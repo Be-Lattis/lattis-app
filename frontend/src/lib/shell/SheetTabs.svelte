@@ -10,6 +10,7 @@
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import Submenu from '#lib/ui/Submenu.svelte';
 	import { clip, clipped } from '#lib/ui/menu.js';
+	import { isCoarse, revealX } from '#lib/ui/mobile.js';
 	import { cycle, modal } from '#lib/ui/focus.js';
 	import { sheetNameProblem, refusedName } from '#lib/ui/names.js';
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
@@ -97,7 +98,7 @@
 	async function openChoice(s: Sheet, el: HTMLElement | null) {
 		if (!onchoice || !s.choice) return;
 		menu = null;
-		const m = { id: s.id, x: el?.offsetLeft ?? 0, values: null as { text: string; count: number }[] | null };
+		const m = { id: s.id, x: el ? leftOf(el) : 0, values: null as { text: string; count: number }[] | null };
 		choiceMenu = m;
 		try {
 			const values = await onchoice.values(s.id);
@@ -273,6 +274,26 @@
 
 	const index = $derived(shown.findIndex((s) => s.id === active));
 
+	// Doigt (téléphone, tablette) : tous les onglets, dans une bande qui
+	// défile au doigt (l'onglet actif y reste visible) ; pas de barre de
+	// défilement de la grille, qui défile elle-même au doigt.
+	const coarse = isCoarse();
+	let host: HTMLElement;
+	let strip = $state<HTMLElement>();
+	/** Gauche d'un onglet dans la barre (les menus s'y posent), bande défilée comprise. */
+	const leftOf = (el: HTMLElement) => el.getBoundingClientRect().left - host.getBoundingClientRect().left;
+	$effect(() => {
+		void active;
+		void vis.length;
+		const st = strip;
+		if (!coarse || !st || st.scrollWidth <= st.clientWidth) return;
+		const el = st.querySelector<HTMLElement>('.sheet.on');
+		if (!el) return;
+		const left = el.getBoundingClientRect().left - st.getBoundingClientRect().left + st.scrollLeft;
+		const to = revealX(left, left + el.offsetWidth, st.scrollLeft, st.clientWidth);
+		if (to !== st.scrollLeft) st.scrollLeft = to;
+	});
+
 	// Trop d'onglets pour garder à la barre de défilement sa largeur minimale
 	// (le quart de la barre, 150 px au moins) : ceux qui ne tiennent pas se
 	// cachent derrière « … », qui les liste tous ; l'onglet actif reste visible.
@@ -287,7 +308,7 @@
 		return Math.ceil(measurer.measureText(label(s)).width) + 37 + (s.protected || locked ? 16 : 0) + (s.choice ? 30 : 0);
 	}
 	const range = $derived.by(() => {
-		if (!width) return { from: 0, to: shown.length - 1 };
+		if (!width || coarse) return { from: 0, to: shown.length - 1 };
 		const room = width - navW - ADD_W - (hscroll ? Math.max(width / 4, 150) : 0) - CHIP_W * similar.length;
 		return tabWindow(
 			shown.map((s) => tabWidth(s, s.id === active)),
@@ -347,7 +368,8 @@
 	let dropX = $state(0);
 
 	function dragStart(e: PointerEvent, s: Sheet) {
-		if (!onmove || e.button !== 0 || vis.length < 2) return;
+		// Au doigt, glisser fait défiler la bande (Déplacer : menu de l'onglet).
+		if (!onmove || e.button !== 0 || vis.length < 2 || e.pointerType === 'touch') return;
 		drag = { id: s.id, x0: e.clientX, moved: false, drop: -1 };
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	}
@@ -359,9 +381,9 @@
 		let k = rects.findIndex((r) => r && e.clientX < r.left + r.width / 2);
 		if (k < 0) k = vis.length;
 		drag.drop = k;
-		const host = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
+		const box = host.getBoundingClientRect();
 		const r = rects[Math.min(k, rects.length - 1)];
-		dropX = r ? (k < rects.length ? r.left : r.right) - host.left : 0;
+		dropX = r ? (k < rects.length ? r.left : r.right) - box.left : 0;
 	}
 	function dragEnd() {
 		const d = drag;
@@ -381,11 +403,12 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="sheet-tabs" bind:clientWidth={width} data-region="tabs" onkeydown={tabKeys}>
+<div class="sheet-tabs" bind:this={host} bind:clientWidth={width} data-region="tabs" onkeydown={tabKeys}>
 	<div class="nav" bind:clientWidth={navW}>
 		<button disabled={index <= 0} onclick={() => onselect(shown[index - 1].id)} title="Feuille précédente (Ctrl+Pg.Préc)" aria-label="Feuille précédente">◀</button>
 		<button disabled={index < 0 || index >= shown.length - 1} onclick={() => onselect(shown[index + 1].id)} title="Feuille suivante (Ctrl+Pg.Suiv)" aria-label="Feuille suivante">▶</button>
 	</div>
+	<div class="strip" class:scroll={coarse} bind:this={strip}>
 	{#each vis as s, si (s.id)}
 		{#if renaming === s.id}
 			<!-- svelte-ignore a11y_autofocus -->
@@ -433,7 +456,7 @@
 				oncontextmenu={(e) => {
 					e.preventDefault();
 					if (del || rename || insert || onprotect || copy || color || hide || onchoice) {
-						menu = { id: s.id, x: (e.currentTarget as HTMLElement).offsetLeft };
+						menu = { id: s.id, x: leftOf(e.currentTarget as HTMLElement) };
 						choiceMenu = null;
 						candidates = null;
 						if (onchoice && !s.kind) {
@@ -462,6 +485,7 @@
 			>
 		{/if}
 	{/each}
+	</div>
 	{#each similar as g, gi (gi)}
 		{@const out = g.sheets.filter((id) => shown.some((s) => s.id === id) && !vis.some((s) => s.id === id)).length}
 		<!-- Puce au bout de la série : survol, les onglets du groupe ressortent ; clic, le volet Regrouper. -->
@@ -545,7 +569,7 @@
 			>
 		</div>
 	{/if}
-	{#if hscroll}
+	{#if hscroll && !coarse}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="hbar"
@@ -954,6 +978,22 @@
 		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
 		user-select: none;
 	}
+	/* Onglets des feuilles : dans la barre (souris), ou bande qui défile au doigt. */
+	.strip {
+		display: contents;
+	}
+	.strip.scroll {
+		display: flex;
+		flex: 0 1 auto;
+		min-width: 0;
+		overflow-x: auto;
+		overflow-y: hidden;
+		scrollbar-width: none;
+		overscroll-behavior-x: contain;
+	}
+	.strip.scroll::-webkit-scrollbar {
+		display: none;
+	}
 	.nav {
 		display: flex;
 		align-items: center;
@@ -1308,5 +1348,18 @@
 		margin-right: 4px;
 		color: #6b7280;
 		--icon-accent: #b45309;
+	}
+	/* Doigt : barre plus haute (cibles d'au moins 32 px), au-dessus de la barre d'état. */
+	@media (pointer: coarse) {
+		.sheet-tabs {
+			height: 36px;
+		}
+		.nav button,
+		.add {
+			width: 32px;
+		}
+		.menu {
+			bottom: 36px;
+		}
 	}
 </style>

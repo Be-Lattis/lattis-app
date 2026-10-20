@@ -138,6 +138,12 @@ function keepInside(node: HTMLElement): () => void {
 		const k = node.offsetWidth ? r0.width / node.offsetWidth : 1;
 		const box = visibleBox(node);
 		const avail = box.bottom - box.top - 2 * EDGE_GAP;
+		// Plus large que la fenêtre (téléphone) : rétréci, avec sa barre horizontale.
+		const availW = box.right - box.left - 2 * EDGE_GAP;
+		if (r0.width > availW && availW > 0) {
+			node.style.maxWidth = `${availW / (k || 1)}px`;
+			node.style.overflowX = 'auto';
+		}
 		if (r0.height > avail && !shed(node, avail)) {
 			node.style.maxHeight = `${avail / (k || 1)}px`;
 			node.style.overflowY = 'auto';
@@ -160,6 +166,8 @@ function keepInside(node: HTMLElement): () => void {
 	};
 }
 
+const coarse = () => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+
 function watch(node: HTMLElement, close: () => void, far: boolean) {
 	let onClose = close;
 	const unfit = keepInside(node);
@@ -179,7 +187,13 @@ function watch(node: HTMLElement, close: () => void, far: boolean) {
 		e.preventDefault();
 		onClose();
 	};
-	const away = () => onClose();
+	// Clavier à l'écran ou barres du navigateur d'un téléphone : seule la
+	// hauteur change, le menu (ou le panneau où l'on saisit) reste ouvert.
+	const w0 = typeof window !== 'undefined' ? window.innerWidth : 0;
+	const away = (e?: Event) => {
+		if (e?.type === 'resize' && window.innerWidth === w0 && coarse()) return;
+		onClose();
+	};
 	// Le clic qui ouvre le menu ne doit pas le refermer aussitôt.
 	const t = setTimeout(() => {
 		window.addEventListener('mousemove', move);

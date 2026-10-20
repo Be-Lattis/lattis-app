@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Édition web sur téléphone : la feuille défile au doigt dans les deux sens, avec élan ; un appui choisit la cellule, un second appui ouvre la saisie, un appui long le menu contextuel, deux doigts zooment. Le ruban est réduit et s'ouvre par-dessus la feuille quand on touche un onglet ; ses onglets, ses commandes et les onglets des feuilles défilent au doigt. Onglets des feuilles et barre d'état restent en bas de l'écran (barres du navigateur, clavier à l'écran) et les menus tiennent dans l'écran.
+
 ### Changements
 
 - Clic droit : les actions propres à la situation (Utiliser comme en-têtes, Ajouter au tableau, Utiliser la première ligne comme en-têtes, Sortir cette ligne du tableau, Convertir le résultat déversé, Basculer sur…) sont en tête du menu, avant Couper, Copier, Coller.

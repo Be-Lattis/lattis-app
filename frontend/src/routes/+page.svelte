@@ -53,6 +53,7 @@
 	import { applyTheme } from '#lib/grid/theme.svelte.js';
 	import { listenExternal } from '#lib/ai/external.svelte.js';
 	import { isWeb } from '#lib/web/platform.js';
+	import { followViewport, installLongPress } from '#lib/ui/mobile.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import DocPage from '#lib/doc/DocPage.svelte';
 	import type { DocFormat } from '#lib/doc/format.js';
@@ -1161,6 +1162,9 @@
 		// Écran de chargement d'app.html (avant le code de l'application) : l'application est là.
 		document.getElementById('boot')?.remove();
 		installErrorReporting();
+		// Téléphone : appui long = clic droit ; hauteur suivant le clavier à l'écran.
+		const offPress = installLongPress();
+		const offViewport = followViewport();
 		// Fil des actions de Claude Desktop / Claude Code : écouté dès le
 		// démarrage (réglages lus) pour ne rien manquer avant l'ouverture du
 		// volet.
@@ -1336,6 +1340,8 @@
 		window.addEventListener('dragover', noDrop);
 		window.addEventListener('drop', noDrop);
 		return () => {
+			offPress();
+			offViewport();
 			off();
 			offUI();
 			offOpen();
@@ -3104,7 +3110,17 @@
 		user-select: none;
 		display: flex;
 		flex-direction: column;
+		/* Téléphone : hauteur visible (barres du navigateur, clavier à l'écran : --app-h, ui/mobile.ts). */
 		height: 100vh;
+		height: var(--app-h, 100dvh);
+		position: relative;
+		top: var(--app-top, 0px);
+		box-sizing: border-box;
+		padding-top: env(safe-area-inset-top);
+		-webkit-touch-callout: none;
+		-webkit-tap-highlight-color: transparent;
+		/* Pas de zoom de la page au doigt (la feuille a le sien, au pincement) ni d'attente du double appui. */
+		touch-action: pan-x pan-y;
 		font: 13px 'Segoe UI', system-ui, -apple-system, sans-serif;
 		color: #1f2328;
 	}
@@ -3138,7 +3154,9 @@
 		align-items: center;
 		gap: 14px;
 		height: 24px;
-		padding: 0 10px;
+		/* Bas de l'écran d'un téléphone (barre d'accueil, coins arrondis). */
+		padding: 0 max(10px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px, env(safe-area-inset-left));
+		flex: none;
 		background: #217346;
 		color: #e8f3ec;
 		font-size: 12px;

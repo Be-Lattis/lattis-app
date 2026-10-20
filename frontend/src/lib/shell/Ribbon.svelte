@@ -18,6 +18,7 @@
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode, type Size } from './fit';
 	import { scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
 	import { keyLabel, pdfPrinterHint } from '#lib/web/platform.js';
+	import { isNarrow, revealX } from '#lib/ui/mobile.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import { kindInfo, MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 	import Submenu from '#lib/ui/Submenu.svelte';
@@ -251,6 +252,13 @@
 	let bg = $state('#fff2cc');
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
 	let fileOpen = $state(false);
+	// Menu Fichier posé sous son onglet, hors de la barre des onglets (qui défile sur un téléphone).
+	let filePos = $state({ x: 0, y: 0 });
+	function openFile(ev: MouseEvent) {
+		const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+		filePos = { x: Math.max(0, r.left), y: r.bottom };
+		fileOpen = !fileOpen;
+	}
 	const data = (what: DataAction) => (ondata ? () => ondata(what) : undefined);
 	const cells = (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => (oncells ? () => oncells(op) : undefined);
 	// Palette ouverte sous le bouton Couleur ou Remplissage, comme dans Excel.
@@ -1043,17 +1051,20 @@
 	// Ruban réduit (comme Excel : Ctrl+F1, double-clic sur un onglet) : seuls
 	// les onglets restent ; un clic sur un onglet déplie ses commandes
 	// par-dessus la feuille, repliées après une commande ou un clic ailleurs.
-	// Le choix est gardé sur ce poste.
+	// Le choix est gardé sur ce poste. Sans choix, réduit sur un téléphone
+	// (comme Excel mobile) : un onglet touché déplie ses commandes par-dessus.
 	const FOLD_KEY = 'lattis.ribbon.folded';
 	let folded = $state(readFold());
 	let peek = $state(false);
 
 	function readFold(): boolean {
 		try {
-			return localStorage.getItem(FOLD_KEY) === '1';
+			const v = localStorage.getItem(FOLD_KEY);
+			if (v !== null) return v === '1';
 		} catch {
-			return false;
+			// stockage indisponible : réglage par défaut
 		}
+		return isNarrow();
 	}
 
 	// Réduire ou épingler : le ruban se replie vers le haut (ou se déplie),
@@ -1100,6 +1111,21 @@
 			}
 		};
 	}
+
+	// Barre des onglets qui défile (téléphone) : l'onglet choisi reste visible.
+	let tabsEl: HTMLElement;
+	$effect(() => {
+		void tab;
+		const bar = tabsEl;
+		if (!bar || bar.scrollWidth <= bar.clientWidth) return;
+		const el = untrack(() => activeTabEl());
+		if (!el) return;
+		const b = bar.getBoundingClientRect();
+		const r = el.getBoundingClientRect();
+		const left = r.left - b.left + bar.scrollLeft;
+		const to = revealX(left, left + r.width, bar.scrollLeft, bar.clientWidth);
+		if (to !== bar.scrollLeft) bar.scrollTo({ left: to, behavior: reducedMotion() ? 'auto' : 'smooth' });
+	});
 
 	/** keep : déplier sans replier (KeyTips), au lieu de basculer comme un clic. */
 	function select(t: typeof tab, keep = false) {
@@ -1358,12 +1384,12 @@
 		if (from && !headerEl.contains(from)) returnTo = from;
 	}}
 >
-	<nav class="tabs" aria-label="Onglets du ruban">
+	<nav class="tabs" aria-label="Onglets du ruban" bind:this={tabsEl}>
 		<div class="file-wrap">
-			<button class="tab file" data-label="Fichier" aria-haspopup="menu" aria-expanded={fileOpen} aria-keyshortcuts="Alt+F" onclick={() => (fileOpen = !fileOpen)}>Fichier</button>
+			<button class="tab file" data-label="Fichier" aria-haspopup="menu" aria-expanded={fileOpen} aria-keyshortcuts="Alt+F" onclick={(ev) => openFile(ev)}>Fichier</button>
 			{#if fileOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-				<div class="file-menu" role="menu" aria-label="Fichier" use:dismiss={() => (fileOpen = false)}>
+				<div class="file-menu" role="menu" aria-label="Fichier" style:left="{filePos.x}px" style:top="{filePos.y}px" use:dismiss={() => (fileOpen = false)}>
 					{#each [['new', 'Nouveau', 'Ctrl+N'], ['open', 'Ouvrir…', 'Ctrl+O']] as [a, label, keys] (a)}
 						<button role="menuitem" onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
@@ -1746,10 +1772,8 @@
 		display: flex;
 	}
 	.file-menu {
-		position: absolute;
-		top: 32px;
-		left: 0;
-		z-index: 10;
+		position: fixed;
+		z-index: 30;
 		background: #fff;
 		border: 1px solid #d4d7db;
 		border-radius: var(--float-radius);
@@ -2161,5 +2185,40 @@
 	}
 	.drop-menu .keys {
 		margin-left: 18px;
+	}
+	/* Téléphone : les onglets ne passent pas à la ligne et défilent au doigt. */
+	@media (max-width: 600px) {
+		.tabs {
+			overflow-x: auto;
+			overflow-y: hidden;
+			scrollbar-width: none;
+			overscroll-behavior-x: contain;
+			padding: 0 4px;
+		}
+		.tabs::-webkit-scrollbar {
+			display: none;
+		}
+		.tab {
+			flex: none;
+			white-space: nowrap;
+			padding: 0 12px;
+		}
+		.sep {
+			flex: 1 0 6px;
+		}
+		.tab.help {
+			margin-right: 4px;
+		}
+	}
+	/* Doigt : onglets plus hauts (cibles d'au moins 32 px). */
+	@media (pointer: coarse) {
+		.tabs {
+			height: 40px;
+		}
+		.tab.help {
+			width: 28px;
+			height: 28px;
+			flex: none;
+		}
 	}
 </style>

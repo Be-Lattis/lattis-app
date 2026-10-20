@@ -130,6 +130,16 @@ Le navigateur ne laisse pas la page intercepter certains raccourcis. Leurs équi
 
 Ctrl+O, Ctrl+S, Ctrl+P, F1 et F5 restent interceptés par la page.
 
+### Téléphone et tablette
+
+Au doigt (Pointer Events `pointerType === 'touch'`, la souris et le stylet ne changent pas) :
+
+- **Grille** (`grid/touch.ts`, `Sheet.svelte`) : glisser fait défiler dans les deux sens, avec l'élan d'une liste native ; un appui choisit la cellule ; un appui sur la cellule active (ou un double appui) ouvre la saisie et le clavier ; deux doigts zooment (10 à 400 %, enregistré par feuille). Pas d'extension de sélection, de poignée de recopie ni de glissé d'en-tête au doigt : Maj+flèches au clavier, ou la souris.
+- **Appui long = clic droit** partout (`ui/mobile.ts`) : menu de la cellule, de l'onglet d'une feuille, du ruban (iOS n'envoie pas de `contextmenu` ; celui d'Android n'est pas doublé).
+- **Ruban** : réduit par défaut sous 600 px de large (tant qu'on n'a pas choisi : Ctrl+F1, double-clic ou épingle) ; un onglet touché déplie ses commandes par-dessus la feuille, qui défilent au doigt. La barre des onglets défile au doigt, l'onglet choisi reste visible. Menus et panneaux restent dans l'écran (décalés, rétrécis avec défilement).
+- **Onglets des feuilles** en bas : tous dans une bande qui défile au doigt (pas de « … »), sans barre de défilement horizontale de la grille ; Déplacer passe par le menu de l'onglet. Barre d'onglets, barre d'état et cibles du ruban d'au moins 32 px (`pointer: coarse`).
+- **Hauteur** : `100dvh`, marges `env(safe-area-inset-*)` (`viewport-fit=cover`) ; clavier à l'écran : la hauteur suit `visualViewport` (`--app-h`), Android avec `interactive-widget=resizes-content`. Pas de zoom de la page au doigt (`touch-action: pan-x pan-y`) : la feuille a le sien.
+
 ## 5. Essai local
 
 ```sh

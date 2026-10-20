@@ -22,6 +22,7 @@
 	import { AutoRows } from './rowfit';
 	import { arrowNotes, arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
 	import { stepZoom } from './zoom';
+	import { isDrag, inertia, LONG_PRESS_MS, MIN_SPEED, pinchZoom, Velocity } from './touch';
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { keepInView, seenIn, type Span as XSpan } from './keepinview';
 	import { cleanSource, dvDialog, dvPatch, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
@@ -6914,6 +6915,130 @@
 		window.addEventListener('pointerup', up);
 	}
 
+	// --- Doigt (touch.ts) ----------------------------------------------------------
+	// Glisser fait défiler dans les deux sens, avec élan ; un appui choisit la
+	// cellule comme un clic (sur la cellule active : la saisie, clavier à
+	// l'écran) ; l'appui long donne le menu contextuel (ui/mobile.ts) ; deux
+	// doigts zooment. Pas d'extension de sélection, de poignée de recopie ni
+	// de glissé d'en-tête au doigt : la souris et le stylet les gardent.
+	let touch: { id: number; x0: number; y0: number; x: number; y: number; t0: number; drag: boolean; vel: Velocity } | null = null;
+	let pinch: { z0: number; d0: number } | null = null;
+	const fingers = new Map<number, { x: number; y: number }>();
+	let fling = 0;
+
+	function stopFling() {
+		if (fling) cancelAnimationFrame(fling);
+		fling = 0;
+	}
+
+	/** Élan au lâcher, (vx, vy) en px de la feuille par ms. */
+	function startFling(vx: number, vy: number) {
+		stopFling();
+		if (Math.hypot(vx, vy) < MIN_SPEED) return;
+		let last = performance.now();
+		let rx = 0;
+		let ry = 0;
+		const step = (now: number) => {
+			const dt = Math.min(50, now - last);
+			last = now;
+			const a = inertia(vx, dt);
+			const b = inertia(vy, dt);
+			vx = a.v;
+			vy = b.v;
+			// Pixels entiers : le reste s'ajoute à l'image suivante.
+			rx += a.d;
+			ry += b.d;
+			const dx = Math.trunc(rx);
+			const dy = Math.trunc(ry);
+			rx -= dx;
+			ry -= dy;
+			const moved = scrollByPx(dx, dy);
+			// Bord de la feuille atteint : l'élan s'arrête dans ce sens.
+			if (dx && !moved.dx) vx = 0;
+			if (dy && !moved.dy) vy = 0;
+			fling = Math.hypot(vx, vy) >= MIN_SPEED ? requestAnimationFrame(step) : 0;
+		};
+		fling = requestAnimationFrame(step);
+	}
+
+	function onPointerDown(e: PointerEvent) {
+		if (e.pointerType !== 'touch') return onScrollbarDown(e);
+		// Pas d'événements souris simulés : le geste est traité ici.
+		e.preventDefault();
+		stopFling();
+		stopGlide();
+		fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		if (fingers.size === 2) {
+			const [a, b] = [...fingers.values()];
+			pinch = onzoom ? { z0: zoom, d0: Math.hypot(a.x - b.x, a.y - b.y) } : null;
+			touch = null;
+			return;
+		}
+		if (fingers.size > 1) return;
+		touch = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t0: e.timeStamp, drag: false, vel: new Velocity() };
+		touch.vel.add(e.timeStamp, e.clientX, e.clientY);
+	}
+
+	function onPointerMove(e: PointerEvent) {
+		if (e.pointerType !== 'touch' || !fingers.has(e.pointerId)) return;
+		fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		if (pinch) {
+			const [a, b] = [...fingers.values()];
+			if (!a || !b) return;
+			const z = pinchZoom(pinch.z0, pinch.d0, Math.hypot(a.x - b.x, a.y - b.y));
+			if (z !== zoom) onzoom?.(z);
+			return;
+		}
+		const t = touch;
+		if (!t || t.id !== e.pointerId) return;
+		if (!t.drag && !isDrag(e.clientX - t.x0, e.clientY - t.y0)) return;
+		if (!t.drag) {
+			t.drag = true;
+			holdWhileScrolling();
+			noteTip = null;
+		}
+		const k = zoomK();
+		scrollByPx((t.x - e.clientX) / k, (t.y - e.clientY) / k);
+		t.x = e.clientX;
+		t.y = e.clientY;
+		t.vel.add(e.timeStamp, e.clientX, e.clientY);
+	}
+
+	function onPointerUp(e: PointerEvent) {
+		if (e.pointerType !== 'touch' || !fingers.delete(e.pointerId)) return;
+		if (pinch || fingers.size) {
+			// Fin d'un pincement : aucun appui ni élan.
+			if (fingers.size < 2) pinch = null;
+			touch = null;
+			return;
+		}
+		const t = touch;
+		touch = null;
+		if (!t || t.id !== e.pointerId || e.type === 'pointercancel') return;
+		if (t.drag) {
+			const k = zoomK();
+			const { vx, vy } = t.vel.get(e.timeStamp);
+			startFling(-vx / k, -vy / k);
+			return;
+		}
+		if (e.timeStamp - t.t0 >= LONG_PRESS_MS) return; // appui long : menu contextuel
+		tapAt(e.clientX, e.clientY);
+	}
+
+	// Le lever du doigt est traité par onPointerUp : touchend annulé (ontouchend),
+	// sans quoi le navigateur donnerait ensuite le focus à la grille, ôté à l'éditeur.
+
+	/** Appui bref : un clic ; sur la cellule déjà active, la saisie (comme un double clic). */
+	function tapAt(clientX: number, clientY: number) {
+		const init = { bubbles: true, cancelable: true, clientX, clientY, button: 0, buttons: 1, detail: 1, view: window };
+		const probe = new MouseEvent('mousedown', init);
+		const cell = cellAt(probe);
+		const again = !editing && !!cell && cell.row === active.row && cell.col === active.col && selChart === null;
+		scroller.dispatchEvent(probe);
+		window.dispatchEvent(new MouseEvent('mouseup', { ...init, buttons: 0 }));
+		if (again && cell && !editing && !listMenu && active.row === cell.row && active.col === cell.col) onDblClick(new MouseEvent('dblclick', { ...init, detail: 2 }));
+	}
+
 	function onScroll() {
 		holdWhileScrolling();
 		noteTip = null;
@@ -6937,6 +7062,7 @@
 		}
 		holdWhileScrolling();
 		stopGlide();
+		stopFling();
 		noteTip = null;
 		const unit = e.deltaMode === 1 ? ROW_H : e.deltaMode === 2 ? vs.view : 1;
 		let dy = e.deltaY * unit;
@@ -6958,6 +7084,13 @@
 			const first = cax().indexAt(scroller.scrollLeft);
 			dx = cax().offset(clamp(first + steps, 0, SHEET_COLS - 1)) - scroller.scrollLeft;
 		}
+		scrollByPx(dx, dy);
+	}
+
+	/** Défile de (dx, dy) px de la feuille (molette, doigt) ; rend le déplacement effectif. */
+	function scrollByPx(dx: number, dy: number): { dx: number; dy: number } {
+		const t0 = vs.top;
+		const l0 = scroller.scrollLeft;
 		if (dy) {
 			// Défiler vers le bas agrandit la feuille d'autant.
 			if (dy > 0) vs.content = Math.min(rax().total, Math.max(vs.content, vs.top + dy + 2 * vs.view));
@@ -6975,6 +7108,7 @@
 			updateExtent();
 		}
 		schedule();
+		return { dx: scroller.scrollLeft - l0, dy: vs.top - t0 };
 	}
 
 	function syncNative() {
@@ -10266,6 +10400,7 @@
 			if (cw === viewW && ch === viewH && canvas.width === pw && canvas.height === ph) return;
 			// Largeur d'avant, si seul l'écran a changé (pas le zoom).
 			const oldW = zoom === sizedZoom ? viewW : 0;
+			const oldH = viewH;
 			sizedZoom = zoom;
 			viewW = cw;
 			viewH = ch;
@@ -10282,6 +10417,8 @@
 			draw();
 			// Volet ouvert à droite : l'objet cliqué ne passe pas dessous.
 			if (oldW > 0 && cw < oldW) keepFocusAfterShrink(oldW);
+			// Clavier à l'écran (téléphone) : la cellule en saisie reste visible au-dessus.
+			else if (editing && oldH > 0 && ch < oldH) ensureVisible(active.row, active.col);
 		});
 		const ro = new ResizeObserver(resize);
 		ro.observe(wrap);
@@ -10339,6 +10476,7 @@
 		return () => {
 			ro.disconnect();
 			scroller.removeEventListener('wheel', onWheel);
+			stopFling();
 			window.removeEventListener('mouseup', up);
 			window.removeEventListener('mousemove', onDragMove);
 			stopAutoScroll();
@@ -10653,7 +10791,11 @@
 				class="scroller"
 				bind:this={scroller}
 				onscroll={onScroll}
-				onpointerdown={onScrollbarDown}
+				onpointerdown={onPointerDown}
+				onpointermove={onPointerMove}
+				onpointerup={onPointerUp}
+				onpointercancel={onPointerUp}
+				ontouchend={(e) => e.cancelable && e.preventDefault()}
 				onmousedown={onMouseDown}
 				onmousemove={onMouseMove}
 				onmouseleave={() => ((noteTip = null), hoverLocked >= 0 && ((hoverLocked = -1), schedule()))}
@@ -12370,6 +12512,9 @@
 	.scroller {
 		position: absolute;
 		inset: 0;
+		/* Au doigt, la grille gère elle-même défilement, appui et pincement (touch.ts). */
+		touch-action: none;
+		-webkit-touch-callout: none;
 		/* La barre horizontale est dans la ligne des onglets (SheetTabs). */
 		overflow-x: hidden;
 		overflow-y: auto;
