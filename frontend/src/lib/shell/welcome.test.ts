@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pageById, parseTarget } from '#lib/help/help.js';
 import { plain, slug } from '#lib/help/markdown.js';
-import { demoProgressText, firstSteps, hideSteps, stepsShown } from './welcome';
+import { demoProgressText, firstSteps, guidePage, hideSteps, languageChoices, languageValue, stepsShown } from './welcome';
 
 describe('demoProgressText', () => {
 	it('annonce les lignes et les cellules', () => {
@@ -50,5 +50,27 @@ describe('stepsShown / hideSteps', () => {
 		expect(stepsShown(broken)).toBe(true);
 		expect(() => hideSteps(broken)).not.toThrow();
 		expect(stepsShown(null)).toBe(true);
+	});
+});
+
+describe('accueil du premier lancement', () => {
+	it('propose « automatique » puis chaque langue dans sa langue', () => {
+		const c = languageChoices();
+		expect(c.map((x) => x.value)).toEqual(['auto', 'fr', 'en', 'de', 'es', 'zh']);
+		expect(c[0].label).toMatch(/^Langue du système \(/);
+		expect(c.find((x) => x.value === 'de')?.label).toBe('Deutsch');
+		expect(c.find((x) => x.value === 'zh')?.label).toBe('中文');
+	});
+
+	it('coche la langue du réglage, auto sinon', () => {
+		expect(languageValue('es')).toBe('es');
+		expect(languageValue('auto')).toBe('auto');
+		expect(languageValue(undefined)).toBe('auto');
+		expect(languageValue('it')).toBe('auto');
+		expect(languageValue(3)).toBe('auto');
+	});
+
+	it('mène à la page de prise en main', () => {
+		expect(pageById(guidePage)).toBeDefined();
 	});
 });

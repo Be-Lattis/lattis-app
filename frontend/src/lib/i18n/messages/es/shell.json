@@ -505,6 +505,13 @@
 			}
 		},
 		"noWorkbook": "Ningún libro abierto.",
+		"first": {
+			"title": "Bienvenido a Lattis",
+			"intro": "La hoja de cálculo que reconoce sus tablas, calcula por nombre de columna y se consulta en SQL. Elija su idioma y luego cree o abra un libro.",
+			"language": "Idioma de la interfaz",
+			"languageHint": "Puede cambiarlo en cualquier momento en Archivo › Configuración.",
+			"guide": "Leer la guía de inicio"
+		},
 		"new": "Nuevo libro",
 		"importTooltip": "Crea un libro con las hojas importadas",
 		"firstSteps": "Primeros pasos",

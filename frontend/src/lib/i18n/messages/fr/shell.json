@@ -505,6 +505,13 @@
 			}
 		},
 		"noWorkbook": "Aucun classeur ouvert.",
+		"first": {
+			"title": "Bienvenue dans Lattis",
+			"intro": "Le tableur qui reconnaît vos tableaux, calcule par nom de colonne et se laisse interroger en SQL. Choisissez votre langue, puis créez ou ouvrez un classeur.",
+			"language": "Langue de l’interface",
+			"languageHint": "Modifiable à tout moment dans Fichier › Paramètres.",
+			"guide": "Lire la prise en main"
+		},
 		"new": "Nouveau classeur",
 		"importTooltip": "Crée un classeur avec les feuilles importées",
 		"firstSteps": "Premiers pas",

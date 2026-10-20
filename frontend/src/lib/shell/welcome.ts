@@ -1,6 +1,6 @@
 // Accueil sans classeur ouvert : premiers pas et classeur d'exemple
 // (audit 6, I8).
-import { t } from '#lib/i18n/index.js';
+import { LANG_NAMES, LANGS, type LanguageSetting, systemLang, t } from '#lib/i18n/index.js';
 
 export type DemoProgress = { done: number; total: number; cells: number; totalCells: number };
 
@@ -23,6 +23,23 @@ const step = (key: 'table' | 'formula' | 'sql', help: string) => ({
 	help
 });
 export const firstSteps: { title: string; text: string; help: string }[] = [step('table', 'prise-en-main#tableaux-detectes'), step('formula', 'formules#colonnes-calculees'), step('sql', 'sql')];
+
+/** Page d'aide « Prise en main » (accueil du premier lancement). */
+export const guidePage = 'prise-en-main';
+
+/**
+ * Choix de la langue de l'accueil du premier lancement (réglage
+ * ui.language) : « automatique » nommant la langue qu'il prend, puis chaque
+ * langue écrite dans sa langue, comme Fichier › Paramètres.
+ */
+export function languageChoices(): { value: LanguageSetting; label: string }[] {
+	return [{ value: 'auto', label: t('shell.settings.language.auto', { name: LANG_NAMES[systemLang()] }) }, ...LANGS.map((l) => ({ value: l, label: LANG_NAMES[l] }))];
+}
+
+/** Valeur du réglage ui.language à cocher (auto pour une valeur absente ou inconnue). */
+export function languageValue(v: unknown): LanguageSetting {
+	return typeof v === 'string' && (LANGS as readonly string[]).includes(v) ? (v as LanguageSetting) : 'auto';
+}
 
 const KEY = 'lattis.welcome.hidden';
 

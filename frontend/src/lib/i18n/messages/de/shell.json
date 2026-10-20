@@ -505,6 +505,13 @@
 			}
 		},
 		"noWorkbook": "Keine Arbeitsmappe geöffnet.",
+		"first": {
+			"title": "Willkommen bei Lattis",
+			"intro": "Die Tabellenkalkulation, die Ihre Tabellen erkennt, mit Spaltennamen rechnet und sich mit SQL abfragen lässt. Wählen Sie Ihre Sprache und erstellen oder öffnen Sie dann eine Arbeitsmappe.",
+			"language": "Sprache der Benutzeroberfläche",
+			"languageHint": "Jederzeit änderbar unter Datei › Einstellungen.",
+			"guide": "Erste Schritte lesen"
+		},
 		"new": "Neue Arbeitsmappe",
 		"importTooltip": "Erstellt eine Arbeitsmappe mit den importierten Blättern",
 		"firstSteps": "Erste Schritte",

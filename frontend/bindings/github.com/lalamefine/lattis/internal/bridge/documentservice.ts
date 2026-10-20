@@ -802,6 +802,22 @@ export function FireControl(id: number, event: string, value: string, old: strin
 }
 
 /**
+ * FirstLaunch dit si c'est le tout premier lancement de Lattis sur ce poste
+ * (accueil au lieu d'un classeur vide), jusqu'à FirstLaunchDone.
+ */
+export function FirstLaunch(): $CancellablePromise<boolean> {
+    return $Call.ByID(237974807);
+}
+
+/**
+ * FirstLaunchDone retient que l'accueil du premier lancement a mené à un
+ * classeur : les lancements suivants s'ouvrent comme d'habitude.
+ */
+export function FirstLaunchDone(): $CancellablePromise<void> {
+    return $Call.ByID(3809486115);
+}
+
+/**
  * ForgetConnectionPassword oublie le mot de passe d'une connexion (session
  * et trousseau).
  */

@@ -4362,6 +4362,11 @@ export interface MessageParams {
 	'shell.web.lost': Record<never, never>;
 	'shell.web.reconnect': Record<never, never>;
 	'shell.web.reconnected': Record<never, never>;
+	'shell.welcome.first.guide': Record<never, never>;
+	'shell.welcome.first.intro': Record<never, never>;
+	'shell.welcome.first.language': Record<never, never>;
+	'shell.welcome.first.languageHint': Record<never, never>;
+	'shell.welcome.first.title': Record<never, never>;
 	'shell.welcome.firstSteps': Record<never, never>;
 	'shell.welcome.hide': Record<never, never>;
 	'shell.welcome.importTooltip': Record<never, never>;

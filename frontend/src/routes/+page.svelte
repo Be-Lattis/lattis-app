@@ -31,7 +31,8 @@
 	import { popBack, pushBack, type RefSpot } from '#lib/grid/reflink.js';
 	import { printSheet } from '#lib/shell/print.js';
 	import { withSaveProgress } from '#lib/shell/saveprogress.js';
-	import { demoProgressText, firstSteps, hideSteps, stepsShown } from '#lib/shell/welcome.js';
+	import { demoProgressText, firstSteps, guidePage, hideSteps, stepsShown } from '#lib/shell/welcome.js';
+	import WelcomeLanguage from '#lib/shell/WelcomeLanguage.svelte';
 	import PageSetupDialog from '#lib/shell/PageSetupDialog.svelte';
 	import { pageAction, type PageAction, type PageSetup, type PageSetupTab } from '#lib/shell/pagesetup.js';
 	import type { PageBreaks } from '#bindings/internal/transfer/models.js';
@@ -529,6 +530,16 @@
 	let demoProgress = $state('');
 	// Accueil : premiers pas, jusqu'à « Ne plus afficher ».
 	let showSteps = $state(stepsShown());
+	// Tout premier lancement sur ce poste (DocumentService.FirstLaunch) :
+	// l'accueil, avec la langue, au lieu d'un classeur vide ; retenu dès
+	// qu'un classeur s'ouvre (lancements suivants : comme d'habitude).
+	let firstRun = $state(false);
+	$effect(() => {
+		if (firstRun && mode === 'doc') {
+			firstRun = false;
+			DocumentService.FirstLaunchDone().catch(() => {});
+		}
+	});
 
 	const err = (e: unknown) => errorText(e);
 
@@ -1272,6 +1283,7 @@
 				bench = await GridService.BenchRequested();
 				if (bench) return startDemo();
 				loadRecent();
+				firstRun = await DocumentService.FirstLaunch().catch(() => false);
 				// Le moteur survit à la page (web : rechargement, onglet fermé
 				// puis rouvert ; bureau : rechargement de la fenêtre, wails3 dev) :
 				// on reprend le classeur qu'il a ouvert, au lieu d'en créer un
@@ -1302,6 +1314,7 @@
 				}
 				orphans = (await DocumentService.Orphans()) ?? [];
 				if (orphans.length > 0) mode = 'recover';
+				else if (firstRun) mode = 'closed'; // accueil du premier lancement
 				else await startDoc();
 			} catch (e) {
 				failure = err(e);
@@ -2421,16 +2434,22 @@
 				{#if recoverError}<p class="error">{recoverError}</p>{/if}
 			</div>
 		{:else if mode === 'closed'}
-			<div class="splash">
-				<h1>Lattis</h1>
-				<p>{t('shell.welcome.noWorkbook')}</p>
+			<div class="splash" class:first-run={firstRun}>
+				{#if firstRun}
+					<h1>{t('shell.welcome.first.title')}</h1>
+					<p class="intro">{t('shell.welcome.first.intro')}</p>
+					<WelcomeLanguage />
+				{:else}
+					<h1>Lattis</h1>
+					<p>{t('shell.welcome.noWorkbook')}</p>
+				{/if}
 				<div class="actions">
 					<button class="primary ico" onclick={() => file('new')}><Icon name="new-file" size={14} />{t('shell.welcome.new')}</button>
 					<button class="ico" onclick={() => file('open')}><Icon name="open" size={14} />{t('ribbon.file.open')}</button>
 					<button class="ico" onclick={() => file('import')} title={t('shell.welcome.importTooltip')}><Icon name="database" size={14} />{t('ribbon.file.import')}</button>
 					{#if sharedWorkbooksEnabled()}<button class="ico" onclick={() => file('openRemote')}><Icon name="web" size={14} />{t('ribbon.file.openRemote')}</button>{/if}
 				</div>
-				{#if showSteps}
+				{#if showSteps || firstRun}
 					<div class="steps">
 						<p class="muted">{t('shell.welcome.firstSteps')}</p>
 						<ol>
@@ -2440,13 +2459,17 @@
 						</ol>
 						<div class="steps-actions">
 							<button class="ico" onclick={() => openSample().catch((e) => (notice = err(e)))}><Icon name="book" size={14} />{t('shell.welcome.openSample')}</button>
-							<button
-								class="link"
-								onclick={() => {
-									hideSteps();
-									showSteps = false;
-								}}>{t('shell.welcome.hide')}</button
-							>
+							{#if firstRun}
+								<button class="link" onclick={() => openHelp(guidePage)}>{t('shell.welcome.first.guide')}</button>
+							{:else}
+								<button
+									class="link"
+									onclick={() => {
+										hideSteps();
+										showSteps = false;
+									}}>{t('shell.welcome.hide')}</button
+								>
+							{/if}
 						</div>
 					</div>
 				{:else}
@@ -3548,8 +3571,26 @@
 	}
 	.steps-actions {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 12px;
+	}
+	/* Accueil du premier lancement : plus haut que la fenêtre, il défile sans perdre son titre. */
+	.splash.first-run {
+		justify-content: safe center;
+		overflow-y: auto;
+		box-sizing: border-box;
+		padding: 24px 16px;
+		gap: 12px;
+	}
+	.splash.first-run .actions {
+		margin-top: 4px;
+	}
+	.intro {
+		max-width: 520px;
+		margin: 0;
+		text-align: center;
+		line-height: 1.5;
 	}
 	button.link {
 		border: none;

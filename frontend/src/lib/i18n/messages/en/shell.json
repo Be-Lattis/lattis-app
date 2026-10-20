@@ -505,6 +505,13 @@
 			}
 		},
 		"noWorkbook": "No workbook open.",
+		"first": {
+			"title": "Welcome to Lattis",
+			"intro": "The spreadsheet that recognizes your tables, calculates by column name and can be queried in SQL. Choose your language, then create or open a workbook.",
+			"language": "Interface language",
+			"languageHint": "You can change it at any time in File › Settings.",
+			"guide": "Read the getting started guide"
+		},
 		"new": "New workbook",
 		"importTooltip": "Creates a workbook with the imported sheets",
 		"firstSteps": "Getting started",

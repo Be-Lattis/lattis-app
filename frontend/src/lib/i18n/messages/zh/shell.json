@@ -505,6 +505,13 @@
 			}
 		},
 		"noWorkbook": "没有打开的工作簿。",
+		"first": {
+			"title": "欢迎使用 Lattis",
+			"intro": "这款电子表格能识别你的表格，按列名计算，并可用 SQL 查询。请选择语言，然后新建或打开一个工作簿。",
+			"language": "界面语言",
+			"languageHint": "随时可在“文件 › 设置”中更改。",
+			"guide": "阅读入门指南"
+		},
 		"new": "新建工作簿",
 		"importTooltip": "用导入的工作表创建一个工作簿",
 		"firstSteps": "入门",
