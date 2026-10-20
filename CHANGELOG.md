@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.1.0-beta.3 (20/10/2026)
+
 ### Nouveautés
 
 - Windows : version portable dans chaque version publiée (`Lattis-windows-x64-portable.exe`, l'exécutable seul, sans installation).
