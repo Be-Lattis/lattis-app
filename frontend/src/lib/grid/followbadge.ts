@@ -33,9 +33,18 @@ export function placeFollowBadge(o: { x: number; y: number; w: number; bw: numbe
 	return { x: o.left ? x + 1 : x - 1, y: o.y - Math.floor(o.bh / 2), place: 'corner', radii: [4, 4, 4, 4] };
 }
 
+/** Nom de tableau tiré d'un nom d'onglet (comme identifier côté moteur) : lettres, _ et chiffres hors tête. */
+export function tableIdentifier(s: string): string {
+	let out = '';
+	for (const ch of s) {
+		if (/[\p{L}_]/u.test(ch) || (out && /\p{N}/u.test(ch))) out += ch;
+	}
+	return out;
+}
+
 /**
- * Pastille du nom (à gauche) : seulement sur une feuille de plusieurs
- * tableaux. Le seul tableau d'une feuille a le nom de son onglet (ils se
- * suivent : renommer l'un renomme l'autre) ; l'onglet le montre déjà.
+ * Pastille du nom (à gauche) : pas sur un tableau qui porte le nom de son
+ * onglet (« Ventes 2026 » ↔ Ventes2026) ; l'onglet le montre déjà, et le
+ * renommer renomme ce tableau (pas l'inverse).
  */
-export const showNameBadge = (tablesOnSheet: number): boolean => tablesOnSheet > 1;
+export const showNameBadge = (table: string, sheet: string): boolean => tableIdentifier(sheet).toLowerCase() !== table.toLowerCase();

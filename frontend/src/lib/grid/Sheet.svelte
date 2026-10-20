@@ -2968,7 +2968,7 @@
 					followBadges.push({ kind: 'follow', e, label, radii: b.radii, x0: b.x, x1: b.x + bw, y0: b.y, y1: b.y + bh, clip });
 					room -= bw + 4;
 				}
-				if (e.t.name && room >= 30 && showNameBadge(entries.length)) {
+				if (e.t.name && room >= 30 && showNameBadge(e.t.name, sheetName)) {
 					const dflt = isDefaultTableName(e.t.name);
 					const label = fitText(e.t.name + (dflt ? ' ✎' : ''), room - 10);
 					const bw = Math.ceil(ctx.measureText(label).width) + 10;

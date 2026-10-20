@@ -210,8 +210,8 @@ func (m *Model) renameSheetAs(ctx context.Context, sheet int64, name string, lin
 		if !linked {
 			return nil
 		}
-		// Seul tableau de la feuille : il prend le nouveau nom (soletable.go).
-		return t.tableFollowsSheet(sheet, name)
+		// Tableau nommé comme l'onglet : il prend le nouveau nom (soletable.go).
+		return t.tableFollowsSheet(sheet, old, name)
 	})
 }
 

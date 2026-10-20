@@ -46,13 +46,13 @@ func soleWant(t *testing.T, d *fixture, sheet int64, sheetName, tables string) {
 	}
 }
 
-func TestSoleTableFollowsSheet(t *testing.T) {
+func TestSheetRenameFollowsTable(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
 	if ev, err := d.Paste(ctx, 1, 2, 1, soleBlock); err != nil || ev.Created != "Feuille1" {
 		t.Fatalf("Paste = %+v, %v", ev, err)
 	}
-	// Renommer l'onglet renomme le tableau (sans espace), en une étape.
+	// Renommer l'onglet renomme le tableau du même nom (sans espace), en une étape.
 	if err := d.RenameSheetLinked(ctx, 1, "Ventes 2026"); err != nil {
 		t.Fatal(err)
 	}
@@ -62,20 +62,22 @@ func TestSoleTableFollowsSheet(t *testing.T) {
 		t.Fatal(err)
 	}
 	soleWant(t, d, 1, "Feuille1", "Feuille1")
-	// Et l'inverse : renommer le tableau renomme l'onglet.
-	if err := d.RenameTableLinked(ctx, "Feuille1", "Clients"); err != nil {
+	// L'inverse ne se fait pas : renommer le tableau laisse l'onglet.
+	if err := d.RenameTable(ctx, "Feuille1", "Clients"); err != nil {
 		t.Fatal(err)
 	}
-	soleWant(t, d, 1, "Clients", "Clients")
+	soleWant(t, d, 1, "Feuille1", "Clients")
+	// Noms différents : l'onglet se renomme seul.
+	if err := d.RenameSheetLinked(ctx, 1, "Seul"); err != nil {
+		t.Fatal(err)
+	}
+	soleWant(t, d, 1, "Seul", "Clients")
 	if _, err := d.bus.Undo(ctx); err != nil {
 		t.Fatal(err)
 	}
-	soleWant(t, d, 1, "Feuille1", "Feuille1")
-	// Scripts, assistant (RenameSheet, RenameTable) : l'un sans l'autre.
-	if err := d.RenameSheet(ctx, 1, "Seul"); err != nil {
+	if _, err := d.bus.Undo(ctx); err != nil {
 		t.Fatal(err)
 	}
-	soleWant(t, d, 1, "Seul", "Feuille1")
 	// Un nom qui ne peut pas nommer un tableau (adresse) : l'onglet seul.
 	d.TakeNotice()
 	if err := d.RenameSheetLinked(ctx, 1, "Q1"); err != nil {
@@ -87,7 +89,7 @@ func TestSoleTableFollowsSheet(t *testing.T) {
 	}
 }
 
-func TestSoleTableConflicts(t *testing.T) {
+func TestSheetRenameFollowsTableConflicts(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
 	if _, err := d.Paste(ctx, 1, 2, 1, soleBlock); err != nil {
@@ -100,10 +102,6 @@ func TestSoleTableConflicts(t *testing.T) {
 	if ev, err := d.Paste(ctx, s2, 2, 1, soleBlock); err != nil || ev.Created != "Feuille2" {
 		t.Fatalf("Paste = %+v, %v", ev, err)
 	}
-	s3, err := d.AddSheet(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
 	// Nom de tableau pris : l'onglet seul est renommé, la barre d'état le dit.
 	d.TakeNotice()
 	if err := d.RenameSheetLinked(ctx, 1, "feuille 2"); err != nil {
@@ -113,48 +111,14 @@ func TestSoleTableConflicts(t *testing.T) {
 	if n := d.TakeNotice(); !strings.Contains(n, "déjà le nom d'un autre tableau") {
 		t.Fatalf("barre d'état : %q", n)
 	}
-	// Nom de feuille pris (l'onglet vide Feuille3) : le tableau seul.
-	if err := d.RenameTableLinked(ctx, "Feuille1", "Feuille3"); err != nil {
-		t.Fatal(err)
-	}
-	soleWant(t, d, 1, "feuille 2", "Feuille3")
-	soleWant(t, d, s3, "Feuille3", "")
-	if n := d.TakeNotice(); !strings.Contains(n, "déjà le nom d'une autre feuille") {
-		t.Fatalf("barre d'état : %q", n)
-	}
-	// Deux tableaux sur la feuille : plus de lien.
+	// Deux tableaux sur la feuille : celui qui porte le nom de l'onglet suit.
 	if ev, err := d.Paste(ctx, s2, 2, 10, soleBlock); err != nil || ev.Created != "Tableau1" {
 		t.Fatalf("Paste = %+v, %v", ev, err)
 	}
 	if err := d.RenameSheetLinked(ctx, s2, "Deux"); err != nil {
 		t.Fatal(err)
 	}
-	soleWant(t, d, s2, "Deux", "Feuille2,Tableau1")
-	if err := d.RenameTableLinked(ctx, "Feuille2", "Premier"); err != nil {
-		t.Fatal(err)
-	}
-	soleWant(t, d, s2, "Deux", "Premier,Tableau1")
-}
-
-// Le lien naît sans rien renommer : une feuille passée de deux tableaux à un
-// garde ses noms, le renommage suivant les accorde.
-func TestSoleTableLinkStarts(t *testing.T) {
-	ctx := context.Background()
-	d := open(t)
-	if _, err := d.Paste(ctx, 1, 2, 1, soleBlock); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := d.Paste(ctx, 1, 2, 10, soleBlock); err != nil {
-		t.Fatal(err)
-	}
-	if err := d.DeleteTables(ctx, []string{"Feuille1"}); err != nil {
-		t.Fatal(err)
-	}
-	soleWant(t, d, 1, "Feuille1", "Tableau1")
-	if err := d.RenameTableLinked(ctx, "Tableau1", "Stock"); err != nil {
-		t.Fatal(err)
-	}
-	soleWant(t, d, 1, "Stock", "Stock")
+	soleWant(t, d, s2, "Deux", "Deux,Tableau1")
 }
 
 // Naissance : le premier tableau d'une feuille prend le nom de l'onglet, s'il
@@ -195,31 +159,9 @@ func TestSoleTableLayoutLocked(t *testing.T) {
 		t.Fatal(err)
 	}
 	d.SetSharing(layoutLocked{})
-	if err := d.RenameTableLinked(ctx, "Feuille1", "Clients"); err == nil || !strings.Contains(err.Error(), "concepteurs seulement") {
-		t.Fatalf("renommage permis : %v", err)
-	}
 	if err := d.RenameSheetLinked(ctx, 1, "Clients"); err == nil {
 		t.Fatal("onglet renommé")
 	}
 	soleWant(t, d, 1, "Feuille1", "Feuille1")
 }
 
-// Classeur protégé (onglets figés) : le tableau seul est renommé.
-func TestSoleTableProtectedTab(t *testing.T) {
-	ctx := context.Background()
-	d := open(t)
-	if _, err := d.Paste(ctx, 1, 2, 1, soleBlock); err != nil {
-		t.Fatal(err)
-	}
-	if err := d.ProtectWorkbook(ctx, "", false, false); err != nil {
-		t.Fatal(err)
-	}
-	d.TakeNotice()
-	if err := d.RenameTableLinked(ctx, "Feuille1", "Clients"); err != nil {
-		t.Fatal(err)
-	}
-	soleWant(t, d, 1, "Feuille1", "Clients")
-	if n := d.TakeNotice(); !strings.Contains(n, "protégé") {
-		t.Fatalf("barre d'état : %q", n)
-	}
-}

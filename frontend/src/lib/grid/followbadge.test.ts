@@ -38,12 +38,13 @@ describe('pastille « suit l’année »', () => {
 });
 
 describe('pastille du nom du tableau', () => {
-	it('seul tableau de la feuille : pas de pastille (son nom suit l’onglet)', () => {
-		expect(showNameBadge(1)).toBe(false);
+	it('tableau qui porte le nom de son onglet : pas de pastille', () => {
+		expect(showNameBadge('Ventes2026', 'Ventes 2026')).toBe(false);
+		expect(showNameBadge('feuille1', 'Feuille1')).toBe(false);
 	});
 
-	it('plusieurs tableaux : la pastille de chacun', () => {
-		expect(showNameBadge(2)).toBe(true);
-		expect(showNameBadge(5)).toBe(true);
+	it('autre nom : la pastille', () => {
+		expect(showNameBadge('Clients', 'Feuille1')).toBe(true);
+		expect(showNameBadge('T1', '1T')).toBe(true);
 	});
 });

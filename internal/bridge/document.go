@@ -1300,7 +1300,7 @@ func (s *DocumentService) FilterValues(ctx context.Context, table string, i int)
 
 // RenameTable renomme un tableau.
 func (s *DocumentService) RenameTable(ctx context.Context, old, name string) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.RenameTableLinked(ctx, old, name) })
+	return s.act(ctx, func(d *doc.Document) error { return d.RenameTable(ctx, old, name) })
 }
 
 // DeleteTables supprime des tableaux entiers.

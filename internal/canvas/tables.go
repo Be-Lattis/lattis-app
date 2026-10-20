@@ -28,16 +28,10 @@ func A1Like(name string) bool { return a1Name.MatchString(name) }
 // identifiant (lettres, chiffres, _), pour s'écrire tel quel dans une
 // formule, et pas une adresse de cellule. Scripts, assistant : le tableau seul.
 func (m *Model) RenameTable(ctx context.Context, old, name string) error {
-	return m.renameTableAs(ctx, old, name, false)
+	return m.renameTableAs(ctx, old, name)
 }
 
-// RenameTableLinked renomme un tableau depuis l'application : l'onglet
-// d'une feuille dont c'est le seul tableau suit (soletable.go).
-func (m *Model) RenameTableLinked(ctx context.Context, old, name string) error {
-	return m.renameTableAs(ctx, old, name, true)
-}
-
-func (m *Model) renameTableAs(ctx context.Context, old, name string, linked bool) error {
+func (m *Model) renameTableAs(ctx context.Context, old, name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" || identifier(name) != name {
 		return fmt.Errorf("%w : « %s » n'est pas un nom de tableau (lettres, chiffres et _, sans espace)", ErrTable, name)
@@ -60,14 +54,7 @@ func (m *Model) renameTableAs(ctx context.Context, old, name string, linked bool
 		if k > 0 {
 			return fmt.Errorf("%w : « %s » existe déjà", ErrTable, name)
 		}
-		if err := t.renameTable(tb, name); err != nil {
-			return err
-		}
-		if !linked {
-			return nil
-		}
-		// Seul tableau de la feuille : l'onglet prend son nom (soletable.go).
-		return t.sheetFollowsTable(tb.Sheet, name)
+		return t.renameTable(tb, name)
 	})
 }
 
