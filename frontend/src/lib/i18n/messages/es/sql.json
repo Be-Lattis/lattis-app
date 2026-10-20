@@ -1,1 +1,39 @@
-{}
+{
+	"when": {
+		"now": "ahora mismo",
+		"minutes": "hace {n} min",
+		"yesterday": "ayer {time}"
+	},
+	"rows": "{n, plural, one {# fila} other {# filas}}",
+	"example": {
+		"text": "texto",
+		"value": "valor",
+		"column": "columna",
+		"type": {
+			"integer": "entero",
+			"decimal": "decimal",
+			"text": "texto",
+			"boolean": "booleano: 1 o 0",
+			"date": "fecha AAAA-MM-DD",
+			"formula": "calculada"
+		},
+		"select": "Todas las columnas de la tabla {name} ({rows})",
+		"selectPivot": "Todas las columnas de la tabla dinámica {name} ({rows})",
+		"insert": "Agrega una fila al final de {name}",
+		"insertComputed": "Agrega una fila al final de {name} (las columnas calculadas se rellenan solas)",
+		"insertUndo": "Ctrl+Z deshace la adición.",
+		"update": "Modifica las filas de {name} que cumplen la condición",
+		"updateWarn": "Sin WHERE, se modifican todas las filas. Ctrl+Z deshace.",
+		"delete": "Elimina las filas de {name} que cumplen la condición",
+		"deleteWarn": "Sin WHERE, se vacía toda la tabla. Ctrl+Z deshace."
+	},
+	"complete": {
+		"table": "tabla · {rows}"
+	},
+	"ambiguous": "Columna «{column}» ambigua: presente en {tables}. Especifique la tabla, por ejemplo {example}.",
+	"and": " y ",
+	"editor": {
+		"ambiguous": "Columna presente en varias tablas: especifique la tabla",
+		"placeholder": "SELECT … FROM Tabla — Ctrl+Espacio para los nombres"
+	}
+}

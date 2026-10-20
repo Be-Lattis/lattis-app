@@ -1,1 +1,238 @@
-{}
+{
+	"lint": {
+		"longComment": "comentario largo sin terminar: falta «]]»",
+		"accent": {
+			"index": "escriba [{quoted}] en lugar de .{word}",
+			"plain": "use un nombre sin tildes",
+			"name": "un nombre Lua no puede contener letras acentuadas («{word}»): {hint}"
+		},
+		"hex": "número hexadecimal incompleto",
+		"exponent": "exponente incompleto en el número",
+		"unterminated": {
+			"double": "cadena sin terminar: falta la \" de cierre (para varias líneas, use [[ ... ]])",
+			"single": "cadena sin terminar: falta la ' de cierre (para varias líneas, use [[ ... ]])"
+		},
+		"longString": "cadena larga sin terminar: falta «]]»",
+		"char": {
+			"neq": "«distinto de» se escribe ~= en Lua, no !=",
+			"not": "«no» se escribe not en Lua, no !",
+			"tilde": "«~» solo no existe: «distinto de» se escribe ~=",
+			"and": "«y» se escribe and en Lua, no &&",
+			"or": "«o» se escribe or en Lua, no ||",
+			"typographic": "comilla tipográfica «{char}»: use \" o '",
+			"backtick": "«`» no existe en Lua: use \" o '",
+			"unexpected": "carácter inesperado «{char}»"
+		},
+		"eof": "el final del script",
+		"expected": "se esperaba «{token}», se encontró {found}",
+		"expectedWhat": "se esperaba «{token}» {what}, se encontró {found}",
+		"compareHint": " (para comparar, use ==)",
+		"endExpected": "se esperaba «end» para cerrar {opener} de la línea {line}, se encontró {found}",
+		"noContinue": "Lua no tiene «continue»: ponga el resto del bucle en un if",
+		"reserved": "«{word}» es una palabra reservada de Lua: no se puede usar como nombre ({what})",
+		"nameExpected": "se esperaba un nombre ({what}), se encontró {found}",
+		"noLabel": "no hay ninguna etiqueta visible «::{name}::» para este goto",
+		"labelDefined": "la etiqueta «::{name}::» ya está definida en la línea {line}",
+		"gotoScope": "el goto de la línea {line} salta al ámbito de la variable local «{name}»: declárela antes del goto",
+		"extraEnd": "«end» de más: no hay ningún bloque que cerrar",
+		"withoutIf": "«{word}» sin «if»",
+		"untilWithoutRepeat": "«until» sin «repeat»",
+		"unexpectedStatement": "instrucción inesperada: {found}",
+		"overridesGlobal": "esta asignación reemplaza el «{name}» predefinido",
+		"globalVar": "variable global «{name}»: es preferible «local {name} = ...»",
+		"globalFunc": "función global «{name}»: es preferible «local function {name}»",
+		"breakOutside": "«break» fuera de un bucle",
+		"lastStatement": "«{word}» debe ser la última instrucción de su bloque (antes de «end», «else» o «until»)",
+		"what": {
+			"ifCond": "después de la condición del if",
+			"elseifCond": "después de la condición del elseif",
+			"whileCond": "después de la condición del while",
+			"closeRepeat": "para cerrar el repeat",
+			"funcName": "nombre de la función",
+			"localName": "nombre de la variable local",
+			"gotoLabel": "etiqueta del goto",
+			"label": "etiqueta",
+			"closeLabel": "para cerrar la etiqueta",
+			"forVar": "variable del bucle for",
+			"forBounds": "entre el inicio y el final del bucle for",
+			"forDo": "después de los límites del bucle for",
+			"forInDo": "después de «for ... in ...»",
+			"openParams": "para abrir los parámetros de la función",
+			"param": "parámetro de la función",
+			"closeParams": "para cerrar los parámetros de la función",
+			"assignment": "en la asignación",
+			"closeKey": "para cerrar la clave",
+			"afterKey": "después de la clave [ ... ]",
+			"closeParen": "para cerrar el paréntesis",
+			"field": "nombre del campo después del punto",
+			"closeIndex": "para cerrar el índice",
+			"method": "nombre del método después de «:»"
+		},
+		"forIn": "se esperaba «=» o «in» después de la variable del bucle for, se encontró {found}",
+		"assignCall": "no se puede asignar un valor al resultado de una llamada a función",
+		"assignExpr": "esta expresión no puede recibir un valor",
+		"compound": "Lua no tiene el operador «{op}=»: escriba x = x {bin} valor",
+		"concatAssign": "Lua no tiene el operador «..=»: escriba s = s .. valor",
+		"compareNotAssign": "«==» compara dos valores; para asignar, use un solo =",
+		"incomplete": "instrucción incompleta: se espera una llamada a función o una asignación (=)",
+		"incompleteFound": "instrucción incompleta: se espera una llamada a función o una asignación (=), se encontró {found}",
+		"floorDiv": "Lua 5.1 no tiene el operador «//»: use math.floor(a / b)",
+		"vararg": "«...» solo se puede usar en una función declarada con «...» en sus parámetros",
+		"tableClose": "se esperaba «}» para cerrar la tabla abierta en la línea {line} (separe los elementos con comas), se encontró {found}",
+		"unavailableName": "«{name}» no está disponible: {why}",
+		"undefinedHint": "«{name}» no está definido: ¿quiso decir «{hint}»?",
+		"undefined": "«{name}» no está definido (variable nunca asignada ni declarada con local)",
+		"colonCall": "escriba {base}.{name}(...) con un punto: «:» pasaría {base} como primer argumento",
+		"parenLine": "este «(» al principio de una línea continúa la llamada de la línea anterior; agregue «;» al final de la línea anterior si no es lo que quiere",
+		"exprEof": "se esperaba una expresión, pero el script termina ahí",
+		"exprEnd": "«end» inesperado: falta una expresión antes, o sobra un «end»",
+		"exprKeyword": "se esperaba una expresión, se encontró la palabra reservada «{word}»",
+		"exprEquals": "«=» inesperado: falta un valor antes, o para comparar use ==",
+		"exprFound": "se esperaba una expresión, se encontró {found}",
+		"argsExpected": "se esperaban argumentos después de «:nombre», se encontró {found}",
+		"callClose": "se esperaba «)» para cerrar la llamada abierta en la línea {line} (separe los argumentos con comas), se encontró {found}",
+		"deprecated": "{name} es un nombre antiguo: use {use}",
+		"unavailableMember": "{name} no está disponible: {why}",
+		"noMemberHint": "{name} no existe: ¿quiso decir {hint}?",
+		"noMember": "{name} no existe",
+		"arity": {
+			"atLeast": "al menos {min} argumentos",
+			"exactly": "{n, plural, =1 {# argumento} other {# argumentos}}",
+			"between": "de {min} a {max} argumentos",
+			"given": "{n, plural, one {# recibido} other {# recibidos}}",
+			"message": "{path} espera {want}, {given}: {signature}"
+		}
+	},
+	"category": {
+		"syntaxe": "Fundamentos del lenguaje: condiciones, bucles, funciones",
+		"db": "Datos SQL (db)",
+		"sheets": "Hojas (sheets)",
+		"cells": "Celdas (cells)",
+		"tables": "Tablas (tables)",
+		"columns": "Columnas (columns)",
+		"ui": "Selección y cuadros de diálogo (ui)",
+		"controls": "Controles y eventos (controls)",
+		"events": "Eventos del libro (events)",
+		"objects": "Gráficos, tablas dinámicas y botones",
+		"workbook": "Libro y scripts (doc, scripts)",
+		"http": "Solicitudes HTTP y HTTPS (http)",
+		"base": "Funciones básicas",
+		"string": "Texto (string)",
+		"table": "Tablas Lua (table)",
+		"math": "Matemáticas (math)",
+		"os": "Fecha y hora (os)"
+	},
+	"unavailable": {
+		"files": "sin acceso a archivos en un script",
+		"modules": "sin carga de módulos en un script",
+		"code": "sin carga de código en un script",
+		"debug": "biblioteca debug no disponible",
+		"coroutine": "biblioteca coroutine no disponible",
+		"none": "no disponible en un script",
+		"programs": "sin ejecución de programas en un script",
+		"env": "sin acceso a las variables de entorno"
+	},
+	"editor": {
+		"noProblem": "No se detectó ningún problema",
+		"errors": "{n, plural, one {# error} other {# errores}}",
+		"warnings": "{n, plural, one {# advertencia} other {# advertencias}}",
+		"next": "haga clic para ir al siguiente (F8)"
+	},
+	"controls": {
+		"label": "Etiqueta: {label}"
+	},
+	"pick": {
+		"banner": "Haga clic en un control (botón, campo…) para insertar su nombre en el script — Esc para cancelar."
+	},
+	"picker": {
+		"filter": "Filtrar por nombre, tipo o pestaña",
+		"aria": "Controles del libro",
+		"noMatch": "Ningún control coincide.",
+		"none": "No hay ningún control en el libro: Insertar › Botón o Campo.",
+		"onSheet": {
+			"label": "Elegir en la hoja",
+			"tooltip": "Mostrar las hojas: al hacer clic en un control se inserta su nombre; Esc cancela"
+		}
+	},
+	"network": {
+		"badHost": "Se espera un nombre de host: api.example.com, o una dirección https://…",
+		"aria": "Acceso a la red",
+		"title": "Acceso a la red del libro",
+		"help": "Antes de la primera solicitud HTTP a un host (http.get, http.post… en un script o una página HTML), Lattis le pide permiso. Aquí aparecen los hosts permitidos con «Recordar para este libro»: se recuerdan en este equipo, no en el archivo (un libro recibido siempre vuelve a preguntar). El servidor MCP solo accede a estos hosts.",
+		"remove": {
+			"label": "Quitar",
+			"tooltip": "Quitar: la próxima solicitud volverá a preguntar"
+		},
+		"none": "No hay ningún host recordado.",
+		"host": "Host que se permitirá",
+		"allow": "Permitir"
+	},
+	"ref": {
+		"title": "Referencia de Lua",
+		"help": "Ayuda sobre los scripts Lua",
+		"search": "Buscar: consulta, fecha, mayúsculas…",
+		"results": "{n, plural, one {# resultado} other {# resultados}}",
+		"deprecated": "Nombre antiguo: es preferible",
+		"insert": "Insertar el ejemplo",
+		"noMatch": "Ninguna función coincide."
+	},
+	"dialog": {
+		"hideCode": "Ocultar el código",
+		"showCode": "Ver el código ({n, plural, one {# línea} other {# líneas}})",
+		"required": "«{label}» es obligatorio",
+		"number": "«{label}»: se espera un número",
+		"integer": "«{label}»: se espera un número entero",
+		"min": "«{label}»: como mínimo {min}",
+		"max": "«{label}»: como máximo {max}",
+		"warning": "Atención.",
+		"code": "Código del script"
+	},
+	"view": {
+		"example": {
+			"line1": "Ejemplo: la lista de las tablas del libro y sus columnas.",
+			"line2": "db.query, db.rows, db.insert, db.execute…: vea el botón «Referencia».",
+			"columns": "columna(s)"
+		},
+		"newName": "Nuevo script",
+		"saved": "Script guardado en el libro",
+		"nameRefused": "Nombre de script rechazado",
+		"running": "En ejecución…",
+		"stopped": "Detenido tras {secs} s",
+		"done": "Terminado en {secs} s",
+		"writes": "{n, plural, one {# fila escrita} other {# filas escritas}}",
+		"undoAll": "(Ctrl+Z para deshacerlo todo)",
+		"renamed": "Script renombrado como «{name}»",
+		"copy": "{name} (copia)",
+		"copyN": "{name} (copia {n})",
+		"duplicated": "Script duplicado: «{name}»",
+		"title": "Scripts del libro",
+		"locked": "{why}: puede leerlos y ejecutarlos.",
+		"renameAria": "Nuevo nombre del script",
+		"empty": "No hay ningún script guardado en este libro.",
+		"menuTitle": "Script «{name}»",
+		"rename": "Cambiar nombre",
+		"duplicate": "Duplicar",
+		"delete": "Eliminar",
+		"orOpen": "O abra un script del libro, a la izquierda.",
+		"nameAria": "Nombre del script",
+		"run": {
+			"label": "Ejecutar",
+			"tooltip": "Ejecutar (Ctrl+Entrar)"
+		},
+		"stop": "Detener",
+		"save": {
+			"label": "Guardar",
+			"tooltip": "Guardar el script (Ctrl+S)"
+		},
+		"reference": "Referencia",
+		"pick": {
+			"label": "Señalar un control",
+			"tooltip": "Insertar en el cursor el nombre de un botón, un campo u otro control del libro"
+		},
+		"network": {
+			"tooltip": "Hosts a los que los scripts y las páginas HTML del libro pueden acceder por HTTP"
+		},
+		"output": "Salida",
+		"keys": "Ctrl+Entrar: ejecutar · Ctrl+S: guardar el script"
+	}
+}

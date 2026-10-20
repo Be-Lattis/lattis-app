@@ -1,1 +1,1520 @@
-{}
+{
+	"a11y": {
+		"header": "encabezado de columna {column}",
+		"table": "tabla {table}",
+		"empty": "vacía",
+		"computed": "columna calculada",
+		"error": "error de fórmula",
+		"selection": "Selección {range}, {rows, plural, one {# fila} other {# filas}} por {cols, plural, one {# columna} other {# columnas}}",
+		"editing": "Modificando {addr}",
+		"enterTable": "Tabla {table}"
+	},
+	"autocomplete": {
+		"rowValue": "valor de la fila",
+		"table": "tabla",
+		"name": "celda con nombre",
+		"letNameOrCalc": "{calc} o {name}",
+		"letNameOrCalc.help": "{desc} O un nombre más ({name}), seguido de su valor."
+	},
+	"controls": {
+		"kind": {
+			"button": "Botón",
+			"input": "Campo de texto",
+			"textarea": "Área de texto",
+			"checkbox": "Casilla",
+			"select": "Lista desplegable",
+			"file": "Archivo"
+		},
+		"title": {
+			"link": "Celda vinculada: {cell}",
+			"value": "Valor guardado en el control",
+			"noAction": "Ninguna acción vinculada",
+			"action": "Acción ({event}): {handler}",
+			"listener": "Escucha ({event}): {handler}"
+		},
+		"noAction": "Ninguna acción vinculada a este botón: clic derecho › Modificar botón… para elegir una",
+		"file": {
+			"pick": "Elegir un archivo",
+			"choose": "Elegir un archivo…",
+			"none": "Ningún archivo"
+		},
+		"copied": "Botón copiado: clic derecho en una celda › Pegar botón",
+		"pasted": "Botón pegado",
+		"editor": {
+			"label": "Etiqueta",
+			"placeholder": "Texto de marcador de posición (opcional)",
+			"buttonText": "Texto del botón",
+			"aria": "Control",
+			"insert": "Insertar: {kind}",
+			"edit": "Modificar: {kind}",
+			"help": "Ayuda sobre los botones y controles",
+			"kind": "Tipo",
+			"name": "Nombre (para los scripts)",
+			"name.placeholder": "automático",
+			"link": "Celda vinculada (opcional)",
+			"link.placeholder": "ninguna: valor guardado en el control",
+			"source": "Origen de las opciones",
+			"source.list": "Escritas",
+			"source.column": "Columna de tabla",
+			"source.column.tooltip": "Valores distintos de una columna de tabla, actualizados con ella",
+			"source.column.none": "No hay ninguna tabla en el libro",
+			"column": "Columna (valores distintos)",
+			"notFound": "{name} (no encontrada)",
+			"options": "Opciones (una por línea)",
+			"pick": {
+				"address": "Campo activo: un clic en el libro escribe aquí la dirección de la celda.",
+				"value": "Campo activo: un clic en el libro escribe aquí el valor de la celda."
+			},
+			"script": "Script",
+			"script.none": "(ninguna acción)",
+			"action": "Acción",
+			"action.all": "Ejecutar todo el script",
+			"action.call": "Llamar a {fn}()",
+			"listeners": "Escuchas de los scripts (controls.on)",
+			"colors": "Colores personalizados",
+			"colors.normal": "Normal",
+			"colors.hover": "Al pasar el ratón",
+			"colors.active": "Al hacer clic",
+			"colors.text": "Texto",
+			"live": "Los ajustes se aplican al control de inmediato."
+		},
+		"error": {
+			"noLabel": "Asigne una etiqueta al control",
+			"badLink": "Celda vinculada no válida («B3», por ejemplo); déjela vacía para guardar el valor en el control",
+			"noColumn": "Elija la columna que da las opciones"
+		},
+		"input": {
+			"aria": "Cuadro de entrada"
+		},
+		"menu": {
+			"title": "{kind} «{name}»",
+			"run": "Ejecutar la acción",
+			"edit": "Modificar…",
+			"resize": "Cambiar tamaño",
+			"resize.hint": "Arrastre un controlador para cambiar el tamaño del botón"
+		},
+		"note": {
+			"noScript": "No hay ningún script en la biblioteca (pestaña Script): el control se crea sin acción, para vincularla más adelante.",
+			"input": "El texto se escribe en la celda vinculada al salir del campo o con Entrar, y luego se ejecuta la acción.",
+			"textarea": "El texto se escribe en la celda vinculada al salir del área o con Ctrl+Entrar, y luego se ejecuta la acción.",
+			"file": "La ruta del archivo elegido se escribe en la celda vinculada, y luego se ejecuta la acción.",
+			"value": "El valor se escribe en la celda vinculada y luego se ejecuta la acción; todo se deshace de una vez (Ctrl+Z).",
+			"button": "Un clic en el botón ejecuta la acción; todo lo que cambia se deshace de una vez (Ctrl+Z)."
+		},
+		"running": "«{name}»: en ejecución…",
+		"paste": "Pegar botón"
+	},
+	"cf": {
+		"iconSet": {
+			"3arrows": "3 flechas (de color)",
+			"3arrowsgray": "3 flechas (gris)",
+			"3triangles": "3 triángulos",
+			"4arrows": "4 flechas (de color)",
+			"4arrowsgray": "4 flechas (gris)",
+			"5arrows": "5 flechas (de color)",
+			"5arrowsgray": "5 flechas (gris)",
+			"3traffic": "3 semáforos (sin marco)",
+			"3trafficrim": "3 semáforos (con marco)",
+			"3signs": "3 señales",
+			"4traffic": "4 semáforos",
+			"4redblack": "De rojo a negro",
+			"3symbols": "3 símbolos (en un círculo)",
+			"3symbols2": "3 símbolos (sin círculo)",
+			"3flags": "3 banderas",
+			"3stars": "3 estrellas",
+			"4rating": "4 clasificaciones",
+			"5rating": "5 clasificaciones",
+			"5quarters": "5 cuartos",
+			"5boxes": "5 cuadros"
+		},
+		"iconGroup": {
+			"directional": "Direccional",
+			"shapes": "Formas",
+			"indicators": "Indicadores",
+			"ratings": "Valoraciones"
+		},
+		"range": {
+			"tooBig": "Rango demasiado grande (más de {max} celdas): seleccione filas o columnas enteras",
+			"missing": "Escriba un rango",
+			"noColumn": "Columna no encontrada: {ref}",
+			"invalid": "Rango no válido: {ref}",
+			"unknown": "Referencia no reconocida: {ref}"
+		},
+		"date": {
+			"yesterday": "Ayer",
+			"today": "Hoy",
+			"tomorrow": "Mañana",
+			"last7": "En los últimos 7 días",
+			"lastweek": "Semana pasada",
+			"thisweek": "Esta semana",
+			"nextweek": "Semana próxima",
+			"lastmonth": "Mes pasado",
+			"thismonth": "Este mes",
+			"nextmonth": "Mes próximo"
+		},
+		"op": {
+			"between": "entre",
+			"notbetween": "no está entre",
+			"eq": "igual a",
+			"ne": "no igual a",
+			"gt": "mayor que",
+			"lt": "menor que",
+			"ge": "mayor o igual que",
+			"le": "menor o igual que"
+		},
+		"textOp": {
+			"contains": "que contiene",
+			"notcontains": "que no contiene",
+			"begins": "que comienza por",
+			"ends": "que termina en"
+		},
+		"style": {
+			"lightRedDarkRed": "Relleno rojo claro con texto rojo oscuro",
+			"yellowDarkYellow": "Relleno amarillo con texto amarillo oscuro",
+			"greenDarkGreen": "Relleno verde con texto verde oscuro",
+			"lightRedFill": "Relleno rojo claro",
+			"redText": "Texto rojo",
+			"redBorder": "Borde rojo",
+			"bold": "Negrita"
+		},
+		"barColor": {
+			"blue": "Azul",
+			"green": "Verde",
+			"red": "Rojo",
+			"orange": "Naranja",
+			"lightBlue": "Azul claro",
+			"purple": "Morado"
+		},
+		"scale": {
+			"greenYellowRed": "Verde - Amarillo - Rojo",
+			"redYellowGreen": "Rojo - Amarillo - Verde",
+			"greenWhiteRed": "Verde - Blanco - Rojo",
+			"redWhiteGreen": "Rojo - Blanco - Verde",
+			"blueWhiteRed": "Azul - Blanco - Rojo",
+			"redWhiteBlue": "Rojo - Blanco - Azul",
+			"whiteRed": "Blanco - Rojo",
+			"redWhite": "Rojo - Blanco",
+			"greenWhite": "Verde - Blanco",
+			"whiteGreen": "Blanco - Verde",
+			"greenYellow": "Verde - Amarillo",
+			"yellowGreen": "Amarillo - Verde",
+			"tooltip": "Escala de colores {colors}"
+		},
+		"describe": {
+			"compare": "Valor de la celda {op} {value}",
+			"between": "Valor de la celda entre {from} y {to}",
+			"notBetween": "Valor de la celda no está entre {from} y {to}",
+			"contains": "Texto que contiene «{value}»",
+			"notContains": "Texto que no contiene «{value}»",
+			"begins": "Texto que comienza por «{value}»",
+			"ends": "Texto que termina en «{value}»",
+			"empty": "Celda en blanco",
+			"notEmpty": "Celda no en blanco",
+			"error": "Valor de error",
+			"noError": "Sin errores",
+			"date": "Fecha: {when}",
+			"dup": "Valores duplicados",
+			"unique": "Valores únicos",
+			"top": "{n} valores superiores",
+			"topPct": "{n} % superior",
+			"bottom": "{n} valores inferiores",
+			"bottomPct": "{n} % inferior",
+			"stdDevAbove": "{n, plural, one {# desv. est.} other {# desv. est.}} por encima del promedio",
+			"stdDevBelow": "{n, plural, one {# desv. est.} other {# desv. est.}} por debajo del promedio",
+			"aboveOrEqual": "Igual o por encima del promedio",
+			"belowOrEqual": "Igual o por debajo del promedio",
+			"above": "Por encima del promedio",
+			"below": "Por debajo del promedio",
+			"formula": "Fórmula: {formula}",
+			"bar": "Barra de datos",
+			"scale": "Escala de {n} colores",
+			"icons": "Conjunto de iconos: {set}"
+		},
+		"error": {
+			"noSelection": "Seleccione las celdas a las que dar formato",
+			"notInTable": "La celda activa no está en una tabla",
+			"value": "Escriba un valor",
+			"values": "Escriba los dos valores",
+			"pct": "Escriba un porcentaje de 1 a 100",
+			"count": "Escriba un número de 1 a 1000",
+			"text": "Escriba un texto",
+			"rank": "Escriba un rango de 1 a 1000",
+			"formula": "Escriba una fórmula"
+		},
+		"quick": {
+			"gt": "Mayor que",
+			"lt": "Menor que",
+			"between": "Entre",
+			"eq": "Es igual a",
+			"contains": "Texto que contiene",
+			"date": "Una fecha",
+			"dup": "Valores duplicados",
+			"top": "10 superiores",
+			"bottom": "10 inferiores",
+			"above": "Por encima del promedio",
+			"below": "Por debajo del promedio",
+			"forRange": "para el rango seleccionado",
+			"with": "con"
+		},
+		"kind": {
+			"value": "Aplicar formato a todas las celdas según sus valores",
+			"contains": "Aplicar formato únicamente a las celdas que contengan",
+			"rank": "Aplicar formato únicamente a los valores con rango inferior o superior",
+			"avg": "Aplicar formato únicamente a los valores que estén por encima o por debajo del promedio",
+			"dup": "Aplicar formato únicamente a los valores únicos o duplicados",
+			"formula": "Utilice una fórmula que determine las celdas para aplicar formato"
+		},
+		"cfvo": {
+			"auto": "Automático",
+			"min": "Valor más bajo",
+			"max": "Valor más alto",
+			"num": "Número",
+			"pct": "Porcentaje",
+			"pctl": "Percentil"
+		},
+		"avg": {
+			"above": "por encima",
+			"below": "por debajo",
+			"aboveOrEqual": "igual o por encima",
+			"belowOrEqual": "igual o por debajo",
+			"above1": "1 desv. est. por encima",
+			"below1": "1 desv. est. por debajo",
+			"above2": "2 desv. est. por encima",
+			"below2": "2 desv. est. por debajo",
+			"above3": "3 desv. est. por encima",
+			"below3": "3 desv. est. por debajo",
+			"ofRange": "del promedio del rango seleccionado"
+		},
+		"cond": {
+			"value": "Valor de la celda",
+			"text": "Texto específico",
+			"date": "Fechas",
+			"empty": "Celdas en blanco",
+			"notempty": "Sin celdas en blanco",
+			"error": "Errores",
+			"noerror": "Sin errores"
+		},
+		"scope": {
+			"selection": "Selección actual",
+			"sheet": "Esta hoja",
+			"table": "Esta tabla: {table}"
+		},
+		"menu": {
+			"highlight": "Reglas para resaltar celdas",
+			"topBottom": "Reglas superiores e inferiores",
+			"bars": "Barras de datos",
+			"scales": "Escalas de color",
+			"icons": "Conjuntos de iconos",
+			"newRule": "Nueva regla…",
+			"clear": "Borrar reglas",
+			"manage": "Administrar reglas…",
+			"quick": {
+				"gt": "Mayor que…",
+				"lt": "Menor que…",
+				"between": "Entre…",
+				"eq": "Es igual a…",
+				"contains": "Texto que contiene…",
+				"date": "Una fecha…",
+				"dup": "Valores duplicados…",
+				"top": "10 superiores…",
+				"topPct": "10 % de valores superiores…",
+				"bottom": "10 inferiores…",
+				"bottomPct": "10 % de valores inferiores…",
+				"above": "Por encima del promedio…",
+				"below": "Por debajo del promedio…"
+			},
+			"more": "Más reglas…",
+			"clear.selection": "Borrar reglas de las celdas seleccionadas",
+			"clear.sheet": "Borrar reglas de toda la hoja",
+			"clear.table": "Borrar reglas de esta tabla"
+		},
+		"bar": {
+			"gradient": "Relleno degradado",
+			"solid": "Relleno sólido",
+			"gradient.tooltip": "Barra de datos {color} (degradado)",
+			"solid.tooltip": "Barra de datos {color} (sólido)",
+			"fill": "Relleno:",
+			"border": "Borde sólido",
+			"negative": "Barras negativas:",
+			"only": "Mostrar solo la barra"
+		},
+		"lead": {
+			"gt": "Aplicar formato a las celdas que son MAYORES QUE:",
+			"lt": "Aplicar formato a las celdas que son MENORES QUE:",
+			"between": "Aplicar formato a las celdas que están ENTRE:",
+			"eq": "Aplicar formato a las celdas que son IGUALES A:",
+			"contains": "Aplicar formato a las celdas que contienen el texto:",
+			"date": "Aplicar formato a las celdas que contienen una fecha:",
+			"dup": "Aplicar formato a las celdas que contienen:",
+			"top": "Aplicar formato a las celdas que se encuentran en el rango SUPERIOR:",
+			"topPct": "Aplicar formato a las celdas que se encuentran en el rango SUPERIOR (en %):",
+			"bottom": "Aplicar formato a las celdas que se encuentran en el rango INFERIOR:",
+			"bottomPct": "Aplicar formato a las celdas que se encuentran en el rango INFERIOR (en %):",
+			"above": "Aplicar formato a las celdas que están POR ENCIMA DEL PROMEDIO:",
+			"below": "Aplicar formato a las celdas que están POR DEBAJO DEL PROMEDIO:"
+		},
+		"placeholder": {
+			"text": "texto",
+			"valueOrDate": "valor o fecha",
+			"value": "valor"
+		},
+		"and": "y",
+		"dup": {
+			"dup": "duplicados",
+			"unique": "únicos",
+			"values": "valores",
+			"ofRange": "valores del rango seleccionado"
+		},
+		"edit": {
+			"title": {
+				"edit": "Modificar regla de formato",
+				"new": "Nueva regla de formato"
+			},
+			"kind": "Seleccionar un tipo de regla:",
+			"desc": "Editar una descripción de regla:",
+			"value": "Aplicar formato a todas las celdas según sus valores:",
+			"style": "Estilo de formato:",
+			"contains": "Dar formato únicamente a las celdas con:",
+			"rank": "Aplicar formato a los valores que se encuentren en el:",
+			"avg": "Aplicar formato a los valores que estén:",
+			"dup": "Dar formato a todo:",
+			"formula": "Dar formato a los valores donde esta fórmula sea verdadera:",
+			"formula.help": "En una tabla, [@Columna] designa la celda de la misma fila (una dirección de la primera fila de datos, como $C2, también se aplica a cada fila). Fuera de una tabla, la fórmula se escribe para la celda superior izquierda del rango: sus direcciones relativas siguen a cada celda."
+		},
+		"vstyle": {
+			"scale2": "Escala de 2 colores",
+			"scale3": "Escala de 3 colores"
+		},
+		"grid": {
+			"min": "Mínimo",
+			"mid": "Punto medio",
+			"max": "Máximo",
+			"kind": "Tipo:",
+			"value": "Valor:",
+			"color": "Color:",
+			"lowest": "(valor más bajo)",
+			"highest": "(valor más alto)",
+			"auto": "(automático)"
+		},
+		"preview": "Vista previa:",
+		"icons": {
+			"style": "Estilo de icono:",
+			"reverse": "Invertir criterio de ordenación de icono",
+			"only": "Mostrar icono únicamente",
+			"icon": "Icono",
+			"value": "Valor",
+			"kind": "Tipo",
+			"when": "cuando el valor es",
+			"whenLast": "cuando {op} {value}"
+		},
+		"rank": {
+			"top": "Superior",
+			"bottom": "Inferior",
+			"pct": "% del rango seleccionado"
+		},
+		"customFormat": "Formato personalizado",
+		"customFormat.more": "Formato personalizado…",
+		"letter": {
+			"bold": "N",
+			"italic": "K",
+			"underline": "S"
+		},
+		"font": "Fuente:",
+		"fontColor": "Color de fuente",
+		"fillColor": "Color de relleno",
+		"border": "Borde",
+		"borderColor": "Color del borde",
+		"appliesTo": "Se aplica a:",
+		"appliesTo.placeholder": "selección actual",
+		"stop": "Detener si es verdad",
+		"stop.tooltip": "Las reglas siguientes dejan de aplicarse a las celdas que cumplen esta",
+		"manager": {
+			"title": "Administrador de reglas de formato condicional",
+			"scope": "Mostrar reglas de formato para:",
+			"edit": "Editar regla…",
+			"delete": "Eliminar regla",
+			"duplicate": "Duplicar regla",
+			"up": "Subir (prioridad mayor)",
+			"down": "Bajar (prioridad menor)",
+			"col": {
+				"rule": "Regla (aplicada en el orden mostrado)",
+				"format": "Formato",
+				"appliesTo": "Se aplica a"
+			},
+			"none": {
+				"selection": "No hay reglas en la selección.",
+				"sheet": "No hay reglas en esta hoja."
+			},
+			"apply": "Aplicar"
+		},
+		"unavailable": "Formato condicional no disponible"
+	},
+	"color": {
+		"standard": {
+			"darkRed": "Rojo oscuro",
+			"red": "Rojo",
+			"orange": "Naranja",
+			"yellow": "Amarillo",
+			"lightGreen": "Verde claro",
+			"green": "Verde",
+			"lightBlue": "Azul claro",
+			"blue": "Azul",
+			"darkBlue": "Azul oscuro",
+			"purple": "Morado"
+		},
+		"slot": {
+			"lt1": "Fondo 1",
+			"dk1": "Texto 1",
+			"lt2": "Fondo 2",
+			"dk2": "Texto 2",
+			"accent1": "Énfasis 1",
+			"accent2": "Énfasis 2",
+			"accent3": "Énfasis 3",
+			"accent4": "Énfasis 4",
+			"accent5": "Énfasis 5",
+			"accent6": "Énfasis 6"
+		},
+		"hue": {
+			"white": "Blanco",
+			"black": "Negro",
+			"gray": "Gris",
+			"red": "Rojo",
+			"orange": "Naranja",
+			"yellow": "Amarillo",
+			"green": "Verde",
+			"teal": "Verde azulado",
+			"blue": "Azul",
+			"purple": "Morado",
+			"pink": "Rosa"
+		},
+		"lighter": "{pct} % más claro",
+		"darker": "{pct} % más oscuro",
+		"button": {
+			"tooltip": "{label}: {color}",
+			"none": "ninguno"
+		},
+		"palette": {
+			"theme": "Colores del tema",
+			"standard": "Colores estándar",
+			"recent": "Colores recientes",
+			"more": "Más colores…"
+		}
+	},
+	"customSort": {
+		"summary": {
+			"list": "lista «{name}»",
+			"reversed": "{order} (invertido)"
+		},
+		"error": {
+			"noValues": "No hay valores que ordenar",
+			"noName": "Asigne un nombre a la lista que se guardará",
+			"exists": "La lista «{name}» ya existe"
+		},
+		"title": "Orden personalizado",
+		"heading": "Orden personalizado – «{field}»",
+		"loading": "Cargando los valores…",
+		"orderFrom": "Orden basado en:",
+		"orderFrom.values": "los valores de la columna (orden libre)",
+		"orderFrom.list": "Lista «{name}»: {values}…",
+		"orderFrom.workbookList": "Lista «{name}» (libro): {values}…",
+		"hint": "Arrastre los valores para ordenarlos, o seleccione uno y use los botones (teclado: Alt+↑ / Alt+↓, Alt+Inicio / Alt+Fin). Los valores que faltan en el orden siguen en orden ascendente; las celdas en blanco quedan al final.",
+		"items": {
+			"aria": "Orden de los valores"
+		},
+		"absent": "ausente",
+		"absent.tooltip": "Valor del orden ausente de los datos: se conserva para cuando aparezca",
+		"empty": "No hay valores (la columna está vacía).",
+		"move": {
+			"first": "Primero",
+			"first.tooltip": "Mover al principio (Alt+Inicio)",
+			"up": "Subir",
+			"up.tooltip": "Subir (Alt+↑)",
+			"down": "Bajar",
+			"down.tooltip": "Bajar (Alt+↓)",
+			"last": "Último",
+			"last.tooltip": "Mover al final (Alt+Fin)"
+		},
+		"direction": "Sentido",
+		"direction.forward": "En este orden (del primero al último)",
+		"direction.reverse": "Invertido (del último al primero)",
+		"save": "Guardar este orden como lista personalizada del libro, para otras columnas",
+		"save.name": "Nombre:",
+		"save.name.placeholder": "Tallas, Prioridades…",
+		"applied": "Orden personalizado aplicado (Ctrl+Z para deshacer)"
+	},
+	"defaultName": {
+		"hint": "Nombre predeterminado: cambie el nombre de la tabla"
+	},
+	"formulaError": {
+		"name": {
+			"ref": "#NAME?: {ref} no existe. Escriba Cell[{cell}] para una celda libre, [Columna] para el valor de la fila en una tabla, Tabla[Columna] para una columna entera, o Tabla[Columna][fila] para un único valor.",
+			"unknown": "#NAME?: nombre desconocido. Compruebe el nombre de la función, la tabla, la columna o la celda con nombre."
+		},
+		"value": {
+			"text": "#VALUE!: Cell[{cell}] contiene texto, no un número ni una fecha.",
+			"column": "#VALUE!: se usa una columna entera Tabla[Columna] donde se espera un único valor. Escriba Tabla[Columna][fila], o [Columna] en una fila de la tabla.",
+			"type": "#VALUE!: tipo de valor inesperado (texto donde se espera un número, o argumento no válido)."
+		},
+		"div0": "#DIV/0!: división por cero (o por una celda en blanco).",
+		"ref": "#REF!: referencia no válida, la tabla o la columna se eliminó o se le cambió el nombre.",
+		"circ": "#CIRC!: referencia circular, la fórmula depende de su propio valor (por ejemplo SUM(Tabla[X]) en la columna X). Haga que lea otras celdas u otras columnas; para un total acumulado, lea la fila anterior: [Total][-1].",
+		"na": "#N/A: valor no encontrado (REFERENCE, MATCH…); compruebe la clave que busca.",
+		"num": "#NUM!: número no válido o fuera del intervalo.",
+		"spill": "#SPILL!: la matriz dinámica no puede desbordarse, hay celdas de su camino que ya están ocupadas.",
+		"calc": "#CALC!: la matriz dinámica está vacía (ninguna fila coincide)."
+	},
+	"filter": {
+		"cond": {
+			"kind": {
+				"number": "Filtros de número",
+				"date": "Filtros de fecha",
+				"text": "Filtros de texto"
+			},
+			"op": {
+				"eq": "Es igual a",
+				"ne": "No es igual a",
+				"begins": "Comienza por",
+				"ends": "Termina en",
+				"contains": "Contiene",
+				"notcontains": "No contiene",
+				"gt": "Mayor que",
+				"ge": "Mayor o igual que",
+				"lt": "Menor que",
+				"le": "Menor o igual que",
+				"between": "Entre",
+				"top": "Diez mejores",
+				"bottom": "Diez inferiores",
+				"above": "Por encima del promedio",
+				"below": "Por debajo del promedio"
+			},
+			"date": {
+				"lt": "Antes",
+				"gt": "Después",
+				"le": "Antes o el mismo día",
+				"ge": "Después o el mismo día"
+			},
+			"topN": "{n} mejores",
+			"bottomN": "{n} inferiores",
+			"between": "{op} {from} y {to}",
+			"one": "{op} «{value}»",
+			"joinOr": "{a} o {b}",
+			"joinAnd": "{a} y {b}",
+			"missingValue": "Escriba el valor de la condición"
+		},
+		"values": {
+			"noMatch": "Ningún valor coincide con la búsqueda",
+			"noneChecked": "Active al menos un valor"
+		},
+		"blanks": "(Vacías)",
+		"search": {
+			"placeholder": "Buscar",
+			"aria": "Buscar un valor"
+		},
+		"loading": "Cargando los valores…",
+		"selectAllResults": "(Seleccionar todos los resultados de la búsqueda)",
+		"selectAll": "(Seleccionar todo)",
+		"noMatch": "Ningún valor coincide.",
+		"notFiltered": "La tabla de la celda activa no está filtrada",
+		"chooseOne": "Elija al menos un valor",
+		"placeActive": "Coloque la celda activa en una columna de tabla para filtrar",
+		"clearOf": "Borrar filtro de «{field}»",
+		"computed": "Columna calculada: se ordena y filtra por sus valores; su tipo sigue a su fórmula.",
+		"custom": "Filtro personalizado…",
+		"active": "Filtro activo: {conds}",
+		"custom.heading": "Mostrar las filas en las que «{column}»:",
+		"custom.and": "Y",
+		"custom.or": "O",
+		"custom.cond": "Condición {n}",
+		"custom.none": "(ninguna)",
+		"custom.number": "número",
+		"custom.date": "dd/mm/aaaa",
+		"custom.wildcards": "* representa cualquier serie de caracteres; ?, un solo carácter.",
+		"firstValues": "Solo se enumeran los 1000 primeros valores.",
+		"errorsOnly": "Solo las entradas que no corresponden al tipo ({n})",
+		"custom.back": "‹ Lista de valores"
+	},
+	"find": {
+		"count": "{k} de {total}",
+		"replaced": {
+			"all": "{n, plural, one {# celda reemplazada} other {# celdas reemplazadas}} (Ctrl+Z para deshacer)",
+			"selection": "{n, plural, one {# celda reemplazada} other {# celdas reemplazadas}} en la selección (Ctrl+Z para deshacer)"
+		},
+		"notFound": {
+			"all": "No se encontró ninguna celda",
+			"selection": "No se encontró ninguna celda en la selección"
+		},
+		"none": "Sin resultados",
+		"aria": "Buscar y reemplazar",
+		"replace": {
+			"hide": "Ocultar reemplazar",
+			"show": "Mostrar reemplazar",
+			"tooltip": "Reemplazar (Ctrl+H)"
+		},
+		"placeholder": "Buscar",
+		"prev": "Anterior",
+		"prev.tooltip": "Anterior (Mayús+Entrar o Mayús+F3)",
+		"next": "Siguiente",
+		"next.tooltip": "Siguiente (Entrar o F3)",
+		"close": "Cerrar la búsqueda",
+		"close.tooltip": "Cerrar (Esc)",
+		"replaceBy": "Reemplazar por",
+		"zone": "Dentro de: {zone}",
+		"zone.selection.tooltip": "La selección limita la búsqueda; seleccione una sola celda para buscar en toda la hoja",
+		"zone.selection.aria": "Dentro de la selección {range}",
+		"zone.sheet.tooltip": "Toda la hoja; seleccione varias celdas para limitar la búsqueda",
+		"zone.sheet.aria": "Dentro de toda la hoja",
+		"zone.sheet": "hoja",
+		"replaceOne": "Reemplazar",
+		"replaceOne.tooltip": "Reemplaza la celda encontrada y pasa a la siguiente",
+		"replaceAll": "Reemplazar todos",
+		"replaceAll.tooltip": "Reemplaza todas las apariciones (Ctrl+Z para deshacer)"
+	},
+	"sort": {
+		"number": {
+			"asc": "Ordenar de menor a mayor",
+			"desc": "Ordenar de mayor a menor"
+		},
+		"date": {
+			"asc": "Ordenar de más antiguos a más recientes",
+			"desc": "Ordenar de más recientes a más antiguos"
+		},
+		"text": {
+			"asc": "Ordenar de A a Z",
+			"desc": "Ordenar de Z a A"
+		},
+		"placeActive": "Coloque la celda activa en una columna de tabla para ordenar"
+	},
+	"type": {
+		"integer": "Entero",
+		"decimal": "Decimal",
+		"text": "Texto",
+		"boolean": "Booleano",
+		"date": "Fecha",
+		"formula": "Calculada",
+		"title": {
+			"fixed": "Tipo de datos · fijo",
+			"inferred": "Tipo de datos · deducido"
+		},
+		"pending": "{n, plural, one {# valor no puede convertirse en «{type}»: se conservará y se marcará como error.} other {# valores no pueden convertirse en «{type}»: se conservarán y se marcarán como errores.}}",
+		"convertAnyway": "Convertir de todos modos",
+		"aria": "Tipo de datos",
+		"fixed": {
+			"tooltip": "Tipo fijo"
+		},
+		"inferred": {
+			"tooltip": "Tipo deducido: al elegirlo, se fija"
+		},
+		"convert": {
+			"tooltip": "Convertir en {type}"
+		},
+		"revert": "Volver a {type} ({n, plural, one {# valor marcado} other {# valores marcados}} como errores)",
+		"errors": "{n, plural, one {# valor} other {# valores}} que no corresponden al tipo de la columna",
+		"computed": "Columna calculada",
+		"toValues": {
+			"tooltip": "Se quita la fórmula: la columna conserva sus valores actuales, con el tipo de esos valores (Ctrl+Z para deshacer)"
+		}
+	},
+	"syntax": {
+		"unclosedQuote": "comillas sin cerrar",
+		"badNumber": "número no válido",
+		"unknownError": "error desconocido",
+		"unclosedBracket": "corchete sin cerrar",
+		"unexpectedChar": "carácter inesperado «{char}»",
+		"missingCloseParen": "falta un paréntesis de cierre «)»",
+		"missingOperatorOrParen": "falta un operador o «)» antes de «{word}»",
+		"badCellAddress": "dirección de celda no válida: Cell[{addr}]",
+		"rowFromOne": "las filas de una tabla se cuentan a partir de 1",
+		"rowExpected": "se espera una fila entre corchetes",
+		"missingCloseParenOf": "falta un paréntesis de cierre «)» para {name}",
+		"missingSepOrParen": "falta «{sep}» o «)» antes de «{word}»",
+		"missingValue": "falta un valor",
+		"missingValueAfter": "falta un valor después de «{word}»",
+		"missingValueBefore": "falta un valor antes de «{word}»",
+		"empty": "la fórmula está vacía",
+		"unexpected": "«{word}» inesperado",
+		"extraCloseParen": "paréntesis de cierre «)» de más",
+		"sepOutside": "«{sep}» fuera de los paréntesis de una función",
+		"missingOperator": "falta un operador antes de «{word}»"
+	},
+	"hidden": {
+		"band": {
+			"choice": "⧩ {n, plural, one {# fila} other {# filas}} con otros valores de «{category}» (selección de la pestaña): al escribir aquí se agrega una fila",
+			"filter": "⧩ {n, plural, one {# fila oculta} other {# filas ocultas}} por el filtro"
+		},
+		"refusal": "Filas ocultas por el filtro de la tabla «{table}»: borre el filtro para modificarlas"
+	},
+	"pivot": {
+		"zone": {
+			"filters": "Filtros",
+			"filters.hint": "Arrastre aquí un campo para filtrar todo el informe",
+			"cols": "Columnas",
+			"cols.hint": "Sus valores pasan a ser columnas (un campo)",
+			"rows": "Filas",
+			"rows.hint": "Arrastre aquí los campos que agrupan las filas",
+			"values": "Valores",
+			"values.hint": "Arrastre aquí los campos que resumir"
+		},
+		"agg": {
+			"sum": "Suma",
+			"count": "Cuenta",
+			"countDistinct": "Recuento distinto",
+			"avg": "Promedio",
+			"min": "Mín.",
+			"max": "Máx."
+		},
+		"show": {
+			"none": "Sin cálculo",
+			"pctTotal": "% del total general",
+			"pctCol": "% del total de columnas",
+			"pctRow": "% del total de filas"
+		},
+		"format": {
+			"auto": "Automático (formato del origen)",
+			"number": "Número (1235)",
+			"number2": "Número, 2 decimales (1234,50)",
+			"currency": "Moneda (1235 €)",
+			"currency2": "Moneda, 2 decimales (1234,50 €)",
+			"percent": "Porcentaje (12,3 %)"
+		},
+		"rowCount": "Recuento de filas",
+		"valueLabel": "{agg} de {field}",
+		"move": {
+			"up": "Subir",
+			"down": "Bajar",
+			"first": "Mover al principio",
+			"last": "Mover al final",
+			"to": "Mover a {zone}"
+		},
+		"handKept": "{n, plural, one {Valores introducidos en una fila que ya no está en la tabla dinámica, apartados: volverán con su etiqueta.} other {Valores introducidos en # filas que ya no están en la tabla dinámica, apartados: volverán con sus etiquetas.}}",
+		"place": {
+			"create": "Haga clic en la celda donde colocar la tabla dinámica (Esc: cancelar)",
+			"move": "Haga clic en la celda adonde mover la tabla dinámica «{name}» (Esc: cancelar)",
+			"created": "Tabla dinámica creada (Ctrl+Z para deshacer)",
+			"moved": "Tabla dinámica movida (Ctrl+Z para deshacer)",
+			"same": "La tabla dinámica ya está en este lugar",
+			"cancelled": "Colocación de la tabla dinámica cancelada"
+		},
+		"filter": {
+			"all": "(Todas)",
+			"count": "({n} valores)",
+			"aria": "Filtro de {field}",
+			"title": "Filtrar «{field}»",
+			"several": "(Varios elementos)",
+			"field": "Campo:",
+			"reportField": "«{field}» · filtro del informe"
+		},
+		"summarizeBy": "Resumir por",
+		"menu": {
+			"chooseValues": "Elegir valores…",
+			"clearFilter": "Borrar filtro",
+			"customSort": "Orden personalizado…",
+			"sourceOrder": "Orden del origen",
+			"removeField": "Quitar campo",
+			"editCalc": "Modificar campo calculado…",
+			"removeCalc": "Quitar campo calculado",
+			"addTo": "Agregar a {zone}",
+			"removeFromReport": "Quitar del informe",
+			"title": "Tabla dinámica «{name}»",
+			"titleOf": "Tabla dinámica de «{source}»",
+			"source": "Cambiar origen…",
+			"source.tooltip": "Asociar la tabla dinámica a otra tabla: se conservan los campos que existen en ella",
+			"move": "Mover",
+			"move.tooltip": "El próximo clic en una celda (de esta hoja o de otra) coloca ahí la esquina superior izquierda de la tabla dinámica; Esc cancela"
+		},
+		"calc": {
+			"title": "Campo calculado",
+			"title.edit": "Campo calculado «{name}»",
+			"intro": "Una fórmula sobre las columnas de cada fila de «{source}»: las filas se agrupan por su resultado, en Filas, Columnas o Filtros (o se resumen en Valores).",
+			"name": "Nombre del campo:",
+			"add": "Agregar",
+			"add.label": "Campo calculado…",
+			"add.tooltip": "Un campo cuyo valor se calcula para cada fila del origen: =YEAR([Fecha]); =LEFT([Código];2)… Agrupa las filas en Filas o Columnas, filtra o se resume como una columna."
+		},
+		"panel": {
+			"title": "Campos de tabla dinámica",
+			"help": "Ayuda sobre las tablas dinámicas",
+			"name": {
+				"tooltip": "La tabla dinámica se consulta en la pestaña SQL con este nombre y sirve de origen a los gráficos"
+			},
+			"source": "{name} · origen:"
+		},
+		"defaultName": "Tabla dinámica",
+		"search": {
+			"field": "Buscar un campo",
+			"clear": "Borrar la búsqueda"
+		},
+		"fields": {
+			"choose": "Seleccionar campos para agregar al informe:",
+			"aria": "Campos de la tabla {table}",
+			"computed": "Columna calculada: todavía no se puede usar como campo de tabla dinámica",
+			"add": "Agregar a un área",
+			"add.aria": "Agregar «{name}» a un área",
+			"noMatch": "Ningún campo coincide con «{search}»."
+		},
+		"zones": {
+			"hint": "Arrastrar campos entre las áreas siguientes:"
+		},
+		"source": {
+			"change": "Cambiar origen:",
+			"choose": "Elegir una tabla…",
+			"tooltip": "Tabla de origen de la tabla dinámica"
+		},
+		"empty": "El informe está vacío: active campos arriba, o arrástrelos a las áreas. Los números van a Valores; todo lo demás, a Filas.",
+		"noValues": "Agregue un campo a Valores para calcular totales (suma, recuento, promedio…).",
+		"handForget": "Olvidar los valores apartados",
+		"handForget.tooltip": "Borrar estos valores (Ctrl+Z para deshacer)",
+		"grandTotals": "Totales generales",
+		"subtotals": "Subtotales",
+		"subtotals.top": "En la parte superior del grupo",
+		"subtotals.bottom": "En la parte inferior del grupo",
+		"subtotals.none": "Ninguno",
+		"defer": "Aplazar actualización del diseño",
+		"update": "Actualizar",
+		"update.tooltip": "Aplicar los cambios a la tabla dinámica",
+		"pending": "Cambios pendientes: la tabla dinámica todavía no está al día (también se aplican al cerrar el panel).",
+		"delete": "Eliminar tabla dinámica",
+		"valueSettings": "Configuración de campo de valor",
+		"valueSettings.menu": "Configuración de campo de valor…",
+		"valueSettings.source": "Origen: {field}",
+		"valueSettings.rowCount": "recuento de filas",
+		"valueSettings.name": "Nombre personalizado",
+		"valueSettings.show": "Mostrar valores como",
+		"valueSettings.format": "Formato de número",
+		"valueSettings.pctFormat": "Un porcentaje conserva su propio formato.",
+		"error": "Tabla dinámica: {error}",
+		"readOnly": "Una tabla dinámica no se puede modificar celda a celda: haga doble clic en ella para cambiar sus campos",
+		"partial": "No se puede borrar una parte de una tabla dinámica: selecciónela entera para eliminarla, o clic derecho › Eliminar tabla dinámica",
+		"deleted": "Tabla dinámica «{name}» eliminada (Ctrl+Z para deshacer)",
+		"placeActive": "Coloque la celda activa en una tabla para crear una tabla dinámica",
+		"pasted": "Tabla dinámica pegada (Ctrl+Z para deshacer)",
+		"overlap": "El área se superpondría a la tabla dinámica «{name}»: muévala por separado (selecciónela y arrastre su borde, o clic derecho › Mover)",
+		"deletedMany": "{n} tablas dinámicas eliminadas (Ctrl+Z para deshacer)",
+		"partialCut": "No se puede cortar una parte de una tabla dinámica: selecciónela entera para moverla, o copie sus valores (Ctrl+C)",
+		"fold": "Expandir / Contraer",
+		"fold.expand": "Expandir",
+		"fold.collapse": "Contraer",
+		"fold.expandAll": "Expandir todo",
+		"fold.collapseAll": "Contraer todo"
+	},
+	"readFail": "No se pudo volver a leer la tabla «{table}»; se volverá a cargar.",
+	"refLink": {
+		"becomes": "«{column}» pasa a ser una referencia a «{table}»: Ctrl+clic o clic derecho › Ir a…",
+		"cites": "Filas que citan «{value}» ({n})",
+		"noCites": "Ninguna fila cita «{value}»",
+		"missing": "«{value}» no existe en {table}",
+		"go": "Ir a «{table}» › {value}",
+		"go.tooltip": "Va a la fila «{value}» de la tabla «{table}» (Alt+← para volver)",
+		"cite": {
+			"tooltip": "Filtra «{table}» por {column} = {value} y va a la primera fila (Alt+← para volver)"
+		}
+	},
+	"validation": {
+		"notAllowed": "«{value}» no está permitido aquí: elija en la lista ({list}), Alt+↓ para abrirla",
+		"missingSource": "Escriba el rango de origen: Tabla[Columna], Cell[A1:A10] u Hoja2!Cell[A1:A10] («Seleccionar» para elegirlo)",
+		"missingValues": "Escriba al menos un valor (uno por línea, o separados por «;»)",
+		"preview": {
+			"notFound": "Origen no encontrado: {error}",
+			"empty": "El rango no contiene ningún valor",
+			"values": "{n, plural, one {# valor} other {# valores}}: {list}"
+		},
+		"sourceError": "«{value}» no se puede comprobar: el origen de la lista ({src}) no se puede leer ({error})",
+		"sourceEmpty": "«{value}» no está permitido aquí: el rango de la lista ({src}) está vacío",
+		"target": {
+			"onSheet": "{what} ({sheet})",
+			"col": "columna {col}",
+			"cols": "columnas {range}",
+			"row": "fila {row}",
+			"rows": "filas {range}",
+			"tableCol": "columna «{column}» de la tabla {table}",
+			"tableCols": "columnas «{from}» a «{to}» de la tabla {table}",
+			"cell": "celda {addr}",
+			"cells": "celdas {range}",
+			"tableCells": "celdas {range} de la tabla {table}"
+		},
+		"readImpossible": "no se puede leer aquí",
+		"removed": "Validación quitada",
+		"list": {
+			"set": "Lista desplegable: {n, plural, one {# valor permitido} other {# valores permitidos}} (Alt+↓ para abrirla)",
+			"source": "Lista desplegable tomada de {src}, que se vuelve a leer cada vez que se abre (Alt+↓ para abrirla)",
+			"help": "Valores permitidos en la selección, uno por línea (o separados por «;»). Una flecha ▾ ofrece la lista en la celda (Alt+↓); cualquier otra entrada se rechaza. En una columna de tabla entera, la lista también se aplica a las filas que se agreguen después.",
+			"placeholder": "Sí\nNo"
+		},
+		"pick": "Seleccione el rango de origen (en esta hoja o en otra) y luego Entrar (Esc: cancelar)",
+		"pick.oneColumn": "Un rango de origen abarca una sola columna de tabla, o celdas libres",
+		"range": {
+			"help": "Los valores del rango (distintos, sin celdas vacías, en orden) se vuelven a leer cada vez que se abre la lista y en cada entrada: una columna de tabla (Clientes[Ciudad]), celdas (Cell[A1:A10], Hoja2!Cell[A1:A10]) o una celda con nombre. La referencia sigue los cambios de nombre y los movimientos.",
+			"aria": "Rango de origen",
+			"placeholder": "Clientes[Ciudad]"
+		},
+		"pick.source": "Rango de origen:",
+		"title": "Validación de datos — {target}",
+		"source": "Origen de la lista",
+		"mode": {
+			"list": "Valores escritos",
+			"range": "Rango"
+		},
+		"pick.tooltip": "Elegir el rango en la hoja (Entrar para volver)",
+		"pick.button": "Seleccionar",
+		"reading": "Leyendo el rango…",
+		"clear": "Borrar la validación",
+		"listMenu": {
+			"notFound": "Lista no encontrada: {error}",
+			"reading": "Leyendo la lista…",
+			"empty": "El rango de la lista está vacío"
+		}
+	},
+	"spill": {
+		"tip": "Resultado desbordado de la fórmula de {addr} — clic derecho: convertir en tabla"
+	},
+	"tabChoice": {
+		"clear": "Dejar de filtrar la pestaña",
+		"clear.tooltip": "La pestaña pierde su ▾ «{name}»: las tablas y tablas dinámicas de la hoja vuelven a mostrar todas sus filas (Ctrl+Z para deshacer)",
+		"byField": "Filtrar la pestaña por este campo",
+		"byColumn": "Filtrar la pestaña por esta columna",
+		"computed": "Una columna calculada no se puede usar como selección de la pestaña: tome una columna de entrada (Año, Mes, Ciudad…)",
+		"tooMany": "«{column}» está vacía o tiene más de {max} valores distintos: demasiados para la lista de la pestaña; tome una columna como Año, Mes o Ciudad",
+		"byField.tooltip": "La pestaña de la hoja obtiene un ▾ para elegir un valor de «{column}»: esta tabla dinámica, las demás tablas dinámicas de la hoja creadas sobre una tabla que tiene «{column}» y las tablas de la hoja que la tienen solo muestran las filas con ese valor (la tabla de origen, si está en otra hoja, no se filtra). Empieza con todos los valores. Ctrl+Z para deshacer.",
+		"byColumn.tooltip": "La pestaña de la hoja obtiene un ▾ para elegir un valor de «{column}»: cada tabla de la hoja que tiene la columna «{column}», y las tablas dinámicas creadas sobre ellas, solo muestran las filas con ese valor. Empieza con todos los valores. Ctrl+Z para deshacer.",
+		"replaces": "{text} Reemplaza la selección por «{name}».",
+		"notice": {
+			"cleared": "La pestaña ya no filtra por «{column}»: se vuelven a mostrar todas las filas (Ctrl+Z para deshacer)",
+			"set": "La pestaña filtra por «{column}»: su flecha ▾ elige el valor mostrado (Alt+↓); Ctrl+Z para deshacer"
+		}
+	},
+	"textCols": {
+		"dateOrder": {
+			"DMY": "DMA",
+			"MDY": "MDA",
+			"YMD": "AMD",
+			"DYM": "DAM",
+			"MYD": "MAD",
+			"YDM": "ADM"
+		},
+		"format": {
+			"text": "Texto",
+			"skip": "No importar columna (saltar)",
+			"general": "General",
+			"date": "Fecha",
+			"notImported": "Saltar columna",
+			"legend": "Formato de los datos de la columna {n}",
+			"hint": "«General» convierte los números y las fechas; todo lo demás pasa a ser texto. Haga clic en una columna de la vista previa para elegir su formato."
+		},
+		"sep": {
+			"comma": ", (coma)",
+			"period": ". (punto)",
+			"space": "espacio",
+			"apostrophe": "' (apóstrofo)",
+			"none": "ninguno"
+		},
+		"step": {
+			"kind": "Tipo de los datos originales",
+			"separators": "Separadores",
+			"formats": "Formato de los datos en columnas"
+		},
+		"title": "Convertir texto en columnas",
+		"heading": "Asistente para convertir texto en columnas – paso {step} de 3: {name}",
+		"note": {
+			"table": "Tabla {table}, columna {column}: la primera parte se queda en la columna, las siguientes pasan a ser columnas nuevas insertadas a la derecha.",
+			"tableWithHeader": "Tabla {table}, columna {column} (encabezado incluido): la primera parte se queda en la columna, las siguientes pasan a ser columnas nuevas insertadas a la derecha.",
+			"cells": "{n, plural, one {# celda de texto} other {# celdas de texto}} que convertir."
+		},
+		"kind": {
+			"legend": "Elija el tipo de archivo que describa los datos con mayor precisión",
+			"delimited": "Delimitados",
+			"delimited.help": "– Caracteres como comas o tabulaciones separan cada campo.",
+			"fixed": "De ancho fijo",
+			"fixed.help": "– Los campos están alineados en columnas con espacios entre uno y otro."
+		},
+		"preview": "Vista previa de los datos",
+		"preview.selection": "Vista previa de los datos seleccionados",
+		"delim": {
+			"tab": "Tabulación",
+			"semicolon": "Punto y coma",
+			"comma": "Coma",
+			"space": "Espacio",
+			"other": "Otro:",
+			"other.aria": "Otro separador"
+		},
+		"merge": "Considerar separadores consecutivos como uno solo",
+		"quote": "Calificador de texto:",
+		"quote.none": "ninguno",
+		"fixed": {
+			"hint": "Las líneas con flechas indican un salto de columna. Para crear una línea de salto, haga clic en la posición deseada. Para eliminarla, haga doble clic en ella. Para moverla, arrástrela."
+		},
+		"break": {
+			"tooltip": "Arrastrar para mover, doble clic para eliminar"
+		},
+		"dest": "Destino:",
+		"dest.table.tooltip": "En una tabla, la primera parte se queda en la columna y las siguientes se insertan a la derecha",
+		"dest.tooltip": "Primera celda donde escribir las columnas, por ejemplo $B$2",
+		"advanced": "Avanzadas…",
+		"advanced.open": "Avanzadas ▴",
+		"decimal": "Separador decimal:",
+		"thousands": "Separador de miles:",
+		"back": "< Atrás",
+		"next": "Siguiente >",
+		"finish": "Finalizar",
+		"confirm": "¿Desea reemplazar el contenido de las celdas de destino?",
+		"confirm.title": "Reemplazar el contenido",
+		"oneColumn": "Texto en columnas solo puede convertir una columna a la vez: seleccione celdas de una sola columna",
+		"done": "Texto convertido en {n, plural, one {# columna} other {# columnas}} (Ctrl+Z para deshacer)",
+		"done.table": "Texto convertido en {n, plural, one {# columna} other {# columnas}} (tabla {table}) (Ctrl+Z para deshacer)"
+	},
+	"theme": {
+		"custom": "Personalizado",
+		"builtin": {
+			"vert-bleu": "Verde y azul",
+			"bleu-orange": "Azul y naranja",
+			"violet-sarcelle": "Morado y verde azulado",
+			"sarcelle-violet": "Verde azulado y morado",
+			"gris-bleu": "Gris y azul",
+			"orange-bleu": "Naranja y azul",
+			"bordeaux-gris": "Burdeos y gris"
+		}
+	},
+	"titleHead": {
+		"offer": "Esta fila parece los encabezados de «{table}»"
+	},
+	"format": {
+		"tab": {
+			"number": "Número",
+			"align": "Alineación",
+			"font": "Fuente",
+			"border": "Borde",
+			"fill": "Relleno"
+		},
+		"sampleText": "Texto",
+		"title": "Formato de celdas",
+		"category": "Categoría",
+		"category.standard": "General",
+		"category.standard.help": "Sin formato específico: el valor tal como se introdujo o calculó.",
+		"category.number": "Número",
+		"category.number.help": "Número de decimales y separador de miles.",
+		"category.currency": "Moneda",
+		"category.currency.help": "Importe en euros.",
+		"category.percent": "Porcentaje",
+		"category.percent.help": "El valor multiplicado por 100, seguido de %.",
+		"category.date": "Fecha",
+		"category.date.help": "Una fecha (o un número de serie de Excel) mostrada según el modelo elegido.",
+		"category.time": "Hora",
+		"category.time.help": "Una hora (o una fecha y hora) mostrada según el modelo elegido.",
+		"category.text": "Texto",
+		"category.text.help": "El contenido se muestra tal como se introdujo.",
+		"sample": "Muestra",
+		"decimals": "Posiciones decimales",
+		"thousands": "Usar separador de miles (.)",
+		"dateType": "Tipo",
+		"align": {
+			"legend": "Alineación del texto",
+			"horizontal": "Horizontal",
+			"general": "General",
+			"left": "Izquierda",
+			"center": "Centro",
+			"right": "Derecha",
+			"vertical": "Vertical",
+			"top": "Superior",
+			"bottom": "Inferior"
+		},
+		"textControl": "Control del texto",
+		"wrap": "Ajustar texto",
+		"merge": "Combinar celdas",
+		"merge.tooltip": "Seleccione varias celdas libres (fuera de las tablas) para combinarlas",
+		"font": "Fuente",
+		"font.style": "Estilo",
+		"font.regular": "Normal",
+		"font.italic": "Cursiva",
+		"font.bold": "Negrita",
+		"font.boldItalic": "Negrita cursiva",
+		"font.size": "Tamaño",
+		"font.underline": "Subrayado",
+		"font.strike": "Tachado",
+		"color": "Color",
+		"color.auto": "Automático",
+		"preview": "Vista previa",
+		"border": {
+			"presets": "Preestablecidos",
+			"none": "Ninguno",
+			"outline": "Contorno",
+			"all": "Todos",
+			"edges": "Borde (haga clic en un lado)",
+			"top": "Superior",
+			"bottom": "Inferior",
+			"left": "Izquierdo",
+			"right": "Derecho",
+			"help": "Los lados elegidos se aplican a cada celda de la selección; «Contorno» dibuja alrededor de la selección."
+		},
+		"fill": "Color de fondo",
+		"fill.none": "Sin relleno"
+	},
+	"readOnly": {
+		"notYours": "Fila de otro miembro: como participante, solo puede modificar sus propias filas"
+	},
+	"formula": {
+		"pickHint": "Fórmula en curso: haga clic en una celda o una columna para insertar su referencia; Entrar confirma, Esc cancela",
+		"refPlace": "Coloque el cursor de la fórmula después de «(», «;» o un operador para insertar ahí una referencia",
+		"refRange": "Este rango no puede convertirse en una referencia: un rango abarca una sola columna de una tabla",
+		"refOneColumn": "Un rango solo puede abarcar una sola columna de una tabla: arrastre dentro de una columna, o sobre celdas libres",
+		"error": "Fórmula: {error}",
+		"validate": "Introducir",
+		"validate.tooltip": "Confirmar la fórmula (Entrar)",
+		"validate.error": "La fórmula tiene un error: corríjalo para confirmarla"
+	},
+	"rights": {
+		"filtered": "Vista filtrada según sus permisos"
+	},
+	"key": {
+		"autoNumber": "numerada automáticamente: una fila agregada recibe el número siguiente",
+		"hint": "Esta columna parece identificar cada fila: haga clic para convertirla en la clave de la tabla",
+		"set": "«{name}» es ahora la clave de la tabla {table} (Ctrl+Z para deshacer)",
+		"lookupCancelled": "búsqueda cancelada: la fórmula no se guarda",
+		"autoNumberKey": "clave, {tip}",
+		"isKey": "clave de la tabla",
+		"accept": "Convertirla en la clave de la tabla",
+		"dismiss": "No volver a sugerirlo",
+		"note": "Clave de la tabla: sus valores identifican las filas.",
+		"note.auto": "Clave de la tabla: sus valores identifican las filas. Una fila agregada recibe el número siguiente.",
+		"remove": "Quitar la clave",
+		"checking": "Comprobando la clave…",
+		"use": "Usar como clave",
+		"use.replace": "Usar como clave (en lugar de la actual)",
+		"impossible": "Clave imposible: {why}",
+		"sequence": "Secuencia de números: una fila agregada al final recibe el número siguiente."
+	},
+	"painter": {
+		"hint": "Copiar formato: seleccione las celdas a las que dar formato (Esc para cancelar)"
+	},
+	"merge": {
+		"selectSeveral": "Seleccione varias celdas libres para combinarlas",
+		"inTable": "Combinar y centrar no se aplica en una tabla: una tabla conserva una celda por valor. Combine celdas libres, fuera de las tablas.",
+		"done": "Celdas combinadas y centradas",
+		"done.cleared": "Celdas combinadas: solo se conserva el valor superior izquierdo ({n, plural, one {# borrado} other {# borrados}}, Ctrl+Z para deshacer)"
+	},
+	"quoted": "«{text}»",
+	"twoLevel": {
+		"split": "{names} en dos líneas: escriba el grupo en la banda superior (sin grupo, la columna queda en un solo nivel)"
+	},
+	"size": {
+		"range": "Tamaño entre 4 y 1000 píxeles",
+		"rowHeight": "Alto de fila (píxeles)",
+		"colWidth": "Ancho de columna (píxeles)"
+	},
+	"freeze": {
+		"place": "Coloque la celda activa debajo de las filas y a la derecha de las columnas que inmovilizar",
+		"tooBig": "La parte que inmovilizar es más grande que la pantalla: desplace la hoja hacia arriba, o elija una celda más arriba o más a la izquierda"
+	},
+	"note": {
+		"pinEmpty": "Escriba la nota antes de anclarla",
+		"none": "La celda activa no tiene ninguna nota",
+		"edit": "Modificar nota",
+		"delete": "Eliminar nota",
+		"insert": "Insertar nota",
+		"unpin": "Desanclar (información sobre herramientas al pasar el ratón)",
+		"pin": "Anclar: mostrar siempre la nota",
+		"placeholder": "Nota de la celda"
+	},
+	"table": {
+		"alreadyIn": "La celda activa ya está en una tabla",
+		"placeActive": "Coloque la celda activa en una tabla",
+		"deletedMany": "{n} tablas eliminadas (Ctrl+Z para deshacer)",
+		"deleted": "Tabla «{name}» eliminada (Ctrl+Z para deshacer)",
+		"renamed": "Tabla renombrada como «{name}»"
+	},
+	"status": {
+		"group": "{table} · grupo de encabezados «{group}» ({n, plural, one {# columna} other {# columnas}})",
+		"groupEmpty": "{table} · grupo de encabezados (vacío)",
+		"errors": "{n, plural, one {# error} other {# errores}}",
+		"type": {
+			"fixed": "{type} (fijo)",
+			"inferred": "{type} (deducido)"
+		},
+		"oneLevel": "en un solo nivel",
+		"badType": "«{value}» no es de tipo {type}",
+		"perf": {
+			"fetch": "bloque p50 {ms}",
+			"draw": "dibujo {ms}",
+			"fps": "{n} fps",
+			"edit": "entrada {ms}"
+		},
+		"average": "Promedio: {value}",
+		"count": "Recuento: {n}",
+		"sum": "Suma: {value}",
+		"computing": "Calculando los totales…",
+		"tooBig": "Selección demasiado grande para los totales",
+		"loading": "(filas cargándose)"
+	},
+	"chart": {
+		"copied": "Gráfico copiado: Ctrl+V para pegarlo en la celda activa",
+		"copiedImage": "Gráfico copiado como imagen: péguelo en un correo o un documento",
+		"copyImageFailed": "No se pudo copiar la imagen: {error}",
+		"pasted": "Gráfico pegado",
+		"pivotInserted": "Gráfico de la tabla dinámica «{name}» insertado",
+		"placeActive": "Coloque la celda activa en una tabla para insertar un gráfico",
+		"mapInserted": "Mapa insertado: elija sus coordenadas en el panel",
+		"noNumbers": "La tabla no tiene ninguna columna numérica que representar",
+		"inserted": "Gráfico insertado: haga clic en él para modificarlo, arrástrelo para moverlo",
+		"nth": "Gráfico {n} de {total}",
+		"aria": "Gráfico",
+		"aria.titled": "Gráfico «{title}»",
+		"error": "Gráfico: {error}",
+		"paste": "Pegar gráfico",
+		"copyImage": "Copiar como imagen",
+		"pasteHere": "Pegar un gráfico en la celda activa",
+		"delete": "Eliminar gráfico"
+	},
+	"query": {
+		"readOnly": "Tabla cargada por una consulta: sus celdas no se pueden modificar; cambie la consulta (Datos › Consultas) y luego actualice (F5)"
+	},
+	"dedup": {
+		"removed": "{n, plural, one {# fila duplicada eliminada} other {# filas duplicadas eliminadas}} (Ctrl+Z para deshacer)",
+		"none": "No hay duplicados",
+		"title": "Quitar duplicados de «{table}»",
+		"help": "Dos filas son duplicados cuando las columnas activadas tienen los mismos valores. Se conserva la primera.",
+		"allColumns": "(Todas las columnas)",
+		"computing": "Calculando…",
+		"noneWith": "No hay filas duplicadas con estas columnas.",
+		"willRemove": "{n, plural, one {Se eliminará # fila duplicada.} other {Se eliminarán # filas duplicadas.}}"
+	},
+	"rows": {
+		"headerNoDelete": "La fila de encabezado no se puede eliminar: elimine la tabla o sus columnas"
+	},
+	"audit": {
+		"none": "Ningún vínculo: la selección no contiene ni una fórmula ni una celda leída por una fórmula",
+		"links": "Vínculos de {n, plural, one {# celda} other {# celdas}}: {pre, plural, one {# precedente} other {# precedentes}}, {dep, plural, one {# dependiente} other {# dependientes}}",
+		"away": "({n} en otras hojas)",
+		"cut": "solo las {n} primeras celdas",
+		"clear": "un clic en la cuadrícula (o Esc) los borra"
+	},
+	"cells": {
+		"copied": "Celdas copiadas (Ctrl+Z para deshacer)",
+		"moved": "Celdas movidas (Ctrl+Z para deshacer)",
+		"deleted": "Celdas eliminadas (Ctrl+Z para deshacer)"
+	},
+	"fill": {
+		"series": "Serie rellenada (Ctrl+Z para deshacer)",
+		"limit": "Relleno limitado a 10 000 celdas",
+		"down": "Rellenado hacia abajo (Ctrl+Z para deshacer)",
+		"right": "Rellenado hacia la derecha (Ctrl+Z para deshacer)"
+	},
+	"repeat": {
+		"nothing": "Nada que repetir"
+	},
+	"endMode": "Fin: una flecha va al borde de la región",
+	"recalculated": "Recalculado",
+	"protect": {
+		"structure": "Estructura de la hoja protegida (Revisar › Desproteger estructura)"
+	},
+	"names": {
+		"refused": {
+			"column": "Nombre de columna rechazado",
+			"table": "Nombre de tabla rechazado",
+			"group": "Grupo de encabezados rechazado",
+			"cell": "Nombre de celda rechazado"
+		},
+		"column": {
+			"invalid": "Nombre de columna no válido",
+			"empty": "El nombre de la columna no puede estar vacío.\n\nEscriba un nombre, o Esc para conservar el anterior."
+		},
+		"cell": {
+			"inTable": "Solo se puede asignar un nombre a una celda libre; una tabla se designa por su nombre: {table}",
+			"set": "Celda con el nombre «{name}»",
+			"removed": "Nombre quitado"
+		}
+	},
+	"edit": {
+		"multiLimit": "Ctrl+Entrar: selección limitada a 10 000 celdas"
+	},
+	"clear": {
+		"limit": "Borrado limitado a 1000 celdas por ahora"
+	},
+	"copy": {
+		"limit": "Copia limitada a 100 000 celdas por ahora",
+		"reading": "Leyendo las filas que copiar…",
+		"changed": "La tabla cambió durante la copia: vuelva a intentarlo"
+	},
+	"clipboard": {
+		"unavailable": "No se puede acceder al portapapeles",
+		"cut": "Selección cortada: péguela con Ctrl+V (Esc para cancelar)",
+		"copied": "{n, plural, one {# celda copiada} other {# celdas copiadas}}",
+		"unavailable.copy": "No se puede acceder al portapapeles: use Ctrl+C",
+		"unavailable.paste": "No se puede acceder al portapapeles: use Ctrl+V",
+		"pasted": "Pegado (Ctrl+Z para deshacer)",
+		"pastedRows": "{n, plural, one {# fila pegada} other {# filas pegadas}}"
+	},
+	"typeMix": {
+		"date": "{n, plural, one {# valor que no es una fecha} other {# valores que no son fechas}} de {total}",
+		"boolean": "{n, plural, one {# valor no booleano} other {# valores no booleanos}} de {total}",
+		"number": "{n, plural, one {# valor no numérico} other {# valores no numéricos}} de {total}"
+	},
+	"nameBadge": {
+		"default": {
+			"tooltip": "«{name}»: nombre predeterminado: cambie el nombre de la tabla. Haga clic para darle un nombre significativo (se usa en las fórmulas, el SQL y los gráficos)"
+		},
+		"tooltip": "Tabla «{name}»: haga clic para cambiarle el nombre"
+	},
+	"follow": {
+		"tooltip": "Esta tabla sigue la pestaña de selección: solo muestra sus filas en las que {name} = {value} (las demás están ocultas, no eliminadas; una fila que introduzca recibe este valor). La flecha ▾ de la pestaña cambia el valor. Haga clic en la insignia: menú «Seguir {follow}», desactívelo para que esta tabla muestre todas sus filas",
+		"empty": "(vacío)"
+	},
+	"bench": {
+		"running": "Medición en curso…",
+		"result": "Desplazamiento: {fps} fps, imagen p95 {frame} ms, {janky} imágenes > 33 ms, {missing}/{drawn} imágenes incompletas · Salto: p50 {jump} ms · Entrada: p50 {edit} ms"
+	},
+	"lines": {
+		"insertRows": "Insertar {n, plural, one {una fila} other {# filas}}",
+		"deleteRows": "Eliminar filas",
+		"deleteRow": "Eliminar fila",
+		"insertCols": "Insertar {n, plural, one {una columna} other {# columnas}}",
+		"deleteCols": "Eliminar columnas",
+		"deleteCol": "Eliminar columna",
+		"insert": "Insertar…",
+		"dialog": {
+			"rowAbove": "Toda la fila (encima)",
+			"row": "Toda la fila",
+			"colLeft": "Toda la columna (a la izquierda)",
+			"col": "Toda la columna"
+		}
+	},
+	"menu": {
+		"clearAll": {
+			"tooltip": "Vacía las celdas: valores, formato, combinaciones, notas y validaciones"
+		},
+		"clearContents": "Borrar contenido",
+		"formatCells": "Formato de celdas…",
+		"conditionalFormat": "Formato condicional…",
+		"rowHeight": "Alto de fila…",
+		"autoFitRows": "Autoajustar alto de fila",
+		"autoFitRows.tooltip": "Alto según el contenido (doble clic en el borde del número de fila)",
+		"colWidth": "Ancho de columna…",
+		"autoFitCols": "Autoajustar ancho de columna",
+		"autoFitCols.tooltip": "Ancho según el contenido mostrado (doble clic en el borde del encabezado)",
+		"hide": "Ocultar",
+		"unhide": "Mostrar",
+		"filterColumn": "Filtrar la columna…",
+		"clearTableFilter": "Borrar el filtro de la tabla",
+		"table": "Tabla «{name}»",
+		"deleteTable": "Eliminar tabla",
+		"deleteTable.confirm": "¿Eliminar esta tabla y sus {n} filas? Ctrl+Z lo deshará.",
+		"toValues": "Convertir en valores",
+		"toValues.many.tooltip": "Las {n} columnas calculadas de la selección pasan a ser columnas de entrada: conservan sus valores actuales, sin fórmula (Ctrl+Z para deshacer)",
+		"toValues.tooltip": "La columna calculada pasa a ser una columna de entrada: conserva sus valores actuales, sin fórmula (Ctrl+Z para deshacer)",
+		"promote": "Usar la primera fila como encabezados",
+		"promote.tooltip": "La 1.ª fila de datos da los nombres de las columnas y pasa a ser el encabezado, en su lugar; el encabezado actual desaparece (Ctrl+Z para deshacer)",
+		"rowToNote": "Sacar esta fila de la tabla (total o nota)",
+		"rowToNote.tooltip": "La fila se queda justo debajo de la tabla, apartada como total o nota (Ctrl+Z para deshacer)",
+		"sortFilter": "Ordenar y filtrar",
+		"insert": "Insertar",
+		"rowAbove": "Fila encima",
+		"rowBelow": "Fila debajo",
+		"column": "Columna «{name}»",
+		"renameColumn": "Cambiar nombre de columna",
+		"typeAndKey": "Tipo de datos y clave…",
+		"validation": "Validación de datos…",
+		"insertColumn": "Insertar columna",
+		"left": "A la izquierda",
+		"right": "A la derecha",
+		"headerToTitle": "Sacar el encabezado",
+		"headerToTitle.tooltip": "La 1.ª fila de datos pasa a ser el encabezado; el encabezado actual se queda encima de la tabla, como título (salvo los nombres «Columna n»)",
+		"titleToHeader": "Usar la fila superior como encabezados",
+		"titleToHeader.tooltip": "Las celdas escritas justo encima de la tabla pasan a ser los nombres de sus columnas; el encabezado actual pasa a ser la 1.ª fila de datos (salvo los nombres «Columna n»)",
+		"twoLevel": {
+			"off": "Quitar los grupos de encabezados",
+			"off.tooltip": "Las columnas recuperan su nombre completo «Grupo.Nombre» en una sola fila; la banda de grupos desaparece",
+			"on": "Encabezados en 2 filas (grupos encima)",
+			"on.tooltip": "La fila justo encima de la tabla pasa a ser una banda de grupos: «FORESTAL» colocado encima de Nombre y Estado da las columnas «FORESTAL.Nombre» y «FORESTAL.Estado». Celdas combinadas o no."
+		},
+		"follow": "Seguir {what}",
+		"follow.off.tooltip": "La tabla muestra todas sus filas, sea cual sea el valor de la pestaña",
+		"follow.off.column.tooltip": "La tabla muestra todas sus filas, sea cual sea el valor de la pestaña (su columna «{name}» se quita si solo tiene un valor)",
+		"follow.on.formula.tooltip": "La tabla solo muestra las filas cuya fórmula {formula} da el valor mostrado (debe tener las columnas)",
+		"follow.on.tooltip": "La tabla recibe la columna «{name}», rellenada con el valor mostrado, y solo muestra sus filas",
+		"refresh": "Actualizar la consulta",
+		"refresh.tooltip": "Vuelve a ejecutar la consulta «{name}» (F5 en la tabla)",
+		"handKey": "Clave de las columnas de entrada…",
+		"handKey.tooltip": "Columna del resultado que vincula los valores introducidos con sus filas de una actualización a la siguiente",
+		"handForget": "Olvidar los valores apartados ({n, plural, one {# fila} other {# filas}})",
+		"handForget.tooltip": "Valores introducidos en filas que desaparecieron del resultado, conservados por si vuelven (Ctrl+Z para deshacer)",
+		"addShared": "Agregar al libro compartido…",
+		"addShared.tooltip": "Esta tabla solo está en su equipo: créela en el libro compartido, con sus filas, para todos los miembros",
+		"shareData": "Compartir en el Data Lake de Lattis…",
+		"shareData.tooltip": "Hacer que esta tabla se pueda leer desde otros libros del servidor (catálogo del Data Lake de Lattis)",
+		"pushSource": "Actualizar el origen del Data Lake",
+		"pushSource.tooltip": "Envía ahora las filas de esta tabla a su origen del Data Lake (solo las columnas elegidas; el libro no se publica)",
+		"toRange": "Convertir en rango",
+		"toRange.tooltip": "La tabla pasa a ser celdas libres, en el mismo lugar",
+		"ask": "Preguntar al asistente…",
+		"asHeader": "Usar como encabezados de «{table}»",
+		"asHeader.tooltip": "Las celdas de esta fila, encima de las columnas de la tabla, pasan a ser sus encabezados; el encabezado actual pasa a ser la 1.ª fila de datos (salvo los nombres «Columna n»)",
+		"join": "Agregar a la tabla",
+		"join.tooltip": "Esta celda se mantiene fuera de la tabla vecina (nota, total); se une a ella",
+		"asTable": "Dar formato como tabla",
+		"asTable.tooltip": "El rango vuelve a ser una tabla (su primera fila da los encabezados)",
+		"spillLinked": "Convertir en tabla vinculada",
+		"spillLinked.tooltip": "Una tabla cargada por la fórmula reemplaza el resultado desbordado: se recalcula cuando cambian sus orígenes (columnas de solo lectura, columnas de entrada posibles a la derecha)",
+		"spillValues": "Convertir en tabla (valores)",
+		"spillValues.tooltip": "Una tabla normal conserva los valores actuales del resultado desbordado, sin vínculo con la fórmula",
+		"rangeToValues": {
+			"tooltip": "Las fórmulas de la selección se reemplazan por sus valores actuales (Ctrl+Z para deshacer)"
+		},
+		"asGroups": "Usar como grupos de encabezados de la tabla",
+		"asGroups.tooltip": "Las celdas de esta fila, combinadas o no, pasan a ser los grupos de encabezados de la tabla «{table}»"
+	},
+	"sig": {
+		"optional": "(opcional)",
+		"example": "Ejemplo:"
+	},
+	"nameBox": {
+		"table": "Nombre de la tabla: modifíquelo y pulse Entrar para cambiarlo",
+		"table.default": "Nombre predeterminado: cambie el nombre de la tabla (modifíquelo y pulse Entrar)",
+		"column": "Columna[fila]: modifique el nombre y pulse Entrar para cambiar el nombre de la columna",
+		"cell": "Nombre de la celda: escriba un nombre y pulse Entrar para asignarlo, o el nombre de una celda para ir a ella",
+		"size": "{rows}F × {cols}C"
+	},
+	"formulaBar": {
+		"aria": "Barra de fórmulas",
+		"computed": "Columna calculada: se aplica a {n, plural, one {la fila} other {las # filas}}",
+		"computed.tooltip": "La fórmula es la de toda la columna: se aplica a cada una de sus filas."
+	},
+	"sheet": {
+		"aria": "Hoja {name}"
+	},
+	"editor": {
+		"readOnly": "solo lectura",
+		"freeCell": "Celda libre"
+	},
+	"keyDialog": {
+		"title": "Clave de búsqueda",
+		"heading": "La búsqueda en «{table}» usa:",
+		"index": "el número de fila actual de la tabla (índice)",
+		"notKey": "«{column}» no se puede usar como clave: {why}",
+		"column": "la columna «{column}», que pasa a ser la clave de la tabla (se rechazarán los duplicados)",
+		"notKey.note": "«{column}» no se puede usar como clave: {why}.",
+		"index.note": "El número cambia si ordena o inserta filas. Lattis ya no sugerirá una clave para esta tabla."
+	},
+	"handDialog": {
+		"title": "Clave de las columnas de entrada",
+		"heading": "Los valores introducidos junto a «{table}» siguen a sus filas por:",
+		"columns": "las columnas «{name}»",
+		"column": "la columna «{name}»",
+		"rank": "la posición de las filas (no recomendado)",
+		"rank.note": "Si la consulta devuelve sus filas en otro orden, o agrega o quita algunas, los valores introducidos acabarán junto a otras filas.",
+		"change": {
+			"note": "Los valores ya introducidos se quedan en sus filas; los apartados (filas desaparecidas) se olvidan. Se rechazan los duplicados y las celdas vacías de la columna."
+		},
+		"key": {
+			"note": "En cada actualización, un valor vuelve a la fila con el mismo «{key}»; si esa fila desaparece, el valor se aparta y vuelve con ella."
+		},
+		"none": {
+			"note": "Ninguna columna del resultado identifica sus filas (valores duplicados o vacíos): agregue una a la consulta (un identificador) para una unión fiable."
+		}
+	},
+	"functions": {
+		"title": "Insertar función ({n} disponibles)",
+		"search": "Buscar (SUM, VLOOKUP, fecha, texto…)",
+		"repeat": "{n, plural, one {El último argumento se puede repetir.} other {Los # últimos argumentos se pueden repetir.}}",
+		"english": "en francés: {name}"
+	},
+	"keys": {
+		"enter": "Entrar",
+		"escape": "Esc"
+	}
+}
