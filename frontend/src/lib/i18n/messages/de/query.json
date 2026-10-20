@@ -1,1 +1,531 @@
-{}
+{
+	"conn": {
+		"web": "Web (API)",
+		"lattis": "Lattis-Server",
+		"dialog": {
+			"webOk": "Der Server antwortet.",
+			"ok": "Verbindung erfolgreich.",
+			"nameInvalid": {
+				"title": "Ungültiger Verbindungsname",
+				"message": "Der Verbindungsname darf nicht leer sein: Er bezeichnet die Verbindung in den Abfragen der Arbeitsmappe.\n\nGeben Sie ihr einen Namen."
+			},
+			"nameTaken": "Verbindungsname bereits vergeben",
+			"aria": "Verbindung {kind}",
+			"webTitle": "Verbindung zu einer Web-API",
+			"dbTitle": "Datenbank {kind}",
+			"host": "Server",
+			"port": "Port",
+			"instance": {
+				"label": "Instanz",
+				"placeholder": "(Standard) oder SQLEXPRESS"
+			},
+			"database": {
+				"label": "Datenbank",
+				"optional": "(optional)"
+			},
+			"user": {
+				"label": "Benutzer",
+				"windows": "leer: Windows-Authentifizierung"
+			},
+			"ssl": {
+				"label": "Verschlüsselung (SSL/TLS)",
+				"driver": "Treibereinstellung",
+				"prefer": "Wenn der Server sie anbietet",
+				"disable": "Deaktiviert",
+				"require": "Erforderlich",
+				"verify": "Erforderlich, Zertifikat geprüft"
+			},
+			"web": {
+				"url": "API-Adresse",
+				"urlPlaceholder": "https://api.beispiel.de/v1",
+				"header": "Token-Header",
+				"user": "Benutzer (Basic)",
+				"userPlaceholder": "leer: nur Token"
+			},
+			"orgServer": "Server Ihrer Organisation",
+			"noServer": "Kein Server: Fügen Sie einen mit „Server verwalten…“ hinzu",
+			"version": "Version {version}",
+			"invitation": "auf Einladung",
+			"connected": "Angemeldet: {user}",
+			"notConnected": "Nicht angemeldet",
+			"signIn": "Anmelden…",
+			"name": "Verbindungsname",
+			"token": "Token",
+			"remembered": "(gespeichert)",
+			"remember": "Im Schlüsselbund des Systems speichern",
+			"help": {
+				"lattis": "Es wird kein Kennwort gespeichert: Die Verbindung nutzt Ihre Sitzung auf dem Server (Menü Konto in der Titelleiste) und das, was Ihre Rechte Ihnen dort zu lesen erlauben. Als Abfragequelle dient sie nur zum Lesen (auf einem Replikat, wenn der Server eines anbietet).",
+				"web": "Das Token wird nie in der Arbeitsmappe gespeichert; es wird nur an Adressen gesendet, die mit der Adresse der Verbindung beginnen",
+				"bearer": ": Bearer wird einem bloßen Token vorangestellt",
+				"db": "Das Kennwort wird nie in der Arbeitsmappe gespeichert. Die Verbindung dient nur zum Lesen",
+				"readOnly": "schreibgeschützte Transaktion",
+				"selectOnly": "nur SELECT-Abfragen, Transaktion immer zurückgesetzt"
+			},
+			"test": "Testen"
+		}
+	},
+	"sourceKind": {
+		"csv": "Text- oder CSV-Datei",
+		"xlsx": "Excel-Arbeitsmappe",
+		"json": "JSON-Datei",
+		"parquet": "Parquet-Datei",
+		"sqlite": "SQLite-Datenbank (Datei)",
+		"table": "Tabelle der Arbeitsmappe",
+		"query": "Andere Abfrage",
+		"sql": "SQL-Abfrage der Arbeitsmappe",
+		"postgres": "PostgreSQL",
+		"mysql": "MySQL / MariaDB",
+		"sqlserver": "SQL Server",
+		"web": "Web (JSON-API)",
+		"lattis": "Lattis-Server",
+		"formula": "Formel (verknüpfte Tabelle)"
+	},
+	"op": {
+		"select": {
+			"label": "Spalten auswählen",
+			"hint": "Bestimmte Spalten in der gewünschten Reihenfolge behalten"
+		},
+		"remove": {
+			"label": "Spalten entfernen",
+			"hint": "Spalten entfernen"
+		},
+		"rename": {
+			"label": "Umbenennen",
+			"hint": "Eine Spalte umbenennen"
+		},
+		"type": {
+			"label": "Datentyp",
+			"hint": "Den Typ einer Spalte ändern (ein nicht konvertierbarer Wert wird leer)"
+		},
+		"filter": {
+			"label": "Zeilen filtern",
+			"hint": "Die Zeilen behalten, die Bedingungen erfüllen"
+		},
+		"sort": {
+			"label": "Sortieren",
+			"hint": "Die Zeilen sortieren"
+		},
+		"distinct": {
+			"label": "Duplikate entfernen",
+			"hint": "Eine Zeile pro Wert behalten (aller Spalten oder bestimmter Spalten)"
+		},
+		"top": {
+			"label": "Erste Zeilen beibehalten",
+			"hint": "Die ersten N Zeilen behalten"
+		},
+		"split": {
+			"label": "Spalte teilen",
+			"hint": "Eine Textspalte nach Trennzeichen teilen"
+		},
+		"replace": {
+			"label": "Werte ersetzen",
+			"hint": "Einen Wert durch einen anderen ersetzen"
+		},
+		"transform": {
+			"label": "Format",
+			"hint": "TRIM, GROSSBUCHSTABEN, kleinbuchstaben"
+		},
+		"addcolumn": {
+			"label": "Benutzerdefinierte Spalte",
+			"hint": "Neue Spalte, berechnet durch einen SQLite-Ausdruck ([Spalte] bezeichnet eine Spalte)"
+		},
+		"index": {
+			"label": "Indexspalte",
+			"hint": "Die Zeilen nummerieren"
+		},
+		"group": {
+			"label": "Gruppieren nach",
+			"hint": "Zeilen gruppieren und Aggregate berechnen"
+		},
+		"unpivot": {
+			"label": "Entpivotieren",
+			"hint": "Spalten in Zeilen umwandeln (Attribut, Wert)"
+		},
+		"pivot": {
+			"label": "Pivotieren",
+			"hint": "Die Werte einer Spalte in Spalten umwandeln"
+		},
+		"merge": {
+			"label": "Zusammenführen",
+			"hint": "Eine andere Abfrage oder eine Tabelle über gemeinsame Spalten verknüpfen"
+		},
+		"append": {
+			"label": "Anfügen",
+			"hint": "Die Zeilen einer anderen Abfrage oder einer Tabelle am Ende anfügen"
+		}
+	},
+	"type": {
+		"text": "Text",
+		"integer": "Ganze Zahl",
+		"decimal": "Dezimalzahl",
+		"date": "Datum",
+		"boolean": "Wahr/Falsch",
+		"auto": "Auto"
+	},
+	"cmp": {
+		"eq": "ist gleich",
+		"ne": "ist nicht gleich",
+		"gt": "ist größer als",
+		"ge": "ist größer oder gleich",
+		"lt": "ist kleiner als",
+		"le": "ist kleiner oder gleich",
+		"contains": "enthält",
+		"notcontains": "enthält nicht",
+		"begins": "beginnt mit",
+		"ends": "endet mit",
+		"empty": "ist leer",
+		"notempty": "ist nicht leer"
+	},
+	"agg": {
+		"sum": "Summe",
+		"avg": "Mittelwert",
+		"count": "Zeilen zählen",
+		"countdistinct": "Eindeutige Werte zählen",
+		"min": "Min",
+		"max": "Max"
+	},
+	"join": {
+		"left": "Linker äußerer (alle Zeilen der ersten, die übereinstimmenden der zweiten)",
+		"inner": "Innerer (nur übereinstimmende Zeilen)",
+		"full": "Vollständiger äußerer (alle Zeilen aus beiden)",
+		"right": "Rechter äußerer (alle Zeilen der zweiten)",
+		"anti": "Linker Anti (Zeilen der ersten ohne Übereinstimmung)"
+	},
+	"default": {
+		"custom": "Benutzerdefiniert",
+		"index": "Index",
+		"count": "Anzahl",
+		"attribute": "Attribut",
+		"value": "Wert"
+	},
+	"password": {
+		"title": "Kennwort",
+		"header": "Verbindung „{name}“",
+		"stored": "Diese Arbeitsmappe möchte sich mit Ihrem auf diesem Computer gespeicherten Kennwort verbinden.",
+		"storedHelp": "Erlauben Sie es, wenn Sie diese Arbeitsmappe kennen: Die Zustimmung wird für sie auf diesem Computer gespeichert. Eine Arbeitsmappe aus unbekannter Quelle sollte sie nicht erhalten.",
+		"allow": "Erlauben",
+		"other": "Anderes Kennwort eingeben",
+		"refuse": "Ablehnen",
+		"refused": "Der Server hat das Kennwort abgelehnt.",
+		"asked": "Der Server verlangt ein Kennwort.",
+		"remember": "Auf diesem Computer speichern (Schlüsselbund des Systems)",
+		"never": "Es wird nie in der Arbeitsmappe gespeichert."
+	},
+	"host": {
+		"group": {
+			"file": "Datei",
+			"database": "Datenbank",
+			"other": "Andere Quellen"
+		},
+		"source": {
+			"csv": "Text/CSV",
+			"sqlite": "SQLite-Datenbank"
+		},
+		"noExcelTable": "Keine Tabelle mit zwei oder mehr Zeilen in dieser Arbeitsmappe.",
+		"noTable": "Die Arbeitsmappe enthält keine Tabelle.",
+		"refreshingAll": "Alle Abfragen werden aktualisiert…",
+		"refreshing": "Wird aktualisiert…",
+		"passwordAbandoned": "Aktualisierung abgebrochen: kein Kennwort eingegeben.",
+		"refreshedAll": "{n, plural, one {# Abfrage aktualisiert} other {# Abfragen aktualisiert}}",
+		"nothingToRefresh": "Keine geladene Abfrage zu aktualisieren",
+		"loaded": "Tabelle „{table}“: {n, plural, one {# Zeile geladen} other {# Zeilen geladen}}",
+		"saved": "Abfrage „{name}“ gespeichert",
+		"deleted": "Abfrage „{name}“ gelöscht (Strg+Z zum Rückgängigmachen)",
+		"deletedTable": "Abfrage „{name}“ gelöscht; die Tabelle {table} bleibt auf ihrem Blatt (Strg+Z zum Rückgängigmachen)",
+		"connDeleted": "Verbindung „{name}“ gelöscht (Strg+Z zum Rückgängigmachen)",
+		"connRenamed": "Verbindung „{old}“ umbenannt in „{name}“ (Strg+Z zum Rückgängigmachen)",
+		"rename": {
+			"label": "Umbenennen",
+			"aria": "Neuer Name der Verbindung „{name}“",
+			"empty": "Geben Sie einen Namen für die Verbindung ein."
+		},
+		"forgotten": "Kennwort von „{name}“ vergessen",
+		"panel": {
+			"title": "Abfragen und Verbindungen",
+			"help": "Hilfe zu Abfragen und Verbindungen"
+		},
+		"queries": "Abfragen",
+		"editQuery": "Abfrage „{name}“ bearbeiten",
+		"refreshedOn": "Aktualisiert am {date}",
+		"connectionOnly": "Nur Verbindung",
+		"refresh": "Aktualisieren",
+		"load": "Laden",
+		"more": "Weitere Aktionen",
+		"edit": "Bearbeiten",
+		"delete": "Löschen",
+		"noQuery": "Keine Abfrage: Daten › Daten abrufen.",
+		"connections": "Verbindungen",
+		"editConn": "Verbindung „{name}“ bearbeiten",
+		"tokenRemembered": "Token gespeichert",
+		"passwordRemembered": "Kennwort gespeichert",
+		"forgetToken": "Token vergessen",
+		"forgetPassword": "Kennwort vergessen",
+		"newConn": "Neue Verbindung…"
+	},
+	"source": {
+		"passwordRequired": "Kennwort erforderlich, um die Tabellen aufzulisten.",
+		"need": {
+			"file": "Wählen Sie eine Datei.",
+			"xlsxTable": "Wählen Sie eine Tabelle der Arbeitsmappe.",
+			"table": "Wählen Sie eine Tabelle.",
+			"query": "Wählen Sie eine Abfrage.",
+			"connection": "Wählen Sie eine Verbindung und eine Tabelle (oder schreiben Sie eine SQL-Abfrage).",
+			"fileTable": "Wählen Sie eine Tabelle (oder schreiben Sie eine SQL-Abfrage).",
+			"sql": "Schreiben Sie eine SQL-Abfrage.",
+			"formula": "Schreiben Sie eine Formel, die mit = beginnt.",
+			"url": "Die Adresse muss mit http:// oder https:// beginnen."
+		},
+		"title": "Quelle",
+		"kind": "Quelltyp",
+		"file": {
+			"label": "Datei",
+			"placeholder": "Dateipfad",
+			"browse": "Durchsuchen…"
+		},
+		"csv": {
+			"delimiter": "Trennzeichen",
+			"auto": "Automatisch erkannt",
+			"semicolon": "Semikolon (;)",
+			"comma": "Komma (,)",
+			"tab": "Tabstopp",
+			"pipe": "Senkrechter Strich (|)"
+		},
+		"xlsx": {
+			"table": "Tabelle {n}"
+		},
+		"recordPath": {
+			"label": "Datensatzpfad",
+			"placeholder": "leer: der Stamm oder sein einziges Array; z. B. data.items"
+		},
+		"json": {
+			"help": "Array von Objekten oder ein JSON-Objekt pro Zeile (NDJSON). Verschachtelte Objekte werden zu Spalten „parent.child“."
+		},
+		"parquet": {
+			"help": "Jede Spalte der Datei ergibt eine Spalte („parent.child“ für eine Struktur; eine Liste wird zu Text)."
+		},
+		"table": "Tabelle",
+		"query": "Abfrage",
+		"queryHelp": "Die Abfrage geht vom Ergebnis der anderen Abfrage aus (Verweis): Eine Änderung der anderen Abfrage ändert auch diese.",
+		"newConn": "Neu…",
+		"web": {
+			"url": "Adresse (GET)",
+			"urlPlaceholder": "https://api.beispiel.de/v1/kunden?page=1",
+			"headers": "Header (einer pro Zeile, „Name: Wert“)",
+			"auth": "Authentifizierung",
+			"public": "Keine (öffentliche API)",
+			"help": "Header werden in der Arbeitsmappe gespeichert: Ein Token oder API-Schlüssel läuft über eine Web-Verbindung (im Schlüsselbund des Systems aufbewahrt)."
+		},
+		"tables": "Tabellen und Sichten",
+		"search": "Suchen",
+		"view": "(Sicht)",
+		"sql": {
+			"label": "SQL-Abfrage (schreibgeschützt)",
+			"dbHelp": "Filtern Sie möglichst hier: Die Abfrage wird vom Server ausgeführt, die Schritte danach von Lattis.",
+			"fileHelp": "Die Datei wird schreibgeschützt geöffnet; die Schritte werden danach angewendet.",
+			"workbook": "SQL-Abfrage auf die Arbeitsmappe (schreibgeschützt)",
+			"workbookHelp": "Wie auf der Registerkarte SQL: Die Abfrage wird bei jeder Aktualisierung neu gelesen.",
+			"sheet": "Adressen Cell[A1] ohne Blatt werden auf „{sheet}“ gelesen."
+		},
+		"formula": {
+			"label": "Formel (dynamische Tabelle)",
+			"help": "Die Tabelle wird neu berechnet, wenn sich ihre Quellen ändern (ohne Schritte; mit Schritten bei der Aktualisierung, F5)."
+		}
+	},
+	"step": {
+		"need": {
+			"columns": "Aktivieren Sie mindestens eine Spalte.",
+			"name": "Geben Sie einen Namen ein.",
+			"nameExpr": "Geben Sie einen Namen und einen Ausdruck ein.",
+			"mergeOther": "Wählen Sie die zusammenzuführende Abfrage oder Tabelle.",
+			"keys": "Wählen Sie die übereinstimmenden Spalten auf beiden Seiten.",
+			"appendOther": "Wählen Sie die anzufügende Abfrage oder Tabelle."
+		},
+		"or": "Oder",
+		"and": "Und",
+		"remove": "Entfernen",
+		"filter": {
+			"add": "Bedingung hinzufügen",
+			"help": "Zahlen und Datumswerte werden wie im Raster geschrieben (3,5; 31/12/2026). Enthält, beginnt mit und endet mit unterscheiden nicht zwischen Groß- und Kleinschreibung."
+		},
+		"column": "Spalte",
+		"newName": "Neuer Name",
+		"type": "Typ",
+		"distinct": {
+			"help": "Keine Spalte aktiviert: Eine Zeile ist ein Duplikat, wenn alle ihre Werte identisch sind."
+		},
+		"unpivot": {
+			"attribute": "Attributspalte"
+		},
+		"valueColumn": "Wertspalte",
+		"select": {
+			"help": "Aktivieren Sie die zu behaltenden Spalten; ↑ ↓ ändern ihre Reihenfolge."
+		},
+		"up": "Nach oben",
+		"down": "Nach unten",
+		"split": {
+			"delimiter": "Trennzeichen",
+			"parts": "Anzahl der Spalten"
+		},
+		"replace": {
+			"value": "Zu suchender Wert",
+			"with": "Ersetzen durch",
+			"help": "In einer Textspalte wird jedes Vorkommen ersetzt; sonst der ganze Wert."
+		},
+		"transform": {
+			"trim": "Leerzeichen entfernen (TRIM)",
+			"upper": "GROSSBUCHSTABEN",
+			"lower": "kleinbuchstaben"
+		},
+		"addcolumn": {
+			"name": "Name der neuen Spalte",
+			"expr": "Formel (SQLite)",
+			"placeholder": "[Menge] * [Preis]",
+			"help": "Verfügbare Spalten: {columns}. Beispiele: [Preis] * 1.2, upper([Ort]), [Nachname] || ' ' || [Vorname], CASE WHEN [Betrag] > 100 THEN 'groß' ELSE 'klein' END."
+		},
+		"autoType": "Auto (aus den Werten abgeleitet)",
+		"name": "Name",
+		"index": {
+			"start": "Beginnen bei"
+		},
+		"merge": {
+			"with": "Zusammenführen mit",
+			"keys": "Übereinstimmende Spalten (erste Abfrage ↔ zweite):",
+			"addKey": "Übereinstimmende Spalte hinzufügen",
+			"join": "Joinart",
+			"columns": "Aus der zweiten zu übernehmende Spalten (keine aktiviert: alle außer den übereinstimmenden Spalten):"
+		},
+		"append": {
+			"from": "Zeilen anfügen von",
+			"help": "Spalten werden über ihren Namen zugeordnet; eine auf einer Seite fehlende Spalte bleibt leer."
+		},
+		"group": {
+			"by": "Gruppieren nach:",
+			"aggs": "Aggregate:",
+			"add": "Aggregat hinzufügen"
+		},
+		"sort": {
+			"by": "Sortieren nach",
+			"then": "Dann nach",
+			"inOrder": "In Reihenfolge",
+			"asc": "Aufsteigend",
+			"reverse": "Umgekehrt",
+			"desc": "Absteigend",
+			"custom": "Benutzerdefinierte Reihenfolge (optional, Werte durch „;“ getrennt)",
+			"customPlaceholder": "Hoch; Mittel; Niedrig",
+			"add": "Ebene hinzufügen"
+		},
+		"top": {
+			"count": "Anzahl der Zeilen"
+		},
+		"pivot": {
+			"column": "Spalte, deren Werte zu Spalten werden",
+			"agg": "Aggregat",
+			"help": "Höchstens 50 eindeutige Werte; die anderen Spalten gruppieren die Zeilen."
+		}
+	},
+	"editor": {
+		"otherQuery": "Abfrage {name}",
+		"otherTable": "Tabelle {name}",
+		"needName": "Geben Sie der Abfrage einen Namen.",
+		"tab": {
+			"home": "Start",
+			"transform": "Transformieren",
+			"addColumn": "Spalte hinzufügen"
+		},
+		"group": {
+			"close": "Schließen",
+			"columns": "Spalten verwalten",
+			"rows": "Zeilen verringern",
+			"combine": "Kombinieren",
+			"table": "Tabelle",
+			"anyColumn": "Beliebige Spalte",
+			"textColumn": "Textspalte",
+			"general": "Allgemein"
+		},
+		"cmd": {
+			"closeLoad": {
+				"label": "Schließen & laden",
+				"hint": "Abfrage speichern und ihr Ergebnis in eine Tabelle laden"
+			},
+			"save": {
+				"hint": "Abfrage speichern, ohne sie zu laden (nur Verbindung)"
+			},
+			"cancel": {
+				"hint": "Abfrage-Editor schließen, ohne die Änderungen zu speichern (die Arbeitsmappe bleibt geöffnet)"
+			},
+			"refresh": {
+				"label": "Vorschau aktualisieren",
+				"hint": "Quellen neu lesen"
+			},
+			"source": {
+				"label": "Quelle…",
+				"hint": "Quelle der Abfrage ändern"
+			},
+			"sql": {
+				"label": "SQL anzeigen",
+				"hint": "SQL der Vorschau anzeigen"
+			},
+			"undo": {
+				"label": "Rückgängig",
+				"hint": "Letzte Aktion an den Schritten rückgängig machen (Strg+Z)"
+			},
+			"redo": {
+				"label": "Wiederholen",
+				"hint": "Rückgängig gemachte Aktion wiederholen (Strg+Y)"
+			},
+			"sortDialog": "Sortieren…",
+			"asc": {
+				"hint": "Nach den gewählten Spalten aufsteigend sortieren"
+			},
+			"desc": {
+				"hint": "Nach den gewählten Spalten absteigend sortieren"
+			},
+			"mergeQueries": "Abfragen zusammenführen",
+			"appendQueries": "Abfragen anfügen",
+			"unpivot": "Spalten entpivotieren",
+			"pivot": "Spalte pivotieren"
+		},
+		"title": "Abfrage-Editor",
+		"tabs": "Registerkarten des Menübands",
+		"close": {
+			"tooltip": "Abbrechen: Abfrage-Editor schließen, ohne zu speichern (die Arbeitsmappe bleibt geöffnet)",
+			"aria": "Abbrechen und Abfrage-Editor schließen"
+		},
+		"errorStep": "Schritt {n} ({label})",
+		"previousStep": "Vorschau des vorherigen Schritts",
+		"header": {
+			"tooltip": "{name}: {type} — Rechtsklick oder ▾: Spaltenmenü; Strg oder Umschalt: mehrere Spalten",
+			"menu": "Menü der Spalte {name}"
+		},
+		"computing": "Vorschau wird berechnet…",
+		"noData": "Keine Daten.",
+		"status": {
+			"size": "{columns, plural, one {# Spalte} other {# Spalten}}, {rows, plural, one {# Zeile} other {# Zeilen}}",
+			"sample": "Vorschau auf Basis der ersten 1.000 Zeilen jeder Quelle",
+			"shown": "({n} angezeigt)"
+		},
+		"hideSql": "SQL ausblenden",
+		"properties": "Eigenschaften",
+		"applied": "Angewendete Schritte",
+		"step": {
+			"edit": "Schritt bearbeiten",
+			"delete": "Schritt löschen"
+		},
+		"help": "Ein neuer Schritt wird nach dem gewählten Schritt eingefügt. Klicken Sie auf eine Spaltenüberschrift, um die Spalte auszuwählen (Strg oder Umschalt: mehrere); ihr ▾ oder ein Rechtsklick öffnet das Spaltenmenü.",
+		"menu": {
+			"count": "({n} Spalten)",
+			"chosen": "{n} Spalten ausgewählt",
+			"keep": "Andere Spalten entfernen",
+			"rename": "Umbenennen…",
+			"type": "Typ ändern",
+			"replace": "Werte ersetzen…",
+			"split": "Spalte teilen…",
+			"asc": "Aufsteigend sortieren",
+			"desc": "Absteigend sortieren",
+			"filter": "Zeilen filtern…",
+			"group": "Gruppieren nach…",
+			"unpivotOthers": "Andere Spalten entpivotieren",
+			"pivot": "Spalte pivotieren…"
+		}
+	}
+}

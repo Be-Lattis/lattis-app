@@ -23,18 +23,15 @@ describe('t', () => {
 		expect(t('shell.settings.language.auto', { name: 'English' })).toBe('Langue du système (English)');
 	});
 
-	it('rend le français quand la langue n’a pas le texte, la clé quand personne ne l’a', async () => {
-		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+	it('rend le texte de la langue chargée, la clé quand personne ne l’a', async () => {
 		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 		await setLang('de');
 		expect(lang()).toBe('de');
-		expect(t('common.cancel')).toBe('Annuler');
-		// Pluriel du texte français, nombre écrit à l'allemande.
-		expect(t('common.rows', { n: 1234 })).toBe('1.234 lignes');
-		expect(warn).toHaveBeenCalled();
+		expect(t('common.cancel')).toBe('Abbrechen');
+		// Pluriel allemand, nombre écrit à l'allemande.
+		expect(t('common.rows', { n: 1234 })).toBe('1.234 Zeilen');
 		expect(tAny('nulle.part')).toBe('nulle.part');
 		expect(error).toHaveBeenCalled();
-		warn.mockRestore();
 		error.mockRestore();
 	});
 });

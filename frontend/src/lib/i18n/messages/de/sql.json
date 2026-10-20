@@ -1,1 +1,39 @@
-{}
+{
+	"when": {
+		"now": "gerade eben",
+		"minutes": "vor {n} Min.",
+		"yesterday": "gestern {time}"
+	},
+	"rows": "{n, plural, one {# Zeile} other {# Zeilen}}",
+	"example": {
+		"text": "Text",
+		"value": "Wert",
+		"column": "Spalte",
+		"type": {
+			"integer": "Ganzzahl",
+			"decimal": "Dezimalzahl",
+			"text": "Text",
+			"boolean": "boolesch: 1 oder 0",
+			"date": "Datum JJJJ-MM-TT",
+			"formula": "berechnet"
+		},
+		"select": "Alle Spalten der Tabelle {name} ({rows})",
+		"selectPivot": "Alle Spalten der PivotTable {name} ({rows})",
+		"insert": "Fügt am Ende von {name} eine Zeile hinzu",
+		"insertComputed": "Fügt am Ende von {name} eine Zeile hinzu (berechnete Spalten füllen sich selbst)",
+		"insertUndo": "Strg+Z macht das Hinzufügen rückgängig.",
+		"update": "Ändert die Zeilen von {name}, die die Bedingung erfüllen",
+		"updateWarn": "Ohne WHERE werden alle Zeilen geändert. Strg+Z macht es rückgängig.",
+		"delete": "Löscht die Zeilen von {name}, die die Bedingung erfüllen",
+		"deleteWarn": "Ohne WHERE wird die ganze Tabelle geleert. Strg+Z macht es rückgängig."
+	},
+	"complete": {
+		"table": "Tabelle · {rows}"
+	},
+	"ambiguous": "Mehrdeutige Spalte „{column}“: vorhanden in {tables}. Geben Sie die Tabelle an, zum Beispiel {example}.",
+	"and": " und ",
+	"editor": {
+		"ambiguous": "Spalte in mehreren Tabellen vorhanden: Geben Sie die Tabelle an",
+		"placeholder": "SELECT … FROM Tabelle — Strg+Leertaste für Namen"
+	}
+}

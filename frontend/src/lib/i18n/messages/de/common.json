@@ -1,1 +1,11 @@
-{}
+{
+	"ok": "OK",
+	"cancel": "Abbrechen",
+	"close": "Schließen",
+	"rows": "{n, plural, =0 {keine Zeilen} one {# Zeile} other {# Zeilen}}",
+	"values": "{n, plural, =0 {keine Werte} one {# Wert} other {# Werte}}",
+	"cut": "Ausschneiden",
+	"copy": "Kopieren",
+	"paste": "Einfügen",
+	"delete": "Löschen"
+}

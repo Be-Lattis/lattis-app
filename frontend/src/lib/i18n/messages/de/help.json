@@ -1,1 +1,39 @@
-{}
+{
+	"title": "Hilfe",
+	"where": {
+		"function": "Funktion",
+		"shortcut": "Tastenkombination",
+		"settings": "Einstellungen"
+	},
+	"back": "Vorherige Seite",
+	"report": {
+		"label": "Problem melden",
+		"tooltip": "Öffnet die Seite zum Erstellen eines Issues auf GitHub (Version vorausgefüllt)"
+	},
+	"close": {
+		"tooltip": "Hilfe schließen (Esc)",
+		"aria": "Hilfe schließen"
+	},
+	"search": {
+		"placeholder": "Suchen: SUMIF, Schlüssel, Diagramm, db.query…",
+		"aria": "Hilfe durchsuchen"
+	},
+	"toc": "Inhalt",
+	"results": {
+		"count": "{n, plural, one {# Ergebnis} other {# Ergebnisse}}",
+		"first": "Erste {n} Ergebnisse",
+		"none": "Keine Treffer."
+	},
+	"fn": {
+		"english": "Französischer Name:",
+		"category": "Kategorie:",
+		"arguments": "Argumente",
+		"optional": "optional",
+		"repeatable": "wiederholbar",
+		"example": "Beispiel",
+		"seeAlso": "Siehe auch",
+		"loading": "Funktionskatalog wird geladen…",
+		"unknown": "Unbekannte Funktion: {name}.",
+		"unavailable": "Katalog nicht verfügbar."
+	}
+}

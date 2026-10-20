@@ -1,1 +1,238 @@
-{}
+{
+	"lint": {
+		"longComment": "langer Kommentar nicht abgeschlossen: „]]“ fehlt",
+		"accent": {
+			"index": "schreiben Sie [{quoted}] statt .{word}",
+			"plain": "verwenden Sie einen Namen ohne Akzente und Umlaute",
+			"name": "ein Lua-Name darf keine Akzente oder Umlaute enthalten („{word}“): {hint}"
+		},
+		"hex": "unvollständige Hexadezimalzahl",
+		"exponent": "unvollständiger Exponent in der Zahl",
+		"unterminated": {
+			"double": "Zeichenkette nicht abgeschlossen: Das schließende \" fehlt (für mehrere Zeilen verwenden Sie [[ ... ]])",
+			"single": "Zeichenkette nicht abgeschlossen: Das schließende ' fehlt (für mehrere Zeilen verwenden Sie [[ ... ]])"
+		},
+		"longString": "lange Zeichenkette nicht abgeschlossen: „]]“ fehlt",
+		"char": {
+			"neq": "„ungleich“ wird in Lua ~= geschrieben, nicht !=",
+			"not": "„nicht“ wird in Lua not geschrieben, nicht !",
+			"tilde": "„~“ allein gibt es nicht: „ungleich“ wird ~= geschrieben",
+			"and": "„und“ wird in Lua and geschrieben, nicht &&",
+			"or": "„oder“ wird in Lua or geschrieben, nicht ||",
+			"typographic": "typografisches Anführungszeichen „{char}“: verwenden Sie \" oder '",
+			"backtick": "„`“ gibt es in Lua nicht: verwenden Sie \" oder '",
+			"unexpected": "unerwartetes Zeichen „{char}“"
+		},
+		"eof": "das Ende des Skripts",
+		"expected": "„{token}“ erwartet, gefunden: {found}",
+		"expectedWhat": "„{token}“ erwartet {what}, gefunden: {found}",
+		"compareHint": " (zum Vergleichen verwenden Sie ==)",
+		"endExpected": "„end“ erwartet, um {opener} aus Zeile {line} zu schließen, gefunden: {found}",
+		"noContinue": "Lua hat kein „continue“: setzen Sie den Rest der Schleife in ein if",
+		"reserved": "„{word}“ ist ein reserviertes Wort in Lua: Es kann nicht als Name dienen ({what})",
+		"nameExpected": "Name erwartet ({what}), gefunden: {found}",
+		"noLabel": "keine sichtbare Sprungmarke „::{name}::“ für dieses goto",
+		"labelDefined": "Sprungmarke „::{name}::“ bereits in Zeile {line} definiert",
+		"gotoScope": "das goto in Zeile {line} springt in den Gültigkeitsbereich der lokalen Variablen „{name}“: deklarieren Sie sie vor dem goto",
+		"extraEnd": "überzähliges „end“: kein Block zu schließen",
+		"withoutIf": "„{word}“ ohne „if“",
+		"untilWithoutRepeat": "„until“ ohne „repeat“",
+		"unexpectedStatement": "unerwartete Anweisung: {found}",
+		"overridesGlobal": "diese Zuweisung ersetzt das vordefinierte „{name}“",
+		"globalVar": "globale Variable „{name}“: besser „local {name} = ...“",
+		"globalFunc": "globale Funktion „{name}“: besser „local function {name}“",
+		"breakOutside": "„break“ außerhalb einer Schleife",
+		"lastStatement": "„{word}“ muss die letzte Anweisung seines Blocks sein (vor „end“, „else“ oder „until“)",
+		"what": {
+			"ifCond": "nach der Bedingung des if",
+			"elseifCond": "nach der Bedingung des elseif",
+			"whileCond": "nach der Bedingung des while",
+			"closeRepeat": "um das repeat zu schließen",
+			"funcName": "Funktionsname",
+			"localName": "Name der lokalen Variablen",
+			"gotoLabel": "Sprungmarke des goto",
+			"label": "Sprungmarke",
+			"closeLabel": "um die Sprungmarke zu schließen",
+			"forVar": "Variable der for-Schleife",
+			"forBounds": "zwischen Anfang und Ende der for-Schleife",
+			"forDo": "nach den Grenzen der for-Schleife",
+			"forInDo": "nach „for ... in ...“",
+			"openParams": "um die Parameter der Funktion zu öffnen",
+			"param": "Parameter der Funktion",
+			"closeParams": "um die Parameter der Funktion zu schließen",
+			"assignment": "in der Zuweisung",
+			"closeKey": "um den Schlüssel zu schließen",
+			"afterKey": "nach dem Schlüssel [ ... ]",
+			"closeParen": "um die Klammer zu schließen",
+			"field": "Feldname nach dem Punkt",
+			"closeIndex": "um den Index zu schließen",
+			"method": "Methodenname nach „:“"
+		},
+		"forIn": "„=“ oder „in“ erwartet nach der Variablen der for-Schleife, gefunden: {found}",
+		"assignCall": "dem Ergebnis eines Funktionsaufrufs kann kein Wert zugewiesen werden",
+		"assignExpr": "diesem Ausdruck kann kein Wert zugewiesen werden",
+		"compound": "Lua hat keinen Operator „{op}=“: schreiben Sie x = x {bin} Wert",
+		"concatAssign": "Lua hat keinen Operator „..=“: schreiben Sie s = s .. Wert",
+		"compareNotAssign": "„==“ vergleicht zwei Werte; zum Zuweisen verwenden Sie ein einfaches =",
+		"incomplete": "unvollständige Anweisung: Ein Funktionsaufruf oder eine Zuweisung (=) wird erwartet",
+		"incompleteFound": "unvollständige Anweisung: Ein Funktionsaufruf oder eine Zuweisung (=) wird erwartet, gefunden: {found}",
+		"floorDiv": "Lua 5.1 hat keinen Operator „//“: verwenden Sie math.floor(a / b)",
+		"vararg": "„...“ ist nur in einer Funktion verwendbar, die mit „...“ in ihren Parametern deklariert ist",
+		"tableClose": "„}“ erwartet, um die in Zeile {line} geöffnete Tabelle zu schließen (trennen Sie die Elemente durch Kommas), gefunden: {found}",
+		"unavailableName": "„{name}“ ist nicht verfügbar: {why}",
+		"undefinedHint": "„{name}“ ist nicht definiert: meinten Sie „{hint}“?",
+		"undefined": "„{name}“ ist nicht definiert (Variable nie zugewiesen und nicht mit local deklariert)",
+		"colonCall": "schreiben Sie {base}.{name}(...) mit einem Punkt: „:“ würde {base} als erstes Argument übergeben",
+		"parenLine": "dieses „(“ am Zeilenanfang setzt den Aufruf der vorherigen Zeile fort; fügen Sie „;“ am Ende der vorherigen Zeile hinzu, wenn das nicht gewollt ist",
+		"exprEof": "Ausdruck erwartet, aber das Skript endet hier",
+		"exprEnd": "unerwartetes „end“: Davor fehlt ein Ausdruck, oder es gibt ein überzähliges „end“",
+		"exprKeyword": "Ausdruck erwartet, gefunden: das reservierte Wort „{word}“",
+		"exprEquals": "unerwartetes „=“: Davor fehlt ein Wert, oder zum Vergleichen verwenden Sie ==",
+		"exprFound": "Ausdruck erwartet, gefunden: {found}",
+		"argsExpected": "Argumente erwartet nach „:name“, gefunden: {found}",
+		"callClose": "„)“ erwartet, um den in Zeile {line} geöffneten Aufruf zu schließen (trennen Sie die Argumente durch Kommas), gefunden: {found}",
+		"deprecated": "{name} ist ein alter Name: verwenden Sie {use}",
+		"unavailableMember": "{name} ist nicht verfügbar: {why}",
+		"noMemberHint": "{name} existiert nicht: meinten Sie {hint}?",
+		"noMember": "{name} existiert nicht",
+		"arity": {
+			"atLeast": "mindestens {min} Argumente",
+			"exactly": "{n, plural, =1 {# Argument} other {# Argumente}}",
+			"between": "{min} bis {max} Argumente",
+			"given": "{n, plural, one {# übergeben} other {# übergeben}}",
+			"message": "{path} erwartet {want}, {given}: {signature}"
+		}
+	},
+	"category": {
+		"syntaxe": "Sprachgrundlagen: Bedingungen, Schleifen, Funktionen",
+		"db": "SQL-Daten (db)",
+		"sheets": "Blätter (sheets)",
+		"cells": "Zellen (cells)",
+		"tables": "Tabellen (tables)",
+		"columns": "Spalten (columns)",
+		"ui": "Auswahl und Dialogfelder (ui)",
+		"controls": "Steuerelemente und Ereignisse (controls)",
+		"events": "Ereignisse der Arbeitsmappe (events)",
+		"objects": "Diagramme, PivotTables und Schaltflächen",
+		"workbook": "Arbeitsmappe und Skripts (doc, scripts)",
+		"http": "HTTP- und HTTPS-Anfragen (http)",
+		"base": "Grundfunktionen",
+		"string": "Text (string)",
+		"table": "Lua-Tabellen (table)",
+		"math": "Mathematik (math)",
+		"os": "Datum und Uhrzeit (os)"
+	},
+	"unavailable": {
+		"files": "kein Dateizugriff in einem Skript",
+		"modules": "kein Laden von Modulen in einem Skript",
+		"code": "kein Laden von Code in einem Skript",
+		"debug": "Bibliothek debug nicht verfügbar",
+		"coroutine": "Bibliothek coroutine nicht verfügbar",
+		"none": "in einem Skript nicht verfügbar",
+		"programs": "kein Starten von Programmen in einem Skript",
+		"env": "kein Zugriff auf Umgebungsvariablen"
+	},
+	"editor": {
+		"noProblem": "Keine Probleme erkannt",
+		"errors": "{n, plural, one {# Fehler} other {# Fehler}}",
+		"warnings": "{n, plural, one {# Warnung} other {# Warnungen}}",
+		"next": "klicken, um zum nächsten zu gehen (F8)"
+	},
+	"controls": {
+		"label": "Beschriftung: {label}"
+	},
+	"pick": {
+		"banner": "Klicken Sie auf ein Steuerelement (Schaltfläche, Feld…), um seinen Namen in das Skript einzufügen — Esc zum Abbrechen."
+	},
+	"picker": {
+		"filter": "Nach Name, Typ oder Register filtern",
+		"aria": "Steuerelemente der Arbeitsmappe",
+		"noMatch": "Kein Steuerelement entspricht.",
+		"none": "Kein Steuerelement in der Arbeitsmappe: Einfügen › Schaltfläche oder Feld.",
+		"onSheet": {
+			"label": "Auf dem Blatt auswählen",
+			"tooltip": "Blätter anzeigen: Ein Klick auf ein Steuerelement fügt seinen Namen ein; Esc bricht ab"
+		}
+	},
+	"network": {
+		"badHost": "Hostname erwartet: api.beispiel.de oder eine Adresse https://…",
+		"aria": "Netzwerkzugriff",
+		"title": "Netzwerkzugriff der Arbeitsmappe",
+		"help": "Vor der ersten HTTP-Anfrage an einen Host (http.get, http.post… in einem Skript oder einer HTML-Seite) bittet Lattis Sie um Erlaubnis. Mit „Für diese Arbeitsmappe speichern“ erlaubte Hosts werden hier aufgeführt: Sie werden auf diesem Computer gespeichert, nicht in der Datei (eine erhaltene Arbeitsmappe fragt immer erneut). Der MCP-Server erreicht nur diese Hosts.",
+		"remove": {
+			"label": "Entfernen",
+			"tooltip": "Entfernen: Die nächste Anfrage fragt erneut"
+		},
+		"none": "Kein gespeicherter Host.",
+		"host": "Zu erlaubender Host",
+		"allow": "Erlauben"
+	},
+	"ref": {
+		"title": "Lua-Referenz",
+		"help": "Hilfe zu Lua-Skripts",
+		"search": "Suchen: query, date, Großbuchstaben…",
+		"results": "{n, plural, one {# Ergebnis} other {# Ergebnisse}}",
+		"deprecated": "Alter Name: besser",
+		"insert": "Beispiel einfügen",
+		"noMatch": "Keine Funktion entspricht."
+	},
+	"dialog": {
+		"hideCode": "Code ausblenden",
+		"showCode": "Code anzeigen ({n, plural, one {# Zeile} other {# Zeilen}})",
+		"required": "„{label}“ ist erforderlich",
+		"number": "„{label}“: Zahl erwartet",
+		"integer": "„{label}“: ganze Zahl erwartet",
+		"min": "„{label}“: mindestens {min}",
+		"max": "„{label}“: höchstens {max}",
+		"warning": "Achtung.",
+		"code": "Skriptcode"
+	},
+	"view": {
+		"example": {
+			"line1": "Beispiel: die Liste der Tabellen der Arbeitsmappe und ihre Spalten.",
+			"line2": "db.query, db.rows, db.insert, db.execute…: siehe Schaltfläche „Referenz“.",
+			"columns": "Spalte(n)"
+		},
+		"newName": "Neues Skript",
+		"saved": "Skript in der Arbeitsmappe gespeichert",
+		"nameRefused": "Skriptname abgelehnt",
+		"running": "Wird ausgeführt…",
+		"stopped": "Nach {secs} s angehalten",
+		"done": "In {secs} s abgeschlossen",
+		"writes": "{n, plural, one {# Zeile geschrieben} other {# Zeilen geschrieben}}",
+		"undoAll": "(Strg+Z, um alles rückgängig zu machen)",
+		"renamed": "Skript umbenannt in „{name}“",
+		"copy": "{name} (Kopie)",
+		"copyN": "{name} (Kopie {n})",
+		"duplicated": "Skript dupliziert: „{name}“",
+		"title": "Skripts der Arbeitsmappe",
+		"locked": "{why}: Sie können sie lesen und ausführen.",
+		"renameAria": "Neuer Skriptname",
+		"empty": "Kein Skript in dieser Arbeitsmappe gespeichert.",
+		"menuTitle": "Skript „{name}“",
+		"rename": "Umbenennen",
+		"duplicate": "Duplizieren",
+		"delete": "Löschen",
+		"orOpen": "Oder öffnen Sie links ein Skript der Arbeitsmappe.",
+		"nameAria": "Skriptname",
+		"run": {
+			"label": "Ausführen",
+			"tooltip": "Ausführen (Strg+Eingabe)"
+		},
+		"stop": "Anhalten",
+		"save": {
+			"label": "Speichern",
+			"tooltip": "Skript speichern (Strg+S)"
+		},
+		"reference": "Referenz",
+		"pick": {
+			"label": "Steuerelement auswählen",
+			"tooltip": "Am Cursor den Namen einer Schaltfläche, eines Felds oder eines anderen Steuerelements der Arbeitsmappe einfügen"
+		},
+		"network": {
+			"tooltip": "Hosts, die die Skripts und HTML-Seiten der Arbeitsmappe per HTTP erreichen dürfen"
+		},
+		"output": "Ausgabe",
+		"keys": "Strg+Eingabe: ausführen · Strg+S: Skript speichern"
+	}
+}

@@ -1,1 +1,682 @@
-{}
+{
+	"tabs": {
+		"file": "Datei",
+		"home": "Start",
+		"insert": "Einfügen",
+		"pageLayout": "Seitenlayout",
+		"data": "Daten",
+		"formulas": "Formeln",
+		"review": "Überprüfen",
+		"view": "Ansicht",
+		"ai": "Assistent ✦",
+		"sql": "SQL",
+		"script": "Skript",
+		"help": "Hilfe"
+	},
+	"tabsAria": "Registerkarten des Menübands",
+	"aiButton": {
+		"label": "Assistent",
+		"open": "KI-Assistenten öffnen (Alt+I)",
+		"close": "KI-Assistenten schließen (Alt+I)"
+	},
+	"helpButton": {
+		"tooltip": "Hilfe (F1)",
+		"aria": "Hilfe"
+	},
+	"fold": {
+		"pinTooltip": "Menüband anheften (Strg+F1)",
+		"foldTooltip": "Menüband reduzieren: Nur die Registerkarten bleiben sichtbar (Strg+F1)",
+		"pinAria": "Menüband anheften",
+		"foldAria": "Menüband reduzieren"
+	},
+	"hideMenu": {
+		"aria": "Gruppen des Menübands",
+		"hide": "Gruppe „{group}“ ausblenden",
+		"show": "„{group}“ wieder einblenden",
+		"showAll": "Alle wieder einblenden",
+		"none": "Keine ausgeblendete Gruppe auf dieser Registerkarte"
+	},
+	"color": {
+		"choose": "Farbe auswählen",
+		"chooseAria": "{command}: Farbe auswählen",
+		"aria": "{command}: {color}",
+		"tooltip": "{tip} ({color})",
+		"noFill": "Keine Füllung",
+		"auto": "Automatisch"
+	},
+	"comboAria": "{command}: {value}",
+	"withKeys": "{label} ({keys})",
+	"fontSize": "Schriftgrad (Punkt)",
+	"file": {
+		"new": "Neu",
+		"open": "Öffnen…",
+		"recent": "Zuletzt verwendete Datei öffnen",
+		"recentNone": "Keine zuletzt verwendeten Dateien",
+		"openRemote": "Von einem Server öffnen…",
+		"close": "Schließen",
+		"save": "Speichern",
+		"saveAs": "Speichern unter…",
+		"download": "Kopie herunterladen",
+		"share": "Auf einem Server veröffentlichen…",
+		"rights": "Zugriff verwalten…",
+		"republish": "Erneut veröffentlichen…",
+		"reconnect": "Verbindung erneut versuchen",
+		"detach": "Vom Server trennen…",
+		"import": "Importieren (CSV, Excel)…",
+		"export": "Exportieren",
+		"exportTable": "Die Tabelle als CSV…",
+		"exportSheet": "Das ganze Blatt als CSV…",
+		"exportXlsx": "Die Excel-Arbeitsmappe (.xlsx)…",
+		"exportOds": "Die OpenDocument-Arbeitsmappe (.ods)…",
+		"print": "Drucken / PDF…",
+		"settings": "Einstellungen…",
+		"help": "Hilfe",
+		"report": "Problem melden…",
+		"about": "Über Lattis…",
+		"demo": "Demo: 1 Mio. Zeilen"
+	},
+	"numberFormat": {
+		"number": "Zahl",
+		"percent": "Prozent",
+		"currency": "Währung",
+		"date": "Datum",
+		"time": "Uhrzeit",
+		"text": "Text",
+		"general": "Standard"
+	},
+	"group": {
+		"undo": "Rückgängig",
+		"clipboard": "Zwischenablage",
+		"font": "Schriftart",
+		"borders": "Rahmen",
+		"alignment": "Ausrichtung",
+		"number": "Zahl",
+		"styles": "Formatvorlagen",
+		"cells": "Zellen",
+		"editing": "Bearbeiten",
+		"tables": "Tabellen",
+		"charts": "Diagramme",
+		"controls": "Steuerelemente",
+		"pageSetup": "Seite einrichten",
+		"scale": "An Format anpassen",
+		"sheetOptions": "Blattoptionen",
+		"getData": "Daten abrufen",
+		"queries": "Abfragen und Verbindungen",
+		"sortFilter": "Sortieren und Filtern",
+		"dataTools": "Datentools",
+		"library": "Bibliothek",
+		"audit": "Formelüberwachung",
+		"calculation": "Berechnung",
+		"notes": "Notizen",
+		"protect": "Schützen",
+		"show": "Anzeigen",
+		"theme": "Design",
+		"bench": "Messungen (Prototyp)",
+		"paragraph": "Absatz",
+		"print": "Drucken",
+		"links": "Links",
+		"printing": "Drucken"
+	},
+	"launch": {
+		"font": "Zellen formatieren: Schrift (Strg+1)",
+		"borders": "Zellen formatieren: Rahmen (Strg+1)",
+		"alignment": "Zellen formatieren: Ausrichtung (Strg+1)",
+		"number": "Zellen formatieren: Zahl, Datum, Uhrzeit… (Strg+1)",
+		"pageSetup": "Seite einrichten…: Papierformat, Seitenränder, Kopf- und Fußzeile, Blatt",
+		"scale": "Seite einrichten…: Skalierung",
+		"sheetOptions": "Seite einrichten…: Blatt"
+	},
+	"cmd": {
+		"undo": {
+			"label": "Rückgängig",
+			"tooltip": "Rückgängig: {action} (Strg+Z)",
+			"none": "Nichts rückgängig zu machen",
+			"docTooltip": "Letzte Textänderung rückgängig machen (Strg+Z)"
+		},
+		"redo": {
+			"label": "Wiederholen",
+			"tooltip": "Wiederholen: {action} (Strg+Y)",
+			"none": "Nichts zu wiederholen",
+			"docTooltip": "Wiederholen (Strg+Y)"
+		},
+		"paste": {
+			"label": "Einfügen",
+			"tooltip": "Einfügen (Strg+V)",
+			"docTooltip": "Text einfügen (Strg+V)"
+		},
+		"cut": {
+			"label": "Ausschneiden",
+			"tooltip": "Ausschneiden (Strg+X)"
+		},
+		"copy": {
+			"label": "Kopieren",
+			"tooltip": "Kopieren (Strg+C)"
+		},
+		"painter": {
+			"label": "Format übertragen",
+			"tooltip": "Formatierung der aktiven Zelle übertragen"
+		},
+		"bold": {
+			"label": "Fett",
+			"tooltip": "Fett (Strg+B)"
+		},
+		"italic": {
+			"label": "Kursiv",
+			"tooltip": "Kursiv (Strg+I)"
+		},
+		"underline": {
+			"label": "Unterstrichen",
+			"tooltip": "Unterstrichen (Strg+U)"
+		},
+		"strike": {
+			"label": "Durchgestrichen",
+			"tooltip": "Durchgestrichen"
+		},
+		"fontColor": {
+			"label": "Schriftfarbe",
+			"tooltip": "Schriftfarbe (▾: Farbton auswählen)"
+		},
+		"fillColor": {
+			"label": "Füllfarbe",
+			"tooltip": "Füllfarbe (▾: Farbton auswählen)"
+		},
+		"highlight": {
+			"label": "Hervorheben",
+			"tooltip": "Texthervorhebungsfarbe (▾: Farbton auswählen)"
+		},
+		"clearChars": {
+			"label": "Löschen",
+			"tooltip": "Zeichenformatierung löschen"
+		},
+		"bordersAll": {
+			"label": "Alle",
+			"tooltip": "Alle Rahmenlinien"
+		},
+		"bordersOutline": {
+			"label": "Außen",
+			"tooltip": "Rahmenlinien außen um die Auswahl"
+		},
+		"bordersNone": {
+			"label": "Keine",
+			"tooltip": "Rahmenlinien entfernen"
+		},
+		"alignTop": {
+			"label": "Oben",
+			"tooltip": "Oben ausrichten"
+		},
+		"alignMiddle": {
+			"label": "Mitte",
+			"tooltip": "Vertikal zentrieren"
+		},
+		"alignBottom": {
+			"label": "Unten",
+			"tooltip": "Unten ausrichten"
+		},
+		"alignLeft": {
+			"label": "Links",
+			"tooltip": "Linksbündig",
+			"tooltipOn": "Linksbündig (klicken: zurück zur Standardausrichtung)"
+		},
+		"alignCenter": {
+			"label": "Zentriert",
+			"tooltip": "Zentriert",
+			"tooltipOn": "Zentriert (klicken: zurück zur Standardausrichtung)"
+		},
+		"alignRight": {
+			"label": "Rechts",
+			"tooltip": "Rechtsbündig",
+			"tooltipOn": "Rechtsbündig (klicken: zurück zur Standardausrichtung)"
+		},
+		"justify": {
+			"label": "Blocksatz",
+			"tooltip": "Blocksatz"
+		},
+		"wrap": {
+			"label": "Textumbruch",
+			"tooltip": "Text in der Zelle auf mehreren Zeilen anzeigen"
+		},
+		"merge": {
+			"label": "Verbinden und zentrieren",
+			"tooltip": "Die ausgewählten freien Zellen zu einer verbinden, Inhalt zentriert",
+			"tooltipOn": "Zellverbund aufheben"
+		},
+		"numberFormat": {
+			"label": "Zahlenformat",
+			"tooltip": "Zahlenformat der Auswahl",
+			"number": "Zahl (0,00)",
+			"date": "Datum, kurz",
+			"more": "Mehr Zahlenformate…"
+		},
+		"currency": {
+			"label": "Währung",
+			"tooltip": "Währungsformat (€)"
+		},
+		"percent": {
+			"label": "Prozent",
+			"tooltip": "Prozentformat (0,25 wird als 25 % angezeigt)"
+		},
+		"date": {
+			"label": "Datum",
+			"tooltip": "Datum, kurz; Strg+1 für die anderen Datums- und Uhrzeitformate"
+		},
+		"fixed2": {
+			"label": "0,00",
+			"tooltip": "Zahl mit zwei Dezimalstellen"
+		},
+		"decimalMore": {
+			"label": "Dezimalstelle hinzufügen",
+			"tooltip": "Eine Dezimalstelle mehr anzeigen"
+		},
+		"decimalLess": {
+			"label": "Dezimalstelle entfernen",
+			"tooltip": "Eine Dezimalstelle weniger anzeigen"
+		},
+		"conditional": {
+			"label": "Bedingte Formatierung",
+			"tooltip": "Zellen hervorheben, Datenbalken, Farbskalen, Symbolsätze, Regel-Manager"
+		},
+		"formatAsTable": {
+			"label": "Als Tabelle formatieren",
+			"tooltip": "Aus dem Bereich oder Zellblock der aktiven Zelle eine Tabelle machen, ihre erste Zeile als Überschriften (Strg+L)"
+		},
+		"insert": {
+			"label": "Einfügen",
+			"tooltip": "Zeile oder Spalte einfügen",
+			"row": "Zeile einfügen (oberhalb)",
+			"column": "Spalte einfügen (links)"
+		},
+		"delete": {
+			"label": "Löschen",
+			"tooltip": "Zeile oder Spalte der aktiven Zelle löschen",
+			"row": "Zeile löschen",
+			"column": "Spalte löschen"
+		},
+		"format": {
+			"label": "Format",
+			"tooltip": "Zellen formatieren, aus- und einblenden",
+			"cells": "Zellen formatieren…",
+			"hideRows": "Zeilen ausblenden",
+			"hideColumns": "Spalten ausblenden",
+			"showRows": "Zeilen einblenden",
+			"showColumns": "Spalten einblenden"
+		},
+		"autoSum": {
+			"label": "AutoSumme",
+			"tooltip": "SUM der Tabellenspalte darüber (Alt+=)"
+		},
+		"fill": {
+			"label": "Ausfüllen",
+			"tooltip": "Erste Zeile oder Spalte der Auswahl kopieren",
+			"down": "Unten",
+			"right": "Rechts"
+		},
+		"clear": {
+			"label": "Löschen",
+			"tooltip": "Formate, Inhalte oder Notiz der Auswahl löschen",
+			"formats": "Formate löschen",
+			"contents": "Inhalte löschen",
+			"note": "Notiz löschen"
+		},
+		"sortFilter": {
+			"label": "Sortieren und Filtern",
+			"tooltip": "Tabelle nach der aktiven Spalte sortieren oder filtern",
+			"az": "Von A bis Z sortieren",
+			"za": "Von Z bis A sortieren",
+			"clearFilters": "Filter löschen"
+		},
+		"sortCustom": {
+			"label": "Benutzerdefiniertes Sortieren…",
+			"tooltip": "Tabelle nach der aktiven Spalte in einer gewählten Reihenfolge sortieren (Tage, Monate, freie Reihenfolge)"
+		},
+		"filter": {
+			"label": "Filtern",
+			"tooltip": "Tabelle nach der aktiven Spalte filtern (Strg+Umschalt+L)"
+		},
+		"find": {
+			"label": "Suchen",
+			"tooltip": "Suchen (Strg+F)"
+		},
+		"replace": {
+			"label": "Ersetzen",
+			"tooltip": "Ersetzen (Strg+H)"
+		},
+		"pivot": {
+			"label": "PivotTable",
+			"tooltip": "PivotTable aus der aktiven Tabelle: Klicken Sie dann auf die Zelle, in der sie platziert werden soll, auf einem beliebigen Blatt (Esc: abbrechen; „Neues Blatt“ in der Statusleiste). Doppelklick auf eine PivotTable, um sie zu bearbeiten",
+			"docTooltip": "PivotTable aus einer Tabelle der Arbeitsmappe, in den Text eingefügt und mit ihm neu berechnet"
+		},
+		"table": {
+			"label": "Tabelle",
+			"tooltip": "Aus dem Bereich oder Zellblock der aktiven Zelle eine Tabelle machen (Strg+L)"
+		},
+		"dataLake": {
+			"label": "Lattis Data Lake",
+			"tooltip": "In die aktive Zelle einen Datensatz aus dem Katalog des Lattis Data Lake einfügen: verknüpfte Tabelle, schreibgeschützt, live aktualisiert"
+		},
+		"form": {
+			"label": "Formular",
+			"tooltip": "Die aktive Tabelle als Formular freigeben (Lattis-Server)"
+		},
+		"chart": {
+			"tooltip": "{chart} der aktiven Tabelle",
+			"tooltipBar": "{chart} der aktiven Tabelle: vertikale Balken (Alt+F1)",
+			"docTooltip": "{chart} einer Tabelle der Arbeitsmappe, in den Text eingefügt"
+		},
+		"moreCharts": {
+			"label": "Weitere Diagramme",
+			"tooltip": "Weitere Diagramme: {list}"
+		},
+		"button": {
+			"label": "Schaltfläche",
+			"tooltip": "Aktionsschaltfläche in der aktiven Zelle: Ein Klick führt ein Skript der Registerkarte Skript aus (oder nichts)",
+			"docTooltip": "Schaltfläche im Text: Ein Klick führt ein Skript der Registerkarte Skript aus (oder eine seiner Funktionen)"
+		},
+		"field": {
+			"label": "Feld",
+			"tooltip": "Mit einer Zelle verknüpftes Steuerelement: Textfeld, Textbereich, Kontrollkästchen, Dropdownliste oder Datei (Typ im Dialogfeld wählen)",
+			"tooltipScript": "Mit einer Zelle verknüpftes Steuerelement: Textfeld, Textbereich, Kontrollkästchen, Dropdownliste oder Datei (Typ im Dialogfeld wählen); es kann auch ein Skript ausführen",
+			"docTooltip": "Mit einer Zelle eines Blatts verknüpftes Steuerelement: Textfeld, Textbereich, Kontrollkästchen, Dropdownliste oder Datei",
+			"docTooltipScript": "Mit einer Zelle eines Blatts verknüpftes Steuerelement: Textfeld, Textbereich, Kontrollkästchen, Dropdownliste oder Datei, von Skripts steuerbar (controls.*)"
+		},
+		"margins": {
+			"label": "Seitenränder",
+			"tooltip": "Seitenränder: {preset}",
+			"customName": "benutzerdefiniert",
+			"custom": "Benutzerdefinierte Seitenränder…",
+			"preset": "{name} — oben und unten: {topBottom}, links und rechts: {leftRight}"
+		},
+		"orientation": {
+			"label": "Ausrichtung",
+			"tooltipPortrait": "Ausrichtung: Hochformat",
+			"tooltipLandscape": "Ausrichtung: Querformat",
+			"portrait": "Hochformat",
+			"landscape": "Querformat"
+		},
+		"size": {
+			"label": "Größe",
+			"tooltip": "Papierformat: {paper}",
+			"item": "{name} ({size})",
+			"more": "Weitere Papierformate…"
+		},
+		"printArea": {
+			"label": "Druckbereich",
+			"tooltip": "Nur einen Teil des Blatts drucken",
+			"tooltipOn": "Ein Druckbereich ist festgelegt: Nur er wird gedruckt",
+			"set": "Druckbereich festlegen",
+			"clear": "Druckbereich aufheben"
+		},
+		"breaks": {
+			"label": "Umbrüche",
+			"tooltip": "Manueller Seitenumbruch oberhalb und links der aktiven Zelle (dort beginnt die neue Seite)",
+			"insert": "Seitenumbruch einfügen",
+			"remove": "Seitenumbruch entfernen",
+			"reset": "Alle Seitenumbrüche zurücksetzen"
+		},
+		"printTitles": {
+			"label": "Drucktitel",
+			"tooltip": "Oben zu wiederholende Zeilen und links zu wiederholende Spalten auf jeder gedruckten Seite"
+		},
+		"width": {
+			"label": "Breite",
+			"tooltip": "Breite: {fit} (verkleinert das Blatt, damit es auf diese Anzahl Seiten passt)"
+		},
+		"height": {
+			"label": "Höhe",
+			"tooltip": "Höhe: {fit}"
+		},
+		"scale": {
+			"label": "Skalierung",
+			"tooltip": "Druckskalierung: {scale}",
+			"tooltipFitted": "{scale}: Die Wahl einer Skalierung beendet die Anpassung",
+			"percent": "{n} %",
+			"custom": "Benutzerdefiniert…"
+		},
+		"printPdf": {
+			"label": "Drucken / PDF…",
+			"tooltip": "Blatt drucken oder als PDF speichern (Strg+P)"
+		},
+		"showGridlines": {
+			"label": "Gitternetzlinien anzeigen",
+			"tooltipOn": "Gitternetzlinien des Blatts auf dem Bildschirm ausblenden",
+			"tooltipOff": "Gitternetzlinien des Blatts auf dem Bildschirm anzeigen"
+		},
+		"printGridlines": {
+			"label": "Gitternetzlinien drucken",
+			"tooltip": "Gitternetzlinien aller Zellen drucken"
+		},
+		"showHeadings": {
+			"label": "Überschriften anzeigen",
+			"tooltipOn": "Buchstaben und Nummern nur bei der Eingabe einer Formel",
+			"tooltipOff": "Spaltenbuchstaben und Zeilennummern immer anzeigen"
+		},
+		"printHeadings": {
+			"label": "Überschriften drucken",
+			"tooltip": "Spaltenbuchstaben und Zeilennummern drucken"
+		},
+		"fromTable": {
+			"label": "Aus Tabelle",
+			"tooltip": "Neue Abfrage aus einer Tabelle der Arbeitsmappe"
+		},
+		"csv": {
+			"label": "Text/CSV",
+			"tooltip": "Neue Abfrage aus einer CSV-Datei (Transformationsschritte, aktualisierbar)"
+		},
+		"xlsx": {
+			"label": "Excel-Arbeitsmappe",
+			"tooltip": "Neue Abfrage aus einer Tabelle einer .xlsx-Arbeitsmappe"
+		},
+		"otherFiles": {
+			"label": "Andere Dateien",
+			"tooltip": "Neue Abfrage aus einer JSON- oder Parquet-Datei oder einer SQLite-Datenbank",
+			"sqlite": "SQLite-Datenbank"
+		},
+		"database": {
+			"label": "Datenbank",
+			"tooltip": "Neue Abfrage auf eine Datenbank (schreibgeschützt)"
+		},
+		"lattisServer": {
+			"label": "Lattis-Server",
+			"tooltip": "Neue Abfrage auf eine Tabelle eines Lattis-Servers oder einen Datensatz seines Data Lake (schreibgeschützt)"
+		},
+		"web": {
+			"label": "Web",
+			"tooltip": "Neue Abfrage aus einer Web-API, die JSON liefert (schreibgeschützt)"
+		},
+		"refreshAll": {
+			"label": "Alle aktualisieren",
+			"tooltip": "Quellen aller geladenen Abfragen neu lesen, ihre Tabellen ersetzen und neu berechnen (Strg+Alt+F5)"
+		},
+		"queries": {
+			"label": "Abfragen und Verbindungen",
+			"tooltip": "Aufgabenbereich der Importabfragen und Verbindungen der Arbeitsmappe"
+		},
+		"sortAsc": {
+			"label": "A → Z sortieren",
+			"tooltip": "Tabelle nach der aktiven Spalte aufsteigend sortieren"
+		},
+		"sortDesc": {
+			"label": "Z → A sortieren",
+			"tooltip": "Tabelle nach der aktiven Spalte absteigend sortieren"
+		},
+		"clearFilter": {
+			"label": "Löschen",
+			"tooltipOn": "Filter der aktiven Tabelle löschen",
+			"tooltipOff": "Löschen: Die Tabelle der aktiven Zelle ist nicht gefiltert"
+		},
+		"errorsOnly": {
+			"label": "Nur Fehler",
+			"tooltipOn": "Wieder alle Zeilen der aktiven Spalte anzeigen",
+			"tooltipOff": "Nur die Einträge der aktiven Spalte anzeigen, die nicht ihrem Typ entsprechen"
+		},
+		"textToColumns": {
+			"label": "Text in Spalten",
+			"tooltip": "Text in Spalten: den Inhalt der ausgewählten Spalte (Trennzeichen oder feste Breite) auf mehrere Spalten aufteilen"
+		},
+		"dedup": {
+			"label": "Duplikate entfernen",
+			"tooltip": "Doppelte Zeilen der aktiven Tabelle löschen"
+		},
+		"validation": {
+			"label": "Datenüberprüfung",
+			"tooltip": "Dropdownliste: zulässige Werte in der Auswahl (oder einer ganzen Tabellenspalte), andere Eingaben werden abgelehnt"
+		},
+		"mergeSheets": {
+			"label": "Blätter zusammenführen…",
+			"tooltip": "Die Tabellen mehrerer Blätter mit denselben Spalten (eines pro Monat, Jahr, Ort…) zu einer einzigen Tabelle mit einer Kategoriespalte zusammenführen"
+		},
+		"insertFunction": {
+			"label": "Funktion einfügen",
+			"tooltip": "Eine Funktion auswählen und die Formel in der aktiven Zelle beginnen (Umschalt+F3)"
+		},
+		"reference": {
+			"tooltip": "REFERENCE(Tabelle[Spalte]; Schlüssel): das VLOOKUP von Lattis"
+		},
+		"showLinks": {
+			"label": "Verknüpfungen anzeigen",
+			"tooltip": "Verknüpfungspfeile aller ausgewählten Zellen: blau von dem, was ihre Formeln lesen, rot zu den Formeln, die sie lesen; ein Klick in das Raster (oder Esc) entfernt sie"
+		},
+		"calculate": {
+			"label": "Neu berechnen",
+			"tooltip": "Formeln neu berechnen und TODAY, NOW und RAND erneuern (F9, oder F5 außerhalb einer importierten Tabelle)"
+		},
+		"toValues": {
+			"label": "In Werte konvertieren",
+			"tooltip": "Die Formeln der Auswahl durch ihre aktuellen Werte ersetzen: berechnete Spalten (die zu Eingabespalten mit dem Typ ihrer Werte werden) und freie Zellen (Strg+Z zum Rückgängigmachen)"
+		},
+		"note": {
+			"new": "Neue Notiz",
+			"edit": "Notiz bearbeiten",
+			"tooltipNew": "Notiz zur aktiven Zelle: rote Ecke, beim Daraufzeigen angezeigt (Umschalt+F2)",
+			"tooltipEdit": "Notiz der aktiven Zelle bearbeiten (Umschalt+F2)"
+		},
+		"deleteNote": {
+			"label": "Notiz löschen",
+			"tooltip": "Notiz der aktiven Zelle löschen",
+			"tooltipNone": "Notiz löschen: Die aktive Zelle hat keine"
+		},
+		"protectSheet": {
+			"tooltip": "{action}: keine Änderungen mehr an seinem Inhalt (Kennwort optional)"
+		},
+		"protectStructure": {
+			"protect": "Struktur schützen",
+			"unprotect": "Strukturschutz aufheben",
+			"tooltipUnprotect": "Schutz der Blattstruktur aufheben",
+			"tooltipByBook": "Struktur aller Blätter mit der Arbeitsmappe geschützt (Überprüfen › Arbeitsmappenschutz aufheben)",
+			"tooltipSheet": "Struktur schützen: nicht nötig, das ganze Blatt ist bereits geschützt",
+			"tooltip": "Struktur schützen: Alles ist gesperrt außer der Eingabe in Tabellen (freie Zellen, Formatierung, Spalten, Tabellen, Objekte und Register); Kennwort optional"
+		},
+		"protectWorkbook": {
+			"protect": "Arbeitsmappe schützen",
+			"unprotect": "Arbeitsmappenschutz aufheben",
+			"tooltipUnprotect": "Schutz der Arbeitsmappenstruktur aufheben",
+			"tooltip": "Struktur der Arbeitsmappe schützen: Hinzufügen, Löschen, Umbenennen oder Verschieben von Blättern wird abgelehnt"
+		},
+		"pageBreaks": {
+			"tooltipOn": "Seitenumbrüche (gepunktete Linien) und Druckbereich ausblenden",
+			"tooltipOff": "Seitenumbrüche beim Drucken (gepunktete Linien) und Druckbereich anzeigen"
+		},
+		"gridlines": {
+			"label": "Gitternetzlinien",
+			"tooltipOn": "Gitternetzlinien des Blatts ausblenden",
+			"tooltipOff": "Gitternetzlinien des Blatts anzeigen"
+		},
+		"headings": {
+			"label": "A1-Überschriften"
+		},
+		"animate": {
+			"label": "Animationen",
+			"tooltipOn": "Animation des Auswahlrahmens deaktivieren",
+			"tooltipOff": "Auswahlrahmen animieren (er gleitet zur neuen Zelle)"
+		},
+		"zoom": {
+			"label": "Zoom",
+			"tooltip": "Zoom des Blatts: {zoom} (Strg+Mausrad oder der Schieberegler in der Statusleiste)"
+		},
+		"zoom100": {
+			"label": "100 %",
+			"tooltip": "Zurück zu 100 % Zoom"
+		},
+		"freeze": {
+			"label": "Fenster fixieren",
+			"tooltipOn": "Fixierte Bereiche: {rows, plural, one {# Zeile} other {# Zeilen}}, {cols, plural, one {# Spalte} other {# Spalten}}",
+			"tooltipOff": "Zeilen und Spalten beim Scrollen sichtbar halten",
+			"unfreeze": "Fixierung aufheben",
+			"cell": "Fenster fixieren (an der aktiven Zelle)",
+			"row": "Oberste Zeile fixieren",
+			"col": "Erste Spalte fixieren"
+		},
+		"theme": {
+			"label": "Design",
+			"tooltip": "Farben der Tabellen der Arbeitsmappe: gewöhnliche Tabellen und Tabellen aus einer externen Quelle (Design: {theme})",
+			"customName": "benutzerdefiniert",
+			"customize": "Anpassen…"
+		},
+		"bench": {
+			"label": "Raster messen"
+		},
+		"bullets": {
+			"label": "Aufzählung",
+			"tooltip": "Aufzählungsliste"
+		},
+		"numbered": {
+			"label": "Nummerierung",
+			"tooltip": "Nummerierte Liste"
+		},
+		"quote": {
+			"label": "Zitat",
+			"tooltip": "Zitat (Einzug und Linie links)"
+		},
+		"code": {
+			"label": "Code",
+			"tooltip": "Codeblock (nichtproportionale Schrift)"
+		},
+		"style": {
+			"label": "Formatvorlage",
+			"tooltip": "Absatzformat: Standard oder Überschrift",
+			"normal": "Standard",
+			"h1": "Überschrift 1",
+			"h2": "Überschrift 2",
+			"h3": "Überschrift 3"
+		},
+		"docPrint": {
+			"label": "Drucken / PDF",
+			"tooltip": "Dokument drucken oder als PDF speichern ({printer}), einschließlich Diagrammen und PivotTables"
+		},
+		"link": {
+			"label": "Link",
+			"tooltip": "Link zu einer Webseite (Strg+Klick zum Öffnen)"
+		},
+		"image": {
+			"label": "Bild",
+			"tooltip": "Bild einfügen (in der Arbeitsmappe gespeichert)"
+		}
+	},
+	"protect": {
+		"sheet": {
+			"locked": "Blatt geschützt",
+			"protect": "Blatt schützen",
+			"unprotect": "Blattschutz aufheben"
+		},
+		"doc": {
+			"locked": "Dokument geschützt",
+			"protect": "Dokument schützen",
+			"unprotect": "Dokumentschutz aufheben"
+		},
+		"html": {
+			"locked": "Seite geschützt",
+			"protect": "Seite schützen",
+			"unprotect": "Seitenschutz aufheben"
+		}
+	},
+	"gate": {
+		"hint": "{command}: {reason}",
+		"noWorkbook": "{command}: Öffnen oder erstellen Sie eine Arbeitsmappe",
+		"workbookStructure": "die Struktur der Arbeitsmappe ist geschützt (dieser Befehl erstellt ein Blatt)",
+		"layoutShared": "nur Besitzer und Designer ändern die freien Zellen und das Layout dieser freigegebenen Arbeitsmappe",
+		"layoutLocked": "Nur Besitzer und Designer ändern die freien Zellen und das Layout dieser freigegebenen Arbeitsmappe",
+		"ownProtected": "{locked} (Überprüfen › {unprotect})",
+		"bookProtected": "Arbeitsmappe geschützt (Überprüfen › Arbeitsmappenschutz aufheben)",
+		"structureByBook": "Blattstruktur geschützt (Überprüfen › Arbeitsmappenschutz aufheben)",
+		"structure": "Struktur geschützt (Überprüfen › Strukturschutz aufheben)"
+	}
+}
