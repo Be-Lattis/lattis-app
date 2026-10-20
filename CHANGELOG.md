@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.1.0-beta.3.1 (20/10/2026)
+
 ### Nouveautés
 
 - En-têtes tapés après les données : les noms tapés sur la ligne juste au-dessus d'un tableau deviennent ses en-têtes en un clic (« Utiliser comme en-têtes », proposé dans la barre d'état dès deux noms au-dessus d'un en-tête qui ressemble à des données, et au clic droit) ; l'ancien en-tête devient la 1re ligne, les formules suivent, `Ctrl+Z` annule.
