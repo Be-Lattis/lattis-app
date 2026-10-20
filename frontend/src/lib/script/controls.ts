@@ -5,6 +5,7 @@
 import type { Completion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 import { CONTROL_KINDS, type ControlKind } from '#lib/grid/buttons.js';
 import { apiReference } from './api.gen';
+import { t } from '#lib/i18n/index.js';
 
 /** Contrôle du classeur, tel que le renvoie controls.list. */
 export interface ControlInfo {
@@ -74,7 +75,7 @@ export function controlCompletions(list: () => Promise<ControlInfo[]>) {
 					});
 				},
 				detail: `${kindLabel(c.kind)} · ${c.sheet}`,
-				info: c.label && c.label !== c.name ? `Libellé : ${c.label}` : undefined,
+				info: c.label && c.label !== c.name ? t('script.controls.label', { label: c.label }) : undefined,
 				type: 'variable'
 			};
 		});

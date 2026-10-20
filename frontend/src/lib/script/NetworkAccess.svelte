@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { hostOf } from '#lib/page/hosts.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	export interface HostAccess {
 		list: () => Promise<string[]>;
@@ -29,14 +30,14 @@
 			hosts = (await fn()) ?? [];
 			error = '';
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		}
 	};
 
 	function add() {
 		const h = hostOf(draft);
 		if (!h) {
-			error = 'Nom d’hôte attendu : api.exemple.fr, ou une adresse https://…';
+			error = t('script.network.badHost');
 			return;
 		}
 		draft = '';
@@ -54,7 +55,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Accès réseau"
+		aria-label={t('script.network.aria')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -62,21 +63,21 @@
 			if (e.key === 'Escape') onclose();
 		}}
 	>
-		<h2>Accès réseau du classeur</h2>
+		<h2>{t('script.network.title')}</h2>
 		<p class="muted">
-			Avant la première requête HTTP vers un hôte (http.get, http.post… dans un script ou une page HTML), Lattis vous demande l’autorisation. Les hôtes autorisés avec « Mémoriser pour ce classeur » sont listés ici : ils sont mémorisés sur ce poste, pas dans le fichier (un classeur reçu redemande toujours). Le serveur MCP n’atteint que ces hôtes.
+			{t('script.network.help')}
 		</p>
 		{#if hosts.length}
 			<ul>
 				{#each hosts as h (h)}
 					<li>
 						<span><Icon name="web" size={14} />{h}</span>
-						<button onclick={() => run(() => forget(h))} title="Retirer : la prochaine requête redemandera">Retirer</button>
+						<button onclick={() => run(() => forget(h))} title={t('script.network.remove.tooltip')}>{t('script.network.remove.label')}</button>
 					</li>
 				{/each}
 			</ul>
 		{:else}
-			<p class="muted">Aucun hôte mémorisé.</p>
+			<p class="muted">{t('script.network.none')}</p>
 		{/if}
 		<form
 			class="add"
@@ -85,12 +86,12 @@
 				add();
 			}}
 		>
-			<input bind:value={draft} placeholder="api.exemple.fr" spellcheck="false" aria-label="Hôte à autoriser" />
-			<button type="submit" disabled={!draft.trim()}>Autoriser</button>
+			<input bind:value={draft} placeholder="api.exemple.fr" spellcheck="false" aria-label={t('script.network.host')} />
+			<button type="submit" disabled={!draft.trim()}>{t('script.network.allow')}</button>
 		</form>
 		{#if error}<p class="error">{error}</p>{/if}
 		<div class="actions">
-			<button class="primary" onclick={onclose}>Fermer</button>
+			<button class="primary" onclick={onclose}>{t('common.close')}</button>
 		</div>
 	</div>
 </div>

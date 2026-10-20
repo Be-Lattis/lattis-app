@@ -2,12 +2,13 @@
 	// Bandeau de la pipette (onglet Script › Pointer un contrôle › Choisir sur
 	// la feuille), affiché par-dessus les feuilles tant qu'elle est active.
 	import { finishPick, picker } from './pick.svelte';
+	import { t } from '#lib/i18n/index.js';
 </script>
 
 {#if picker.active}
 	<div class="banner" role="status">
-		<span>Cliquez sur un contrôle (bouton, champ…) pour insérer son nom dans le script — Échap pour annuler.</span>
-		<button onclick={() => finishPick(null)}>Annuler</button>
+		<span>{t('script.pick.banner')}</span>
+		<button onclick={() => finishPick(null)}>{t('common.cancel')}</button>
 	</div>
 {/if}
 

@@ -13,6 +13,8 @@
 // sert à voir les erreurs plus tôt, pas à les garantir.
 
 import { byName, globals, libraries, unavailable, type RefEntry } from './reference';
+// t s'appelle tr ici : t désigne partout un jeton (Token) dans l'analyseur.
+import { t as tr } from '#lib/i18n/index.js';
 
 export type Severity = 'error' | 'warning' | 'info';
 
@@ -93,7 +95,7 @@ function tokenize(src: string): Token[] {
 			if (src[i + 2] === '[') {
 				const lb = longBracket(i + 2);
 				if (lb) {
-					if (lb.end < 0) throw new LintError('commentaire long non terminé : il manque « ]] »', start, start + 4);
+					if (lb.end < 0) throw new LintError(tr('script.lint.longComment'), start, start + 4);
 					i = lb.end;
 					continue;
 				}
@@ -108,8 +110,8 @@ function tokenize(src: string): Token[] {
 				while (j < n && (isAlpha(src[j]) || isDigit(src[j]) || isLetter(src[j]))) j++;
 				const word = src.slice(start, j);
 				const prev = out[out.length - 1];
-				const hint = prev?.value === '.' ? `écrivez [${JSON.stringify(word)}] au lieu de .${word}` : 'utilisez un nom sans accent';
-				throw new LintError(`un nom Lua ne peut pas contenir d'accent (« ${word} ») : ${hint}`, start, j);
+				const hint = prev?.value === '.' ? tr('script.lint.accent.index', { quoted: JSON.stringify(word), word }) : tr('script.lint.accent.plain');
+				throw new LintError(tr('script.lint.accent.name', { word, hint }), start, j);
 			}
 			const word = src.slice(start, i);
 			out.push({ type: keywords.has(word) ? 'kw' : 'name', value: word, from: start, to: i, nl });
@@ -121,7 +123,7 @@ function tokenize(src: string): Token[] {
 				i += 2;
 				const h = i;
 				while (i < n && isHex(src[i])) i++;
-				if (i === h) throw new LintError('nombre hexadécimal incomplet', start, i);
+				if (i === h) throw new LintError(tr('script.lint.hex'), start, i);
 			} else {
 				while (i < n && isDigit(src[i])) i++;
 				// Comme gopher-lua : un point après les chiffres appartient au nombre (3..2 est une erreur).
@@ -134,7 +136,7 @@ function tokenize(src: string): Token[] {
 					if (src[i] === '+' || src[i] === '-') i++;
 					const e = i;
 					while (i < n && isDigit(src[i])) i++;
-					if (i === e) throw new LintError('exposant incomplet dans le nombre', start, i);
+					if (i === e) throw new LintError(tr('script.lint.exponent'), start, i);
 				}
 			}
 			out.push({ type: 'number', value: src.slice(start, i), from: start, to: i, nl });
@@ -152,7 +154,7 @@ function tokenize(src: string): Token[] {
 				i++;
 			}
 			if (i >= n || src[i] !== c)
-				throw new LintError(`texte non terminé : il manque le ${c === '"' ? 'guillemet " fermant' : "guillemet ' fermant"} (pour plusieurs lignes, utilisez [[ ... ]])`, start, Math.min(i, n));
+				throw new LintError(c === '"' ? tr('script.lint.unterminated.double') : tr('script.lint.unterminated.single'), start, Math.min(i, n));
 			i++;
 			out.push({ type: 'string', value: src.slice(start, i), from: start, to: i, nl });
 			nl = false;
@@ -161,7 +163,7 @@ function tokenize(src: string): Token[] {
 		if (c === '[' && (src[i + 1] === '[' || src[i + 1] === '=')) {
 			const lb = longBracket(i);
 			if (lb) {
-				if (lb.end < 0) throw new LintError('texte long non terminé : il manque « ]] »', start, start + 2);
+				if (lb.end < 0) throw new LintError(tr('script.lint.longString'), start, start + 2);
 				i = lb.end;
 				out.push({ type: 'string', value: src.slice(start, i), from: start, to: i, nl });
 				nl = false;
@@ -189,15 +191,15 @@ function tokenize(src: string): Token[] {
 function badChar(src: string, i: number): LintError {
 	const c = String.fromCodePoint(src.codePointAt(i)!);
 	const at = (msg: string, len = c.length) => new LintError(msg, i, i + len);
-	if (c === '!' && src[i + 1] === '=') return at("« différent » s'écrit ~= en Lua, pas !=", 2);
-	if (c === '!') return at("« non » s'écrit not en Lua, pas !");
-	if (c === '~') return at("« ~ » seul n'existe pas : « différent » s'écrit ~=");
-	if (c === '&') return at("« et » s'écrit and en Lua, pas &&", src[i + 1] === '&' ? 2 : 1);
-	if (c === '|') return at("« ou » s'écrit or en Lua, pas ||", src[i + 1] === '|' ? 2 : 1);
-	if ('«»“”‘’'.includes(c)) return at(`guillemet typographique « ${c} » : utilisez " ou '`);
-	if (c === '`') return at('« ` » n\'existe pas en Lua : utilisez " ou \'');
-	if (isLetter(c)) return at(`un nom Lua ne peut pas contenir d'accent (« ${c} ») : utilisez un nom sans accent`);
-	return at(`caractère inattendu « ${c} »`);
+	if (c === '!' && src[i + 1] === '=') return at(tr('script.lint.char.neq'), 2);
+	if (c === '!') return at(tr('script.lint.char.not'));
+	if (c === '~') return at(tr('script.lint.char.tilde'));
+	if (c === '&') return at(tr('script.lint.char.and'), src[i + 1] === '&' ? 2 : 1);
+	if (c === '|') return at(tr('script.lint.char.or'), src[i + 1] === '|' ? 2 : 1);
+	if ('«»“”‘’'.includes(c)) return at(tr('script.lint.char.typographic', { char: c }));
+	if (c === '`') return at(tr('script.lint.char.backtick'));
+	if (isLetter(c)) return at(tr('script.lint.accent.name', { word: c, hint: tr('script.lint.accent.plain') }));
+	return at(tr('script.lint.char.unexpected', { char: c }));
 }
 
 // --- Analyse -----------------------------------------------------------------
@@ -302,7 +304,7 @@ class Parser {
 		return false;
 	}
 	private describe(t: Token): string {
-		if (t.type === 'eof') return 'la fin du script';
+		if (t.type === 'eof') return tr('script.lint.eof');
 		const v = t.value.length > 20 ? t.value.slice(0, 20) + '…' : t.value;
 		return `« ${v} »`;
 	}
@@ -313,8 +315,9 @@ class Parser {
 	}
 	private expect(v: string, what?: string): Token {
 		if (this.is(v)) return this.next();
-		let msg = `« ${v} » attendu${what ? ' ' + what : ''}, trouvé ${this.describe(this.tok)}`;
-		if ((v === 'then' || v === 'do') && this.is('=')) msg += ' (pour comparer, utilisez ==)';
+		const found = this.describe(this.tok);
+		let msg = what ? tr('script.lint.expectedWhat', { token: v, what, found }) : tr('script.lint.expected', { token: v, found });
+		if ((v === 'then' || v === 'do') && this.is('=')) msg += tr('script.lint.compareHint');
 		this.fail(msg);
 	}
 	private closeBlock(kw: string, open: Token): void {
@@ -323,15 +326,15 @@ class Parser {
 			return;
 		}
 		const line = this.lineOf(open.from);
-		let msg = `« end » attendu pour fermer ${opener[kw] ?? `« ${kw} »`} de la ligne ${line}, trouvé ${this.describe(this.tok)}`;
-		if (this.tok.type === 'name' && this.tok.value === 'continue') msg = "Lua n'a pas de « continue » : mettez la suite de la boucle dans un if";
+		let msg = tr('script.lint.endExpected', { opener: opener[kw] ?? `« ${kw} »`, line: String(line), found: this.describe(this.tok) });
+		if (this.tok.type === 'name' && this.tok.value === 'continue') msg = tr('script.lint.noContinue');
 		this.fail(msg);
 	}
 	private name(what: string): Token {
 		const t = this.tok;
 		if (t.type === 'name') return this.next();
-		if (t.type === 'kw') this.fail(`« ${t.value} » est un mot réservé de Lua : il ne peut pas servir de nom (${what})`);
-		this.fail(`nom attendu (${what}), trouvé ${this.describe(t)}`);
+		if (t.type === 'kw') this.fail(tr('script.lint.reserved', { word: t.value, what }));
+		this.fail(tr('script.lint.nameExpected', { what, found: this.describe(t) }));
 	}
 
 	// Portées
@@ -343,7 +346,7 @@ class Parser {
 		const s = this.scopes.pop()!;
 		const parent = this.scopes.length - 1;
 		for (const g of s.gotos) {
-			if (parent < this.fn.scopeBase) this.fail(`aucune étiquette « ::${g.name}:: » visible pour ce goto`, g.tok);
+			if (parent < this.fn.scopeBase) this.fail(tr('script.lint.noLabel', { name: g.name }), g.tok);
 			g.locals = Math.min(g.locals, this.locals());
 			this.scopes[parent].gotos.push(g);
 		}
@@ -373,12 +376,12 @@ class Parser {
 	private label(t: Token) {
 		const line = this.lineOf(t.from);
 		const old = this.top.labels.get(t.value);
-		if (old) this.fail(`étiquette « ::${t.value}:: » déjà définie ligne ${old.line}`, t);
+		if (old) this.fail(tr('script.lint.labelDefined', { name: t.value, line: String(old.line) }), t);
 		const locals = this.locals();
 		this.top.labels.set(t.value, { line, locals });
 		this.top.gotos = this.top.gotos.filter((g) => {
 			if (g.name !== t.value) return true;
-			if (g.locals < locals) this.fail(`le goto de la ligne ${this.lineOf(g.tok.from)} saute dans la portée de la variable locale « ${this.top.last} » : déclarez-la avant le goto`, t);
+			if (g.locals < locals) this.fail(tr('script.lint.gotoScope', { line: String(this.lineOf(g.tok.from)), name: this.top.last }), t);
 			return false;
 		});
 	}
@@ -396,24 +399,24 @@ class Parser {
 
 	run(): void {
 		this.block();
-		for (const g of this.scopes[0].gotos) this.fail(`aucune étiquette « ::${g.name}:: » visible pour ce goto`, g.tok);
+		for (const g of this.scopes[0].gotos) this.fail(tr('script.lint.noLabel', { name: g.name }), g.tok);
 		if (this.tok.type !== 'eof') {
 			const t = this.tok;
-			if (t.value === 'end') this.fail('« end » en trop : aucun bloc à fermer', t);
-			if (t.value === 'else' || t.value === 'elseif') this.fail(`« ${t.value} » sans « if »`, t);
-			if (t.value === 'until') this.fail('« until » sans « repeat »', t);
-			this.fail(`instruction inattendue : ${this.describe(t)}`, t);
+			if (t.value === 'end') this.fail(tr('script.lint.extraEnd'), t);
+			if (t.value === 'else' || t.value === 'elseif') this.fail(tr('script.lint.withoutIf', { word: t.value }), t);
+			if (t.value === 'until') this.fail(tr('script.lint.untilWithoutRepeat'), t);
+			this.fail(tr('script.lint.unexpectedStatement', { found: this.describe(t) }), t);
 		}
 		const ug = new Set(this.userGlobals.keys());
 		for (const p of this.pending) p.run(ug);
 		for (const [name, at] of this.userGlobals) {
-			if (globals.has(name)) this.warn('warning', at.from, at.to, `cette affectation remplace « ${name} », prédéfini`);
+			if (globals.has(name)) this.warn('warning', at.from, at.to, tr('script.lint.overridesGlobal', { name }));
 			// Une fonction globale que le script n'appelle pas lui-même reste sans
 			// remarque : c'est ce qu'appellent un bouton, un contrôle ou un
 			// évènement du classeur (controls.on, events.on).
 			else if (!this.userFuncs.includes(name))
-				this.warn('info', at.from, at.to, `variable globale « ${name} » : préférez « local ${name} = ... »`);
-			else if (this.calledGlobals.has(name)) this.warn('info', at.from, at.to, `fonction globale « ${name} » : préférez « local function ${name} »`);
+				this.warn('info', at.from, at.to, tr('script.lint.globalVar', { name }));
+			else if (this.calledGlobals.has(name)) this.warn('info', at.from, at.to, tr('script.lint.globalFunc', { name }));
 		}
 	}
 
@@ -424,10 +427,10 @@ class Parser {
 				if (t.value === 'return') {
 					if (!this.atBlockEnd() && !this.is(';')) this.exprList();
 				} else if (this.fn.loops === 0) {
-					this.fail("« break » en dehors d'une boucle", t);
+					this.fail(tr('script.lint.breakOutside'), t);
 				}
 				this.accept(';');
-				if (!this.atBlockEnd()) this.fail(`« ${t.value} » doit être la dernière instruction de son bloc (avant « end », « else » ou « until »)`, this.tok);
+				if (!this.atBlockEnd()) this.fail(tr('script.lint.lastStatement', { word: t.value }), this.tok);
 				return;
 			}
 			this.statement();
@@ -450,12 +453,12 @@ class Parser {
 				case 'if': {
 					this.next();
 					this.expr();
-					this.expect('then', 'après la condition du if');
+					this.expect('then', tr('script.lint.what.ifCond'));
 					this.scoped(() => this.block());
 					while (this.is('elseif')) {
 						this.next();
 						this.expr();
-						this.expect('then', 'après la condition du elseif');
+						this.expect('then', tr('script.lint.what.elseifCond'));
 						this.scoped(() => this.block());
 					}
 					if (this.accept('else')) this.scoped(() => this.block());
@@ -465,7 +468,7 @@ class Parser {
 				case 'while': {
 					this.next();
 					this.expr();
-					this.expect('do', 'après la condition du while');
+					this.expect('do', tr('script.lint.what.whileCond'));
 					this.loop(() => this.block());
 					this.closeBlock('while', t);
 					return;
@@ -484,19 +487,19 @@ class Parser {
 					this.fn.loops++;
 					this.block();
 					this.fn.loops--;
-					this.expect('until', 'pour fermer le repeat');
+					this.expect('until', tr('script.lint.what.closeRepeat'));
 					this.expr();
 					this.close();
 					return;
 				}
 				case 'function': {
 					this.next();
-					const first = this.name('nom de la fonction');
+					const first = this.name(tr('script.lint.what.funcName'));
 					let method = false;
 					let deep = false;
 					while (this.is('.') || this.is(':')) {
 						method = this.next().value === ':';
-						this.name('nom de la fonction');
+						this.name(tr('script.lint.what.funcName'));
 						deep = true;
 						if (method) break;
 					}
@@ -513,27 +516,27 @@ class Parser {
 					this.next();
 					if (this.is('function')) {
 						const kw = this.next();
-						const nm = this.name('nom de la fonction');
+						const nm = this.name(tr('script.lint.what.funcName'));
 						this.declare(nm.value, nm.from);
 						this.funcBody(false, kw);
 						return;
 					}
-					const names: Token[] = [this.name('nom de variable locale')];
-					while (this.accept(',')) names.push(this.name('nom de variable locale'));
+					const names: Token[] = [this.name(tr('script.lint.what.localName'))];
+					while (this.accept(',')) names.push(this.name(tr('script.lint.what.localName')));
 					if (this.accept('=')) this.exprList();
 					for (const nm of names) this.declare(nm.value, nm.from);
 					return;
 				}
 				case 'goto':
 					this.next();
-					this.gotoStat(this.name('étiquette du goto'));
+					this.gotoStat(this.name(tr('script.lint.what.gotoLabel')));
 					return;
 			}
 		}
 		if (t.type === 'op' && t.value === '::') {
 			this.next();
-			const nm = this.name('étiquette');
-			this.expect('::', "pour fermer l'étiquette");
+			const nm = this.name(tr('script.lint.what.label'));
+			this.expect('::', tr('script.lint.what.closeLabel'));
 			this.label(nm);
 			return;
 		}
@@ -553,24 +556,24 @@ class Parser {
 
 	private forStat(kw: Token): void {
 		this.next();
-		const first = this.name('variable de la boucle for');
+		const first = this.name(tr('script.lint.what.forVar'));
 		if (this.accept('=')) {
 			this.expr();
-			this.expect(',', 'entre le début et la fin de la boucle for');
+			this.expect(',', tr('script.lint.what.forBounds'));
 			this.expr();
 			if (this.accept(',')) this.expr();
-			this.expect('do', 'après les bornes de la boucle for');
+			this.expect('do', tr('script.lint.what.forDo'));
 			this.loop(() => {
 				this.declare(first.value, first.from);
 				this.block();
 			});
 		} else {
 			const names = [first];
-			while (this.accept(',')) names.push(this.name('variable de la boucle for'));
-			if (!this.is('in')) this.fail(`« = » ou « in » attendu après la variable de la boucle for, trouvé ${this.describe(this.tok)}`);
+			while (this.accept(',')) names.push(this.name(tr('script.lint.what.forVar')));
+			if (!this.is('in')) this.fail(tr('script.lint.forIn', { found: this.describe(this.tok) }));
 			this.next();
 			this.exprList();
-			this.expect('do', 'après « for ... in ... »');
+			this.expect('do', tr('script.lint.what.forInDo'));
 			this.loop(() => {
 				for (const nm of names) this.declare(nm.value, nm.from);
 				this.block();
@@ -584,7 +587,7 @@ class Parser {
 		this.fn = { vararg: false, loops: 0, parent: outer, scopeBase: this.scopes.length };
 		this.open();
 		if (method) this.declare('self', kw.from);
-		this.expect('(', 'pour ouvrir les paramètres de la fonction');
+		this.expect('(', tr('script.lint.what.openParams'));
 		if (!this.is(')')) {
 			do {
 				if (this.is('...')) {
@@ -592,11 +595,11 @@ class Parser {
 					this.fn.vararg = true;
 					break;
 				}
-				const p = this.name('paramètre de la fonction');
+				const p = this.name(tr('script.lint.what.param'));
 				this.declare(p.value, p.from);
 			} while (this.accept(','));
 		}
-		this.expect(')', 'pour fermer les paramètres de la fonction');
+		this.expect(')', tr('script.lint.what.closeParams'));
 		this.block();
 		this.closeBlock('function', kw);
 		this.close();
@@ -610,10 +613,10 @@ class Parser {
 			const targets = [e];
 			while (this.accept(',')) targets.push(this.suffixed());
 			for (const tg of targets) {
-				if (tg.kind === 'call') this.fail("on ne peut pas affecter une valeur au résultat d'un appel de fonction", this.toks[this.p - 1]);
-				if (tg.kind !== 'name' && tg.kind !== 'index') this.fail('cette expression ne peut pas recevoir de valeur', start);
+				if (tg.kind === 'call') this.fail(tr('script.lint.assignCall'), this.toks[this.p - 1]);
+				if (tg.kind !== 'name' && tg.kind !== 'index') this.fail(tr('script.lint.assignExpr'), start);
 			}
-			this.expect('=', "dans l'affectation");
+			this.expect('=', tr('script.lint.what.assignment'));
 			this.exprList();
 			for (const tg of targets) {
 				if (tg.kind === 'name') {
@@ -630,12 +633,12 @@ class Parser {
 		}
 		const t = this.tok;
 		if (t.type === 'op' && '+-*/%^.'.includes(t.value) && this.peek().value === '=' && this.peek().from === t.to)
-			this.fail(`Lua n'a pas d'opérateur « ${t.value}= » : écrivez x = x ${t.value === '.' ? '..' : t.value} valeur`, t);
-		if (t.type === 'op' && t.value === '..' && this.peek().value === '=') this.fail("Lua n'a pas d'opérateur « ..= » : écrivez s = s .. valeur", t);
+			this.fail(tr('script.lint.compound', { op: t.value, bin: t.value === '.' ? '..' : t.value }), t);
+		if (t.type === 'op' && t.value === '..' && this.peek().value === '=') this.fail(tr('script.lint.concatAssign'), t);
 		if (e.kind === 'name' && this.src.slice(e.from, e.to) === 'continue')
-			this.fail("Lua n'a pas de « continue » : mettez la suite de la boucle dans un if", start);
-		if (t.type === 'op' && t.value === '==') this.fail('« == » compare deux valeurs ; pour affecter, utilisez un seul =', t);
-		this.fail(`instruction incomplète : un appel de fonction ou une affectation (=) est attendu${t.type !== 'eof' ? `, trouvé ${this.describe(t)}` : ''}`, t.type === 'eof' ? start : t);
+			this.fail(tr('script.lint.noContinue'), start);
+		if (t.type === 'op' && t.value === '==') this.fail(tr('script.lint.compareNotAssign'), t);
+		this.fail(t.type !== 'eof' ? tr('script.lint.incompleteFound', { found: this.describe(t) }) : tr('script.lint.incomplete'), t.type === 'eof' ? start : t);
 	}
 
 	// Expressions
@@ -662,11 +665,11 @@ class Parser {
 			const prio = binPriority[op.value];
 			if (!prio || prio[0] <= limit) {
 				if (op.type === 'op' && op.value === '/' && this.peek().value === '/' && this.peek().from === op.to)
-					this.fail("Lua 5.1 n'a pas d'opérateur « // » : utilisez math.floor(a / b)", op);
+					this.fail(tr('script.lint.floorDiv'), op);
 				break;
 			}
 			this.next();
-			if (op.value === '/' && this.is('/') && this.tok.from === op.to) this.fail("Lua 5.1 n'a pas d'opérateur « // » : utilisez math.floor(a / b)", op);
+			if (op.value === '/' && this.is('/') && this.tok.from === op.to) this.fail(tr('script.lint.floorDiv'), op);
 			const right = this.expr(prio[1]);
 			left = { kind: 'other', from: left.from, to: right.to, onRead: [] };
 		}
@@ -693,7 +696,7 @@ class Parser {
 				break;
 			case 'op':
 				if (t.value === '...') {
-					if (!this.fn.vararg) this.fail("« ... » n'est utilisable que dans une fonction déclarée avec « ... » dans ses paramètres", t);
+					if (!this.fn.vararg) this.fail(tr('script.lint.vararg'), t);
 					this.next();
 					return { kind: 'vararg', from: t.from, to: t.to, onRead: [] };
 				}
@@ -713,8 +716,8 @@ class Parser {
 			if (this.is('[')) {
 				this.next();
 				this.expr();
-				this.expect(']', 'pour fermer la clé');
-				this.expect('=', 'après la clé [ ... ]');
+				this.expect(']', tr('script.lint.what.closeKey'));
+				this.expect('=', tr('script.lint.what.afterKey'));
 				this.expr();
 			} else if (this.tok.type === 'name' && this.peek().value === '=' && this.peek().type === 'op') {
 				this.next();
@@ -730,7 +733,7 @@ class Parser {
 		}
 		if (!this.is('}')) {
 			const line = this.lineOf(open.from);
-			this.fail(`« } » attendu pour fermer la table ouverte ligne ${line} (séparez les éléments par des virgules), trouvé ${this.describe(this.tok)}`);
+			this.fail(tr('script.lint.tableClose', { line: String(line), found: this.describe(this.tok) }));
 		}
 		const close = this.next();
 		return { kind: 'other', from: open.from, to: close.to, onRead: [] };
@@ -743,11 +746,11 @@ class Parser {
 		this.later((ug) => {
 			if (ug.has(name) || globals.has(name)) return;
 			if (unavailable[name]) {
-				this.warn('warning', t.from, t.to, `« ${name} » n'est pas disponible : ${unavailable[name]}`);
+				this.warn('warning', t.from, t.to, tr('script.lint.unavailableName', { name, why: unavailable[name] }));
 				return;
 			}
 			const hint = suggest(name, [...globals, ...ug]);
-			this.warn('warning', t.from, t.to, `« ${name} » n'est pas défini${hint ? ` : voulez-vous dire « ${hint} » ?` : ' (variable jamais affectée ni déclarée avec local)'}`);
+			this.warn('warning', t.from, t.to, hint ? tr('script.lint.undefinedHint', { name, hint }) : tr('script.lint.undefined', { name }));
 		});
 	}
 
@@ -762,7 +765,7 @@ class Parser {
 			this.next();
 			const inner = this.expr();
 			for (const f of inner.onRead) f();
-			const close = this.expect(')', 'pour fermer la parenthèse');
+			const close = this.expect(')', tr('script.lint.what.closeParen'));
 			// gopher-lua accepte (f()) comme instruction : l'appel entre parenthèses reste un appel.
 			e = { kind: inner.kind === 'call' ? 'call' : 'other', from: t.from, to: close.to, onRead: [] };
 		} else {
@@ -772,7 +775,7 @@ class Parser {
 			const s = this.tok;
 			if (s.type === 'op' && s.value === '.') {
 				this.next();
-				const key = this.name('nom de champ après le point');
+				const key = this.name(tr('script.lint.what.field'));
 				// Indexer lit toujours la base ; le membre n'est vérifié que s'il est lu.
 				for (const f of e.onRead) f();
 				const base = e.path && !e.path.includes('.') ? e.path : undefined;
@@ -787,17 +790,17 @@ class Parser {
 				for (const f of e.onRead) f();
 				this.next();
 				this.expr();
-				const close = this.expect(']', "pour fermer l'index");
+				const close = this.expect(']', tr('script.lint.what.closeIndex'));
 				e = { kind: 'index', from: e.from, to: close.to, onRead: [] };
 			} else if (s.type === 'op' && s.value === ':') {
 				for (const f of e.onRead) f();
 				this.next();
-				const m = this.name('nom de méthode après « : »');
+				const m = this.name(tr('script.lint.what.method'));
 				const base = e.path;
 				if (base && !base.includes('.') && libraries[base]) {
 					this.later((ug) => {
 						if (ug.has(base)) return;
-						this.warn('warning', s.from, m.to, `écrivez ${base}.${m.value}(...) avec un point : « : » passerait ${base} comme premier argument`);
+						this.warn('warning', s.from, m.to, tr('script.lint.colonCall', { base, name: m.value }));
 					});
 				}
 				const args = this.args(true);
@@ -805,7 +808,7 @@ class Parser {
 			} else if (s.type === 'string' || (s.type === 'op' && (s.value === '(' || s.value === '{'))) {
 				// gopher-lua l'accepte (Lua 5.1 le refuse) : f()(g)() à l'exécution.
 				if (s.value === '(' && s.nl && this.toks[this.p - 1].value === ')')
-					this.warn('warning', s.from, s.to, "ce « ( » en début de ligne prolonge l'appel de la ligne précédente ; ajoutez « ; » à la fin de la ligne précédente si ce n'est pas voulu");
+					this.warn('warning', s.from, s.to, tr('script.lint.parenLine'));
 				const fnPath = e.path;
 				const pending = e.onRead;
 				const args = this.args(false);
@@ -821,13 +824,13 @@ class Parser {
 	}
 
 	private unexpected(t: Token): string {
-		if (t.type === 'eof') return "expression attendue, mais le script s'arrête là";
+		if (t.type === 'eof') return tr('script.lint.exprEof');
 		if (t.type === 'kw') {
-			if (t.value === 'end') return '« end » inattendu : une expression manque avant, ou il y a un « end » en trop';
-			return `expression attendue, trouvé le mot réservé « ${t.value} »`;
+			if (t.value === 'end') return tr('script.lint.exprEnd');
+			return tr('script.lint.exprKeyword', { word: t.value });
 		}
-		if (t.value === '=') return '« = » inattendu : une valeur manque avant, ou pour comparer utilisez ==';
-		return `expression attendue, trouvé ${this.describe(t)}`;
+		if (t.value === '=') return tr('script.lint.exprEquals');
+		return tr('script.lint.exprFound', { found: this.describe(t) });
 	}
 
 	private args(method: boolean): { count: number; multi: boolean; to: number } {
@@ -840,13 +843,13 @@ class Parser {
 			const tb = this.table();
 			return { count: 1 + (method ? 1 : 0), multi: false, to: tb.to };
 		}
-		if (t.value !== '(') this.fail(`arguments attendus après « : nom », trouvé ${this.describe(t)}`, t);
+		if (t.value !== '(') this.fail(tr('script.lint.argsExpected', { found: this.describe(t) }), t);
 		const open = this.next();
 		let list: Expr[] = [];
 		if (!this.is(')')) list = this.exprList();
 		if (!this.is(')')) {
 			const line = this.lineOf(open.from);
-			this.fail(`« ) » attendu pour fermer l'appel ouvert ligne ${line} (séparez les arguments par des virgules), trouvé ${this.describe(this.tok)}`);
+			this.fail(tr('script.lint.callClose', { line: String(line), found: this.describe(this.tok) }));
 		}
 		const close = this.next();
 		const last = list[list.length - 1];
@@ -859,15 +862,15 @@ class Parser {
 			if (ug.has(lib)) return;
 			const entry = byName.get(full);
 			if (entry && libraries[lib].has(key.value)) {
-				if (entry.deprecated) this.warn('info', key.from, key.to, `${full} est un ancien nom : utilisez ${entry.deprecated}`);
+				if (entry.deprecated) this.warn('info', key.from, key.to, tr('script.lint.deprecated', { name: full, use: entry.deprecated }));
 				return;
 			}
 			if (unavailable[full]) {
-				this.warn('warning', key.from, key.to, `${full} n'est pas disponible : ${unavailable[full]}`);
+				this.warn('warning', key.from, key.to, tr('script.lint.unavailableMember', { name: full, why: unavailable[full] }));
 				return;
 			}
 			const hint = suggest(key.value, [...libraries[lib]]);
-			this.warn('warning', key.from, key.to, `${full} n'existe pas${hint ? ` : voulez-vous dire ${lib}.${hint} ?` : ''}`);
+			this.warn('warning', key.from, key.to, hint ? tr('script.lint.noMemberHint', { name: full, hint: `${lib}.${hint}` }) : tr('script.lint.noMember', { name: full }));
 		});
 	}
 
@@ -883,8 +886,9 @@ class Parser {
 			const tooFew = !a.multi && a.count < min;
 			const tooMany = max !== null && known > max;
 			if (!tooFew && !tooMany) return;
-			const want = max === null ? `au moins ${min}` : min === max ? `${min}` : `de ${min} à ${max}`;
-			this.warn('warning', callee.from, callee.to, `${path} attend ${want} argument${max === 1 && min === max ? '' : 's'}, ${a.count} donné${a.count > 1 ? 's' : ''} : ${entry.signature}`);
+			const want = max === null ? tr('script.lint.arity.atLeast', { min }) : min === max ? tr('script.lint.arity.exactly', { n: min }) : tr('script.lint.arity.between', { min, max });
+			const given = tr('script.lint.arity.given', { n: a.count });
+			this.warn('warning', callee.from, callee.to, tr('script.lint.arity.message', { path, want, given, signature: entry.signature }));
 		});
 	}
 }

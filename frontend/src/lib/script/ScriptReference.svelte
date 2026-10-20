@@ -9,6 +9,7 @@
 	// Un clic déplie une entrée ; Insérer place son exemple dans l'éditeur.
 	// Données : reference.ts.
 	import { categories, reference, search, type RefEntry } from './reference';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Insère un exemple dans l'éditeur, à la position du curseur. */
@@ -44,14 +45,14 @@
 	}
 </script>
 
-<aside class="ref" use:resizePanel={{ key: 'lua-ref' }} use:panelKeys={close} aria-label="Référence Lua">
+<aside class="ref" use:resizePanel={{ key: 'lua-ref' }} use:panelKeys={close} aria-label={t('script.ref.title')}>
 	<div class="head">
-		<PanelHeader title="Référence Lua" help="lua" helpLabel="Aide sur les scripts Lua" onclose={close} />
+		<PanelHeader title={t('script.ref.title')} help="lua" helpLabel={t('script.ref.help')} onclose={close} />
 	</div>
 	<input
 		class="search"
 		type="search"
-		placeholder="Rechercher : query, date, majuscules…"
+		placeholder={t('script.ref.search')}
 		bind:value={query}
 		onkeydown={(e) => {
 			if (e.key === 'Enter' && results[0]) openName = results[0].name;
@@ -63,7 +64,7 @@
 		spellcheck="false"
 	/>
 	<div class="list">
-		{#if searching}<p class="count">{results.length} résultat(s)</p>{/if}
+		{#if searching}<p class="count">{t('script.ref.results', { n: results.length })}</p>{/if}
 		{#each groups as g (g.id)}
 			<section class="cat">
 				<button class="cat-head" aria-expanded={isOpen(g.id)} disabled={searching} onclick={() => toggleCat(g.id)}>
@@ -81,11 +82,11 @@
 							{#if openName === e.name}
 								<div class="body">
 									<code class="sig">{e.signature}</code>
-									{#if e.deprecated}<p class="note">Ancien nom : préférez <code>{e.deprecated}</code>.</p>{/if}
+									{#if e.deprecated}<p class="note">{t('script.ref.deprecated')} <code>{e.deprecated}</code>.</p>{/if}
 									{#if e.details}<p>{e.details}</p>{/if}
 									{#if e.example}
 										<pre>{e.example}</pre>
-										<button class="insert" onclick={() => insert(e.example!)}><Icon name="paste" size={14} />Insérer l’exemple</button>
+										<button class="insert" onclick={() => insert(e.example!)}><Icon name="paste" size={14} />{t('script.ref.insert')}</button>
 									{/if}
 								</div>
 							{/if}
@@ -94,7 +95,7 @@
 				{/if}
 			</section>
 		{/each}
-		{#if query.trim() && results.length === 0}<p class="muted">Aucune fonction ne correspond.</p>{/if}
+		{#if query.trim() && results.length === 0}<p class="muted">{t('script.ref.noMatch')}</p>{/if}
 	</div>
 </aside>
 

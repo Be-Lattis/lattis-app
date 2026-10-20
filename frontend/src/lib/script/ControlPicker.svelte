@@ -5,6 +5,7 @@
 	import { dismissPanel } from '#lib/grid/dismiss.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { kindLabel, type ControlInfo } from './controls';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		controls: ControlInfo[];
@@ -44,8 +45,8 @@
 </script>
 
 <div class="picker" use:dismissPanel={close}>
-	<input class="filter" placeholder="Filtrer par nom, type ou onglet" bind:value={filter} onkeydown={key} use:focus spellcheck="false" />
-	<div class="list" role="listbox" aria-label="Contrôles du classeur">
+	<input class="filter" placeholder={t('script.picker.filter')} bind:value={filter} onkeydown={key} use:focus spellcheck="false" />
+	<div class="list" role="listbox" aria-label={t('script.picker.aria')}>
 		{#each shown as c, i (c.id)}
 			<button
 				role="option"
@@ -53,19 +54,19 @@
 				class:on={i === cursor}
 				onmouseenter={() => (cursor = i)}
 				onclick={() => pick(c)}
-				title={c.label && c.label !== c.name ? `Libellé : ${c.label}` : undefined}
+				title={c.label && c.label !== c.name ? t('script.controls.label', { label: c.label }) : undefined}
 			>
 				<span class="name">{c.name || `#${c.id}`}</span>
 				<span class="kind">{kindLabel(c.kind)}</span>
 				<span class="sheet">{c.sheet}</span>
 			</button>
 		{:else}
-			<p class="empty">{error || (controls.length ? 'Aucun contrôle ne correspond.' : 'Aucun contrôle dans le classeur : Insertion › Bouton ou Champ.')}</p>
+			<p class="empty">{error || (controls.length ? t('script.picker.noMatch') : t('script.picker.none'))}</p>
 		{/each}
 	</div>
 	{#if onsheet}
-		<button class="sheet-pick" onclick={onsheet} disabled={!controls.length} title="Afficher les feuilles : cliquer sur un contrôle insère son nom ; Échap annule">
-			<Icon name="pick-control" size={14} />Choisir sur la feuille
+		<button class="sheet-pick" onclick={onsheet} disabled={!controls.length} title={t('script.picker.onSheet.tooltip')}>
+			<Icon name="pick-control" size={14} />{t('script.picker.onSheet.label')}
 		</button>
 	{/if}
 </div>

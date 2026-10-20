@@ -1,4 +1,6 @@
 <script lang="ts" module>
+	import { t } from '#lib/i18n/index.js';
+	
 	/** Champ d'une boîte de dialogue ouverte par ui.dialog (internal/api). */
 	export interface DialogField {
 		name: string;
@@ -29,9 +31,9 @@
 
 	/** Libellé du bouton qui montre ou cache le code. */
 	export function codeLabel(code: string, shown: boolean): string {
-		if (shown) return 'Masquer le code';
+		if (shown) return t('script.dialog.hideCode');
 		const n = code.replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').length;
-		return `Voir le code (${n} ligne${n > 1 ? 's' : ''})`;
+		return t('script.dialog.showCode', { n });
 	}
 
 	/** Valeurs de départ des champs. */
@@ -63,13 +65,13 @@
 			const label = f.label || f.name;
 			const x = v[f.name];
 			const empty = x === '' || x === undefined || x === null;
-			if (f.required && empty && f.type !== 'checkbox') return `« ${label} » est obligatoire`;
+			if (f.required && empty && f.type !== 'checkbox') return t('script.dialog.required', { label });
 			if ((f.type === 'number' || f.type === 'integer') && !empty) {
 				const n = Number(String(x).replace(',', '.'));
-				if (!Number.isFinite(n)) return `« ${label} » : nombre attendu`;
-				if (f.type === 'integer' && !Number.isInteger(n)) return `« ${label} » : nombre entier attendu`;
-				if (f.min !== undefined && f.min !== null && n < f.min) return `« ${label} » : au moins ${f.min}`;
-				if (f.max !== undefined && f.max !== null && n > f.max) return `« ${label} » : au plus ${f.max}`;
+				if (!Number.isFinite(n)) return t('script.dialog.number', { label });
+				if (f.type === 'integer' && !Number.isInteger(n)) return t('script.dialog.integer', { label });
+				if (f.min !== undefined && f.min !== null && n < f.min) return t('script.dialog.min', { label, min: f.min });
+				if (f.max !== undefined && f.max !== null && n > f.max) return t('script.dialog.max', { label, max: f.max });
 			}
 		}
 		return '';
@@ -145,7 +147,7 @@
 	<div class="dialog" role="dialog" aria-modal="true" aria-label={spec.title} tabindex="-1" bind:this={box} use:modal onkeydown={onkey}>
 		<header>{spec.title}</header>
 		{#if spec.message}<p class="message">{spec.message}</p>{/if}
-		{#if spec.warning}<p class="warning" role="note"><strong>Attention.</strong> {spec.warning}</p>{/if}
+		{#if spec.warning}<p class="warning" role="note"><strong>{t('script.dialog.warning')}</strong> {spec.warning}</p>{/if}
 		{#each fields as f (f.name)}
 			{@const id = `dlg-${spec.id}-${f.name}`}
 			<div class="field" class:inline={f.type === 'checkbox'}>
@@ -178,13 +180,13 @@
 				{/if}
 			</div>
 		{/each}
-		{#if spec.code && showCode}<pre class="code" aria-label={spec.codeName ?? 'Code du script'}>{spec.code}</pre>{/if}
+		{#if spec.code && showCode}<pre class="code" aria-label={spec.codeName ?? t('script.dialog.code')}>{spec.code}</pre>{/if}
 		{#if error}<p class="error">{error}</p>{/if}
 		<div class="actions">
 			{#if spec.code}
 				<button class="see" aria-expanded={showCode} onclick={() => (showCode = !showCode)}>{codeLabel(spec.code, showCode)}</button>
 			{/if}
-			<button class="primary" onclick={ok}>{spec.ok || 'OK'}</button>
+			<button class="primary" onclick={ok}>{spec.ok || t('common.ok')}</button>
 			{#if spec.cancel}<button onclick={() => onanswer(null)}>{spec.cancel}</button>{/if}
 		</div>
 	</div>

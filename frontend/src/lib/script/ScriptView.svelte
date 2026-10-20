@@ -27,7 +27,7 @@
 	// Onglet Script : bibliothèque de scripts Lua du classeur, éditeur,
 	// exécution avec sortie en direct et bouton Arrêter. Les écritures d'un
 	// script forment une seule étape d'annulation. Référence : docs/scripting.md.
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { errorText, fmtNumber, t } from '#lib/i18n/index.js';
 	import { onMount } from 'svelte';
 	import { EditorState } from '@codemirror/state';
 	import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
@@ -167,14 +167,15 @@
 		insertRef(c ?? { id, name: '', kind: '', label: '', sheet: '' });
 	}
 
-	const EXAMPLE = `-- Exemple : la liste des tableaux du classeur et leurs colonnes.
--- db.query, db.rows, db.insert, db.execute… : voir le bouton « Référence ».
-for _, t in ipairs(db.tables()) do
-  print(t.name, #t.columns .. " colonne(s)")
+	/** Modèle d'un nouveau script (commentaires dans la langue de l'interface). */
+const example = () => `-- ${t('script.view.example.line1')}
+-- ${t('script.view.example.line2')}
+  for _, t in ipairs(db.tables()) do
+print(t.name, #t.columns .. " ${t('script.view.example.columns')}")
 end
 `;
-
-	let current = $state<Script>({ id: 0, name: 'Nouveau script', source: EXAMPLE });
+	
+	let current = $state<Script>({ id: 0, name: t('script.view.newName'), source: example() });
 	// editing : un script est ouvert ; sinon, seulement « Nouveau script ».
 	let editing = $state(false);
 	let output = $state<string[]>([]);
@@ -203,8 +204,9 @@ end
 	// Nouveau script : l'exemple sert de modèle de départ.
 	function fresh() {
 		editing = true;
-		current = { id: 0, name: 'Nouveau script', source: EXAMPLE };
-		setSource(EXAMPLE);
+		const ex = example();
+		current = { id: 0, name: t('script.view.newName'), source: ex };
+		setSource(ex);
 		output = [];
 		error = status = '';
 		view?.focus();
@@ -212,7 +214,7 @@ end
 
 	function close() {
 		editing = false;
-		current = { id: 0, name: 'Nouveau script', source: '' };
+		current = { id: 0, name: t('script.view.newName'), source: '' };
 		setSource('');
 		output = [];
 		error = status = '';
@@ -229,11 +231,11 @@ end
 			current.source = view?.state.doc.toString() ?? current.source;
 			current.id = await save(current.id, current.name.trim(), current.source);
 			dirty = false;
-			status = 'Script enregistré dans le classeur';
+			status = t('script.view.saved');
 			error = '';
 		} catch (e) {
-			const m = String(e instanceof Error ? e.message : e);
-			if (/^script : /.test(m)) await refuseName(nameField, refusedName('Nom de script refusé', e));
+			const m = errorText(e);
+			if (/^script : /.test(m)) await refuseName(nameField, refusedName(t('script.view.nameRefused'), e));
 			else error = m;
 		}
 	}
@@ -243,15 +245,16 @@ end
 		running = true;
 		output = [];
 		error = '';
-		status = 'Exécution…';
+		status = t('script.view.running');
 		const unsub = subscribe?.((line) => (output = [...output, line]));
 		try {
 			const r = await run(current.name, view?.state.doc.toString() ?? '');
 			output = r.output ?? output;
 			error = r.error;
-			status = `${r.error ? 'Arrêté' : 'Terminé'} en ${fmtNumber(r.durationMs / 1000, { maximumFractionDigits: 2 })} s · ${r.writes} ligne(s) écrite(s)${r.writes ? ' (Ctrl+Z pour tout annuler)' : ''}`;
-		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			const secs = fmtNumber(r.durationMs / 1000, { maximumFractionDigits: 2 });
+		status = `${r.error ? t('script.view.stopped', { secs }) : t('script.view.done', { secs })} · ${t('script.view.writes', { n: r.writes })}${r.writes ? ` ${t('script.view.undoAll')}` : ''}`;
+			} catch (e) {
+			error = errorText(e);
 			status = '';
 		} finally {
 			unsub?.();
@@ -303,10 +306,10 @@ end
 			await save(s.id, name, s.id === current.id ? (view?.state.doc.toString() ?? s.source) : s.source);
 			renaming = null;
 			if (s.id === current.id) current.name = name;
-			status = `Script renommé « ${name} »`;
+			status = t('script.view.renamed', { name });
 			error = '';
 		} catch (e) {
-			await refuseName(() => renameInput, refusedName('Nom de script refusé', e));
+			await refuseName(() => renameInput, refusedName(t('script.view.nameRefused'), e));
 		} finally {
 			renameBusy = false;
 		}
@@ -315,14 +318,14 @@ end
 	async function duplicate(s: Script) {
 		menu = null;
 		const taken = new Set(scripts.map((x) => x.name.toLowerCase()));
-		let name = `${s.name} (copie)`;
-		for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${s.name} (copie ${n})`;
+		let name = t('script.view.copy', { name: s.name });
+		for (let n = 2; taken.has(name.toLowerCase()); n++) name = t('script.view.copyN', { name: s.name, n: String(n) });
 		try {
 			const id = await save(0, name, s.source);
 			open({ id, name, source: s.source });
-			status = `Script dupliqué : « ${name} »`;
+			status = t('script.view.duplicated', { name });
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		}
 	}
 
@@ -388,10 +391,10 @@ end
 
 <div class="script">
 	<aside class="library">
-		<h2>Scripts du classeur</h2>
-		{#if locked}<p class="locked" role="note">{locked} : vous pouvez les lire et les exécuter.</p>{/if}
+		<h2>{t('script.view.title')}</h2>
+		{#if locked}<p class="locked" role="note">{t('script.view.locked', { why: locked })}</p>{/if}
 		<!-- Action à part, au-dessus de la liste (pas un script de la liste). -->
-		<button class="new" onclick={fresh} disabled={!!locked} title={locked || undefined}><Icon name="new-file" size={14} />Nouveau script</button>
+		<button class="new" onclick={fresh} disabled={!!locked} title={locked || undefined}><Icon name="new-file" size={14} />{t('script.view.newName')}</button>
 		<div class="items" role="list">
 		{#each scripts as s (s.id)}
 			{#if renaming === s.id}
@@ -400,7 +403,7 @@ end
 					class="rename"
 					bind:this={renameInput}
 					value={s.name}
-					aria-label="Nouveau nom du script"
+					aria-label={t('script.view.renameAria')}
 					autofocus
 					onfocus={(e) => e.currentTarget.select()}
 					onkeydown={(e) => {
@@ -416,61 +419,61 @@ end
 				<button class="item" class:on={s.id === current.id} onclick={() => open(s)} oncontextmenu={(e) => onItemMenu(e, s)}>{s.name}</button>
 			{/if}
 		{/each}
-		{#if scripts.length === 0}<p class="empty">Aucun script enregistré dans ce classeur.</p>{/if}
+		{#if scripts.length === 0}<p class="empty">{t('script.view.empty')}</p>{/if}
 		</div>
 	</aside>
 	{#if menu}
 		{@const m = menu}
 		<div class="ctx" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
-			<div class="ctx-title" title={clipped(m.s.name) ? m.s.name : undefined}>Script « {clip(m.s.name)} »</div>
+			<div class="ctx-title" title={clipped(m.s.name) ? m.s.name : undefined}>{t('script.view.menuTitle', { name: clip(m.s.name) })}</div>
 			<button
 				onclick={() => {
 					menu = null;
 					renaming = m.s.id;
-				}}>Renommer</button
+				}}>{t('script.view.rename')}</button
 			>
-			<button onclick={() => duplicate(m.s)}>Dupliquer</button>
+			<button onclick={() => duplicate(m.s)}>{t('script.view.duplicate')}</button>
 			<hr />
-			<button onclick={() => removeScript(m.s)}>Supprimer</button>
+			<button onclick={() => removeScript(m.s)}>{t('script.view.delete')}</button>
 		</div>
 	{/if}
 	<section class="main">
 		{#if !editing}
 			<div class="start">
-				<button class="new big" onclick={fresh}><Icon name="new-file" size={16} />Nouveau script</button>
-				{#if scripts.length}<p class="empty">Ou ouvrez un script du classeur, à gauche.</p>{/if}
+				<button class="new big" onclick={fresh}><Icon name="new-file" size={16} />{t('script.view.newName')}</button>
+				{#if scripts.length}<p class="empty">{t('script.view.orOpen')}</p>{/if}
 			</div>
 		{/if}
 		<div class="toolbar" hidden={!editing}>
-			<input class="name" bind:this={nameField} aria-label="Nom du script" bind:value={current.name} oninput={() => (dirty = true)} spellcheck="false" />
+			<input class="name" bind:this={nameField} aria-label={t('script.view.nameAria')} bind:value={current.name} oninput={() => (dirty = true)} spellcheck="false" />
 			<!-- Boutons par groupes : un groupe passe à la ligne en entier. -->
 			<span class="grp">
-				<button class="run" onclick={doRun} disabled={running} title="Exécuter (Ctrl+Entrée)"><Icon name="play" size={14} />Exécuter</button>
-				<button class="stop" onclick={() => stop()} disabled={!running}><Icon name="stop" size={14} />Arrêter</button>
+				<button class="run" onclick={doRun} disabled={running} title={t('script.view.run.tooltip')}><Icon name="play" size={14} />{t('script.view.run.label')}</button>
+				<button class="stop" onclick={() => stop()} disabled={!running}><Icon name="stop" size={14} />{t('script.view.stop')}</button>
 			</span>
 			<span class="grp">
-				<button onclick={doSave} title="Enregistrer le script (Ctrl+S)"><Icon name="save" size={14} />Enregistrer{dirty ? ' •' : ''}</button>
-				<button class="delete" onclick={doRemove} disabled={!current.id}><Icon name="trash" size={14} />Supprimer</button>
+				<button onclick={doSave} title={t('script.view.save.tooltip')}><Icon name="save" size={14} />{t('script.view.save.label')}{dirty ? ' •' : ''}</button>
+				<button class="delete" onclick={doRemove} disabled={!current.id}><Icon name="trash" size={14} />{t('script.view.delete')}</button>
 			</span>
 			<span class="grp">
-			<button onclick={() => (showRef = !showRef)} aria-pressed={showRef}><Icon name="book" size={14} />Référence</button>
+			<button onclick={() => (showRef = !showRef)} aria-pressed={showRef}><Icon name="book" size={14} />{t('script.view.reference')}</button>
 			{#if controls}
 				<span class="pick-anchor">
-					<button onclick={openPicker} aria-expanded={pickerOpen} title="Insérer au curseur le nom d'un bouton, d'un champ ou d'un autre contrôle du classeur"><Icon name="pick-control" size={14} />Pointer un contrôle</button>
+					<button onclick={openPicker} aria-expanded={pickerOpen} title={t('script.view.pick.tooltip')}><Icon name="pick-control" size={14} />{t('script.view.pick.label')}</button>
 					{#if pickerOpen}
 						<ControlPicker controls={pickerList} error={pickerError} pick={insertRef} onsheet={showSheet ? chooseOnSheet : undefined} close={closePicker} />
 					{/if}
 				</span>
 			{/if}
-			{#if network}<button onclick={() => (netOpen = true)} title="Hôtes que les scripts et pages HTML du classeur peuvent joindre en HTTP"><Icon name="web" size={14} />Accès réseau</button>{/if}
+			{#if network}<button onclick={() => (netOpen = true)} title={t('script.view.network.tooltip')}><Icon name="web" size={14} />{t('script.network.aria')}</button>{/if}
 			</span>
 		</div>
 		<div class="editor" bind:this={host} hidden={!editing}></div>
 		<div class="output" hidden={!editing}>
 			<div class="out-head">
-				<span>Sortie</span>
+				<span>{t('script.view.output')}</span>
 				{#if status}<span class="muted">{status}</span>{/if}
-				<span class="muted keys">Ctrl+Entrée : exécuter · Ctrl+S : enregistrer le script</span>
+				<span class="muted keys">{t('script.view.keys')}</span>
 			</div>
 			<pre>{output.join('\n')}{#if error}<span class="error">{(output.length ? '\n' : '') + error}</span>{/if}</pre>
 		</div>

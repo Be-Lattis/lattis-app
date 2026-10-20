@@ -7,6 +7,7 @@ import { forEachDiagnostic, linter, lintGutter, lintKeymap, nextDiagnostic, type
 import { lintLua } from './lualint';
 import { luaSyntax } from './lualang';
 import { byName } from './reference';
+import { t } from '#lib/i18n/index.js';
 
 const luaLinter = linter(
 	(view): Diagnostic[] =>
@@ -131,12 +132,12 @@ function summary(view: EditorView): { text: string; level: string } {
 	let errors = 0;
 	let warnings = 0;
 	forEachDiagnostic(view.state, (d) => (d.severity === 'error' ? errors++ : warnings++));
-	if (!errors && !warnings) return { text: '✓ Aucun problème détecté', level: 'ok' };
+	if (!errors && !warnings) return { text: `✓ ${t('script.editor.noProblem')}`, level: 'ok' };
 	const parts = [];
-	if (errors) parts.push(`${errors} erreur${errors > 1 ? 's' : ''}`);
-	if (warnings) parts.push(`${warnings} avertissement${warnings > 1 ? 's' : ''}`);
+	if (errors) parts.push(t('script.editor.errors', { n: errors }));
+	if (warnings) parts.push(t('script.editor.warnings', { n: warnings }));
 	return {
-		text: parts.join(' · ') + ' — cliquer pour aller au suivant (F8)',
+		text: parts.join(' · ') + ` — ${t('script.editor.next')}`,
 		level: errors ? 'error' : 'warning'
 	};
 }

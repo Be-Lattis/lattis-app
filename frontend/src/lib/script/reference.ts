@@ -13,6 +13,7 @@
 // serveur MCP.
 
 import { apiReference } from './api.gen';
+import { tAny } from '#lib/i18n/index.js';
 
 export type Category = 'db' | 'sheets' | 'cells' | 'tables' | 'columns' | 'ui' | 'objects' | 'controls' | 'events' | 'workbook' | 'http' | 'base' | 'string' | 'table' | 'math' | 'os' | 'syntaxe';
 
@@ -34,26 +35,34 @@ export interface RefEntry {
 	deprecated?: string;
 }
 
-export const categories: { id: Category; label: string }[] = [
+const category = (id: Category) => ({
+	id,
+	get label() {
+	return tAny(`script.category.${id}`);
+	}
+	});
+	export const categories: { id: Category; readonly label: string }[] = (
+	[
 	// Les bases du langage d'abord : conditions, boucles, fonctions (choix de Louis).
-	{ id: 'syntaxe', label: 'Bases du langage : conditions, boucles, fonctions' },
-	{ id: 'db', label: 'Données SQL (db)' },
-	{ id: 'sheets', label: 'Feuilles (sheets)' },
-	{ id: 'cells', label: 'Cellules (cells)' },
-	{ id: 'tables', label: 'Tableaux (tables)' },
-	{ id: 'columns', label: 'Colonnes (columns)' },
-	{ id: 'ui', label: 'Sélection et boîtes de dialogue (ui)' },
-	{ id: 'controls', label: 'Contrôles et évènements (controls)' },
-	{ id: 'events', label: 'Évènements du classeur (events)' },
-	{ id: 'objects', label: 'Graphiques, TCD et boutons' },
-	{ id: 'workbook', label: 'Classeur et scripts (doc, scripts)' },
-	{ id: 'http', label: 'Requêtes HTTP et HTTPS (http)' },
-	{ id: 'base', label: 'Fonctions de base' },
-	{ id: 'string', label: 'Texte (string)' },
-	{ id: 'table', label: 'Tables (table)' },
-	{ id: 'math', label: 'Maths (math)' },
-	{ id: 'os', label: 'Date et heure (os)' }
-];
+	'syntaxe',
+	'db',
+	'sheets',
+	'cells',
+	'tables',
+	'columns',
+	'ui',
+	'controls',
+	'events',
+	'objects',
+'workbook',
+'http',
+'base',
+'string',
+'table',
+'math',
+'os'
+] as Category[]
+).map(category);
 
 export const reference: RefEntry[] = [
 	// --- Classeur ---------------------------------------------------------------
@@ -660,30 +669,36 @@ export const globals: Set<string> = new Set([
 ]);
 
 /** Ce qui existe en Lua mais que le bac à sable retire, avec la raison affichée. */
-export const unavailable: Record<string, string> = {
-	io: "pas d'accès aux fichiers dans un script",
-	require: 'pas de chargement de module dans un script',
-	dofile: "pas d'accès aux fichiers dans un script",
-	loadfile: "pas d'accès aux fichiers dans un script",
-	load: 'pas de chargement de code dans un script',
-	loadstring: 'pas de chargement de code dans un script',
-	debug: 'bibliothèque debug non disponible',
-	coroutine: 'bibliothèque coroutine non disponible',
-	collectgarbage: 'non disponible dans un script',
-	getfenv: 'non disponible dans un script',
-	setfenv: 'non disponible dans un script',
-	module: 'pas de chargement de module dans un script',
-	package: 'pas de chargement de module dans un script',
-	newproxy: 'non disponible dans un script',
-	'os.execute': 'pas de lancement de programme dans un script',
-	'os.exit': 'non disponible dans un script',
-	'os.getenv': "pas d'accès aux variables d'environnement",
-	'os.remove': "pas d'accès aux fichiers dans un script",
-	'os.rename': "pas d'accès aux fichiers dans un script",
-	'os.tmpname': "pas d'accès aux fichiers dans un script",
-	'os.setlocale': 'non disponible dans un script',
-	'string.dump': 'non disponible dans un script'
+/** Raison de chaque nom absent du bac à sable (clé de script.unavailable). */
+	const UNAVAILABLE: Record<string, string> = {
+	io: 'files',
+	require: 'modules',
+	dofile: 'files',
+	loadfile: 'files',
+	load: 'code',
+	loadstring: 'code',
+	debug: 'debug',
+	coroutine: 'coroutine',
+	collectgarbage: 'none',
+	getfenv: 'none',
+	setfenv: 'none',
+	module: 'modules',
+	package: 'modules',
+	newproxy: 'none',
+	'os.execute': 'programs',
+	'os.exit': 'none',
+	'os.getenv': 'env',
+	'os.remove': 'files',
+	'os.rename': 'files',
+	'os.tmpname': 'files',
+	'os.setlocale': 'none',
+'string.dump': 'none'
 };
+/** Noms absents du bac à sable et pourquoi (texte relu dans la langue de l'interface). */
+export const unavailable: Record<string, string> = Object.defineProperties(
+{},
+Object.fromEntries(Object.entries(UNAVAILABLE).map(([name, why]) => [name, { get: () => tAny(`script.unavailable.${why}`), enumerable: true }]))
+);
 
 /** Recherche dans la référence (nom, signature, résumé, précisions), sans tenir compte des accents. */
 export function search(q: string, entries: RefEntry[] = reference): RefEntry[] {
