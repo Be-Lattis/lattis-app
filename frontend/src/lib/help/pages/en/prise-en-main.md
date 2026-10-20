@@ -17,7 +17,7 @@ Type a few rows anywhere on the sheet: a header row, then values. Lattis recogni
 
 Everything can be undone with `Ctrl+Z`, including creating a table.
 
-**Right-clicking** in a table first offers what is specific to the clicked cell (Switch to, Convert to values, Use first row as headers…), then the most common commands: sort and filter, insert or delete the row, clear, format, the note, and Cut, Copy, Paste. Then come the **Column “Name”** section (rename, type and key, validation, insert or delete the column) and the **Table “Readings”** submenu (headers, sharing, Convert to range, Delete table), each titled with the clicked name; on a PivotTable, likewise, the **PivotTable** section.
+**Right-clicking** in a table first offers what only applies there (Go to, Use first row as headers, Take this row out of the table on the last row, Use the row above as headers on a header…), then Cut, Copy, Paste; Clear contents, Format cells… (`Ctrl+1`), Conditional formatting…; the note. Last come the submenus of each object, titled with its name: **Sort & filter**, **Row “12”** (its key when the table has one: insert above or below, delete the row), **Column “Name”** (rename, type and key, validation, filter the tab, convert to values, insert left or right, delete the column) and **Table “Readings”** (headers, sharing, Convert to range, Delete table). Row numbers, column letters, PivotTables (**PivotTable “Sales”**), charts and buttons follow the same order.
 
 ### Header groups (row above) {#groupes-d-en-tetes-ligne-du-dessus}
 

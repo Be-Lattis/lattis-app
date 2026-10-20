@@ -6,8 +6,6 @@ Der **Assistent ✦** hilft Ihnen, eine Analyse aufzubauen: Er liest die Struktu
 
 Der Assistent ist standardmäßig deaktiviert. Die Schaltfläche **Assistent ✦** oben rechts im Menüband (`Alt+I`) öffnet seinen Bereich: Aktivieren Sie **KI-Assistent aktivieren**. Dieselbe Einstellung finden Sie unter Datei › Einstellungen › Funktionen. In einem Unternehmen kann die Richtlinie der Organisation ihn deaktivieren oder vorgeben.
 
-Sie können den Bereich auch per Rechtsklick im Raster › **Assistenten fragen…** öffnen.
-
 ## Verbinden {#se-connecter}
 
 Die Schaltfläche **Verbindung** in der Kopfzeile des Bereichs bietet zwei Wege an. Das Panel öffnet sich von selbst, solange nichts verbunden ist.

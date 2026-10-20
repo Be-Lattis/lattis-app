@@ -6,8 +6,6 @@ The **Assistant ✦** helps you build an analysis: it reads the structure of you
 
 The assistant is off by default. The **Assistant ✦** button, at the top right of the ribbon (`Alt+I`), opens its pane: check **Turn on the AI Assistant**. The same setting is in File › Settings › Features. In a company, the organization's policy can turn it off or impose it.
 
-You can also open the pane by right-clicking in the grid › **Ask the assistant…**.
-
 ## Connect {#se-connecter}
 
 The **Connection** button, in the pane's header, offers two ways. The panel opens on its own as long as nothing is connected.

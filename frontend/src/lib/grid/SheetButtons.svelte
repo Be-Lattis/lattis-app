@@ -14,6 +14,8 @@
 	import { dismiss } from './dismiss.js';
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { clip as clipName } from '#lib/ui/menu.js';
+	import Submenu from '#lib/ui/Submenu.svelte';
+	import { controlMenu, controlSubmenu } from './ctxmenu';
 	import HelpLink from '#lib/help/HelpLink.svelte';
 	import { BUTTON_H, BUTTON_W, CONTROL_KINDS, VALUE_KINDS, baseName, choicesOf, controlTitle, handlerLabel, handlers, scriptFunctions, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { a1Address } from './formulaEdit';
@@ -554,30 +556,46 @@
 
 {#if menu}
 	{@const m = menu}
-	<div class="menu" style:zoom={unzoom} style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
-		<!-- Nom abrégé en tête (le nom entier dans l'infobulle) ; presse-papiers, le bouton, sa suppression. -->
-		<div class="menu-title" title={controlTitle(m.b.config)}>{t('grid.controls.menu.title', { kind: KINDS[m.b.config.kind ?? ''], name: clipName(m.b.config.name || m.b.config.label || m.b.config.link) })}</div>
-		<button onclick={() => copy(m.b, true)}>{t('common.cut')}</button>
-		<button onclick={() => copy(m.b, false)}>{t('common.copy')}</button>
-		<hr />
-		{#if handlers(m.b.config).length}
+	{#snippet item(id: string)}
+		{#if id === 'cut'}
+			<button onclick={() => copy(m.b, true)}>{t('common.cut')} <span class="keys">Ctrl+X</span></button>
+		{:else if id === 'copy'}
+			<button onclick={() => copy(m.b, false)}>{t('common.copy')} <span class="keys">Ctrl+C</span></button>
+		{:else if id === 'run'}
 			<button
 				onclick={() => {
 					menu = null;
 					onrun(m.b);
 				}}>{t('grid.controls.menu.run')}</button
 			>
+		{:else if id === 'edit'}
+			<button onclick={() => openEditor(m.b)}>{t('grid.controls.menu.edit')}</button>
+		{:else if id === 'resize'}
+			<button
+				onclick={() => {
+					menu = null;
+					selected = m.b.id;
+					say(t('grid.controls.menu.resize.hint'));
+				}}>{t('grid.controls.menu.resize')}</button
+			>
+		{:else if id === 'delete'}
+			<button onclick={() => remove(m.b)}>{t('common.delete')}</button>
+		{:else if id === 'control'}
+			<!-- Le contrôle, titré de son nom abrégé (le nom entier dans l'infobulle) ; sa suppression en dernier. -->
+			<Submenu label={t('grid.controls.menu.title', { kind: KINDS[m.b.config.kind ?? ''], name: clipName(m.b.config.name || m.b.config.label || m.b.config.link) })} title={controlTitle(m.b.config)}>
+				{#each controlSubmenu({ run: handlers(m.b.config).length > 0 }) as g, gi (gi)}
+					{#if gi}<hr />{/if}
+					{#each g as cid (cid)}{@render item(cid)}{/each}
+				{/each}
+			</Submenu>
 		{/if}
-		<button onclick={() => openEditor(m.b)}>{t('grid.controls.menu.edit')}</button>
-		<button
-			onclick={() => {
-				menu = null;
-				selected = m.b.id;
-				say(t('grid.controls.menu.resize.hint'));
-			}}>{t('grid.controls.menu.resize')}</button
-		>
-		<hr />
-		<button onclick={() => remove(m.b)}>{t('common.delete')}</button>
+	{/snippet}
+	<div class="menu" style:zoom={unzoom} style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
+		<!-- Presse-papiers, puis le sous-menu du contrôle (ctxmenu.ts). -->
+		{#each controlMenu() as g, gi (gi)}
+			{#if gi}<hr />{/if}
+			{#each g as id (id)}{@render item(id)}{/each}
+		{/each}
 	</div>
 {/if}
 
@@ -1030,6 +1048,12 @@
 	}
 	.menu button:hover {
 		background: #e3efe7;
+	}
+	.menu .keys {
+		float: right;
+		color: #6b7280;
+		font-size: 12px;
+		margin-left: 16px;
 	}
 	.menu hr {
 		border: none;

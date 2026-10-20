@@ -6,8 +6,6 @@ El **Asistente ✦** le ayuda a construir un análisis: lee la estructura de sus
 
 El asistente está desactivado de forma predeterminada. El botón **Asistente ✦**, arriba a la derecha de la cinta (`Alt+I`), abre su panel: active **Activar el Asistente de IA**. El mismo ajuste está en Archivo › Configuración › Funciones. En una empresa, la directiva de la organización puede desactivarlo o imponerlo.
 
-También puede abrir el panel con clic derecho en la cuadrícula › **Preguntar al asistente…**.
-
 ## Conectarse {#se-connecter}
 
 El botón **Conexión**, en el encabezado del panel, ofrece dos vías. El panel de conexión se abre solo mientras no haya nada conectado.

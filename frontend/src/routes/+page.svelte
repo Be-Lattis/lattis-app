@@ -2518,7 +2518,6 @@
 						onaddshared={mode === 'doc' && share?.mode === 'collaborative' ? (t) => void addToShared(t) : undefined}
 						{sourceTables}
 						onpushsource={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => void pushSource(t) : undefined}
-						onask={mode === 'doc' ? openAssistant : undefined}
 						pageBreaks={breaks && !breaks.empty ? { rows: breaks.rows ?? [], cols: breaks.cols ?? [], manualRows: breaks.manualRows ?? [], manualCols: breaks.manualCols ?? [], area: breaks.area, framed: !!layout?.pageSetup?.area } : undefined}
 					/>
 				</div>

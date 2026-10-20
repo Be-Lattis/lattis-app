@@ -766,6 +766,7 @@ export interface MessageParams {
 	'grid.chart.copyImage': Record<never, never>;
 	'grid.chart.copyImageFailed': { error: number | string };
 	'grid.chart.delete': Record<never, never>;
+	'grid.chart.edit': Record<never, never>;
 	'grid.chart.error': { error: number | string };
 	'grid.chart.inserted': Record<never, never>;
 	'grid.chart.mapInserted': Record<never, never>;
@@ -1176,7 +1177,6 @@ export interface MessageParams {
 	'grid.menu.asHeader.tooltip': Record<never, never>;
 	'grid.menu.asTable': Record<never, never>;
 	'grid.menu.asTable.tooltip': Record<never, never>;
-	'grid.menu.ask': Record<never, never>;
 	'grid.menu.autoFitCols': Record<never, never>;
 	'grid.menu.autoFitCols.tooltip': Record<never, never>;
 	'grid.menu.autoFitRows': Record<never, never>;
@@ -1186,6 +1186,7 @@ export interface MessageParams {
 	'grid.menu.clearTableFilter': Record<never, never>;
 	'grid.menu.colWidth': Record<never, never>;
 	'grid.menu.column': { name: number | string };
+	'grid.menu.columns': { first: number | string; last: number | string };
 	'grid.menu.conditionalFormat': Record<never, never>;
 	'grid.menu.deleteTable': Record<never, never>;
 	'grid.menu.deleteTable.confirm': { n: number | string };
@@ -1204,10 +1205,12 @@ export interface MessageParams {
 	'grid.menu.headerToTitle.tooltip': Record<never, never>;
 	'grid.menu.hide': Record<never, never>;
 	'grid.menu.insert': Record<never, never>;
-	'grid.menu.insertColumn': Record<never, never>;
+	'grid.menu.insertAbove': Record<never, never>;
+	'grid.menu.insertBelow': Record<never, never>;
+	'grid.menu.insertLeft': Record<never, never>;
+	'grid.menu.insertRight': Record<never, never>;
 	'grid.menu.join': Record<never, never>;
 	'grid.menu.join.tooltip': Record<never, never>;
-	'grid.menu.left': Record<never, never>;
 	'grid.menu.promote': Record<never, never>;
 	'grid.menu.promote.tooltip': Record<never, never>;
 	'grid.menu.pushSource': Record<never, never>;
@@ -1216,12 +1219,11 @@ export interface MessageParams {
 	'grid.menu.refresh': Record<never, never>;
 	'grid.menu.refresh.tooltip': { name: number | string };
 	'grid.menu.renameColumn': Record<never, never>;
-	'grid.menu.right': Record<never, never>;
-	'grid.menu.rowAbove': Record<never, never>;
-	'grid.menu.rowBelow': Record<never, never>;
+	'grid.menu.row': { name: number | string };
 	'grid.menu.rowHeight': Record<never, never>;
 	'grid.menu.rowToNote': Record<never, never>;
 	'grid.menu.rowToNote.tooltip': Record<never, never>;
+	'grid.menu.rows': { first: number | string; last: number | string };
 	'grid.menu.shareData': Record<never, never>;
 	'grid.menu.shareData.tooltip': Record<never, never>;
 	'grid.menu.sortFilter': Record<never, never>;
@@ -1306,7 +1308,6 @@ export interface MessageParams {
 	'grid.pivot.filter.reportField': { field: number | string };
 	'grid.pivot.filter.several': Record<never, never>;
 	'grid.pivot.filter.title': { field: number | string };
-	'grid.pivot.fold': Record<never, never>;
 	'grid.pivot.fold.collapse': Record<never, never>;
 	'grid.pivot.fold.collapseAll': Record<never, never>;
 	'grid.pivot.fold.expand': Record<never, never>;

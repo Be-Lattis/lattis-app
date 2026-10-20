@@ -17,7 +17,7 @@ Tapez quelques lignes n'importe où sur la feuille : une ligne d'en-têtes, puis
 
 Tout s'annule avec `Ctrl+Z`, y compris la création d'un tableau.
 
-Le **clic droit** dans un tableau propose d'abord ce qui est propre à la cellule cliquée (Basculer sur, Convertir en valeurs, Utiliser la première ligne comme en-têtes…), puis le plus courant : trier et filtrer, insérer ou supprimer la ligne, effacer, mettre en forme, la note, et Couper, Copier, Coller. Viennent ensuite la section **Colonne « Nom »** (renommer, type et clé, validation, insérer ou supprimer la colonne) et le sous-menu **Tableau « Relevés »** (en-têtes, partage, Convertir en plage, Supprimer le tableau), chacun titré du nom cliqué ; sur un tableau croisé, de même, la section **Tableau croisé**.
+Le **clic droit** dans un tableau propose d'abord ce qui ne vaut qu'ici (Basculer sur, Utiliser la première ligne comme en-têtes, Sortir cette ligne du tableau sur la dernière ligne, Utiliser la ligne du dessus comme en-têtes sur un en-tête…), puis Couper, Copier, Coller ; Effacer le contenu, Format de cellule… (`Ctrl+1`), Mise en forme conditionnelle… ; la note. Viennent enfin les sous-menus de chaque objet, titrés de son nom : **Trier et filtrer**, **Ligne « 12 »** (sa clé quand le tableau en a une : insérer au-dessus ou en dessous, supprimer la ligne), **Colonne « Nom »** (renommer, type et clé, validation, filtrer l'onglet, convertir en valeurs, insérer à gauche ou à droite, supprimer la colonne) et **Tableau « Relevés »** (en-têtes, partage, Convertir en plage, Supprimer le tableau). Les numéros de ligne, les lettres de colonne, les tableaux croisés (**Tableau croisé « Ventes »**), les graphiques et les boutons suivent le même ordre.
 
 ### Groupes d'en-têtes (ligne du dessus)
 
