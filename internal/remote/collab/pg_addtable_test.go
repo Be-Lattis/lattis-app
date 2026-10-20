@@ -56,7 +56,7 @@ func TestPostgresAddTable(t *testing.T) {
 		t.Fatal("Stock absent chez Dave")
 	}
 	// Un éditeur n'ajoute pas de tableau.
-	if _, err := bob.e.AddTable(ctx, newLocalTable(t, bob, "Notes", 20)); !errors.Is(err, workbook.ErrAddDesign) {
+	if _, err := bob.e.AddTable(ctx, tableOf(t, bob, "Stock")); !errors.Is(err, workbook.ErrAddDesign) {
 		t.Fatalf("éditeur : %v", err)
 	}
 }

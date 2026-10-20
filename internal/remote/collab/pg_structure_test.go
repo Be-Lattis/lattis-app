@@ -119,7 +119,7 @@ func TestPostgresStructure(t *testing.T) {
 	eq(t, "Alice rétablie", colsOf(alice, "Ventes"), []string{"Produit:text", "Remise:text", "Quantité:integer", "Prix:decimal"})
 
 	// Éditeur : refusé en local.
-	if err := bob.d.InsertColumn(ctx, "Ventes", 1, "X"); !errors.Is(err, workbook.ErrDesign) {
+	if err := bob.d.InsertColumn(ctx, "Ventes", 1, "X"); !errors.Is(err, workbook.ErrDesign) && !errors.Is(err, workbook.ErrLayout) {
 		t.Fatalf("éditeur : %v", err)
 	}
 

@@ -9,8 +9,11 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Nouveautés
 
 - Windows : version portable dans chaque version publiée (`Lattis-windows-x64-portable.exe`, l'exécutable seul, sans installation).
+- Classeur partagé en direct : les cellules libres (valeurs et formules) et la mise en page (mises en forme, fusions, largeurs et hauteurs, règles, noms, graphiques, boutons, tableaux croisés, mise en page d'impression, feuilles ajoutées, renommées, déplacées ou supprimées, place des tableaux, thème) se synchronisent : une seconde après la modification d'un propriétaire ou d'un concepteur, les autres la voient ; faite hors ligne, elle part au retour du serveur. Si deux concepteurs changent le même élément au même moment, la dernière modification l'emporte (un message le dit).
 
 ### Changements
+
+- Classeur partagé en direct : les cellules libres et la mise en page sont réservées aux propriétaires et concepteurs. Pour un éditeur ou un lecteur, comme sous « Protéger la structure » : la saisie dans les tableaux reste permise, le reste est refusé tout de suite (« Seuls les propriétaires et concepteurs modifient les cellules libres et la mise en page de ce classeur partagé »), commandes du ruban grisées.
 
 - Ouvrir le fichier local d'un classeur partagé en direct (Fichier › Ouvrir, double-clic, récents) l'ouvre depuis le serveur, en ligne et synchronisé, avec un message ; serveur injoignable, le fichier s'ouvre tel quel. Un classeur figé garde son fichier, où l'auteur modifie et republie.
 

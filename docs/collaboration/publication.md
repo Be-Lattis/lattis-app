@@ -33,7 +33,7 @@ Le serveur range la mise en page dans `<schéma>.lattis_meta_objects (kind, key,
 - `format` : un classeur publié par une version plus récente de Lattis est refusé à l'ouverture (« mettre Lattis à jour ») ; d'un format voisin, seules les colonnes communes sont reprises.
 - La mise en page reçue (ou publiée) est gardée dans `_lattis_info` (clé `remote_base`) : au rechargement, ce qui n'y est pas, ligne à ligne, est ce que l'utilisateur a ajouté en local.
 
-Le découpage en objets par feuille, graphique, etc. (et `lattis_meta_tables.sheet_id`) relève de la mise en page partagée (étape 7).
+Après la publication, la mise en page d'un classeur collaboratif suit en direct dans ce même objet (`synchronisation.md` §2.14, décision 0018) ; la découper par feuille resterait possible sans changer le serveur.
 
 ### 2.2 Identifiants locaux conservés
 
@@ -111,7 +111,7 @@ Toutes vérifiées contre PostgreSQL 18 avec les migrations de la branche serveu
 | Point | Constat | Proposition |
 |---|---|---|
 | Identifiant local du tableau | `create_table` lit `p_columns -> 0 ->> 'table_local_id'` (dans le premier élément des colonnes), non documenté dans le contrat. Le client le met dans chaque élément. | Un paramètre `local_id` de `create_table`, ou le documenter. |
-| `lattis_meta_tables.sheet_id` | Toujours `NULL` (`create_table` ne le reçoit pas). Le client garde les feuilles dans l'objet de mise en page. | À prévoir pour les droits par feuille (§8.1) et la mise en page partagée (étape 7). |
+| `lattis_meta_tables.sheet_id` | Toujours `NULL` (`create_table` ne le reçoit pas). Le client garde les feuilles dans l'objet de mise en page. | À prévoir pour les droits par feuille (§8.1) ; la mise en page en direct (`synchronisation.md` §2.14) n'en a pas besoin. |
 | ~~Notifications pendant une republication~~ | Réglé côté serveur (migration `0007_publication.sql`) : la version de travail ne notifie plus, les lecteurs ne reçoivent que `*version:<n>`. Le client garde son filtre (`VersionNotice`) pour un serveur plus ancien ; `TestPostgresFrozenLifecycle` vérifie, quand la migration est là, qu'un lecteur ne reçoit que `*version:<n>`. | — |
 | Niveau dans un classeur figé | `my_capabilities` rend `reader` pour tous les tableaux, propriétaire compris. Le client se fonde sur les rôles (`owner`, `designer`) pour laisser l'auteur préparer la version suivante. | — (cohérent avec « lecture seule pour tous » côté serveur). |
 | ~~Titre~~ | Réglé (migration 0007) : `my_capabilities` donne `title`, que le chargement préfère (à défaut, celui de `my_workbooks`, puis celui déjà noté, pour un serveur plus ancien). | — |
@@ -139,7 +139,7 @@ LATTIS_PG_TEST=1 LATTIS_TEST_PG_URL=postgres://postgres:pg@127.0.0.1:55433/postg
 ## 7. Reste à faire
 
 - ~~Synchronisation des classeurs collaboratifs (étape 5)~~ : faite, voir `synchronisation.md`.
-- Mise en page partagée par objets (étape 7) et accord à la première exécution d'un script publié (§11 : aujourd'hui, l'accord par empreinte du source d'`internal/trust` s'applique).
+- Accord à la première exécution d'un script publié (§11 : aujourd'hui, l'accord par empreinte du source d'`internal/trust` s'applique).
 - ~~Écran Partager (invitations, rôles)~~ : fait, voir `droits.md`.
 - Graphiques ou TCD d'un auteur qui citent un de ses tableaux privés : publiés tels quels, ils s'affichent en erreur chez les lecteurs (non filtrés).
 - Les réglages locaux d'un lecteur sur un tableau publié (filtre, mise en forme) ne survivent pas à un rechargement.

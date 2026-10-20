@@ -485,6 +485,13 @@ export interface State {
      * « Synchronisation… »).
      */
     "sending"?: boolean;
+
+    /**
+     * LayoutConflicts : modifications de la mise en page d'un collègue
+     * remplacées par les siennes depuis l'ouverture (même élément changé
+     * des deux côtés, la dernière écriture l'emporte ; décision 0018).
+     */
+    "layoutConflicts"?: number;
 }
 
 /**
