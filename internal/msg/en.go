@@ -1009,6 +1009,7 @@ var en = map[ID]string{
 	"auth.failedDetail":         "Sign-in failed ({code}): {detail}",
 	"auth.incompleteResponse":   "{server}: incomplete response from {path}",
 	"auth.keyringRefused":       "signed in, but the system keychain refused the token (session limited to this run): {err}",
+	"auth.labelTooLong":         "name too long: {max} characters at most",
 	"auth.loginRequired":        "sign in to {server} (Account menu in the title bar)",
 	"auth.loginRequiredCause":   "sign in to {server} (Account menu in the title bar): {err}",
 	"auth.loopbackFailed":       "could not listen locally ({err}): sign in from another device",

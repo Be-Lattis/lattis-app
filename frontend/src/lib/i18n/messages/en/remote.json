@@ -1269,6 +1269,15 @@
 			"inUse": "The open workbook “{title}” is published on this server: it stays open from its copy on this computer, but will no longer sync until you add this server again and sign in to it.",
 			"queries": "Queries and workbooks that use this server will ask you to sign in to it."
 		},
+		"rename": {
+			"label": "Rename",
+			"tooltip": "Give this server another name on this computer (the server is not changed)",
+			"aria": "Server name on this computer",
+			"empty": "Enter a name for this server.",
+			"tooLong": "Name too long: {max} characters at most.",
+			"serverName": "Name on the server: {name}",
+			"reset": "Restore"
+		},
 		"emptyAdd": "No server. Add one below.",
 		"add": {
 			"title": "Add a server",
