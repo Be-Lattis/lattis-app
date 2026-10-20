@@ -1158,6 +1158,8 @@
 	}
 
 	onMount(() => {
+		// Écran de chargement d'app.html (avant le code de l'application) : l'application est là.
+		document.getElementById('boot')?.remove();
 		installErrorReporting();
 		// Fil des actions de Claude Desktop / Claude Code : écouté dès le
 		// démarrage (réglages lus) pour ne rien manquer avant l'ouverture du
@@ -2540,6 +2542,7 @@
 			<div class="splash">
 				<h1>Lattis</h1>
 				<p>{demoProgress || 'Ouverture…'}</p>
+				<div class="boot-bar" aria-hidden="true"></div>
 			</div>
 		{/if}
 		<!-- Zone des volets du classeur : côte à côte, à droite de la vue, la somme de leurs largeurs bornée (resize.ts). -->
@@ -3216,6 +3219,38 @@
 		justify-content: center;
 		height: 100%;
 		gap: 10px;
+	}
+	/* Ouverture (moteur web qui démarre, classeur qui se charge) : même barre que l'écran de chargement d'app.html. */
+	.boot-bar {
+		width: 180px;
+		height: 3px;
+		border-radius: 2px;
+		background: #e3efe7;
+		overflow: hidden;
+	}
+	.boot-bar::before {
+		content: '';
+		display: block;
+		width: 40%;
+		height: 100%;
+		border-radius: 2px;
+		background: #217346;
+		animation: boot-bar 1.1s ease-in-out infinite;
+	}
+	@keyframes boot-bar {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(250%);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.boot-bar::before {
+			animation: none;
+			width: 100%;
+			opacity: 0.6;
+		}
 	}
 	h1 {
 		font-weight: 600;

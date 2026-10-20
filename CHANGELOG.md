@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Changements
+
+- Édition web : un écran « Lattis » avec une barre de chargement s'affiche pendant le chargement de l'application, puis pendant l'ouverture du classeur, au lieu d'une page blanche.
+
 ## 0.1.0-beta.3.2 (20/10/2026)
 
 ### Corrections
