@@ -15,6 +15,16 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as update$0 from "../update/models.js";
 
 /**
+ * CheckNow : « Rechercher maintenant » (Paramètres › Mises à jour) : la
+ * recherche part tout de suite, sans attendre les 12 h depuis la
+ * précédente ; rend l'état ensuite (échec compris, dans LastError). Une
+ * nouvelle version est proposée dans la barre d'état comme d'habitude.
+ */
+export function CheckNow(): $CancellablePromise<update$0.Status> {
+    return $Call.ByID(1610642686);
+}
+
+/**
  * DismissUpdated ferme l'avis « Mise à jour effectuée ».
  */
 export function DismissUpdated(): $CancellablePromise<void> {

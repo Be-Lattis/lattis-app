@@ -1101,6 +1101,21 @@
 		"readyTooltip": "Lattis {version} 已就绪：点击以关闭 Lattis、安装更新并重新打开",
 		"failed": "无法准备更新，点击此处重试",
 		"updated": "更新完成，请查看版本说明",
-		"updatedTooltip": "Lattis {version}：在 GitHub 上打开版本说明"
+		"updatedTooltip": "Lattis {version}：在 GitHub 上打开版本说明",
+		"check": {
+			"line": "版本 {version} · {detail}",
+			"last": "上次检查：{when}",
+			"never": "从未",
+			"today": "今天 {time}",
+			"yesterday": "昨天 {time}",
+			"upToDate": "已是最新",
+			"found": "{version} 可用",
+			"failed": "失败：{error}",
+			"now": "立即检查",
+			"dev": "无法检查：开发版本",
+			"msix": "MSIX 安装，由 Windows 更新",
+			"policy": "检查已被您的组织关闭",
+			"off": "检查已关闭"
+		}
 	}
 }

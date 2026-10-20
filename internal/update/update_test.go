@@ -468,6 +468,9 @@ func TestCheckPrepareInstaller(t *testing.T) {
 		}
 		phases := []Phase{}
 		for _, e := range events {
+			if e.Checking { // recherche en cours (Paramètres)
+				continue
+			}
 			phases = append(phases, e.Phase)
 		}
 		if strings.Join(phasesText(phases), ",") != "available,downloading,ready" {

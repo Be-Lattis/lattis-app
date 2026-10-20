@@ -1101,6 +1101,21 @@
 		"readyTooltip": "Lattis {version} is ready: click to close Lattis, install the update and reopen it",
 		"failed": "The update could not be prepared, click here to try again",
 		"updated": "Update complete, see the release notes",
-		"updatedTooltip": "Lattis {version}: opens the release notes on GitHub"
+		"updatedTooltip": "Lattis {version}: opens the release notes on GitHub",
+		"check": {
+			"line": "Version {version} · {detail}",
+			"last": "last check: {when}",
+			"never": "never",
+			"today": "today {time}",
+			"yesterday": "yesterday {time}",
+			"upToDate": "up to date",
+			"found": "{version} available",
+			"failed": "failed: {error}",
+			"now": "Check now",
+			"dev": "cannot check: development build",
+			"msix": "MSIX installation, updated by Windows",
+			"policy": "checking turned off by your organization",
+			"off": "checking turned off"
+		}
 	}
 }

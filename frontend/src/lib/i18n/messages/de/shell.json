@@ -1101,6 +1101,21 @@
 		"readyTooltip": "Lattis {version} ist bereit: Klicken Sie, um Lattis zu schließen, das Update zu installieren und Lattis wieder zu öffnen",
 		"failed": "Das Update konnte nicht vorbereitet werden, klicken Sie hier, um es erneut zu versuchen",
 		"updated": "Update abgeschlossen, lesen Sie die Versionshinweise",
-		"updatedTooltip": "Lattis {version}: öffnet die Versionshinweise auf GitHub"
+		"updatedTooltip": "Lattis {version}: öffnet die Versionshinweise auf GitHub",
+		"check": {
+			"line": "Version {version} · {detail}",
+			"last": "letzte Suche: {when}",
+			"never": "nie",
+			"today": "heute {time}",
+			"yesterday": "gestern {time}",
+			"upToDate": "aktuell",
+			"found": "{version} verfügbar",
+			"failed": "fehlgeschlagen: {error}",
+			"now": "Jetzt suchen",
+			"dev": "Suche nicht möglich: Entwicklungs-Build",
+			"msix": "MSIX-Installation, von Windows aktualisiert",
+			"policy": "Suche von Ihrer Organisation deaktiviert",
+			"off": "Suche deaktiviert"
+		}
 	}
 }

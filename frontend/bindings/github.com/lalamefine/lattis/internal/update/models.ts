@@ -70,4 +70,46 @@ export interface Status {
      */
     "updated"?: string;
     "updatedPage"?: string;
+
+    /**
+     * Paramètres › Mises à jour : la version installée, la dernière
+     * recherche (RFC 3339, vide : jamais) et son échec éventuel (dans la
+     * langue de la session), une recherche en cours, et pourquoi la
+     * recherche est impossible (Unavailable, vide sinon).
+     */
+    "current": string;
+    "lastCheck"?: string;
+    "lastError"?: string;
+    "checking"?: boolean;
+    "unavailable"?: Unavailable;
 }
+
+/**
+ * Unavailable : pourquoi la recherche des nouvelles versions est impossible.
+ */
+export enum Unavailable {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * compilation de développement (version « dev »)
+     */
+    UnavailableDev = "dev",
+
+    /**
+     * paquet MSIX, mis à jour par Windows
+     */
+    UnavailableMSIX = "msix",
+
+    /**
+     * coupée par la stratégie de l'organisation
+     */
+    UnavailablePolicy = "policy",
+
+    /**
+     * désactivée dans les paramètres
+     */
+    UnavailableOff = "off",
+};

@@ -4,7 +4,7 @@
 // « Mise à jour effectuée » au premier lancement de la nouvelle version.
 // L'état vient du moteur (UpdateService.Status, évènement update:status) ;
 // ce module en tire le texte et l'action du clic.
-import { t } from '#lib/i18n/index.js';
+import { fmtDate, fmtTime, t } from '#lib/i18n/index.js';
 
 /** État rendu par UpdateService (internal/update.Status). */
 export interface UpdateState {
@@ -15,6 +15,56 @@ export interface UpdateState {
 	error?: string;
 	updated?: string;
 	updatedPage?: string;
+	/** Paramètres › Mises à jour : version installée. */
+	current?: string;
+	/** Dernière recherche (RFC 3339) ; absente : jamais. */
+	lastCheck?: string;
+	/** Échec de la dernière recherche, dans la langue de la session. */
+	lastError?: string;
+	/** Recherche en cours. */
+	checking?: boolean;
+	/** Recherche impossible : 'dev', 'msix', 'policy', 'off'. */
+	unavailable?: string;
+}
+
+/** « aujourd'hui 23:08 », « hier 09:12 », « 18/10/2026 14:05 ». */
+export function checkWhen(iso: string | undefined, now = Date.now()): string {
+	const d = iso ? new Date(iso) : null;
+	if (!d || isNaN(d.getTime())) return t('shell.update.check.never');
+	const hm = fmtTime(d, { hour: '2-digit', minute: '2-digit' });
+	const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+	const days = Math.round((day(new Date(now)) - day(d)) / 86400000);
+	if (days === 0) return t('shell.update.check.today', { time: hm });
+	if (days === 1) return t('shell.update.check.yesterday', { time: hm });
+	return `${fmtDate(d)} ${hm}`;
+}
+
+/** Une version plus récente est proposée (ou se prépare). */
+const OFFERED = new Set(['available', 'manual', 'downloading', 'ready', 'failed']);
+
+/**
+ * Ligne de Paramètres › Mises à jour : « Version 0.3.2-beta · dernière
+ * recherche : aujourd'hui 23:08 — à jour » (ou « — 0.3.3-beta disponible »,
+ * « — échec : … »), ou la raison qui empêche la recherche.
+ */
+export function checkLine(s: UpdateState | null | undefined, now = Date.now()): string {
+	if (!s) return '';
+	const version = s.current || '?';
+	switch (s.unavailable) {
+		case 'dev':
+			return t('shell.update.check.line', { version, detail: t('shell.update.check.dev') });
+		case 'msix':
+			return t('shell.update.check.line', { version, detail: t('shell.update.check.msix') });
+		case 'policy':
+			return t('shell.update.check.line', { version, detail: t('shell.update.check.policy') });
+		case 'off':
+			return t('shell.update.check.line', { version, detail: t('shell.update.check.off') });
+	}
+	let detail = t('shell.update.check.last', { when: checkWhen(s.lastCheck, now) });
+	if (s.lastError) detail += ' — ' + t('shell.update.check.failed', { error: s.lastError });
+	else if (s.version && OFFERED.has(s.phase)) detail += ' — ' + t('shell.update.check.found', { version: s.version });
+	else if (s.lastCheck) detail += ' — ' + t('shell.update.check.upToDate');
+	return t('shell.update.check.line', { version, detail });
 }
 
 /**

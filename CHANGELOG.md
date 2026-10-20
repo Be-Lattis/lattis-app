@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Fichier › Paramètres › Mises à jour : la version installée et la dernière recherche d'une nouvelle version, avec son résultat (« à jour », la version disponible, ou la raison d'un échec : hors ligne, proxy, limite de GitHub), ou ce qui empêche la recherche (compilation de développement, installation MSIX mise à jour par Windows, recherche coupée par l'organisation ou désactivée). « Rechercher maintenant » cherche aussitôt, sans attendre les 12 heures entre deux recherches ; une nouvelle version trouvée est proposée dans la barre d'état.
+
 ### Corrections
 
 - Source d'une requête : les tables internes de Lattis (lattis_meta_*, _lattis_*, schéma lattis d'un Serveur Lattis) ne sont plus listées.

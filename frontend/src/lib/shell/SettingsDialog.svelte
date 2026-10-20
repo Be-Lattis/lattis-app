@@ -9,6 +9,7 @@
 	import { findSetting, parseNumberSetting, settingNote, settingSections, visibleSections } from './settings';
 	import { loadSettings, mcpAvailable, resetSettings, setSetting, userSettings } from './settings.svelte.js';
 	import { errorText, t } from '#lib/i18n/index.js';
+	import UpdateCheck from './UpdateCheck.svelte';
 
 	interface Props {
 		onclose: () => void;
@@ -159,6 +160,10 @@
 						{#if note}<p class="note">{note}</p>{/if}
 					</div>
 				{/each}
+				{#if section.id === 'updates'}
+					{@const st = findSetting(userSettings.list, 'updates.check')}
+					<UpdateCheck setting={`${st?.value}:${st?.locked}`} />
+				{/if}
 				{#if error}<p class="error">{error}</p>{/if}
 			</section>
 		</div>

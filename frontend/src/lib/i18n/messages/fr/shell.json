@@ -1101,6 +1101,21 @@
 		"readyTooltip": "Lattis {version} est prête : cliquez pour fermer Lattis, installer la mise à jour et le rouvrir",
 		"failed": "La mise à jour n'a pas pu être préparée, cliquez ici pour réessayer",
 		"updated": "Mise à jour effectuée, consultez les notes de version",
-		"updatedTooltip": "Lattis {version} : ouvre les notes de version sur GitHub"
+		"updatedTooltip": "Lattis {version} : ouvre les notes de version sur GitHub",
+		"check": {
+			"line": "Version {version} · {detail}",
+			"last": "dernière recherche : {when}",
+			"never": "jamais",
+			"today": "aujourd'hui {time}",
+			"yesterday": "hier {time}",
+			"upToDate": "à jour",
+			"found": "{version} disponible",
+			"failed": "échec : {error}",
+			"now": "Rechercher maintenant",
+			"dev": "recherche impossible : compilation de développement",
+			"msix": "installation MSIX, mise à jour par Windows",
+			"policy": "recherche coupée par l'organisation",
+			"off": "recherche désactivée"
+		}
 	}
 }

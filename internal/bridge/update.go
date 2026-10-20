@@ -38,6 +38,7 @@ type UpdateService struct {
 func NewUpdateService() *UpdateService {
 	u := update.New(Version)
 	u.Enabled = func() bool { return config.UpdateCheck(config.Current()) }
+	u.Locked = func() bool { return config.Current().Locked("updates.check") }
 	u.OnChange = func(s update.Status) {
 		if app := application.Get(); app != nil {
 			app.Event.Emit(UpdateEvent, s)
@@ -62,6 +63,15 @@ func (s *UpdateService) Loaded() { s.u.Loaded() }
 // Status : état de la mise à jour, textes dans la langue de la session.
 func (s *UpdateService) Status() update.Status {
 	return s.u.Status(msg.Current())
+}
+
+// CheckNow : « Rechercher maintenant » (Paramètres › Mises à jour) : la
+// recherche part tout de suite, sans attendre les 12 h depuis la
+// précédente ; rend l'état ensuite (échec compris, dans LastError). Une
+// nouvelle version est proposée dans la barre d'état comme d'habitude.
+func (s *UpdateService) CheckNow(ctx context.Context) update.Status {
+	defer recoverPanic("mise à jour")
+	return s.u.CheckNow(ctx, msg.Current())
 }
 
 // Prepare télécharge et vérifie la nouvelle version, en arrière-plan ;

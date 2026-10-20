@@ -148,6 +148,13 @@ func (c *Client) get(ctx context.Context, rawURL, accept string) (*http.Response
 	}
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
+		switch {
+		case resp.StatusCode == http.StatusTooManyRequests,
+			resp.StatusCode == http.StatusForbidden && resp.Header.Get("X-RateLimit-Remaining") == "0":
+			return nil, msg.New("update.rateLimited", nil)
+		case resp.StatusCode == http.StatusProxyAuthRequired:
+			return nil, msg.New("update.proxyAuth", nil)
+		}
 		return nil, msg.New("update.httpStatus", msg.Args{"status": resp.Status})
 	}
 	return resp, nil

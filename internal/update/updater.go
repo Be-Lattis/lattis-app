@@ -3,6 +3,7 @@ package update
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -39,7 +40,27 @@ type Status struct {
 	// installée et la page de ses notes de version.
 	Updated     string `json:"updated,omitempty"`
 	UpdatedPage string `json:"updatedPage,omitempty"`
+
+	// Paramètres › Mises à jour : la version installée, la dernière
+	// recherche (RFC 3339, vide : jamais) et son échec éventuel (dans la
+	// langue de la session), une recherche en cours, et pourquoi la
+	// recherche est impossible (Unavailable, vide sinon).
+	Current     string      `json:"current"`
+	LastCheck   string      `json:"lastCheck,omitempty"`
+	LastError   string      `json:"lastError,omitempty"`
+	Checking    bool        `json:"checking,omitempty"`
+	Unavailable Unavailable `json:"unavailable,omitempty"`
 }
+
+// Unavailable : pourquoi la recherche des nouvelles versions est impossible.
+type Unavailable string
+
+const (
+	UnavailableDev    Unavailable = "dev"    // compilation de développement (version « dev »)
+	UnavailableMSIX   Unavailable = "msix"   // paquet MSIX, mis à jour par Windows
+	UnavailablePolicy Unavailable = "policy" // coupée par la stratégie de l'organisation
+	UnavailableOff    Unavailable = "off"    // désactivée dans les paramètres
+)
 
 // Délais de la recherche : la première peu après le démarrage (jamais
 // pendant qu'il se fait), puis au plus toutes les CheckEvery.
@@ -63,6 +84,8 @@ type Updater struct {
 	Kind      Kind
 	// Enabled : la recherche est permise (updates.check), lu à chaque fois.
 	Enabled func() bool
+	// Locked : updates.check est imposé par la stratégie (nil : jamais).
+	Locked func() bool
 	// Verify : contrôle de la signature du fichier téléchargé (Authenticode
 	// quand l'application est elle-même signée), nil : aucun.
 	Verify func(path string) error
@@ -77,8 +100,14 @@ type Updater struct {
 	restartAt time.Time
 	updated   string
 	init      bool
-	loaded    chan struct{} // Loaded : l'interface est chargée
-	loadOnce  sync.Once
+	// Dernière recherche en échec (en mémoire seulement : une recherche
+	// manquée ne repousse pas la suivante) et recherche en cours.
+	checkErr error
+	failedAt time.Time
+	checking bool
+	checkMu  sync.Mutex    // une recherche à la fois
+	loaded   chan struct{} // Loaded : l'interface est chargée
+	loadOnce sync.Once
 }
 
 // New prépare la mise à jour de l'exécutable en cours : genre
@@ -121,6 +150,23 @@ func (u *Updater) enabled() bool { return u.Enabled == nil || u.Enabled() }
 func (u *Updater) Checkable() bool {
 	_, ok := ParseVersion(u.Current)
 	return ok && u.Kind != KindMSIX
+}
+
+// unavailable : pourquoi la recherche est impossible (vide : possible).
+func (u *Updater) unavailable() Unavailable {
+	if _, ok := ParseVersion(u.Current); !ok {
+		return UnavailableDev
+	}
+	if u.Kind == KindMSIX {
+		return UnavailableMSIX
+	}
+	if !u.enabled() {
+		if u.Locked != nil && u.Locked() {
+			return UnavailablePolicy
+		}
+		return UnavailableOff
+	}
+	return ""
 }
 
 // Init lit l'état, note le lancement (premier lancement après une mise à
@@ -209,6 +255,17 @@ func (u *Updater) status(l msg.Lang) Status {
 	if u.err != nil && (phase == PhaseFailed || phase == PhaseReady) {
 		s.Error = msg.Text(l, u.err)
 	}
+	s.Current = u.Current
+	last := u.st.LastCheck
+	if u.checkErr != nil && u.failedAt.After(last) {
+		last = u.failedAt
+		s.LastError = msg.Text(l, u.checkErr)
+	}
+	if !last.IsZero() {
+		s.LastCheck = last.UTC().Format(time.RFC3339)
+	}
+	s.Checking = u.checking
+	s.Unavailable = u.unavailable()
 	return s
 }
 
@@ -276,19 +333,50 @@ func (u *Updater) due() bool {
 	return u.now().Sub(u.st.LastCheck) >= CheckEvery
 }
 
+// CheckNow : « Rechercher maintenant » (Paramètres › Mises à jour) : la
+// recherche part tout de suite, sans tenir compte des CheckEvery écoulés
+// depuis la précédente ; rien si elle est impossible (Unavailable). Rend
+// l'état ensuite, textes dans la langue l ; un échec y est (LastError).
+func (u *Updater) CheckNow(ctx context.Context, l msg.Lang) Status {
+	u.mu.Lock()
+	ok := u.unavailable() == ""
+	u.mu.Unlock()
+	if ok {
+		c, cancel := context.WithTimeout(ctx, checkTimeout)
+		_ = u.Check(c)
+		cancel()
+	}
+	return u.Status(l)
+}
+
 // Check cherche sur GitHub une version plus récente que la version
-// courante (même canal : pré-versions comprises pour une bêta).
+// courante (même canal : pré-versions comprises pour une bêta). Un échec
+// est gardé pour Paramètres › Mises à jour, dans la langue de la session.
 func (u *Updater) Check(ctx context.Context) error {
 	cur, ok := ParseVersion(u.Current)
 	if !ok {
 		return nil
 	}
+	u.checkMu.Lock()
+	defer u.checkMu.Unlock()
+	u.mu.Lock()
+	u.checking = true
+	u.mu.Unlock()
+	u.changed()
 	list, err := u.Client.Releases(ctx)
 	if err != nil {
+		err = checkError(ctx, err)
+		u.mu.Lock()
+		u.checking = false
+		u.checkErr, u.failedAt = err, u.now().UTC()
+		u.mu.Unlock()
+		u.changed()
 		return err
 	}
 	best := Newest(list, cur)
 	u.mu.Lock()
+	u.checking = false
+	u.checkErr, u.failedAt = nil, time.Time{}
 	u.st.LastCheck = u.now().UTC()
 	if best == nil {
 		u.st.Latest, u.st.LatestPage = "", ""
@@ -313,6 +401,25 @@ func (u *Updater) Check(ctx context.Context) error {
 	u.mu.Unlock()
 	u.changed()
 	return nil
+}
+
+// checkError : l'échec d'une recherche, dit simplement (hors ligne, délai
+// dépassé, proxy) ; les erreurs déjà traduites (limite de GitHub, réponse
+// inattendue…) restent telles quelles.
+func checkError(ctx context.Context, err error) error {
+	var m msg.Messager
+	if errors.As(err, &m) {
+		return err
+	}
+	var ne net.Error
+	switch {
+	case errors.Is(err, context.DeadlineExceeded), ctx.Err() == context.DeadlineExceeded,
+		errors.As(err, &ne) && ne.Timeout():
+		return msg.Wrap(err, "update.timeout", nil)
+	case errors.Is(err, context.Canceled):
+		return err
+	}
+	return msg.Wrap(err, "update.unreachable", nil)
 }
 
 // Prepare télécharge et vérifie la version proposée (clic dans la barre
