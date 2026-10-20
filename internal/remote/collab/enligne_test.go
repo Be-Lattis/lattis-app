@@ -6,6 +6,9 @@ package collab_test
 import (
 	"context"
 	"testing"
+
+	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/internal/remote/workbook/workbooktest"
 )
 
 // Constat 1 : une colonne renommée par une collègue pendant la coupure, alors
@@ -69,5 +72,60 @@ func TestStructureDuringInputFake(t *testing.T) {
 	_, err2 := bob.e.Sync(ctx)
 	if err1 != nil || err2 != nil || bob.states()["pending"] != 0 {
 		t.Fatalf("Bob : %v / %v, file %v", err1, err2, bob.states())
+	}
+}
+
+// flaky : serveur dont la première mise à jour rend une erreur SQL
+// passagère (interblocage 40P01).
+type flaky struct {
+	workbook.Server
+	code string
+	left int
+}
+
+type flakyWriter struct {
+	workbook.Writer
+	s *flaky
+}
+
+func (s *flaky) Write(ctx context.Context, fn func(workbook.Writer) error) error {
+	return s.Server.Write(ctx, func(w workbook.Writer) error { return fn(flakyWriter{w, s}) })
+}
+
+func (w flakyWriter) Update(ctx context.Context, schema, table, id string, col workbook.RemoteColumn, old, new any) (workbook.Wrote, error) {
+	if w.s.left > 0 {
+		w.s.left--
+		return workbook.Wrote{}, workbooktest.ErrServer{Code: w.s.code, Msg: "erreur passagère"}
+	}
+	return w.Writer.Update(ctx, schema, table, id, col, old, new)
+}
+
+// Constat 3 : une erreur SQL passagère (interblocage, délai dépassé) n'est
+// pas un refus : la saisie reste en attente et part au tour suivant.
+func TestTransientErrorKeepsEntry(t *testing.T) {
+	for _, code := range []string{"40P01", "57014", "55P03"} {
+		t.Run(code, func(t *testing.T) {
+			ctx := context.Background()
+			f, _, bob, _ := setup(t)
+			f.SetDown(true)
+			bob.d.Share.SetOnline(false, "serveur injoignable")
+			bob.mustSet(0, 1, "77")
+			f.SetDown(false)
+			bob.e.SetServer(&flaky{Server: f.As("bob"), code: code, left: 1})
+			bob.d.Share.SetOnline(true, "")
+			// Premier essai : l'erreur passagère est une coupure, rien n'est défait.
+			if _, err := bob.e.Sync(ctx); err == nil {
+				t.Fatal("erreur passagère attendue")
+			}
+			if got := bob.col("Quantité")[0]; got != "77" || bob.states()["pending"] != 1 {
+				t.Fatalf("après l'erreur passagère %s : Quantité %q, file %v (attendu 77 en attente)", code, got, bob.states())
+			}
+			// Essai suivant : l'étape part.
+			r, err := bob.e.Sync(ctx)
+			must(t, err)
+			if r.Rejected != 0 || bob.col("Quantité")[0] != "77" || bob.states()["pending"] != 0 {
+				t.Errorf("renvoi : %+v, Quantité %v, file %v", r, bob.col("Quantité"), bob.states())
+			}
+		})
 	}
 }

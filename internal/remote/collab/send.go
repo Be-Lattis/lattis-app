@@ -317,8 +317,8 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 					// valeur ; l'étape reste en attente.
 					return fmt.Errorf("%w : %s", errStale, errText(err))
 				}
-				if _, rejected := workbook.Rejected(err); !rejected {
-					return err
+				if _, rejected := workbook.Refusal(err); !rejected {
+					return err // coupure ou erreur passagère : l'étape reste en attente
 				}
 				// Refusée seule (point de sauvegarde) : la ligne reprend
 				// l'état du serveur, le reste de l'étape continue.
@@ -349,8 +349,8 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 	if err == nil {
 		return o, nil
 	}
-	if _, rejected := workbook.Rejected(err); !rejected {
-		return nil, err // coupure : l'étape reste en attente
+	if _, rejected := workbook.Refusal(err); !rejected {
+		return nil, err // coupure ou erreur passagère : l'étape reste en attente
 	}
 	// Refus de toute l'étape (droits sur le tableau, contrainte) : défaite
 	// en local, chaque ligne reprend l'état du serveur.

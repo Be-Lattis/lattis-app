@@ -33,7 +33,7 @@ func (e *Engine) PublishChoices(ctx context.Context, force bool) error {
 		return err
 	}
 	if _, err := workbook.PublishChoices(ctx, srv, e.db, info); err != nil {
-		if _, ok := workbook.Rejected(err); !ok {
+		if _, ok := workbook.Refusal(err); !ok {
 			return err
 		}
 	}

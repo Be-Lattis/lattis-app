@@ -77,7 +77,7 @@ func (w pgWriter) write(ctx context.Context, q string, args []any, read func(pgx
 	if err == nil {
 		return nil
 	}
-	if code, rejected := Rejected(err); rejected {
+	if code, rejected := Refusal(err); rejected {
 		if _, rerr := w.tx.Exec(ctx, `ROLLBACK TO SAVEPOINT `+savepoint); rerr != nil {
 			// Colonne, table ou schéma inconnus : pgx prépare tout le lot
 			// avant de l'exécuter, l'erreur arrive avant le SAVEPOINT (le

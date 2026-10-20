@@ -178,8 +178,8 @@ func (e *Engine) sendStructure(ctx context.Context, srv workbook.Server, info *w
 		return nil
 	})
 	if err != nil {
-		if _, ok := workbook.Rejected(err); !ok {
-			return err // coupure : l'entrée reste en attente
+		if _, ok := workbook.Refusal(err); !ok {
+			return err // coupure ou erreur passagère : l'entrée reste en attente
 		}
 		return e.refuseStructure(ctx, srv, info, en, changes, workbook.ServerMessage(err), rep)
 	}

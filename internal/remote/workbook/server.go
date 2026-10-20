@@ -316,6 +316,34 @@ func Rejected(err error) (string, bool) {
 	return "", false
 }
 
+// Transient dit si err est une erreur passagère du serveur : interblocage,
+// conflit de sérialisation, délai dépassé, verrou indisponible, manque de
+// ressources, arrêt ou annulation par l'administrateur, connexion perdue,
+// réplica en lecture seule. Elle a un code SQLSTATE mais n'est pas un
+// refus : la même étape renvoyée plus tard passera. La synchronisation la
+// traite comme une coupure (l'étape reste en attente).
+func Transient(err error) bool {
+	code, ok := Rejected(err)
+	if !ok || len(code) != 5 {
+		return false
+	}
+	switch code[:2] {
+	case "08", "40", "53", "58":
+		return true
+	case "57":
+		return code == "57014" || strings.HasPrefix(code, "57P")
+	}
+	return code == "55P03" || code == "25006"
+}
+
+// Refusal dit si err est un vrai refus du serveur (Rejected, mais pas une
+// erreur passagère) et rend son code : la synchronisation défait alors
+// l'écriture ; une erreur passagère ou une coupure la laissent en attente.
+func Refusal(err error) (string, bool) {
+	code, ok := Rejected(err)
+	return code, ok && !Transient(err)
+}
+
 // XidAfter dit si l'xid8 a (en texte) est postérieur ou égal à since ("" :
 // 0) ; faux si a est illisible.
 func XidAfter(a, since string) bool {

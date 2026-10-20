@@ -792,7 +792,7 @@ func SyncLayout(ctx context.Context, srv Server, db *store.Store, info *Info, fo
 			sent, n = m, c
 			return nil
 		})
-		if _, ok := Rejected(err); ok {
+		if _, ok := Refusal(err); ok {
 			err, sent = nil, nil // droits retirés : rien ne part
 		}
 		if err != nil {
