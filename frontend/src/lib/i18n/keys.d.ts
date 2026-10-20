@@ -2451,6 +2451,8 @@ export interface MessageParams {
 	'remote.login.imposed': Record<never, never>;
 	'remote.login.invitation': Record<never, never>;
 	'remote.login.noProvider': Record<never, never>;
+	'remote.login.openLocal.label': Record<never, never>;
+	'remote.login.openLocal.tooltip': Record<never, never>;
 	'remote.login.otherDevice': Record<never, never>;
 	'remote.login.otherServer': Record<never, never>;
 	'remote.login.title': Record<never, never>;
@@ -4058,6 +4060,7 @@ export interface MessageParams {
 	'shell.share.link.title': Record<never, never>;
 	'shell.share.link.warning': { host: number | string };
 	'shell.share.localCopyOpened': { reason: number | string };
+	'shell.share.notSignedIn': { server: number | string };
 	'shell.share.openedOnline': { server: number | string; title: number | string };
 	'shell.share.publishedFrozen': { server: number | string };
 	'shell.share.publishedLive': { server: number | string };

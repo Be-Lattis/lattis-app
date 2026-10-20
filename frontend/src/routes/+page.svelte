@@ -79,7 +79,7 @@
 	import { pushSummary, type SourceLink } from '#lib/remote/source.js';
 	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
 	import { canRepublish, detachQuestion, goneError, retryNotice, roleChip, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
-	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
+	import { lattis, loadLattis, requestLogin, requestLoginOrLocal, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
 	import type { State as ShareState } from '#bindings/internal/remote/workbook/models.js';
@@ -817,8 +817,19 @@
 	async function openRecent(r: RecentFile) {
 		if (!recentRemote(r)) return openPath(r.path);
 		const server = r.server ?? '';
+		const where = serverLabel({ server, serverName: r.serverName ?? '' });
+		// Copie locale, sans le serveur (injoignable, connexion refusée ou
+		// abandonnée) : modifiable hors ligne, bandeau Réessayer / Détacher.
+		const local = async (reason: string) => {
+			await opened(await DocumentService.OpenLocalCopy(r.path));
+			notice = t('shell.share.localCopyOpened', { reason });
+		};
 		await loadLattis();
-		if (!(lattis.state.servers ?? []).find((s) => s.url === server)?.user && !(await requestLogin(server))) return;
+		if (!(lattis.state.servers ?? []).find((s) => s.url === server)?.user) {
+			const ok = r.path ? await requestLoginOrLocal(server) : await requestLogin(server);
+			if (ok === 'local') return local(t('shell.share.notSignedIn', { server: where }));
+			if (!ok) return;
+		}
 		let res;
 		try {
 			res = await DocumentService.ShareOpen(server, r.workbookId ?? '', r.title ?? '');
@@ -833,11 +844,9 @@
 				return;
 			}
 			if (!r.path) throw e;
-			await opened(await DocumentService.OpenLocalCopy(r.path));
-			// Détail technique dans le bandeau (« Détails ») et dans la console.
+			// Détail technique dans la console.
 			console.warn('serveur injoignable', err(e));
-			notice = t('shell.share.localCopyOpened', { reason: serverDown(serverLabel({ server, serverName: r.serverName ?? '' })) });
-			return;
+			return local(serverDown(where));
 		}
 		await openedRemote(res);
 	}

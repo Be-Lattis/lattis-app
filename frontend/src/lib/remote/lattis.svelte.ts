@@ -13,7 +13,10 @@ export const lattis = $state<{ state: LattisState; login: LoginRequest | null }>
 export interface LoginRequest {
 	/** Adresse du serveur ('' : à saisir dans la page de connexion). */
 	url: string;
-	done: (ok: boolean) => void;
+	/** La page propose « Ouvrir quand même (en local) » (classeur partagé dont on a une copie). */
+	local?: boolean;
+	/** Connecté (vrai), abandon (faux) ou copie locale demandée ('local'). */
+	done: (ok: boolean | 'local') => void;
 }
 
 /** Relit l'état (silencieux en cas d'échec : rien d'affiché). */
@@ -30,12 +33,27 @@ export async function loadLattis() {
  * l'utilisateur abandonne. Une demande déjà ouverte est abandonnée.
  */
 export async function requestLogin(url: string): Promise<boolean> {
+	return (await askLogin(url, false)) === true;
+}
+
+/**
+ * Comme requestLogin, pour ouvrir un classeur partagé dont on a une copie :
+ * la page propose aussi « Ouvrir quand même (en local) » (serveur
+ * injoignable, pas envie de se connecter) ; 'local' si l'utilisateur la
+ * choisit, ou si les classeurs partagés sont coupés.
+ */
+export async function requestLoginOrLocal(url: string): Promise<boolean | 'local'> {
+	return askLogin(url, true);
+}
+
+async function askLogin(url: string, local: boolean): Promise<boolean | 'local'> {
 	lattis.login?.done(false);
 	if (!lattis.state.enabled) await loadLattis();
-	if (!lattis.state.enabled) return false;
+	if (!lattis.state.enabled) return local ? 'local' : false;
 	return new Promise((resolve) => {
 		lattis.login = {
 			url,
+			local,
 			done: (ok) => {
 				lattis.login = null;
 				loadLattis();

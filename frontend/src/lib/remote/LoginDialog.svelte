@@ -21,8 +21,10 @@
 		url: string;
 		/** Connecté (vrai) ou abandon (faux). */
 		ondone: (ok: boolean) => void;
+		/** Classeur partagé à ouvrir : « Ouvrir quand même (en local) », sans connexion. */
+		onlocal?: () => void;
 	}
-	let { url, ondone }: Props = $props();
+	let { url, ondone, onlocal }: Props = $props();
 
 	let address = $state(untrack(() => url));
 	let server = $state<ServerState | null>(null);
@@ -184,6 +186,9 @@
 				<button onclick={() => ((server = null), (error = ''))}>{t('remote.login.otherServer')}</button>
 			{/if}
 			<span class="grow"></span>
+			{#if onlocal && !waiting}
+				<button onclick={onlocal} title={t('remote.login.openLocal.tooltip')}>{t('remote.login.openLocal.label')}</button>
+			{/if}
 			<button onclick={cancel}>{waiting ? t('remote.login.cancel') : t('common.close')}</button>
 		</footer>
 	</div>

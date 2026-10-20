@@ -324,7 +324,11 @@
 		"otherDevice": "Se connecter depuis un autre appareil (code à saisir)",
 		"imposed": "Moyen de connexion imposé par votre organisation.",
 		"otherServer": "Autre serveur",
-		"cancel": "Annuler la connexion"
+		"cancel": "Annuler la connexion",
+		"openLocal": {
+			"label": "Ouvrir quand même (en local)",
+			"tooltip": "Ouvrir la copie de ce poste, sans le serveur"
+		}
 	},
 	"forms": {
 		"reason": {

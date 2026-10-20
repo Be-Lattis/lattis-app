@@ -324,7 +324,11 @@
 		"otherDevice": "Von einem anderen Gerät anmelden (Code eingeben)",
 		"imposed": "Anmeldemethode von Ihrer Organisation vorgegeben.",
 		"otherServer": "Anderer Server",
-		"cancel": "Anmeldung abbrechen"
+		"cancel": "Anmeldung abbrechen",
+		"openLocal": {
+			"label": "Trotzdem öffnen (lokal)",
+			"tooltip": "Die Kopie dieses Computers ohne Server öffnen"
+		}
 	},
 	"forms": {
 		"reason": {

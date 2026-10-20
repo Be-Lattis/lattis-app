@@ -875,7 +875,8 @@
 			"question": "Open a workbook from “{name}”?",
 			"warning": "Lattis has never connected to {host}. Only accept if you know this server and were expecting this link.",
 			"ok": "Sign in and open"
-		}
+		},
+		"notSignedIn": "Not signed in to {server}"
 	},
 	"conflicts": {
 		"mineAll": "Your value is restored for all computers",

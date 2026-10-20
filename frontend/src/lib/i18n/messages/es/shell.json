@@ -875,7 +875,8 @@
 			"question": "¿Abrir un libro de «{name}»?",
 			"warning": "Lattis nunca se ha conectado a {host}. Acepte solo si conoce este servidor y esperaba este enlace.",
 			"ok": "Iniciar sesión y abrir"
-		}
+		},
+		"notSignedIn": "Sin sesión en {server}"
 	},
 	"conflicts": {
 		"mineAll": "Su valor se restablece para todos los equipos",

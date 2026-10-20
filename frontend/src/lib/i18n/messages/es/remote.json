@@ -324,7 +324,11 @@
 		"otherDevice": "Iniciar sesión desde otro dispositivo (escribir un código)",
 		"imposed": "Método de inicio de sesión exigido por su organización.",
 		"otherServer": "Otro servidor",
-		"cancel": "Cancelar el inicio de sesión"
+		"cancel": "Cancelar el inicio de sesión",
+		"openLocal": {
+			"label": "Abrir de todos modos (copia local)",
+			"tooltip": "Abrir la copia de este equipo, sin el servidor"
+		}
 	},
 	"forms": {
 		"reason": {

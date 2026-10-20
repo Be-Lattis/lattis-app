@@ -875,7 +875,8 @@
 			"question": "要打开来自“{name}”的工作簿吗？",
 			"warning": "Lattis 从未连接过 {host}。只有在你了解此服务器且正在等待此链接时才接受。",
 			"ok": "登录并打开"
-		}
+		},
+		"notSignedIn": "未登录 {server}"
 	},
 	"conflicts": {
 		"mineAll": "已为所有计算机恢复你的值",

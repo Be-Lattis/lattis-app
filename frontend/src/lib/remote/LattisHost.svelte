@@ -17,6 +17,6 @@
 {#if lattis.login && lattis.state.enabled}
 	{@const req = lattis.login}
 	{#key req}
-		<LoginDialog url={req.url} ondone={(ok) => req.done(ok)} />
+		<LoginDialog url={req.url} onlocal={req.local ? () => req.done('local') : undefined} ondone={(ok) => req.done(ok)} />
 	{/key}
 {/if}

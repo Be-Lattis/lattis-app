@@ -324,7 +324,11 @@
 		"otherDevice": "Sign in from another device (enter a code)",
 		"imposed": "Sign-in method required by your organization.",
 		"otherServer": "Other server",
-		"cancel": "Cancel sign-in"
+		"cancel": "Cancel sign-in",
+		"openLocal": {
+			"label": "Open anyway (local copy)",
+			"tooltip": "Open this computer's copy, without the server"
+		}
 	},
 	"forms": {
 		"reason": {

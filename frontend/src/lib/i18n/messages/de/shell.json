@@ -875,7 +875,8 @@
 			"question": "Eine Arbeitsmappe von „{name}“ öffnen?",
 			"warning": "Lattis war noch nie mit {host} verbunden. Akzeptieren Sie nur, wenn Sie diesen Server kennen und diesen Link erwartet haben.",
 			"ok": "Anmelden und öffnen"
-		}
+		},
+		"notSignedIn": "Nicht bei {server} angemeldet"
 	},
 	"conflicts": {
 		"mineAll": "Ihr Wert wird für alle Computer wiederhergestellt",

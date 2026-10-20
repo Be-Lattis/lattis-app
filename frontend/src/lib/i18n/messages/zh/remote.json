@@ -324,7 +324,11 @@
 		"otherDevice": "从另一台设备登录（输入代码）",
 		"imposed": "你的组织要求使用此登录方式。",
 		"otherServer": "其他服务器",
-		"cancel": "取消登录"
+		"cancel": "取消登录",
+		"openLocal": {
+			"label": "仍然打开（本地副本）",
+			"tooltip": "打开本机副本，不连接服务器"
+		}
 	},
 	"forms": {
 		"reason": {

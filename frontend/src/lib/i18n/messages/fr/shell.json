@@ -875,7 +875,8 @@
 			"question": "Ouvrir un classeur de « {name} » ?",
 			"warning": "Lattis ne s’est jamais connecté à {host}. N’acceptez que si vous connaissez ce serveur et attendiez ce lien.",
 			"ok": "Se connecter et ouvrir"
-		}
+		},
+		"notSignedIn": "Non connecté à {server}"
 	},
 	"conflicts": {
 		"mineAll": "Votre valeur est remise pour tous les postes",
