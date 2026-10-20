@@ -2,7 +2,6 @@ package canvas
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"testing"
 
@@ -182,17 +181,17 @@ type publishedOpen struct{}
 func (publishedOpen) TableLock(int64) error   { return nil }
 func (publishedOpen) TableShare(int64) string { return "published" }
 
-// Tableau publié d'un classeur collaboratif : refusé, avec un message clair.
+// Tableau publié d'un classeur partagé (types figés) : converti aussi ;
+// l'envoi au serveur est l'affaire du relevé de la structure (oplog,
+// collab : TestConvertToValuesShared).
 func TestColumnsToValuesShared(t *testing.T) {
 	ctx := context.Background()
 	d := valuesFixture(t)
 	d.SetSharing(publishedOpen{})
-	err := d.ColumnsToValues(ctx, "Feuille1", []int{3})
-	var e ErrSharedValues
-	if !errors.As(err, &e) || e.Column != "Montant" {
-		t.Fatalf("attendu : refus du tableau partagé, obtenu %v", err)
+	if err := d.ColumnsToValues(ctx, "Feuille1", []int{3}); err != nil {
+		t.Fatal(err)
 	}
-	if c := columnOf(t, d, "Montant"); c.Formula == "" {
-		t.Fatal("colonne convertie")
+	if c := columnOf(t, d, "Montant"); c.Formula != "" || c.Type != grid.Decimal {
+		t.Fatalf("colonne : %+v", c)
 	}
 }

@@ -52,6 +52,10 @@ type Change struct {
 	Prev []int64 `json:"p,omitempty"`
 	// Key : nouvelle colonne clé (0 : plus de clé).
 	Key int64 `json:"k,omitempty"`
+	// Formula : colonne calculée convertie en valeurs (add_column), ou
+	// redevenue calculée par une annulation (drop_column) : sa formule
+	// (anglais). Un refus du serveur la lui rend, ou la lui retire.
+	Formula string `json:"f,omitempty"`
 }
 
 // OpStructure : opération de la file d'envoi qui porte un changement de
@@ -158,6 +162,7 @@ type cshape struct {
 	id        int64
 	name, typ string
 	formula   bool
+	src       string // formule (anglais), "" pour une colonne saisie
 }
 
 // shapes lit la forme des tableaux ids (absents : supprimés).
@@ -181,7 +186,7 @@ func shapes(ctx context.Context, db snapshot, ids []int64) (map[int64]*tshape, e
 	if err := rs.Err(); err != nil {
 		return nil, err
 	}
-	rs, err = db.QueryContext(ctx, `SELECT tbl, id, name, type, coalesce(formula, '') <> '' FROM _lattis_columns WHERE tbl IN (SELECT value FROM json_each(?)) ORDER BY tbl, pos`, list)
+	rs, err = db.QueryContext(ctx, `SELECT tbl, id, name, type, coalesce(formula, '') FROM _lattis_columns WHERE tbl IN (SELECT value FROM json_each(?)) ORDER BY tbl, pos`, list)
 	if err != nil {
 		return nil, err
 	}
@@ -189,9 +194,10 @@ func shapes(ctx context.Context, db snapshot, ids []int64) (map[int64]*tshape, e
 	for rs.Next() {
 		var tbl int64
 		var c cshape
-		if err := rs.Scan(&tbl, &c.id, &c.name, &c.typ, &c.formula); err != nil {
+		if err := rs.Scan(&tbl, &c.id, &c.name, &c.typ, &c.src); err != nil {
 			return nil, err
 		}
+		c.formula = c.src != ""
 		if t := out[tbl]; t != nil {
 			t.cols = append(t.cols, c)
 		}
@@ -199,8 +205,9 @@ func shapes(ctx context.Context, db snapshot, ids []int64) (map[int64]*tshape, e
 	return out, rs.Err()
 }
 
-// changes compare la forme des tableaux publiés avant et après.
-func changes(ids []int64, before, after map[int64]*tshape) []Change {
+// changes compare la forme des tableaux publiés avant et après ; kind :
+// command.KindDo, KindUndo ou KindRedo.
+func changes(ids []int64, before, after map[int64]*tshape, kind string) []Change {
 	var out []Change
 	for _, id := range ids {
 		b, a := before[id], after[id]
@@ -218,13 +225,21 @@ func changes(ids []int64, before, after map[int64]*tshape) []Change {
 		for _, c := range b.cols {
 			bcols[c.id] = c
 		}
-		acols := map[int64]bool{}
+		acols := map[int64]cshape{}
 		for _, c := range a.cols {
-			acols[c.id] = true
+			acols[c.id] = c
 		}
 		for _, c := range b.cols {
-			if !c.formula && !acols[c.id] {
+			ac, has := acols[c.id]
+			switch {
+			case c.formula:
+			case !has:
 				out = append(out, Change{Table: id, Action: DropColumn, Column: c.id, Name: c.name})
+			case ac.formula && kind == command.KindUndo:
+				// Conversion en valeurs annulée : la colonne redevient calculée,
+				// propre à la mise en page, et quitte le serveur. (Une formule
+				// saisie dans une colonne publiée la laisse sur le serveur.)
+				out = append(out, Change{Table: id, Action: DropColumn, Column: c.id, Name: c.name, Formula: ac.src})
 			}
 		}
 		for i, c := range a.cols {
@@ -233,17 +248,17 @@ func changes(ids []int64, before, after map[int64]*tshape) []Change {
 			}
 			bc, had := bcols[c.id]
 			switch {
-			case !had:
+			case !had || bc.formula:
+				// Colonne ajoutée, ou colonne calculée devenue saisie (Convertir
+				// en valeurs) : ajoutée au serveur ; ses valeurs suivent par les
+				// données de l'étape.
 				var prev []int64
 				for k := i - 1; k >= 0; k-- {
 					if !a.cols[k].formula {
 						prev = append(prev, a.cols[k].id)
 					}
 				}
-				out = append(out, Change{Table: id, Action: AddColumn, Column: c.id, Name: c.name, Type: c.typ, Prev: prev})
-			case bc.formula:
-				// Colonne calculée devenue saisie : elle reste propre au poste
-				// (les colonnes calculées ne sont pas publiées).
+				out = append(out, Change{Table: id, Action: AddColumn, Column: c.id, Name: c.name, Type: c.typ, Prev: prev, Formula: bc.src})
 			default:
 				if bc.name != c.name {
 					out = append(out, Change{Table: id, Action: RenameColumn, Column: c.id, Name: c.name})
@@ -300,7 +315,7 @@ func (s *session) structure(fn StructureFunc, w *writer, kind string, ops []comm
 	if err != nil {
 		return err
 	}
-	ch := changes(ids, b, a)
+	ch := changes(ids, b, a, kind)
 	if len(ch) == 0 {
 		return nil
 	}

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/command"
@@ -34,6 +35,11 @@ type RemoteShape struct {
 	// Columns (-1 : plus de clé).
 	KeySet bool
 	KeyAt  int
+	// Calc : colonnes converties en valeurs (ou redevenues calculées) dont
+	// le serveur a refusé le changement, avec leur formule (anglais) : une
+	// colonne qui n'est pas sur le serveur la reprend au lieu d'être
+	// supprimée, une colonne du serveur la perd.
+	Calc map[int64]string
 }
 
 // RemoteShapeColumn est une colonne publiée.
@@ -138,6 +144,20 @@ func (t *tx) applyShape(sh RemoteShape) ([]int64, bool, error) {
 		if i < 0 || len(tb.Cols) <= 1 {
 			continue
 		}
+		if f, ok := sh.Calc[id]; ok && f != "" {
+			// Conversion en valeurs refusée : la colonne redevient calculée.
+			if err := t.setFormulaEN(tb, i, f); err != nil {
+				return nil, false, err
+			}
+			changed = true
+			continue
+		}
+		if tb.Cols[i].Formula != "" {
+			// Redevenue calculée ici (annulation d'une conversion en valeurs,
+			// reçue par la mise en page) : elle n'est plus que de la mise en
+			// page.
+			continue
+		}
 		if err := t.dropColumn(tb, tb.Cols[i], i); err != nil {
 			return nil, false, err
 		}
@@ -157,6 +177,16 @@ func (t *tx) applyShape(sh RemoteShape) ([]int64, bool, error) {
 		}
 		out[k] = sc.ID
 		c := tb.Cols[i]
+		if _, ok := sh.Calc[c.ID]; ok && c.Formula != "" {
+			// Annulation d'une conversion refusée : colonne saisie du serveur.
+			if err := t.setFormulaEN(tb, i, ""); err != nil {
+				return nil, false, err
+			}
+			changed = true
+			if tb, err = t.table(sh.Table); err != nil {
+				return nil, false, err
+			}
+		}
 		if sc.Name != "" && sc.Name != c.Name {
 			if err := t.rename(tb, c, freeColumnNameExcept(tb, c.ID, sc.Name)); err != nil {
 				return nil, false, err
@@ -179,6 +209,18 @@ func (t *tx) applyShape(sh RemoteShape) ([]int64, bool, error) {
 		}
 		if tb, err = t.table(sh.Table); err != nil {
 			return nil, false, err
+		}
+		// Colonne calculée convertie en valeurs par un concepteur : la
+		// colonne calculée de la mise en page (même identifiant, ou même
+		// nom) devient cette colonne, sans doublon (« Total_2 »).
+		if j := adoptable(tb, sc, out, sh.Published); j >= 0 {
+			id, ok, err := t.adoptColumn(tb, j, sc)
+			if err != nil {
+				return nil, false, err
+			}
+			out[k] = id
+			changed = changed || ok
+			continue
 		}
 		id := sc.Want
 		var taken int
@@ -251,6 +293,80 @@ func (t *tx) applyShape(sh RemoteShape) ([]int64, bool, error) {
 		}
 	}
 	return out, changed, nil
+}
+
+// adoptable : rang de la colonne locale qui devient la nouvelle colonne
+// du serveur sc (colonne calculée convertie en valeurs par un concepteur,
+// arrivée dans la mise en page et par la structure) : celle de
+// l'identifiant noté par le serveur si elle a le même nom (calculée, ou
+// déjà convertie par la mise en page), sinon une colonne calculée du même
+// nom ; ni publiée ni déjà prise. -1 : aucune.
+func adoptable(tb Table, sc RemoteShapeColumn, taken, published []int64) int {
+	free := func(id int64) bool { return !slices.Contains(taken, id) && !slices.Contains(published, id) }
+	if i := shapeCol(tb, sc.Want); sc.Want > 0 && i >= 0 && free(sc.Want) {
+		if strings.EqualFold(tb.Cols[i].Name, sc.Name) {
+			return i
+		}
+	}
+	for i, c := range tb.Cols {
+		if c.Formula != "" && strings.EqualFold(c.Name, sc.Name) && free(c.ID) {
+			return i
+		}
+	}
+	return -1
+}
+
+// adoptColumn fait de la colonne j de tb la colonne du serveur sc : plus
+// de formule, nom et type du serveur, type fixé ; ses valeurs viennent de
+// la relecture du tableau.
+func (t *tx) adoptColumn(tb Table, j int, sc RemoteShapeColumn) (int64, bool, error) {
+	c := tb.Cols[j]
+	changed := false
+	var err error
+	if c.Formula != "" {
+		if err := t.setFormulaEN(tb, j, ""); err != nil {
+			return 0, false, err
+		}
+		changed = true
+		if tb, err = t.table(tb.ID); err != nil {
+			return 0, false, err
+		}
+	}
+	if sc.Name != "" && sc.Name != c.Name {
+		if err := t.rename(tb, tb.Cols[j], freeColumnNameExcept(tb, c.ID, sc.Name)); err != nil {
+			return 0, false, err
+		}
+		changed = true
+		if tb, err = t.table(tb.ID); err != nil {
+			return 0, false, err
+		}
+	}
+	if sc.Type != "" && sc.Type != tb.Cols[j].Type {
+		if err := t.setType(tb, j, sc.Type); err != nil {
+			return 0, false, err
+		}
+		changed = true
+	}
+	fix := `UPDATE _lattis_columns SET fixed = ? WHERE tbl = ? AND id = ?`
+	if err := t.apply([]stmt{st(fix, 1, tb.ID, c.ID)}, []stmt{st(fix, 0, tb.ID, c.ID)}); err != nil {
+		return 0, false, err
+	}
+	return c.ID, changed, nil
+}
+
+// setFormulaEN pose la formule (anglais, telle que rangée) de la colonne i
+// de tb, "" : plus de formule.
+func (t *tx) setFormulaEN(tb Table, i int, en string) error {
+	c := tb.Cols[i]
+	q := `UPDATE _lattis_columns SET formula = ? WHERE tbl = ? AND id = ?`
+	var now, old any
+	if en != "" {
+		now = en
+	}
+	if c.Formula != "" {
+		old = c.Formula
+	}
+	return t.apply([]stmt{st(q, now, tb.ID, c.ID)}, []stmt{st(q, old, tb.ID, c.ID)})
 }
 
 // freeRemoteName rend name en nom de tableau valide et libre (un tableau

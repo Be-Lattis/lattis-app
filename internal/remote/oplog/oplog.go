@@ -445,10 +445,19 @@ func (s *session) diffTable(w *writer, before *sql.Tx, id int64, rids []int64) e
 	}
 	// Colonnes comparées : celles d'après, saisies (pas calculées), au même
 	// type qu'avant. Un changement de structure est une opération « meta » ;
-	// une colonne apparue vaut NULL avant (rétablissement de ses valeurs).
+	// une colonne apparue vaut NULL avant (rétablissement de ses valeurs),
+	// comme une colonne calculée devenue saisie (Convertir en valeurs) qui
+	// n'est pas sur le serveur : ses valeurs y partent toutes.
+	fresh, err := s.converted(id, bcols, acols)
+	if err != nil {
+		return err
+	}
 	var cols []int64
 	for cid, c := range acols {
 		b, had := bcols[cid]
+		if fresh[cid] {
+			had = false
+		}
 		if bcols != nil && (s.ddl[id] || full) {
 			switch {
 			case !had:
@@ -513,7 +522,7 @@ func (s *session) diffTable(w *writer, before *sql.Tx, id int64, rids []int64) e
 	for _, cid := range cols {
 		c := "c_" + strconv.FormatInt(cid, 10)
 		asel = append(asel, c)
-		if _, ok := bcols[cid]; ok {
+		if _, ok := bcols[cid]; ok && !fresh[cid] {
 			bsel = append(bsel, c)
 		} else {
 			bsel = append(bsel, "NULL")
@@ -592,6 +601,32 @@ func (s *session) diffTable(w *writer, before *sql.Tx, id int64, rids []int64) e
 		}
 	}
 	return nil
+}
+
+// converted : colonnes calculées devenues saisies que la correspondance
+// avec le serveur ne connaît pas (Convertir en valeurs : elles y sont
+// ajoutées). Une colonne publiée redevenue saisie (formule saisie puis
+// annulée) se compare comme les autres.
+func (s *session) converted(tbl int64, bcols, acols map[int64]column) (map[int64]bool, error) {
+	var out map[int64]bool
+	for cid, c := range acols {
+		b, had := bcols[cid]
+		if !had || !b.formula || c.formula {
+			continue
+		}
+		var n int
+		q := `SELECT count(*) FROM _lattis_remote_tables r, json_each(coalesce(r.columns, '[]')) j WHERE r.tbl = ? AND json_extract(j.value, '$.local') = ?`
+		if err := s.tx.QueryRowContext(s.ctx, q, tbl, cid).Scan(&n); err != nil {
+			return nil, err
+		}
+		if n == 0 {
+			if out == nil {
+				out = map[int64]bool{}
+			}
+			out[cid] = true
+		}
+	}
+	return out, nil
 }
 
 func colTypes(cols map[int64]column) map[int64]string {

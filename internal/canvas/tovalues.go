@@ -20,16 +20,10 @@ import (
 // sources de l'ancienne formule. Une seule étape d'annulation.
 //
 // Dans un tableau publié d'un classeur collaboratif, une colonne calculée
-// n'existe que dans la mise en page du poste ; en faire une colonne saisie
-// demanderait de l'ajouter au serveur avec ses données : refusé (ErrSharedValues).
-
-// ErrSharedValues refuse la conversion d'une colonne calculée d'un tableau
-// partagé.
-type ErrSharedValues struct{ Table, Column string }
-
-func (e ErrSharedValues) Error() string {
-	return fmt.Sprintf("« %s » est une colonne calculée du tableau partagé « %s » : elle ne peut pas encore être convertie en valeurs dans un classeur collaboratif (les colonnes calculées n'y sont pas publiées).", e.Column, e.Table)
-}
+// n'existe que dans la mise en page ; convertie, elle devient une colonne
+// du tableau sur le serveur : le relevé de la structure (oplog) y voit une
+// colonne ajoutée, envoyée avant ses valeurs (concepteurs seulement ;
+// docs/collaboration/synchronisation.md §2.9).
 
 // ColumnsToValues convertit les colonnes calculées cols (rangs dans le
 // tableau) en colonnes de valeurs. Une colonne qui n'est pas calculée est
@@ -144,9 +138,6 @@ func (t *tx) columnsToValues(tb Table, idx []int) (int, error) {
 	idx = slices.Compact(idx)
 	if len(idx) == 0 {
 		return 0, nil
-	}
-	if t.frozenTypes(tb.ID) {
-		return 0, ErrSharedValues{Table: tb.Name, Column: tb.Cols[idx[0]].Name}
 	}
 	// 1. Les valeurs de toutes les lignes, lues avant tout changement (une
 	// colonne convertie peut en citer une autre), et le type deviné sur

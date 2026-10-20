@@ -228,11 +228,18 @@ func (e *Engine) sendStructure(ctx context.Context, srv workbook.Server, info *w
 func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info *workbook.Info, en entry, changes []oplog.Change, msg string, rep *Report) error {
 	tbls := map[int64]bool{}
 	added := map[int64]bool{} // colonnes ajoutées en local, à retirer
-	for _, ch := range changes {
-		tbls[ch.Table] = true
+	calc := map[int64]string{} // colonnes converties en valeurs (ou l'inverse)
+	seen := func(ch oplog.Change) {
 		if ch.Action == oplog.AddColumn {
 			added[ch.Column] = true
 		}
+		if ch.Formula != "" && (ch.Action == oplog.AddColumn || ch.Action == oplog.DropColumn) {
+			calc[ch.Column] = ch.Formula
+		}
+	}
+	for _, ch := range changes {
+		tbls[ch.Table] = true
+		seen(ch)
 	}
 	dropped := 0
 	err := e.db.Write(ctx, func(tx *sql.Tx) error {
@@ -261,8 +268,8 @@ func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info 
 			for _, op := range ops {
 				if op.Kind == oplog.OpStructure && tbls[op.Table] {
 					hit = true
-					if ch, err := oplog.DecodeStructure(op); err == nil && ch.Action == oplog.AddColumn {
-						added[ch.Column] = true
+					if ch, err := oplog.DecodeStructure(op); err == nil {
+						seen(ch)
 					}
 				}
 			}
@@ -291,7 +298,7 @@ func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info 
 		note += fmt.Sprintf(" (et %d changement(s) de structure suivant(s) du même tableau)", dropped)
 	}
 	rep.notice(note)
-	r, err := e.revertStructure(ctx, srv, info, tbls, added)
+	r, err := e.revertStructure(ctx, srv, info, tbls, added, calc)
 	rep.add(r)
 	return err
 }
@@ -301,9 +308,11 @@ func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info 
 // refusé par le serveur est défait (colonnes ajoutées en local, added,
 // retirées ; colonnes supprimées recréées et relues ; noms, types et clé
 // du serveur). Un tableau supprimé en local revient comme un tableau reçu
-// (receiveArrivals). L'historique d'annulation qui touche ces tableaux est
+// (receiveArrivals). Une colonne convertie en valeurs (calc) redevient
+// calculée au lieu d'être retirée ; une conversion annulée et refusée rend
+// sa colonne saisie. L'historique d'annulation qui touche ces tableaux est
 // effacé : ses étapes ne s'appliqueraient plus.
-func (e *Engine) revertStructure(ctx context.Context, srv workbook.Server, info *workbook.Info, tbls, added map[int64]bool) (Report, error) {
+func (e *Engine) revertStructure(ctx context.Context, srv workbook.Server, info *workbook.Info, tbls, added map[int64]bool, calc map[int64]string) (Report, error) {
 	var rep Report
 	var server []workbook.RemoteTable
 	err := srv.Delta(ctx, func(r workbook.Reader) error {
@@ -356,7 +365,7 @@ func (e *Engine) revertStructure(ctx context.Context, srv workbook.Server, info 
 			if err := tx.QueryRowContext(ctx, `SELECT coalesce(key_col, 0) FROM _lattis_tables WHERE id = ?`, tbl).Scan(&key); err != nil {
 				return nil, err
 			}
-			sh := canvas.RemoteShape{Table: tbl, Name: st.Name, KeyAt: -1}
+			sh := canvas.RemoteShape{Table: tbl, Name: st.Name, KeyAt: -1, Calc: calc}
 			for _, c := range t.remote.Columns {
 				if c.LocalID != 0 {
 					sh.Published = append(sh.Published, c.LocalID)
