@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.2.0-beta (20/10/2026)
+
 ### Nouveautés
 
 - Onglet à choix par une formule : clic droit sur l'onglet › Choisir par › **Une formule…** (`=ANNEE([Date])`, `=TEXTE([Date];"mmmm")`, `=SI([Montant]>1000;"Gros";"Petit")`) ; la flèche de l'onglet choisit parmi les valeurs de la formule, et les tableaux de la feuille qui ont ses colonnes n'affichent que les lignes de la valeur choisie, sans colonne de catégorie à ajouter. La boîte propose fonctions et colonnes, devine le nom (Année, Mois…) et montre un aperçu des valeurs. Une ligne saisie reste affichée jusqu'au prochain changement de valeur. Dans un classeur partagé, la formule est publiée avec la catégorie. Scripts : `sheets.choose_by_formula`.
