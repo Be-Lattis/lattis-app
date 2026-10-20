@@ -1538,6 +1538,7 @@
 			if (ev.headerOffer) headerOffer = { sheet: sheetId, table: ev.headerOffer };
 			if (ev.keyed) return `Clé posée sur « ${ev.keyed.slice(ev.keyed.indexOf('.') + 1)} » pour REFERENCE`;
 			const undoBirth = ev.split ? ' (Ctrl+Z : le défaire, les cellules restent libres)' : '';
+			if (ev.created && ev.unnamed) return `Tableau « ${ev.created} » créé sans en-têtes (la 1re ligne ressemble aux suivantes) : clic droit › Utiliser la première ligne comme en-têtes${autoKeyNote(ev)}${undoBirth}`;
 			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes (« Colonne n ») : tapez les noms dans sa ligne d'en-tête${autoKeyNote(ev)}${undoBirth}`;
 			if (ev.created) return `Tableau « ${ev.created} » créé${autoKeyNote(ev)}${undoBirth || (ev.autoKey ? ' (Ctrl+Z pour annuler)' : '')}`;
 			if (ev.widened) return `Colonne ${ev.widened} passée de ${typeLabel(ev.from as ColumnType)} à ${typeLabel(ev.to as ColumnType)} (Ctrl+Z pour annuler)`;

@@ -20,3 +20,19 @@ export const DEFAULT_NAME_HINT = 'Nom par défaut : renommez le tableau';
 export function isDefaultTableName(name: string | null | undefined): boolean {
 	return !!name && DEFAULT.test(name.trim());
 }
+
+// Nom de colonne donné par Lattis (internal/canvas, autoColRe) : « Colonne n »
+// (collage sans en-têtes, tableau tapé dont la 1re ligne ressemble aux
+// suivantes, colonne ajoutée sans nom). La grille l'écrit en gris italique ;
+// taper dans l'en-tête le remplace.
+const GENERATED_COLUMN = /^Colonne \d+$/;
+
+/** Vrai si name est un nom de colonne donné automatiquement. */
+export function isGeneratedColumnName(name: string | null | undefined): boolean {
+	return !!name && GENERATED_COLUMN.test(name);
+}
+
+/** Vrai si toutes les colonnes ont un nom donné par Lattis : tableau sans en-têtes. */
+export function allGenerated(names: readonly string[]): boolean {
+	return names.length > 0 && names.every(isGeneratedColumnName);
+}

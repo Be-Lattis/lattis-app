@@ -59,7 +59,8 @@ func TestEachRowReportsScanErrors(t *testing.T) {
 }
 
 // promoteIfData prend la première ligne comme en-têtes si le collage ne l'a
-// pas reconnue (colonnes « Colonne n »).
+// pas reconnue (colonnes « Colonne n ») : « Sortir l'en-tête », qui sans
+// vrais noms garde le haut du tableau en place (les données remontent).
 func promoteIfData(ctx context.Context, d *fixture, table string) error {
 	all, err := d.AllTables(ctx)
 	if err != nil {
@@ -67,7 +68,7 @@ func promoteIfData(ctx context.Context, d *fixture, table string) error {
 	}
 	for _, tn := range all {
 		if tn.Name == table && len(tn.Columns) > 0 && strings.HasPrefix(tn.Columns[0], "Colonne ") {
-			return d.PromoteHeader(ctx, table)
+			return d.HeaderToTitle(ctx, table)
 		}
 	}
 	return nil

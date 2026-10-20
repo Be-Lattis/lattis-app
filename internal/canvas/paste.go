@@ -315,45 +315,25 @@ func yearLike(s string) bool {
 	return s >= "1900" && s <= "2100"
 }
 
-// PromoteHeader prend la première ligne de données comme en-têtes (noms des
-// colonnes) puis la supprime : « Utiliser la 1re ligne comme en-têtes ».
-func (m *Model) PromoteHeader(ctx context.Context, table string) error {
-	return m.Do(ctx, "Utiliser la 1re ligne comme en-têtes", func(t *tx) error {
-		tb, err := t.editTable(table)
-		if err != nil {
-			return err
-		}
-		if tb.Rows < 1 || tb.Filtered() {
-			return nil
-		}
-		return t.promote(tb)
-	})
-}
-
 // promote : la première ligne de données donne les noms des colonnes, puis
-// est supprimée.
+// est supprimée (PromoteHeader, unnamed.go ; HeaderToTitle).
 func (t *tx) promote(tb Table) error {
 	rid, _, err := t.rowID(tb, 0)
 	if err != nil {
 		return err
 	}
-	used := map[string]bool{}
+	final := make([]string, len(tb.Cols))
 	for i, c := range tb.Cols {
 		raw, _, err := t.rawAt(tb.Sheet, tb.Row+1, tb.Col+i)
 		if err != nil {
 			return err
 		}
-		name := strings.TrimSpace(raw)
-		if name == "" {
-			name = c.Name
+		if final[i] = strings.TrimSpace(raw); final[i] == "" {
+			final[i] = c.Name
 		}
-		for n := 2; used[strings.ToLower(name)]; n++ {
-			name = strings.TrimSpace(raw) + " " + itoa(n)
-		}
-		used[strings.ToLower(name)] = true
-		if err := t.rename(tb, c, name); err != nil {
-			return err
-		}
+	}
+	if err := t.renameAll(tb, uniqueColumnNames(final)); err != nil {
+		return err
 	}
 	return t.deleteRow(tb, rid)
 }

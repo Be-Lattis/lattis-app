@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isDefaultTableName } from './defaultname';
+import { allGenerated, isDefaultTableName, isGeneratedColumnName } from './defaultname';
 
 describe('nom de tableau par défaut', () => {
 	it('noms donnés à la création', () => {
@@ -20,5 +20,26 @@ describe('nom de tableau par défaut', () => {
 		expect(isDefaultTableName('TCD1')).toBe(false);
 		expect(isDefaultTableName('')).toBe(false);
 		expect(isDefaultTableName(undefined)).toBe(false);
+	});
+});
+
+describe('nom de colonne donné par Lattis', () => {
+	it('« Colonne n »', () => {
+		expect(isGeneratedColumnName('Colonne 1')).toBe(true);
+		expect(isGeneratedColumnName('Colonne 12')).toBe(true);
+	});
+	it('noms choisis', () => {
+		expect(isGeneratedColumnName('Colonne')).toBe(false);
+		expect(isGeneratedColumnName('Colonne A')).toBe(false);
+		expect(isGeneratedColumnName('Colonne 1 bis')).toBe(false);
+		expect(isGeneratedColumnName('colonne 1')).toBe(false);
+		expect(isGeneratedColumnName('Nom')).toBe(false);
+		expect(isGeneratedColumnName('')).toBe(false);
+		expect(isGeneratedColumnName(undefined)).toBe(false);
+	});
+	it('tableau sans en-têtes', () => {
+		expect(allGenerated(['Colonne 1', 'Colonne 2'])).toBe(true);
+		expect(allGenerated(['Colonne 1', 'Ville'])).toBe(false);
+		expect(allGenerated([])).toBe(false);
 	});
 });

@@ -46,6 +46,10 @@ type Event struct {
 	Invalid bool      `json:"invalid"` // saisie hors type dans une colonne au type fixé
 	// Headless : tableau collé sans ligne d'en-tête reconnue (« Colonne n »).
 	Headless bool `json:"headless"`
+	// Unnamed : tableau tapé dont la 1re ligne ressemble aux suivantes :
+	// toutes les lignes sont des données, sous un en-tête « Colonne n »
+	// posé au-dessus (unnamed.go).
+	Unnamed bool `json:"unnamed,omitempty"`
 	// Keyed : colonne devenue clé pour une formule (« Tableau.Colonne »).
 	Keyed string `json:"keyed"`
 	// Refused : valeurs collées écartées car hors du type figé d'un tableau
@@ -78,6 +82,11 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 		t.undoBirth = true
 		err := t.input(sheet, row, col, raw, &ev)
 		t.keyAsk = false // rattachement de fin d'action : sans question
+		// Tableau tapé sans en-têtes dont la 1re ligne se distingue
+		// maintenant des suivantes : elle devient l'en-tête (unnamed.go).
+		if err == nil && ev.Created == "" && strings.TrimSpace(raw) != "" {
+			err = t.reheadYoung(sheet, row, col)
+		}
 		ev.Keyed = t.keyed
 		if ev.Created != "" {
 			ev.AutoKey = t.autoKeyed
@@ -339,6 +348,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 			ev.Created = name
 			// Sans en-têtes (« Colonne n ») : dit comme au collage (audit 2 M7).
 			ev.Headless = ev.Headless || t.born[len(t.born)-1].headless
+			ev.Unnamed = ev.Unnamed || t.born[len(t.born)-1].unnamed
 		}
 		return err
 	}
@@ -505,14 +515,18 @@ func (t *tx) newColumn(tb Table, pos int, name string) (Table, error) {
 
 // birth crée un tableau si la cellule saisie appartient à une zone de
 // cellules libres d'au moins MinRows lignes. La première ligne de la zone
-// donne les en-têtes.
+// donne les en-têtes (saisie : seulement si elle se distingue des
+// suivantes, voir birthOf).
 func (t *tx) birth(sheet int64, row, col int) (string, error) {
 	return t.birthOf(sheet, row, col, false)
 }
 
 // birthOf est birth ; typed (saisie) : la zone doit aussi remplir un carré
-// de 2 × 2 (dense), une liste d'une seule colonne reste libre. Un tableau
-// déplacé ou relu (notes, titres) renaît sans cette condition.
+// de 2 × 2 (dense), une liste d'une seule colonne reste libre, et une 1re
+// ligne qui ressemble aux suivantes (firstRowDiffers) est une donnée sous
+// un en-tête « Colonne n » posé au-dessus quand la place est libre
+// (headRoom ; sinon elle reste l'en-tête). Un tableau déplacé ou relu
+// (notes, titres) renaît sans ces conditions.
 func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	cells, err := t.cells(sheet)
 	if err != nil {
@@ -573,7 +587,22 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 		return "", nil
 	}
 	headers, data, top := grid2[0], grid2[1:], r0
-	if !typedHeader(grid2) {
+	unnamed := false
+	if typedHeader(grid2) && typed && !firstRowDiffers(grid2) {
+		// Que des textes partout (ou rien qui distingue la 1re ligne) :
+		// toutes les lignes sont des données, l'en-tête « Colonne n » se
+		// place au-dessus ; clic droit › Utiliser la première ligne comme
+		// en-têtes pour revenir. Sans place libre au-dessus (ligne 1, titre,
+		// autre tableau, tableau croisé, fusion), la 1re ligne reste
+		// l'en-tête, comme avant.
+		room, err := t.headRoom(sheet, r0, c0, c1)
+		if err != nil {
+			return "", err
+		}
+		if room {
+			headers, data, top, unnamed = autoHeaders(c1-c0+1), grid2, r0-1, true
+		}
+	} else if !typedHeader(grid2) {
 		// Une liste de valeurs (10, 20, 30) : la première ligne reste une
 		// donnée, les colonnes s'appellent « Colonne n » et l'en-tête se
 		// place au-dessus. Sans place libre au-dessus, les cellules restent
@@ -614,6 +643,7 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	}
 	t.noteBorn(tb)
 	t.born[len(t.born)-1].headless = top < r0
+	t.born[len(t.born)-1].unnamed = unnamed
 	// Première colonne ID, ou 1, 2, 3… : la clé (autokey.go).
 	return name, t.autoKey(tb.ID)
 }

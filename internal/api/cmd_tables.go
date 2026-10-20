@@ -469,7 +469,7 @@ tables.sort_custom("Commandes", "Client", nil, "Jours", true) -- liste nommée, 
 				}
 				return nil, d.RowToNote(c, t.Name, t.Total-1)
 			}),
-		tableCmd("tables.promote_header", "Ligne d'en-tête", "Prend la première ligne de données comme ligne d'en-têtes.", true,
+		tableCmd("tables.promote_header", "Utiliser la première ligne comme en-têtes", "La première ligne de données donne les noms des colonnes (une cellule vide garde le nom) et devient l'en-tête à sa place : l'ancien en-tête (« Colonne n » d'un tableau tapé ou collé sans en-têtes, ou autres noms) disparaît, le tableau descend d'une ligne, son bas ne bouge pas. Les formules suivent les renommages ; une colonne passée en texte à cause de cette ligne reprend son type. Refusé sur un tableau filtré, chargé par une requête ou aux en-têtes sur deux lignes.", true,
 			func(c *Call, t tableRef) (any, error) {
 				d, _ := c.Doc()
 				return nil, d.PromoteHeader(c, t.Name)

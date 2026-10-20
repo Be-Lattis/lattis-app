@@ -1027,7 +1027,7 @@ export const apiReference: RefEntry[] = [
 		name: "tables.promote_header",
 		category: "tables",
 		signature: "tables.promote_header(table)",
-		summary: "Prend la première ligne de données comme ligne d'en-têtes.",
+		summary: "La première ligne de données donne les noms des colonnes (une cellule vide garde le nom) et devient l'en-tête à sa place : l'ancien en-tête (« Colonne n » d'un tableau tapé ou collé sans en-têtes, ou autres noms) disparaît, le tableau descend d'une ligne, son bas ne bouge pas. Les formules suivent les renommages ; une colonne passée en texte à cause de cette ligne reprend son type. Refusé sur un tableau filtré, chargé par une requête ou aux en-têtes sur deux lignes.",
 		details: "Paramètres — table : nom du tableau. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 1]
 	},

@@ -10,6 +10,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - En-têtes tapés après les données : les noms tapés sur la ligne juste au-dessus d'un tableau deviennent ses en-têtes en un clic (« Utiliser comme en-têtes », proposé dans la barre d'état dès deux noms au-dessus d'un en-tête qui ressemble à des données, et au clic droit) ; l'ancien en-tête devient la 1re ligne, les formules suivent, `Ctrl+Z` annule.
 
+### Changements
+
+- Tableau tapé dont la première ligne ressemble aux suivantes (que des textes partout) : toutes les lignes tapées sont des données, sous un en-tête « Colonne 1 », « Colonne 2 »… ajouté juste au-dessus (noms en gris italique) ; clic droit › « Utiliser la première ligne comme en-têtes » en fait l'en-tête, à sa place. Une première ligne qui se distingue (un nom au-dessus de nombres, de dates…) reste l'en-tête, comme sans place libre au-dessus.
+
 ### Corrections
 
 - Connexion à MySQL / MariaDB : l'erreur « Unknown system variable 'charset' » empêchait toute connexion ; le jeu de caractères (utf8mb4) passe maintenant par SET NAMES.

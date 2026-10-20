@@ -25,6 +25,7 @@ type bornTable struct {
 	id                      int64
 	row, col, bottom, right int
 	headless                bool // sans en-têtes reconnus (« Colonne n »)
+	unnamed                 bool // 1re ligne semblable aux suivantes (« Colonne n » au-dessus)
 }
 
 // noteBorn retient un tableau créé d'office.

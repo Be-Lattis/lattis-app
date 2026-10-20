@@ -13,7 +13,7 @@
 	import { RowCache, percentile, syncAt, type Fetched, type SyncKind } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
-	import { DEFAULT_NAME_HINT, isDefaultTableName } from './defaultname';
+	import { allGenerated, DEFAULT_NAME_HINT, isDefaultTableName, isGeneratedColumnName } from './defaultname';
 	import { ease, flashAlpha, lerpBar, motionAt, progress, reducedMotion, sameBar, shiftAxis, tableMotions, zeroBar, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
 	import { followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
 	import { boxStyle, formatStat, isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
@@ -2590,7 +2590,9 @@
 							singleIcons.set(`${e.t.id}:${i}`, iconW);
 							continue;
 						}
-						headLabel(headerLabel(col.name, e.t.twoLevel), x, y, cw, rh(r), iconW + 10, hs, e.t.query && !col.hand ? C.linkHeadText : C.headText, 'left');
+						// Nom donné par Lattis (« Colonne n ») : gris italique, à remplacer.
+						const gen = isGeneratedColumnName(col.name);
+						headLabel(headerLabel(col.name, e.t.twoLevel), x, y, cw, rh(r), iconW + 10, gen ? { ...hs, i: true } : hs, gen ? C.unnamedBadge : e.t.query && !col.hand ? C.linkHeadText : C.headText, 'left');
 						continue;
 					}
 					const row = e.cache.row(r - e.t.row - 1);
@@ -10888,13 +10890,15 @@
 			{@const toTitle = cols && !!source.headerToTitle && m.e.t.rows > 0}
 			{@const toHeader = cols && titleAbove(m.e.t)}
 			{@const toNote = rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
+			{@const promote = cols && !!source.promoteHeader && m.e.t.rows > 0 && !m.e.t.query && !m.e.t.twoLevel}
+			{@const promoteHere = promote && rowItems && m.n === 0 && allGenerated(m.e.t.columns.map((c) => c.name))}
 			{@const refresh = !!m.e.t.query && !!source.refreshTable}
 			{@const share = cols && !!onsharedata && !m.e.t.query}
 			{@const addShared = cols && !!onaddshared && m.e.t.shared === 'private' && !m.e.t.query}
 			{@const pushSource = cols && !!onpushsource && sourceTables.includes(m.e.t.name)}
 			{@const twoLevel = cols && !!source.setTwoLevel && !m.e.t.query}
 			{@const follow = cols && !!source.setFollow && !!data?.choice && !m.e.t.query}
-			{@const tableItems = toTitle || toHeader || twoLevel || refresh || share || pushSource || follow || !!source.convertToRange || !!source.deleteTables}
+			{@const tableItems = toTitle || toHeader || promote || twoLevel || refresh || share || pushSource || follow || !!source.convertToRange || !!source.deleteTables}
 			{#snippet sortItems()}
 				{#if cols && source.sortTable}
 					{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
@@ -10970,6 +10974,10 @@
 								clearSelection();
 							}}>Effacer le contenu</button
 						>
+						{#if promoteHere}
+							<!-- Tableau sans en-têtes (que des « Colonne n ») : sur sa 1re ligne. -->
+							<button title="La 1re ligne de données donne les noms des colonnes et devient l'en-tête, à sa place ; l'en-tête actuel disparaît (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la première ligne comme en-têtes</button>
+						{/if}
 						{#if toNote}
 							<!-- Seulement sur la dernière ligne de données (le moteur refuse les autres). -->
 							<button title="La ligne reste juste sous le tableau, gardée à part comme total ou note (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir cette ligne du tableau (total ou note)</button>
@@ -11031,6 +11039,9 @@
 						<Submenu label="Tableau">
 							{#if toTitle}
 								<button title="La 1re ligne de données devient l'en-tête ; l'en-tête actuel reste au-dessus du tableau, en titre (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>Sortir l'en-tête</button>
+							{/if}
+							{#if promote}
+								<button title="La 1re ligne de données donne les noms des colonnes et devient l'en-tête, à sa place ; l'en-tête actuel disparaît (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la première ligne comme en-têtes</button>
 							{/if}
 							{#if toHeader}
 								<button title="Les cellules tapées juste au-dessus du tableau deviennent les noms de ses colonnes ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.titleToHeader!(m.e.t))}>Utiliser la ligne du dessus comme en-têtes</button>

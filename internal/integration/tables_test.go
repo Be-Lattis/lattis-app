@@ -26,9 +26,11 @@ func TestTableDetection(t *testing.T) {
 	if n := len(h.sheet("").Tables); n != 0 {
 		t.Fatal("une colonne seule a créé un tableau")
 	}
+	// Que des textes : la 1re ligne ressemble à la suivante, toutes deux sont
+	// des données sous un en-tête « Colonne n » posé au-dessus.
 	res := asText(h.set(5, 4, "Âge"))
 	tbs := h.sheet("").Tables
-	if len(tbs) != 1 || tbs[0].Row != 5 || tbs[0].Col != 3 || tbs[0].Rows != 1 {
+	if len(tbs) != 1 || tbs[0].Row != 4 || tbs[0].Col != 3 || tbs[0].Rows != 2 || tbs[0].Columns[0].Name != "Colonne 1" || !strings.Contains(res, `"unnamed":true`) {
 		t.Fatalf("carré de 2 × 2 : %+v (%s)", tbs, res)
 	}
 	name := tbs[0].Name
@@ -37,9 +39,11 @@ func TestTableDetection(t *testing.T) {
 	}
 	// Saisir dans le tableau ou juste dessous l'agrandit.
 	h.set(7, 3, "Tom")
+	// Un nombre sous « Âge » : la 1re ligne se distingue, elle devient
+	// l'en-tête à sa place.
 	h.set(6, 4, 31)
 	tb := h.table(name)
-	if tb.Rows != 2 || len(tb.Columns) != 2 || tb.Columns[1].Type != "integer" {
+	if tb.Row != 5 || tb.Rows != 2 || len(tb.Columns) != 2 || tb.Columns[1].Type != "integer" {
 		t.Fatalf("agrandi : %+v", tb)
 	}
 	if tb.Columns[0].Name != "Nom" || tb.Columns[1].Name != "Âge" {

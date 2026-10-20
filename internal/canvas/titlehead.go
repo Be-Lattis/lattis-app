@@ -136,36 +136,8 @@ func (m *Model) TitleToHeader(ctx context.Context, table string) error {
 				final[i] = names[i]
 			}
 		}
-		final = uniqueColumnNames(final)
-		// Les noms libérés d'abord : une colonne qui prend le nom d'une autre
-		// passe par un nom provisoire (les formules suivent chaque étape).
-		taken := map[string]int{}
-		for i, c := range tb.Cols {
-			taken[strings.ToLower(c.Name)] = i
-		}
-		swap := false
-		for i, n := range final {
-			if j, ok := taken[strings.ToLower(n)]; ok && j != i {
-				swap = true
-			}
-		}
-		if swap {
-			for i, c := range tb.Cols {
-				if final[i] == c.Name {
-					continue
-				}
-				tmp := fmt.Sprintf("~%d~%s", i+1, c.Name)
-				if err := t.rename(tb, c, tmp); err != nil {
-					return err
-				}
-				tb.Cols[i].Name = tmp
-			}
-		}
-		for i, c := range tb.Cols {
-			if err := t.rename(tb, c, final[i]); err != nil {
-				return err
-			}
-			tb.Cols[i].Name = final[i]
+		if err := t.renameAll(tb, uniqueColumnNames(final)); err != nil {
+			return err
 		}
 		for i := range tb.Cols {
 			if names[i] != "" {
@@ -202,6 +174,41 @@ func (m *Model) TitleToHeader(ctx context.Context, table string) error {
 		t.notes = append(t.notes, what+" (Ctrl+Z pour annuler)")
 		return nil
 	})
+}
+
+// renameAll donne aux colonnes de tb les noms final (même ordre). Une colonne
+// qui prend le nom d'une autre passe d'abord par un nom provisoire : les
+// formules suivent chaque étape sans confondre les deux colonnes.
+func (t *tx) renameAll(tb Table, final []string) error {
+	cols := append([]Column(nil), tb.Cols...)
+	taken := map[string]int{}
+	for i, c := range cols {
+		taken[strings.ToLower(c.Name)] = i
+	}
+	swap := false
+	for i, n := range final {
+		if j, ok := taken[strings.ToLower(n)]; ok && j != i {
+			swap = true
+		}
+	}
+	if swap {
+		for i, c := range cols {
+			if final[i] == c.Name {
+				continue
+			}
+			tmp := fmt.Sprintf("~%d~%s", i+1, c.Name)
+			if err := t.rename(tb, c, tmp); err != nil {
+				return err
+			}
+			cols[i].Name = tmp
+		}
+	}
+	for i, c := range cols {
+		if err := t.rename(tb, c, final[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // prependRow ajoute en tête du tableau une ligne de saisies (vals, "" :
