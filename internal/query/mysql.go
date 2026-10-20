@@ -42,7 +42,10 @@ func mysqlConfig(c DBConfig, password string) *mysql.Config {
 	cfg.Loc = time.Local
 	cfg.Timeout = 10 * time.Second
 	cfg.AllowNativePasswords = true
-	cfg.Params = map[string]string{"charset": "utf8mb4"}
+	// Jeu de caractères par l'option du pilote (SET NAMES) : dans Params, il
+	// partirait en variable système (« Unknown system variable 'charset' »,
+	// MariaDB, issue n°20).
+	_ = cfg.Apply(mysql.Charset("utf8mb4", ""))
 	switch c.SSLMode {
 	case "disable":
 		cfg.TLSConfig = "false"

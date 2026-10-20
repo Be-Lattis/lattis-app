@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Corrections
+
+- Connexion à MySQL / MariaDB : l'erreur « Unknown system variable 'charset' » empêchait toute connexion ; le jeu de caractères (utf8mb4) passe maintenant par SET NAMES.
+
 ## 0.1.0-beta.3 (20/10/2026)
 
 ### Nouveautés
