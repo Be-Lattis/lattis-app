@@ -36,6 +36,10 @@ Chaque puce a son menu ▾ : déplacer, retirer, filtrer et, pour une valeur, la
 
 Une colonne calculée ne sert pas encore de champ.
 
+### Champ calculé (regrouper par une formule)
+
+**Champ calculé…**, sous la liste des champs, ajoute un champ dont la valeur est calculée pour chaque ligne du tableau source par une formule sur ses colonnes, citées entre crochets : `=ANNEE([Date])` regroupe par année, `=TEXTE([Date];"mmmm")` par mois, `=GAUCHE([Code];2)` par les deux premiers caractères d'un code, `=SI([Montant]>1000;"Gros";"Petit")` par tranche. La boîte propose les fonctions et les colonnes pendant la frappe, et montre les premières valeurs que donne la formule (ou son erreur). Le champ rejoint la liste avec l'icône ƒ et se place comme une colonne : en Lignes ou en Colonnes, il regroupe les lignes par son résultat ; en Filtres, il filtre ; en Valeurs, il se synthétise. Son menu ▾ dans la liste le modifie ou le supprime (il quitte alors les zones). Le TCD le recalcule à chaque mise à jour ; renommer une colonne de la source met la formule à jour. `Ctrl+Z` annule. Scripts : `calc = {{name = "Année", text = "=ANNEE([Date])"}}` dans la configuration de `pivots.create` ou `pivots.set`.
+
 ## Synthèse et affichage des valeurs
 
 Synthèses : Somme, Nombre, Nombre distinct, Moyenne, Min, Max. Une colonne de nombres est sommée par défaut, les autres comptées. L'affichage peut aussi être un pourcentage : du total général, du total de la colonne ou du total de la ligne. Un format de nombre (monétaire, pourcentage, décimales) se choisit par valeur.

@@ -17,6 +17,7 @@
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 	import { TAB_COLORS, moveTarget, tabWindow, textOn, visibleSheets, type SimilarMark, type TabSheet } from './sheets.js';
 	import { allLabel, choiceLabel, choiceStatus, newLabel, nextChoice, type ChoiceActions } from './choice.js';
+	import RowFormulaDialog from '#lib/ui/RowFormulaDialog.svelte';
 
 	type Sheet = TabSheet;
 	interface Props {
@@ -93,6 +94,8 @@
 	let choiceMenu = $state<{ id: number; x: number; values: { text: string; count: number }[] | null } | null>(null);
 	// « Nouvelle année… » : valeur proposée (suite de la série), modifiable.
 	let adding = $state<{ id: number; name: string; draft: string } | null>(null);
+	// « Choisir par › Une formule… » : feuille de la boîte (null : fermée).
+	let byFormula = $state<{ id: number; name: string; formula: string } | null>(null);
 	// « Choisir par… » : colonnes proposées pour l'onglet du menu (null : en cours de lecture).
 	let candidates = $state<{ table: string; column: string; values: number }[] | null>(null);
 
@@ -749,10 +752,22 @@
 									closeMenu();
 									onchoice?.by(id, c.table, c.column);
 								}}
-								><span class="ic">{#if ms?.choice && ms.choice.name.toLowerCase() === c.column.toLowerCase()}●{/if}</span><span class="cname">{c.column}</span><span class="menu-hint">{c.table}</span></button
+								><span class="ic">{#if ms?.choice && !ms.choice.formula && ms.choice.name.toLowerCase() === c.column.toLowerCase()}●{/if}</span><span class="cname">{c.column}</span><span class="menu-hint">{c.table}</span></button
 							>
 						{/each}
 					{/if}
+					<hr />
+					<button
+						role="menuitem"
+						title="Une formule sur les colonnes de chaque ligne donne la valeur à choisir : =ANNEE([Date]), =TEXTE([Date];&quot;mmmm&quot;), =SI([Montant]&gt;1000;&quot;Gros&quot;;&quot;Petit&quot;)"
+						onclick={() => {
+							const id = m.id;
+							const f = ms?.choice?.formula;
+							closeMenu();
+							byFormula = { id, name: f ? (ms?.choice?.name ?? '') : '', formula: f ?? '' };
+						}}
+						><span class="ic">{#if ms?.choice?.formula}●{/if}</span><span class="cname">Une formule…</span>{#if ms?.choice?.formula}<span class="menu-hint">{clip(ms.choice.formula)}</span>{/if}</button
+					>
 					{#if ms?.choice}
 						<hr />
 						<button
@@ -814,12 +829,37 @@
 						{/each}
 					</div>
 				{/if}
-				<hr />
-				<button role="menuitem" disabled={cm.values === null} onclick={() => startAdding(cm.id)}><span class="ic"><Icon name="plus" size={16} /></span>{newLabel(ch.name)}</button>
+				{#if !ch.formula}
+					<hr />
+					<button role="menuitem" disabled={cm.values === null} onclick={() => startAdding(cm.id)}><span class="ic"><Icon name="plus" size={16} /></span>{newLabel(ch.name)}</button>
+				{:else}
+					<div class="menu-note" title={ch.formula}>Valeurs calculées par {clip(ch.formula)}</div>
+				{/if}
 			</div>
 		{/if}
 	{/if}
 </div>
+
+{#if byFormula && onchoice}
+	{@const bf = byFormula}
+	{@const actions = onchoice}
+	<RowFormulaDialog
+		title="Choisir par une formule"
+		intro="La flèche de l’onglet choisira parmi les valeurs de la formule ; les tableaux de la feuille qui ont ses colonnes ne montrent que les lignes de la valeur choisie."
+		nameLabel="Nom de la catégorie :"
+		name={bf.name}
+		formula={bf.formula}
+		guess={!bf.name}
+		follow="Suivent l’onglet"
+		help={actions.formulaHelp?.(bf.id)}
+		preview={(f) => actions.preview(bf.id, f)}
+		onok={async (name, f) => {
+			await actions.byFormula(bf.id, name, f);
+			byFormula = null;
+		}}
+		oncancel={() => (byFormula = null)}
+	/>
+{/if}
 
 {#if adding}
 	{@const ad = adding}

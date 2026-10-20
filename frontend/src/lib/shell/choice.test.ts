@@ -73,4 +73,10 @@ describe('colonne de catégorie masquée', () => {
 		// Catégorie en deuxième colonne d'un tableau, première d'un autre : chacune occupe l'autre.
 		expect(choiceHiddenCols(c, [{ ...ventes, choiceCol: 1 }, depenses]).size).toBe(0);
 	});
+	it('rien à masquer sous une catégorie calculée (pas de colonne)', () => {
+		const c = { name: 'Année', value: '2025', all: false, formula: '=ANNEE([Date])' };
+		expect(choiceHiddenCols(c, [{ ...ventes, byFormula: true }]).size).toBe(0);
+		// Un autre tableau qui suit par formule n'occupe pas la colonne masquée d'un tableau qui suit par colonne.
+		expect([...choiceHiddenCols(c, [depenses, { ...ventes, row: 30, byFormula: true }])]).toEqual([]);
+	});
 });

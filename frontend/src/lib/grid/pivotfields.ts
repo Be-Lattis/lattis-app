@@ -67,6 +67,7 @@ export function fieldIcon(type: string): 'type-number' | 'type-text' | 'type-dat
 		case 'boolean':
 			return 'type-boolean';
 		case 'formula':
+		case 'calc': // champ calculé du TCD
 			return 'function';
 	}
 	return 'type-text';
@@ -157,6 +158,8 @@ export function changeSource(cfg: PivotConfig, source: string, fields: PivotFiel
 	const names = new Map(fields.filter((f) => f.type !== 'formula').map((f) => [f.name.toLowerCase(), f.name]));
 	const keep = (f: string) => names.get(f.toLowerCase());
 	c.source = source;
+	// Champs calculés : leurs formules citent les colonnes de l'ancienne source.
+	delete c.calc;
 	c.rowFields = (c.rowFields ?? []).map(keep).filter((f): f is string => !!f);
 	c.cols = c.cols ? keep(c.cols) : undefined;
 	c.values = (c.values ?? []).flatMap((v) => {

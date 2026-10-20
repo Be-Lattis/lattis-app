@@ -82,6 +82,7 @@
 	import { SINGLE_SERIES, chartFieldsFrom, defaultChartTitle, type ChartKind, type MapGuess } from '#lib/chart/kinds.js';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import type { BoxStatsIn } from '#lib/chart/shapes.js';
+	import type { RowFormulaPreview } from '#lib/ui/rowformula.js';
 	import { svgToPng } from '#lib/chart/image.js';
 	import PivotPanel from './PivotPanel.svelte';
 	import { panelAtCell, changeSource } from './pivotfields';
@@ -155,6 +156,12 @@
 		cols?: string;
 		values?: PivotValue[];
 		filters?: { field: string; values: string[] }[];
+		/**
+		 * Champs calculés (« Champ calculé… ») : une formule sur les colonnes de
+		 * chaque ligne de la source ; text en français, formula en anglais
+		 * canonique (rendu par le moteur).
+		 */
+		calc?: { name: string; formula?: string; text?: string }[];
 		/** Valeurs gardées d'un champ des lignes ou des colonnes (▾ de son étiquette). */
 		items?: { field: string; values: string[] }[];
 		/** Tri des étiquettes d'un champ : 'asc' ou 'desc' (absent : ordre de la source). */
@@ -560,6 +567,10 @@
 		placeButton?(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): Promise<unknown>;
 		deleteButton?(id: number): Promise<unknown>;
 		setPivot?(id: number, cfg: PivotConfig): Promise<unknown>;
+		/** Ajoute (old vide), modifie ou retire (formula vide) un champ calculé ; une erreur est levée telle quelle. */
+		setPivotCalc?(id: number, old: string, name: string, formula: string): Promise<unknown>;
+		/** Aperçu d'un champ calculé sur le tableau source. */
+		previewPivotFormula?(source: string, formula: string): Promise<RowFormulaPreview>;
 		deletePivot?(id: number): Promise<unknown>;
 		/** Tableau croisé entier coupé puis collé : déplacé en (row, col) de la feuille affichée. */
 		movePivot?(id: number, row: number, col: number): Promise<unknown>;
@@ -11261,9 +11272,13 @@
 								<button
 									role="menuitemcheckbox"
 									aria-checked={on}
-									title={on
-										? `Le tableau montre toutes ses lignes, quelle que soit la valeur de l'onglet (sa colonne « ${data?.choice?.name} » est retirée si elle n'a qu'une valeur)`
-										: `Le tableau reçoit la colonne « ${data?.choice?.name} », remplie avec la valeur affichée, et ne montre plus que ses lignes`}
+									title={data?.choice?.formula
+										? on
+											? `Le tableau montre toutes ses lignes, quelle que soit la valeur de l'onglet`
+											: `Le tableau ne montre plus que les lignes dont la formule ${data.choice.formula} donne la valeur affichée (il doit en avoir les colonnes)`
+										: on
+											? `Le tableau montre toutes ses lignes, quelle que soit la valeur de l'onglet (sa colonne « ${data?.choice?.name} » est retirée si elle n'a qu'une valeur)`
+											: `Le tableau reçoit la colonne « ${data?.choice?.name} », remplie avec la valeur affichée, et ne montre plus que ses lignes`}
 									onclick={() => toggleFollow(m.e.t, !on)}><span class="check">{on ? '✓' : ''}</span>Suivre {what}</button
 								>
 							{/if}
@@ -12223,6 +12238,9 @@
 				customLists={source.customLists}
 				setCustomLists={source.setCustomLists}
 				onchange={(cfg) => menuAction(source.setPivot && (() => source.setPivot!(pv.id, cfg)), true)}
+				calcPreview={source.previewPivotFormula ? (f) => source.previewPivotFormula!(pv.config.source, f) : undefined}
+				oncalc={source.setPivotCalc ? (old, name, f) => source.setPivotCalc!(pv.id, old, name, f) : undefined}
+				formulaHelp={{ functions: catalog?.functions ?? [], columns: sourceColumns(pv.config.source).map((c) => c.name) }}
 				handNote={handKeptNote(pv.handKept, pv.handNote)}
 				onforgethand={pv.handKept && source.forgetHandKept ? () => menuAction(() => source.forgetHandKept!({ name: pv.config.name ?? '' } as SheetTable), true) : undefined}
 				ondelete={() => removePivot(pv)}

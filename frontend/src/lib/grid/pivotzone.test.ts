@@ -73,4 +73,12 @@ describe('changer la source', () => {
 		expect(c.rowFields).toBeUndefined();
 		expect(c.values).toEqual([{ agg: 'count' }]);
 	});
+	it('les champs calculés ne passent pas à la nouvelle source', () => {
+		const c = changeSource({ source: 'A', calc: [{ name: 'An', text: '=ANNEE([Date])' }], rowFields: ['An'], values: [{ field: 'Montant', agg: 'sum' }] }, 'B', [
+			{ name: 'Montant', type: 'decimal' }
+		]);
+		expect(c.calc).toBeUndefined();
+		expect(c.rowFields).toBeUndefined();
+		expect(c.values).toEqual([{ field: 'Montant', agg: 'sum' }]);
+	});
 });

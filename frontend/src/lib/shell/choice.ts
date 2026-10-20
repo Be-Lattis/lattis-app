@@ -5,6 +5,7 @@
 // colonnes de catégorie masquées dans la grille.
 
 import { fillSeries } from '#lib/grid/fill.js';
+import type { RowFormulaHelp, RowFormulaPreview } from '#lib/ui/rowformula.js';
 
 /** Onglet à choix d'une feuille (canvas.SheetChoice). */
 export interface TabChoice {
@@ -14,7 +15,10 @@ export interface TabChoice {
 	/** « (Toutes) » : aucun filtre. */
 	all: boolean;
 	type?: string;
+	/** Catégorie calculée par une formule (=ANNEE([Date])) : pas de colonne. */
+	formula?: string;
 }
+
 
 /** Actions de l'onglet à choix, fournies par la page (DocumentService). */
 export interface ChoiceActions {
@@ -27,6 +31,11 @@ export interface ChoiceActions {
 	/** « Choisir par… » : colonnes proposées, puis le choix d'une colonne. */
 	candidates(sheet: number): Promise<{ table: string; column: string; values: number }[]>;
 	by(sheet: number, table: string, column: string): unknown;
+	/** « Choisir par › Une formule… » : aperçu, puis la catégorie calculée. */
+	preview(sheet: number, formula: string): Promise<RowFormulaPreview>;
+	byFormula(sheet: number, name: string, formula: string): Promise<unknown>;
+	/** Fonctions et colonnes proposées à la saisie de la formule. */
+	formulaHelp?(sheet: number): RowFormulaHelp;
 	/** Retire l'onglet à choix. */
 	clear(sheet: number): unknown;
 }
@@ -130,6 +139,8 @@ export interface ChoiceTable {
 	/** Le tableau suit le choix de l'onglet ; choiceCol : rang de sa colonne de catégorie. */
 	follows?: boolean;
 	choiceCol?: number;
+	/** Il suit une catégorie calculée : pas de colonne à masquer. */
+	byFormula?: boolean;
 }
 
 /**
@@ -142,11 +153,11 @@ export interface ChoiceTable {
 export function choiceHiddenCols(choice: TabChoice | null | undefined, tables: readonly ChoiceTable[], cells: readonly { col: number }[] = []): Set<number> {
 	const out = new Set<number>();
 	if (!choice || choice.all) return out;
-	for (const t of tables) if (t.follows && t.choiceCol !== undefined) out.add(t.col + t.choiceCol);
+	for (const t of tables) if (t.follows && !t.byFormula && t.choiceCol !== undefined) out.add(t.col + t.choiceCol);
 	for (const c of [...out]) {
 		const busy =
 			cells.some((x) => x.col === c) ||
-			tables.some((t) => c >= t.col && c < t.col + t.columns.length && !(t.follows && t.col + (t.choiceCol ?? -1) === c));
+			tables.some((t) => c >= t.col && c < t.col + t.columns.length && !(t.follows && !t.byFormula && t.col + (t.choiceCol ?? -1) === c));
 		if (busy) out.delete(c);
 	}
 	return out;

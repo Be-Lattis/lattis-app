@@ -22,6 +22,8 @@
 	import CustomSort from './CustomSort.svelte';
 	import { withoutField, type CustomList, type CustomOrder } from './customsort';
 	import type { TabChoiceItem } from './tabchoice';
+	import RowFormulaDialog from '#lib/ui/RowFormulaDialog.svelte';
+	import type { RowFormulaHelp, RowFormulaPreview } from '#lib/ui/rowformula.js';
 	import {
 		AGGS,
 		FORMATS,
@@ -85,9 +87,21 @@
 		/** Colonnes saisies à droite du TCD : valeurs mises de côté (note), et leur oubli. */
 		handNote?: string;
 		onforgethand?: () => unknown;
+		/**
+		 * Champs calculés (« Champ calculé… ») : aperçu d'une formule sur la
+		 * source, ajout (old vide), modification ou retrait (formule vide) ;
+		 * une erreur levée s'affiche dans la boîte.
+		 */
+		calcPreview?: (formula: string) => Promise<RowFormulaPreview>;
+		oncalc?: (old: string, name: string, formula: string) => unknown;
+		formulaHelp?: RowFormulaHelp;
 	}
 
-	let { config, fields, error = '', filterValues, onchange, ondelete, sources = [], onsource, pickSource = false, onclose, resizable = true, locked = '', customLists, setCustomLists, tabChoice, ontabchoice, handNote = '', onforgethand }: Props = $props();
+	let { config, fields, error = '', filterValues, onchange, ondelete, sources = [], onsource, pickSource = false, onclose, resizable = true, locked = '', customLists, setCustomLists, tabChoice, ontabchoice, handNote = '', onforgethand, calcPreview, oncalc, formulaHelp }: Props = $props();
+
+	/** « Champ calculé… » : boîte ouverte (old : nom du champ modifié, vide pour un nouveau). */
+	let calcEdit = $state<{ old: string; name: string; formula: string } | null>(null);
+	const calcOf = (name: string) => (config.calc ?? []).find((c) => c.name.toLowerCase() === name.toLowerCase());
 
 	let sourceEl = $state<HTMLElement>();
 	$effect(() => {
@@ -113,7 +127,7 @@
 		change(c);
 	}
 
-	const flds = $derived<PivotField[]>(fields.map((f) => ({ name: f.name, type: f.type ?? (f.numeric ? 'decimal' : 'text') })));
+	const flds = $derived<PivotField[]>([...fields.map((f) => ({ name: f.name, type: f.type ?? (f.numeric ? 'decimal' : 'text') })), ...(config.calc ?? []).map((c) => ({ name: c.name, type: 'calc' }))]);
 	const ZONE_ICONS: Record<Zone, IconName> = { filters: 'filter', cols: 'pivot-columns', rows: 'pivot-rows', values: 'autosum' };
 
 	let panelEl: HTMLElement;
@@ -172,6 +186,7 @@
 			sent.then((ok) => {
 				if (ok === false && !dirty) draft = clone(config);
 			});
+		return sent;
 	}
 
 	function setDefer(on: boolean) {
@@ -396,14 +411,35 @@
 	}
 
 	function fieldMenu(field: string, opener: HTMLElement, byKey: boolean) {
-		const items: Item[] = ZONES.map(({ zone, title }) => ({
-			label: `Ajouter à ${title}`,
-			disabled: (zone !== 'values' && (field === ROW_COUNT || zoneItems(draft, zone).includes(field))) || !isUsable(flds.find((f) => f.name === field) ?? { name: '', type: '' }),
-			run: () => change(insertAt(draft, zone, field, flds))
-		}));
+		const items: Item[] = [];
+		// Champ calculé : sa formule d'abord (ce qui est propre à ce champ).
+		const calc = calcOf(field);
+		if (calc && oncalc) {
+			items.push({ label: 'Modifier le champ calculé…', title: calc.text, run: () => (calcEdit = { old: calc.name, name: calc.name, formula: calc.text ?? '' }) });
+			items.push({ label: 'Supprimer le champ calculé', danger: true, run: () => removeCalc(calc.name) });
+			items.push({ label: '', sep: true });
+		}
+		for (const { zone, title } of ZONES)
+			items.push({
+				label: `Ajouter à ${title}`,
+				disabled: (zone !== 'values' && (field === ROW_COUNT || zoneItems(draft, zone).includes(field))) || !isUsable(flds.find((f) => f.name === field) ?? { name: '', type: '' }),
+				run: () => change(insertAt(draft, zone, field, flds))
+			});
 		items.push({ label: '', sep: true });
 		items.push({ label: 'Retirer du rapport', disabled: !used.has(field), danger: true, run: () => change(removeField(draft, field)) });
 		openMenu(opener, field === ROW_COUNT ? 'Nombre de lignes' : field, items, byKey);
+	}
+
+	/** Retire un champ calculé (et des zones) ; le brouillon en attente part d'abord. */
+	let calcFailed = $state('');
+	async function removeCalc(name: string) {
+		calcFailed = '';
+		try {
+			await flush(); // les changements en attente d'abord : ils ne reprennent pas l'ancienne liste
+			await oncalc?.(name, name, '');
+		} catch (e) {
+			calcFailed = String((e as Error)?.message ?? e);
+		}
 	}
 
 	// --- Puces : clavier et focus ---
@@ -517,6 +553,29 @@
 	const fieldType = (name: string) => flds.find((f) => f.name === name)?.type ?? '';
 </script>
 
+{#if calcEdit && oncalc && calcPreview}
+	{@const ce = calcEdit}
+	{@const preview = calcPreview}
+	{@const save = oncalc}
+	<RowFormulaDialog
+		title={ce.old ? `Champ calculé « ${ce.old} »` : 'Champ calculé'}
+		intro="Une formule sur les colonnes de chaque ligne de « {config.source} » : les lignes sont regroupées par son résultat, en Lignes, en Colonnes ou en Filtres (ou synthétisées en Valeurs)."
+		nameLabel="Nom du champ :"
+		name={ce.name}
+		formula={ce.formula}
+		guess={!ce.old}
+		help={formulaHelp}
+		okLabel={ce.old ? 'OK' : 'Ajouter'}
+		{preview}
+		onok={async (name, f) => {
+			await flush();
+			await save(ce.old, name, f);
+			calcEdit = null;
+		}}
+		oncancel={() => (calcEdit = null)}
+	/>
+{/if}
+
 <aside class="panel" bind:this={panelEl} use:resizePanel={{ key: 'pivot', off: !resizable }} use:panelKeys={onclose} aria-label="Champs de tableau croisé dynamique">
 	<PanelHeader title="Champs de tableau croisé dynamique" help="tcd" helpLabel="Aide sur les tableaux croisés" {onclose}>
 		<span class="sub" title="Le tableau croisé dynamique s'interroge dans l'onglet SQL sous ce nom et sert de source aux graphiques">
@@ -567,6 +626,14 @@
 			<li class="none">Aucun champ ne correspond à « {search.trim()} ».</li>
 		{/if}
 	</ul>
+	{#if oncalc && calcPreview}
+		<button
+			class="add-calc"
+			title="Un champ dont la valeur est calculée pour chaque ligne de la source : =ANNEE([Date]), =GAUCHE([Code];2)… Il regroupe les lignes en Lignes ou en Colonnes, filtre ou se synthétise comme une colonne."
+			onclick={() => (calcEdit = { old: '', name: '', formula: '' })}><Icon name="function" size={14} />Champ calculé…</button
+		>
+		{#if calcFailed}<p class="calc-error" role="alert">{calcFailed}</p>{/if}
+	{/if}
 
 	<p class="label">Faites glisser les champs dans les zones voulues :</p>
 	<div class="zones">
@@ -943,6 +1010,30 @@
 	.field.off {
 		color: #9aa0a6;
 		cursor: default;
+	}
+	.add-calc {
+		align-self: flex-start;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		margin: 4px 0 0;
+		padding: 2px 6px;
+		font: inherit;
+		color: #217346;
+		background: none;
+		border: 1px solid transparent;
+		border-radius: 3px;
+		cursor: pointer;
+		--icon-accent: #217346;
+	}
+	.calc-error {
+		margin: 2px 0 0;
+		color: #c42b1c;
+		font-size: 12px;
+	}
+	.add-calc:hover {
+		background: #f1f7f3;
+		border-color: #cfe3d6;
 	}
 	.field.pseudo {
 		border-top: 1px solid #eef0f2;

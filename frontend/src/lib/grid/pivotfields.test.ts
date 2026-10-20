@@ -55,6 +55,9 @@ describe('champs par défaut', () => {
 	});
 	it('icône du type de champ', () => {
 		expect(fields.map((f) => fieldIcon(f.type))).toEqual(['type-text', 'type-text', 'type-date', 'type-number', 'type-number', 'function']);
+		// Champ calculé du TCD : se place en Lignes.
+		expect(fieldIcon('calc')).toBe('function');
+		expect(defaultZone({ name: 'An', type: 'calc' })).toBe('rows');
 	});
 });
 

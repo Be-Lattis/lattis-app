@@ -25,6 +25,7 @@
 	import type { MergePlan, SheetGroup } from '#bindings/internal/canvas/models.js';
 	import { visibleSheet } from '#lib/shell/sheets.js';
 	import { choiceStatus, choiceStep, type ChoiceActions } from '#lib/shell/choice.js';
+	import { previewOf } from '#lib/ui/rowformula.js';
 	import { tabChoiceNotice } from '#lib/grid/tabchoice.js';
 	import { headerOfferText } from '#lib/grid/titlehead.js';
 	import { popBack, pushBack, type RefSpot } from '#lib/grid/reflink.js';
@@ -1634,6 +1635,12 @@
 			await selectSheet(id);
 		},
 		setPivot: (id, cfg) => DocumentService.SetPivot(id, cfg).then(reload),
+		// Champ calculé : une erreur (formule refusée) reste dans la boîte.
+		setPivotCalc: (id, old, name, formula) =>
+			DocumentService.SetPivotCalcField(id, old, name, formula).then(reload, (e) => {
+				throw new Error(err(e));
+			}),
+		previewPivotFormula: async (table, formula) => previewOf(await DocumentService.PreviewPivotFormula(table, formula)),
 		placePivot: (row, col, cfg) => DocumentService.PlacePivot(sheetId, row, col, cfg).then(reload),
 		createPivotAt: (row, col, cfg) => DocumentService.CreatePivotAt(sheetId, row, col, cfg).then(reload),
 		pivotFieldValues: async (table, field) => (await DocumentService.FieldValues(table, field)) ?? [],
@@ -1760,7 +1767,7 @@
 						access: t.access || undefined,
 						filtered: t.filtered || undefined,
 						follows: t.follows || undefined,
-						choiceCol: t.follows ? (t.choiceCol ?? 0) : undefined,
+						choiceCol: t.follows && !t.byFormula ? (t.choiceCol ?? 0) : undefined,
 						columns: (t.columns ?? []).map((c) => ({
 							name: c.name,
 							type: (c.formula ? 'formula' : c.type) as ColumnType,
@@ -1844,6 +1851,20 @@
 				if (id !== sheetId) await selectSheet(id);
 				notice = `Onglet à choix par « ${column} » : la flèche ▾ de l’onglet choisit la valeur affichée (Alt+↓)`;
 			}),
+		preview: async (id, formula) => previewOf(await DocumentService.PreviewChoiceFormula(id, formula)),
+		// Une erreur (formule refusée) reste dans la boîte : pas de sheetAction.
+		byFormula: async (id, name, formula) => {
+			await DocumentService.ChooseSheetByFormula(id, name, formula, '').catch((e) => {
+				throw new Error(err(e));
+			});
+			if (id !== sheetId) await selectSheet(id);
+			else await reload();
+			notice = `Onglet à choix par « ${name} » (${formula}) : la flèche ▾ de l’onglet choisit la valeur affichée (Alt+↓)`;
+		},
+		formulaHelp: () => ({
+			functions: help?.functions ?? [],
+			columns: [...new Set((help?.tables ?? []).filter((t) => t.kind !== 'pivot').flatMap((t) => t.columns ?? []))]
+		}),
 		clear: (id) => sheetAction(() => DocumentService.ClearSheetChoice(id))
 	};
 	/** Ctrl+Alt+Pg.Suiv / Pg.Préc : valeur suivante ou précédente de l'onglet à choix affiché. */
