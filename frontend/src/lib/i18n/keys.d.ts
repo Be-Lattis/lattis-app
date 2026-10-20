@@ -4035,6 +4035,7 @@ export interface MessageParams {
 	'shell.settings.sections.ai': Record<never, never>;
 	'shell.settings.sections.features': Record<never, never>;
 	'shell.settings.sections.limits': Record<never, never>;
+	'shell.settings.sections.updates': Record<never, never>;
 	'shell.settings.sections.view': Record<never, never>;
 	'shell.settings.sharedWorkbooks.help': Record<never, never>;
 	'shell.settings.sharedWorkbooks.label': Record<never, never>;
@@ -4047,6 +4048,8 @@ export interface MessageParams {
 	'shell.settings.undoDepth.help': Record<never, never>;
 	'shell.settings.undoDepth.label': Record<never, never>;
 	'shell.settings.undoDepth.unit': Record<never, never>;
+	'shell.settings.updatesCheck.help': Record<never, never>;
+	'shell.settings.updatesCheck.label': Record<never, never>;
 	'shell.share.addTableConfirm': { table: number | string; workbook: number | string };
 	'shell.share.addingTable': { table: number | string };
 	'shell.share.connected': { server: number | string };
@@ -4358,6 +4361,19 @@ export interface MessageParams {
 	'shell.unsent.theServer': Record<never, never>;
 	'shell.unsent.title': Record<never, never>;
 	'shell.untitled': Record<never, never>;
+	'shell.update.available': Record<never, never>;
+	'shell.update.availableElevatedTooltip': { version: number | string };
+	'shell.update.availableTooltip': { version: number | string };
+	'shell.update.downloading': Record<never, never>;
+	'shell.update.downloadingTooltip': { version: number | string };
+	'shell.update.failed': Record<never, never>;
+	'shell.update.manual': Record<never, never>;
+	'shell.update.manualTooltip': { version: number | string };
+	'shell.update.ready': Record<never, never>;
+	'shell.update.readyElevated': Record<never, never>;
+	'shell.update.readyTooltip': { version: number | string };
+	'shell.update.updated': Record<never, never>;
+	'shell.update.updatedTooltip': { version: number | string };
 	'shell.web.expired': Record<never, never>;
 	'shell.web.lost': Record<never, never>;
 	'shell.web.reconnect': Record<never, never>;

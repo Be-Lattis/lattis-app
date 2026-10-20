@@ -9,7 +9,8 @@
 			"features": "功能",
 			"ai": "AI 助手",
 			"view": "视图",
-			"limits": "限制"
+			"limits": "限制",
+			"updates": "更新"
 		},
 		"htmlTabs": {
 			"label": "网页",
@@ -62,6 +63,10 @@
 		"sqlWriteSeconds": {
 			"label": "SQL 写入最长时间",
 			"help": "SQL 标签页中的写入在运行期间会阻止数据输入；超过此时间，写入将被取消，不做任何更改（默认 120 秒）。"
+		},
+		"updatesCheck": {
+			"label": "检查新版本",
+			"help": "Lattis 在启动时以及之后每天最多两次向 GitHub 查询是否有更新的版本，除自身版本和操作系统外不发送任何信息。新版本会在状态栏中提示；未经您点击不会下载任何内容。您的组织可以关闭此设置。"
 		},
 		"numberRange": "{label}：{min} 到 {max} 之间的整数",
 		"locked": "🔒 由你所在组织的策略设置。",
@@ -1081,5 +1086,20 @@
 		"copyToSheet": "复制",
 		"linkToSheetTooltip": "在新工作表上创建一个链接到查询的表格：使用外部源颜色（默认浅蓝色），可像外部源一样通过右键单击刷新",
 		"linkToSheet": "引用"
+	},
+	"update": {
+		"available": "有新版本可用，点击此处自动更新",
+		"availableTooltip": "Lattis {version}：下载并校验，然后在下次重启时安装",
+		"availableElevatedTooltip": "Lattis {version}：下载并校验；为此计算机的所有用户安装需要管理员权限",
+		"manual": "有新版本可用，点击此处下载",
+		"manualTooltip": "Lattis {version}：打开该版本的页面",
+		"downloading": "正在下载更新…",
+		"downloadingTooltip": "Lattis {version}：下载并校验",
+		"ready": "重新启动应用程序以应用更新",
+		"readyElevated": "重新启动应用程序以应用更新（Windows 将请求管理员权限）",
+		"readyTooltip": "Lattis {version} 已就绪：点击以关闭 Lattis、安装更新并重新打开",
+		"failed": "无法准备更新，点击此处重试",
+		"updated": "更新完成，请查看版本说明",
+		"updatedTooltip": "Lattis {version}：在 GitHub 上打开版本说明"
 	}
 }

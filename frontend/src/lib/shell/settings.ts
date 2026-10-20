@@ -4,6 +4,7 @@
 // Ajouter un réglage : une entrée ici, et sa clé dans UserEditable.
 import { themeCatalog, themeLabel } from '#lib/grid/theme.js';
 import { LANG_NAMES, LANGS, systemLang, t } from '#lib/i18n/index.js';
+import { isWeb } from '#lib/web/platform.js';
 
 /** État d'un réglage rendu par DocumentService.Settings. */
 export interface SettingState {
@@ -43,6 +44,8 @@ export interface SettingSection {
 	settings: SettingDef[];
 	/** Section d'une fonctionnalité à activer (ai.enabled…) : masquée tant qu'elle ne l'est pas. */
 	requires?: string;
+	/** Section de l'application de bureau seulement (mises à jour) : masquée en édition web. */
+	desktopOnly?: boolean;
 }
 
 // Textes lus dans la langue courante à chaque affichage (getters) : la liste
@@ -238,6 +241,25 @@ export const settingSections: SettingSection[] = [
 				}
 			}
 		]
+	},
+	{
+		id: 'updates',
+		get title() {
+			return t('shell.settings.sections.updates');
+		},
+		desktopOnly: true,
+		settings: [
+			{
+				path: 'updates.check',
+				kind: 'bool',
+				get label() {
+					return t('shell.settings.updatesCheck.label');
+				},
+				get help() {
+					return t('shell.settings.updatesCheck.help');
+				}
+			}
+		]
 	}
 ];
 
@@ -254,12 +276,12 @@ export function parseNumberSetting(d: SettingDef, raw: string): number | string 
 /**
  * Sections et réglages à montrer (choix de Louis) : ceux d'une fonctionnalité
  * à activer restent cachés tant qu'elle n'est pas cochée, puisqu'ils ne
- * servent à rien.
+ * servent à rien. En édition web, pas de section propre au bureau.
  */
-export function visibleSections(list: readonly SettingState[]): SettingSection[] {
+export function visibleSections(list: readonly SettingState[], web = isWeb): SettingSection[] {
 	const on = (path?: string) => !path || boolSetting(list, path);
 	return settingSections
-		.filter((s) => on(s.requires))
+		.filter((s) => on(s.requires) && !(web && s.desktopOnly))
 		.map((s) => ({ ...s, settings: s.settings.filter((d) => on(d.requires)).map((d) => (d.choicesOf ? { ...d, choices: d.choicesOf(list) } : d)) }));
 }
 

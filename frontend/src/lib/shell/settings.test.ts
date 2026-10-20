@@ -44,6 +44,16 @@ describe('thème par défaut (décision 0017)', () => {
 	});
 });
 
+describe('mises à jour', () => {
+	it('section du bureau seulement', () => {
+		const updates = settingSections.find((s) => s.id === 'updates');
+		expect(updates?.settings.map((s) => s.path)).toEqual(['updates.check']);
+		expect(updates?.settings[0].label).toBe('Rechercher les nouvelles versions');
+		expect(visibleSections([], false).map((s) => s.id)).toContain('updates');
+		expect(visibleSections([], true).map((s) => s.id)).not.toContain('updates');
+	});
+});
+
 describe('limites (audit 6, M14)', () => {
 	const limits = settingSections.find((s) => s.id === 'limits');
 	it('expose les quatre limites, toujours visibles', () => {

@@ -9,7 +9,8 @@
 			"features": "Features",
 			"ai": "AI assistant",
 			"view": "View",
-			"limits": "Limits"
+			"limits": "Limits",
+			"updates": "Updates"
 		},
 		"htmlTabs": {
 			"label": "Web pages",
@@ -62,6 +63,10 @@
 		"sqlWriteSeconds": {
 			"label": "Maximum SQL write duration",
 			"help": "A write from the SQL tab blocks data entry while it runs; beyond this, it is canceled without changing anything (120 s by default)."
+		},
+		"updatesCheck": {
+			"label": "Check for new versions",
+			"help": "At startup and then at most twice a day, Lattis asks GitHub whether a newer version exists, sending nothing but its version and operating system. A new version is offered in the status bar; nothing is downloaded until you click. Your organization can turn this setting off."
 		},
 		"numberRange": "{label}: a whole number from {min} to {max}",
 		"locked": "🔒 Set by your organization's policy.",
@@ -1081,5 +1086,20 @@
 		"copyToSheet": "Copy",
 		"linkToSheetTooltip": "Creates a table linked to the query, on a new sheet: external source color (light blue by default), refreshable with right-click like an external source",
 		"linkToSheet": "Reference"
+	},
+	"update": {
+		"available": "A new version is available, click here to update automatically",
+		"availableTooltip": "Lattis {version}: download and verification, then installation at the next restart",
+		"availableElevatedTooltip": "Lattis {version}: download and verification; installing it for all users of this computer will require administrator rights",
+		"manual": "A new version is available, click here to download it",
+		"manualTooltip": "Lattis {version}: opens the release page",
+		"downloading": "Downloading the update…",
+		"downloadingTooltip": "Lattis {version}: download and verification",
+		"ready": "Restart the application to apply the update",
+		"readyElevated": "Restart the application to apply the update (Windows will ask for administrator rights)",
+		"readyTooltip": "Lattis {version} is ready: click to close Lattis, install the update and reopen it",
+		"failed": "The update could not be prepared, click here to try again",
+		"updated": "Update complete, see the release notes",
+		"updatedTooltip": "Lattis {version}: opens the release notes on GitHub"
 	}
 }

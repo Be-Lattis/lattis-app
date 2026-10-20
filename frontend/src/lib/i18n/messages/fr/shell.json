@@ -9,7 +9,8 @@
 			"features": "Fonctionnalités",
 			"ai": "Assistant IA",
 			"view": "Affichage",
-			"limits": "Limites"
+			"limits": "Limites",
+			"updates": "Mises à jour"
 		},
 		"htmlTabs": {
 			"label": "Pages web",
@@ -62,6 +63,10 @@
 		"sqlWriteSeconds": {
 			"label": "Durée maximale d'une écriture SQL",
 			"help": "Une écriture de l'onglet SQL bloque les saisies tant qu'elle dure ; au-delà, elle est annulée sans rien modifier (120 s par défaut)."
+		},
+		"updatesCheck": {
+			"label": "Rechercher les nouvelles versions",
+			"help": "Au démarrage puis deux fois par jour au plus, Lattis demande à GitHub s'il existe une version plus récente, sans rien envoyer d'autre que sa version et son système. Une nouvelle version est proposée dans la barre d'état ; rien n'est téléchargé sans votre clic. Votre organisation peut couper ce réglage."
 		},
 		"numberRange": "{label} : un nombre entier de {min} à {max}",
 		"locked": "🔒 Imposé par la stratégie de votre organisation.",
@@ -1081,5 +1086,20 @@
 		"copyToSheet": "Copier",
 		"linkToSheetTooltip": "Crée un tableau lié à la requête, sur une nouvelle feuille : couleur des sources externes (bleu clair par défaut), actualisable au clic droit comme une source externe",
 		"linkToSheet": "Référencer"
+	},
+	"update": {
+		"available": "Une nouvelle version est disponible, cliquez ici pour mettre à jour automatiquement",
+		"availableTooltip": "Lattis {version} : téléchargement et vérification, puis installation au prochain redémarrage",
+		"availableElevatedTooltip": "Lattis {version} : téléchargement et vérification ; l'installation, pour tous les utilisateurs de ce poste, demandera les droits d'administrateur",
+		"manual": "Une nouvelle version est disponible, cliquez ici pour la télécharger",
+		"manualTooltip": "Lattis {version} : ouvre la page de la version",
+		"downloading": "Téléchargement de la mise à jour…",
+		"downloadingTooltip": "Lattis {version} : téléchargement et vérification",
+		"ready": "Redémarrez l'application pour appliquer la mise à jour",
+		"readyElevated": "Redémarrez l'application pour appliquer la mise à jour (Windows demandera les droits d'administrateur)",
+		"readyTooltip": "Lattis {version} est prête : cliquez pour fermer Lattis, installer la mise à jour et le rouvrir",
+		"failed": "La mise à jour n'a pas pu être préparée, cliquez ici pour réessayer",
+		"updated": "Mise à jour effectuée, consultez les notes de version",
+		"updatedTooltip": "Lattis {version} : ouvre les notes de version sur GitHub"
 	}
 }

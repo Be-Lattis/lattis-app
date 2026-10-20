@@ -93,6 +93,7 @@
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 	import BusyBar from '#lib/shell/BusyBar.svelte';
 	import SyncStatusBar from '#lib/shell/SyncStatus.svelte';
+	import UpdateStatus from '#lib/shell/UpdateStatus.svelte';
 	import { syncOf, type SyncStatus } from '#lib/shell/sync.js';
 	import { syncCall } from '#lib/shell/busy.js';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -3182,6 +3183,8 @@
 			<button class="offer-act" onclick={() => (mergeOffer = null)}>{t('shell.status.later')}</button>
 			<button class="offer-act" onclick={() => dismissGroup(g)}>{t('shell.tabs.dismiss')}</button>
 		{/if}
+		<!-- Mise à jour de l'application (bureau seulement). -->
+		{#if !isWeb}<UpdateStatus />{/if}
 		<span class="spacer"></span>
 		{#if mode === 'doc'}<CoEditPresence state={coedit} onconflicts={() => (conflictsOpen = true)} />{/if}
 		{#if mode === 'doc' && share?.present?.length}
