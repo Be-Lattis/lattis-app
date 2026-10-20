@@ -77,8 +77,16 @@ func (w pgWriter) write(ctx context.Context, q string, args []any, read func(pgx
 	if err == nil {
 		return nil
 	}
-	if _, rejected := Rejected(err); rejected {
+	if code, rejected := Rejected(err); rejected {
 		if _, rerr := w.tx.Exec(ctx, `ROLLBACK TO SAVEPOINT `+savepoint); rerr != nil {
+			// Colonne, table ou schéma inconnus : pgx prépare tout le lot
+			// avant de l'exécuter, l'erreur arrive avant le SAVEPOINT (le
+			// retour échoue alors en 3B001). L'erreur d'origine est rendue
+			// avec son code : l'appelant y reconnaît une structure changée
+			// et refait l'étape dans une nouvelle transaction.
+			if code == "42703" || code == "42P01" || code == "3F000" {
+				return err
+			}
 			// La transaction n'est plus utilisable : une coupure, pas un refus.
 			return fmt.Errorf("retour au point de sauvegarde après « %v » : %s", err, rerr.Error())
 		}

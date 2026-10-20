@@ -95,7 +95,7 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 	if err != nil {
 		return rep, err
 	}
-	retried := false
+	stale := 0 // essais de l'étape en cours après une correspondance périmée
 	for ctx.Err() == nil {
 		entries, err := e.nextBatch(ctx)
 		if err != nil {
@@ -113,20 +113,32 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 			if tables, err = remoteTables(ctx, e.db.Read()); err != nil {
 				return rep, err
 			}
-			retried = false
+			stale = 0
 			continue
 		}
 		o, err := e.sendBatch(ctx, srv, info, tables, entries)
-		if errors.Is(err, errStale) && !retried {
-			// Structure changée pendant l'envoi (colonne ou tableau renommé
-			// par ce poste) : correspondance relue, l'étape repart une fois.
-			retried = true
+		if errors.Is(err, errStale) && stale < 2 {
+			// Structure changée pendant l'envoi. Premier essai : la
+			// correspondance locale est relue (colonne ou tableau renommé
+			// par ce poste). Second : la structure du serveur est reçue
+			// d'abord (renommée ou supprimée par un collègue) ; une valeur
+			// d'une colonne ou d'un tableau disparus est alors écartée
+			// comme une colonne non publiée. Sans cela, l'étape échouerait
+			// à chaque tour avant la réception, qui seule l'apprendrait.
+			stale++
+			if stale == 2 {
+				r, err := e.receiveStructure(ctx, nil, nil)
+				rep.add(r)
+				if err != nil {
+					return rep, err
+				}
+			}
 			if tables, err = remoteTables(ctx, e.db.Read()); err != nil {
 				return rep, err
 			}
 			continue
 		}
-		retried = false
+		stale = 0
 		if err != nil {
 			return rep, err
 		}
