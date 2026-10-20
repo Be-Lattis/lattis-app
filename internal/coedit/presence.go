@@ -227,16 +227,38 @@ func (r *roster) live(now time.Time) []Presence {
 	return out
 }
 
-// stale rend les sessions observées dont le battement s'est arrêté.
+// AwayKeep : durée pendant laquelle une session qui ne bat plus (poste
+// coupé du dossier partagé : Wi-Fi, veille) est encore attendue. Ses
+// présence et segments ne sont pas retirés, et les segments qu'elle n'a pas
+// appliqués ne sont pas compactés : revenue, elle reçoit ce que les autres
+// ont fait pendant sa coupure (sinon elle le manquait pour toujours, sans
+// message). Un processus disparu sur ce poste n'est pas attendu.
+var AwayKeep = 24 * time.Hour
+
+// away rend les présences des sessions qui ne battent plus depuis moins de
+// AwayKeep (hors soi) : encore attendues.
+func (r *roster) away(now time.Time) []Presence {
+	var out []Presence
+	for _, s := range r.m {
+		if d := now.Sub(s.at); d >= r.stale && d < AwayKeep && !s.at.IsZero() {
+			out = append(out, s.p)
+		}
+	}
+	return out
+}
+
+// staleSessions rend les sessions observées qui ne battent plus et ne sont
+// plus attendues (AwayKeep dépassé, ou processus disparu sur ce poste).
 func (r *roster) staleSessions(now time.Time) []string {
 	var out []string
 	for sid, s := range r.m {
-		if now.Sub(s.at) >= r.stale {
+		if d := now.Sub(s.at); d >= r.stale && (d >= AwayKeep || s.at.IsZero()) {
 			out = append(out, sid)
 		}
 	}
 	return out
 }
+
 
 // --- Rejoindre -------------------------------------------------------------------
 

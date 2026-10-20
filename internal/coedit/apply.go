@@ -494,13 +494,15 @@ func (e *Engine) fileJournal() map[string]int64 {
 }
 
 // compact supprime les segments que le fichier enregistré couvre et que
-// toutes les sessions vivantes ont appliqués, quand leur session est
+// toutes les sessions vivantes ont appliqués, ainsi que les sessions
+// coupées encore attendues (roster.away, AwayKeep), quand leur session est
 // partie ou en a ouvert un autre ; puis les présences mortes sans journal.
 func (e *Engine) compact(live []Presence, entries []os.DirEntry) {
 	saved := e.fileJournal()
 	if saved == nil {
 		return
 	}
+	waiting := append(slices.Clone(live), e.roster.away(time.Now())...)
 	current := map[string]string{} // session vivante → segment en cours
 	for _, p := range live {
 		current[p.Session] = p.Journal
@@ -529,11 +531,12 @@ func (e *Engine) compact(live []Presence, entries []os.DirEntry) {
 			continue
 		}
 		ok := saved[j] >= last && e.appliedAll()[j] >= last
-		for _, p := range live {
+		for _, p := range waiting {
 			if p.Session != sid && p.Applied[j] < last {
 				ok = false
 			}
 		}
+
 		if !ok {
 			left[sid] = true
 			continue

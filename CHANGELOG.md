@@ -37,6 +37,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Classeur partagé : une ligne ajoutée juste avant une coupure, puis supprimée par un collègue, ne revient plus au retour de la connexion (Serveur Lattis à jour).
 - Fichier de l'auteur d'un classeur publié en direct : il affiche « en ligne sur … » comme un classeur ouvert depuis le serveur, et Ctrl+S dit que les modifications partent aussi au serveur. Rouvert avec des modifications faites hors ligne pas encore envoyées, il s'ouvre tel quel pour qu'elles partent, au lieu de la version du serveur.
 - Édition web : quand le lien avec le serveur tombe (réseau du téléphone, serveur redémarré), un bandeau le dit et ce que vous faites attend la reconnexion, au lieu d'échouer sans explication ; une session expirée propose de se reconnecter, et « Connexion au serveur rétablie » s'affiche au retour.
+- Travail à plusieurs sur un dossier partagé : un poste coupé du dossier plus de 30 secondes (Wi-Fi, veille) reçoit à son retour ce que les autres ont saisi et enregistré pendant sa coupure ; ces modifications étaient perdues pour lui, sans message. Un poste coupé est attendu 24 heures.
 
 ## 0.1.0-beta.3.2 (20/10/2026)
 

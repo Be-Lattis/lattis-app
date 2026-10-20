@@ -371,6 +371,11 @@ func TestUnknownSaveAsks(t *testing.T) {
 }
 
 func TestCrashedStation(t *testing.T) {
+	// Poste planté qu'on n'attend plus (AwayKeep écoulé ; par défaut une
+	// session coupée est attendue 24 h, voir TestCompactedWhileAway).
+	old := coedit.AwayKeep
+	coedit.AwayKeep = 0
+	t.Cleanup(func() { coedit.AwayKeep = old })
 	path := workbook(t)
 	ctx := context.Background()
 	alice := open(t, "alice", path)
