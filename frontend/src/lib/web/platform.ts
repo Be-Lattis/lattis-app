@@ -2,6 +2,8 @@
 // mode « web »). Le scripting permis se lit à l'exécution
 // (DocumentService.Platform, voir shell/settings.svelte.ts).
 
+import { t } from '#lib/i18n/index.js';
+
 export const isWeb: boolean = import.meta.env.MODE === 'web';
 
 /**
@@ -37,5 +39,5 @@ export function keyLabel(keys: string, web = isWeb, mac = isMac): string {
 
 /** Comment obtenir un PDF depuis la fenêtre d'impression, selon le système. */
 export function pdfPrinterHint(windows = isWindowsDesktop): string {
-	return windows ? 'imprimante « Microsoft Print to PDF »' : 'destination « Enregistrer au format PDF »';
+	return windows ? t('doc.web.pdf.windows') : t('doc.web.pdf.browser');
 }

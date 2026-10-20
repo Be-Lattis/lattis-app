@@ -7,6 +7,7 @@
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import { baseName, choicesOf } from '#lib/grid/buttons.js';
 	import { pickCapture, picker } from '#lib/script/pick.svelte.js';
+	import { t } from '#lib/i18n/index.js';
 
 	export interface ControlState {
 		config: ButtonConfig;
@@ -76,7 +77,7 @@
 
 	async function chooseFile() {
 		if (locked) return;
-		const p = await pickFile(st?.config.label || 'Choisir un fichier');
+		const p = await pickFile(st?.config.label || t('doc.web.pick.title'));
 		if (p) await commit(p);
 	}
 
@@ -93,9 +94,9 @@
 	onmousedowncapture={(e) => pickCapture(e, id)}
 	onclickcapture={(e) => pickCapture(e, id)}
 	{style}
-	title={st ? `${st.config.name ?? ''} · ${st.config.link ? 'cellule liée : ' + st.config.link : 'valeur gardée dans le contrôle'}${st.error ? ' · ' + st.error : ''} · clic droit : modifier` : ''} onmousedown={(e) => e.stopPropagation()}>
+	title={st ? `${st.config.name ?? ''} · ${st.config.link ? t('doc.control.linked', { cell: st.config.link }) : t('doc.control.kept')}${st.error ? ' · ' + st.error : ''} · ${t('doc.rightClickEdit')}` : ''} onmousedown={(e) => e.stopPropagation()}>
 	{#if missing}
-		<span class="gone">Contrôle supprimé</span>
+		<span class="gone">{t('doc.control.deleted')}</span>
 	{:else if !st}
 		<span class="gone">…</span>
 	{:else if kind === 'input'}
@@ -110,9 +111,9 @@
 			{#each opts as o (o)}<option value={o}>{o}</option>{/each}
 		</select>
 	{:else if kind === 'file'}
-		<button class="file" disabled={locked} onclick={chooseFile}>{st.value ? baseName(st.value) : st.config.label || 'Choisir un fichier…'}</button>
+		<button class="file" disabled={locked} onclick={chooseFile}>{st.value ? baseName(st.value) : st.config.label || t('doc.web.pick.choose')}</button>
 	{:else}
-		<button class="btn" disabled={locked} onclick={() => click(id)}>{st.config.label || 'Bouton'}</button>
+		<button class="btn" disabled={locked} onclick={() => click(id)}>{st.config.label || t('doc.button.default')}</button>
 	{/if}
 	{#if st?.error}<span class="err" title={st.error}>!</span>{/if}
 </span>

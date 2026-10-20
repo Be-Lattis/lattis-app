@@ -10,6 +10,7 @@
 
 import Quill from 'quill';
 import type { ChartConfig } from '#lib/grid/Sheet.svelte';
+import { t } from '#lib/i18n/index.js';
 
 /** Bouton d'un onglet Document. */
 export interface DocButtonConfig {
@@ -43,7 +44,7 @@ function readConfig<T>(node: HTMLElement): T {
 
 /** Libellé affiché d'un bouton. */
 export function buttonText(cfg: DocButtonConfig): string {
-	return cfg.label || cfg.function || cfg.script || 'Bouton';
+	return cfg.label || cfg.function || cfg.script || t('doc.button.default');
 }
 
 /** Dessine le bouton dans son nœud (aussi après une modification). */
@@ -54,7 +55,7 @@ export function paintButton(node: HTMLElement, cfg: DocButtonConfig) {
 	node.style.color = cfg.textColor ?? '';
 	if (cfg.width) node.style.width = cfg.width + 'px';
 	if (cfg.height) node.style.height = cfg.height + 'px';
-	node.title = (cfg.script ? `Exécute ${cfg.function ? `${cfg.script} › ${cfg.function}()` : cfg.script}` : 'Aucune action liée') + ' · clic droit : modifier';
+	node.title = (cfg.script ? t('doc.button.runs', { what: cfg.function ? `${cfg.script} › ${cfg.function}()` : cfg.script }) : t('doc.button.noAction')) + ` · ${t('doc.rightClickEdit')}`;
 }
 
 export function setupQuill(): typeof Quill {

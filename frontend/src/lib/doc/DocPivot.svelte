@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import type { PivotInfo as Info } from '#bindings/internal/canvas/models.js';
+	import { t } from '#lib/i18n/index.js';
 	// Dernier résultat de chaque tableau inséré, hors état plié.
 	const recent = new Map<string, Info>();
 	function identity(cfg: object): string {
@@ -90,7 +91,7 @@
 	onanimationend={() => (flash = false)}
 >
 	{#if info?.error}
-		<div class="err">Tableau croisé : {info.error}</div>
+		<div class="err">{t('doc.pivot.error', { error: info.error })}</div>
 	{:else if rows.length}
 		<table>
 			<thead>
@@ -98,24 +99,24 @@
 			</thead>
 			<tbody>
 				{#each rows.slice(1) as r, i (i)}
-					{@const t = tree?.[i]}
-					<tr class:total={total && i === rows.length - 2} class:group={!!t && (t.group || t.subtotal)}>
+					{@const tn = tree?.[i]}
+					<tr class:total={total && i === rows.length - 2} class:group={!!tn && (tn.group || tn.subtotal)}>
 						{#each r as c, j (j)}
-							{#if j === 0 && t}
-								<td class="label" style:padding-left="{10 + pivotLabelOffset(t)}px">
-									{#if t.group}
+							{#if j === 0 && tn}
+								<td class="label" style:padding-left="{10 + pivotLabelOffset(tn)}px">
+									{#if tn.group}
 										<button
 											class="fold"
-											style:left="{6 + t.depth * 14}px"
-											title={t.collapsed ? 'Développer' : 'Réduire'}
-											aria-label={(t.collapsed ? 'Développer ' : 'Réduire ') + c}
-											aria-expanded={!t.collapsed}
+											style:left="{6 + tn.depth * 14}px"
+											title={tn.collapsed ? t('doc.pivot.expand') : t('doc.pivot.collapse')}
+											aria-label={tn.collapsed ? t('doc.pivot.expandName', { name: c }) : t('doc.pivot.collapseName', { name: c })}
+											aria-expanded={!tn.collapsed}
 											disabled={!onconfig}
 											onmousedown={(e) => e.stopPropagation()}
 											onclick={(e) => {
 												e.stopPropagation();
-												toggle(t);
-											}}>{t.collapsed ? '+' : '−'}</button
+												toggle(tn);
+											}}>{tn.collapsed ? '+' : '−'}</button
 										>
 									{/if}{c}
 								</td>
@@ -128,7 +129,7 @@
 			</tbody>
 		</table>
 	{:else if info}
-		<div class="muted">Tableau croisé de « {config.source} » : choisissez des champs (clic droit › Modifier…).</div>
+		<div class="muted">{t('doc.pivot.empty', { source: config.source })}</div>
 	{/if}
 </div>
 

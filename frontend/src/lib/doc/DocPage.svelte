@@ -376,12 +376,12 @@
 			case 'paste':
 				navigator.clipboard
 					?.readText()
-					.then((t) => {
+					.then((tb) => {
 						const at = range()!;
-						if (pasteObject(t, at)) return;
+						if (pasteObject(tb, at)) return;
 						quill!.deleteText(at.index, at.length, 'user');
 						quill!.insertText(at.index, t, 'user');
-						quill!.setSelection(at.index + t.length, 0);
+						quill!.setSelection(at.index + tb.length, 0);
 					})
 					.catch(() => onnotice?.('Coller : utilisez Ctrl+V dans le texte'));
 				return;
@@ -420,40 +420,40 @@
 		if (!guard()) return;
 		// Un tableau croisé (déjà agrégé) se prête le mieux à un graphique.
 		// Une carte lit les lignes d'un tableau (coordonnées).
-		const t = kind === 'map' ? (tables.find((x) => x.kind !== 'pivot') ?? tables[0]) : (tables.find((x) => x.kind === 'pivot') ?? tables[0]);
+		const tb = kind === 'map' ? (tables.find((x) => x.kind !== 'pivot') ?? tables[0]) : (tables.find((x) => x.kind === 'pivot') ?? tables[0]);
 		if (!t) {
 			onnotice?.('Aucun tableau dans le classeur : créez-en un sur une feuille pour le représenter ici.');
 			return;
 		}
 		const at = range()!.index;
-		quill!.insertEmbed(at, CHART_BLOT, defaultChart(t, kind), 'user');
+		quill!.insertEmbed(at, CHART_BLOT, defaultChart(tb, kind), 'user');
 		quill!.setSelection(at + 1, 0);
 		hydrate();
 		openPanel({ kind: 'chart', index: at });
 	}
 
-	function defaultChart(t: DocTable, kind: string): ChartConfig {
-		const num = (i: number) => /^(int|integer|decimal|real|number)/i.test(t.types[i] ?? '');
+	function defaultChart(tb: DocTable, kind: string): ChartConfig {
+		const num = (i: number) => /^(int|integer|decimal|real|number)/i.test(tb.types[i] ?? '');
 		// Carte : carré grisé, coordonnées à choisir dans le volet.
-		if (kind === 'map') return { source: t.name, kind, x: '', series: [], mapDraft: true } as ChartConfig;
+		if (kind === 'map') return { source: tb.name, kind, x: '', series: [], mapDraft: true } as ChartConfig;
 		// Même règle que sur une feuille (chartFields) ; sans colonne de nombres,
 		// la deuxième colonne, à compléter dans le volet.
-		const f = chartFields(kind, t.columns.map((name, i) => ({ name, numeric: num(i) })));
-		const series = f.series.length ? f.series : t.columns.filter((c) => c !== f.x).slice(0, 1);
+		const f = chartFields(kind, tb.columns.map((name, i) => ({ name, numeric: num(i) })));
+		const series = f.series.length ? f.series : tb.columns.filter((c) => c !== f.x).slice(0, 1);
 		// Titre comme sur une feuille et dans Excel : le nom de la série quand il n'y en a qu'une.
-		return { source: t.name, kind, x: f.x, series, title: defaultChartTitle(series) } as ChartConfig;
+		return { source: tb.name, kind, x: f.x, series, title: defaultChartTitle(series) } as ChartConfig;
 	}
 
 	/** Insère un tableau croisé d'un tableau du classeur (champs à choisir dans le volet). */
 	export async function insertPivot() {
 		if (!guard()) return;
-		const t = tables.find((x) => x.kind !== 'pivot');
+		const tb = tables.find((x) => x.kind !== 'pivot');
 		if (!t) {
 			onnotice?.('Aucun tableau dans le classeur : créez-en un sur une feuille pour l’analyser ici.');
 			return;
 		}
 		const at = range()!.index;
-		quill!.insertEmbed(at, PIVOT_BLOT, await defaultPivot(t), 'user');
+		quill!.insertEmbed(at, PIVOT_BLOT, await defaultPivot(tb), 'user');
 		quill!.setSelection(at + 1, 0);
 		hydrate();
 		openPanel({ kind: 'pivot', index: at });
@@ -462,25 +462,25 @@
 	// Champs de départ : en lignes, la première colonne de texte qui regroupe
 	// (2 à 50 valeurs distinctes) ; en valeurs, la somme du premier nombre qui
 	// n'est pas un identifiant (sinon le nombre de lignes).
-	async function defaultPivot(t: DocTable): Promise<PivotConfig> {
-		const num = (i: number) => /^(int|integer|decimal|real|number)/i.test(t.types[i] ?? '');
+	async function defaultPivot(tb: DocTable): Promise<PivotConfig> {
+		const num = (i: number) => /^(int|integer|decimal|real|number)/i.test(tb.types[i] ?? '');
 		const idLike = (c: string) => /^(n°|no\b|num|id\b|code|matricule|réf)/i.test(c);
-		const texts = t.columns.filter((_, i) => !num(i));
+		const texts = tb.columns.filter((_, i) => !num(i));
 		let row = texts[0];
 		if (fieldValues) {
 			for (const c of texts) {
-				const vals = await fieldValues(t.name, c).catch(() => []);
+				const vals = await fieldValues(tb.name, c).catch(() => []);
 				if (vals.length >= 2 && vals.length <= 50) {
 					row = c;
 					break;
 				}
 			}
 		}
-		const val = t.columns.find((c, i) => num(i) && !idLike(c));
+		const val = tb.columns.find((c, i) => num(i) && !idLike(c));
 		return {
-			source: t.name,
+			source: tb.name,
 			rowFields: row ? [row] : [],
-			values: val ? [{ field: val, agg: 'sum' }] : [{ field: row ?? t.columns[0], agg: 'count' }]
+			values: val ? [{ field: val, agg: 'sum' }] : [{ field: row ?? tb.columns[0], agg: 'count' }]
 		} as PivotConfig;
 	}
 
@@ -511,9 +511,9 @@
 	}
 	function onHover(e: MouseEvent) {
 		if (sizing) return;
-		const t = e.target as HTMLElement;
-		if (t.closest('.grip')) return;
-		const el = t.closest<HTMLElement>(SIZED);
+		const tb = e.target as HTMLElement;
+		if (tb.closest('.grip')) return;
+		const el = tb.closest<HTMLElement>(SIZED);
 		// En allant vers la poignée, le pointeur peut quitter l'élément : elle reste.
 		if (!el && grip && pageEl) {
 			const p = pageEl.getBoundingClientRect();
@@ -772,26 +772,26 @@
 	}
 
 	function onClick(e: MouseEvent) {
-		const t = e.target as HTMLElement;
-		const b = t.closest<HTMLElement>('.ql-lattis-button');
+		const tb = e.target as HTMLElement;
+		const b = tb.closest<HTMLElement>('.ql-lattis-button');
 		if (b) {
 			e.preventDefault();
 			runButton(JSON.parse(b.dataset.config ?? '{}'));
 			return;
 		}
-		if (t.closest('.ql-lattis-control')) return;
-		if (t.tagName === 'IMG') {
-			picked = { kind: 'image', index: indexOf(t) };
+		if (tb.closest('.ql-lattis-control')) return;
+		if (tb.tagName === 'IMG') {
+			picked = { kind: 'image', index: indexOf(tb) };
 			markSelected();
 			return;
 		}
 		picked = null;
-		const c = t.closest<HTMLElement>('.ql-lattis-chart, .ql-lattis-pivot');
+		const c = tb.closest<HTMLElement>('.ql-lattis-chart, .ql-lattis-pivot');
 		if (c) {
 			openPanel({ kind: c.classList.contains('ql-lattis-pivot') ? 'pivot' : 'chart', index: indexOf(c) });
 			return;
 		}
-		const a = t.closest<HTMLAnchorElement>('a[href]');
+		const a = tb.closest<HTMLAnchorElement>('a[href]');
 		if (a) {
 			e.preventDefault();
 			if (e.ctrlKey || e.metaKey) openOutside(a.href);
@@ -800,12 +800,12 @@
 	}
 
 	function onContext(e: MouseEvent) {
-		const t = e.target as HTMLElement;
+		const tb = e.target as HTMLElement;
 		// Maj + clic droit dans le texte : menu du système, avec les suggestions
 		// d'orthographe (le navigateur ne les donne pas à la page).
-		if (e.shiftKey && !t.closest('.ql-lattis-button, .ql-lattis-chart, .ql-lattis-pivot, .ql-lattis-control')) return;
+		if (e.shiftKey && !tb.closest('.ql-lattis-button, .ql-lattis-chart, .ql-lattis-pivot, .ql-lattis-control')) return;
 		e.preventDefault();
-		const el = t.closest<HTMLElement>('.ql-lattis-button, .ql-lattis-chart, .ql-lattis-pivot, .ql-lattis-control');
+		const el = tb.closest<HTMLElement>('.ql-lattis-button, .ql-lattis-chart, .ql-lattis-pivot, .ql-lattis-control');
 		clip = docClip.item;
 		if (el) {
 			const kind = el.classList.contains('ql-lattis-button') ? 'button' : el.classList.contains('ql-lattis-pivot') ? 'pivot' : el.classList.contains('ql-lattis-control') ? 'control' : 'chart';
@@ -896,10 +896,10 @@
 		return () => (on = false);
 	});
 	// Colonnes des tableaux qui peuvent donner les choix d'une liste.
-	const colRefs = $derived(tables.filter((t) => t.kind !== 'pivot').flatMap((t) => t.columns.map((c) => `${t.name}[${c}]`)));
+	const colRefs = $derived(tables.filter((tb) => tb.kind !== 'pivot').flatMap((tb) => tb.columns.map((c) => `${tb.name}[${c}]`)));
 	const pivot = $derived(panel?.kind === 'pivot' ? (panelValue as unknown as PivotConfig | null) : null);
 	const pivotFields = (src: string) => {
-		const t = tables.find((x) => x.name.toLowerCase() === src.toLowerCase());
+		const tb = tables.find((x) => x.name.toLowerCase() === src.toLowerCase());
 		return (t?.columns ?? []).map((c, i) => ({ name: c, type: t!.types[i], numeric: ['integer', 'decimal', 'formula'].includes(t!.types[i]) }));
 	};
 
@@ -937,7 +937,7 @@
 		</div>
 	</div>
 	{#if panel?.kind === 'chart' && chart}
-		{@const tbl = tables.find((t) => t.name.toLowerCase() === chart.source.toLowerCase())}
+		{@const tbl = tables.find((tb) => tb.name.toLowerCase() === chart.source.toLowerCase())}
 		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }} use:panelKeys={() => openPanel(null)}>
 			<div class="srcbox">
 				<label
@@ -946,11 +946,11 @@
 						value={chart.source}
 						disabled={!!locked}
 						onchange={(e) => {
-							const t = tables.find((x) => x.name === (e.currentTarget as HTMLSelectElement).value);
-							if (t) setChart({ ...defaultChart(t, chart.kind), title: chart.title === chart.source ? t.name : chart.title });
+							const tb = tables.find((x) => x.name === (e.currentTarget as HTMLSelectElement).value);
+							if (tb) setChart({ ...defaultChart(tb, chart.kind), title: chart.title === chart.source ? tb.name : chart.title });
 						}}
 					>
-						{#each tables as t (t.name)}<option value={t.name} class:dflt={isDefaultTableName(t.name)}>{t.name}</option>{/each}
+						{#each tables as tb (tb.name)}<option value={tb.name} class:dflt={isDefaultTableName(tb.name)}>{tb.name}</option>{/each}
 						{#if !tbl}<option value={chart.source}>{chart.source} (introuvable)</option>{/if}
 					</select>
 				</label>
@@ -971,12 +971,12 @@
 						value={pivot.source}
 						disabled={!!locked}
 						onchange={(e) => {
-							const t = tables.find((x) => x.name === (e.currentTarget as HTMLSelectElement).value);
+							const tb = tables.find((x) => x.name === (e.currentTarget as HTMLSelectElement).value);
 							const at = panel?.index;
-							if (t && at !== undefined) defaultPivot(t).then((cfg) => replaceEmbed(at, PIVOT_BLOT, cfg));
+							if (tb && at !== undefined) defaultPivot(tb).then((cfg) => replaceEmbed(at, PIVOT_BLOT, cfg));
 						}}
 					>
-						{#each tables.filter((t) => t.kind !== 'pivot') as t (t.name)}<option value={t.name} class:dflt={isDefaultTableName(t.name)}>{t.name}</option>{/each}
+						{#each tables.filter((tb) => tb.kind !== 'pivot') as tb (tb.name)}<option value={tb.name} class:dflt={isDefaultTableName(tb.name)}>{tb.name}</option>{/each}
 					</select>
 				</label>
 			</div>

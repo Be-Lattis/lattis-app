@@ -19,6 +19,7 @@
 	import { htmlTabsEnabled } from '#lib/shell/settings.svelte.js';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
 	import { declinedPages, pageConsent } from './consent';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Nom de l'onglet (titre de la barre). */
@@ -84,7 +85,7 @@
 					if (ok) allowed = s;
 					else if (!editing && !declinedPages.has(s)) consent = pageConsent(name, s);
 				},
-				(e) => (error = String(e instanceof Error ? e.message : e))
+				(e) => (error = errorText(e))
 			);
 		});
 	});
@@ -101,7 +102,7 @@
 			declinedPages.delete(s);
 			allowed = s;
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		}
 	}
 
@@ -121,8 +122,8 @@
 		return navigationGuard(node, doc, () => {
 			escapes++;
 			reloads++;
-			if (escapes >= maxEscapes) error = 'La page essaie sans cesse d’ouvrir une autre adresse : elle est arrêtée.';
-			else onnotice?.(`Page « ${name} » : navigation vers une autre adresse bloquée, la page a été rechargée.`);
+			if (escapes >= maxEscapes) error = t('doc.page.escapes');
+			else onnotice?.(t('doc.page.navBlocked', { name }));
 		});
 	}
 	// Page web externe : l'adresse affichée (null : page HTML du classeur).
@@ -145,9 +146,9 @@
 			shown = src;
 			dirty = false;
 			error = '';
-			onnotice?.(`Onglet « ${name} » : page web ${pageUrl(src)} (Ctrl+Z pour annuler)`);
+			onnotice?.(t('doc.page.urlSet', { name, url: pageUrl(src) ?? '' }));
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		}
 	}
 
@@ -166,7 +167,7 @@
 		const target = frame.contentWindow;
 		call(c.name, c.args).then(
 			(value) => target?.postMessage(replyOf(c.id, { ok: true, value }), '*'),
-			(x) => target?.postMessage(replyOf(c.id, { ok: false, error: String(x instanceof Error ? x.message : x) }), '*')
+			(x) => target?.postMessage(replyOf(c.id, { ok: false, error: errorText(x) }), '*')
 		);
 	}
 
@@ -197,9 +198,9 @@
 			dirty = false;
 			shown = src;
 			error = '';
-			onnotice?.(`Page « ${name} » enregistrée (Ctrl+Z pour annuler)`);
+			onnotice?.(t('doc.page.saved', { name }));
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		}
 	}
 
@@ -276,13 +277,13 @@
 	<div class="toolbar">
 		<span class="title"><Icon name="web" size={14} />{name}</span>
 		{#if editing}
-			<button class="primary" onclick={doSave} disabled={!!locked}><Icon name="save" size={14} />Enregistrer{dirty ? ' •' : ''}</button>
-			<button onclick={preview} title="Afficher le brouillon dans l’aperçu, sans l’enregistrer (Ctrl+Entrée)"><Icon name="play" size={14} />Aperçu</button>
-			<button onclick={() => stopEdit(true)} title="Revenir à la page (le brouillon reste à enregistrer)"><Icon name="web" size={14} />Afficher</button>
-			{#if dirty}<button onclick={() => stopEdit(false)}>Abandonner les modifications</button>{/if}
-			<span class="muted">Ctrl+S : enregistrer · Ctrl+Entrée : aperçu · lattis.call("sheets.list"), lattis.query(sql), lattis.on("change", f)</span>
+			<button class="primary" onclick={doSave} disabled={!!locked}><Icon name="save" size={14} />{t('doc.page.save')}{dirty ? ' •' : ''}</button>
+			<button onclick={preview} title={t('doc.page.preview.tooltip')}><Icon name="play" size={14} />{t('doc.page.preview.label')}</button>
+			<button onclick={() => stopEdit(true)} title={t('doc.page.show.tooltip')}><Icon name="web" size={14} />{t('doc.page.show.label')}</button>
+			{#if dirty}<button onclick={() => stopEdit(false)}>{t('doc.page.discard')}</button>{/if}
+			<span class="muted">{t('doc.page.keys')} · lattis.call("sheets.list"), lattis.query(sql), lattis.on("change", f)</span>
 		{:else}
-			<button onclick={startEdit} disabled={!!locked} title={locked || 'Modifier le HTML, le CSS et le JavaScript de la page'}><Icon name="edit" size={14} />{url ? 'Page HTML' : 'Modifier'}</button>
+			<button onclick={startEdit} disabled={!!locked} title={locked || t('doc.page.edit.tooltip')}><Icon name="edit" size={14} />{url ? t('doc.page.edit.html') : t('doc.page.edit.label')}</button>
 			{#if !htmlTabs}
 				<!-- Pages web coupés (Fichier › Paramètres › Fonctionnalités) : la page déjà posée s'affiche quand même. -->
 			{:else if asking !== null}
@@ -298,13 +299,13 @@
 						if (e.key === 'Escape') asking = null;
 					}}
 				/>
-				<button class="primary" onclick={setUrl}>Afficher</button>
-				<button onclick={() => (asking = null)}>Annuler</button>
+				<button class="primary" onclick={setUrl}>{t('doc.page.show.label')}</button>
+				<button onclick={() => (asking = null)}>{t('common.cancel')}</button>
 			{:else}
 				<button
 					onclick={() => (locked ? onnotice?.(locked) : (asking = url ?? 'https://'))}
 					disabled={!!locked}
-					title={locked || 'Afficher une page web externe dans cet onglet'}><Icon name="web" size={14} />Site web…</button
+					title={locked || t('doc.page.site.tooltip')}><Icon name="web" size={14} />{t('doc.page.site.label')}</button
 				>
 			{/if}
 			<button
@@ -313,12 +314,12 @@
 					escapes = 0;
 					reloads++;
 				}}
-				title="Recharger la page"><Icon name="refresh" size={14} />Recharger</button>
+				title={t('doc.page.reload.tooltip')}><Icon name="refresh" size={14} />{t('doc.page.reload.label')}</button>
 			{#if url}
-				<button onclick={() => openOutside(url)} title="Ouvrir dans le navigateur"><Icon name="open" size={14} />{url}</button>
-				<span class="muted">Page blanche : le site refuse peut-être d’être affiché dans un cadre (ouvrez-le dans le navigateur).</span>
+				<button onclick={() => openOutside(url)} title={t('doc.page.openBrowser')}><Icon name="open" size={14} />{url}</button>
+				<span class="muted">{t('doc.page.blank')}</span>
 			{/if}
-			{#if dirty}<span class="muted">Modifications non enregistrées</span>{/if}
+			{#if dirty}<span class="muted">{t('doc.page.unsaved')}</span>{/if}
 		{/if}
 		{#if error}<span class="error">{error}</span>{/if}
 	</div>
@@ -329,23 +330,22 @@
 			{#if !runs}
 				<div class="blocked" role="status">
 					{#if checked === shown}
-						<p><strong>Cette page web n’a pas été exécutée.</strong></p>
+						<p><strong>{t('doc.page.blocked.title')}</strong></p>
 						<p class="muted">
-							Elle n’a encore jamais été autorisée sur ce poste (classeur reçu, ou page modifiée ailleurs). N’autorisez que si vous faites confiance à la
-							personne qui vous a fourni ce classeur.
-						</p>
+							{t('doc.page.blocked.help')}
+							</p>
 						{#if editing}
-							<p class="muted">Aperçu (Ctrl+Entrée) exécute le code affiché dans l’éditeur.</p>
+							<p class="muted">{t('doc.page.blocked.preview')}</p>
 						{:else}
-							<button class="decide" onclick={() => (consent = pageConsent(name, shown))}>Décider…</button>
+							<button class="decide" onclick={() => (consent = pageConsent(name, shown))}>{t('doc.page.blocked.decide')}</button>
 						{/if}
 					{/if}
 				</div>
 			{:else if url}
 				<!-- Site externe : sa propre origine, sans pont vers le classeur. -->
-				<iframe title="Page {name}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" src={url}></iframe>
+				<iframe title={t('doc.page.frame', { name })} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" src={url}></iframe>
 			{:else if escapes < maxEscapes}
-				<iframe bind:this={frame} title="Page {name}" sandbox="allow-scripts" {srcdoc} use:stayHome={srcdoc}></iframe>
+				<iframe bind:this={frame} title={t('doc.page.frame', { name })} sandbox="allow-scripts" {srcdoc} use:stayHome={srcdoc}></iframe>
 			{/if}
 		{/key}
 	</div>

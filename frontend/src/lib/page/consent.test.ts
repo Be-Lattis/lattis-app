@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PAGE_WARNING, pageConsent } from './consent';
+import { pageConsent, pageWarning } from './consent';
 import { urlSource } from './bridge';
 
 describe('accord des pages web', () => {
@@ -11,7 +11,7 @@ describe('accord des pages web', () => {
 		expect(d.code).toBe(src);
 		expect(d.message).toContain('« Tableau de bord »');
 		expect(d.message).toMatch(/lire et modifier le classeur/);
-		expect(d.warning).toBe(PAGE_WARNING);
+		expect(d.warning).toBe(pageWarning());
 		expect(d.warning).toMatch(/faites confiance à la personne qui vous a fourni ce classeur/);
 	});
 	it('site externe : son adresse', () => {

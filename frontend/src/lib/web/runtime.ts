@@ -6,6 +6,8 @@
 // internal/transport) et les évènements poussés arrivent par Events.On.
 // Fenêtre et système : sans effet. Voir docs/collaboration/version-web.md.
 
+import { t } from '#lib/i18n/index.js';
+
 // ---------------------------------------------------------------- promesses
 
 /** Promesse annulable, comme celles des liaisons Wails (cancel()). */
@@ -202,7 +204,7 @@ export class RpcClient {
 		ws.onerror = () => {};
 		ws.onclose = () => {
 			this.#ws = null;
-			for (const p of this.#pending.values()) p.reject(new RuntimeError('Connexion au moteur Lattis perdue'));
+			for (const p of this.#pending.values()) p.reject(new RuntimeError(t('doc.web.lost')));
 			this.#pending.clear();
 			if (this.#closed) return;
 			// La page le montre (bandeau) : les appels suivants attendent la
@@ -267,7 +269,7 @@ export class RpcClient {
 				if (!p) return;
 				this.#pending.delete(id);
 				this.#send({ method: '$/cancel', params: { id } });
-				p.reject(cause ?? new RuntimeError('Appel annulé'));
+				p.reject(cause ?? new RuntimeError(t('doc.web.canceled')));
 			}
 		);
 	}
@@ -338,20 +340,20 @@ export function pickFile(req: OpenFileRequest) {
 	back.setAttribute('style', 'position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font:13px "Segoe UI",system-ui,sans-serif');
 	const box = document.createElement('div');
 	box.setAttribute('role', 'dialog');
-	box.setAttribute('aria-label', req.title || 'Choisir un fichier');
+	box.setAttribute('aria-label', req.title || t('doc.web.pick.title'));
 	box.setAttribute('style', 'background:#fff;border:1px solid #d4d7db;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:16px 18px;width:380px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;gap:12px');
 	const h = document.createElement('div');
-	h.textContent = req.title || 'Choisir un fichier';
+	h.textContent = req.title || t('doc.web.pick.title');
 	h.setAttribute('style', 'font-size:15px;font-weight:600');
 	const p = document.createElement('div');
-	p.textContent = 'Le fichier choisi est envoyé au serveur Lattis.';
+	p.textContent = t('doc.web.pick.help');
 	p.setAttribute('style', 'color:#6b7280;font-size:12px');
 	const row = document.createElement('div');
 	row.setAttribute('style', 'display:flex;gap:8px;justify-content:flex-end');
 	const choose = document.createElement('button');
-	choose.textContent = 'Choisir un fichier…';
+	choose.textContent = t('doc.web.pick.choose');
 	const cancel = document.createElement('button');
-	cancel.textContent = 'Annuler';
+	cancel.textContent = t('common.cancel');
 	row.append(choose, cancel);
 	input.hidden = true; // dans la page : atteignable par les tests de bout en bout
 	box.append(h, p, row, input);

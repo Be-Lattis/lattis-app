@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import type { ChartInfo } from '#bindings/internal/canvas/models.js';
+	import { t } from '#lib/i18n/index.js';
 	// Dernières données et largeur lues, par source (voir dataKey).
 	const lastInfo = new Map<string, ChartInfo>();
 	const lastWidth = new Map<string, number>();
@@ -59,7 +60,7 @@
 
 <div class="dchart" class:selected bind:clientWidth={width} bind:clientHeight={boxH} style:height="{height}px" style:width={config.width ? config.width + 'px' : null} style:max-width="100%">
 	{#if info?.error}
-		<div class="err">Graphique « {config.title || config.source} » : {info.error}</div>
+		<div class="err">{t('doc.chart.error', { name: config.title || config.source, error: info.error })}</div>
 	{:else if info && width > 0}
 		<Chart kind={config.kind} labels={info.labels ?? []} series={(info.series ?? []) as never} {width} height={boxH || height} style={config} animate={live.animate && settled} interactive={selected} onview={(v) => onconfig?.({ ...config, mapView: v ?? undefined })} map={info} info={info as never} onpoint={onrow && ((r) => onrow(config.source, r))} />
 	{/if}
