@@ -1,1 +1,175 @@
-{}
+{
+	"consent": {
+		"warning": "N'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. Dans le doute, choisissez « Ne pas exécuter » : le reste du classeur reste utilisable.",
+		"site": "L'onglet « {name} » affiche le site externe {url}, qui n'a encore jamais été autorisé dans ce classeur sur ce poste (classeur reçu, ou onglet modifié ailleurs). Ce site s'exécute dans l'onglet, sans accès au classeur.",
+		"page": "L'onglet « {name} » contient une page web (HTML et JavaScript) qui n'a encore jamais été autorisée sur ce poste (classeur reçu, ou page modifiée ailleurs). Une page peut lire et modifier le classeur, lancer les actions de ses boutons, vous poser des questions et, avec votre accord, contacter des sites web.",
+		"title": "Exécuter une page web du classeur ?",
+		"ok": "Autoriser",
+		"cancel": "Ne pas exécuter",
+		"code": "Code de la page"
+	},
+	"web": {
+		"lost": "Connexion au moteur Lattis perdue",
+		"canceled": "Appel annulé",
+		"pick": {
+			"title": "Choisir un fichier",
+			"help": "Le fichier choisi est envoyé au serveur Lattis.",
+			"choose": "Choisir un fichier…"
+		},
+		"pdf": {
+			"windows": "imprimante « Microsoft Print to PDF »",
+			"browser": "destination « Enregistrer au format PDF »"
+		}
+	},
+	"pivot": {
+		"expand": "Développer",
+		"collapse": "Réduire",
+		"expandName": "Développer {name}",
+		"collapseName": "Réduire {name}",
+		"error": "Tableau croisé : {error}",
+		"empty": "Tableau croisé de « {source} » : choisissez des champs (clic droit › Modifier…)."
+	},
+	"chart": {
+		"error": "Graphique « {name} » : {error}"
+	},
+	"button": {
+		"default": "Bouton",
+		"runs": "Exécute {what}",
+		"noAction": "Aucune action liée",
+		"nothing": "Ce bouton n’exécute rien : clic droit pour lui lier un script.",
+		"noActionOption": "(aucune action)",
+		"run": "Exécuter",
+		"wholeScript": "tout le script",
+		"function": "la fonction {name}()",
+		"script": "Script",
+		"background": "Fond",
+		"text": "Texte",
+		"help": "Un clic sur le bouton exécute son action ; clic droit pour revenir ici.",
+		"try": "Essayer"
+	},
+	"rightClickEdit": "clic droit : modifier",
+	"control": {
+		"linked": "cellule liée : {cell}",
+		"kept": "valeur gardée dans le contrôle",
+		"deleted": "Contrôle supprimé",
+		"choice": "Choix {n}",
+		"gone": "Ce contrôle n’existe plus : supprimez-le du texte.",
+		"insertTitle": "Insérer : {kind}",
+		"editTitle": "Modifier : {kind}",
+		"type": "Type",
+		"name": "Nom (pour les scripts)",
+		"auto": "automatique",
+		"label": "Libellé",
+		"buttonText": "Texte du bouton",
+		"placeholder": "Texte indicatif (facultatif)",
+		"keptIn": "Valeur gardée dans",
+		"inControl": "le contrôle (aucune cellule liée)",
+		"sheet": "la feuille {name}",
+		"cell": "Cellule",
+		"choices": {
+			"source": "Source des choix",
+			"typed": "Saisis",
+			"column": "Colonne d’un tableau",
+			"from": "Choix tirés de (valeurs distinctes)",
+			"list": "Choix (un par ligne)"
+		},
+		"script": "Script (à chaque changement)",
+		"help": "La valeur du contrôle est celle de la cellule liée (dans ce document, ou sur une feuille pour la lire dans les formules). Les scripts le pilotent par controls.get / controls.set et controls.on(\"change\", …)."
+	},
+	"page": {
+		"escapes": "La page essaie sans cesse d’ouvrir une autre adresse : elle est arrêtée.",
+		"navBlocked": "Page « {name} » : navigation vers une autre adresse bloquée, la page a été rechargée.",
+		"urlSet": "Onglet « {name} » : page web {url} (Ctrl+Z pour annuler)",
+		"saved": "Page « {name} » enregistrée (Ctrl+Z pour annuler)",
+		"save": "Enregistrer",
+		"preview": {
+			"label": "Aperçu",
+			"tooltip": "Afficher le brouillon dans l’aperçu, sans l’enregistrer (Ctrl+Entrée)"
+		},
+		"show": {
+			"label": "Afficher",
+			"tooltip": "Revenir à la page (le brouillon reste à enregistrer)"
+		},
+		"discard": "Abandonner les modifications",
+		"keys": "Ctrl+S : enregistrer · Ctrl+Entrée : aperçu",
+		"edit": {
+			"label": "Modifier",
+			"html": "Page HTML",
+			"tooltip": "Modifier le HTML, le CSS et le JavaScript de la page"
+		},
+		"site": {
+			"label": "Site web…",
+			"tooltip": "Afficher une page web externe dans cet onglet"
+		},
+		"reload": {
+			"label": "Recharger",
+			"tooltip": "Recharger la page"
+		},
+		"openBrowser": "Ouvrir dans le navigateur",
+		"blank": "Page blanche : le site refuse peut-être d’être affiché dans un cadre (ouvrez-le dans le navigateur).",
+		"unsaved": "Modifications non enregistrées",
+		"blocked": {
+			"title": "Cette page web n’a pas été exécutée.",
+			"help": "Elle n’a encore jamais été autorisée sur ce poste (classeur reçu, ou page modifiée ailleurs). N’autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur.",
+			"preview": "Aperçu (Ctrl+Entrée) exécute le code affiché dans l’éditeur.",
+			"decide": "Décider…"
+		},
+		"frame": "Page {name}",
+		"pasteHint": "Coller : utilisez Ctrl+V dans le texte",
+		"noTableChart": "Aucun tableau dans le classeur : créez-en un sur une feuille pour le représenter ici.",
+		"noTablePivot": "Aucun tableau dans le classeur : créez-en un sur une feuille pour l’analyser ici.",
+		"placeholder": "Écrivez ici… (Insertion : graphiques et boutons)",
+		"aria": "Document {name}",
+		"grip": "Tirer pour redimensionner"
+	},
+	"clip": {
+		"chartPasted": "Graphique collé",
+		"pivotPasted": "Tableau croisé collé",
+		"chartCopied": "Graphique copié : Ctrl+V dans le texte ou sur une feuille",
+		"pivotCopied": "Tableau croisé copié : Ctrl+V dans le texte ou sur une feuille",
+		"cutAnywhere": "Élément coupé : Ctrl+V dans le texte ou sur une feuille",
+		"copiedAnywhere": "Élément copié : Ctrl+V dans le texte ou sur une feuille",
+		"cutText": "Élément coupé : clic droit › Coller dans le texte",
+		"copiedText": "Élément copié : clic droit › Coller dans le texte"
+	},
+	"panel": {
+		"source": "Tableau source",
+		"missing": "{name} (introuvable)",
+		"height": "Hauteur (px)",
+		"deleteChart": "Supprimer le graphique",
+		"help": "Aide sur les boutons et contrôles",
+		"close": "Fermer le volet",
+		"insert": "Insérer",
+		"save": "Enregistrer"
+	},
+	"link": {
+		"title": "Lien",
+		"address": "Adresse",
+		"selection": "Le texte sélectionné devient un lien.",
+		"inserted": "L’adresse est insérée comme lien.",
+		"ctrlClick": "Ctrl+clic sur un lien l’ouvre dans le navigateur.",
+		"apply": "Appliquer",
+		"remove": "Retirer le lien"
+	},
+	"menu": {
+		"pasteItem": "Coller l’élément ({what})",
+		"what": {
+			"chart": "graphique",
+			"pivot": "tableau croisé",
+			"control": "contrôle",
+			"button": "bouton"
+		},
+		"spelling": "Maj + clic droit : suggestions d’orthographe",
+		"pivot": "Tableau croisé dynamique",
+		"field": "Champ (texte, case, liste, fichier)…",
+		"image": "Image…",
+		"link": "Lien…",
+		"title": {
+			"pivot": "Tableau croisé",
+			"control": "Contrôle"
+		},
+		"pasteAfter": "Coller l’élément après",
+		"runAction": "Exécuter l’action",
+		"edit": "Modifier…"
+	}
+}

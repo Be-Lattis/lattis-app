@@ -30,6 +30,7 @@
 	import DocChart from './DocChart.svelte';
 	import DocPivot from './DocPivot.svelte';
 	import { blockFormats, docFormat, DOC_FONT, DOC_PT, parseDelta, quillFormats, type DocBlock, type DocFormat } from './format';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	export interface DocTable {
 		name: string;
@@ -112,7 +113,7 @@
 		try {
 			await save(src);
 		} catch (e) {
-			onnotice?.(String(e instanceof Error ? e.message : e));
+			onnotice?.(errorText(e));
 		}
 	}
 
@@ -380,10 +381,10 @@
 						const at = range()!;
 						if (pasteObject(tb, at)) return;
 						quill!.deleteText(at.index, at.length, 'user');
-						quill!.insertText(at.index, t, 'user');
+						quill!.insertText(at.index, tb, 'user');
 						quill!.setSelection(at.index + tb.length, 0);
 					})
-					.catch(() => onnotice?.('Coller : utilisez Ctrl+V dans le texte'));
+					.catch(() => onnotice?.(t('doc.page.pasteHint')));
 				return;
 			case 'link': {
 				const f = quill.getFormat(r.index, r.length);
@@ -421,8 +422,8 @@
 		// Un tableau croisé (déjà agrégé) se prête le mieux à un graphique.
 		// Une carte lit les lignes d'un tableau (coordonnées).
 		const tb = kind === 'map' ? (tables.find((x) => x.kind !== 'pivot') ?? tables[0]) : (tables.find((x) => x.kind === 'pivot') ?? tables[0]);
-		if (!t) {
-			onnotice?.('Aucun tableau dans le classeur : créez-en un sur une feuille pour le représenter ici.');
+		if (!tb) {
+			onnotice?.(t('doc.page.noTableChart'));
 			return;
 		}
 		const at = range()!.index;
@@ -448,8 +449,8 @@
 	export async function insertPivot() {
 		if (!guard()) return;
 		const tb = tables.find((x) => x.kind !== 'pivot');
-		if (!t) {
-			onnotice?.('Aucun tableau dans le classeur : créez-en un sur une feuille pour l’analyser ici.');
+		if (!tb) {
+			onnotice?.(t('doc.page.noTablePivot'));
 			return;
 		}
 		const at = range()!.index;
@@ -591,7 +592,7 @@
 		quill.insertEmbed(at.index, o.kind === 'chart' ? CHART_BLOT : PIVOT_BLOT, config, 'user');
 		quill.setSelection(at.index + 1, 0);
 		hydrate();
-		onnotice?.(o.kind === 'chart' ? 'Graphique collé' : 'Tableau croisé collé');
+		onnotice?.(o.kind === 'chart' ? t('doc.clip.chartPasted') : t('doc.clip.pivotPasted'));
 		return true;
 	}
 
@@ -614,7 +615,7 @@
 		e.clipboardData?.setData('text/plain', encodeObj(o));
 		docClip.item = clip = { type: BLOT[o.kind], value: o.config };
 		if (e.type === 'cut' && !locked) deleteEmbed(panel.index);
-		onnotice?.(o.kind === 'chart' ? 'Graphique copié : Ctrl+V dans le texte ou sur une feuille' : 'Tableau croisé copié : Ctrl+V dans le texte ou sur une feuille');
+		onnotice?.(o.kind === 'chart' ? t('doc.clip.chartCopied') : t('doc.clip.pivotCopied'));
 	}
 
 	async function copyItem(kind: 'chart' | 'pivot' | 'button' | 'control', index: number, cut: boolean) {
@@ -626,7 +627,7 @@
 		if (kind === 'control' && controls) value = { cfg: (await controls.load(Number(value.id))).config, width: value.width, height: value.height };
 		docClip.item = clip = { type: BLOT[kind], value: structuredClone($state.snapshot(value)) };
 		if (cut) deleteEmbed(index);
-		onnotice?.(o ? (cut ? 'Élément coupé : Ctrl+V dans le texte ou sur une feuille' : 'Élément copié : Ctrl+V dans le texte ou sur une feuille') : cut ? 'Élément coupé : clic droit › Coller dans le texte' : 'Élément copié : clic droit › Coller dans le texte');
+		onnotice?.(o ? (cut ? t('doc.clip.cutAnywhere') : t('doc.clip.copiedAnywhere')) : cut ? t('doc.clip.cutText') : t('doc.clip.copiedText'));
 	}
 
 	async function pasteItem(at: number) {
@@ -639,7 +640,7 @@
 			try {
 				value = { id: await controls.create(cfg), width: value.width, height: value.height };
 			} catch (e) {
-				onnotice?.(String(e instanceof Error ? e.message : e));
+				onnotice?.(errorText(e));
 				return;
 			}
 		}
@@ -668,7 +669,7 @@
 		if (!guard() || !controls) return;
 		const api = controls;
 		const at = range()!.index;
-		const cfg: ButtonConfig = { kind, label: '', script: '', options: kind === 'select' ? ['Choix 1', 'Choix 2'] : undefined };
+		const cfg: ButtonConfig = { kind, label: '', script: '', options: kind === 'select' ? [t('doc.control.choice', { n: '1' }), t('doc.control.choice', { n: '2' })] : undefined };
 		try {
 			const id = await api.create(cfg);
 			quill!.insertEmbed(at, CONTROL_BLOT, { id }, 'user');
@@ -676,7 +677,7 @@
 			hydrate();
 			openPanel({ kind: 'control', index: at, id, cfg: (await api.load(id)).config });
 		} catch (e) {
-			onnotice?.(String(e instanceof Error ? e.message : e));
+			onnotice?.(errorText(e));
 		}
 	}
 
@@ -687,7 +688,7 @@
 			const st = await controls.load(Number(v.id));
 			openPanel({ kind: 'control', index, id: Number(v.id), cfg: structuredClone(st.config) });
 		} catch {
-			onnotice?.('Ce contrôle n’existe plus : supprimez-le du texte.');
+			onnotice?.(t('doc.control.gone'));
 		}
 	}
 
@@ -707,14 +708,14 @@
 				live.stamp++;
 			}
 		} catch (e) {
-			onnotice?.(String(e instanceof Error ? e.message : e));
+			onnotice?.(errorText(e));
 		}
 	}
 
 	export function insertButton() {
 		if (!guard()) return;
 		const at = range()!.index;
-		const cfg: DocButtonConfig = { label: 'Bouton', script: scripts[0]?.name ?? '' };
+		const cfg: DocButtonConfig = { label: t('doc.button.default'), script: scripts[0]?.name ?? '' };
 		quill!.insertEmbed(at, BUTTON_BLOT, cfg, 'user');
 		quill!.setSelection(at + 1, 0);
 		openPanel({ kind: 'button', index: at });
@@ -759,7 +760,7 @@
 
 	async function runButton(cfg: DocButtonConfig) {
 		if (!cfg.script) {
-			onnotice?.('Ce bouton n’exécute rien : clic droit pour lui lier un script.');
+			onnotice?.(t('doc.button.nothing'));
 			return;
 		}
 		await flush();
@@ -767,7 +768,7 @@
 			const msg = await run(cfg.script, cfg.function ?? '');
 			if (msg) onnotice?.(msg);
 		} catch (e) {
-			onnotice?.(String(e instanceof Error ? e.message : e));
+			onnotice?.(errorText(e));
 		}
 	}
 
@@ -823,7 +824,7 @@
 
 	onMount(() => {
 		const Q = setupQuill();
-		const q = new Q(host!, { modules: { history: { delay: 800, maxStack: 200, userOnly: true } }, placeholder: 'Écrivez ici… (Insertion : graphiques et boutons)' });
+		const q = new Q(host!, { modules: { history: { delay: 800, maxStack: 200, userOnly: true } }, placeholder: t('doc.page.placeholder') });
 		quill = q;
 		q.setContents(parseDelta(source) as never, 'silent');
 		q.history.clear();
@@ -900,7 +901,7 @@
 	const pivot = $derived(panel?.kind === 'pivot' ? (panelValue as unknown as PivotConfig | null) : null);
 	const pivotFields = (src: string) => {
 		const tb = tables.find((x) => x.name.toLowerCase() === src.toLowerCase());
-		return (t?.columns ?? []).map((c, i) => ({ name: c, type: t!.types[i], numeric: ['integer', 'decimal', 'formula'].includes(t!.types[i]) }));
+		return (tb?.columns ?? []).map((c, i) => ({ name: c, type: tb!.types[i], numeric: ['integer', 'decimal', 'formula'].includes(tb!.types[i]) }));
 	};
 
 	function applyLink(url: string | null) {
@@ -920,14 +921,14 @@
 <div class="doc" style:--doc-font={DOC_FONT} style:--doc-size="{DOC_PT}pt">
 	<div class="scroll">
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="page" aria-label="Document {name}" bind:this={pageEl} onmouseover={onHover} onfocus={() => {}} onmouseleave={() => !sizing && (grip = null)}>
+		<div class="page" aria-label={t('doc.page.aria', { name })} bind:this={pageEl} onmouseover={onHover} onfocus={() => {}} onmouseleave={() => !sizing && (grip = null)}>
 			<div bind:this={host}></div>
 			{#if grip}
 				<div
 					class="grip"
 					style:left="{grip.x - 13}px"
 					style:top="{grip.y - 13}px"
-					title="Tirer pour redimensionner"
+					title={t('doc.page.grip')}
 					onpointerdown={startSize}
 					onpointermove={moveSize}
 					onpointerup={endSize}
@@ -941,7 +942,7 @@
 		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }} use:panelKeys={() => openPanel(null)}>
 			<div class="srcbox">
 				<label
-					>Tableau source
+					>{t('doc.panel.source')}
 					<select
 						value={chart.source}
 						disabled={!!locked}
@@ -951,14 +952,14 @@
 						}}
 					>
 						{#each tables as tb (tb.name)}<option value={tb.name} class:dflt={isDefaultTableName(tb.name)}>{tb.name}</option>{/each}
-						{#if !tbl}<option value={chart.source}>{chart.source} (introuvable)</option>{/if}
+						{#if !tbl}<option value={chart.source}>{t('doc.panel.missing', { name: chart.source })}</option>{/if}
 					</select>
 				</label>
 				<label
-					>Hauteur (px)
+					>{t('doc.panel.height')}
 					<input type="number" min="120" max="1200" step="20" value={chart.height || 300} disabled={!!locked} onchange={(e) => setChart({ ...chart, height: Number((e.currentTarget as HTMLInputElement).value) || 300 })} />
 				</label>
-				<button class="danger" disabled={!!locked} onclick={() => panel && deleteEmbed(panel.index)}><Icon name="trash" size={14} />Supprimer le graphique</button>
+				<button class="danger" disabled={!!locked} onclick={() => panel && deleteEmbed(panel.index)}><Icon name="trash" size={14} />{t('doc.panel.deleteChart')}</button>
 			</div>
 			<ChartPanel config={chart} guess={mapInfo?.guess} invalid={mapInfo?.invalid} info={mapInfo} columns={tbl?.columns ?? []} onchange={setChart} onclose={() => openPanel(null)} resizable={false} {locked} />
 		</div>
@@ -966,7 +967,7 @@
 		<div class="side panelbox" use:resizePanel={{ key: 'doc-side', min: 260 }} use:panelKeys={() => openPanel(null)}>
 			<div class="srcbox">
 				<label
-					>Tableau source
+					>{t('doc.panel.source')}
 					<select
 						value={pivot.source}
 						disabled={!!locked}
@@ -999,108 +1000,108 @@
 		{@const setLink = (sheet: string, cell: string) => (p.cfg.link = !sheet ? '' : sheet === name ? (cell.trim() || 'A1').toUpperCase() : `${/^[\p{L}_][\p{L}\p{N}_]*$/u.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`}!${(cell.trim() || 'A1').toUpperCase()}`)}
 		{@const cfns = p.cfg.script ? scriptFunctions(scripts.find((s) => s.name === p.cfg.script)?.source ?? '') : []}
 		<aside class="side form" use:resizePanel={{ key: 'doc-control' }} use:panelKeys={() => openPanel(null)}>
-			<header><span>{p.id === null ? 'Insérer' : 'Modifier'} : {CONTROL_KINDS[p.cfg.kind ?? 'input'].toLowerCase()}</span><HelpLink target="controles" label="Aide sur les boutons et contrôles" /><button class="x" title="Fermer (Échap)" aria-label="Fermer le volet" onclick={() => openPanel(null)}>✕</button></header>
+			<header><span>{p.id === null ? t('doc.control.insertTitle', { kind: CONTROL_KINDS[p.cfg.kind ?? 'input'].toLowerCase() }) : t('doc.control.editTitle', { kind: CONTROL_KINDS[p.cfg.kind ?? 'input'].toLowerCase() })}</span><HelpLink target="controles" label={t('doc.panel.help')} /><button class="x" title={t('remote.closeEsc')} aria-label={t('doc.panel.close')} onclick={() => openPanel(null)}>✕</button></header>
 			<label
-				>Type
+				>{t('doc.control.type')}
 				<select bind:value={p.cfg.kind} disabled={!!locked}>
 					{#each VALUE_KINDS as k (k)}<option value={k}>{CONTROL_KINDS[k]}</option>{/each}
 				</select>
 			</label>
-			<label>Nom (pour les scripts)<input type="text" bind:value={p.cfg.name} placeholder="automatique" disabled={!!locked} /></label>
+			<label>{t('doc.control.name')}<input type="text" bind:value={p.cfg.name} placeholder={t('doc.control.auto')} disabled={!!locked} /></label>
 			{#if p.cfg.kind !== 'select'}
-				<label>{p.cfg.kind === 'checkbox' ? 'Libellé' : p.cfg.kind === 'file' ? 'Texte du bouton' : 'Texte indicatif (facultatif)'}<input type="text" bind:value={p.cfg.label} disabled={!!locked} /></label>
+				<label>{p.cfg.kind === 'checkbox' ? t('doc.control.label') : p.cfg.kind === 'file' ? t('doc.control.buttonText') : t('doc.control.placeholder')}<input type="text" bind:value={p.cfg.label} disabled={!!locked} /></label>
 			{/if}
 			<div class="link">
 				<label
-					>Valeur gardée dans
+					>{t('doc.control.keptIn')}
 					<select value={at[0]} disabled={!!locked} onchange={(e) => setLink((e.currentTarget as HTMLSelectElement).value, at[1])}>
-						<option value="">le contrôle (aucune cellule liée)</option>
-						{#each sheets as s (s)}<option value={s}>la feuille {s}</option>{/each}
-						{#if at[0] && !sheets.includes(at[0])}<option value={at[0]}>{at[0]} (introuvable)</option>{/if}
+						<option value="">{t('doc.control.inControl')}</option>
+						{#each sheets as s (s)}<option value={s}>{t('doc.control.sheet', { name: s })}</option>{/each}
+						{#if at[0] && !sheets.includes(at[0])}<option value={at[0]}>{t('doc.panel.missing', { name: at[0] })}</option>{/if}
 					</select>
 				</label>
-				{#if at[0]}<label>Cellule<input type="text" value={at[1]} disabled={!!locked} onchange={(e) => setLink(at[0], (e.currentTarget as HTMLInputElement).value)} /></label>{/if}
+				{#if at[0]}<label>{t('doc.control.cell')}<input type="text" value={at[1]} disabled={!!locked} onchange={(e) => setLink(at[0], (e.currentTarget as HTMLInputElement).value)} /></label>{/if}
 			</div>
 			{#if p.cfg.kind === 'select'}
 				<div class="field">
-					<span>Source des choix</span>
-					<div class="seg" role="radiogroup" aria-label="Source des choix">
-						<button type="button" role="radio" aria-checked={!p.cfg.optionsFrom} class:on={!p.cfg.optionsFrom} disabled={!!locked} onclick={() => (p.cfg.optionsFrom = '')}>Saisis</button>
-						<button type="button" role="radio" aria-checked={!!p.cfg.optionsFrom} class:on={!!p.cfg.optionsFrom} disabled={!!locked || !colRefs.length} onclick={() => (p.cfg.optionsFrom = p.cfg.optionsFrom || colRefs[0])}>Colonne d’un tableau</button>
+					<span>{t('doc.control.choices.source')}</span>
+					<div class="seg" role="radiogroup" aria-label={t('doc.control.choices.source')}>
+						<button type="button" role="radio" aria-checked={!p.cfg.optionsFrom} class:on={!p.cfg.optionsFrom} disabled={!!locked} onclick={() => (p.cfg.optionsFrom = '')}>{t('doc.control.choices.typed')}</button>
+						<button type="button" role="radio" aria-checked={!!p.cfg.optionsFrom} class:on={!!p.cfg.optionsFrom} disabled={!!locked || !colRefs.length} onclick={() => (p.cfg.optionsFrom = p.cfg.optionsFrom || colRefs[0])}>{t('doc.control.choices.column')}</button>
 					</div>
 				</div>
 			{/if}
 			{#if p.cfg.kind === 'select' && p.cfg.optionsFrom}
 				<label
-					>Choix tirés de (valeurs distinctes)
+					>{t('doc.control.choices.from')}
 					<select bind:value={p.cfg.optionsFrom} disabled={!!locked}>
 						{#each colRefs as r (r)}<option value={r}>{r}</option>{/each}
 					</select>
 				</label>
 			{:else if p.cfg.kind === 'select'}
 				<label
-					>Choix (un par ligne)
+					>{t('doc.control.choices.list')}
 					<textarea rows="4" disabled={!!locked} value={(p.cfg.options ?? []).join('\n')} onchange={(e) => (p.cfg.options = (e.currentTarget as HTMLTextAreaElement).value.split('\n').map((x) => x.trim()).filter(Boolean))}></textarea>
 				</label>
 			{/if}
 			<label
-				>Script (à chaque changement)
+				>{t('doc.control.script')}
 				<select value={p.cfg.script} disabled={!!locked} onchange={(e) => ((p.cfg.script = (e.currentTarget as HTMLSelectElement).value), (p.cfg.function = ''))}>
-					<option value="">(aucune action)</option>
+					<option value="">{t('doc.button.noActionOption')}</option>
 					{#each scripts as s (s.name)}<option value={s.name}>{s.name}</option>{/each}
 				</select>
 			</label>
 			{#if p.cfg.script}
 				<label
-					>Exécuter
+					>{t('doc.button.run')}
 					<select bind:value={p.cfg.function} disabled={!!locked}>
-						<option value="">tout le script</option>
-						{#each cfns as f (f)}<option value={f}>la fonction {f}()</option>{/each}
+						<option value="">{t('doc.button.wholeScript')}</option>
+						{#each cfns as f (f)}<option value={f}>{t('doc.button.function', { name: f })}</option>{/each}
 					</select>
 				</label>
 			{/if}
-			<p class="hint">La valeur du contrôle est celle de la cellule liée (dans ce document, ou sur une feuille pour la lire dans les formules). Les scripts le pilotent par controls.get / controls.set et controls.on("change", …).</p>
+			<p class="hint">{t('doc.control.help')}</p>
 			<div class="row">
-				<button class="primary" disabled={!!locked} onclick={saveControl}>{p.id === null ? 'Insérer' : 'Enregistrer'}</button>
-				<button onclick={() => openPanel(null)}>{p.id === null ? 'Annuler' : 'Fermer'}</button>
+				<button class="primary" disabled={!!locked} onclick={saveControl}>{p.id === null ? t('doc.panel.insert') : t('doc.panel.save')}</button>
+				<button onclick={() => openPanel(null)}>{p.id === null ? t('common.cancel') : t('common.close')}</button>
 			</div>
 		</aside>
 	{:else if panel?.kind === 'button' && btn}
 		<aside class="side form" use:resizePanel={{ key: 'doc-control' }} use:panelKeys={() => openPanel(null)}>
-			<header><span>Bouton</span><HelpLink target="controles" label="Aide sur les boutons et contrôles" /><button class="x" title="Fermer (Échap)" aria-label="Fermer le volet" onclick={() => openPanel(null)}>✕</button></header>
-			<label>Libellé<input type="text" value={btn.label} disabled={!!locked} onchange={(e) => setButton({ label: (e.currentTarget as HTMLInputElement).value })} /></label>
+			<header><span>{t('doc.button.default')}</span><HelpLink target="controles" label={t('doc.panel.help')} /><button class="x" title={t('remote.closeEsc')} aria-label={t('doc.panel.close')} onclick={() => openPanel(null)}>✕</button></header>
+			<label>{t('doc.control.label')}<input type="text" value={btn.label} disabled={!!locked} onchange={(e) => setButton({ label: (e.currentTarget as HTMLInputElement).value })} /></label>
 			<label
-				>Script
+				>{t('doc.button.script')}
 				<select value={btn.script} disabled={!!locked} onchange={(e) => setButton({ script: (e.currentTarget as HTMLSelectElement).value, function: '' })}>
-					<option value="">(aucune action)</option>
+					<option value="">{t('doc.button.noActionOption')}</option>
 					{#each scripts as s (s.name)}<option value={s.name}>{s.name}</option>{/each}
 				</select>
 			</label>
 			{#if btn.script}
 				<label
-					>Exécuter
+					>{t('doc.button.run')}
 					<select value={btn.function ?? ''} disabled={!!locked} onchange={(e) => setButton({ function: (e.currentTarget as HTMLSelectElement).value })}>
-						<option value="">tout le script</option>
-						{#each fns as f (f)}<option value={f}>la fonction {f}()</option>{/each}
+						<option value="">{t('doc.button.wholeScript')}</option>
+						{#each fns as f (f)}<option value={f}>{t('doc.button.function', { name: f })}</option>{/each}
 					</select>
 				</label>
 			{/if}
 			<div class="colors">
-				<label>Fond<input type="color" value={btn.color || '#217346'} disabled={!!locked} onchange={(e) => setButton({ color: (e.currentTarget as HTMLInputElement).value })} /></label>
-				<label>Texte<input type="color" value={btn.textColor || '#ffffff'} disabled={!!locked} onchange={(e) => setButton({ textColor: (e.currentTarget as HTMLInputElement).value })} /></label>
+				<label>{t('doc.button.background')}<input type="color" value={btn.color || '#217346'} disabled={!!locked} onchange={(e) => setButton({ color: (e.currentTarget as HTMLInputElement).value })} /></label>
+				<label>{t('doc.button.text')}<input type="color" value={btn.textColor || '#ffffff'} disabled={!!locked} onchange={(e) => setButton({ textColor: (e.currentTarget as HTMLInputElement).value })} /></label>
 			</div>
-			<p class="hint">Un clic sur le bouton exécute son action ; clic droit pour revenir ici.</p>
+			<p class="hint">{t('doc.button.help')}</p>
 			<div class="row">
-				<button onclick={() => btn && runButton(btn)}><Icon name="play" size={14} />Essayer</button>
-				<button class="danger" disabled={!!locked} onclick={() => panel && deleteEmbed(panel.index)}><Icon name="trash" size={14} />Supprimer</button>
+				<button onclick={() => btn && runButton(btn)}><Icon name="play" size={14} />{t('doc.button.try')}</button>
+				<button class="danger" disabled={!!locked} onclick={() => panel && deleteEmbed(panel.index)}><Icon name="trash" size={14} />{t('common.delete')}</button>
 			</div>
 		</aside>
 	{:else if panel?.kind === 'link'}
 		{@const p = panel}
 		<aside class="side form" use:resizePanel={{ key: 'doc-link' }} use:panelKeys={() => openPanel(null)}>
-			<header><span>Lien</span><button class="x" title="Fermer (Échap)" aria-label="Fermer le volet" onclick={() => openPanel(null)}>✕</button></header>
+			<header><span>{t('doc.link.title')}</span><button class="x" title={t('remote.closeEsc')} aria-label={t('doc.panel.close')} onclick={() => openPanel(null)}>✕</button></header>
 			<label
-				>Adresse
+				>{t('doc.link.address')}
 				<!-- svelte-ignore a11y_autofocus -->
 				<input
 					type="url"
@@ -1113,10 +1114,10 @@
 					onchange={(e) => (p.url = (e.currentTarget as HTMLInputElement).value)}
 				/>
 			</label>
-			<p class="hint">{p.length ? 'Le texte sélectionné devient un lien.' : 'L’adresse est insérée comme lien.'} Ctrl+clic sur un lien l’ouvre dans le navigateur.</p>
+			<p class="hint">{p.length ? t('doc.link.selection') : t('doc.link.inserted')} {t('doc.link.ctrlClick')}</p>
 			<div class="row">
-				<button class="primary" onclick={(e) => applyLink(((e.currentTarget as HTMLElement).closest('aside')!.querySelector('input') as HTMLInputElement).value)}>Appliquer</button>
-				{#if p.length}<button onclick={() => applyLink(null)}>Retirer le lien</button>{/if}
+				<button class="primary" onclick={(e) => applyLink(((e.currentTarget as HTMLElement).closest('aside')!.querySelector('input') as HTMLInputElement).value)}>{t('doc.link.apply')}</button>
+				{#if p.length}<button onclick={() => applyLink(null)}>{t('doc.link.remove')}</button>{/if}
 			</div>
 		</aside>
 	{/if}
@@ -1126,44 +1127,44 @@
 	{@const m = menu}
 	<div class="menu" role="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={closeMenu}>
 		{#if m.kind === 'text'}
-			<button disabled={!!locked} onclick={() => act(() => command('cut'))}>Couper</button>
-			<button onclick={() => act(() => command('copy'))}>Copier</button>
-			<button disabled={!!locked} onclick={() => act(() => command('paste'))}>Coller</button>
-			{#if clip}<button disabled={!!locked} onclick={() => act(() => pasteItem(m.index))}>Coller l’élément ({clip.type === CHART_BLOT ? 'graphique' : clip.type === PIVOT_BLOT ? 'tableau croisé' : clip.type === CONTROL_BLOT ? 'contrôle' : 'bouton'})</button>{/if}
-			<div class="menu-hint">Maj + clic droit : suggestions d’orthographe</div>
+			<button disabled={!!locked} onclick={() => act(() => command('cut'))}>{t('common.cut')}</button>
+			<button onclick={() => act(() => command('copy'))}>{t('common.copy')}</button>
+			<button disabled={!!locked} onclick={() => act(() => command('paste'))}>{t('common.paste')}</button>
+			{#if clip}<button disabled={!!locked} onclick={() => act(() => pasteItem(m.index))}>{t('doc.menu.pasteItem', { what: clip.type === CHART_BLOT ? t('doc.menu.what.chart') : clip.type === PIVOT_BLOT ? t('doc.menu.what.pivot') : clip.type === CONTROL_BLOT ? t('doc.menu.what.control') : t('doc.menu.what.button') })}</button>{/if}
+			<div class="menu-hint">{t('doc.menu.spelling')}</div>
 			<hr />
-			<div class="menu-title">Insérer</div>
+			<div class="menu-title">{t('doc.panel.insert')}</div>
 			<!-- Les graphiques dans un sous-menu (les courants, puis les autres), comme Excel. -->
-			<Submenu label="Graphique" disabled={!!locked}>
+			<Submenu label={t('chart.chart')} disabled={!!locked}>
 				{#snippet icon()}<Icon name="chart-bar" size={14} />{/snippet}
-				<button onclick={() => act(() => insertChart('bar'))}><Icon name="chart-bar" size={14} />Barres</button>
-				<button onclick={() => act(() => insertChart('line'))}><Icon name="chart-line" size={14} />Courbes</button>
-				<button onclick={() => act(() => insertChart('pie'))}><Icon name="chart-pie" size={14} />Secteurs</button>
-				<button onclick={() => act(() => insertChart('scatter'))}><Icon name="chart-scatter" size={14} />Nuage de points</button>
+				<button onclick={() => act(() => insertChart('bar'))}><Icon name="chart-bar" size={14} />{t('chart.panel.shape.bar')}</button>
+				<button onclick={() => act(() => insertChart('line'))}><Icon name="chart-line" size={14} />{t('chart.kind.line.label')}</button>
+				<button onclick={() => act(() => insertChart('pie'))}><Icon name="chart-pie" size={14} />{t('chart.kind.pie.label')}</button>
+				<button onclick={() => act(() => insertChart('scatter'))}><Icon name="chart-scatter" size={14} />{t('chart.kind.scatter.label')}</button>
 				<hr />
 				{#each MORE_KINDS as k (k.kind)}
 					<button title={k.hint} onclick={() => act(() => insertChart(k.kind))}><Icon name={k.icon} size={14} />{k.label}</button>
 				{/each}
 			</Submenu>
-			<button disabled={!!locked} onclick={() => act(insertPivot)}><Icon name="pivot-table" size={14} />Tableau croisé dynamique</button>
-			<button disabled={!!locked} onclick={() => act(insertButton)}><Icon name="button" size={14} />Bouton</button>
-			{#if controls}<button disabled={!!locked} onclick={() => act(() => insertControl('input'))}><Icon name="text-input" size={14} />Champ (texte, case, liste, fichier)…</button>{/if}
-			<button disabled={!!locked} onclick={() => act(() => command('image'))}><Icon name="image" size={14} />Image…</button>
-			<button disabled={!!locked} onclick={() => act(() => command('link'))}><Icon name="link" size={14} />Lien…</button>
+			<button disabled={!!locked} onclick={() => act(insertPivot)}><Icon name="pivot-table" size={14} />{t('doc.menu.pivot')}</button>
+			<button disabled={!!locked} onclick={() => act(insertButton)}><Icon name="button" size={14} />{t('doc.button.default')}</button>
+			{#if controls}<button disabled={!!locked} onclick={() => act(() => insertControl('input'))}><Icon name="text-input" size={14} />{t('doc.menu.field')}</button>{/if}
+			<button disabled={!!locked} onclick={() => act(() => command('image'))}><Icon name="image" size={14} />{t('doc.menu.image')}</button>
+			<button disabled={!!locked} onclick={() => act(() => command('link'))}><Icon name="link" size={14} />{t('doc.menu.link')}</button>
 		{:else}
-			{@const label = m.kind === 'chart' ? 'Graphique' : m.kind === 'pivot' ? 'Tableau croisé' : m.kind === 'control' ? 'Contrôle' : 'Bouton'}
+			{@const label = m.kind === 'chart' ? t('chart.chart') : m.kind === 'pivot' ? t('doc.menu.title.pivot') : m.kind === 'control' ? t('doc.menu.title.control') : t('doc.button.default')}
 			<div class="menu-title">{label}</div>
-			<button disabled={!!locked} onclick={() => act(() => copyItem(m.kind as 'chart', m.index, true))}>Couper</button>
-			<button onclick={() => act(() => copyItem(m.kind as 'chart', m.index, false))}>Copier</button>
-			<button disabled={!clip || !!locked} onclick={() => act(() => pasteItem(m.index + 1))}>Coller l’élément après</button>
+			<button disabled={!!locked} onclick={() => act(() => copyItem(m.kind as 'chart', m.index, true))}>{t('common.cut')}</button>
+			<button onclick={() => act(() => copyItem(m.kind as 'chart', m.index, false))}>{t('common.copy')}</button>
+			<button disabled={!clip || !!locked} onclick={() => act(() => pasteItem(m.index + 1))}>{t('doc.menu.pasteAfter')}</button>
 			<hr />
 			{#if m.kind === 'button'}
 				{@const b = embedAt(m.index, BUTTON_BLOT) as DocButtonConfig | null}
-				{#if b?.script}<button onclick={() => act(() => runButton(b))}>Exécuter l’action</button>{/if}
+				{#if b?.script}<button onclick={() => act(() => runButton(b))}>{t('doc.menu.runAction')}</button>{/if}
 			{/if}
-			<button onclick={() => act(() => (m.kind === 'control' ? editControl(m.index) : openPanel({ kind: m.kind as 'chart' | 'pivot' | 'button', index: m.index })))}>Modifier…</button>
+			<button onclick={() => act(() => (m.kind === 'control' ? editControl(m.index) : openPanel({ kind: m.kind as 'chart' | 'pivot' | 'button', index: m.index })))}>{t('doc.menu.edit')}</button>
 			<hr />
-			<button disabled={!!locked} onclick={() => act(() => deleteEmbed(m.index))}>Supprimer</button>
+			<button disabled={!!locked} onclick={() => act(() => deleteEmbed(m.index))}>{t('common.delete')}</button>
 		{/if}
 	</div>
 {/if}
