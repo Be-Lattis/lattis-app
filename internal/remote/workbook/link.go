@@ -79,6 +79,8 @@ type Link struct {
 	sending            bool
 	// layoutConflicts, layoutUnsent : mise en page (voir State, SetLayoutUnsent).
 	layoutConflicts int
+	// held : étapes mises de côté (collab, held.go).
+	held int
 	layoutUnsent    bool
 }
 
@@ -476,6 +478,9 @@ type State struct {
 	// remplacées par les siennes depuis l'ouverture (même élément changé
 	// des deux côtés, la dernière écriture l'emporte ; décision 0018).
 	LayoutConflicts int `json:"layoutConflicts,omitempty"`
+	// Held : étapes de la file mises de côté (le serveur les reçoit mais
+	// elles échouent toujours) : volet Conflits, Réessayer ou Abandonner.
+	Held int `json:"held,omitempty"`
 }
 
 // SetQueue note les étapes en attente d'envoi et les conflits ouverts
@@ -489,6 +494,15 @@ func (l *Link) SetQueue(pending, conflicts int) (state, sync bool) {
 	state = l.conflicts != conflicts
 	l.pending, l.conflicts = pending, conflicts
 	return state, sync
+}
+
+// SetHeld note le nombre d'étapes mises de côté ; vrai s'il change.
+func (l *Link) SetHeld(n int) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	changed := l.held != n
+	l.held = n
+	return changed
 }
 
 // AddLayoutConflicts compte des modifications de la mise en page d'un
@@ -557,7 +571,7 @@ func (l *Link) State() State {
 		Shared: true, Server: l.info.Server, ServerName: l.info.ServerName, WorkbookID: l.info.WorkbookID,
 		Title: l.info.Title, Mode: l.info.Mode, Version: l.info.Version, Roles: append([]string{}, l.info.Roles...),
 		CanDesign: l.info.CanDesign(), CanManage: l.info.CanManage(), Online: l.online, Offline: l.offline, Gone: l.gone, NewVersion: l.newVersion, Published: len(l.published),
-		Pending: l.pending, Conflicts: l.conflicts, Sending: l.sending, LayoutConflicts: l.layoutConflicts,
+		Pending: l.pending, Conflicts: l.conflicts, Sending: l.sending, LayoutConflicts: l.layoutConflicts, Held: l.held,
 	}
 	s.Link = protocol.WorkbookLink(s.Server, s.WorkbookID)
 	switch {

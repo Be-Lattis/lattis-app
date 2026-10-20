@@ -277,6 +277,7 @@ export function ChooseSheetByFormula(sheet: number, name: string, formula: strin
 }
 
 /**
+ * ChooseSheetValue règle l'onglet à choix sur une valeur (all : toutes) ;
  * de la navigation, hors du journal d'annulation.
  */
 export function ChooseSheetValue(sheet: number, value: string, all: boolean): $CancellablePromise<$models.DocState> {
@@ -2227,6 +2228,23 @@ export function ShareForget(): $CancellablePromise<void> {
  */
 export function ShareGrantRole(roleID: string, principal: string, on: boolean): $CancellablePromise<$models.RightsView> {
     return $Call.ByID(490379137, roleID, principal, on);
+}
+
+/**
+ * ShareHeld liste les tableaux dont des modifications ne partent pas vers
+ * le serveur (mises de côté après des échecs répétés ; volet Conflits).
+ */
+export function ShareHeld(): $CancellablePromise<collab$0.Held[] | null> {
+    return $Call.ByID(3681537982);
+}
+
+/**
+ * ShareHeldResolve règle les modifications mises de côté du tableau tbl :
+ * retry, les renvoyer ; sinon les abandonner (le tableau reprend l'état du
+ * serveur).
+ */
+export function ShareHeldResolve(tbl: number, retry: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(990396990, tbl, retry);
 }
 
 /**

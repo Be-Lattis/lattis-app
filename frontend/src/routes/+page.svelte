@@ -76,7 +76,7 @@
 	import { rightsObjects, type RightsObject } from '#lib/remote/rights.js';
 	import { refusedNotice } from '#lib/remote/share.js';
 	import { pushSummary, type SourceLink } from '#lib/remote/source.js';
-	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
+	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
 	import { canRepublish, detachQuestion, goneError, RETRY_NOTICE, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
@@ -217,10 +217,13 @@
 	// conflit apparaît).
 	let conflictsOpen = $state(false);
 	let conflicts = $state<Conflict[]>([]);
+	// Modifications mises de côté (elles échouent toujours sur le serveur) :
+	// dans le même volet, Réessayer ou Abandonner.
+	let held = $state<Held[]>([]);
 	let conflictBusy = $state(false);
 	let lastConflicts = 0;
 	$effect(() => {
-		const n = (share?.conflicts ?? 0) + (coedit?.conflicts ?? 0);
+		const n = (share?.conflicts ?? 0) + (share?.held ?? 0) + (coedit?.conflicts ?? 0);
 		if (n > lastConflicts) conflictsOpen = true;
 		lastConflicts = n;
 		if (conflictsOpen || n) loadConflicts();
@@ -229,6 +232,7 @@
 	async function loadConflicts() {
 		try {
 			conflicts = (await DocumentService.ShareConflicts()) ?? [];
+			held = share?.held ? ((await DocumentService.ShareHeld()) ?? []) : [];
 		} catch (e) {
 			notice = err(e);
 		}
@@ -268,6 +272,23 @@
 			await loadConflicts();
 			notice = mine ? (coedit?.active ? 'Votre valeur est remise pour tous les postes' : 'Votre valeur est renvoyée au serveur') : 'Valeur du collègue reprise';
 			if (!conflicts.length) conflictsOpen = false;
+		} catch (e) {
+			notice = err(e);
+		} finally {
+			conflictBusy = false;
+		}
+	}
+
+	/** Volet Conflits : renvoie (retry) ou abandonne les modifications mises de côté d'un tableau. */
+	async function resolveHeld(h: Held, retry: boolean) {
+		conflictBusy = true;
+		try {
+			docState = await syncCall(DocumentService.ShareHeldResolve(h.table, retry));
+			share = await DocumentService.ShareState().catch(() => share);
+			await reload();
+			await loadConflicts();
+			notice = docState.notice || (retry ? `Modifications de « ${h.name} » renvoyées au serveur` : `Modifications de « ${h.name} » abandonnées : le tableau reprend la version du serveur`);
+			if (!conflicts.length && !held.length) conflictsOpen = false;
 		} catch (e) {
 			notice = err(e);
 		} finally {
@@ -2599,7 +2620,7 @@
 				{/key}
 			{/if}
 			{#if mode === 'doc' && conflictsOpen && (share?.mode === 'collaborative' || coedit?.active)}
-				<ConflictPanel {conflicts} local={!!coedit?.active} busy={conflictBusy} onresolve={resolveConflict} onresolveall={resolveAllConflicts} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
+				<ConflictPanel {conflicts} {held} onheld={resolveHeld} local={!!coedit?.active} busy={conflictBusy} onresolve={resolveConflict} onresolveall={resolveAllConflicts} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
 			{/if}
 			{#if aiChat.open && !aiChat.over && (mode === 'doc' || mode === 'closed')}
 				<AiPanel

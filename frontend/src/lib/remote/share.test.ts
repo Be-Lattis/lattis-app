@@ -61,6 +61,9 @@ describe('partage', () => {
 		const collab = (s: Partial<State>) => state({ mode: 'collaborative', roles: ['editor'], ...s });
 		expect(banner(collab({}))).toBeNull();
 		expect(banner(collab({ conflicts: 2 }))).toEqual({ kind: 'conflict', text: '2 conflits : cellules modifiées par un collègue entre-temps', actions: [{ action: 'conflicts', label: 'Voir' }] });
+		// Modification mise de côté (échoue toujours sur le serveur) : avant les conflits.
+		expect(banner(collab({ held: 1, conflicts: 2 }))).toEqual({ kind: 'conflict', text: 'Une modification ne part pas vers le serveur', actions: [{ action: 'conflicts', label: 'Voir' }] });
+		expect(banner(collab({ held: 3 }))?.text).toBe('3 modifications ne partent pas vers le serveur');
 		expect(banner(collab({ online: false, pending: 3 }))?.text).toBe('Serveur Acme ne répond pas. Hors ligne : vos modifications seront envoyées au retour du serveur (3 modifications en attente).');
 	});
 

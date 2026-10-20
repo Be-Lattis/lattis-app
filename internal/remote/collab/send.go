@@ -107,13 +107,28 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 		// Changements de structure de l'étape : faits d'abord (les données
 		// de l'étape les supposent), puis la correspondance est relue.
 		if i := slices.IndexFunc(entries, entry.isStructure); i >= 0 {
+			if held, err := e.heldTable(ctx, entries, &rep); err != nil || held {
+				if err != nil {
+					return rep, err
+				}
+				continue
+			}
 			if err := e.sendStructure(ctx, srv, info, entries[i], &rep); err != nil {
-				return rep, err
+				if held, herr := e.hold(ctx, entries, err, &rep); herr != nil || !held {
+					return rep, errors.Join(err, herr)
+				}
+				continue
 			}
 			if tables, err = remoteTables(ctx, e.db.Read()); err != nil {
 				return rep, err
 			}
 			stale = 0
+			continue
+		}
+		if held, err := e.heldTable(ctx, entries, &rep); err != nil || held {
+			if err != nil {
+				return rep, err
+			}
 			continue
 		}
 		o, err := e.sendBatch(ctx, srv, info, tables, entries)
@@ -140,8 +155,15 @@ func (e *Engine) send(ctx context.Context) (Report, error) {
 		}
 		stale = 0
 		if err != nil {
-			return rep, err
+			// Le serveur répond mais l'étape échoue encore : au bout de
+			// HeldAfter fois, elle est mise de côté (held.go) et la suite de
+			// la file part ; sinon, coupure : on réessaiera.
+			if held, herr := e.hold(ctx, entries, err, &rep); herr != nil || !held {
+				return rep, errors.Join(err, herr)
+			}
+			continue
 		}
+		e.stuck = stuckStep{}
 		if err := e.finish(ctx, srv, info, tables, o, &rep); err != nil {
 			return rep, err
 		}

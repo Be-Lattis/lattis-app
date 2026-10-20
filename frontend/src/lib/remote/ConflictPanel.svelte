@@ -3,7 +3,7 @@
 	// cellule modifiée par un collègue entre-temps. « Garder la mienne »
 	// renvoie ma valeur, conditionnée à la valeur actuelle du serveur ;
 	// « Garder la sienne » reprend la valeur du serveur.
-	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
+	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { panelKeys } from '#lib/ui/focus.js';
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
@@ -19,15 +19,31 @@
 		onclose: () => void;
 		/** Travail à plusieurs sur un dossier partagé : la valeur du collègue est déjà dans la cellule. */
 		local?: boolean;
+		/** Tableaux dont des modifications ne partent pas (le serveur les refuse toujours sans dire pourquoi). */
+		held?: Held[];
+		/** Réessayer (retry) ou abandonner les modifications mises de côté d'un tableau. */
+		onheld?: (h: Held, retry: boolean) => void;
 	}
-	let { conflicts, busy = false, onresolve, onresolveall, ongoto, onclose, local = false }: Props = $props();
+	let { conflicts, busy = false, onresolve, onresolveall, ongoto, onclose, local = false, held = [], onheld }: Props = $props();
 </script>
 
 <aside class="panel" use:resizePanel={{ key: 'conflicts' }} use:panelKeys={onclose} aria-label="Conflits">
-	<PanelHeader title="Conflits ({conflicts.length})" {onclose} />
-	{#if !conflicts.length}
+	<PanelHeader title="Conflits ({conflicts.length + held.length})" {onclose} />
+	{#each held as h (h.table)}
+		<div class="item held">
+			<strong>« {h.name || 'Tableau'} » : {h.steps > 1 ? `${h.steps} modifications ne partent pas` : 'une modification ne part pas'}</strong>
+			<span class="text">Le serveur la reçoit mais échoue à chaque essai : {h.error}. Vos valeurs restent affichées sur ce poste ; les autres modifications partent normalement.</span>
+			{#if onheld}
+				<div class="acts">
+					<button disabled={busy} onclick={() => onheld(h, true)}>Réessayer</button>
+					<button disabled={busy} title="Le tableau reprend la version du serveur" onclick={() => onheld(h, false)}>Abandonner</button>
+				</div>
+			{/if}
+		</div>
+	{/each}
+	{#if !conflicts.length && !held.length}
 		<p class="muted">Aucun conflit en attente.</p>
-	{:else}
+	{:else if conflicts.length}
 		{#if local}
 			<p class="muted">Ces cellules ont été modifiées par un collègue en même temps que vous : sa valeur, la plus récente, est affichée partout. « Garder la mienne » remet la vôtre pour tous les postes.</p>
 		{:else}
@@ -80,6 +96,10 @@
 		border-left: 3px solid #d97706;
 		border-radius: 3px;
 		background: #fff;
+	}
+	.held {
+		border-color: #f3c3c3;
+		border-left-color: #b91c1c;
 	}
 	.where {
 		align-self: flex-start;

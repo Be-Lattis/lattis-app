@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/internal/remote/workbook/workbooktest"
 )
@@ -127,5 +128,77 @@ func TestTransientErrorKeepsEntry(t *testing.T) {
 				t.Errorf("renvoi : %+v, Quantité %v, file %v", r, bob.col("Quantité"), bob.states())
 			}
 		})
+	}
+}
+
+// Question 6 de l'audit : une étape que le serveur reçoit mais qui échoue
+// toujours est mise de côté au bout de HeldAfter essais ; la réception
+// continue, les modifications suivantes du même tableau l'attendent, et
+// Réessayer les renvoie.
+func TestHeldStep(t *testing.T) {
+	ctx := context.Background()
+	f, alice, bob, _ := setup(t)
+	fl := &flaky{Server: f.As("bob"), code: "40P01", left: 1000}
+	bob.e.SetServer(fl)
+	bob.mustSet(0, 1, "77")
+	for i := 0; i < collab.HeldAfter; i++ {
+		bob.e.Sync(ctx)
+	}
+	bob.e.Counts(ctx) // comme le suivi après chaque tour
+	if st := bob.d.Share.State(); st.Held != 1 {
+		t.Fatalf("étape mise de côté attendue : %+v, file %v", st, bob.states())
+	}
+	// Une modification suivante du même tableau attend avec elle.
+	bob.mustSet(1, 1, "88")
+	// La réception continue : Bob reçoit la saisie d'Alice.
+	alice.mustSet(2, 2, "9")
+	alice.send()
+	_, err := bob.e.Sync(ctx)
+	must(t, err)
+	if got := bob.col("Prix")[2]; got != "9.0" {
+		t.Errorf("réception bloquée : Prix de Bob %v", bob.col("Prix"))
+	}
+	if got := bob.col("Quantité"); got[0] != "77" || got[1] != "88" {
+		t.Errorf("valeurs de Bob perdues : %v", got)
+	}
+	held, err := bob.e.HeldList(ctx)
+	must(t, err)
+	if len(held) != 1 || held[0].Name != "Ventes" || held[0].Steps != 2 {
+		t.Fatalf("liste : %+v", held)
+	}
+	// Le serveur va mieux : Réessayer.
+	fl.left = 0
+	must(t, bob.e.RetryHeld(ctx, held[0].Table))
+	_, err = bob.e.Sync(ctx)
+	must(t, err)
+	alice.receive()
+	if got := alice.col("Quantité"); got[0] != "77" || got[1] != "88" {
+		t.Errorf("Alice après Réessayer : %v", got)
+	}
+	bob.e.Counts(ctx)
+	if st := bob.d.Share.State(); st.Held != 0 || bob.states()["pending"] != 0 {
+		t.Errorf("encore de côté : %+v", st)
+	}
+}
+
+// Abandonner : les modifications mises de côté sont défaites, le tableau
+// reprend l'état du serveur.
+func TestDropHeld(t *testing.T) {
+	ctx := context.Background()
+	f, _, bob, _ := setup(t)
+	bob.e.SetServer(&flaky{Server: f.As("bob"), code: "40P01", left: 1000})
+	bob.mustSet(0, 1, "77")
+	for i := 0; i < collab.HeldAfter; i++ {
+		bob.e.Sync(ctx)
+	}
+	held, err := bob.e.HeldList(ctx)
+	must(t, err)
+	if len(held) != 1 {
+		t.Fatalf("liste : %+v", held)
+	}
+	_, err = bob.e.DropHeld(ctx, held[0].Table)
+	must(t, err)
+	if got := bob.col("Quantité")[0]; got != "3" {
+		t.Errorf("Quantité après Abandonner : %q, attendu 3", got)
 	}
 }

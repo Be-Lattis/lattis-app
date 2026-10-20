@@ -36,3 +36,20 @@ export interface Conflict {
     "col": number;
     "found": boolean;
 }
+
+/**
+ * Held est un tableau dont des modifications sont mises de côté.
+ */
+export interface Held {
+    /**
+     * Table : identifiant local du tableau, Name : son nom.
+     */
+    "table": number;
+    "name": string;
+
+    /**
+     * Steps : étapes mises de côté ; Error : erreur de la première.
+     */
+    "steps": number;
+    "error": string;
+}

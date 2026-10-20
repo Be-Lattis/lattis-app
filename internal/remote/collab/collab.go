@@ -61,6 +61,9 @@ type Engine struct {
 	layoutDone, layoutSeen int64
 	layoutAt               time.Time
 	layoutTheme            string
+	// stuck : échecs de suite de la première étape de la file, serveur
+	// joignable (held.go) ; sous run.
+	stuck stuckStep
 }
 
 // SetBackoff règle les nouveaux essais de connexion du suivi (délais
@@ -210,7 +213,7 @@ type entry struct {
 // nextBatch lit la première étape en attente (toutes ses entrées).
 func (e *Engine) nextBatch(ctx context.Context) ([]entry, error) {
 	rs, err := e.db.Read().QueryContext(ctx, `SELECT id, coalesce(seq, 0), kind, ops FROM _lattis_outbox
-		WHERE state = 'pending' AND batch = (SELECT batch FROM _lattis_outbox WHERE state = 'pending' ORDER BY id LIMIT 1) ORDER BY id`)
+		WHERE state = 'pending' AND error IS NULL AND batch = (SELECT batch FROM _lattis_outbox WHERE state = 'pending' AND error IS NULL ORDER BY id LIMIT 1) ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -279,6 +282,8 @@ const (
 func pendingCells(ctx context.Context, q interface {
 	QueryContext(ctx context.Context, q string, args ...any) (*sql.Rows, error)
 }, fn func(tbl int64, id string, col int64)) error {
+	// Une étape mise de côté (held.go) garde aussi ses cellules : la
+	// valeur du poste reste affichée tant qu'on n'a pas choisi.
 	rs, err := q.QueryContext(ctx, `SELECT ops FROM _lattis_outbox WHERE state = 'pending' ORDER BY id`)
 	if err != nil {
 		return err
@@ -330,9 +335,12 @@ func (e *Engine) purge(ctx context.Context) error {
 // les note dans l'état de partage. state : l'état de partage a changé
 // (conflits, file hors ligne) ; sync : la file a changé (barre d'état).
 func (e *Engine) Counts(ctx context.Context) (pending, conflicts int, state, sync bool, err error) {
-	err = e.db.Read().QueryRowContext(ctx, `SELECT (SELECT count(DISTINCT batch) FROM _lattis_outbox WHERE state = 'pending'), (SELECT count(*) FROM _lattis_conflicts)`).Scan(&pending, &conflicts)
+	var held int
+	err = e.db.Read().QueryRowContext(ctx, `SELECT (SELECT count(DISTINCT batch) FROM _lattis_outbox WHERE state = 'pending' AND error IS NULL), (SELECT count(*) FROM _lattis_conflicts),
+		(SELECT count(DISTINCT batch) FROM _lattis_outbox WHERE `+heldWhere+`)`).Scan(&pending, &conflicts, &held)
 	if err == nil {
 		state, sync = e.link.SetQueue(pending, conflicts)
+		state = e.link.SetHeld(held) || state
 	}
 	return
 }

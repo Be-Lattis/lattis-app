@@ -492,6 +492,12 @@ export interface State {
      * des deux côtés, la dernière écriture l'emporte ; décision 0018).
      */
     "layoutConflicts"?: number;
+
+    /**
+     * Held : étapes de la file mises de côté (le serveur les reçoit mais
+     * elles échouent toujours) : volet Conflits, Réessayer ou Abandonner.
+     */
+    "held"?: number;
 }
 
 /**

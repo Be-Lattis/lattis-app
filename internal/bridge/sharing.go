@@ -434,6 +434,52 @@ func (s *DocumentService) ShareResolve(ctx context.Context, id int64, mine bool)
 	return s.changed(ctx)
 }
 
+// ShareHeld liste les tableaux dont des modifications ne partent pas vers
+// le serveur (mises de côté après des échecs répétés ; volet Conflits).
+func (s *DocumentService) ShareHeld(ctx context.Context) ([]collab.Held, error) {
+	eng := s.collab()
+	if eng == nil {
+		return []collab.Held{}, nil
+	}
+	h, err := eng.HeldList(ctx)
+	if h == nil {
+		h = []collab.Held{}
+	}
+	return h, err
+}
+
+// ShareHeldResolve règle les modifications mises de côté du tableau tbl :
+// retry, les renvoyer ; sinon les abandonner (le tableau reprend l'état du
+// serveur).
+func (s *DocumentService) ShareHeldResolve(ctx context.Context, tbl int64, retry bool) (DocState, error) {
+	eng := s.collab()
+	if eng == nil {
+		return DocState{}, collab.ErrNotCollaborative
+	}
+	var notices []string
+	if retry {
+		if err := eng.RetryHeld(ctx, tbl); err != nil {
+			return DocState{}, err
+		}
+		s.kickShare()
+	} else {
+		rep, err := eng.DropHeld(ctx, tbl)
+		if err != nil {
+			return DocState{}, err
+		}
+		notices = rep.Notices
+	}
+	if d, err := s.current(); err == nil {
+		eng.Counts(ctx)
+		s.emitShare(d)
+	}
+	st, err := s.changed(ctx)
+	if len(notices) > 0 && st.Notice == "" {
+		st.Notice = notices[len(notices)-1]
+	}
+	return st, err
+}
+
 // ShareCanAddTable dit pourquoi le tableau table ne peut pas être ajouté au
 // classeur collaboratif ouvert ("" : il peut l'être ; voir ShareAddTable).
 func (s *DocumentService) ShareCanAddTable(ctx context.Context, table string) (string, error) {

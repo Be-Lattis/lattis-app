@@ -159,6 +159,10 @@ export function banner(s: State | null | undefined): Banner | null {
 		return { kind: 'offline', text: offlineText(s), ...(s.offline ? { detail: s.offline } : {}), actions };
 	}
 	if (s.newVersion) return { kind: 'new', text: `Nouvelle version disponible (version ${s.newVersion})`, actions: [{ action: 'reload', label: 'Recharger' }] };
+	if (s.held) {
+		const n = s.held;
+		return { kind: 'conflict', text: n > 1 ? `${n} modifications ne partent pas vers le serveur` : 'Une modification ne part pas vers le serveur', actions: [{ action: 'conflicts', label: 'Voir' }] };
+	}
 	if (s.conflicts) {
 		const n = s.conflicts;
 		return { kind: 'conflict', text: `${n} conflit${n > 1 ? 's' : ''} : cellule${n > 1 ? 's' : ''} modifiée${n > 1 ? 's' : ''} par un collègue entre-temps`, actions: [{ action: 'conflicts', label: 'Voir' }] };
