@@ -6,7 +6,7 @@ import "github.com/lalamefine/lattis/internal/msg"
 // signature, autocomplétion, dialogue « Insérer une fonction »).
 type FunctionInfo struct {
 	Name        string   `json:"name"`        // nom dans la langue demandée
-	Other       string   `json:"other"`       // nom dans l'autre langue
+	Other       string   `json:"other"`       // nom anglais (français pour l'anglais)
 	Arity       string   `json:"arity"`       // « 2 à 3 arguments »
 	Category    string   `json:"category"`    // « Agrégats »
 	Description string   `json:"description"` // une phrase

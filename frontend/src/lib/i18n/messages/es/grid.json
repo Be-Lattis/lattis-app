@@ -547,20 +547,20 @@
 	},
 	"formulaError": {
 		"name": {
-			"ref": "#NAME?: {ref} no existe. Escriba Cell[{cell}] para una celda libre, [Columna] para el valor de la fila en una tabla, Tabla[Columna] para una columna entera, o Tabla[Columna][fila] para un único valor.",
-			"unknown": "#NAME?: nombre desconocido. Compruebe el nombre de la función, la tabla, la columna o la celda con nombre."
+			"ref": "#¿NOMBRE?: {ref} no existe. Escriba Cell[{cell}] para una celda libre, [Columna] para el valor de la fila en una tabla, Tabla[Columna] para una columna entera, o Tabla[Columna][fila] para un único valor.",
+			"unknown": "#¿NOMBRE?: nombre desconocido. Compruebe el nombre de la función, la tabla, la columna o la celda con nombre."
 		},
 		"value": {
-			"text": "#VALUE!: Cell[{cell}] contiene texto, no un número ni una fecha.",
-			"column": "#VALUE!: se usa una columna entera Tabla[Columna] donde se espera un único valor. Escriba Tabla[Columna][fila], o [Columna] en una fila de la tabla.",
-			"type": "#VALUE!: tipo de valor inesperado (texto donde se espera un número, o argumento no válido)."
+			"text": "#¡VALOR!: Cell[{cell}] contiene texto, no un número ni una fecha.",
+			"column": "#¡VALOR!: se usa una columna entera Tabla[Columna] donde se espera un único valor. Escriba Tabla[Columna][fila], o [Columna] en una fila de la tabla.",
+			"type": "#¡VALOR!: tipo de valor inesperado (texto donde se espera un número, o argumento no válido)."
 		},
-		"div0": "#DIV/0!: división por cero (o por una celda en blanco).",
-		"ref": "#REF!: referencia no válida, la tabla o la columna se eliminó o se le cambió el nombre.",
-		"circ": "#CIRC!: referencia circular, la fórmula depende de su propio valor (por ejemplo SUM(Tabla[X]) en la columna X). Haga que lea otras celdas u otras columnas; para un total acumulado, lea la fila anterior: [Total][-1].",
-		"na": "#N/A: valor no encontrado (REFERENCE, MATCH…); compruebe la clave que busca.",
-		"num": "#NUM!: número no válido o fuera del intervalo.",
-		"spill": "#SPILL!: la matriz dinámica no puede desbordarse, hay celdas de su camino que ya están ocupadas.",
+		"div0": "#¡DIV/0!: división por cero (o por una celda en blanco).",
+		"ref": "#¡REF!: referencia no válida, la tabla o la columna se eliminó o se le cambió el nombre.",
+		"circ": "#CIRC!: referencia circular, la fórmula depende de su propio valor (por ejemplo SUMA(Tabla[X]) en la columna X). Haga que lea otras celdas u otras columnas; para un total acumulado, lea la fila anterior: [Total][-1].",
+		"na": "#N/D: valor no encontrado (REFERENCIA, COINCIDIR…); compruebe la clave que busca.",
+		"num": "#¡NUM!: número no válido o fuera del intervalo.",
+		"spill": "#¡DESBORDAMIENTO!: la matriz dinámica no puede desbordarse, hay celdas de su camino que ya están ocupadas.",
 		"calc": "#CALC!: la matriz dinámica está vacía (ninguna fila coincide)."
 	},
 	"filter": {
@@ -828,7 +828,7 @@
 			"name": "Nombre del campo:",
 			"add": "Agregar",
 			"add.label": "Campo calculado…",
-			"add.tooltip": "Un campo cuyo valor se calcula para cada fila del origen: =YEAR([Fecha]), =LEFT([Código];2)… Agrupa las filas en Filas o Columnas, filtra o se resume como una columna."
+			"add.tooltip": "Un campo cuyo valor se calcula para cada fila del origen: =AÑO([Fecha]), =IZQUIERDA([Código];2)… Agrupa las filas en Filas o Columnas, filtra o se resume como una columna."
 		},
 		"panel": {
 			"title": "Campos de tabla dinámica",
@@ -1509,9 +1509,9 @@
 	},
 	"functions": {
 		"title": "Insertar función ({n} disponibles)",
-		"search": "Buscar (SUM, VLOOKUP, fecha, texto…)",
+		"search": "Buscar (SUMA, BUSCARV, fecha, texto…)",
 		"repeat": "{n, plural, one {El último argumento se puede repetir.} other {Los # últimos argumentos se pueden repetir.}}",
-		"english": "en francés: {name}"
+		"english": "en inglés: {name}"
 	},
 	"keys": {
 		"enter": "Entrar",

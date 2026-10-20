@@ -494,7 +494,7 @@ var de = map[ID]string{
 	"formula.rowInBrackets":   "Zeile in eckigen Klammern erwartet",
 	"formula.unclosedBracket": "nicht geschlossene Klammer",
 	"formula.whyEmpty":        "leere Formel",
-	"formula.whyNoColumn":     "Die Formel muss auf mindestens eine Spalte in eckigen Klammern verweisen, zum Beispiel =YEAR([Datum])",
+	"formula.whyNoColumn":     "Die Formel muss auf mindestens eine Spalte in eckigen Klammern verweisen, zum Beispiel =JAHR([Datum])",
 
 	// Formeln: Eingabefehler (formula.SyntaxError) und Umwandlung einer
 	// Excel-Formel (formula.ErrConvert).
@@ -510,7 +510,7 @@ var de = map[ID]string{
 	"formula.syntax.missingCloseParenFn": "schließende Klammer „)“ fehlt bei {fn}",
 	"formula.syntax.missingCloseBrace":   "schließende geschweifte Klammer „{brace}“ fehlt",
 	"formula.syntax.badCellAddress":      "ungültige Zelladresse: Cell[{address}]",
-	"formula.syntax.arrayLiterals":       "eine Matrixkonstante enthält nur Zahlen, Texte, TRUE, FALSE oder Fehler",
+	"formula.syntax.arrayLiterals":       "eine Matrixkonstante enthält nur Zahlen, Texte, WAHR, FALSCH oder Fehler",
 	"formula.syntax.arrayRows":           "alle Zeilen einer Matrixkonstante müssen gleich viele Werte haben",
 	"formula.syntax.arraySep":            "Trennzeichen in der Matrixkonstante erwartet: „{sep}“ zwischen Spalten, „;“ zwischen Zeilen",
 	"formula.syntax.empty":               "die Formel ist leer",
@@ -535,19 +535,19 @@ var de = map[ID]string{
 	"formula.convert.sheetNotFound":      "Blatt „{sheet}“ nicht gefunden",
 	"formula.convert.rangeOverflow":      "der Bereich {range} ragt über die Tabelle {table} hinaus: wählen Sie eine einzige Spalte ({table}[Spalte]) oder freie Zellen",
 	"formula.convert.rangeTooBig":        "der Bereich {range} ist zu groß: höchstens {max} Zellen",
-	"formula.convert.hlookup":            "HLOOKUP gibt es in Lattis nicht: Tabellen sind zeilenweise aufgebaut. Transponieren Sie die Daten und verwenden Sie dann REFERENCE",
-	"formula.convert.vlookupApprox":      "VLOOKUP mit ungefährer Übereinstimmung (4. Argument fehlt oder TRUE): verwenden Sie REFERENCE.APPROX oder fügen Sie FALSE für eine genaue Übereinstimmung hinzu",
+	"formula.convert.hlookup":            "WVERWEIS gibt es in Lattis nicht: Tabellen sind zeilenweise aufgebaut. Transponieren Sie die Daten und verwenden Sie dann REFERENZ",
+	"formula.convert.vlookupApprox":      "SVERWEIS mit ungefährer Übereinstimmung (4. Argument fehlt oder WAHR): verwenden Sie REFERENZ.UNGEFÄHR oder fügen Sie FALSCH für eine genaue Übereinstimmung hinzu",
 	"formula.convert.rangeNoTable":       "der Bereich {range} entspricht keiner Tabelle",
-	"formula.convert.vlookupRange":       "das 2. Argument von VLOOKUP muss ein Bereich oder eine Tabelle sein",
+	"formula.convert.vlookupRange":       "das 2. Argument von SVERWEIS muss ein Bereich oder eine Tabelle sein",
 	"formula.convert.tableNotFound":      "Tabelle {table} nicht gefunden",
 	"formula.convert.columnOutOfRange":   "Spaltennummer außerhalb des Bereichs",
 	"formula.convert.rangeKey":           "die Tabelle {table} hat bereits den Schlüssel {key}; der Bereich beginnt mit {column}",
 	"formula.convert.lookupKey":          "{fn}: die Tabelle {table} hat bereits den Schlüssel {key}, die Suche erfolgt über {column}",
-	"formula.convert.nameXlookup":        "XLOOKUP",
-	"formula.convert.nameIndexMatch":     "INDEX/MATCH",
-	"formula.convert.xlookupExact":       "XLOOKUP: nur die genaue Übereinstimmung wird unterstützt; für Staffeln verwenden Sie REFERENCE.APPROX",
-	"formula.convert.xlookupColumns":     "XLOOKUP: das 2. und 3. Argument müssen Tabellenspalten sein (Tabelle[Spalte])",
-	"formula.convert.xlookupSameTable":   "XLOOKUP: die gesuchte und die zurückgegebene Spalte müssen zur selben Tabelle gehören",
+	"formula.convert.nameXlookup":        "XVERWEIS",
+	"formula.convert.nameIndexMatch":     "INDEX/VERGLEICH",
+	"formula.convert.xlookupExact":       "XVERWEIS: nur die genaue Übereinstimmung wird unterstützt; für Staffeln verwenden Sie REFERENZ.UNGEFÄHR",
+	"formula.convert.xlookupColumns":     "XVERWEIS: das 2. und 3. Argument müssen Tabellenspalten sein (Tabelle[Spalte])",
+	"formula.convert.xlookupSameTable":   "XVERWEIS: die gesuchte und die zurückgegebene Spalte müssen zur selben Tabelle gehören",
 
 	// Queries
 	"query.accessDenied":          "Zugriff verweigert",
@@ -1351,7 +1351,7 @@ var de = map[ID]string{
 	"paste.tooBig": "Einfügen über vorhandenen Tabellen zu groß ({n} Zellen): Fügen Sie in einen leeren Bereich ein",
 
 	// Types
-	"type.aBoolean":  "ein boolescher Wert (TRUE oder FALSE)",
+	"type.aBoolean":  "ein boolescher Wert (WAHR oder FALSCH)",
 	"type.aDate":     "ein Datum",
 	"type.aNumber":   "eine Zahl",
 	"type.aText":     "ein Text",

@@ -22,8 +22,8 @@ type Locale struct {
 	Dot bool
 }
 
-// NameLang : langue des noms de fonctions. Seuls le français et l'anglais ont
-// les leurs ; NamesDE et NamesES prennent les noms anglais en attendant.
+// NameLang : langue des noms de fonctions, de VRAI/FAUX et des codes
+// d'erreur, comme Excel dans cette langue (SOMME, SUM, SUMME, SUMA).
 type NameLang uint8
 
 const (
@@ -40,8 +40,9 @@ var (
 
 // ForLanguage donne la locale des formules d'une langue de l'interface
 // (fr, en, de, es, zh) : « ; » et décimale « , » en français, allemand et
-// espagnol, « , » et « . » en anglais et en chinois ; noms français en
-// français, anglais ailleurs. Langue inconnue : le français.
+// espagnol, « , » et « . » en anglais et en chinois ; noms français,
+// allemands et espagnols dans ces langues, anglais en anglais et en
+// chinois. Langue inconnue : le français.
 func ForLanguage(lang string) Locale {
 	switch strings.ToLower(lang) {
 	case "en", "zh":
@@ -611,11 +612,8 @@ func (p *parser) primary() (Node, error) {
 			}
 			return ref, nil
 		}
-		switch strings.ToUpper(t.text) {
-		case "VRAI", "TRUE":
-			return BoolLit{true}, nil
-		case "FAUX", "FALSE":
-			return BoolLit{false}, nil
+		if v, ok := BoolWord(t.text, p.loc); ok {
+			return BoolLit{v}, nil
 		}
 		return Name{t.text}, nil
 	}
@@ -664,11 +662,8 @@ func (p *parser) array(open token) (Node, error) {
 			if !p.loc.Dot && strings.HasSuffix(word, ".") && strings.Count(word, ".") == 1 {
 				word, dot = strings.TrimSuffix(word, "."), true
 			}
-			switch strings.ToUpper(word) {
-			case "VRAI", "TRUE":
-				v = BoolLit{true}
-			case "FAUX", "FALSE":
-				v = BoolLit{false}
+			if b, ok := BoolWord(word, p.loc); ok {
+				v = BoolLit{b}
 			}
 			if v != nil && dot {
 				row = append(row, v)
@@ -887,6 +882,13 @@ func (p *parser) call(name token) (Node, error) {
 	if len(c.Args) < fn.Min || fn.Max >= 0 && len(c.Args) > fn.Max {
 		return nil, synErr(name.pos, msg.M("formula.syntax.arity", msg.Args{"fn": fn.name(p.loc), "arity": fn.arityMsg()}))
 	}
+	// GROUPER.PAR(…; SOMME) : l'agrégat écrit seul, dans n'importe quelle
+	// langue, est gardé sous son nom anglais, comme une fonction.
+	if c.Fn == "GROUPBY" && len(c.Args) == 3 {
+		if agg, ok := groupAgg(c.Args[2]); ok {
+			c.Args[2] = Name{agg}
+		}
+	}
 	if c.Fn == "LET" {
 		// Comme Excel, une forme fautive est refusée à la saisie.
 		if len(c.Args)%2 == 0 {
@@ -952,14 +954,7 @@ func format(b *strings.Builder, n Node, loc Locale) {
 	case StrLit:
 		b.WriteString(`"` + strings.ReplaceAll(n.V, `"`, `""`) + `"`)
 	case BoolLit:
-		switch {
-		case !loc.french() && n.V:
-			b.WriteString("TRUE")
-		case !loc.french():
-			b.WriteString("FALSE")
-		default:
-			b.WriteString(Boolean(n.V).String())
-		}
+		b.WriteString(BoolText(n.V, loc))
 	case ErrLit:
 		b.WriteString(n.V.In(loc))
 	case Ref:
@@ -1032,7 +1027,10 @@ func format(b *strings.Builder, n Node, loc Locale) {
 				b.WriteRune(loc.sep())
 				b.WriteByte(' ')
 			}
-			if a != nil {
+			// GROUPER.PAR(…; SOMME) : l'agrégat écrit seul suit la langue.
+			if agg, ok := groupAgg(a); ok && n.Fn == "GROUPBY" && i == 2 {
+				b.WriteString(LocalName(agg, loc))
+			} else if a != nil {
 				format(b, a, loc)
 			}
 		}

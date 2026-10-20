@@ -48,10 +48,10 @@ Las consultas `INSERT`, `UPDATE` y `DELETE` modifican las tablas como una entrad
 
 ## Una consulta en una fórmula {#une-requete-dans-une-formule}
 
-La función [QUERY](fonction:QUERY) ejecuta un `SELECT` en solo lectura y desborda su resultado en la hoja:
+La función [CONSULTA](fonction:CONSULTA) ejecuta un `SELECT` en solo lectura y desborda su resultado en la hoja:
 
 ```
-=QUERY("SELECT Cliente, SUM(Importe) FROM Ventas GROUP BY Cliente")
+=CONSULTA("SELECT Cliente, SUM(Importe) FROM Ventas GROUP BY Cliente")
 ```
 
 ## En los scripts {#dans-les-scripts}

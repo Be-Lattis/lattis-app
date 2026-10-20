@@ -4,7 +4,7 @@
 // repérées pour être colorées dans l'éditeur et encadrées sur la grille, et
 // références de plage insérées au glissé.
 // (t est ici un jeton : la traduction s'appelle tr.)
-import { formulaSep, t as tr } from '#lib/i18n/index.js';
+import { ERROR_CODES, formulaSep, t as tr } from '#lib/i18n/index.js';
 
 /** La saisie est-elle une formule ? */
 export const isFormula = (text: string) => /^\s*=/.test(text) && text.trim().length > 1;
@@ -36,7 +36,8 @@ class SyntaxErr extends Error {
 	}
 }
 
-const ERRORS = ['#DIV/0!', '#VALEUR!', '#N/A', '#REF!', '#NOM?', '#NOMBRE!', '#CIRC!', '#VALUE!', '#NAME?', '#NUM!'];
+// Codes d'erreur de toutes les langues (#VALEUR!, #VALUE!, #WERT!, #¡VALOR!…).
+const ERRORS = ERROR_CODES;
 const A1_RANGE = /^(?:(?:[\p{L}\w]+|'(?:[^']|'')+')!)?\$?[A-Za-z]{1,3}\$?\d+:\$?[A-Za-z]{1,3}\$?\d+/u;
 const A1 = /^([A-Za-z]{1,3})([1-9][0-9]{0,6})$/;
 const isLetter = (c: string) => /\p{L}/u.test(c);

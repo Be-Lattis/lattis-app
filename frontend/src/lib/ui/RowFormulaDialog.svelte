@@ -138,7 +138,7 @@
 				spellcheck="false"
 				autocomplete="off"
 				data-autofocus
-				placeholder={`=${fnName('YEAR', 'ANNEE')}([Date])`}
+				placeholder={`=${fnName({ en: 'YEAR', fr: 'ANNEE', de: 'JAHR', es: 'AÑO' })}([Date])`}
 				aria-invalid={!!(shown?.error || failed)}
 				oninput={refresh}
 				onclick={refresh}

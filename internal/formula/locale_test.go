@@ -13,9 +13,9 @@ func TestForLanguage(t *testing.T) {
 		{"", `=SI(SOMME(T[A]; 1,5)>2; VRAI; "x")`},
 		{"en", en},
 		{"zh", en},
-		// Noms allemands et espagnols à venir : anglais, séparateurs à la française.
-		{"de", `=IF(SUM(T[A]; 1,5)>2; TRUE; "x")`},
-		{"ES", `=IF(SUM(T[A]; 1,5)>2; TRUE; "x")`},
+		// Noms allemands et espagnols d'Excel, séparateurs à la française.
+		{"de", `=WENN(SUMME(T[A]; 1,5)>2; WAHR; "x")`},
+		{"ES", `=SI(SUMA(T[A]; 1,5)>2; VERDADERO; "x")`},
 	} {
 		loc := ForLanguage(c.lang)
 		n, err := Parse(en, EN)
@@ -49,7 +49,7 @@ func TestForLanguageArray(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := Format(n, ForLanguage("de")); got != `=SUM({1.2;3.4})` {
+	if got := Format(n, ForLanguage("de")); got != `=SUMME({1.2;3.4})` {
 		t.Errorf("de : %s", got)
 	}
 	if _, err := Parse(`SUM({1.2;3.4})`, ForLanguage("es")); err != nil {

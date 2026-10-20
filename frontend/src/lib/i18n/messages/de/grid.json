@@ -551,16 +551,16 @@
 			"unknown": "#NAME?: unbekannter Name. Prüfen Sie den Namen der Funktion, der Tabelle, der Spalte oder der benannten Zelle."
 		},
 		"value": {
-			"text": "#VALUE!: Cell[{cell}] enthält Text, keine Zahl und kein Datum.",
-			"column": "#VALUE!: Eine ganze Spalte Tabelle[Spalte] wird verwendet, wo ein einzelner Wert erwartet wird. Schreiben Sie Tabelle[Spalte][Zeile] oder [Spalte] in einer Zeile der Tabelle.",
-			"type": "#VALUE!: unerwarteter Werttyp (Text, wo eine Zahl erwartet wird, oder ungültiges Argument)."
+			"text": "#WERT!: Cell[{cell}] enthält Text, keine Zahl und kein Datum.",
+			"column": "#WERT!: Eine ganze Spalte Tabelle[Spalte] wird verwendet, wo ein einzelner Wert erwartet wird. Schreiben Sie Tabelle[Spalte][Zeile] oder [Spalte] in einer Zeile der Tabelle.",
+			"type": "#WERT!: unerwarteter Werttyp (Text, wo eine Zahl erwartet wird, oder ungültiges Argument)."
 		},
 		"div0": "#DIV/0!: Division durch null (oder durch eine leere Zelle).",
-		"ref": "#REF!: ungültiger Bezug, die Tabelle oder Spalte wurde gelöscht oder umbenannt.",
-		"circ": "#CIRC!: Zirkelbezug, die Formel hängt von ihrem eigenen Wert ab (z. B. SUM(Tabelle[X]) in der Spalte X). Lassen Sie sie andere Zellen oder Spalten lesen; für eine laufende Summe lesen Sie die vorherige Zeile: [Kumuliert][-1].",
-		"na": "#N/A: Wert nicht gefunden (REFERENCE, MATCH…); prüfen Sie den gesuchten Schlüssel.",
-		"num": "#NUM!: ungültige Zahl oder Zahl außerhalb des zulässigen Bereichs.",
-		"spill": "#SPILL!: Die dynamische Matrix kann nicht überlaufen, Zellen in ihrem Weg sind bereits gefüllt.",
+		"ref": "#BEZUG!: ungültiger Bezug, die Tabelle oder Spalte wurde gelöscht oder umbenannt.",
+		"circ": "#CIRC!: Zirkelbezug, die Formel hängt von ihrem eigenen Wert ab (z. B. SUMME(Tabelle[X]) in der Spalte X). Lassen Sie sie andere Zellen oder Spalten lesen; für eine laufende Summe lesen Sie die vorherige Zeile: [Kumuliert][-1].",
+		"na": "#NV: Wert nicht gefunden (REFERENZ, VERGLEICH…); prüfen Sie den gesuchten Schlüssel.",
+		"num": "#ZAHL!: ungültige Zahl oder Zahl außerhalb des zulässigen Bereichs.",
+		"spill": "#ÜBERLAUF!: Die dynamische Matrix kann nicht überlaufen, Zellen in ihrem Weg sind bereits gefüllt.",
 		"calc": "#CALC!: Die dynamische Matrix ist leer (keine Zeile entspricht)."
 	},
 	"filter": {
@@ -828,7 +828,7 @@
 			"name": "Feldname:",
 			"add": "Hinzufügen",
 			"add.label": "Berechnetes Feld…",
-			"add.tooltip": "Ein Feld, dessen Wert für jede Zeile der Quelle berechnet wird: =YEAR([Datum]), =LEFT([Code];2)… Es gruppiert die Zeilen in Zeilen oder Spalten, filtert oder wird wie eine Spalte zusammengefasst."
+			"add.tooltip": "Ein Feld, dessen Wert für jede Zeile der Quelle berechnet wird: =JAHR([Datum]), =LINKS([Code];2)… Es gruppiert die Zeilen in Zeilen oder Spalten, filtert oder wird wie eine Spalte zusammengefasst."
 		},
 		"panel": {
 			"title": "PivotTable-Felder",
@@ -1509,9 +1509,9 @@
 	},
 	"functions": {
 		"title": "Funktion einfügen ({n} verfügbar)",
-		"search": "Suchen (SUM, VLOOKUP, Datum, Text…)",
+		"search": "Suchen (SUMME, SVERWEIS, Datum, Text…)",
 		"repeat": "{n, plural, one {Das letzte Argument kann wiederholt werden.} other {Die letzten # Argumente können wiederholt werden.}}",
-		"english": "auf Französisch: {name}"
+		"english": "auf Englisch: {name}"
 	},
 	"keys": {
 		"enter": "Eingabe",

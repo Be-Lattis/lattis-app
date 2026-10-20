@@ -25,16 +25,16 @@ type funcDef struct {
 	impl     func([]Value) Value
 }
 
-// name : le nom de la fonction dans la langue des noms de l. L'allemand et
-// l'espagnol prennent les noms anglais en attendant les leurs (lot 5 de
-// docs/i18n.md) : il suffira d'une colonne de noms dans funcDef et d'un
-// cas ici (NamesDE, NamesES), lookupFunc les acceptant ensuite à la saisie.
+// name : le nom de la fonction dans la langue des noms de l (SUM, SOMME,
+// SUMME, SUMA ; noms allemands et espagnols dans funcs_names.go).
 func (f funcDef) name(l Locale) string {
 	switch l.Names {
 	case NamesFR:
 		return f.FR
-	case NamesDE, NamesES:
-		return f.EN
+	case NamesDE:
+		return namesDE[f.EN]
+	case NamesES:
+		return namesES[f.EN]
 	}
 	return f.EN
 }
@@ -304,17 +304,24 @@ var funcs = []funcDef{
 // un message (voir Convert), et donc absentes de l'aide à la saisie.
 var refused = map[string]bool{"HLOOKUP": true}
 
+// funcIndex : chaque fonction sous ses noms anglais, français, allemand et
+// espagnol, tous acceptés quelle que soit la langue de la session, comme le
+// français accepte l'anglais (un nom ne désigne qu'une fonction :
+// TestFunctionNames).
 var funcIndex = func() map[string]funcDef {
 	m := map[string]funcDef{}
 	for _, f := range funcs {
-		m[f.EN] = f
-		m[f.FR] = f
+		for _, n := range []string{f.EN, f.FR, namesDE[f.EN], namesES[f.EN]} {
+			if n != "" {
+				m[n] = f
+			}
+		}
 	}
 	return m
 }()
 
-// LocalName donne le nom d'une fonction (anglais ou français) dans une
-// langue ; le nom tel quel pour une fonction inconnue.
+// LocalName donne le nom d'une fonction (dans n'importe quelle langue) dans
+// une langue ; le nom tel quel pour une fonction inconnue.
 func LocalName(name string, l Locale) string {
 	if f, ok := lookupFunc(name); ok {
 		return f.name(l)

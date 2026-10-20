@@ -261,7 +261,10 @@ func letName(n Node) (string, bool) {
 	if _, _, _, ok := A1Address(nm.Name); ok {
 		return "", false // B2, AB12 : une adresse à la Excel
 	}
-	if _, ok := lookupFunc(nm.Name); ok {
+	// Noms anglais et français seulement : les noms allemands et espagnols
+	// (Y, O, TAG, WERT…) restent des noms de LET possibles, comme avant
+	// qu'ils soient au catalogue.
+	if f, ok := lookupFunc(nm.Name); ok && (strings.EqualFold(nm.Name, f.EN) || strings.EqualFold(nm.Name, f.FR)) {
 		return "", false
 	}
 	return strings.ToLower(nm.Name), true

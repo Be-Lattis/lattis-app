@@ -15,7 +15,7 @@
 		"aria": "Hilfe schließen"
 	},
 	"search": {
-		"placeholder": "Suchen: SUMIF, Schlüssel, Diagramm, db.query…",
+		"placeholder": "Suchen: SUMMEWENN, Schlüssel, Diagramm, db.query…",
 		"aria": "Hilfe durchsuchen"
 	},
 	"toc": "Inhalt",
@@ -25,7 +25,7 @@
 		"none": "Keine Treffer."
 	},
 	"fn": {
-		"english": "Französischer Name:",
+		"english": "Englischer Name:",
 		"category": "Kategorie:",
 		"arguments": "Argumente",
 		"optional": "optional",

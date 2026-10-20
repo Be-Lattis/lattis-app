@@ -15,7 +15,7 @@
 		"aria": "Cerrar la ayuda"
 	},
 	"search": {
-		"placeholder": "Buscar: SUMIF, clave, gráfico, db.query…",
+		"placeholder": "Buscar: SUMAR.SI, clave, gráfico, db.query…",
 		"aria": "Buscar en la ayuda"
 	},
 	"toc": "Contenido",
@@ -25,7 +25,7 @@
 		"none": "No hay coincidencias."
 	},
 	"fn": {
-		"english": "Nombre en francés:",
+		"english": "Nombre en inglés:",
 		"category": "Categoría:",
 		"arguments": "Argumentos",
 		"optional": "opcional",

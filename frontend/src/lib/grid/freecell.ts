@@ -20,7 +20,7 @@ export function freeKind(text: string): FreeKind {
 	if (!s) return 'text';
 	if (isNumericText(s) || exponent.test(s) || (/\d/.test(s) && amount.test(s) && (s.includes('€') || s.startsWith('(')))) return 'number';
 	if (date.test(s) || time.test(s)) return 'date';
-	if (/^(vrai|faux|true|false)$/i.test(s)) return 'bool';
+	if (/^(vrai|faux|true|false|wahr|falsch|verdadero|falso)$/i.test(s)) return 'bool';
 	return 'text';
 }
 

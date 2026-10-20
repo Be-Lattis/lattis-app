@@ -45,8 +45,21 @@ describe('valeurs dans la langue de la session', () => {
 		expect(errorCode('#VALEUR!', 'fr')).toBe('#VALEUR!');
 		expect(errorCode('#N/A', 'en')).toBe('#N/A');
 		expect(frenchErrorCode('#NAME?')).toBe('#NOM?');
-		expect(fnName('SUM', 'SOMME', 'fr')).toBe('SOMME');
-		expect(fnName('SUM', 'SOMME', 'de')).toBe('SUM');
+		expect(boolText(true, 'de')).toBe('WAHR');
+		expect(boolText(false, 'es')).toBe('FALSO');
+		expect(boolText(true, 'zh')).toBe('TRUE');
+		expect(errorCode('#VALEUR!', 'de')).toBe('#WERT!');
+		expect(errorCode('#N/A', 'es')).toBe('#N/D');
+		expect(errorCode('#DEVERSEMENT!', 'de')).toBe('#ÜBERLAUF!');
+		expect(errorCode('#NOM?', 'zh')).toBe('#NAME?');
+		expect(frenchErrorCode('#¿NOMBRE?')).toBe('#NOM?');
+		expect(frenchErrorCode('#BEZUG!')).toBe('#REF!');
+		expect(frenchErrorCode('#CIRC!')).toBe('#CIRC!');
+		const sum = { en: 'SUM', fr: 'SOMME', de: 'SUMME', es: 'SUMA' };
+		expect(fnName(sum, 'fr')).toBe('SOMME');
+		expect(fnName(sum, 'de')).toBe('SUMME');
+		expect(fnName(sum, 'es')).toBe('SUMA');
+		expect(fnName(sum, 'zh')).toBe('SUM');
 	});
 
 	it('nombres écrits dans la langue', () => {

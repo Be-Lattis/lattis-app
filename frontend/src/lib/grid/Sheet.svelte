@@ -6475,10 +6475,10 @@
 		const inTbl = tableAt(row, col);
 		const above = entries.filter((e) => col >= e.t.col && col <= e.lastCol && e.last < row).sort((a, b) => b.last - a.last)[0];
 		if (!inTbl && above) {
-			startFormula(`=${fnName('SUM', 'SOMME')}(${above.t.name}[${above.t.columns[col - above.t.col].name}])`);
+			startFormula(`=${fnName({ en: 'SUM', fr: 'SOMME', de: 'SUMME', es: 'SUMA' })}(${above.t.name}[${above.t.columns[col - above.t.col].name}])`);
 			return;
 		}
-		startFormula(`=${fnName('SUM', 'SOMME')}(`);
+		startFormula(`=${fnName({ en: 'SUM', fr: 'SOMME', de: 'SUMME', es: 'SUMA' })}(`);
 	}
 
 	export function openFunctions() {

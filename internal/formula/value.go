@@ -50,8 +50,19 @@ var errNames = map[ErrCode]string{
 	ErrCirc:  "#CIRC!",
 }
 
-// Noms anglais acceptés à la saisie.
-var errAliases = map[string]ErrCode{"#VALUE!": ErrValue, "#NAME?": ErrName, "#NUM!": ErrNum}
+// Noms anglais, allemands et espagnols acceptés à la saisie (errLang), dans
+// toutes les langues.
+var errAliases = func() map[string]ErrCode {
+	m := map[string]ErrCode{}
+	for _, names := range errLang {
+		for code, name := range names {
+			if name != errNames[code] {
+				m[name] = code
+			}
+		}
+	}
+	return m
+}()
 
 func (e ErrCode) String() string { return errNames[e] }
 

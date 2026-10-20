@@ -159,9 +159,22 @@ describe('pages par langue', () => {
 			for (const c of code(p.blocks).filter((x) => /^=/.test(x))) {
 				const bare = c.replace(/"[^"]*"/g, '""').replace(/\{[^}]*\}/g, '{}');
 				expect(bare, `${p.id} : ${c}`).not.toMatch(/(?<!\d),|,(?!\d)/); // « ; » sépare, « , » est décimale
+				// Noms de l'Excel allemand (SUMME, WENN…), ni français ni anglais.
 				expect(bare, `${p.id} : ${c}`).not.toMatch(/\b(SOMME|MOYENNE|SI|NBVAL|RECHERCHEV|ANNEE|TEXTE|GAUCHE|FILTRE|REQUETE)\(/);
+				expect(bare, `${p.id} : ${c}`).not.toMatch(/\b(SUM|AVERAGE|IF|COUNTA|SUMIFS|VLOOKUP|YEAR|LEFT|UNIQUE|TEXTSPLIT|QUERY|ROUND|SHEETCHOICE)\(/);
 			}
 		}
+	});
+	it('espagnol : formules à l’espagnole', async () => {
+		const es = await loadHelpPages('es');
+		for (const p of es)
+			for (const c of code(p.blocks).filter((x) => /^=/.test(x))) {
+				const bare = c.replace(/"[^"]*"/g, '""').replace(/\{[^}]*\}/g, '{}');
+				expect(bare, `${p.id} : ${c}`).not.toMatch(/(?<!\d),|,(?!\d)/); // « ; » sépare, « , » est décimale
+				// Noms de l'Excel espagnol (SUMA, SI…), ni français ni anglais.
+				expect(bare, `${p.id} : ${c}`).not.toMatch(/\b(SOMME|MOYENNE|NBVAL|RECHERCHEV|ANNEE|TEXTE|GAUCHE|FILTRE|REQUETE)\(/);
+				expect(bare, `${p.id} : ${c}`).not.toMatch(/\b(SUM|AVERAGE|IF|COUNTA|SUMIFS|VLOOKUP|YEAR|LEFT|UNIQUE|TEXTSPLIT|QUERY|ROUND|SHEETCHOICE)\(/);
+			}
 	});
 	it('anglais : typographie, touches et formules à l’anglaise', async () => {
 		const en = await loadHelpPages('en');

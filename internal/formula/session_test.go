@@ -11,16 +11,16 @@ import (
 // Translate passe d'une langue à l'autre sans rien perdre : relue dans sa
 // langue, la formule redonne la forme gardée.
 func TestTranslate(t *testing.T) {
-	for _, c := range []struct{ fr, en, de string }{
-		{`=SOMME(Ventes[Montant]; 1,5)`, `=SUM(Ventes[Montant], 1.5)`, `=SUM(Ventes[Montant]; 1,5)`},
-		{`=SI(ESTERREUR(1/0); #NOM?; VRAI)`, `=IF(ISERROR(1/0), #NAME?, TRUE)`, `=IF(ISERROR(1/0); #NAME?; TRUE)`},
-		{`=SOMME({1.2;3.4})`, `=SUM({1,2;3,4})`, `=SUM({1.2;3.4})`},
-		{`=REFERENCE(Clients[Ville]; Cell[A1])&"; ,"`, `=REFERENCE(Clients[Ville], Cell[A1])&"; ,"`, `=REFERENCE(Clients[Ville]; Cell[A1])&"; ,"`},
-		{`=LET(x; 2,5; x*Feuille2!Cell[B3])`, `=LET(x, 2.5, x*Feuille2!Cell[B3])`, `=LET(x; 2,5; x*Feuille2!Cell[B3])`},
+	for _, c := range []struct{ fr, en, de, es string }{
+		{`=SOMME(Ventes[Montant]; 1,5)`, `=SUM(Ventes[Montant], 1.5)`, `=SUMME(Ventes[Montant]; 1,5)`, `=SUMA(Ventes[Montant]; 1,5)`},
+		{`=SI(ESTERREUR(1/0); #NOM?; VRAI)`, `=IF(ISERROR(1/0), #NAME?, TRUE)`, `=WENN(ISTFEHLER(1/0); #NAME?; WAHR)`, `=SI(ESERROR(1/0); #¿NOMBRE?; VERDADERO)`},
+		{`=SOMME({1.2;3.4})`, `=SUM({1,2;3,4})`, `=SUMME({1.2;3.4})`, `=SUMA({1.2;3.4})`},
+		{`=REFERENCE(Clients[Ville]; Cell[A1])&"; ,"`, `=REFERENCE(Clients[Ville], Cell[A1])&"; ,"`, `=REFERENZ(Clients[Ville]; Cell[A1])&"; ,"`, `=REFERENCIA(Clients[Ville]; Cell[A1])&"; ,"`},
+		{`=LET(x; 2,5; x*Feuille2!Cell[B3])`, `=LET(x, 2.5, x*Feuille2!Cell[B3])`, `=LET(x; 2,5; x*Feuille2!Cell[B3])`, `=LET(x; 2,5; x*Feuille2!Cell[B3])`},
 	} {
 		for _, l := range []struct {
 			lang, want string
-		}{{"en", c.en}, {"zh", c.en}, {"de", c.de}, {"es", c.de}, {"fr", c.fr}} {
+		}{{"en", c.en}, {"zh", c.en}, {"de", c.de}, {"es", c.es}, {"fr", c.fr}} {
 			loc := ForLanguage(l.lang)
 			got, err := Translate(c.fr, FR, loc)
 			if err != nil || got != l.want {
@@ -92,8 +92,16 @@ func TestCatalog(t *testing.T) {
 	if !strings.Contains(fr.Signature, "SOMME.SI(plage; critère") || fr.Arity != "de 2 à 3 arguments" {
 		t.Errorf("français : %+v", fr)
 	}
-	de := find(Catalog(ForLanguage("de"), msg.DE), "SUMIF")
-	if !strings.Contains(de.Signature, "SUMIF(plage; critère") || !strings.HasPrefix(de.Example, "=SUMIF(") {
+	if fr.Other != "SUMIF" {
+		t.Errorf("français, autre nom : %q", fr.Other)
+	}
+	// Allemand et espagnol : noms d'Excel, l'anglais en autre nom.
+	de := find(Catalog(ForLanguage("de"), msg.DE), "SUMMEWENN")
+	if de.Other != "SUMIF" || !strings.Contains(de.Signature, "SUMMEWENN(plage; critère") || !strings.HasPrefix(de.Example, "=SUMMEWENN(") {
 		t.Errorf("allemand : %+v", de)
+	}
+	es := find(Catalog(ForLanguage("es"), msg.ES), "SUMAR.SI")
+	if es.Other != "SUMIF" || !strings.Contains(es.Signature, "SUMAR.SI(plage; critère") || !strings.HasPrefix(es.Example, "=SUMAR.SI(") {
+		t.Errorf("espagnol : %+v", es)
 	}
 }

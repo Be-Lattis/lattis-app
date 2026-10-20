@@ -302,7 +302,7 @@
 		},
 		"autoSum": {
 			"label": "AutoSumme",
-			"tooltip": "SUM der Tabellenspalte darüber (Alt+=)"
+			"tooltip": "SUMME der Tabellenspalte darüber (Alt+=)"
 		},
 		"fill": {
 			"label": "Ausfüllen",
@@ -529,7 +529,7 @@
 			"tooltip": "Eine Funktion auswählen und die Formel in der aktiven Zelle beginnen (Umschalt+F3)"
 		},
 		"reference": {
-			"tooltip": "REFERENCE(Tabelle[Spalte]; Schlüssel): das VLOOKUP von Lattis"
+			"tooltip": "REFERENZ(Tabelle[Spalte]; Schlüssel): der SVERWEIS von Lattis"
 		},
 		"showLinks": {
 			"label": "Verknüpfungen anzeigen",
@@ -537,7 +537,7 @@
 		},
 		"calculate": {
 			"label": "Neu berechnen",
-			"tooltip": "Formeln neu berechnen und TODAY, NOW und RAND erneuern (F9, oder F5 außerhalb einer importierten Tabelle)"
+			"tooltip": "Formeln neu berechnen und HEUTE, JETZT und ZUFALLSZAHL erneuern (F9, oder F5 außerhalb einer importierten Tabelle)"
 		},
 		"toValues": {
 			"label": "In Werte konvertieren",

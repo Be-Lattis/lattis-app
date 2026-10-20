@@ -493,7 +493,7 @@ var es = map[ID]string{
 	"formula.rowInBrackets":   "se espera una fila entre corchetes",
 	"formula.unclosedBracket": "corchete sin cerrar",
 	"formula.whyEmpty":        "fórmula vacía",
-	"formula.whyNoColumn":     "la fórmula debe hacer referencia al menos a una columna entre corchetes, por ejemplo =YEAR([Fecha])",
+	"formula.whyNoColumn":     "la fórmula debe hacer referencia al menos a una columna entre corchetes, por ejemplo =AÑO([Fecha])",
 
 	// Fórmulas: errores de escritura (formula.SyntaxError) y de conversión
 	// de una fórmula de Excel (formula.ErrConvert).
@@ -509,7 +509,7 @@ var es = map[ID]string{
 	"formula.syntax.missingCloseParenFn": "falta un paréntesis de cierre «)» en {fn}",
 	"formula.syntax.missingCloseBrace":   "falta una llave de cierre «{brace}»",
 	"formula.syntax.badCellAddress":      "dirección de celda no válida: Cell[{address}]",
-	"formula.syntax.arrayLiterals":       "una constante matricial solo contiene números, textos, TRUE, FALSE o errores",
+	"formula.syntax.arrayLiterals":       "una constante matricial solo contiene números, textos, VERDADERO, FALSO o errores",
 	"formula.syntax.arrayRows":           "todas las filas de una constante matricial deben tener el mismo número de valores",
 	"formula.syntax.arraySep":            "se esperaba un separador en la constante matricial: «{sep}» entre columnas, «;» entre filas",
 	"formula.syntax.empty":               "la fórmula está vacía",
@@ -534,19 +534,19 @@ var es = map[ID]string{
 	"formula.convert.sheetNotFound":      "hoja «{sheet}» no encontrada",
 	"formula.convert.rangeOverflow":      "el rango {range} desborda la tabla {table}: indique una sola columna ({table}[Columna]) o celdas libres",
 	"formula.convert.rangeTooBig":        "el rango {range} es demasiado grande: {max} celdas como máximo",
-	"formula.convert.hlookup":            "HLOOKUP no existe en Lattis: las tablas se organizan por filas. Transponga los datos y luego use REFERENCE",
-	"formula.convert.vlookupApprox":      "VLOOKUP con coincidencia aproximada (4.º argumento omitido o TRUE): use REFERENCE.APPROX o añada FALSE para una coincidencia exacta",
+	"formula.convert.hlookup":            "BUSCARH no existe en Lattis: las tablas se organizan por filas. Transponga los datos y luego use REFERENCIA",
+	"formula.convert.vlookupApprox":      "BUSCARV con coincidencia aproximada (4.º argumento omitido o VERDADERO): use REFERENCIA.APROX o añada FALSO para una coincidencia exacta",
 	"formula.convert.rangeNoTable":       "el rango {range} no corresponde a ninguna tabla",
-	"formula.convert.vlookupRange":       "el 2.º argumento de VLOOKUP debe ser un rango o una tabla",
+	"formula.convert.vlookupRange":       "el 2.º argumento de BUSCARV debe ser un rango o una tabla",
 	"formula.convert.tableNotFound":      "tabla {table} no encontrada",
 	"formula.convert.columnOutOfRange":   "número de columna fuera del rango",
 	"formula.convert.rangeKey":           "la tabla {table} ya tiene la clave {key}; el rango empieza por {column}",
 	"formula.convert.lookupKey":          "{fn}: la tabla {table} ya tiene la clave {key}, la búsqueda se hace en {column}",
-	"formula.convert.nameXlookup":        "XLOOKUP",
-	"formula.convert.nameIndexMatch":     "INDEX/MATCH",
-	"formula.convert.xlookupExact":       "XLOOKUP: solo se admite la coincidencia exacta; para tramos, use REFERENCE.APPROX",
-	"formula.convert.xlookupColumns":     "XLOOKUP: los argumentos 2.º y 3.º deben ser columnas de tabla (Tabla[Columna])",
-	"formula.convert.xlookupSameTable":   "XLOOKUP: las columnas buscada y devuelta deben pertenecer a la misma tabla",
+	"formula.convert.nameXlookup":        "BUSCARX",
+	"formula.convert.nameIndexMatch":     "INDICE/COINCIDIR",
+	"formula.convert.xlookupExact":       "BUSCARX: solo se admite la coincidencia exacta; para tramos, use REFERENCIA.APROX",
+	"formula.convert.xlookupColumns":     "BUSCARX: los argumentos 2.º y 3.º deben ser columnas de tabla (Tabla[Columna])",
+	"formula.convert.xlookupSameTable":   "BUSCARX: las columnas buscada y devuelta deben pertenecer a la misma tabla",
 
 	// Consultas
 	"query.accessDenied":          "acceso denegado",
@@ -1350,7 +1350,7 @@ var es = map[ID]string{
 	"paste.tooBig": "pegado demasiado grande sobre tablas existentes ({n} celdas): pegue en una zona vacía",
 
 	// Tipos
-	"type.aBoolean":  "un booleano (TRUE o FALSE)",
+	"type.aBoolean":  "un booleano (VERDADERO o FALSO)",
 	"type.aDate":     "una fecha",
 	"type.aNumber":   "un número",
 	"type.aText":     "un texto",

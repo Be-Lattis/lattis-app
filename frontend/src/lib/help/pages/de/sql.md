@@ -48,10 +48,10 @@ Abfragen mit `INSERT`, `UPDATE` und `DELETE` ändern Tabellen wie eine Eingabe; 
 
 ## Eine Abfrage in einer Formel {#une-requete-dans-une-formule}
 
-Die Funktion [QUERY](fonction:QUERY) führt ein schreibgeschütztes `SELECT` aus und lässt sein Ergebnis auf das Blatt überlaufen:
+Die Funktion [ABFRAGE](fonction:ABFRAGE) führt ein schreibgeschütztes `SELECT` aus und lässt sein Ergebnis auf das Blatt überlaufen:
 
 ```
-=QUERY("SELECT Kunde, SUM(Betrag) FROM Umsatz GROUP BY Kunde")
+=ABFRAGE("SELECT Kunde, SUM(Betrag) FROM Umsatz GROUP BY Kunde")
 ```
 
 ## In Skripten {#dans-les-scripts}

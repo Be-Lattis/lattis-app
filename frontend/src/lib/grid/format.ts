@@ -1,6 +1,6 @@
 // Affichage des valeurs selon le type logique de la colonne, dans la langue de
 // l'interface (#lib/i18n) ; la valeur stockée ne change pas.
-import { boolText, decimalSep, errorCode, isoToShort, numberFormat, t, tAny } from '#lib/i18n/index.js';
+import { boolText, decimalSep, ERROR_CODES, errorCode, isoToShort, numberFormat, t, tAny } from '#lib/i18n/index.js';
 
 export type ColumnType = 'integer' | 'decimal' | 'text' | 'boolean' | 'date' | 'formula';
 
@@ -14,10 +14,12 @@ function generalValue(v: unknown): string {
 	return String(v);
 }
 
-/** Vrai pour le libellé d'une erreur de formule (« #DIV/0! »…), en français ou en anglais. */
+/** Vrai pour le libellé d'une erreur de formule (« #DIV/0! »…), dans n'importe quelle langue (hors débordement). */
 export function isErrorValue(v: unknown): boolean {
-	return typeof v === 'string' && /^#(DIV\/0!|VALEUR!|VALUE!|N\/A|REF!|NOM\?|NAME\?|NOMBRE!|NUM!|CIRC!)$/.test(v);
+	return typeof v === 'string' && v.startsWith('#') && ERROR_CODES.includes(v) && !SPILL.has(v);
 }
+
+const SPILL = new Set(['#DEVERSEMENT!', '#SPILL!', '#ÜBERLAUF!', '#¡DESBORDAMIENTO!']);
 
 /** Alignement d'une valeur calculée : nombres à droite, booléens et erreurs centrés. */
 export function valueAlignment(v: unknown): 'left' | 'right' | 'center' {

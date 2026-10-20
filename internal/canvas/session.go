@@ -159,11 +159,9 @@ func (u ui) valueIn(raw string) string {
 		return raw
 	}
 	if u.loc.Names != formula.NamesFR {
-		switch strings.ToUpper(s) {
-		case "TRUE":
-			return "VRAI"
-		case "FALSE":
-			return "FAUX"
+		// TRUE, WAHR, VERDADERO… (VRAI et FAUX restent tels que tapés).
+		if b, ok := formula.BoolWord(s, u.loc); ok && !strings.EqualFold(s, formula.BoolText(b, formula.FR)) {
+			return formula.BoolText(b, formula.FR)
 		}
 	}
 	if u.loc.Dot {
@@ -192,9 +190,9 @@ func (u ui) valueOut(s string) string {
 	if u.loc.Names != formula.NamesFR {
 		switch s {
 		case "VRAI":
-			return "TRUE"
+			return formula.BoolText(true, u.loc)
 		case "FAUX":
-			return "FALSE"
+			return formula.BoolText(false, u.loc)
 		}
 	}
 	if u.loc.Dot {

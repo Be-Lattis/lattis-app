@@ -86,20 +86,36 @@ export function formulaDecimal(l: Lang = lang()): '.' | ',' {
 	return formulaSep(l) === ',' ? '.' : ',';
 }
 
-/**
- * Nom d'une fonction de formule dans la langue : français en français,
- * anglais ailleurs. L'allemand et l'espagnol prendront les leurs avec leurs
- * colonnes de noms (lot 5 de docs/i18n.md, formula.funcDef.name côté Go) :
- * c'est ici qu'il faudra les ajouter, avec le catalogue rendu par le moteur.
- */
-export function fnName(en: string, fr: string, l: Lang = lang()): string {
-	return l === 'fr' ? fr : en;
+/** Noms d'une fonction de formule dans chaque langue des noms (le chinois prend l'anglais). */
+export interface FnNames {
+	en: string;
+	fr: string;
+	de: string;
+	es: string;
 }
 
-/** VRAI ou FAUX dans la langue des formules (TRUE/FALSE hors français, comme les noms de fonctions). */
+/**
+ * Nom d'une fonction de formule dans la langue, comme Excel (SOMME, SUM,
+ * SUMME, SUMA) ; anglais en chinois. Pour les quelques noms écrits par
+ * l'interface (« Somme automatique », exemples) : l'aide à la saisie prend
+ * les siens dans le catalogue du moteur (internal/formula/funcs_names.go).
+ */
+export function fnName(names: FnNames, l: Lang = lang()): string {
+	return l === 'zh' ? names.en : names[l];
+}
+
+/** VRAI et FAUX dans chaque langue des formules, comme Excel. */
+const BOOLS: Record<Lang, [string, string]> = {
+	fr: ['VRAI', 'FAUX'],
+	en: ['TRUE', 'FALSE'],
+	de: ['WAHR', 'FALSCH'],
+	es: ['VERDADERO', 'FALSO'],
+	zh: ['TRUE', 'FALSE']
+};
+
+/** VRAI ou FAUX dans la langue des formules (TRUE, WAHR, VERDADERO…). */
 export function boolText(b: boolean, l: Lang = lang()): string {
-	if (l === 'fr') return b ? 'VRAI' : 'FAUX';
-	return b ? 'TRUE' : 'FALSE';
+	return BOOLS[l][b ? 0 : 1];
 }
 
 /**
@@ -129,21 +145,35 @@ export function parseBool(text: string, l: Lang = lang()): boolean | null {
 	return null;
 }
 
-const ERRORS_EN: Record<string, string> = {
-	'#VALEUR!': '#VALUE!',
-	'#NOM?': '#NAME?',
-	'#NOMBRE!': '#NUM!',
-	'#DEVERSEMENT!': '#SPILL!'
+/**
+ * Codes d'erreur écrits autrement qu'en français, comme Excel dans chaque
+ * langue (internal/formula/session.go, errLang) ; le chinois prend
+ * l'anglais. #CIRC! est le même partout.
+ */
+const ERRORS: Record<string, Record<'en' | 'de' | 'es', string>> = {
+	'#DIV/0!': { en: '#DIV/0!', de: '#DIV/0!', es: '#¡DIV/0!' },
+	'#VALEUR!': { en: '#VALUE!', de: '#WERT!', es: '#¡VALOR!' },
+	'#N/A': { en: '#N/A', de: '#NV', es: '#N/D' },
+	'#REF!': { en: '#REF!', de: '#BEZUG!', es: '#¡REF!' },
+	'#NOM?': { en: '#NAME?', de: '#NAME?', es: '#¿NOMBRE?' },
+	'#NOMBRE!': { en: '#NUM!', de: '#ZAHL!', es: '#¡NUM!' },
+	'#DEVERSEMENT!': { en: '#SPILL!', de: '#ÜBERLAUF!', es: '#¡DESBORDAMIENTO!' }
 };
 
-/** Code d'erreur d'une formule (« #VALEUR! ») écrit dans la langue (« #VALUE! » hors français). */
+/** Tous les codes d'erreur, dans toutes les langues (français d'abord). */
+export const ERROR_CODES: string[] = [
+	...new Set([...Object.keys(ERRORS), '#CIRC!', ...Object.values(ERRORS).flatMap((e) => Object.values(e))])
+];
+
+/** Code d'erreur d'une formule (« #VALEUR! ») écrit dans la langue (« #VALUE! », « #WERT! », « #¡VALOR! »). */
 export function errorCode(code: string, l: Lang = lang()): string {
-	return l === 'fr' ? code : (ERRORS_EN[code] ?? code);
+	if (l === 'fr') return code;
+	return ERRORS[code]?.[l === 'zh' ? 'en' : l] ?? code;
 }
 
 /** Code d'erreur en français, quelle que soit la langue où il est écrit (pour l'expliquer). */
 export function frenchErrorCode(code: string): string {
-	for (const [fr, en] of Object.entries(ERRORS_EN)) if (en === code) return fr;
+	for (const [fr, names] of Object.entries(ERRORS)) if (Object.values(names).includes(code)) return fr;
 	return code;
 }
 

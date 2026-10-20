@@ -302,7 +302,7 @@
 		},
 		"autoSum": {
 			"label": "Autosuma",
-			"tooltip": "SUM de la columna de la tabla situada encima (Alt+=)"
+			"tooltip": "SUMA de la columna de la tabla situada encima (Alt+=)"
 		},
 		"fill": {
 			"label": "Rellenar",
@@ -529,7 +529,7 @@
 			"tooltip": "Elegir una función e iniciar la fórmula en la celda activa (Mayús+F3)"
 		},
 		"reference": {
-			"tooltip": "REFERENCE(Tabla[Columna]; clave): el VLOOKUP de Lattis"
+			"tooltip": "REFERENCIA(Tabla[Columna]; clave): el BUSCARV de Lattis"
 		},
 		"showLinks": {
 			"label": "Mostrar vínculos",
@@ -537,7 +537,7 @@
 		},
 		"calculate": {
 			"label": "Calcular",
-			"tooltip": "Recalcular las fórmulas y actualizar TODAY, NOW y RAND (F9, o F5 fuera de una tabla importada)"
+			"tooltip": "Recalcular las fórmulas y actualizar HOY, AHORA y ALEATORIO (F9, o F5 fuera de una tabla importada)"
 		},
 		"toValues": {
 			"label": "Convertir en valores",

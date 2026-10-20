@@ -54,15 +54,15 @@ func TestSessionFreeCells(t *testing.T) {
 		de, zh   string
 		enV, deV string
 	}{
-		{0, "=SUM(1.5,2,TRUE)", "=SOMME(1,5; 2; VRAI)", "=SUM(1.5, 2, TRUE)", "4,5", "=SUM(1,5; 2; TRUE)", "=SUM(1.5, 2, TRUE)", "4.5", "4,5"},
-		{1, "=IF(1>2,\"a;b\",#N/A)", "=SI(1>2; \"a;b\"; #N/A)", "=IF(1>2, \"a;b\", #N/A)", "#N/A", "=IF(1>2; \"a;b\"; #N/A)", "=IF(1>2, \"a;b\", #N/A)", "#N/A", "#N/A"},
+		{0, "=SUM(1.5,2,TRUE)", "=SOMME(1,5; 2; VRAI)", "=SUM(1.5, 2, TRUE)", "4,5", "=SUMME(1,5; 2; WAHR)", "=SUM(1.5, 2, TRUE)", "4.5", "4,5"},
+		{1, "=IF(1>2,\"a;b\",#N/A)", "=SI(1>2; \"a;b\"; #N/A)", "=IF(1>2, \"a;b\", #N/A)", "#N/A", "=WENN(1>2; \"a;b\"; #NV)", "=IF(1>2, \"a;b\", #N/A)", "#N/A", "#NV"},
 		{2, "=1/0", "=1/0", "=1/0", "#DIV/0!", "=1/0", "=1/0", "#DIV/0!", "#DIV/0!"},
-		{3, "=VALUE(\"x\")", "=CNUM(\"x\")", "=VALUE(\"x\")", "#VALEUR!", "=VALUE(\"x\")", "=VALUE(\"x\")", "#VALUE!", "#VALUE!"},
+		{3, "=VALUE(\"x\")", "=CNUM(\"x\")", "=VALUE(\"x\")", "#VALEUR!", "=WERT(\"x\")", "=VALUE(\"x\")", "#VALUE!", "#WERT!"},
 		{4, "1,234.5", "1234,5", "1234.5", "", "1234,5", "1234.5", "", ""},
 		{5, "10/19/2026", "19/10/2026", "10/19/2026", "", "19.10.2026", "2026/10/19", "", ""},
-		{6, "true", "VRAI", "TRUE", "", "TRUE", "TRUE", "", ""},
+		{6, "true", "VRAI", "TRUE", "", "WAHR", "TRUE", "", ""},
 		{7, "Total", "Total", "Total", "", "Total", "Total", "", ""},
-		{8, "=DATE(2026,10,19)", "=DATE(2026; 10; 19)", "=DATE(2026, 10, 19)", "19/10/2026", "=DATE(2026; 10; 19)", "=DATE(2026, 10, 19)", "10/19/2026", "19.10.2026"},
+		{8, "=DATE(2026,10,19)", "=DATE(2026; 10; 19)", "=DATE(2026, 10, 19)", "19/10/2026", "=DATUM(2026; 10; 19)", "=DATE(2026, 10, 19)", "10/19/2026", "19.10.2026"},
 	} {
 		speak(d, "en")
 		if _, err := d.SetCell(ctx, 1, c.row, 0, c.typed); err != nil {
@@ -180,7 +180,8 @@ func TestSessionTableFormulas(t *testing.T) {
 	for _, c := range []struct{ lang, formula, rule, between string }{
 		{"en", "=[Montant]*1.5", "=AND([Montant]>1.5, TRUE)", `"value":"1.5","to":"1234.5"`},
 		{"fr", "=[Montant]*1,5", "=ET([Montant]>1,5; VRAI)", `"value":"1,5","to":"1234,5"`},
-		{"de", "=[Montant]*1,5", "=AND([Montant]>1,5; TRUE)", `"value":"1,5","to":"1234,5"`},
+		{"de", "=[Montant]*1,5", "=UND([Montant]>1,5; WAHR)", `"value":"1,5","to":"1234,5"`},
+		{"es", "=[Montant]*1,5", "=Y([Montant]>1,5; VERDADERO)", `"value":"1,5","to":"1234,5"`},
 	} {
 		speak(d, c.lang)
 		f, r := column(ctx)
@@ -222,7 +223,7 @@ func TestSessionTableFormulas(t *testing.T) {
 	if err := d.SetPivotCalcField(ctx, id, "", "Big", `=IF([Montant]>6.5,"yes","no")`); err != nil {
 		t.Fatal(err)
 	}
-	for lang, want := range map[string]string{"en": `=YEAR([Date]) =IF([Montant]>6.5, "yes", "no")`, "fr": `=ANNEE([Date]) =SI([Montant]>6,5; "yes"; "no")`, "de": `=YEAR([Date]) =IF([Montant]>6,5; "yes"; "no")`} {
+	for lang, want := range map[string]string{"en": `=YEAR([Date]) =IF([Montant]>6.5, "yes", "no")`, "fr": `=ANNEE([Date]) =SI([Montant]>6,5; "yes"; "no")`, "de": `=JAHR([Date]) =WENN([Montant]>6,5; "yes"; "no")`, "es": `=AÑO([Date]) =SI([Montant]>6,5; "yes"; "no")`} {
 		speak(d, lang)
 		l, err := d.Layout(ctx, 1)
 		if err != nil {
@@ -251,6 +252,76 @@ func TestSessionTableFormulas(t *testing.T) {
 	speak(d, "fr")
 	if ch, err := d.SheetChoice(ctx, 1); err != nil || ch == nil || ch.Formula != "=ANNEE([Date])+0,5" {
 		t.Fatalf("catégorie : %+v %v", ch, err)
+	}
+}
+
+// Formules et valeurs tapées en allemand et en espagnol, avec les noms
+// d'Excel dans ces langues : gardées comme si elles avaient été tapées en
+// français (cellules libres) ou en anglais (colonnes calculées).
+func TestSessionGermanSpanish(t *testing.T) {
+	ctx := context.Background()
+	stored := StorageForm(ctx)
+	for _, c := range []struct {
+		lang, typed, kept, shown, value string
+	}{
+		{"de", "=SUMME(1,5; 2; WAHR)", "=SOMME(1,5; 2; VRAI)", "=SUMME(1,5; 2; WAHR)", "4,5"},
+		{"es", "=SUMA(1,5; 2; VERDADERO)", "=SOMME(1,5; 2; VRAI)", "=SUMA(1,5; 2; VERDADERO)", "4,5"},
+		{"de", "=WENN(ISTFEHLER(1/0); #NV; FALSCH)", "=SI(ESTERREUR(1/0); #N/A; FAUX)", "=WENN(ISTFEHLER(1/0); #NV; FALSCH)", "#NV"},
+		{"es", "=SI(ESERROR(1/0); #N/D; FALSO)", "=SI(ESTERREUR(1/0); #N/A; FAUX)", "=SI(ESERROR(1/0); #N/D; FALSO)", "#N/D"},
+		{"de", "=JAHR(DATUM(2026; 10; 19))+LÄNGE(LINKS(\"abc\"; 2))", "=ANNEE(DATE(2026; 10; 19))+NBCAR(GAUCHE(\"abc\"; 2))", "=JAHR(DATUM(2026; 10; 19))+LÄNGE(LINKS(\"abc\"; 2))", "2028"},
+		{"es", "=AÑO(FECHA(2026; 10; 19))+LARGO(IZQUIERDA(\"abc\"; 2))", "=ANNEE(DATE(2026; 10; 19))+NBCAR(GAUCHE(\"abc\"; 2))", "=AÑO(FECHA(2026; 10; 19))+LARGO(IZQUIERDA(\"abc\"; 2))", "2028"},
+		{"de", "=WERT(\"x\")", "=CNUM(\"x\")", "=WERT(\"x\")", "#WERT!"},
+		{"es", "=VALOR(\"x\")", "=CNUM(\"x\")", "=VALOR(\"x\")", "#¡VALOR!"},
+		// Les noms anglais restent acceptés ; WAHR, VERDADERO : booléens tapés.
+		{"de", "=SUM(1; 2)", "=SOMME(1; 2)", "=SUMME(1; 2)", "3"},
+		{"de", "wahr", "VRAI", "WAHR", ""},
+		{"es", "Falso", "FAUX", "FALSO", ""},
+	} {
+		d := open(t)
+		speak(d, c.lang)
+		if _, err := d.SetCell(ctx, 1, 0, 0, c.typed); err != nil {
+			t.Fatalf("%s %q : %v", c.lang, c.typed, err)
+		}
+		if raw, _ := freeCell(t, stored, d, 0, 0); raw != c.kept {
+			t.Errorf("%s %q gardé %q, attendu %q", c.lang, c.typed, raw, c.kept)
+		}
+		if raw, value := freeCell(t, ctx, d, 0, 0); raw != c.shown || value != c.value {
+			t.Errorf("%s %q relu %q = %q, attendu %q = %q", c.lang, c.typed, raw, value, c.shown, c.value)
+		}
+		// Relue en français, la même cellule.
+		speak(d, "fr")
+		if raw, _ := freeCell(t, ctx, d, 0, 0); raw != c.kept {
+			t.Errorf("%s %q en français : %q", c.lang, c.typed, raw)
+		}
+	}
+	// Colonne calculée : gardée en anglais.
+	for _, c := range []struct{ lang, typed, shown string }{
+		{"de", "=WENN([Montant]>1,5; RUNDEN([Montant]; 0); 0)", "=WENN([Montant]>1,5; RUNDEN([Montant]; 0); 0)"},
+		{"es", "=SI([Montant]>1,5; REDONDEAR([Montant]; 0); 0)", "=SI([Montant]>1,5; REDONDEAR([Montant]; 0); 0)"},
+	} {
+		d := formulaSheet(t)
+		speak(d, c.lang)
+		if _, err := d.SetCell(ctx, 1, 0, 3, "Double"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := d.SetCell(ctx, 1, 1, 3, c.typed); err != nil {
+			t.Fatalf("%s %q : %v", c.lang, c.typed, err)
+		}
+		var en string
+		if err := d.read(ctx, func(t *tx) error {
+			return t.row(`SELECT formula FROM _lattis_columns WHERE name = 'Double'`).Scan(&en)
+		}); err != nil || en != "=IF([Montant]>1.5, ROUND([Montant], 0), 0)" {
+			t.Errorf("%s : colonne gardée %q %v", c.lang, en, err)
+		}
+		l, err := d.Layout(ctx, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, col := range l.Tables[0].Columns {
+			if col.Name == "Double" && col.Formula != c.shown {
+				t.Errorf("%s : colonne relue %q", c.lang, col.Formula)
+			}
+		}
 	}
 }
 

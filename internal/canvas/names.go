@@ -76,7 +76,7 @@ func (t *tx) checkName(name string, sheet int64, row, col int) error {
 		return ErrName{name, "name.whySyntax"}
 	}
 	switch strings.ToUpper(name) {
-	case "VRAI", "FAUX", "TRUE", "FALSE":
+	case "VRAI", "FAUX", "TRUE", "FALSE", "WAHR", "FALSCH", "VERDADERO", "FALSO":
 		return ErrName{name, "name.whyReserved"}
 	}
 	if _, _, ok := formula.CellRef(name); ok {

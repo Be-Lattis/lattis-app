@@ -75,4 +75,32 @@ describe('grille en allemand', () => {
 		expect(literal('19.10.2026', 'date')).toBe("'2026-10-19'");
 		expect(literal('1.234,5', 'decimal')).toBe('1234.5');
 	});
+
+	it('booléens et erreurs comme Excel en allemand', () => {
+		expect(checkFormula('=SUMME(1,5; WAHR)&#WERT!&#NV&#BEZUG!')).toBeNull();
+		expect(formatValue('boolean', 1)).toBe('WAHR');
+		expect(formatValue('formula', '#VALEUR!')).toBe('#WERT!');
+		expect(formatValue('formula', '#N/A')).toBe('#NV');
+		expect(isErrorValue('#ZAHL!')).toBe(true);
+		expect(explainError('#WERT!')).toBe(explainError('#VALEUR!'));
+		expect(freeKind('FALSCH')).toBe('bool');
+	});
+});
+
+describe('grille en espagnol', () => {
+	beforeEach(async () => {
+		await setLang('es');
+	});
+	afterEach(async () => {
+		await setLang('fr');
+	});
+
+	it('booléens et erreurs comme Excel en espagnol', () => {
+		expect(checkFormula('=SUMA(1,5; VERDADERO)&#¡VALOR!&#N/D&#¿NOMBRE?')).toBeNull();
+		expect(formatValue('formula', true)).toBe('VERDADERO');
+		expect(formatValue('formula', '#NOMBRE!')).toBe('#¡NUM!');
+		expect(isErrorValue('#¡REF!')).toBe(true);
+		expect(explainError('#¿NOMBRE?')).toBe(explainError('#NOM?'));
+		expect(freeKind('falso')).toBe('bool');
+	});
 });
