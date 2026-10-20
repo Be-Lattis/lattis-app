@@ -4,6 +4,7 @@
 	// code par site, par exemple). Le serveur lit les paramètres connus ; un
 	// champ « verrouillé par le lien » reste en lecture seule.
 	import { modal } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import FormQR from './FormQR.svelte';
 	import { listValues, prefillURL, type FormColumn, type FormField } from './forms';
 
@@ -25,7 +26,7 @@
 	let open = $state<number | null>(0);
 </script>
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && onclose()}>
+<div class="back" role="presentation" use:backdrop={() => onclose()}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"

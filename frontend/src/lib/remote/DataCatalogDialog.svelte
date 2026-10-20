@@ -5,6 +5,7 @@
 	// à jour en direct) à la cellule active. Un publieur range données et
 	// dossiers en les glissant sur un dossier (ou sur « Racine »).
 	import { modal } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
@@ -160,7 +161,7 @@
 	{/each}
 {/snippet}
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && !busy && ondone(false)}>
+<div class="back" role="presentation" use:backdrop={() => !busy && ondone(false)}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"

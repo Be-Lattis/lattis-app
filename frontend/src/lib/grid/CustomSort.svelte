@@ -6,6 +6,7 @@
 	// listes personnalisées d'Excel. Les valeurs hors de l'ordre et les vides
 	// viennent toujours après.
 	import { onMount } from 'svelte';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import { modal } from '#lib/ui/focus.js';
 	import { cleanValues, fold, moveItem, orderItems, orderOf, suggestList, type CustomList, type CustomOrder, type OrderItem } from './customsort';
 
@@ -139,7 +140,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="back" onmousedown={(e) => e.target === e.currentTarget && onclose()}>
+<div class="back" use:backdrop={() => onclose()}>
 	<div
 		class="dlg"
 		role="dialog"

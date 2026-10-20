@@ -6,6 +6,7 @@
 	// supprimé sur le serveur). Les serveurs déclarés par l'organisation
 	// restent ; une stratégie qui verrouille l'ajout masque « Ajouter ».
 	import { modal } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
@@ -74,7 +75,7 @@
 	}
 </script>
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && close()}>
+<div class="back" role="presentation" use:backdrop={() => close()}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"

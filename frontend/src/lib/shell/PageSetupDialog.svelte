@@ -3,6 +3,7 @@
 	// Excel : onglets Page, Marges, En-tête/Pied de page et Feuille. La boîte
 	// édite une copie ; OK l'applique en une étape d'annulation.
 	import { modal } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import type { HeaderFooter, Rect } from '#bindings/internal/canvas/models.js';
 	import { copySetup, fitted, HF_CODES, HF_PRESETS, hfLabel, marginPreset, marginsOf, PAPERS, paperOf, parseRange, parseSpan, rangeA1, renderHF, sameHF, spanA1, type PageSetup, type PageSetupTab } from './pagesetup';
 
@@ -215,7 +216,7 @@
 {/snippet}
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="back" onmousedown={(e) => e.target === e.currentTarget && onclose()}>
+<div class="back" use:backdrop={() => onclose()}>
 	<div class="dlg" role="dialog" aria-label="Mise en page" tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
 		<div class="head">Mise en page</div>
 		<div class="tabs" role="tablist">

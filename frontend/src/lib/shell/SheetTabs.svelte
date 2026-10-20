@@ -7,6 +7,7 @@
 	// ni renommage, ni déplacement, ni suppression, ni masquage). Le menu se
 	// ferme sur Échap, sur un clic ailleurs et quand la fenêtre change de taille.
 	import Icon from '#lib/icons/Icon.svelte';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import Submenu from '#lib/ui/Submenu.svelte';
 	import { clip, clipped } from '#lib/ui/menu.js';
@@ -822,7 +823,7 @@
 
 {#if adding}
 	{@const ad = adding}
-	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (adding = null)}>
+	<div class="modal-back" role="presentation" use:backdrop={() => (adding = null)}>
 		<div class="dialog" role="dialog" aria-modal="true" aria-label={newLabel(ad.name)} tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmAdding, () => (adding = null))}>
 			<h2>{newLabel(ad.name).replace('…', '')}</h2>
 			<p>La valeur s’ajoute à la liste de « {ad.name} » et l’onglet l’affiche : la feuille paraît vide, prête à être remplie. Ctrl+Z l’annule.</p>
@@ -838,7 +839,7 @@
 
 {#if moving}
 	{@const mv = moving}
-	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (moving = null)}>
+	<div class="modal-back" role="presentation" use:backdrop={() => (moving = null)}>
 		<div class="dialog" role="dialog" aria-modal="true" aria-label="Déplacer ou copier" tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmMove, () => (moving = null))}>
 			<h2>Déplacer ou copier</h2>
 			<p>Déplacer la feuille « {sheets.find((x) => x.id === mv.id)?.name ?? ''} »</p>
@@ -861,7 +862,7 @@
 {/if}
 
 {#if listing}
-	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (listing = false)}>
+	<div class="modal-back" role="presentation" use:backdrop={() => (listing = false)}>
 		<div class="dialog" role="dialog" aria-modal="true" aria-label="Toutes les feuilles" tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, () => (listing = false), () => (listing = false))} use:focus>
 			<h2>Toutes les feuilles</h2>
 			<ul class="all-sheets">
@@ -887,7 +888,7 @@
 {/if}
 
 {#if unhiding !== null}
-	<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && (unhiding = null)}>
+	<div class="modal-back" role="presentation" use:backdrop={() => (unhiding = null)}>
 		<div class="dialog" role="dialog" aria-modal="true" aria-label="Afficher" tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmUnhide, () => (unhiding = null))}>
 			<h2>Afficher</h2>
 			<label for="unhide">Afficher la feuille :</label>

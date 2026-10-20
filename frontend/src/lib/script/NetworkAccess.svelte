@@ -3,6 +3,7 @@
 	// HTML du classeur joignent sans redemander (module http). Un hôte
 	// retiré redemandera l'autorisation à la prochaine requête.
 	import { modal } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import { onMount } from 'svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { hostOf } from '#lib/page/hosts.js';
@@ -47,7 +48,7 @@
 	});
 </script>
 
-<div class="modal-back" role="presentation" onclick={(e) => e.target === e.currentTarget && onclose()}>
+<div class="modal-back" role="presentation" use:backdrop={() => onclose()}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"

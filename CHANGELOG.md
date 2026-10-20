@@ -12,6 +12,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Changements
 
+- Boîtes de dialogue : un cliqué-glissé commencé dans la boîte et relâché à côté (sélection d'un texte, curseur) ne la ferme plus ; seul un clic enfoncé et relâché sur le fond la ferme.
 - Clic droit : les actions propres à la situation (Utiliser comme en-têtes, Ajouter au tableau, Utiliser la première ligne comme en-têtes, Sortir cette ligne du tableau, Convertir le résultat déversé, Basculer sur…) sont en tête du menu, avant Couper, Copier, Coller.
 - Édition web : un écran « Lattis » avec une barre de chargement s'affiche pendant le chargement de l'application, puis pendant l'ouverture du classeur, au lieu d'une page blanche.
 

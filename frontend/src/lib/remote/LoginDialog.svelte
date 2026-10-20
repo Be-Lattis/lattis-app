@@ -8,6 +8,7 @@
 	// autorisé, invitation requise, compte désactivé) s'affichent tels que
 	// internal/remote/auth les rédige.
 	import { modal } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
@@ -121,7 +122,7 @@
 	{/if}
 {/snippet}
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && !waiting && ondone(false)}>
+<div class="back" role="presentation" use:backdrop={() => !waiting && ondone(false)}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"

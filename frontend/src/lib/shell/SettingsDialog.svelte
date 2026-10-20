@@ -4,6 +4,7 @@
 	// suite dans le config.json de l'utilisateur et s'applique sans
 	// redémarrer ; un réglage imposé par une stratégie est grisé.
 	import { modal } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import { onMount } from 'svelte';
 	import { findSetting, parseNumberSetting, settingNote, settingSections, visibleSections } from './settings';
 	import { loadSettings, mcpAvailable, setSetting, userSettings } from './settings.svelte.js';
@@ -47,7 +48,7 @@
 	}
 </script>
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && close()}>
+<div class="back" role="presentation" use:backdrop={() => close()}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"

@@ -10,6 +10,7 @@
 	// DocumentService.Share* (bridge/rights.go). Mise en page :
 	// access.css et shareForm.css (docs/audits/audit-ux-gerer-acces.md).
 	import { isTextField, modal, tabbables } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import HelpLink from '#lib/help/HelpLink.svelte';
 	import { onMount, tick, untrack } from 'svelte';
@@ -167,7 +168,7 @@
 	}
 </script>
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && !busy && onclose()}>
+<div class="back" role="presentation" use:backdrop={() => !busy && onclose()}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog ac-dialog"

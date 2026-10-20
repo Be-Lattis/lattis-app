@@ -2,6 +2,7 @@
 	// Détails d'un export .xlsx ou .ods : par feuille, ce qui est exporté et
 	// ce qui ne l'est pas (ou seulement en valeurs).
 	import { modal } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import { exportDetails, type ExportReport } from './exportReport.js';
 
 	interface Props {
@@ -13,7 +14,7 @@
 	const sheets = $derived(exportDetails(report));
 </script>
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && onclose()}>
+<div class="back" role="presentation" use:backdrop={() => onclose()}>
 	<div class="dialog" role="dialog" aria-modal="true" aria-label="Détails de l'export" tabindex="-1" use:modal={onclose}>
 		<h2>Export {format} : détails</h2>
 		<div class="list">

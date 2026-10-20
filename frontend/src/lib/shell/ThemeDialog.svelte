@@ -4,6 +4,7 @@
 	// classeur ; « Ajouter à mes thèmes » les garde dans les réglages
 	// (ui.themes) pour les autres classeurs.
 	import { untrack } from 'svelte';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import { modal } from '#lib/ui/focus.js';
 	import { family, type ThemeDef, type WorkbookTheme } from '#lib/grid/theme.js';
 
@@ -39,7 +40,7 @@
 	}
 </script>
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && cancel()}>
+<div class="back" role="presentation" use:backdrop={() => cancel()}>
 	<div class="dialog" role="dialog" aria-modal="true" aria-label="Personnaliser le thème" tabindex="-1" use:modal={cancel}>
 		<h2>Personnaliser le thème</h2>
 		<div class="row">

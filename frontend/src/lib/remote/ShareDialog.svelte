@@ -5,6 +5,7 @@
 	// saisies invalides à corriger ou à accepter comme texte, noms valides en
 	// PostgreSQL. Les tableaux non cochés restent privés (sur ce poste).
 	import { modal } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { onMount, untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
@@ -121,7 +122,7 @@
 	}
 </script>
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && !busy && ondone(null)}>
+<div class="back" role="presentation" use:backdrop={() => !busy && ondone(null)}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"

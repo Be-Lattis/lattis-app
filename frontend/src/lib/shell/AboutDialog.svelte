@@ -2,6 +2,7 @@
 	// Fichier › À propos de Lattis : version, licence (MPL-2.0), code source,
 	// marque ; en édition web, le code source du serveur (AGPL-3.0).
 	import { modal } from '#lib/ui/focus.js';
+	import { backdrop } from '#lib/ui/backdrop.js';
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import { openOutside } from '#lib/ai/links.js';
@@ -25,7 +26,7 @@
 	};
 </script>
 
-<div class="back" role="presentation" onclick={(e) => e.target === e.currentTarget && onclose()}>
+<div class="back" role="presentation" use:backdrop={() => onclose()}>
 	<div class="dialog" role="dialog" aria-modal="true" aria-label="À propos de Lattis" tabindex="-1" use:modal={onclose}>
 		<h2>Lattis</h2>
 		<p class="muted">Tableur relationnel local-first · version {about?.version ?? '…'}</p>
