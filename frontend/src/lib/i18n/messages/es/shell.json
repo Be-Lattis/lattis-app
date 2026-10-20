@@ -13,34 +13,34 @@
 		},
 		"htmlTabs": {
 			"label": "Páginas web",
-			"help": "Permite añadir páginas web: una página HTML, CSS y JavaScript que lee y modifica el libro, o una página de un sitio web. Los libros que ya contienen alguna se abren y funcionan con normalidad."
+			"help": "Añadir al libro páginas HTML o páginas de un sitio web."
 		},
 		"sharedWorkbooks": {
 			"label": "Libros compartidos (Servidor Lattis)",
-			"help": "Permite iniciar sesión en el Servidor Lattis de su organización (menú Cuenta de la barra de título) y añadirlo como origen de datos. Los libros compartidos se alojan allí; se inicia sesión con su cuenta (Google, Microsoft, Keycloak…) o con una contraseña de Lattis."
+			"help": "Iniciar sesión en el Servidor Lattis de su organización."
 		},
 		"coEditing": {
 			"label": "Trabajar juntos en una carpeta compartida",
-			"help": "Un libro guardado en un NAS o en un recurso compartido de red y ya abierto en otro equipo ofrece «Trabajar juntos»: cada uno edita los datos de las tablas y ve los cambios de los demás en directo (un registro por equipo junto al archivo). Si se desactiva, se abre en solo lectura o «de todos modos», como antes."
+			"help": "Editar entre varios un libro guardado en una carpeta compartida."
 		},
 		"aiEnabled": {
 			"label": "Asistente de IA",
-			"help": "El botón «Asistente ✦», arriba a la derecha de la cinta (Alt+I), abre un panel a la derecha de la cuadrícula: un asistente que ayuda a crear un análisis y actúa sobre el libro; cada respuesta se deshace en un solo paso. Necesita una clave de API de un proveedor (Anthropic, Mistral, OpenAI…), guardada en el llavero del sistema, un modelo instalado en este equipo, o Claude Desktop con una suscripción a Claude."
+			"help": "Un asistente que analiza y modifica el libro (Alt+I)."
 		},
 		"aiDataSharing": {
 			"label": "Datos enviados al asistente",
 			"schemaOnly": "Solo la estructura (nombres, tipos, número de filas y de valores distintos)",
 			"sample": "La estructura y algunas filas de ejemplo (20 como máximo por lectura)",
 			"full": "Todo el libro (el asistente puede leer todos los valores)",
-			"help": "También se aplica a Claude Desktop y Claude Code a través del servidor MCP. El proveedor también recibe sus mensajes, la hoja activa y la selección; con un modelo local, nada sale de este equipo."
+			"help": "Con un modelo local, nada sale del equipo."
 		},
 		"aiKeepConversation": {
 			"label": "Guardar la conversación en el libro",
-			"help": "La conversación se guarda con el libro y vuelve la próxima vez que se abre: viaja con el archivo, incluidos los resultados de consultas mostrados y las filas leídas por el asistente. Solo se guarda si el libro también se ha modificado. Si no, se borra al cerrar el libro o al abrir otro."
+			"help": "La conversación se guarda con el libro."
 		},
 		"aiLocalUrl": {
 			"label": "Dirección del modelo local",
-			"help": "Proveedor «Modelo local»: la dirección de Ollama, LM Studio u otro servidor compatible con OpenAI en este equipo. Ningún dato sale del equipo."
+			"help": "Ollama, LM Studio o un servidor compatible con OpenAI."
 		},
 		"theme": {
 			"label": "Tema de colores predeterminado"
@@ -48,23 +48,23 @@
 		"undoDepth": {
 			"label": "Niveles de deshacer",
 			"unit": "comandos",
-			"help": "Número de comandos que Ctrl+Z puede deshacer (200 de forma predeterminada). El historial nunca se guarda en el archivo."
+			"help": "200 de forma predeterminada."
 		},
 		"scriptSeconds": {
 			"label": "Duración máxima de un script",
-			"help": "Pasado este tiempo, el script se detiene y sus cambios se deshacen (30 s de forma predeterminada)."
+			"help": "Pasado este tiempo, el script se detiene y se deshace (30 s de forma predeterminada)."
 		},
 		"sqlReadSeconds": {
 			"label": "Duración máxima de una lectura SQL",
-			"help": "Consultas de la pestaña SQL y lecturas de los scripts (30 s de forma predeterminada)."
+			"help": "Pestaña SQL y scripts (30 s de forma predeterminada)."
 		},
 		"sqlWriteSeconds": {
 			"label": "Duración máxima de una escritura SQL",
-			"help": "Una escritura desde la pestaña SQL bloquea la entrada de datos mientras se ejecuta; pasado este tiempo, se cancela sin cambiar nada (120 s de forma predeterminada)."
+			"help": "Pasado este tiempo, la escritura se cancela (120 s de forma predeterminada)."
 		},
 		"updatesCheck": {
 			"label": "Buscar nuevas versiones",
-			"help": "Al iniciarse y luego como máximo dos veces al día, Lattis pregunta a GitHub si existe una versión más reciente, sin enviar nada más que su versión y su sistema. Una nueva versión se propone en la barra de estado; no se descarga nada sin su clic. Su organización puede desactivar este ajuste."
+			"help": "Ofrecer las nuevas versiones en la barra de estado."
 		},
 		"numberRange": "{label}: un número entero de {min} a {max}",
 		"locked": "🔒 Definido por la directiva de su organización.",

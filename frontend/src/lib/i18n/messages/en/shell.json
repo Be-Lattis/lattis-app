@@ -13,34 +13,34 @@
 		},
 		"htmlTabs": {
 			"label": "Web pages",
-			"help": "Lets you add web pages: an HTML, CSS and JavaScript page that reads and changes the workbook, or a page from a website. Workbooks that already contain some open and work normally."
+			"help": "Add HTML pages or website pages to the workbook."
 		},
 		"sharedWorkbooks": {
 			"label": "Shared workbooks (Lattis Server)",
-			"help": "Lets you sign in to your organization's Lattis Server (Account menu in the title bar) and add it as a data source. Shared workbooks live there; you sign in with your account (Google, Microsoft, Keycloak…) or a Lattis password."
+			"help": "Sign in to your organization's Lattis Server."
 		},
 		"coEditing": {
 			"label": "Work together on a shared folder",
-			"help": "A workbook stored on a NAS or a network share and already open on another computer offers “Work together”: everyone edits the table data and sees the others' changes live (one log per computer next to the file). When turned off, it opens read-only or “anyway”, as before."
+			"help": "Edit together a workbook stored in a shared folder."
 		},
 		"aiEnabled": {
 			"label": "AI assistant",
-			"help": "The “Assistant ✦” button, at the top right of the ribbon (Alt+I), opens a pane to the right of the grid: an assistant that helps build an analysis and acts on the workbook, each answer undone in one step. It needs an API key from a provider (Anthropic, Mistral, OpenAI…), kept in the system keychain, a model installed on this computer, or Claude Desktop with a Claude subscription."
+			"help": "An assistant that analyzes and edits the workbook (Alt+I)."
 		},
 		"aiDataSharing": {
 			"label": "Data sent to the assistant",
 			"schemaOnly": "Structure only (names, types, number of rows and distinct values)",
 			"sample": "Structure and a few sample rows (20 at most per read)",
 			"full": "The whole workbook (the assistant can read every value)",
-			"help": "Also applies to Claude Desktop and Claude Code through the MCP server. The provider also receives your messages, the active sheet and the selection; with a local model, nothing leaves this computer."
+			"help": "With a local model, nothing leaves the computer."
 		},
 		"aiKeepConversation": {
 			"label": "Keep the conversation in the workbook",
-			"help": "The conversation is saved with the workbook and comes back the next time it opens: it travels with the file, including the query results shown and the rows read by the assistant. It is only saved if the workbook was also changed. Otherwise, it is cleared when you close the workbook or open another one."
+			"help": "The conversation is saved with the workbook."
 		},
 		"aiLocalUrl": {
 			"label": "Local model address",
-			"help": "“Local model” provider: the address of Ollama, LM Studio or another OpenAI-compatible server on this computer. No data leaves the computer."
+			"help": "Ollama, LM Studio or an OpenAI-compatible server."
 		},
 		"theme": {
 			"label": "Default color theme"
@@ -48,23 +48,23 @@
 		"undoDepth": {
 			"label": "Undo depth",
 			"unit": "commands",
-			"help": "Number of commands Ctrl+Z can undo (200 by default). The history is never saved in the file."
+			"help": "200 by default."
 		},
 		"scriptSeconds": {
 			"label": "Maximum script duration",
-			"help": "Beyond this, the script is stopped and its changes are undone (30 s by default)."
+			"help": "Beyond this, the script is stopped and undone (30 s by default)."
 		},
 		"sqlReadSeconds": {
 			"label": "Maximum SQL read duration",
-			"help": "Queries in the SQL tab and reads from scripts (30 s by default)."
+			"help": "SQL tab and scripts (30 s by default)."
 		},
 		"sqlWriteSeconds": {
 			"label": "Maximum SQL write duration",
-			"help": "A write from the SQL tab blocks data entry while it runs; beyond this, it is canceled without changing anything (120 s by default)."
+			"help": "Beyond this, the write is cancelled (120 s by default)."
 		},
 		"updatesCheck": {
 			"label": "Check for new versions",
-			"help": "At startup and then at most twice a day, Lattis asks GitHub whether a newer version exists, sending nothing but its version and operating system. A new version is offered in the status bar; nothing is downloaded until you click. Your organization can turn this setting off."
+			"help": "Offer new versions in the status bar."
 		},
 		"numberRange": "{label}: a whole number from {min} to {max}",
 		"locked": "🔒 Set by your organization's policy.",

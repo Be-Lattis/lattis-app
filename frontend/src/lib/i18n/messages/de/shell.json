@@ -13,34 +13,34 @@
 		},
 		"htmlTabs": {
 			"label": "Webseiten",
-			"help": "Ermöglicht das Hinzufügen von Webseiten: eine HTML-, CSS- und JavaScript-Seite, die die Arbeitsmappe liest und ändert, oder eine Seite einer Website. Arbeitsmappen, die bereits welche enthalten, lassen sich normal öffnen und verwenden."
+			"help": "HTML-Seiten oder Webseiten zur Arbeitsmappe hinzufügen."
 		},
 		"sharedWorkbooks": {
 			"label": "Freigegebene Arbeitsmappen (Lattis-Server)",
-			"help": "Ermöglicht die Anmeldung an einem Lattis-Server Ihrer Organisation (Menü Konto in der Titelleiste) und das Hinzufügen als Datenquelle. Dort liegen die freigegebenen Arbeitsmappen; Sie melden sich mit Ihrem Konto (Google, Microsoft, Keycloak…) oder einem Lattis-Kennwort an."
+			"help": "Beim Lattis-Server Ihrer Organisation anmelden."
 		},
 		"coEditing": {
 			"label": "Gemeinsam in einem freigegebenen Ordner arbeiten",
-			"help": "Eine Arbeitsmappe auf einem NAS oder einer Netzwerkfreigabe, die bereits auf einem anderen Computer geöffnet ist, bietet „Gemeinsam bearbeiten“ an: Alle ändern die Tabellendaten und sehen die Änderungen der anderen live (ein Protokoll pro Computer neben der Datei). Ist die Option deaktiviert, wird sie wie bisher schreibgeschützt oder „trotzdem“ geöffnet."
+			"help": "Eine Arbeitsmappe in einem freigegebenen Ordner gemeinsam bearbeiten."
 		},
 		"aiEnabled": {
 			"label": "KI-Assistent",
-			"help": "Die Schaltfläche „Assistent ✦“ oben rechts im Menüband (Alt+I) öffnet einen Bereich rechts neben dem Raster: einen Assistenten, der beim Aufbau einer Analyse hilft und auf die Arbeitsmappe einwirkt, wobei jede Antwort in einem Schritt rückgängig gemacht werden kann. Er benötigt einen API-Schlüssel eines Anbieters (Anthropic, Mistral, OpenAI…), der im Schlüsselbund des Systems aufbewahrt wird, ein auf diesem Computer installiertes Modell oder Claude Desktop mit einem Claude-Abonnement."
+			"help": "Ein Assistent, der die Arbeitsmappe analysiert und bearbeitet (Alt+I)."
 		},
 		"aiDataSharing": {
 			"label": "An den Assistenten gesendete Daten",
 			"schemaOnly": "Nur die Struktur (Namen, Typen, Anzahl der Zeilen und der unterschiedlichen Werte)",
 			"sample": "Struktur und einige Beispielzeilen (höchstens 20 pro Lesevorgang)",
 			"full": "Die ganze Arbeitsmappe (der Assistent kann alle Werte lesen)",
-			"help": "Gilt auch für Claude Desktop und Claude Code über den MCP-Server. Der Anbieter erhält außerdem Ihre Nachrichten, das aktive Tabellenblatt und die Auswahl; mit einem lokalen Modell verlässt nichts diesen Computer."
+			"help": "Mit einem lokalen Modell verlässt nichts den Computer."
 		},
 		"aiKeepConversation": {
 			"label": "Unterhaltung in der Arbeitsmappe behalten",
-			"help": "Die Unterhaltung wird mit der Arbeitsmappe gespeichert und erscheint beim nächsten Öffnen wieder: Sie reist mit der Datei, einschließlich der angezeigten Abfrageergebnisse und der vom Assistenten gelesenen Zeilen. Sie wird nur gespeichert, wenn auch die Arbeitsmappe geändert wurde. Andernfalls wird sie gelöscht, wenn Sie die Arbeitsmappe schließen oder eine andere öffnen."
+			"help": "Die Unterhaltung wird mit der Arbeitsmappe gespeichert."
 		},
 		"aiLocalUrl": {
 			"label": "Adresse des lokalen Modells",
-			"help": "Anbieter „Lokales Modell“: die Adresse von Ollama, LM Studio oder einem anderen OpenAI-kompatiblen Server auf diesem Computer. Keine Daten verlassen den Computer."
+			"help": "Ollama, LM Studio oder ein OpenAI-kompatibler Server."
 		},
 		"theme": {
 			"label": "Standardfarbdesign"
@@ -48,23 +48,23 @@
 		"undoDepth": {
 			"label": "Rückgängig-Tiefe",
 			"unit": "Befehle",
-			"help": "Anzahl der Befehle, die Strg+Z rückgängig machen kann (standardmäßig 200). Der Verlauf wird nie in der Datei gespeichert."
+			"help": "Standard: 200."
 		},
 		"scriptSeconds": {
 			"label": "Maximale Skriptdauer",
-			"help": "Darüber hinaus wird das Skript angehalten und seine Änderungen werden rückgängig gemacht (standardmäßig 30 s)."
+			"help": "Danach wird das Skript beendet und rückgängig gemacht (Standard: 30 s)."
 		},
 		"sqlReadSeconds": {
 			"label": "Maximale Dauer eines SQL-Lesevorgangs",
-			"help": "Abfragen der Registerkarte SQL und Lesevorgänge von Skripts (standardmäßig 30 s)."
+			"help": "SQL-Registerkarte und Skripte (Standard: 30 s)."
 		},
 		"sqlWriteSeconds": {
 			"label": "Maximale Dauer eines SQL-Schreibvorgangs",
-			"help": "Ein Schreibvorgang der Registerkarte SQL blockiert die Eingabe, solange er läuft; darüber hinaus wird er abgebrochen, ohne etwas zu ändern (standardmäßig 120 s)."
+			"help": "Danach wird der Schreibvorgang abgebrochen (Standard: 120 s)."
 		},
 		"updatesCheck": {
 			"label": "Nach neuen Versionen suchen",
-			"help": "Beim Start und danach höchstens zweimal täglich fragt Lattis bei GitHub nach einer neueren Version und sendet dabei nur seine Version und sein Betriebssystem. Eine neue Version wird in der Statusleiste angeboten; ohne Ihren Klick wird nichts heruntergeladen. Ihre Organisation kann diese Einstellung abschalten."
+			"help": "Neue Versionen in der Statusleiste anbieten."
 		},
 		"numberRange": "{label}: eine ganze Zahl von {min} bis {max}",
 		"locked": "🔒 Durch die Richtlinie Ihrer Organisation festgelegt.",
