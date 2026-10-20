@@ -498,6 +498,12 @@ export interface State {
      * elles échouent toujours) : volet Conflits, Réessayer ou Abandonner.
      */
     "held"?: number;
+
+    /**
+     * Present : autres membres qui ont le classeur ouvert en ce moment
+     * (relais de lattisd ; vide sans relais).
+     */
+    "present"?: string[] | null;
 }
 
 /**

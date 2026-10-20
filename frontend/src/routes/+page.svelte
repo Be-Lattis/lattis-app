@@ -3151,6 +3151,11 @@
 		{/if}
 		<span class="spacer"></span>
 		{#if mode === 'doc'}<CoEditPresence state={coedit} onconflicts={() => (conflictsOpen = true)} />{/if}
+		{#if mode === 'doc' && share?.present?.length}
+			{@const names = share.present}
+			<!-- Classeur du serveur : membres qui l'ont ouvert en ce moment (relais de lattisd). -->
+			<span class="present" title={`Ont aussi ce classeur ouvert : ${names.join(', ')}`}><Icon name="user" size={12} />{names.length > 3 ? `${names.slice(0, 3).join(', ')} +${names.length - 3}` : names.join(', ')}</span>
+		{/if}
 		{#if sheetStatus}
 			{#if sheetStatus.stats}<span class="stats">{sheetStatus.stats}</span>{/if}
 			{#if import.meta.env.DEV}
@@ -3267,6 +3272,15 @@
 	.placeholder {
 		padding: 24px;
 		color: #4b5563;
+	}
+	.present {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		white-space: nowrap;
+		max-width: 260px;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.weblink {
 		display: flex;

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"slices"
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/command"
@@ -81,7 +82,9 @@ type Link struct {
 	layoutConflicts int
 	// held : étapes mises de côté (collab, held.go).
 	held int
-	layoutUnsent    bool
+	// present : autres membres qui suivent le classeur (relais de lattisd).
+	present      []string
+	layoutUnsent bool
 }
 
 // Attach lit l'état de partage d'un classeur ouvert (hors ligne tant que la
@@ -481,6 +484,9 @@ type State struct {
 	// Held : étapes de la file mises de côté (le serveur les reçoit mais
 	// elles échouent toujours) : volet Conflits, Réessayer ou Abandonner.
 	Held int `json:"held,omitempty"`
+	// Present : autres membres qui ont le classeur ouvert en ce moment
+	// (relais de lattisd ; vide sans relais).
+	Present []string `json:"present,omitempty"`
 }
 
 // SetQueue note les étapes en attente d'envoi et les conflits ouverts
@@ -494,6 +500,18 @@ func (l *Link) SetQueue(pending, conflicts int) (state, sync bool) {
 	state = l.conflicts != conflicts
 	l.pending, l.conflicts = pending, conflicts
 	return state, sync
+}
+
+// SetPresence note les autres membres qui suivent le classeur ; vrai si la
+// liste change.
+func (l *Link) SetPresence(names []string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if slices.Equal(l.present, names) {
+		return false
+	}
+	l.present = slices.Clone(names)
+	return true
 }
 
 // SetHeld note le nombre d'étapes mises de côté ; vrai s'il change.
@@ -571,7 +589,7 @@ func (l *Link) State() State {
 		Shared: true, Server: l.info.Server, ServerName: l.info.ServerName, WorkbookID: l.info.WorkbookID,
 		Title: l.info.Title, Mode: l.info.Mode, Version: l.info.Version, Roles: append([]string{}, l.info.Roles...),
 		CanDesign: l.info.CanDesign(), CanManage: l.info.CanManage(), Online: l.online, Offline: l.offline, Gone: l.gone, NewVersion: l.newVersion, Published: len(l.published),
-		Pending: l.pending, Conflicts: l.conflicts, Sending: l.sending, LayoutConflicts: l.layoutConflicts, Held: l.held,
+		Pending: l.pending, Conflicts: l.conflicts, Sending: l.sending, LayoutConflicts: l.layoutConflicts, Held: l.held, Present: slices.Clone(l.present),
 	}
 	s.Link = protocol.WorkbookLink(s.Server, s.WorkbookID)
 	switch {

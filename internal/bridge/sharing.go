@@ -287,6 +287,13 @@ func (s *DocumentService) followCollab(ctx context.Context, d *doc.Document, eng
 			}
 			continue
 		}
+		// Changements des autres : par le relais de lattisd (une écoute de
+		// PostgreSQL pour tous les postes), sinon par LISTEN.
+		srv = withRelay(ctx, srv, info, func(users []workbook.Present) {
+			if d.Share.SetPresence(othersPresent(users, info.User)) {
+				s.emitShare(d)
+			}
+		})
 		eng.Follow(ctx, srv, shareRetry, func(ev collab.Event) {
 			if cur, err := s.current(); err != nil || cur != d {
 				return
@@ -308,6 +315,54 @@ func (s *DocumentService) followCollab(ctx context.Context, d *doc.Document, eng
 			return
 		}
 	}
+}
+
+// withRelay fait suivre les changements du classeur par le relais de
+// lattisd (GET <émetteur>/api/events, workbook.EventsServer) ; repli sur
+// LISTEN si le serveur n'en a pas. LATTIS_LISTEN=1 garde LISTEN
+// (diagnostic). Les essais (shareServer) gardent leur serveur.
+func withRelay(ctx context.Context, srv workbook.Server, info *workbook.Info, presence func([]workbook.Present)) workbook.Server {
+	if shareServer != nil || os.Getenv("LATTIS_LISTEN") == "1" {
+		return srv
+	}
+	m, err := sessions()
+	if err != nil {
+		return srv
+	}
+	server, err := auth.NormalizeURL(info.Server)
+	if err != nil {
+		return srv
+	}
+	_, disc, err := m.Session(ctx, server)
+	if err != nil {
+		return srv
+	}
+	base := server
+	if disc != nil && disc.Issuer != "" {
+		base = disc.Issuer
+	}
+	es := workbook.WithEvents(srv, strings.TrimSuffix(base, "/")+"/api/events", info.WorkbookID,
+		func(ctx context.Context) (string, error) { return m.Token(ctx, server) },
+		func() { m.Invalidate(server) })
+	es.OnPresence = presence
+	return es
+}
+
+// othersPresent : noms des membres présents, sans l'utilisateur lui-même
+// (son rôle PostgreSQL, souvent son adresse, ou son adresse).
+func othersPresent(users []workbook.Present, me string) []string {
+	var out []string
+	for _, u := range users {
+		if strings.EqualFold(u.Email, me) || strings.EqualFold(u.Name, me) {
+			continue
+		}
+		name := u.Name
+		if name == "" {
+			name = u.Email
+		}
+		out = append(out, name)
+	}
+	return out
 }
 
 // stopShare arrête le suivi du serveur (fermeture du classeur).
