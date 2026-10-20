@@ -43,7 +43,7 @@
 		},
 		"map": {
 			"label": "Karte",
-			"hint": "Punkte oder Dichte auf einer OpenStreetMap-Karte, aus Spalten mit Breiten- und Längengrad"
+			"hint": "Punkte oder Dichte auf einer Karte, aus Breiten- und Längengrad"
 		},
 		"waterfall": {
 			"label": "Wasserfall",
@@ -149,10 +149,10 @@
 			},
 			"single": {
 				"label": "1 Spalte",
-				"tooltip": "Breiten- und Längengrad in derselben Zelle, in beliebiger Standardschreibweise"
+				"tooltip": "Breiten- und Längengrad in derselben Zelle"
 			},
 			"pairHelp": "Dezimalzahlen (48,8566 oder 48.8566) oder Grad 48°51'24\"N.",
-			"singleHelp": "Jede Standardschreibweise: 48.8566, 2.3522 · 48,8566;2,3522 · 48°51'24\"N 2°21'03\"E · 48°51.4'N 2°21.05'E · N48.85 E2.35 · POINT(2.3522 48.8566) · geo:48.8566,2.3522"
+			"singleHelp": "Zum Beispiel: 48.8566, 2.3522 · 48°51'24\"N 2°21'03\"E · POINT(2.3522 48.8566)"
 		},
 		"latitude": "Breitengrad",
 		"longitude": "Längengrad",
@@ -172,20 +172,18 @@
 		"heat": "Dichte (Heatmap)",
 		"colorBy": {
 			"label": "Farbe nach",
-			"heatTooltip": "Die Dichte ist eine einzige Wärmeebene: Wechseln Sie zu „Punkte“, um nach Wert einzufärben",
+			"heatTooltip": "Dichte: Wechseln Sie zu „Punkte“, um nach Wert zu färben",
 			"pointsOnly": "(nur Punkte)",
-			"tooltip": "Jeder eindeutige Wert der Spalte erhält eine eigene Farbe, verteilt über das ganze Spektrum",
+			"tooltip": "Eine Farbe pro eindeutigem Wert der Spalte",
 			"single": "(eine Farbe)"
 		},
 		"colorLegend": "Farblegende",
 		"pointSize": {
 			"label": "Punktgröße",
-			"tooltip": "Multipliziert die Größe der Punkte; die Spalte Wert legt bereits ihre relative Größe fest"
+			"tooltip": "Multipliziert die Größe der Punkte"
 		},
 		"hidden": {
-			"label": "Vom Filter ausgeblendete Zeilen",
-			"mapTooltip": "Standardmäßig zeigt die Karte wie Excel nur die vom Filter der Tabelle angezeigten Zeilen",
-			"tooltip": "Standardmäßig zeigt das Diagramm wie Excel nur die vom Filter der Tabelle angezeigten Zeilen"
+			"label": "Vom Filter ausgeblendete Zeilen"
 		},
 		"view": {
 			"label": "Ansicht",
@@ -194,8 +192,8 @@
 			"recenter": "Zentrieren",
 			"fitted": "An die Punkte angepasst"
 		},
-		"mapHelp": "Karte ausgewählt: Das Mausrad zoomt, Ziehen verschiebt die Karte (Alt+Ziehen verschiebt das Diagramm), Doppelklick oder + / − zoomen; ein Klick auf einen Punkt wechselt zu seiner Zeile in der Tabelle.",
-		"mapTiles": "Hintergrundkarte © OpenStreetMap (tile.openstreetmap.org), abhängig von der Netzwerkberechtigung der Arbeitsmappe. Der Wert legt die Größe der Punkte fest bzw. das Gewicht jedes Punkts in der Dichte.",
+		"mapHelp": "Mausrad: Zoom · Ziehen: Karte verschieben (Alt+Ziehen: das Diagramm) · Klick auf einen Punkt: seine Zeile",
+		"mapTiles": "Kartenhintergrund © OpenStreetMap (tile.openstreetmap.org), abhängig von der Netzwerkfreigabe der Arbeitsmappe.",
 		"source": {
 			"label": "Quelle",
 			"tooltip": "Tabelle oder PivotTable, deren Daten das Diagramm darstellt",
@@ -222,14 +220,13 @@
 			},
 			"color": "Farbe der Datenreihe",
 			"shape": "Form der Datenreihe",
-			"secondaryOn": "Datenreihe auf der Sekundärachse (rechts): Klicken, um sie auf die Primärachse zurückzusetzen",
+			"secondaryOn": "Reihe auf der Sekundärachse: Klicken, um sie auf die Primärachse zurückzusetzen",
 			"secondaryOff": "Datenreihe auf einer Sekundärachse rechts mit eigener Skala darstellen",
 			"axis2": "Achse 2"
 		},
 		"bins": "Klassen",
 		"blanks": {
 			"label": "Leere Zellen",
-			"tooltip": "Wie in Excel: Eine leere Zelle unterbricht die Linie (Lücke), zählt als null, oder ihre Nachbarn werden verbunden",
 			"gap": "Lücke",
 			"zero": "Null",
 			"span": "Datenpunkte verbinden"
@@ -247,7 +244,7 @@
 		},
 		"dataLabels": "Datenbeschriftungen",
 		"grid": "Gitternetzlinien",
-		"moveHelp": "Ziehen Sie das Diagramm, um es zu verschieben, und seine Ziehpunkte, um die Größe zu ändern. Rechtsklick: Ausschneiden, Kopieren, Löschen.",
+		"moveHelp": "Ziehen zum Verschieben, an den Ziehpunkten für die Größe; Rechtsklick: ausschneiden, kopieren, löschen.",
 		"keyboardHelp": "Mit der Tastatur: Pfeiltasten zum Verschieben, Umschalt+Pfeiltasten zum Ändern der Größe, Tab zum nächsten Diagramm, Entf zum Löschen."
 	},
 	"image": {

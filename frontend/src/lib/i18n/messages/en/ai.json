@@ -54,7 +54,7 @@
 			"running": "Undoing…",
 			"label": "Undo these changes"
 		},
-		"intro": "Open Claude Desktop or Claude Code and ask, for example, “What does my Lattis workbook contain?”: each action will appear here.",
+		"intro": "Ask Claude for example “What's in my Lattis workbook?”: its actions will appear here.",
 		"confirm": {
 			"label": "Ask before changing",
 			"help": "Lattis asks for your approval before each change to the workbook; reads go through without asking."
@@ -65,7 +65,7 @@
 		"tooltip": "Go to “{target}”"
 	},
 	"setup": {
-		"intro": "With a Claude subscription (Pro, Max, Team), you don't need an API key: you chat in Claude Desktop or Claude Code, which acts on the open workbook, and Lattis shows what is done.",
+		"intro": "With a Claude subscription, no API key needed: Claude Desktop or Claude Code acts on the open workbook.",
 		"sharing": {
 			"before": "The “Data sent to the assistant” setting (File › Settings › AI Assistant) also applies to Claude:",
 			"after": "After a change, restart Claude so that it sees the new list of tools."
@@ -78,7 +78,7 @@
 			"notFound": "Not found"
 		},
 		"desktop": {
-			"help": "Claude's desktop app. Lattis appears in the conversation's tools.",
+			"help": "Claude's desktop app.",
 			"done": "Configured ✓ — restart Claude Desktop (quit it completely, then open it again).",
 			"download": "Download Claude Desktop",
 			"manual": "Configure manually",
@@ -88,7 +88,7 @@
 		"reconfigure": "Configure again",
 		"configure": "Configure",
 		"code": {
-			"help": "Claude's assistant in the terminal (or in its desktop app). Lattis is added for all your projects.",
+			"help": "Claude's assistant in the terminal.",
 			"done": {
 				"before": "Configured ✓ — open a new Claude Code session:",
 				"after": "shows Lattis there."
@@ -119,21 +119,21 @@
 			"tooltip": "Drive Lattis from Claude Desktop or Claude Code (MCP server)",
 			"labelDialog": "Desktop app…",
 			"label": "Desktop app",
-			"help": "A provider's desktop app drives Lattis with your subscription to that provider, without an API key.",
+			"help": "Your subscription with the provider, no API key.",
 			"claude": {
 				"before": "A Claude subscription can't be used directly in another application, but",
 				"and": "and",
-				"after": "can drive Lattis. You talk to Claude in its app; Lattis shows what it does (“From Claude”) and can undo everything."
+				"after": "can drive Lattis, which shows what is done and can undo everything."
 			},
 			"needsDesktop": "This method requires the Lattis desktop app.",
-			"maxTeam": "Max or Team subscribers: your monthly API credits also pay for an API key (“API key” tab), which keeps the conversation in Lattis."
+			"maxTeam": "Max or Team subscribers: your monthly API credits also pay for an API key (“API key” tab)."
 		},
 		"providerModel": "Provider and model",
 		"provider": "Provider",
 		"model": "Model",
 		"defaultModel": "default model",
 		"local": {
-			"help": "The model runs on this computer (Ollama, LM Studio…): no data leaves the computer, and there is no key.",
+			"help": "The model runs on this computer: no data leaves it, no key needed.",
 			"url": "Local model address",
 			"experimental": "Experimental: small models are worse at calling Lattis's tools."
 		},
@@ -144,7 +144,7 @@
 			"open": "Open the console",
 			"credits": "A new key only works with credits: add some in",
 			"billing": "Billing",
-			"maxTeam": "Claude Max or Team subscriber? Link this organization in claude.ai › Settings › Billing to receive your monthly API credits ($100 to $500).",
+			"maxTeam": "Claude Max or Team subscriber? Link this organization in claude.ai › Settings › Billing for your monthly API credits.",
 			"other": "Depending on the provider, the account needs credits or a payment method."
 		},
 		"step2": "Paste it here.",
@@ -165,7 +165,7 @@
 		},
 		"new": {
 			"label": "New",
-			"tooltip": "New conversation (the current conversation stays in the list)"
+			"tooltip": "New conversation"
 		},
 		"conversations": "Conversations",
 		"close": {
@@ -183,8 +183,8 @@
 		"loading": "Loading…",
 		"enable": {
 			"title": "Turn on the assistant",
-			"intro": "The AI Assistant reads the structure of your tables, suggests an approach and can add calculated columns, keys, PivotTables and charts. Everything it changes in one answer can be undone in one go.",
-			"how": "It goes through an AI provider with your API key, through a model installed on this computer, or through Claude Desktop with your Claude subscription. It never receives the whole workbook.",
+			"intro": "The AI Assistant analyzes your tables and can change them; each answer is undone in one step.",
+			"how": "It goes through an AI provider, a local model or Claude Desktop, and never receives the whole workbook.",
 			"locked": "The AI Assistant is turned off by your organization's policy.",
 			"check": "Turn on the AI Assistant",
 			"settings": "Also available in File › Settings › Features.",
@@ -196,7 +196,7 @@
 			"claude": "From Claude"
 		},
 		"log": "Conversation with the assistant",
-		"empty": "Describe what you want to analyze: the assistant reads the workbook's structure, suggests an approach and can create calculated columns, keys, PivotTables and charts.",
+		"empty": "Describe what you want to analyze.",
 		"noDoc": "First open or create a workbook (File › New).",
 		"compact": "Earlier messages were summarized for the assistant; they are still shown here",
 		"undone": "{n, plural, =1 {Change undone} other {Changes undone}}",

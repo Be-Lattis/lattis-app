@@ -1,8 +1,8 @@
 {
 	"consent": {
-		"warning": "Erlauben Sie dies nur, wenn Sie der Person vertrauen, die Ihnen diese Arbeitsmappe gegeben hat. Wählen Sie im Zweifel „Nicht ausführen“: Der Rest der Arbeitsmappe bleibt nutzbar.",
-		"site": "Das Register „{name}“ zeigt die externe Website {url} an, die in dieser Arbeitsmappe auf diesem Computer noch nie erlaubt wurde (erhaltene Arbeitsmappe oder anderswo geändertes Register). Diese Website läuft im Register, ohne Zugriff auf die Arbeitsmappe.",
-		"page": "Das Register „{name}“ enthält eine Webseite (HTML und JavaScript), die auf diesem Computer noch nie erlaubt wurde (erhaltene Arbeitsmappe oder anderswo geänderte Seite). Eine Seite kann die Arbeitsmappe lesen und ändern, die Aktionen ihrer Schaltflächen ausführen, Ihnen Fragen stellen und mit Ihrer Zustimmung Websites kontaktieren.",
+		"warning": "Erlauben Sie dies nur, wenn Sie der Person vertrauen, die Ihnen diese Arbeitsmappe gegeben hat; im Zweifel „Nicht ausführen“.",
+		"site": "Das Register „{name}“ zeigt die externe Website {url}, auf diesem Computer noch nie erlaubt, ohne Zugriff auf die Arbeitsmappe.",
+		"page": "Das Register „{name}“ enthält eine Webseite, die auf diesem Computer noch nie erlaubt wurde. Sie kann die Arbeitsmappe lesen und ändern und mit Ihrer Zustimmung Websites kontaktieren.",
 		"title": "Eine Webseite aus der Arbeitsmappe ausführen?",
 		"ok": "Erlauben",
 		"cancel": "Nicht ausführen",
@@ -74,7 +74,7 @@
 			"list": "Auswahlmöglichkeiten (eine pro Zeile)"
 		},
 		"script": "Script (bei jeder Änderung)",
-		"help": "Der Wert des Steuerelements ist der Wert der verknüpften Zelle (in diesem Dokument oder auf einem Tabellenblatt, um ihn in Formeln zu lesen). Scripts steuern es mit controls.get / controls.set und controls.on(\"change\", …)."
+		"help": "Der Wert des Steuerelements ist der Wert der verknüpften Zelle."
 	},
 	"page": {
 		"escapes": "Die Seite versucht ständig, eine andere Adresse zu öffnen: Sie wurde angehalten.",
@@ -110,7 +110,7 @@
 		"unsaved": "Nicht gespeicherte Änderungen",
 		"blocked": {
 			"title": "Diese Webseite wurde nicht ausgeführt.",
-			"help": "Sie wurde auf diesem Computer noch nie erlaubt (erhaltene Arbeitsmappe oder anderswo geänderte Seite). Erlauben Sie sie nur, wenn Sie der Person vertrauen, die Ihnen diese Arbeitsmappe gegeben hat.",
+			"help": "Auf diesem Computer noch nie erlaubt. Erlauben Sie sie nur, wenn Sie der Person vertrauen, die Ihnen diese Arbeitsmappe gegeben hat.",
 			"preview": "Vorschau (Strg+Eingabe) führt den im Editor angezeigten Code aus.",
 			"decide": "Entscheiden…"
 		},

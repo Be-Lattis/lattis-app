@@ -235,7 +235,7 @@
 				</span>
 			</label>
 		{/if}
-		<label class="opt" title={t('chart.panel.hidden.mapTooltip')}><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('chart.panel.hidden.label')}</label>
+		<label class="opt"><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('chart.panel.hidden.label')}</label>
 		<div class="line mapview">
 			<span>{t('chart.panel.view.label')}</span>
 			{#if config.mapView}
@@ -308,12 +308,12 @@
 				</label>
 			{/each}
 		</div>
-		<label class="opt" title={t('chart.panel.hidden.tooltip')}><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('chart.panel.hidden.label')}</label>
+		<label class="opt"><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('chart.panel.hidden.label')}</label>
 		{#if config.kind === 'histogram'}
 			<label class="line">{t('chart.panel.bins')}<input value={config.bins ?? ''} onchange={(e) => set({ bins: num((e.currentTarget as HTMLInputElement).value) })} placeholder="auto" /></label>
 		{/if}
 		{#if config.kind === 'line' || config.kind === 'area' || config.kind === 'combo'}
-			<label class="line" title={t('chart.panel.blanks.tooltip')}>{t('chart.panel.blanks.label')}
+			<label class="line">{t('chart.panel.blanks.label')}
 				<Select
 					value={config.blanks || 'gap'}
 					options={[

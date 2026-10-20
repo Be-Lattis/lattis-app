@@ -54,7 +54,7 @@
 			"running": "正在撤消…",
 			"label": "撤消这些更改"
 		},
-		"intro": "打开 Claude Desktop 或 Claude Code，然后提问，例如“我的 Lattis 工作簿包含什么？”：每个操作都会显示在这里。",
+		"intro": "例如向 Claude 提问“我的 Lattis 工作簿里有什么？”：其操作将显示在这里。",
 		"confirm": {
 			"label": "更改前询问",
 			"help": "每次更改工作簿前，Lattis 都会征求您的同意；读取操作无需询问。"
@@ -65,7 +65,7 @@
 		"tooltip": "转到“{target}”"
 	},
 	"setup": {
-		"intro": "使用 Claude 订阅（Pro、Max、Team）无需 API 密钥：您在 Claude Desktop 或 Claude Code 中对话，由它操作打开的工作簿，Lattis 显示所做的操作。",
+		"intro": "使用 Claude 订阅无需 API 密钥：由 Claude Desktop 或 Claude Code 操作打开的工作簿。",
 		"sharing": {
 			"before": "“发送给助手的数据”设置（文件 › 设置 › AI 助手）同样适用于 Claude：",
 			"after": "更改后，请重新启动 Claude，使其看到新的工具列表。"
@@ -78,7 +78,7 @@
 			"notFound": "未找到"
 		},
 		"desktop": {
-			"help": "Claude 的桌面应用。Lattis 会出现在对话的工具中。",
+			"help": "Claude 的桌面应用。",
 			"done": "已配置 ✓ — 请重新启动 Claude Desktop（完全退出后再重新打开）。",
 			"download": "下载 Claude Desktop",
 			"manual": "手动配置",
@@ -88,7 +88,7 @@
 		"reconfigure": "重新配置",
 		"configure": "配置",
 		"code": {
-			"help": "终端中（或其桌面应用中）的 Claude 助手。Lattis 会添加到您的所有项目中。",
+			"help": "终端中的 Claude 助手。",
 			"done": {
 				"before": "已配置 ✓ — 打开新的 Claude Code 会话：",
 				"after": "会在其中显示 Lattis。"
@@ -119,21 +119,21 @@
 			"tooltip": "从 Claude Desktop 或 Claude Code 操控 Lattis（MCP 服务器）",
 			"labelDialog": "桌面应用…",
 			"label": "桌面应用",
-			"help": "提供商的桌面应用使用您在该提供商处的订阅操控 Lattis，无需 API 密钥。",
+			"help": "使用您在提供商处的订阅，无需 API 密钥。",
 			"claude": {
 				"before": "Claude 订阅不能直接在其他应用中使用，但",
 				"and": "和",
-				"after": "可以操控 Lattis。您在 Claude 的应用中与它对话；Lattis 显示它所做的操作（“来自 Claude”），并可全部撤消。"
+				"after": "可以操控 Lattis；Lattis 会显示所做的操作，并可全部撤消。"
 			},
 			"needsDesktop": "此方式需要 Lattis 桌面应用。",
-			"maxTeam": "Max 或 Team 订阅用户：每月的 API 额度也可用于 API 密钥（“API 密钥”选项卡），让对话保留在 Lattis 中。"
+			"maxTeam": "Max 或 Team 订阅用户：每月的 API 额度也可用于 API 密钥（“API 密钥”选项卡）。"
 		},
 		"providerModel": "提供商和模型",
 		"provider": "提供商",
 		"model": "模型",
 		"defaultModel": "默认模型",
 		"local": {
-			"help": "模型在此计算机上运行（Ollama、LM Studio…）：数据不会离开计算机，也不需要密钥。",
+			"help": "模型在此计算机上运行：数据不会离开本机，无需密钥。",
 			"url": "本地模型地址",
 			"experimental": "实验性：小模型调用 Lattis 工具的效果较差。"
 		},
@@ -144,7 +144,7 @@
 			"open": "打开控制台",
 			"credits": "新密钥只有在有额度时才能使用：请在以下位置添加额度：",
 			"billing": "账单",
-			"maxTeam": "您是 Claude Max 或 Team 订阅用户？请在 claude.ai › 设置 › 账单 中关联此组织，以获得每月的 API 额度（100 至 500 美元）。",
+			"maxTeam": "Claude Max 或 Team 订阅用户？请在 claude.ai › 设置 › 账单中关联此组织，以获得每月 API 额度。",
 			"other": "根据提供商的不同，账户需要有额度或付款方式。"
 		},
 		"step2": "将其粘贴到此处。",
@@ -165,7 +165,7 @@
 		},
 		"new": {
 			"label": "新建",
-			"tooltip": "新建对话（当前对话保留在列表中）"
+			"tooltip": "新建对话"
 		},
 		"conversations": "对话",
 		"close": {
@@ -183,8 +183,8 @@
 		"loading": "正在加载…",
 		"enable": {
 			"title": "启用助手",
-			"intro": "AI 助手读取表格的结构，提出处理思路，并可添加计算列、键、数据透视表和图表。它在一次回答中所做的所有更改都可一次性撤消。",
-			"how": "它通过使用您 API 密钥的 AI 提供商、安装在此计算机上的模型，或使用您 Claude 订阅的 Claude Desktop 工作。它绝不会收到整个工作簿。",
+			"intro": "AI 助手会分析您的表格并可修改它们；每次回复的更改可一步撤消。",
+			"how": "它通过 AI 提供商、本地模型或 Claude Desktop 工作，绝不会收到整个工作簿。",
 			"locked": "AI 助手已被您组织的策略禁用。",
 			"check": "启用 AI 助手",
 			"settings": "也可在 文件 › 设置 › 功能 中设置。",
@@ -196,7 +196,7 @@
 			"claude": "来自 Claude"
 		},
 		"log": "与助手的对话",
-		"empty": "描述您想分析的内容：助手会读取工作簿的结构，提出处理思路，并可创建计算列、键、数据透视表和图表。",
+		"empty": "描述您想分析的内容。",
 		"noDoc": "请先打开或创建工作簿（文件 › 新建）。",
 		"compact": "之前的消息已为助手做了摘要；它们仍显示在这里",
 		"undone": "{n, plural, =1 {已撤消更改} other {已撤消更改}}",

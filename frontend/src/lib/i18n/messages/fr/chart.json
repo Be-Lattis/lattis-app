@@ -43,7 +43,7 @@
 		},
 		"map": {
 			"label": "Carte",
-			"hint": "Points ou densité sur une carte OpenStreetMap, à partir de colonnes latitude et longitude"
+			"hint": "Points ou densité sur une carte, à partir de la latitude et de la longitude"
 		},
 		"waterfall": {
 			"label": "Cascade",
@@ -149,10 +149,10 @@
 			},
 			"single": {
 				"label": "1 colonne",
-				"tooltip": "Latitude et longitude dans la même cellule, écrites de toute façon standard"
+				"tooltip": "Latitude et longitude dans la même cellule"
 			},
 			"pairHelp": "Nombres décimaux (48,8566 ou 48.8566), ou degrés 48°51'24\"N.",
-			"singleHelp": "Toute écriture standard : 48.8566, 2.3522 · 48,8566;2,3522 · 48°51'24\"N 2°21'03\"E · 48°51.4'N 2°21.05'E · N48.85 E2.35 · POINT(2.3522 48.8566) · geo:48.8566,2.3522"
+			"singleHelp": "Par exemple : 48.8566, 2.3522 · 48°51'24\"N 2°21'03\"E · POINT(2.3522 48.8566)"
 		},
 		"latitude": "Latitude",
 		"longitude": "Longitude",
@@ -172,20 +172,18 @@
 		"heat": "Densité (chaleur)",
 		"colorBy": {
 			"label": "Couleur par",
-			"heatTooltip": "La densité est une seule nappe de chaleur : passez en « Points » pour colorer par valeur",
+			"heatTooltip": "Densité : passez en « Points » pour colorer par valeur",
 			"pointsOnly": "(points seulement)",
-			"tooltip": "Chaque valeur distincte de la colonne prend sa couleur, réparties sur tout le spectre",
+			"tooltip": "Une couleur par valeur distincte de la colonne",
 			"single": "(une seule couleur)"
 		},
 		"colorLegend": "Légende des couleurs",
 		"pointSize": {
 			"label": "Taille des points",
-			"tooltip": "Multiplie la taille des points ; la colonne Valeur règle déjà leur taille relative"
+			"tooltip": "Multiplie la taille des points"
 		},
 		"hidden": {
-			"label": "Lignes masquées par le filtre",
-			"mapTooltip": "Par défaut, comme Excel, la carte ne montre que les lignes affichées par le filtre du tableau",
-			"tooltip": "Par défaut, comme Excel, le graphique ne montre que les lignes affichées par le filtre du tableau"
+			"label": "Lignes masquées par le filtre"
 		},
 		"view": {
 			"label": "Vue",
@@ -194,8 +192,8 @@
 			"recenter": "Recentrer",
 			"fitted": "Ajustée aux points"
 		},
-		"mapHelp": "Carte sélectionnée : la molette zoome, glisser déplace la carte (Alt+glisser déplace le graphique), double-clic ou + / − zooment ; un clic sur un point va à sa ligne dans le tableau.",
-		"mapTiles": "Fond de carte © OpenStreetMap (tile.openstreetmap.org), soumis à l’autorisation réseau du classeur. La valeur règle la taille des points, ou le poids de chacun dans la densité.",
+		"mapHelp": "Molette : zoom · glisser : déplacer la carte (Alt+glisser : le graphique) · clic sur un point : sa ligne",
+		"mapTiles": "Fond de carte © OpenStreetMap (tile.openstreetmap.org), soumis à l’autorisation réseau du classeur.",
 		"source": {
 			"label": "Source",
 			"tooltip": "Tableau ou tableau croisé dont le graphique trace les données",
@@ -222,14 +220,13 @@
 			},
 			"color": "Couleur de la série",
 			"shape": "Forme de la série",
-			"secondaryOn": "Série sur l’axe secondaire (à droite) : cliquer pour la remettre sur l’axe principal",
+			"secondaryOn": "Série sur l’axe secondaire : cliquer pour la remettre sur l’axe principal",
 			"secondaryOff": "Tracer la série sur un axe secondaire, à droite, avec sa propre échelle",
 			"axis2": "Axe 2"
 		},
 		"bins": "Classes",
 		"blanks": {
 			"label": "Cellules vides",
-			"tooltip": "Comme Excel : une cellule vide coupe la courbe (intervalle), compte pour zéro, ou ses voisines sont reliées",
 			"gap": "Intervalle",
 			"zero": "Zéro",
 			"span": "Relier les points"
@@ -247,7 +244,7 @@
 		},
 		"dataLabels": "Étiquettes de données",
 		"grid": "Quadrillage",
-		"moveHelp": "Glissez le graphique pour le déplacer, ses poignées pour le redimensionner. Clic droit : couper, copier, supprimer.",
+		"moveHelp": "Glissez pour déplacer, tirez les poignées pour redimensionner ; clic droit : couper, copier, supprimer.",
 		"keyboardHelp": "Au clavier : flèches pour le déplacer, Maj+flèches pour le redimensionner, Tab pour passer au graphique suivant, Suppr pour le supprimer."
 	},
 	"image": {

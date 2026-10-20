@@ -54,7 +54,7 @@
 			"running": "Wird rückgängig gemacht…",
 			"label": "Diese Änderungen rückgängig machen"
 		},
-		"intro": "Öffnen Sie Claude Desktop oder Claude Code und fragen Sie zum Beispiel „Was enthält meine Lattis-Arbeitsmappe?“: Jede Aktion erscheint hier.",
+		"intro": "Fragen Sie Claude zum Beispiel „Was enthält meine Lattis-Arbeitsmappe?“: Seine Aktionen erscheinen hier.",
 		"confirm": {
 			"label": "Vor Änderungen fragen",
 			"help": "Lattis bittet vor jeder Änderung der Arbeitsmappe um Ihre Zustimmung; Lesevorgänge laufen ohne Rückfrage."
@@ -65,7 +65,7 @@
 		"tooltip": "Gehe zu „{target}“"
 	},
 	"setup": {
-		"intro": "Mit einem Claude-Abonnement (Pro, Max, Team) brauchen Sie keinen API-Schlüssel: Sie chatten in Claude Desktop oder Claude Code, das auf die geöffnete Arbeitsmappe wirkt, und Lattis zeigt, was getan wird.",
+		"intro": "Mit einem Claude-Abonnement ohne API-Schlüssel: Claude Desktop oder Claude Code wirkt auf die geöffnete Arbeitsmappe.",
 		"sharing": {
 			"before": "Die Einstellung „An den Assistenten gesendete Daten“ (Datei › Einstellungen › KI-Assistent) gilt auch für Claude:",
 			"after": "Starten Sie Claude nach einer Änderung neu, damit es die neue Liste der Tools sieht."
@@ -78,7 +78,7 @@
 			"notFound": "Nicht gefunden"
 		},
 		"desktop": {
-			"help": "Die Desktop-App von Claude. Lattis erscheint dort in den Tools der Unterhaltung.",
+			"help": "Die Desktop-App von Claude.",
 			"done": "Konfiguriert ✓ – starten Sie Claude Desktop neu (vollständig beenden und wieder öffnen).",
 			"download": "Claude Desktop herunterladen",
 			"manual": "Manuell konfigurieren",
@@ -88,7 +88,7 @@
 		"reconfigure": "Erneut konfigurieren",
 		"configure": "Konfigurieren",
 		"code": {
-			"help": "Der Assistent von Claude im Terminal (oder in seiner Desktop-App). Lattis wird für alle Ihre Projekte hinzugefügt.",
+			"help": "Der Assistent von Claude im Terminal.",
 			"done": {
 				"before": "Konfiguriert ✓ – öffnen Sie eine neue Sitzung von Claude Code:",
 				"after": "zeigt dort Lattis an."
@@ -119,21 +119,21 @@
 			"tooltip": "Lattis aus Claude Desktop oder Claude Code steuern (MCP-Server)",
 			"labelDialog": "Desktop-App…",
 			"label": "Desktop-App",
-			"help": "Die Desktop-App eines Anbieters steuert Lattis mit Ihrem Abonnement bei diesem Anbieter, ohne API-Schlüssel.",
+			"help": "Ihr Abonnement beim Anbieter, ohne API-Schlüssel.",
 			"claude": {
 				"before": "Ein Claude-Abonnement lässt sich nicht direkt in einer anderen Anwendung nutzen, aber",
 				"and": "und",
-				"after": "können Lattis steuern. Sie sprechen mit Claude in seiner App; Lattis zeigt, was es tut („Von Claude“), und kann alles rückgängig machen."
+				"after": "können Lattis steuern; Lattis zeigt, was getan wird, und kann alles rückgängig machen."
 			},
 			"needsDesktop": "Diese Verbindungsart erfordert die Desktop-App von Lattis.",
-			"maxTeam": "Max- oder Team-Abonnenten: Ihre monatlichen API-Guthaben bezahlen auch einen API-Schlüssel (Registerkarte „API-Schlüssel“), mit dem die Unterhaltung in Lattis bleibt."
+			"maxTeam": "Max- oder Team-Abonnenten: Ihre monatlichen API-Guthaben bezahlen auch einen API-Schlüssel (Registerkarte „API-Schlüssel“)."
 		},
 		"providerModel": "Anbieter und Modell",
 		"provider": "Anbieter",
 		"model": "Modell",
 		"defaultModel": "Standardmodell",
 		"local": {
-			"help": "Das Modell läuft auf diesem Computer (Ollama, LM Studio…): Keine Daten verlassen den Computer, und es gibt keinen Schlüssel.",
+			"help": "Das Modell läuft auf diesem Computer: Keine Daten verlassen ihn, kein Schlüssel nötig.",
 			"url": "Adresse des lokalen Modells",
 			"experimental": "Experimentell: Kleine Modelle rufen die Tools von Lattis weniger zuverlässig auf."
 		},
@@ -144,7 +144,7 @@
 			"open": "Konsole öffnen",
 			"credits": "Ein neuer Schlüssel funktioniert nur mit Guthaben: Fügen Sie welches hinzu unter",
 			"billing": "Abrechnung",
-			"maxTeam": "Claude Max- oder Team-Abonnent? Verknüpfen Sie diese Organisation unter claude.ai › Einstellungen › Abrechnung, um Ihr monatliches API-Guthaben (100 bis 500 $) zu erhalten.",
+			"maxTeam": "Claude Max- oder Team-Abonnent? Verknüpfen Sie diese Organisation unter claude.ai › Einstellungen › Abrechnung für Ihre monatlichen API-Guthaben.",
 			"other": "Je nach Anbieter braucht das Konto Guthaben oder ein Zahlungsmittel."
 		},
 		"step2": "Fügen Sie ihn hier ein.",
@@ -165,7 +165,7 @@
 		},
 		"new": {
 			"label": "Neu",
-			"tooltip": "Neue Unterhaltung (die aktuelle Unterhaltung bleibt in der Liste)"
+			"tooltip": "Neue Unterhaltung"
 		},
 		"conversations": "Unterhaltungen",
 		"close": {
@@ -183,8 +183,8 @@
 		"loading": "Wird geladen…",
 		"enable": {
 			"title": "Assistenten aktivieren",
-			"intro": "Der KI-Assistent liest die Struktur Ihrer Tabellen, schlägt ein Vorgehen vor und kann berechnete Spalten, Schlüssel, PivotTables und Diagramme hinzufügen. Alles, was er in einer Antwort ändert, lässt sich auf einmal rückgängig machen.",
-			"how": "Er nutzt einen KI-Anbieter mit Ihrem API-Schlüssel, ein auf diesem Computer installiertes Modell oder Claude Desktop mit Ihrem Claude-Abonnement. Er erhält nie die gesamte Arbeitsmappe.",
+			"intro": "Der KI-Assistent analysiert Ihre Tabellen und kann sie ändern; jede Antwort lässt sich in einem Schritt rückgängig machen.",
+			"how": "Er nutzt einen KI-Anbieter, ein lokales Modell oder Claude Desktop und erhält nie die gesamte Arbeitsmappe.",
 			"locked": "Der KI-Assistent ist durch die Richtlinie Ihrer Organisation deaktiviert.",
 			"check": "KI-Assistent aktivieren",
 			"settings": "Auch unter Datei › Einstellungen › Funktionen verfügbar.",
@@ -196,7 +196,7 @@
 			"claude": "Von Claude"
 		},
 		"log": "Unterhaltung mit dem Assistenten",
-		"empty": "Beschreiben Sie, was Sie analysieren möchten: Der Assistent liest die Struktur der Arbeitsmappe, schlägt ein Vorgehen vor und kann berechnete Spalten, Schlüssel, PivotTables und Diagramme erstellen.",
+		"empty": "Beschreiben Sie, was Sie analysieren möchten.",
 		"noDoc": "Öffnen oder erstellen Sie zuerst eine Arbeitsmappe (Datei › Neu).",
 		"compact": "Frühere Nachrichten wurden für den Assistenten zusammengefasst; sie werden hier weiter angezeigt",
 		"undone": "{n, plural, =1 {Änderung rückgängig gemacht} other {Änderungen rückgängig gemacht}}",

@@ -43,7 +43,7 @@
 		},
 		"map": {
 			"label": "Mapa",
-			"hint": "Puntos o densidad en un mapa de OpenStreetMap, a partir de columnas de latitud y longitud"
+			"hint": "Puntos o densidad en un mapa, a partir de la latitud y la longitud"
 		},
 		"waterfall": {
 			"label": "Cascada",
@@ -149,10 +149,10 @@
 			},
 			"single": {
 				"label": "1 columna",
-				"tooltip": "Latitud y longitud en la misma celda, escritas de cualquier forma estándar"
+				"tooltip": "Latitud y longitud en la misma celda"
 			},
 			"pairHelp": "Números decimales (48,8566 o 48.8566), o grados 48°51'24\"N.",
-			"singleHelp": "Cualquier notación estándar: 48.8566, 2.3522 · 48,8566;2,3522 · 48°51'24\"N 2°21'03\"E · 48°51.4'N 2°21.05'E · N48.85 E2.35 · POINT(2.3522 48.8566) · geo:48.8566,2.3522"
+			"singleHelp": "Por ejemplo: 48.8566, 2.3522 · 48°51'24\"N 2°21'03\"E · POINT(2.3522 48.8566)"
 		},
 		"latitude": "Latitud",
 		"longitude": "Longitud",
@@ -172,20 +172,18 @@
 		"heat": "Densidad (calor)",
 		"colorBy": {
 			"label": "Color según",
-			"heatTooltip": "La densidad es una sola capa de calor: cambie a «Puntos» para colorear según un valor",
+			"heatTooltip": "Densidad: cambie a «Puntos» para colorear por valor",
 			"pointsOnly": "(solo puntos)",
-			"tooltip": "Cada valor distinto de la columna recibe su propio color, repartido por todo el espectro",
+			"tooltip": "Un color por cada valor distinto de la columna",
 			"single": "(un solo color)"
 		},
 		"colorLegend": "Leyenda de colores",
 		"pointSize": {
 			"label": "Tamaño de los puntos",
-			"tooltip": "Multiplica el tamaño de los puntos; la columna Valor ya fija su tamaño relativo"
+			"tooltip": "Multiplica el tamaño de los puntos"
 		},
 		"hidden": {
-			"label": "Filas ocultas por el filtro",
-			"mapTooltip": "De forma predeterminada, como en Excel, el mapa solo muestra las filas que deja visibles el filtro de la tabla",
-			"tooltip": "De forma predeterminada, como en Excel, el gráfico solo muestra las filas que deja visibles el filtro de la tabla"
+			"label": "Filas ocultas por el filtro"
 		},
 		"view": {
 			"label": "Vista",
@@ -194,8 +192,8 @@
 			"recenter": "Volver a centrar",
 			"fitted": "Ajustada a los puntos"
 		},
-		"mapHelp": "Mapa seleccionado: la rueda del ratón acerca o aleja, arrastrar desplaza el mapa (Alt+arrastrar mueve el gráfico), doble clic o + / − para el zoom; hacer clic en un punto lleva a su fila en la tabla.",
-		"mapTiles": "Mapa base © OpenStreetMap (tile.openstreetmap.org), sujeto al permiso de red del libro. El valor fija el tamaño de los puntos, o el peso de cada uno en la densidad.",
+		"mapHelp": "Rueda: zoom · arrastrar: mover el mapa (Alt+arrastrar: el gráfico) · clic en un punto: su fila",
+		"mapTiles": "Mapa base © OpenStreetMap (tile.openstreetmap.org), sujeto al permiso de red del libro.",
 		"source": {
 			"label": "Origen",
 			"tooltip": "Tabla o tabla dinámica cuyos datos representa el gráfico",
@@ -222,14 +220,13 @@
 			},
 			"color": "Color de la serie",
 			"shape": "Forma de la serie",
-			"secondaryOn": "Serie en el eje secundario (a la derecha): haga clic para devolverla al eje principal",
+			"secondaryOn": "Serie en el eje secundario: haga clic para devolverla al eje principal",
 			"secondaryOff": "Trazar la serie en un eje secundario, a la derecha, con su propia escala",
 			"axis2": "Eje 2"
 		},
 		"bins": "Intervalos",
 		"blanks": {
 			"label": "Celdas vacías",
-			"tooltip": "Como en Excel: una celda vacía corta la línea (rango vacío), cuenta como cero, o se unen sus vecinas",
 			"gap": "Rango vacío",
 			"zero": "Cero",
 			"span": "Conectar puntos de datos"
@@ -247,7 +244,7 @@
 		},
 		"dataLabels": "Etiquetas de datos",
 		"grid": "Líneas de cuadrícula",
-		"moveHelp": "Arrastre el gráfico para moverlo y sus controladores para cambiar su tamaño. Clic derecho: cortar, copiar, eliminar.",
+		"moveHelp": "Arrastre para mover y use los controladores para cambiar el tamaño; clic derecho: cortar, copiar, eliminar.",
 		"keyboardHelp": "Con el teclado: flechas para moverlo, Mayús+flechas para cambiar su tamaño, Tab para pasar al gráfico siguiente, Supr para eliminarlo."
 	},
 	"image": {

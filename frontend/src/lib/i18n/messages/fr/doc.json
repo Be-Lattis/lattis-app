@@ -1,8 +1,8 @@
 {
 	"consent": {
-		"warning": "N'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. Dans le doute, choisissez « Ne pas exécuter » : le reste du classeur reste utilisable.",
-		"site": "L'onglet « {name} » affiche le site externe {url}, qui n'a encore jamais été autorisé dans ce classeur sur ce poste (classeur reçu, ou onglet modifié ailleurs). Ce site s'exécute dans l'onglet, sans accès au classeur.",
-		"page": "L'onglet « {name} » contient une page web (HTML et JavaScript) qui n'a encore jamais été autorisée sur ce poste (classeur reçu, ou page modifiée ailleurs). Une page peut lire et modifier le classeur, lancer les actions de ses boutons, vous poser des questions et, avec votre accord, contacter des sites web.",
+		"warning": "N'autorisez que si vous faites confiance à qui vous a fourni ce classeur ; dans le doute, « Ne pas exécuter ».",
+		"site": "L'onglet « {name} » affiche le site externe {url}, jamais autorisé sur ce poste, sans accès au classeur.",
+		"page": "L'onglet « {name} » contient une page web jamais autorisée sur ce poste. Elle peut lire et modifier le classeur et, avec votre accord, contacter des sites web.",
 		"title": "Exécuter une page web du classeur ?",
 		"ok": "Autoriser",
 		"cancel": "Ne pas exécuter",
@@ -74,7 +74,7 @@
 			"list": "Choix (un par ligne)"
 		},
 		"script": "Script (à chaque changement)",
-		"help": "La valeur du contrôle est celle de la cellule liée (dans ce document, ou sur une feuille pour la lire dans les formules). Les scripts le pilotent par controls.get / controls.set et controls.on(\"change\", …)."
+		"help": "La valeur du contrôle est celle de la cellule liée."
 	},
 	"page": {
 		"escapes": "La page essaie sans cesse d’ouvrir une autre adresse : elle est arrêtée.",
@@ -110,7 +110,7 @@
 		"unsaved": "Modifications non enregistrées",
 		"blocked": {
 			"title": "Cette page web n’a pas été exécutée.",
-			"help": "Elle n’a encore jamais été autorisée sur ce poste (classeur reçu, ou page modifiée ailleurs). N’autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur.",
+			"help": "Jamais autorisée sur ce poste. N’autorisez que si vous faites confiance à qui vous a fourni ce classeur.",
 			"preview": "Aperçu (Ctrl+Entrée) exécute le code affiché dans l’éditeur.",
 			"decide": "Décider…"
 		},

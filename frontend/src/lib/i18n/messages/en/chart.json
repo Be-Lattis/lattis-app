@@ -43,7 +43,7 @@
 		},
 		"map": {
 			"label": "Map",
-			"hint": "Points or density on an OpenStreetMap map, from latitude and longitude columns"
+			"hint": "Points or density on a map, from latitude and longitude"
 		},
 		"waterfall": {
 			"label": "Waterfall",
@@ -149,10 +149,10 @@
 			},
 			"single": {
 				"label": "1 column",
-				"tooltip": "Latitude and longitude in the same cell, written in any standard way"
+				"tooltip": "Latitude and longitude in the same cell"
 			},
 			"pairHelp": "Decimal numbers (48.8566 or 48,8566), or degrees 48°51'24\"N.",
-			"singleHelp": "Any standard notation: 48.8566, 2.3522 · 48,8566;2,3522 · 48°51'24\"N 2°21'03\"E · 48°51.4'N 2°21.05'E · N48.85 E2.35 · POINT(2.3522 48.8566) · geo:48.8566,2.3522"
+			"singleHelp": "For example: 48.8566, 2.3522 · 48°51'24\"N 2°21'03\"E · POINT(2.3522 48.8566)"
 		},
 		"latitude": "Latitude",
 		"longitude": "Longitude",
@@ -172,20 +172,18 @@
 		"heat": "Density (heat)",
 		"colorBy": {
 			"label": "Color by",
-			"heatTooltip": "Density is a single heat layer: switch to “Points” to color by value",
+			"heatTooltip": "Density: switch to “Points” to color by value",
 			"pointsOnly": "(points only)",
-			"tooltip": "Each distinct value of the column gets its own color, spread across the whole spectrum",
+			"tooltip": "One color per distinct value of the column",
 			"single": "(single color)"
 		},
 		"colorLegend": "Color legend",
 		"pointSize": {
 			"label": "Point size",
-			"tooltip": "Multiplies the size of the points; the Value column already sets their relative size"
+			"tooltip": "Multiplies the size of the points"
 		},
 		"hidden": {
-			"label": "Rows hidden by the filter",
-			"mapTooltip": "By default, like Excel, the map only shows the rows displayed by the table's filter",
-			"tooltip": "By default, like Excel, the chart only shows the rows displayed by the table's filter"
+			"label": "Rows hidden by the filter"
 		},
 		"view": {
 			"label": "View",
@@ -194,8 +192,8 @@
 			"recenter": "Recenter",
 			"fitted": "Fitted to the points"
 		},
-		"mapHelp": "Map selected: the mouse wheel zooms, dragging moves the map (Alt+drag moves the chart), double-click or + / − zoom; clicking a point goes to its row in the table.",
-		"mapTiles": "Base map © OpenStreetMap (tile.openstreetmap.org), subject to the workbook's network permission. The value sets the size of the points, or the weight of each one in the density.",
+		"mapHelp": "Wheel: zoom · drag: move the map (Alt+drag: the chart) · click a point: its row",
+		"mapTiles": "Base map © OpenStreetMap (tile.openstreetmap.org), subject to the workbook's network permission.",
 		"source": {
 			"label": "Source",
 			"tooltip": "Table or PivotTable whose data the chart plots",
@@ -222,14 +220,13 @@
 			},
 			"color": "Series color",
 			"shape": "Series shape",
-			"secondaryOn": "Series on the secondary axis (right): click to put it back on the primary axis",
+			"secondaryOn": "Series on the secondary axis: click to put it back on the primary axis",
 			"secondaryOff": "Plot the series on a secondary axis, on the right, with its own scale",
 			"axis2": "Axis 2"
 		},
 		"bins": "Bins",
 		"blanks": {
 			"label": "Empty cells",
-			"tooltip": "Like Excel: an empty cell breaks the line (gap), counts as zero, or its neighbors are connected",
 			"gap": "Gap",
 			"zero": "Zero",
 			"span": "Connect data points"
@@ -247,7 +244,7 @@
 		},
 		"dataLabels": "Data labels",
 		"grid": "Gridlines",
-		"moveHelp": "Drag the chart to move it, its handles to resize it. Right-click: cut, copy, delete.",
+		"moveHelp": "Drag to move, pull the handles to resize; right-click: cut, copy, delete.",
 		"keyboardHelp": "With the keyboard: arrows to move it, Shift+arrows to resize it, Tab to go to the next chart, Del to delete it."
 	},
 	"image": {

@@ -1,8 +1,8 @@
 {
 	"consent": {
-		"warning": "Permítalo solo si confía en la persona que le ha proporcionado este libro. En caso de duda, elija «No ejecutar»: el resto del libro sigue siendo utilizable.",
-		"site": "La pestaña «{name}» muestra el sitio externo {url}, que todavía no se ha permitido nunca en este libro en este equipo (libro recibido, o pestaña modificada en otro lugar). Este sitio se ejecuta en la pestaña, sin acceso al libro.",
-		"page": "La pestaña «{name}» contiene una página web (HTML y JavaScript) que todavía no se ha permitido nunca en este equipo (libro recibido, o página modificada en otro lugar). Una página puede leer y modificar el libro, ejecutar las acciones de sus botones, hacerle preguntas y, con su consentimiento, contactar con sitios web.",
+		"warning": "Permítalo solo si confía en quien le proporcionó este libro; en caso de duda, «No ejecutar».",
+		"site": "La pestaña «{name}» muestra el sitio externo {url}, nunca permitido en este equipo, sin acceso al libro.",
+		"page": "La pestaña «{name}» contiene una página web nunca permitida en este equipo. Puede leer y modificar el libro y, con su consentimiento, contactar con sitios web.",
 		"title": "¿Ejecutar una página web del libro?",
 		"ok": "Permitir",
 		"cancel": "No ejecutar",
@@ -74,7 +74,7 @@
 			"list": "Opciones (una por línea)"
 		},
 		"script": "Script (en cada cambio)",
-		"help": "El valor del control es el de la celda vinculada (en este documento, o en una hoja para leerlo en las fórmulas). Los scripts lo controlan con controls.get / controls.set y controls.on(\"change\", …)."
+		"help": "El valor del control es el de la celda vinculada."
 	},
 	"page": {
 		"escapes": "La página intenta sin cesar abrir otra dirección: se ha detenido.",
@@ -110,7 +110,7 @@
 		"unsaved": "Cambios no guardados",
 		"blocked": {
 			"title": "Esta página web no se ha ejecutado.",
-			"help": "Todavía no se ha permitido nunca en este equipo (libro recibido, o página modificada en otro lugar). Permítala solo si confía en la persona que le ha proporcionado este libro.",
+			"help": "Nunca permitida en este equipo. Permítala solo si confía en quien le proporcionó este libro.",
 			"preview": "Vista previa (Ctrl+Entrar) ejecuta el código mostrado en el editor.",
 			"decide": "Decidir…"
 		},

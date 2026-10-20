@@ -54,7 +54,7 @@
 			"running": "Deshaciendo…",
 			"label": "Deshacer estos cambios"
 		},
-		"intro": "Abra Claude Desktop o Claude Code y pregunte, por ejemplo, «¿Qué contiene mi libro de Lattis?»: cada acción aparecerá aquí.",
+		"intro": "Pregunte a Claude, por ejemplo, «¿Qué contiene mi libro de Lattis?»: sus acciones aparecerán aquí.",
 		"confirm": {
 			"label": "Preguntar antes de cambiar",
 			"help": "Lattis pide su aprobación antes de cada cambio en el libro; las lecturas se hacen sin preguntar."
@@ -65,7 +65,7 @@
 		"tooltip": "Ir a «{target}»"
 	},
 	"setup": {
-		"intro": "Con una suscripción a Claude (Pro, Max, Team), no necesita clave de API: conversa en Claude Desktop o Claude Code, que actúa sobre el libro abierto, y Lattis muestra lo que se hace.",
+		"intro": "Con una suscripción a Claude, sin clave de API: Claude Desktop o Claude Code actúa sobre el libro abierto.",
 		"sharing": {
 			"before": "El ajuste «Datos enviados al asistente» (Archivo › Configuración › Asistente de IA) también se aplica a Claude:",
 			"after": "Tras un cambio, reinicie Claude para que vea la nueva lista de herramientas."
@@ -78,7 +78,7 @@
 			"notFound": "No encontrado"
 		},
 		"desktop": {
-			"help": "La aplicación de escritorio de Claude. Lattis aparece en las herramientas de la conversación.",
+			"help": "La aplicación de escritorio de Claude.",
 			"done": "Configurado ✓ — reinicie Claude Desktop (ciérrelo por completo y vuelva a abrirlo).",
 			"download": "Descargar Claude Desktop",
 			"manual": "Configurar manualmente",
@@ -88,7 +88,7 @@
 		"reconfigure": "Volver a configurar",
 		"configure": "Configurar",
 		"code": {
-			"help": "El asistente de Claude en el terminal (o en su aplicación de escritorio). Lattis se agrega para todos sus proyectos.",
+			"help": "El asistente de Claude en el terminal.",
 			"done": {
 				"before": "Configurado ✓ — abra una nueva sesión de Claude Code:",
 				"after": "muestra Lattis en ella."
@@ -119,21 +119,21 @@
 			"tooltip": "Controlar Lattis desde Claude Desktop o Claude Code (servidor MCP)",
 			"labelDialog": "Aplicación de escritorio…",
 			"label": "Aplicación de escritorio",
-			"help": "La aplicación de escritorio de un proveedor controla Lattis con su suscripción a ese proveedor, sin clave de API.",
+			"help": "Su suscripción con el proveedor, sin clave de API.",
 			"claude": {
 				"before": "Una suscripción a Claude no se puede usar directamente en otra aplicación, pero",
 				"and": "y",
-				"after": "pueden controlar Lattis. Usted habla con Claude en su aplicación; Lattis muestra lo que hace («Desde Claude») y puede deshacerlo todo."
+				"after": "pueden controlar Lattis, que muestra lo que se hace y puede deshacerlo todo."
 			},
 			"needsDesktop": "Este modo requiere la aplicación de escritorio de Lattis.",
-			"maxTeam": "Suscriptores de Max o Team: sus créditos de API mensuales también pagan una clave de API (pestaña «Clave de API»), que mantiene la conversación en Lattis."
+			"maxTeam": "Suscriptores de Max o Team: sus créditos de API mensuales también pagan una clave de API (pestaña «Clave de API»)."
 		},
 		"providerModel": "Proveedor y modelo",
 		"provider": "Proveedor",
 		"model": "Modelo",
 		"defaultModel": "modelo predeterminado",
 		"local": {
-			"help": "El modelo se ejecuta en este equipo (Ollama, LM Studio…): ningún dato sale del equipo y no hay clave.",
+			"help": "El modelo se ejecuta en este equipo: ningún dato sale de él, sin clave.",
 			"url": "Dirección del modelo local",
 			"experimental": "Experimental: los modelos pequeños llaman peor a las herramientas de Lattis."
 		},
@@ -144,7 +144,7 @@
 			"open": "Abrir la consola",
 			"credits": "Una clave nueva solo funciona con créditos: agréguelos en",
 			"billing": "Facturación",
-			"maxTeam": "¿Suscriptor de Claude Max o Team? Vincule esta organización en claude.ai › Settings › Billing para recibir sus créditos de API mensuales (de 100 a 500 $).",
+			"maxTeam": "¿Suscriptor de Claude Max o Team? Vincule esta organización en claude.ai › Settings › Billing para sus créditos de API mensuales.",
 			"other": "Según el proveedor, la cuenta necesita créditos o un medio de pago."
 		},
 		"step2": "Péguela aquí.",
@@ -165,7 +165,7 @@
 		},
 		"new": {
 			"label": "Nueva",
-			"tooltip": "Nueva conversación (la conversación actual sigue en la lista)"
+			"tooltip": "Nueva conversación"
 		},
 		"conversations": "Conversaciones",
 		"close": {
@@ -183,8 +183,8 @@
 		"loading": "Cargando…",
 		"enable": {
 			"title": "Activar el asistente",
-			"intro": "El Asistente de IA lee la estructura de sus tablas, propone un enfoque y puede agregar columnas calculadas, claves, tablas dinámicas y gráficos. Todo lo que cambia en una respuesta se puede deshacer de una vez.",
-			"how": "Pasa por un proveedor de IA con su clave de API, por un modelo instalado en este equipo, o por Claude Desktop con su suscripción a Claude. Nunca recibe el libro completo.",
+			"intro": "El Asistente de IA analiza sus tablas y puede modificarlas; cada respuesta se deshace en un solo paso.",
+			"how": "Pasa por un proveedor de IA, un modelo local o Claude Desktop, y nunca recibe el libro completo.",
 			"locked": "El Asistente de IA está desactivado por la directiva de su organización.",
 			"check": "Activar el Asistente de IA",
 			"settings": "También disponible en Archivo › Configuración › Funciones.",
@@ -196,7 +196,7 @@
 			"claude": "Desde Claude"
 		},
 		"log": "Conversación con el asistente",
-		"empty": "Describa lo que quiere analizar: el asistente lee la estructura del libro, propone un enfoque y puede crear columnas calculadas, claves, tablas dinámicas y gráficos.",
+		"empty": "Describa lo que quiere analizar.",
 		"noDoc": "Abra o cree primero un libro (Archivo › Nuevo).",
 		"compact": "Los mensajes anteriores se han resumido para el asistente; se siguen mostrando aquí",
 		"undone": "{n, plural, =1 {Cambio deshecho} other {Cambios deshechos}}",

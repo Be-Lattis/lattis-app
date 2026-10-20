@@ -12,7 +12,7 @@ describe('accord des pages web', () => {
 		expect(d.message).toContain('« Tableau de bord »');
 		expect(d.message).toMatch(/lire et modifier le classeur/);
 		expect(d.warning).toBe(pageWarning());
-		expect(d.warning).toMatch(/faites confiance à la personne qui vous a fourni ce classeur/);
+		expect(d.warning).toMatch(/faites confiance à qui vous a fourni ce classeur/);
 	});
 	it('site externe : son adresse', () => {
 		const d = pageConsent('Site', urlSource('exemple.fr'));

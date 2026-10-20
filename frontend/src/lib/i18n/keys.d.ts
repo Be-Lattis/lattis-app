@@ -234,7 +234,6 @@ export interface MessageParams {
 	'chart.panel.blanks.gap': Record<never, never>;
 	'chart.panel.blanks.label': Record<never, never>;
 	'chart.panel.blanks.span': Record<never, never>;
-	'chart.panel.blanks.tooltip': Record<never, never>;
 	'chart.panel.blanks.zero': Record<never, never>;
 	'chart.panel.choose': Record<never, never>;
 	'chart.panel.colorBy.heatTooltip': Record<never, never>;
@@ -266,8 +265,6 @@ export interface MessageParams {
 	'chart.panel.heat': Record<never, never>;
 	'chart.panel.help': Record<never, never>;
 	'chart.panel.hidden.label': Record<never, never>;
-	'chart.panel.hidden.mapTooltip': Record<never, never>;
-	'chart.panel.hidden.tooltip': Record<never, never>;
 	'chart.panel.invalid': { n: number | string };
 	'chart.panel.keyboardHelp': Record<never, never>;
 	'chart.panel.latitude': Record<never, never>;
@@ -950,7 +947,6 @@ export interface MessageParams {
 	'grid.filter.blanks': Record<never, never>;
 	'grid.filter.chooseOne': Record<never, never>;
 	'grid.filter.clearOf': { field: number | string };
-	'grid.filter.computed': Record<never, never>;
 	'grid.filter.cond.between': { from: number | string; op: number | string; to: number | string };
 	'grid.filter.cond.bottomN': { n: number | string };
 	'grid.filter.cond.date.ge': Record<never, never>;
@@ -1891,7 +1887,6 @@ export interface MessageParams {
 	'query.source.need.url': Record<never, never>;
 	'query.source.need.xlsxTable': Record<never, never>;
 	'query.source.newConn': Record<never, never>;
-	'query.source.parquet.help': Record<never, never>;
 	'query.source.passwordRequired': Record<never, never>;
 	'query.source.query': Record<never, never>;
 	'query.source.queryHelp': Record<never, never>;
@@ -1899,11 +1894,9 @@ export interface MessageParams {
 	'query.source.recordPath.placeholder': Record<never, never>;
 	'query.source.search': Record<never, never>;
 	'query.source.sql.dbHelp': Record<never, never>;
-	'query.source.sql.fileHelp': Record<never, never>;
 	'query.source.sql.label': Record<never, never>;
 	'query.source.sql.sheet': { sheet: number | string };
 	'query.source.sql.workbook': Record<never, never>;
-	'query.source.sql.workbookHelp': Record<never, never>;
 	'query.source.table': Record<never, never>;
 	'query.source.tables': Record<never, never>;
 	'query.source.title': Record<never, never>;
@@ -2726,7 +2719,6 @@ export interface MessageParams {
 	'remote.serverPicker.empty': Record<never, never>;
 	'remote.serverPicker.manage.label': Record<never, never>;
 	'remote.serverPicker.manage.tooltip': Record<never, never>;
-	'remote.servers.add.help': Record<never, never>;
 	'remote.servers.add.locked': Record<never, never>;
 	'remote.servers.add.submit': Record<never, never>;
 	'remote.servers.add.title': Record<never, never>;
@@ -3734,7 +3726,7 @@ export interface MessageParams {
 	'shell.merge.panel.column': Record<never, never>;
 	'shell.merge.panel.columns': Record<never, never>;
 	'shell.merge.panel.from': Record<never, never>;
-	'shell.merge.panel.keepCells': { category: number | string };
+	'shell.merge.panel.keepCells': Record<never, never>;
 	'shell.merge.panel.layout': Record<never, never>;
 	'shell.merge.panel.left': { list: number | string };
 	'shell.merge.panel.merge': Record<never, never>;
@@ -4331,7 +4323,6 @@ export interface MessageParams {
 	'shell.theme.derive': Record<never, never>;
 	'shell.theme.mine': Record<never, never>;
 	'shell.theme.name': Record<never, never>;
-	'shell.theme.note': Record<never, never>;
 	'shell.theme.otherColors': Record<never, never>;
 	'shell.theme.remove': Record<never, never>;
 	'shell.theme.removeTooltip': { name: number | string };

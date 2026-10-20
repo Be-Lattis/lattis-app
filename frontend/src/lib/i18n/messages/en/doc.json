@@ -1,8 +1,8 @@
 {
 	"consent": {
-		"warning": "Only allow it if you trust the person who gave you this workbook. If in doubt, choose “Don't run”: the rest of the workbook remains usable.",
-		"site": "The “{name}” tab shows the external site {url}, which has never been allowed in this workbook on this computer before (received workbook, or tab changed elsewhere). This site runs in the tab, without access to the workbook.",
-		"page": "The “{name}” tab contains a web page (HTML and JavaScript) that has never been allowed on this computer before (received workbook, or page changed elsewhere). A page can read and change the workbook, run its buttons' actions, ask you questions and, with your approval, contact websites.",
+		"warning": "Only allow it if you trust whoever gave you this workbook; if in doubt, “Don't run”.",
+		"site": "The “{name}” tab shows the external site {url}, never allowed on this computer, without access to the workbook.",
+		"page": "The “{name}” tab contains a web page never allowed on this computer. It can read and change the workbook and, with your approval, contact websites.",
 		"title": "Run a web page from the workbook?",
 		"ok": "Allow",
 		"cancel": "Don't run",
@@ -74,7 +74,7 @@
 			"list": "Choices (one per line)"
 		},
 		"script": "Script (on every change)",
-		"help": "The control's value is the linked cell's value (in this document, or on a sheet to read it in formulas). Scripts drive it with controls.get / controls.set and controls.on(\"change\", …)."
+		"help": "The control's value is the linked cell's value."
 	},
 	"page": {
 		"escapes": "The page keeps trying to open another address: it has been stopped.",
@@ -110,7 +110,7 @@
 		"unsaved": "Unsaved changes",
 		"blocked": {
 			"title": "This web page was not run.",
-			"help": "It has never been allowed on this computer before (received workbook, or page changed elsewhere). Only allow it if you trust the person who gave you this workbook.",
+			"help": "Never allowed on this computer. Only allow it if you trust whoever gave you this workbook.",
 			"preview": "Preview (Ctrl+Enter) runs the code shown in the editor.",
 			"decide": "Decide…"
 		},

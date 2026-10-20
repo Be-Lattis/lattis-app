@@ -54,7 +54,7 @@
 			"running": "Annulation…",
 			"label": "Annuler ces modifications"
 		},
-		"intro": "Ouvrez Claude Desktop ou Claude Code et demandez par exemple « Que contient mon classeur Lattis ? » : chaque action apparaîtra ici.",
+		"intro": "Demandez par exemple à Claude « Que contient mon classeur Lattis ? » : ses actions apparaîtront ici.",
 		"confirm": {
 			"label": "Demander avant de modifier",
 			"help": "Lattis demande votre accord avant chaque modification du classeur ; les lectures passent sans demande."
@@ -65,7 +65,7 @@
 		"tooltip": "Aller à « {target} »"
 	},
 	"setup": {
-		"intro": "Avec un abonnement Claude (Pro, Max, Team), pas besoin de clé d’API : vous discutez dans Claude Desktop ou Claude Code, qui agit sur le classeur ouvert, et Lattis montre ce qui est fait.",
+		"intro": "Avec un abonnement Claude, pas de clé d’API : Claude Desktop ou Claude Code agit sur le classeur ouvert.",
 		"sharing": {
 			"before": "Le réglage « Données transmises à l’assistant » (Fichier › Paramètres › Assistant IA) vaut aussi pour Claude :",
 			"after": "Après un changement, redémarrez Claude pour qu’il voie la nouvelle liste d’outils."
@@ -78,7 +78,7 @@
 			"notFound": "Introuvable"
 		},
 		"desktop": {
-			"help": "L’application de bureau de Claude. Lattis y apparaît dans les outils de la conversation.",
+			"help": "L’application de bureau de Claude.",
 			"done": "Configuré ✓ — redémarrez Claude Desktop (quittez-le complètement, puis rouvrez-le).",
 			"download": "Télécharger Claude Desktop",
 			"manual": "Configurer à la main",
@@ -88,7 +88,7 @@
 		"reconfigure": "Configurer à nouveau",
 		"configure": "Configurer",
 		"code": {
-			"help": "L’assistant de Claude dans le terminal (ou dans son application de bureau). Lattis est ajouté pour tous vos projets.",
+			"help": "L’assistant de Claude dans le terminal.",
 			"done": {
 				"before": "Configuré ✓ — ouvrez une nouvelle session de Claude Code :",
 				"after": "y montre Lattis."
@@ -119,21 +119,21 @@
 			"tooltip": "Piloter Lattis depuis Claude Desktop ou Claude Code (serveur MCP)",
 			"labelDialog": "Application de bureau…",
 			"label": "Application de bureau",
-			"help": "L’application de bureau d’un fournisseur pilote Lattis avec votre abonnement chez lui, sans clé d’API.",
+			"help": "Votre abonnement chez le fournisseur, sans clé d’API.",
 			"claude": {
 				"before": "Un abonnement Claude ne s’utilise pas directement dans une autre application, mais",
 				"and": "et",
-				"after": "savent piloter Lattis. Vous parlez à Claude dans son application ; Lattis montre ce qu’il fait (« Depuis Claude ») et peut tout annuler."
+				"after": "savent piloter Lattis, qui montre ce qui est fait et peut tout annuler."
 			},
 			"needsDesktop": "Cette voie demande l’application de bureau de Lattis.",
-			"maxTeam": "Abonnés Max ou Team : vos crédits d’API mensuels paient aussi une clé d’API (onglet « Clé d’API »), qui garde la conversation dans Lattis."
+			"maxTeam": "Abonnés Max ou Team : vos crédits d’API mensuels paient aussi une clé d’API (onglet « Clé d’API »)."
 		},
 		"providerModel": "Fournisseur et modèle",
 		"provider": "Fournisseur",
 		"model": "Modèle",
 		"defaultModel": "modèle par défaut",
 		"local": {
-			"help": "Le modèle tourne sur ce poste (Ollama, LM Studio…) : aucune donnée ne quitte l’ordinateur, et il n’y a pas de clé.",
+			"help": "Le modèle tourne sur ce poste : aucune donnée ne quitte l’ordinateur, pas de clé.",
 			"url": "Adresse du modèle local",
 			"experimental": "Expérimental : les petits modèles appellent moins bien les outils de Lattis."
 		},
@@ -144,7 +144,7 @@
 			"open": "Ouvrir la console",
 			"credits": "Une clé neuve ne marche qu’avec des crédits : ajoutez-en dans",
 			"billing": "Facturation",
-			"maxTeam": "Abonné Claude Max ou Team ? Liez cette organisation dans claude.ai › Paramètres › Facturation pour recevoir vos crédits d’API mensuels (100 à 500 $).",
+			"maxTeam": "Abonné Claude Max ou Team ? Liez cette organisation dans claude.ai › Paramètres › Facturation pour vos crédits d’API mensuels.",
 			"other": "Selon le fournisseur, il faut des crédits ou un moyen de paiement sur le compte."
 		},
 		"step2": "Collez-la ici.",
@@ -165,7 +165,7 @@
 		},
 		"new": {
 			"label": "Nouvelle",
-			"tooltip": "Nouvelle conversation (la conversation actuelle reste dans la liste)"
+			"tooltip": "Nouvelle conversation"
 		},
 		"conversations": "Conversations",
 		"close": {
@@ -183,8 +183,8 @@
 		"loading": "Chargement…",
 		"enable": {
 			"title": "Activer l’assistant",
-			"intro": "L’Assistant IA lit la structure de vos tableaux, propose une démarche et peut ajouter colonnes calculées, clés, tableaux croisés et graphiques. Tout ce qu’il modifie dans une réponse s’annule d’un coup.",
-			"how": "Il passe par un fournisseur d’IA avec votre clé d’API, par un modèle installé sur ce poste, ou par Claude Desktop avec votre abonnement Claude. Il ne reçoit jamais tout le classeur.",
+			"intro": "L’Assistant IA analyse vos tableaux et peut les modifier ; chaque réponse s’annule d’un coup.",
+			"how": "Il passe par un fournisseur d’IA, un modèle local ou Claude Desktop, et ne reçoit jamais tout le classeur.",
 			"locked": "L’assistant IA est désactivé par la stratégie de votre organisation.",
 			"check": "Activer l’assistant IA",
 			"settings": "Réglage aussi dans Fichier › Paramètres › Fonctionnalités.",
@@ -196,7 +196,7 @@
 			"claude": "Depuis Claude"
 		},
 		"log": "Conversation avec l’assistant",
-		"empty": "Décrivez ce que vous voulez analyser : l’assistant lit la structure du classeur, propose une démarche et peut créer colonnes calculées, clés, tableaux croisés et graphiques.",
+		"empty": "Décrivez ce que vous voulez analyser.",
 		"noDoc": "Ouvrez ou créez d’abord un classeur (Fichier › Nouveau).",
 		"compact": "Les échanges précédents ont été résumés pour l’assistant ; ils restent affichés ici",
 		"undone": "{n, plural, =1 {Modification annulée} other {Modifications annulées}}",
