@@ -292,7 +292,7 @@ func (s *DocumentService) open(ctx context.Context, path string, mode doc.OpenMo
 	s.replace(d)
 	addRecentDoc(d)
 	st, err := s.State(ctx)
-	st.Notice = d.TakeOpenNotice()
+	st.Notice = d.TakeOpenNoticeIn(s.sessionLang())
 	return OpenResult{State: st}, err
 }
 
@@ -310,7 +310,7 @@ func (s *DocumentService) Salvage(ctx context.Context, path string) (SalvageResu
 	}
 	report := s.say(id, msg.Args{"rows": rep.Rows, "tables": rep.Tables, "damaged": len(rep.Damaged)})
 	st, err := s.State(ctx)
-	st.Notice = d.TakeOpenNotice()
+	st.Notice = d.TakeOpenNoticeIn(s.sessionLang())
 	return SalvageResult{State: st, Report: report}, err
 }
 
@@ -328,7 +328,7 @@ func (s *DocumentService) Recover(ctx context.Context, dir string) (DocState, er
 			}
 			s.replace(d)
 			st, err := s.State(ctx)
-			st.Notice = d.TakeOpenNotice()
+			st.Notice = d.TakeOpenNoticeIn(s.sessionLang())
 			return st, err
 		}
 	}

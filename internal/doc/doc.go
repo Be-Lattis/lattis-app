@@ -55,7 +55,7 @@ type Document struct {
 	dropped []string
 	// notes : autres messages de l'ouverture (verrou, fichier modifié par
 	// ailleurs), signalés une fois.
-	notes []string
+	notes []msg.Message
 	// indexer : index des tableaux partagés sur le serveur (SetIndexer).
 	indexer atomic.Pointer[Indexer]
 	// coedit : travail à plusieurs sur un dossier partagé (SetCoEdit).
@@ -298,10 +298,10 @@ func (d *Document) lockFile() {
 	switch {
 	case errors.As(err, &held):
 		d.arc.ReadOnly = true
-		d.notes = append(d.notes, held.Error()+" : ouvert en lecture seule (Enregistrer sous pour garder vos modifications).")
+		d.notes = append(d.notes, msg.M("doc.openedReadOnly", msg.Args{"locked": held.Msg()}))
 	case err != nil:
 		trace.Logf(1, trace.Doc, "verrou de %s : %v", d.arc.Path, err)
-		d.notes = append(d.notes, fmt.Sprintf("Impossible de poser le verrou à côté de « %s » (dossier en lecture seule ?) : un autre poste qui l'ouvre ne sera pas prévenu.", filepath.Base(d.arc.Path)))
+		d.notes = append(d.notes, msg.M("doc.lockFailed", msg.Args{"file": filepath.Base(d.arc.Path)}))
 	}
 }
 
@@ -332,7 +332,7 @@ func Recover(ctx context.Context, o archive.Orphan) (_ *Document, err error) {
 	if _, err := os.Stat(o.Source); o.Source != "" && err == nil {
 		d.lockFile()
 		if changed, _ := a.Changed(); changed {
-			d.notes = append(d.notes, fmt.Sprintf("« %s » a été modifié par ailleurs depuis cette session : à l'enregistrement, Lattis proposera d'en faire une copie.", filepath.Base(o.Source)))
+			d.notes = append(d.notes, msg.M("doc.changedSinceSession", msg.Args{"file": filepath.Base(o.Source)}))
 		}
 	}
 	return d, nil
@@ -511,17 +511,20 @@ func (d *Document) MarkChanged() {
 // TakeOpenNotice rend (une fois) le message à afficher à l'ouverture :
 // déclencheurs inconnus supprimés du classeur (meta.MigrateOpen), vide
 // sinon ; puis verrou d'un autre poste, fichier modifié par ailleurs.
-func (d *Document) TakeOpenNotice() string {
-	out := d.notes
+func (d *Document) TakeOpenNotice() string { return d.TakeOpenNoticeIn(msg.FR) }
+
+// TakeOpenNoticeIn : TakeOpenNotice dans la langue l.
+func (d *Document) TakeOpenNoticeIn(l msg.Lang) string {
+	notes := d.notes
 	d.notes = nil
+	var out []string
 	if n := len(d.dropped); n > 0 {
 		names := strings.Join(d.dropped, ", ")
 		d.dropped = nil
-		msg := fmt.Sprintf("%d déclencheurs inconnus supprimés du classeur (sécurité) : %s. Enregistrez le classeur pour les retirer aussi du fichier.", n, names)
-		if n == 1 {
-			msg = fmt.Sprintf("1 déclencheur inconnu supprimé du classeur (sécurité) : %s. Enregistrez le classeur pour le retirer aussi du fichier.", names)
-		}
-		out = append([]string{msg}, out...)
+		out = append(out, msg.Format(l, "doc.triggersDropped", msg.Args{"n": n, "names": names}))
+	}
+	for _, m := range notes {
+		out = append(out, m.Text(l))
 	}
 	return strings.Join(out, " ")
 }

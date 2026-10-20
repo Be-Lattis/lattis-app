@@ -8,19 +8,23 @@ package msg
 var fr = map[ID]string{
 	// Classeur
 	"doc.backupFailed":           "copie de sauvegarde de l'ancien format impossible, rien n'a été enregistré : {err}",
+	"doc.changedSinceSession":    "« {file} » a été modifié par ailleurs depuis cette session : à l'enregistrement, Lattis proposera d'en faire une copie.",
 	"doc.chooseFile":             "choisir un fichier pour enregistrer",
 	"doc.closeCancelledByScript": "Fermeture annulée par un script (évènement before_close)",
 	"doc.downloadServer":         "Ce classeur est sur le serveur : il n'y a rien à télécharger pour le garder (Enregistrer sous en fait une copie à part)",
 	"doc.downloadWebOnly":        "Télécharger une copie n'existe que dans l'édition web : le classeur est déjà un fichier de ce poste",
 	"doc.downloaded":             "Copie téléchargée : {file}",
 	"doc.invalidHost":            "hôte invalide : nom de domaine (et port éventuel) attendu",
+	"doc.lockFailed":             "Impossible de poser le verrou à côté de « {file} » (dossier en lecture seule ?) : un autre poste qui l'ouvre ne sera pas prévenu.",
 	"doc.noDemo":                 "aucune démonstration demandée au lancement (--demo)",
 	"doc.noIndexer":              "Les index se posent sur les tableaux partagés d'un classeur collaboratif ouvert depuis son serveur",
 	"doc.none":                   "aucun classeur ouvert",
+	"doc.openedReadOnly":         "{locked} : ouvert en lecture seule (Enregistrer sous pour garder vos modifications).",
 	"doc.recoverFailed":          "récupération impossible : {err}",
 	"doc.salvaged":               "Données récupérées : {rows} ligne(s) dans {tables} table(s). Enregistrer sous un nouveau nom, puis vérifier le contenu.",
 	"doc.salvagedIncomplete":     "Données récupérées : {rows} ligne(s) dans {tables} table(s), {damaged} table(s) incomplète(s). Enregistrer sous un nouveau nom, puis vérifier le contenu.",
 	"doc.saveCancelledByScript":  "Enregistrement annulé par un script (évènement before_save)",
+	"doc.triggersDropped":        "{n, plural, one {1 déclencheur inconnu supprimé du classeur (sécurité) : {names}. Enregistrez le classeur pour le retirer aussi du fichier.} other {# déclencheurs inconnus supprimés du classeur (sécurité) : {names}. Enregistrez le classeur pour les retirer aussi du fichier.}}",
 
 	// Tableaux
 	"table.areaOutOfSheet":         "tableau : zone hors de la feuille",
@@ -376,6 +380,17 @@ var fr = map[ID]string{
 	"import.tableExists":         "import : le tableau {table} existe déjà",
 	"import.tooManyRows":         "import du tableau {table} : plus de {max} lignes",
 	"import.unknownType":         "import : type {type} inconnu",
+	"import.xlsx.cellFormula":    "Feuille « {sheet} », cellule {cell} : {err} ; valeur importée sans la formule",
+	"import.xlsx.charts":         "{n, plural, one {1 graphique non importé (recréez-le à partir des données importées)} other {# graphiques non importés (recréez-les à partir des données importées)}}",
+	"import.xlsx.columnFormula":  "Tableau {table}, colonne « {column} » : {err} ; valeurs importées sans la formule",
+	"import.xlsx.columnFormulas": "Tableau {table}, colonne « {column} » : formules différentes d'une ligne à l'autre ; valeurs importées sans les formules",
+	"import.xlsx.comments":       "{n, plural, one {1 commentaire non importé} other {# commentaires non importés}}",
+	"import.xlsx.errorValues":    "Tableau {table} : {n} valeur(s) en erreur dans Excel ({na}…) importée(s) vide(s)",
+	"import.xlsx.images":         "{n, plural, one {1 image non importée} other {# images non importées}}",
+	"import.xlsx.macros":         "Macros VBA non importées",
+	"import.xlsx.pivots":         "{n, plural, one {1 tableau croisé dynamique importé en valeurs} other {# tableaux croisés dynamiques importés en valeurs}}",
+	"import.xlsx.rules":          "Feuille « {sheet} » : {n, plural, one {1 règle de mise en forme conditionnelle non importée} other {# règles de mise en forme conditionnelle non importées}}",
+	"import.xlsx.validations":    "Feuille « {sheet} » : {n, plural, one {1 validation de données non importée} other {# validations de données non importées}}",
 
 	// Protection
 	"protect.alreadyProtected":      "{what} est déjà protégée",

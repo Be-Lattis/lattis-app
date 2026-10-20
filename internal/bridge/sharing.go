@@ -919,7 +919,7 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 		return OpenResult{}, err
 	}
 	st, err := s.State(ctx)
-	st.Notice = d.TakeOpenNotice()
+	st.Notice = d.TakeOpenNoticeIn(s.sessionLang())
 	if aside != "" {
 		st.Notice = s.say("share.cacheDamaged", msg.Args{"title": st.Title, "path": aside})
 	}

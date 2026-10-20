@@ -31,6 +31,8 @@ type xlsxSheet struct {
 }
 
 type xlsxFile struct {
+	// lang : langue des avertissements de l'import.
+	lang     msg.Lang
 	zr       *zip.ReadCloser
 	sheets   []xlsxSheet
 	sst      []string

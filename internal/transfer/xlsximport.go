@@ -4,13 +4,13 @@ import (
 	"archive/zip"
 	"context"
 	"errors"
-	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ImportXLSX ajoute au classeur les feuilles d'un classeur Excel .xlsx.
@@ -31,6 +31,7 @@ func ImportXLSX(ctx context.Context, m *canvas.Model, path string) (canvas.Impor
 		return canvas.ImportResult{}, err
 	}
 	defer x.Close()
+	x.lang = m.Language()
 	taken, err := m.TableNames(ctx)
 	if err != nil {
 		return canvas.ImportResult{}, err
@@ -66,39 +67,32 @@ func (x *xlsxFile) lost() []string {
 		}
 	}
 	var out []string
+	say := func(id msg.ID, args msg.Args) { out = append(out, msg.Format(x.lang, id, args)) }
 	if charts > 0 {
-		out = append(out, plural(charts, "graphique non importé (recréez-le à partir des données importées)", "graphiques non importés (recréez-les à partir des données importées)"))
+		say("import.xlsx.charts", msg.Args{"n": charts})
 	}
 	if pivots > 0 {
-		out = append(out, plural(pivots, "tableau croisé dynamique importé en valeurs", "tableaux croisés dynamiques importés en valeurs"))
+		say("import.xlsx.pivots", msg.Args{"n": pivots})
 	}
 	if macros {
-		out = append(out, "Macros VBA non importées")
+		say("import.xlsx.macros", nil)
 	}
 	if notes > 0 {
-		out = append(out, plural(notes, "commentaire non importé", "commentaires non importés"))
+		say("import.xlsx.comments", msg.Args{"n": notes})
 	}
 	if images > 0 {
-		out = append(out, plural(images, "image non importée", "images non importées"))
+		say("import.xlsx.images", msg.Args{"n": images})
 	}
 	for _, sh := range x.sheets {
 		e := x.extras[sh.name]
 		if e[0] > 0 {
-			out = append(out, fmt.Sprintf("Feuille « %s » : %s", sh.name, plural(e[0], "règle de mise en forme conditionnelle non importée", "règles de mise en forme conditionnelle non importées")))
+			say("import.xlsx.rules", msg.Args{"sheet": sh.name, "n": e[0]})
 		}
 		if e[1] > 0 {
-			out = append(out, fmt.Sprintf("Feuille « %s » : %s", sh.name, plural(e[1], "validation de données non importée", "validations de données non importées")))
+			say("import.xlsx.validations", msg.Args{"sheet": sh.name, "n": e[1]})
 		}
 	}
 	return out
-}
-
-// plural écrit « 1 graphique… » ou « 3 graphiques… ».
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return "1 " + one
-	}
-	return fmt.Sprintf("%d %s", n, many)
 }
 
 // countTags compte les balises name d'une partie XML (0 si illisible).
@@ -289,7 +283,7 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 							err = f
 						}
 						if err != nil {
-							warnings = append(warnings, fmt.Sprintf("Feuille « %s », cellule %s : %v ; valeur importée sans la formule", sh.name, cellName(fc.row, fc.col), err))
+							warnings = append(warnings, msg.Format(x.lang, "import.xlsx.cellFormula", msg.Args{"sheet": sh.name, "cell": cellName(fc.row, fc.col), "err": err}))
 						}
 					}
 					out[si].Cells = append(out[si].Cells, cell)
@@ -310,24 +304,26 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 			for i, cs := range st.cols {
 				t.Types[i] = final(cs.t)
 				errs += cs.errs
-				loc := fmt.Sprintf("Tableau %s, colonne « %s »", is.name, is.headers[i])
+				loc := msg.Args{"table": is.name, "column": is.headers[i]}
 				switch {
 				case cs.formulas == 0:
 				case cs.why != nil:
-					warnings = append(warnings, fmt.Sprintf("%s : %v ; valeurs importées sans la formule", loc, cs.why))
+					loc["err"] = cs.why
+					warnings = append(warnings, msg.Format(x.lang, "import.xlsx.columnFormula", loc))
 				case cs.mixed || cs.formulas < rows:
-					warnings = append(warnings, fmt.Sprintf("%s : %v ; valeurs importées sans les formules", loc, errInconsistent))
+					warnings = append(warnings, msg.Format(x.lang, "import.xlsx.columnFormulas", loc))
 				default:
 					src, err := rv.rewrite(cs.first, where{sheet: sh.name, row: cs.firstRow, col: is.c0 + i, table: is})
 					if err != nil {
-						warnings = append(warnings, fmt.Sprintf("%s : %v ; valeurs importées sans la formule", loc, err))
+						loc["err"] = err
+						warnings = append(warnings, msg.Format(x.lang, "import.xlsx.columnFormula", loc))
 					} else {
 						t.Formulas[i] = src
 					}
 				}
 			}
 			if errs > 0 {
-				warnings = append(warnings, fmt.Sprintf("Tableau %s : %d valeur(s) en erreur dans Excel (#N/A…) importée(s) vide(s)", is.name, errs))
+				warnings = append(warnings, msg.Format(x.lang, "import.xlsx.errorValues", msg.Args{"table": is.name, "n": errs, "na": "#N/A"}))
 			}
 			t.Rows = x.rows(ctx, sh, is, t.Types)
 			out[si].Tables = append(out[si].Tables, t)
