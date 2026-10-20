@@ -1,0 +1,156 @@
+package collab_test
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/internal/remote/workbook/workbooktest"
+)
+
+// Essais de l'audit hors ligne (docs/audits/2026-10-20-audit-hors-ligne.md).
+
+// A1 : une colonne renommée par une collègue pendant la coupure, alors
+// qu'une saisie hors ligne la vise : l'envoi échoue (42703, errStale), la
+// réception (qui relirait la correspondance) ne vient qu'après l'envoi.
+func TestAuditStaleColumnLivelock(t *testing.T) {
+	ctx := context.Background()
+	f, alice, bob, _ := setup(t)
+	f.SetDown(true)
+	bob.d.Share.SetOnline(false, "serveur injoignable")
+	bob.mustSet(0, 2, "9") // Prix
+	f.SetDown(false)
+	must(t, alice.header(2, "Tarif"))
+	alice.send()
+
+	bob.d.Share.SetOnline(true, "")
+	for i := 0; i < 3; i++ {
+		_, err := bob.e.Sync(ctx)
+		t.Logf("essai %d : err=%v, file=%v", i+1, err, bob.states())
+	}
+	if bob.states()["pending"] > 0 {
+		t.Errorf("BLOQUÉ : la file ne part jamais (%v) ; colonnes de Bob : %v", bob.states(), colsOf(bob, "Ventes"))
+	}
+}
+
+// A1 bis : même chose avec un tableau supprimé par une conceptrice.
+func TestAuditStaleTableLivelock(t *testing.T) {
+	ctx := context.Background()
+	f, alice, bob, _ := setup(t)
+	f.SetDown(true)
+	bob.d.Share.SetOnline(false, "serveur injoignable")
+	bob.mustSet(0, 1, "99")
+	f.SetDown(false)
+	must(t, alice.d.DeleteTables(ctx, []string{"Ventes"}))
+	alice.send()
+
+	bob.d.Share.SetOnline(true, "")
+	for i := 0; i < 3; i++ {
+		_, err := bob.e.Sync(ctx)
+		t.Logf("essai %d : err=%v, file=%v", i+1, err, bob.states())
+	}
+	if bob.states()["pending"] > 0 {
+		t.Errorf("BLOQUÉ : la file ne part jamais (%v)", bob.states())
+	}
+}
+
+// flaky : serveur dont la première mise à jour rend une erreur SQL
+// passagère (interblocage 40P01).
+type flaky struct {
+	workbook.Server
+	code string
+	left int
+}
+
+type flakyWriter struct {
+	workbook.Writer
+	s *flaky
+}
+
+func (s *flaky) Write(ctx context.Context, fn func(workbook.Writer) error) error {
+	return s.Server.Write(ctx, func(w workbook.Writer) error { return fn(flakyWriter{w, s}) })
+}
+
+func (w flakyWriter) Update(ctx context.Context, schema, table, id string, col workbook.RemoteColumn, old, new any) (workbook.Wrote, error) {
+	if w.s.left > 0 {
+		w.s.left--
+		return workbook.Wrote{}, workbooktest.ErrServer{Code: w.s.code, Msg: "erreur passagère"}
+	}
+	return w.Writer.Update(ctx, schema, table, id, col, old, new)
+}
+
+// A2 : une erreur SQL passagère (interblocage, délai dépassé) est prise
+// pour un refus : la saisie hors ligne est défaite.
+func TestAuditTransientErrorIsRejection(t *testing.T) {
+	for _, code := range []string{"40P01", "57014", "55P03"} {
+		t.Run(code, func(t *testing.T) {
+			ctx := context.Background()
+			f, _, bob, _ := setup(t)
+			f.SetDown(true)
+			bob.d.Share.SetOnline(false, "serveur injoignable")
+			bob.mustSet(0, 1, "77")
+			f.SetDown(false)
+			bob.e.SetServer(&flaky{Server: f.As("bob"), code: code, left: 1})
+			bob.d.Share.SetOnline(true, "")
+			r, err := bob.e.Sync(ctx)
+			must(t, err)
+			t.Logf("rapport : rejetées=%d, messages=%v, Quantité=%v", r.Rejected, r.Notices, bob.col("Quantité"))
+			if bob.col("Quantité")[0] != "77" {
+				t.Errorf("PERDU : saisie hors ligne défaite après une erreur passagère %s", code)
+			}
+		})
+	}
+}
+
+// ambiguous : la transaction est validée sur le serveur, puis la réponse
+// se perd (coupure pendant le COMMIT).
+type ambiguous struct {
+	workbook.Server
+	left int
+}
+
+func (s *ambiguous) Write(ctx context.Context, fn func(workbook.Writer) error) error {
+	err := s.Server.Write(ctx, fn)
+	if err == nil && s.left > 0 {
+		s.left--
+		return errors.New("read tcp: connection reset by peer")
+	}
+	return err
+}
+
+// A3 : coupure entre la validation du serveur et sa réponse : l'étape
+// repart à la reconnexion ; pas de doublon. Une ligne ajoutée puis
+// supprimée par une collègue entre les deux envois revient-elle ?
+func TestAuditAmbiguousCommit(t *testing.T) {
+	ctx := context.Background()
+	f, alice, bob, _ := setup(t)
+	f.SetDown(true)
+	bob.d.Share.SetOnline(false, "serveur injoignable")
+	must(t, bob.d.InsertRow(ctx, "Ventes", 3))
+	bob.mustSet(3, 0, "Sucre")
+	bob.mustSet(0, 1, "30")
+	f.SetDown(false)
+	bob.e.SetServer(&ambiguous{Server: f.As("bob"), left: 1})
+	bob.d.Share.SetOnline(true, "")
+	if _, err := bob.e.Sync(ctx); err == nil {
+		t.Fatal("coupure attendue")
+	}
+	// Pendant la coupure (vue de Bob), Alice reçoit la ligne Sucre et la supprime.
+	alice.receive()
+	eq(t, "Alice reçoit", alice.col("Produit"), []string{"Café", "Thé", "Chocolat", ""})
+	must(t, alice.d.DeleteRow(ctx, "Ventes", 3))
+	alice.send()
+
+	r, err := bob.e.Sync(ctx)
+	must(t, err)
+	t.Logf("renvoi : %+v", r)
+	alice.receive()
+	t.Logf("Alice : %v / %v ; Bob : %v / %v", alice.col("Produit"), alice.col("Quantité"), bob.col("Produit"), bob.col("Quantité"))
+	if n := len(alice.col("Produit")); n != 3 {
+		t.Errorf("RESSUSCITÉE : la ligne supprimée par Alice revient (%d lignes)", n)
+	}
+	if r.Conflicts > 0 {
+		t.Errorf("faux conflit sur sa propre écriture : %+v", r)
+	}
+}
