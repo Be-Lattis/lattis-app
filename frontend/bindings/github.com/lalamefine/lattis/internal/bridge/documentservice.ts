@@ -1570,6 +1570,14 @@ export function RemoveDuplicates(table: string, cols: number[] | null): $Cancell
 }
 
 /**
+ * RemoveRecent retire un classeur de la liste des récents (classeur
+ * supprimé du serveur, ou auquel l'utilisateur n'a plus accès).
+ */
+export function RemoveRecent(r: $models.RecentFile): $CancellablePromise<void> {
+    return $Call.ByID(3493286641, r);
+}
+
+/**
  * RenameFavorite renomme une requête favorite.
  */
 export function RenameFavorite(id: number, name: string): $CancellablePromise<$models.DocState> {
@@ -2138,6 +2146,17 @@ export function ShareDropRole(roleID: string): $CancellablePromise<$models.Right
  */
 export function ShareEditing(sheet: number, row: number, col: number, on: boolean): $CancellablePromise<void> {
     return $Call.ByID(2788069455, sheet, row, col, on);
+}
+
+/**
+ * ShareForget (bandeau « Ce classeur a été supprimé de … », « Retirer des
+ * récents ») retire le classeur partagé ouvert, disparu du serveur, de la
+ * liste des récents, le ferme et efface son cache : les modifications pas
+ * encore envoyées sont perdues (l'interface demande d'abord ;
+ * « Enregistrer une copie locale… » les garde).
+ */
+export function ShareForget(): $CancellablePromise<void> {
+    return $Call.ByID(2198423468);
 }
 
 /**

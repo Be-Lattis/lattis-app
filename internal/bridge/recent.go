@@ -3,6 +3,7 @@ package bridge
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -185,5 +186,50 @@ func (s *DocumentService) Recent(ctx context.Context) []RecentFile {
 // perdues : l'interface demande d'abord).
 func (s *DocumentService) CloseDocument(ctx context.Context) error {
 	s.replace(nil)
+	return nil
+}
+
+// dropRecent retire r de la liste (classeur du serveur : par serveur et
+// identifiant, et son cache noté par son chemin ; fichier : par chemin).
+func dropRecent(r RecentFile) {
+	list := readRecent()
+	n := len(list)
+	list = slices.DeleteFunc(list, func(o RecentFile) bool {
+		return r.same(o) || r.Path != "" && o.Path != "" && samePath(o.Path, r.Path)
+	})
+	if len(list) != n {
+		writeRecent(list)
+	}
+}
+
+// RemoveRecent retire un classeur de la liste des récents (classeur
+// supprimé du serveur, ou auquel l'utilisateur n'a plus accès).
+func (s *DocumentService) RemoveRecent(ctx context.Context, r RecentFile) {
+	dropRecent(r)
+}
+
+// ShareForget (bandeau « Ce classeur a été supprimé de … », « Retirer des
+// récents ») retire le classeur partagé ouvert, disparu du serveur, de la
+// liste des récents, le ferme et efface son cache : les modifications pas
+// encore envoyées sont perdues (l'interface demande d'abord ;
+// « Enregistrer une copie locale… » les garde).
+func (s *DocumentService) ShareForget(ctx context.Context) error {
+	d, err := s.current()
+	if err != nil {
+		return err
+	}
+	st := d.Share.State()
+	if !st.Shared {
+		return errNotShared
+	}
+	if st.Gone == "" {
+		return errors.New("ce classeur est toujours sur le serveur")
+	}
+	path := d.Path()
+	dropRecent(RecentFile{Path: path, Server: st.Server, WorkbookID: st.WorkbookID})
+	s.replace(nil)
+	if inShareCache(path) {
+		_ = os.Remove(path)
+	}
 	return nil
 }

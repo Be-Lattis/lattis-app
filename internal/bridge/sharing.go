@@ -175,8 +175,9 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 	}
 	unbindCollab(s.share.doc)
 	s.share.sync, s.share.doc, s.share.retry = nil, nil, nil
+	// Classeur supprimé du serveur : plus rien à suivre (State.Gone).
 	info := d.Share.Info()
-	if info == nil {
+	if info == nil || d.Share.Gone() == workbook.GoneDeleted {
 		s.share.mu.Unlock()
 		return
 	}
@@ -221,6 +222,10 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 				continue
 			}
 			workbook.WatchWith(ctx, srv, d.Share, retry, func() { s.emitShare(d) })
+			if d.Share.Gone() == workbook.GoneDeleted {
+				s.shareGone(d, info, nil)
+				return
+			}
 		}
 	}()
 }
@@ -236,6 +241,21 @@ func (s *DocumentService) shareDown(d *doc.Document, info *workbook.Info, err er
 	}
 	trace.Logf(1, trace.Doc, "serveur %s injoignable (classeur partagé « %s ») : %s", info.Server, info.Title, reason)
 	d.Share.SetOnline(false, reason)
+	s.emitShare(d)
+}
+
+// shareGone : le classeur d a été supprimé du serveur (workbook.GoneDeleted) ;
+// le suivi s'est arrêté, sans nouvel essai. La structure de ses tableaux
+// ne passe plus par la synchronisation (eng) : tout se fait en local, rien
+// ne part plus (Link.Gate).
+func (s *DocumentService) shareGone(d *doc.Document, info *workbook.Info, eng *collab.Engine) {
+	trace.Logf(1, trace.Doc, "classeur partagé « %s » supprimé de %s : suivi arrêté", info.Title, info.Server)
+	s.share.mu.Lock()
+	if eng != nil && s.share.sync == eng {
+		unbindCollab(d)
+		s.share.sync = nil
+	}
+	s.share.mu.Unlock()
 	s.emitShare(d)
 }
 
@@ -280,6 +300,10 @@ func (s *DocumentService) followCollab(ctx context.Context, d *doc.Document, eng
 				s.emitSync(d)
 			}
 		})
+		if d.Share.Gone() == workbook.GoneDeleted {
+			s.shareGone(d, info, eng)
+			return
+		}
 	}
 }
 
@@ -690,7 +714,15 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 			return OpenResult{State: st}, err
 		}
 		if _, err := workbook.Load(ctx, srv, cur.DB(), src, false); err != nil {
-			return OpenResult{}, err
+			gone := workbook.GoneReason(err)
+			if gone == "" {
+				return OpenResult{}, err
+			}
+			if cur.Share.SetGone(gone) {
+				s.emitShare(cur)
+			}
+			st, err := s.State(ctx)
+			return OpenResult{State: st}, err
 		}
 		_, err := s.afterShare(ctx, cur)
 		st, serr := s.State(ctx)
@@ -712,10 +744,19 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 	// aussi), mis à jour par les changements depuis son point de reprise à
 	// la connexion (un tableau dont le point de reprise n'est plus couvert
 	// par les pierres tombales du serveur est relu en entier).
+	gone := ""
 	if fresh || !keepCollabCache(ctx, d) {
 		if _, err := workbook.Load(ctx, srv, d.DB(), src, fresh); err != nil {
-			d.Close()
-			return OpenResult{}, err
+			// Classeur supprimé du serveur, ou plus d'accès : son cache s'ouvre
+			// tel quel, avec le bandeau qui le dit (pas « ne répond pas ») ;
+			// sans cache, une erreur qui le dit.
+			if gone = workbook.GoneReason(err); gone == "" || fresh {
+				d.Close()
+				if gone != "" {
+					return OpenResult{}, goneError(gone, name, server)
+				}
+				return OpenResult{}, err
+			}
 		}
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -730,6 +771,8 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 		d.Close()
 		return OpenResult{}, err
 	}
+	// Avant replace : un classeur supprimé n'est plus suivi (watchShare).
+	d.Share.SetGone(gone)
 	s.replace(d)
 	addRecentDoc(d)
 	if _, err := s.shareReady(ctx, d); err != nil {
@@ -738,6 +781,20 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 	st, err := s.State(ctx)
 	st.Notice = d.TakeOpenNotice()
 	return OpenResult{State: st}, err
+}
+
+// goneError : le classeur demandé n'est plus sur le serveur (supprimé) ou
+// plus pour l'utilisateur, et n'a pas de cache à ouvrir. Mêmes mots que le
+// bandeau (frontend/src/lib/remote/share.ts, goneText).
+func goneError(gone, name, server string) error {
+	where := strings.TrimSpace(name)
+	if where == "" {
+		where = auth.Host(server)
+	}
+	if gone == workbook.GoneRevoked {
+		return fmt.Errorf("Vous n'avez plus accès à ce classeur sur %s.", where)
+	}
+	return fmt.Errorf("Ce classeur a été supprimé de %s.", where)
 }
 
 // keepCollabCache dit si le cache local d'un classeur collaboratif se

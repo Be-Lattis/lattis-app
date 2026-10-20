@@ -60,10 +60,10 @@ export function inferredColumns(t: TableCheck): string[] {
 	return (t.columns ?? []).filter((c) => c.inferred && !c.computed).map((c) => `${c.name} (${remoteTypeLabel(c.remote)})`);
 }
 
-export type BannerKind = 'new' | 'offline' | 'readonly' | 'conflict';
+export type BannerKind = 'new' | 'offline' | 'gone' | 'readonly' | 'conflict';
 
 /** Bouton d'un bandeau. */
-export type BannerAction = 'reload' | 'login' | 'conflicts' | 'retry' | 'copy' | 'detach';
+export type BannerAction = 'reload' | 'login' | 'conflicts' | 'retry' | 'copy' | 'detach' | 'forget';
 
 export interface Banner {
 	kind: BannerKind;
@@ -102,14 +102,54 @@ export function offlineText(s: State): string {
 	const where = serverLabel(s);
 	const n = s.pending ?? 0;
 	const waiting = n ? ` (${n} modification${n > 1 ? 's' : ''} en attente)` : '';
-	const why = needsLogin(s.offline) ? `Connexion à ${where} requise` : `Le serveur ${where} ne répond pas`;
+	const why = needsLogin(s.offline) ? `Connexion à ${where} requise` : serverDown(where);
 	if (s.mode === COLLABORATIVE) return `${why}. Hors ligne : vos modifications seront envoyées au retour du serveur${waiting}.`;
 	return `${why} : ce classeur partagé est en lecture seule.`;
+}
+
+/**
+ * « Le serveur localhost:8080 ne répond pas » ; un nom qui commence déjà
+ * par « Serveur » ne le répète pas : « Serveur Lattis ne répond pas ».
+ */
+export function serverDown(where: string): string {
+	return /^serveur\b/i.test(where) ? `${where} ne répond pas` : `Le serveur ${where} ne répond pas`;
+}
+
+/** Classeur supprimé du serveur (State.gone) ; l'utilisateur n'y a plus accès. */
+export const GONE_DELETED = 'deleted';
+export const GONE_REVOKED = 'revoked';
+
+/**
+ * Texte du bandeau d'un classeur disparu du serveur (supprimé, ou plus
+ * d'accès) : à ne pas confondre avec un serveur qui ne répond pas. Mêmes
+ * mots que l'erreur d'ouverture sans cache (bridge.goneError).
+ */
+export function goneText(s: State): string {
+	const where = serverLabel(s);
+	const what = s.gone === GONE_REVOKED ? `Vous n'avez plus accès à ce classeur sur ${where}.` : `Ce classeur a été supprimé de ${where}.`;
+	const n = s.pending ?? 0;
+	if (!n) return what;
+	return `${what} ${n} modification${n > 1 ? 's' : ''} non envoyée${n > 1 ? 's restent' : ' reste'} dans la copie locale.`;
+}
+
+/** Erreur d'ouverture d'un classeur disparu du serveur (bridge.goneError) plutôt que d'une coupure. */
+export function goneError(msg: string): boolean {
+	return /a été supprimé de |n['’]avez plus accès à ce classeur/.test(msg);
 }
 
 /** Bandeau du classeur partagé ouvert (null : rien à dire). */
 export function banner(s: State | null | undefined): Banner | null {
 	if (!s?.shared) return null;
+	if (s.gone) {
+		return {
+			kind: 'gone',
+			text: goneText(s),
+			actions: [
+				{ action: 'copy', label: 'Enregistrer une copie locale…' },
+				{ action: 'forget', label: 'Retirer des récents' }
+			]
+		};
+	}
 	if (!s.online) {
 		const actions: NonNullable<Banner['actions']> = [
 			needsLogin(s.offline) ? { action: 'login', label: 'Se connecter…' } : { action: 'retry', label: 'Réessayer' },

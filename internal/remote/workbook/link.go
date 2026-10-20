@@ -64,6 +64,9 @@ type Link struct {
 	restricted map[int64][]Restriction
 	online     bool
 	offline    string // raison de la coupure (affichage)
+	// gone : le serveur répond, mais le classeur n'y est plus (GoneDeleted)
+	// ou plus pour l'utilisateur (GoneRevoked) ; vide sinon (SetGone).
+	gone       string
 	newVersion int
 	// Collaboratif : étapes en attente d'envoi et conflits ouverts
 	// (SetQueue, tenus par la synchronisation) ; sending : la file part
@@ -152,12 +155,66 @@ func (l *Link) Info() *Info {
 // ligne).
 func (l *Link) SetOnline(on bool, reason string) {
 	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.gone == GoneDeleted {
+		return // plus rien à joindre : ni en ligne ni « hors ligne »
+	}
 	l.online = on
 	if on {
 		reason = ""
 	}
 	l.offline = reason
-	l.mu.Unlock()
+}
+
+// Classeur disparu du serveur (Link.SetGone, State.Gone) : à distinguer
+// d'un serveur qui ne répond pas, qu'on réessaie.
+const (
+	// GoneDeleted : classeur supprimé du serveur (P0002, « classeur
+	// inconnu ») ; définitif, le suivi s'arrête, plus rien n'est mis en
+	// file : le cache n'est plus qu'un classeur local en attente d'une
+	// copie.
+	GoneDeleted = "deleted"
+	// GoneRevoked : l'utilisateur n'a plus accès au classeur (42501 de
+	// lattis.my_capabilities) ; ses tableaux publiés passent au niveau
+	// « aucun », l'écoute reste posée (accès rendu : *acl).
+	GoneRevoked = "revoked"
+)
+
+// GoneReason dit si err, réponse de lattis.my_capabilities, veut dire que
+// le classeur a disparu pour l'utilisateur (GoneDeleted, GoneRevoked) ;
+// vide pour une coupure ou une autre erreur. Le 42501 d'un réplica en
+// retard est déjà relu sur rw (pgServer.with).
+func GoneReason(err error) string {
+	switch code, _ := Rejected(err); code {
+	case "P0002":
+		return GoneDeleted
+	case "42501":
+		return GoneRevoked
+	}
+	return ""
+}
+
+// SetGone note que le classeur a disparu du serveur (GoneDeleted,
+// GoneRevoked) ou y est de nouveau (vide) ; vrai si cela change. Supprimé :
+// hors ligne pour de bon, sans raison de coupure.
+func (l *Link) SetGone(reason string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.gone == reason {
+		return false
+	}
+	l.gone = reason
+	if reason == GoneDeleted {
+		l.online, l.offline, l.sending = false, "", false
+	}
+	return true
+}
+
+// Gone dit si le classeur a disparu du serveur (GoneDeleted, GoneRevoked).
+func (l *Link) Gone() string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.gone
 }
 
 // Online dit si le serveur répond.
@@ -211,8 +268,8 @@ func (l *Link) TableLock(tbl int64) error {
 }
 
 func (l *Link) lock(tbl int64) error {
-	if l.info == nil || !l.published[tbl] {
-		return nil
+	if l.info == nil || !l.published[tbl] || l.gone == GoneDeleted {
+		return nil // supprimé du serveur : données locales, libres
 	}
 	// Hors ligne : un classeur figé est en lecture seule ; un classeur
 	// collaboratif reste modifiable avec les derniers droits connus, tout
@@ -321,6 +378,9 @@ func (l *Link) Gate(op command.Op) (bool, error) {
 	if l.info == nil {
 		return true, nil // tableau publié hors d'un classeur partagé (essais du journal)
 	}
+	if l.gone == GoneDeleted {
+		return false, nil // supprimé du serveur : rien ne part plus
+	}
 	frozen := l.info.Mode == Frozen
 	if op.Table != 0 {
 		if err := l.lock(op.Table); err != nil {
@@ -374,6 +434,9 @@ type State struct {
 	Online    bool `json:"online"`
 	// Offline : raison de la coupure, vide en ligne.
 	Offline string `json:"offline,omitempty"`
+	// Gone : le serveur répond mais le classeur n'y est plus
+	// (GoneDeleted) ou plus pour l'utilisateur (GoneRevoked) ; vide sinon.
+	Gone string `json:"gone,omitempty"`
 	// ReadOnly : message du bandeau quand les tableaux publiés ne se
 	// modifient pas (« Hors ligne, lecture seule », « Classeur publié en
 	// lecture seule »), vide sinon.
@@ -429,8 +492,8 @@ type SyncStatus struct {
 func (l *Link) Sync() SyncStatus {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
-	if l.info == nil || l.info.Mode != Collaborative {
-		return SyncStatus{}
+	if l.info == nil || l.info.Mode != Collaborative || l.gone == GoneDeleted {
+		return SyncStatus{} // supprimé : plus de file (le bandeau le dit)
 	}
 	return SyncStatus{Shared: true, Online: l.online, Pending: l.pending, Sending: l.sending}
 }
@@ -445,11 +508,12 @@ func (l *Link) State() State {
 	s := State{
 		Shared: true, Server: l.info.Server, ServerName: l.info.ServerName, WorkbookID: l.info.WorkbookID,
 		Title: l.info.Title, Mode: l.info.Mode, Version: l.info.Version, Roles: append([]string{}, l.info.Roles...),
-		CanDesign: l.info.CanDesign(), CanManage: l.info.CanManage(), Online: l.online, Offline: l.offline, NewVersion: l.newVersion, Published: len(l.published),
+		CanDesign: l.info.CanDesign(), CanManage: l.info.CanManage(), Online: l.online, Offline: l.offline, Gone: l.gone, NewVersion: l.newVersion, Published: len(l.published),
 		Pending: l.pending, Conflicts: l.conflicts, Sending: l.sending,
 	}
 	s.Link = protocol.WorkbookLink(s.Server, s.WorkbookID)
 	switch {
+	case l.gone == GoneDeleted:
 	case !l.online && l.info.Mode == Frozen:
 		s.ReadOnly = ErrOffline.Error()
 	case l.info.Mode == Frozen && !s.CanDesign:

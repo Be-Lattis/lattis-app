@@ -268,6 +268,24 @@ func (f *Fake) SetTitle(workbookID, title string) {
 	}
 }
 
+// DropWorkbook supprime un classeur (lattis.drop_workbook) : ses schémas
+// et ses rôles disparaissent ; my_capabilities répond « classeur inconnu »
+// (P0002). Les écoutes en cours restent posées (LISTEN ne dépend pas du
+// classeur).
+func (f *Fake) DropWorkbook(workbookID string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.books, workbookID)
+}
+
+// Count rend le nombre d'appels de name (Calls), lu sous le verrou : pour
+// les essais qui suivent un fil en cours.
+func (f *Fake) Count(name string) int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.Calls[name]
+}
+
 // Rows donne les lignes d'un tableau de la version publiée (essais) :
 // lattis_id, lattis_pos, puis les valeurs.
 func (f *Fake) Rows(workbookID, name string) [][]any {
@@ -424,7 +442,7 @@ func (s *session) Workbooks(ctx context.Context) ([]workbook.Listing, error) {
 func (s *session) caps(id string) (workbook.Capabilities, error) {
 	b := s.f.books[id]
 	if b == nil {
-		return workbook.Capabilities{}, errors.New("classeur inconnu")
+		return workbook.Capabilities{}, ErrServer{"P0002", "classeur inconnu"} // lattis.workbook
 	}
 	if len(s.f.userRoles(b, s.user)) == 0 {
 		return workbook.Capabilities{}, ErrPrivilege{"aucun accès à ce classeur"}

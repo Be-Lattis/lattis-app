@@ -16,6 +16,8 @@ type worker struct {
 	kick    chan struct{}
 	changed func(Event)
 	retry   time.Duration
+	// stop arrête le suivi (classeur supprimé du serveur).
+	stop func()
 
 	mu sync.Mutex
 	// due : tableaux notifiés à relire ; full : tout relire (connexion,
@@ -132,6 +134,12 @@ func (w *worker) cycle(ctx context.Context) {
 	if !listening || ctx.Err() != nil {
 		return
 	}
+	// Classeur disparu du serveur : rien à envoyer ni à lire ; accès retiré,
+	// seule la relecture des droits (connexion, *acl) peut le rendre.
+	gone := w.e.link.Gone()
+	if gone == workbook.GoneDeleted || gone != "" && !full && !acl {
+		return
+	}
 	ev := Event{}
 	if !w.e.link.Online() {
 		w.e.link.SetOnline(true, "")
@@ -142,12 +150,27 @@ func (w *worker) cycle(ctx context.Context) {
 		// refusée en local (grille grisée, message) plutôt qu'au serveur.
 		// Le titre du classeur aussi (renommé sur le serveur).
 		title := w.e.link.State().Title
-		if changed, err := w.e.RefreshRights(ctx); err == nil && changed {
+		changed, err := w.e.RefreshRights(ctx)
+		now := w.e.link.Gone()
+		if err == nil && changed && now == "" {
 			ev.State = true
 			ev.Notices = append(ev.Notices, RightsNotice)
 		}
-		if w.e.link.State().Title != title {
+		if w.e.link.State().Title != title || now != gone {
 			ev.State = true
+		}
+		if now != "" {
+			// Supprimé du serveur, ou plus d'accès : ni envoi (la file reste
+			// dans le classeur), ni lecture, ni nouvel essai ; supprimé, le
+			// suivi s'arrête.
+			if now == workbook.GoneDeleted {
+				w.stop()
+			}
+			w.changed(ev)
+			return
+		}
+		if gone != "" {
+			full = true // accès rendu : tout est relu
 		}
 	}
 	// File à envoyer : la barre d'état dit « Synchronisation… » pendant

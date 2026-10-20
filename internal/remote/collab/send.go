@@ -84,7 +84,8 @@ func (e *Engine) Send(ctx context.Context) (Report, error) {
 func (e *Engine) send(ctx context.Context) (Report, error) {
 	var rep Report
 	info, srv := e.active()
-	if info == nil || !e.link.Online() {
+	// Classeur disparu du serveur (supprimé, accès retiré) : la file reste.
+	if info == nil || !e.link.Online() || e.link.Gone() != "" {
 		return rep, nil
 	}
 	tables, err := remoteTables(ctx, e.db.Read())
@@ -526,10 +527,12 @@ func sortedKeys[V any](m map[int64]V) []int64 {
 // connaît plus sous ce nom (structure changée pendant l'envoi).
 var errStale = errors.New("structure du tableau changée sur le serveur")
 
-// staleStructure : colonne ou table inconnue (42703, 42P01).
+// staleStructure : colonne, table ou schéma inconnu (42703, 42P01, 3F000 :
+// classeur supprimé pendant l'envoi, vu par la relecture des droits au
+// prochain essai ; jamais un refus qui déferait l'étape).
 func staleStructure(err error) bool {
 	code, ok := workbook.Rejected(err)
-	return ok && (code == "42703" || code == "42P01")
+	return ok && (code == "42703" || code == "42P01" || code == "3F000")
 }
 
 // errText résume une erreur pour la barre d'état.

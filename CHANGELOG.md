@@ -24,6 +24,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Corrections
 
+- Classeur partagé supprimé du serveur (ou dont on vous a retiré l'accès) : il n'est plus présenté comme « hors ligne » avec un serveur « qui ne répond pas ». Le bandeau dit « Ce classeur a été supprimé de Serveur Lattis. » (ou « Vous n'avez plus accès à ce classeur sur … »), compte les modifications non envoyées et propose « Enregistrer une copie locale… », qui les garde, ou « Retirer des récents » ; Lattis cesse de réessayer et vos saisies ne sont plus mises en attente. Le bandeau d'une coupure ne répète plus le mot : « Serveur Lattis ne répond pas ».
 - Plantage de l'interface (« Erreur de l'interface ») sur un clic dans la grille pendant qu'elle était démontée ; le rapport d'erreur donne désormais le vrai message au lieu de « [object Object] ».
 - Fichier › Ouvrir un fichier récent : un classeur partagé en direct n'apparaît plus deux fois (son fichier local et sa version partagée) ; seule la version partagée reste. Un classeur figé garde son fichier, où l'auteur republie.
 - Dates : les formes courtes sont reconnues à la saisie, à la conversion d'une colonne en date et dans les formules : 19/10/26 (année sur deux chiffres, 00 à 29 : 2000 à 2029), 19-10-2026, 19.10.2026, 2026/10/19, 19 oct. 2026, 1er janvier 26, Oct 19, 2026 ; jour et mois seuls (19/10) : année en cours.

@@ -40,6 +40,16 @@ func (s *DocumentService) ShareLocalCopy(ctx context.Context) (OpenResult, error
 	if d.Share.Info() == nil {
 		return OpenResult{}, errNotShared
 	}
+	if st := d.Share.State(); st.Gone == workbook.GoneDeleted {
+		// Supprimé du serveur (bandeau « Enregistrer une copie locale… ») :
+		// le cache n'a plus de raison d'être, ni l'entrée des récents ; les
+		// modifications jamais envoyées restent dans la copie.
+		r, err := s.detachAs(ctx, d, "Enregistrer une copie locale", docBaseName(d)+".lattis", true)
+		if err == nil && !r.Cancelled {
+			dropRecent(RecentFile{Server: st.Server, WorkbookID: st.WorkbookID})
+		}
+		return r, err
+	}
 	return s.detachAs(ctx, d, "Travailler sur une copie locale", docBaseName(d)+" (copie locale).lattis", false)
 }
 

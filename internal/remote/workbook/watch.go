@@ -43,38 +43,49 @@ func Watch(ctx context.Context, srv Server, link *Link, retry time.Duration, cha
 }
 
 // WatchWith suit le classeur comme Watch, les nouveaux essais réglés par b
-// (délais croissants, Wake pour essayer tout de suite).
+// (délais croissants, Wake pour essayer tout de suite). Un classeur
+// supprimé du serveur (GoneDeleted) arrête le suivi : plus d'essais.
 func WatchWith(ctx context.Context, srv Server, link *Link, b *Backoff, changed func()) {
 	info := link.Info()
-	if info == nil {
+	if info == nil || link.Gone() == GoneDeleted {
 		return
 	}
 	if changed == nil {
 		changed = func() {}
 	}
 	for ctx.Err() == nil {
-		err := srv.Listen(ctx, info.Channel, func() {
+		lctx, stop := context.WithCancel(ctx)
+		err := srv.Listen(lctx, info.Channel, func() {
 			b.Reset()
 			link.SetOnline(true, "")
-			if caps, err := srv.Capabilities(ctx, info.WorkbookID); err == nil {
+			if caps, err := srv.Capabilities(lctx, info.WorkbookID); err == nil {
 				link.SetNewVersion(caps.Version)
 			}
 			// Rôles (propriétaire ou concepteur : préparer la version
-			// suivante) relus à chaque (re)connexion.
-			RefreshCapabilities(ctx, srv, link)
+			// suivante) relus à chaque (re)connexion ; classeur supprimé ou
+			// accès retiré notés au passage.
+			RefreshCapabilities(lctx, srv, link)
+			if link.Gone() == GoneDeleted {
+				stop()
+			}
 			changed()
 		}, func(p string) {
 			if v, ok := VersionNotice(p); ok && link.SetNewVersion(v) {
 				changed()
 			}
 			if p == NoticeACL {
-				title := link.State().Title
-				if ch, err := RefreshCapabilities(ctx, srv, link); err == nil && (ch || link.State().Title != title) {
+				title, gone := link.State().Title, link.Gone()
+				ch, err := RefreshCapabilities(lctx, srv, link)
+				if err == nil && (ch || link.State().Title != title) || link.Gone() != gone {
 					changed()
+				}
+				if link.Gone() == GoneDeleted {
+					stop()
 				}
 			}
 		})
-		if ctx.Err() != nil {
+		stop()
+		if ctx.Err() != nil || link.Gone() == GoneDeleted {
 			return
 		}
 		reason := "serveur injoignable"

@@ -124,10 +124,18 @@ func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, err
 		return false, nil
 	}
 	caps, err := srv.Capabilities(ctx, info.WorkbookID)
-	revoked := Privilege(err)
+	// Classeur supprimé du serveur (P0002) : noté sur link, le suivi s'arrête ;
+	// accès retiré (42501) : noté aussi, rendu à la prochaine lecture réussie.
+	gone := GoneReason(err)
+	if gone == GoneDeleted {
+		link.SetGone(gone)
+		return false, err
+	}
+	revoked := gone == GoneRevoked
 	if err != nil && !revoked {
 		return false, err
 	}
+	linkChanged := link.SetGone(gone)
 	local := map[string]int64{}
 	rs, err := db.Read().QueryContext(ctx, `SELECT tbl, coalesce(remote_id, '') FROM _lattis_remote_tables WHERE published = 1`)
 	if err != nil {
@@ -195,13 +203,13 @@ func RefreshCapabilities(ctx context.Context, srv Server, link *Link) (bool, err
 		return nil
 	})
 	if errors.Is(err, errUnchanged) {
-		return false, nil
+		return linkChanged, nil
 	}
 	if err != nil {
 		return false, err
 	}
 	if changed || titled {
-		return changed, link.Reload(ctx)
+		return changed || linkChanged, link.Reload(ctx)
 	}
-	return false, nil
+	return linkChanged, nil
 }

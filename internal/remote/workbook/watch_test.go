@@ -55,3 +55,41 @@ func TestWatchFollowsServer(t *testing.T) {
 		t.Fatal("VersionNotice *meta")
 	}
 }
+
+// Classeur figé supprimé du serveur : noté « supprimé » (pas hors ligne),
+// le suivi s'arrête sans nouvel essai ; le cache devient local, modifiable.
+func TestWatchStopsWhenDeleted(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	fake := workbooktest.New()
+	a := author(t)
+	info := publish(t, a, fake.As("alice"), workbook.Frozen, "Ventes")
+	must(t, fake.Grant(info.WorkbookID, "bob", "reader"))
+	r := open(t, fake.As("bob"), info.WorkbookID, "bob")
+	fake.DropWorkbook(info.WorkbookID)
+	done := make(chan struct{})
+	go func() {
+		workbook.Watch(ctx, fake.As("bob"), r.Share, 10*time.Millisecond, nil)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("suivi pas arrêté")
+	}
+	st := r.Share.State()
+	if st.Gone != workbook.GoneDeleted || st.Online || st.Offline != "" || st.ReadOnly != "" {
+		t.Fatalf("état : %+v", st)
+	}
+	r.Share.SetOnline(false, "coupure") // sans effet : rien à joindre
+	if st := r.Share.State(); st.Offline != "" {
+		t.Fatalf("hors ligne après la suppression : %+v", st)
+	}
+	if _, err := r.SetCell(ctx, 1, 1, 0, "x"); err != nil {
+		t.Fatalf("saisie locale : %v", err)
+	}
+	if workbook.GoneReason(workbooktest.ErrDown) != "" || workbook.GoneReason(workbooktest.ErrPrivilege{Msg: "aucun accès à ce classeur"}) != workbook.GoneRevoked ||
+		workbook.GoneReason(workbooktest.ErrServer{Code: "P0002", Msg: "classeur inconnu"}) != workbook.GoneDeleted {
+		t.Fatal("GoneReason")
+	}
+}

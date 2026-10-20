@@ -455,6 +455,12 @@ export interface State {
     "offline"?: string;
 
     /**
+     * Gone : le serveur répond mais le classeur n'y est plus
+     * (GoneDeleted) ou plus pour l'utilisateur (GoneRevoked) ; vide sinon.
+     */
+    "gone"?: string;
+
+    /**
      * ReadOnly : message du bandeau quand les tableaux publiés ne se
      * modifient pas (« Hors ligne, lecture seule », « Classeur publié en
      * lecture seule »), vide sinon.

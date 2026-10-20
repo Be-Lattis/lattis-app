@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Check, State } from '#bindings/internal/remote/workbook/models.js';
 import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 import { syncAt } from '#lib/grid/cache.js';
-import { banner, blocking, detachQuestion, offlineText, serverLabel, canRepublish, conflictText, defaultSelection, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, rolesLabel, whenLabel } from './share';
+import { banner, blocking, detachQuestion, goneError, goneText, offlineText, serverDown, serverLabel, canRepublish, conflictText, defaultSelection, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, rolesLabel, whenLabel } from './share';
 
 const check: Check = {
 	tables: [
@@ -44,7 +44,7 @@ describe('partage', () => {
 		expect(banner(state({ newVersion: 4, readOnly: 'Classeur publié en lecture seule' }))).toMatchObject({ kind: 'new', actions: [{ action: 'reload' }], text: 'Nouvelle version disponible (version 4)' });
 		expect(banner(state({ online: false, offline: 'dial tcp : refusé' }))).toEqual({
 			kind: 'offline',
-			text: 'Le serveur Serveur Acme ne répond pas : ce classeur partagé est en lecture seule.',
+			text: 'Serveur Acme ne répond pas : ce classeur partagé est en lecture seule.',
 			detail: 'dial tcp : refusé',
 			actions: [
 				{ action: 'retry', label: 'Réessayer' },
@@ -61,7 +61,7 @@ describe('partage', () => {
 		const collab = (s: Partial<State>) => state({ mode: 'collaborative', roles: ['editor'], ...s });
 		expect(banner(collab({}))).toBeNull();
 		expect(banner(collab({ conflicts: 2 }))).toEqual({ kind: 'conflict', text: '2 conflits : cellules modifiées par un collègue entre-temps', actions: [{ action: 'conflicts', label: 'Voir' }] });
-		expect(banner(collab({ online: false, pending: 3 }))?.text).toBe('Le serveur Serveur Acme ne répond pas. Hors ligne : vos modifications seront envoyées au retour du serveur (3 modifications en attente).');
+		expect(banner(collab({ online: false, pending: 3 }))?.text).toBe('Serveur Acme ne répond pas. Hors ligne : vos modifications seront envoyées au retour du serveur (3 modifications en attente).');
 	});
 
 	it('serveur arrêté : texte lisible, détails à part, sorties proposées', () => {
@@ -77,6 +77,37 @@ describe('partage', () => {
 		expect(offlineText({ ...owner, mode: 'frozen' })).toBe('Le serveur localhost:8080 ne répond pas : ce classeur partagé est en lecture seule.');
 		// Un éditeur ne détache pas : copie locale seulement.
 		expect(banner({ ...owner, roles: ['editor'], canManage: false })?.actions?.map((a) => a.action)).toEqual(['retry', 'copy']);
+	});
+
+	it('nom du serveur sans répéter « serveur »', () => {
+		expect(serverDown('Serveur Lattis')).toBe('Serveur Lattis ne répond pas');
+		expect(serverDown('serveur de test')).toBe('serveur de test ne répond pas');
+		expect(serverDown('localhost:8080')).toBe('Le serveur localhost:8080 ne répond pas');
+		expect(serverDown('Serveurs du Nord')).toBe('Le serveur Serveurs du Nord ne répond pas');
+		expect(offlineText(state({ serverName: 'Serveur Lattis', mode: 'collaborative', online: false }))).toBe('Serveur Lattis ne répond pas. Hors ligne : vos modifications seront envoyées au retour du serveur.');
+	});
+
+	it('classeur supprimé du serveur ou plus accessible : pas « ne répond pas »', () => {
+		// Le cas de Louis : un classeur qu'il a supprimé du serveur, rouvert depuis les récents.
+		const gone = state({ serverName: 'Serveur Lattis', mode: 'collaborative', roles: ['owner'], canManage: true, online: false, gone: 'deleted' });
+		expect(banner(gone)).toEqual({
+			kind: 'gone',
+			text: 'Ce classeur a été supprimé de Serveur Lattis.',
+			actions: [
+				{ action: 'copy', label: 'Enregistrer une copie locale…' },
+				{ action: 'forget', label: 'Retirer des récents' }
+			]
+		});
+		expect(goneText({ ...gone, pending: 3 })).toBe('Ce classeur a été supprimé de Serveur Lattis. 3 modifications non envoyées restent dans la copie locale.');
+		expect(goneText({ ...gone, pending: 1 })).toBe('Ce classeur a été supprimé de Serveur Lattis. 1 modification non envoyée reste dans la copie locale.');
+		// Plus d'accès : le serveur répond (en ligne), le bandeau le dit quand même.
+		const revoked = state({ server: 'http://localhost:8080', serverName: '', online: true, gone: 'revoked' });
+		expect(banner(revoked)?.text).toBe("Vous n'avez plus accès à ce classeur sur localhost:8080.");
+		expect(banner(revoked)?.kind).toBe('gone');
+		// Erreurs d'ouverture (bridge.goneError) : pas une coupure.
+		expect(goneError('Ce classeur a été supprimé de Serveur Lattis.')).toBe(true);
+		expect(goneError("Vous n'avez plus accès à ce classeur sur localhost:8080.")).toBe(true);
+		expect(goneError('dial tcp 127.0.0.1:5432: connexion refusée')).toBe(false);
 	});
 
 	it('explique le détachement', () => {

@@ -2,8 +2,10 @@
 	// Bandeau du classeur partagé ouvert (§5.4, §7, §10) : « Nouvelle version
 	// disponible » (Recharger), serveur injoignable (texte lisible, erreur
 	// technique dans « Détails » ; Réessayer, Travailler sur une copie
-	// locale, Détacher du serveur pour le propriétaire), « Classeur publié
-	// en lecture seule », conflits d'un classeur collaboratif (Voir).
+	// locale, Détacher du serveur pour le propriétaire), classeur supprimé du
+	// serveur ou plus accessible (Enregistrer une copie locale…, Retirer des
+	// récents), « Classeur publié en lecture seule », conflits d'un classeur
+	// collaboratif (Voir).
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { State } from '#bindings/internal/remote/workbook/models.js';
 	import { banner, type BannerAction } from './share';
@@ -19,8 +21,10 @@
 		onretry?: () => void;
 		oncopy?: () => void;
 		ondetach?: () => void;
+		/** Classeur disparu du serveur : « Retirer des récents ». */
+		onforget?: () => void;
 	}
-	let { share, busy = false, retrying = false, onreload, onlogin, onconflicts, onretry, oncopy, ondetach }: Props = $props();
+	let { share, busy = false, retrying = false, onreload, onlogin, onconflicts, onretry, oncopy, ondetach, onforget }: Props = $props();
 	const b = $derived(banner(share));
 	let details = $state(false);
 
@@ -30,7 +34,8 @@
 		conflicts: onconflicts,
 		retry: onretry,
 		copy: oncopy,
-		detach: ondetach
+		detach: ondetach,
+		forget: onforget
 	});
 
 	function label(a: BannerAction, text: string): string {
@@ -43,7 +48,7 @@
 {#if b}
 	<div class="banner {b.kind}" role="status">
 		<div class="line">
-			<Icon name={b.kind === 'new' ? 'refresh' : b.kind === 'conflict' ? 'warning' : b.kind === 'offline' ? 'cloud-off' : 'lock'} size={14} />
+			<Icon name={b.kind === 'new' ? 'refresh' : b.kind === 'conflict' || b.kind === 'gone' ? 'warning' : b.kind === 'offline' ? 'cloud-off' : 'lock'} size={14} />
 			<span class="text" title={b.detail ? `${b.text}\n\n${b.detail}` : b.text}>{b.text}</span>
 			{#if b.detail}
 				<button class="link" aria-expanded={details} onclick={() => (details = !details)}>{details ? 'Masquer les détails' : 'Détails'}</button>
@@ -83,7 +88,8 @@
 		color: #7c3a03;
 		--icon-accent: #d97706;
 	}
-	.banner.offline {
+	.banner.offline,
+	.banner.gone {
 		background: #fdf3e1;
 		color: #7c4a03;
 		--icon-accent: #b45309;

@@ -504,7 +504,8 @@ var Debounce = 200 * time.Millisecond
 // changements à chaque (re)connexion, lecture des changements d'un tableau
 // sur notification (regroupées sur Debounce), envoi à chaque Kick. Le
 // serveur coupé, le classeur passe hors ligne (lecture seule, §10) et un
-// nouvel essai a lieu toutes les retry. changed est appelé hors de tout
+// nouvel essai a lieu toutes les retry ; supprimé du serveur
+// (workbook.GoneDeleted), le suivi s'arrête. changed est appelé hors de tout
 // verrou, depuis un seul fil.
 func (e *Engine) Follow(ctx context.Context, srv workbook.Server, retry time.Duration, changed func(Event)) {
 	info := e.link.Info()
@@ -515,7 +516,14 @@ func (e *Engine) Follow(ctx context.Context, srv workbook.Server, retry time.Dur
 	if changed == nil {
 		changed = func(Event) {}
 	}
-	w := &worker{e: e, kick: make(chan struct{}, 1), due: map[int64]bool{}, structure: map[int64]bool{}, changed: changed, retry: retry}
+	if e.link.Gone() == workbook.GoneDeleted {
+		return // supprimé du serveur : plus rien à suivre
+	}
+	// Classeur supprimé du serveur (vu par la relecture des droits) : le
+	// suivi s'arrête, sans nouvel essai (worker.stop).
+	ctx, stop := context.WithCancel(ctx)
+	defer stop()
+	w := &worker{e: e, kick: make(chan struct{}, 1), due: map[int64]bool{}, structure: map[int64]bool{}, changed: changed, retry: retry, stop: stop}
 	e.mu.Lock()
 	e.kicker = w.kick
 	e.mu.Unlock()

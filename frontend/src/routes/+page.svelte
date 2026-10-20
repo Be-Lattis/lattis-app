@@ -70,7 +70,7 @@
 	import { refusedNotice } from '#lib/remote/share.js';
 	import { pushSummary, type SourceLink } from '#lib/remote/source.js';
 	import type { Conflict } from '#bindings/internal/remote/collab/models.js';
-	import { canRepublish, detachQuestion, RETRY_NOTICE, rolesLabel, serverLabel } from '#lib/remote/share.js';
+	import { canRepublish, detachQuestion, goneError, RETRY_NOTICE, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
@@ -681,6 +681,18 @@
 		}
 	}
 
+	/** Classeur disparu du serveur : « Retirer des récents » le ferme et efface son cache (après confirmation s'il reste des modifications non envoyées). */
+	async function shareForget() {
+		const n = share?.pending ?? 0;
+		if (n && !confirm(`${n} modification${n > 1 ? 's' : ''} non envoyée${n > 1 ? 's seront perdues' : ' sera perdue'}.\n\n« Enregistrer une copie locale… » les garde. Retirer quand même ce classeur des récents ?`)) return;
+		try {
+			await DocumentService.ShareForget();
+			await closeDoc(false);
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+
 	/** « Détacher du serveur » (propriétaire) : d'abord expliquer, puis faire. */
 	function askDetach() {
 		if (share?.shared && share.canManage) detachAsk = detachQuestion(share, !!docState.remote);
@@ -763,11 +775,20 @@
 		try {
 			res = await DocumentService.ShareOpen(server, r.workbookId ?? '', r.title ?? '');
 		} catch (e) {
+			// Supprimé du serveur, ou plus d'accès (sans cache à ouvrir) : pas une coupure.
+			if (goneError(err(e))) {
+				notice = err(e);
+				if (confirm(`${err(e)}\n\nLe retirer des classeurs récents ?`)) {
+					await DocumentService.RemoveRecent(r);
+					await loadRecent();
+				}
+				return;
+			}
 			if (!r.path) throw e;
 			await openPath(r.path);
 			// Détail technique dans le bandeau (« Détails ») et dans la console.
 			console.warn('serveur injoignable', err(e));
-			notice = `Le serveur ${serverLabel({ server, serverName: r.serverName ?? '' })} ne répond pas : copie locale ouverte`;
+			notice = `${serverDown(serverLabel({ server, serverName: r.serverName ?? '' }))} : copie locale ouverte`;
 			return;
 		}
 		await openedRemote(res);
@@ -2131,7 +2152,7 @@
 		merged={!!sheetStatus?.merged}
 		shared={mode === 'doc' && !!share?.shared}
 		republish={mode === 'doc' && canRepublish(share)}
-		reconnect={mode === 'doc' && !!share?.shared && !share.online}
+		reconnect={mode === 'doc' && !!share?.shared && !share.online && !share.gone}
 		detach={mode === 'doc' && !!share?.shared && !!share.canManage}
 		rights={canRights}
 		pageSetup={layout?.pageSetup}
@@ -2151,6 +2172,7 @@
 			onretry={retryShare}
 			oncopy={shareLocalCopy}
 			ondetach={askDetach}
+			onforget={shareForget}
 		/>
 	{/if}
 
