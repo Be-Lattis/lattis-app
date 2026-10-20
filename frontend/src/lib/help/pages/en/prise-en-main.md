@@ -88,7 +88,7 @@ Tabs go together when at least two thirds of their columns are found from one ta
 1. **Tabs**: the tables to combine, to check, in tab order;
 2. **Category column**: its name, prefilled from the tab names (Month, Year, Quarter, City, the common part such as “Lot”, otherwise Category) and always editable, its type, and the value taken from each tab, to correct if needed. It goes first in the table, with a drop-down list of its values;
 3. **Columns**: the matching (✓ present, ∅ missing, “Amount $ → Amount” paired) and the final type; a column that becomes text is flagged;
-4. **After**: the name of the table and of the new sheet, and what becomes of the old tabs: **deleted** (by default) or **kept hidden**, their tables renamed `January_old`;
+4. **After**: the name of the table and of the new sheet, and what becomes of the old tabs: **deleted** (by default) or **kept hidden**, their tables renamed `January_ancien`;
 5. **Preview**: the first rows and the total number of rows, then the summary of the formulas that referred to the old tabs: “14 formulas carried over, 2 to fix by hand”, with the list (sheet, cell, formula before → after).
 
 **Combine** does everything in a single step: `Ctrl+Z` gives back the original tabs. Formatting and entries in error follow their rows. The **key** is kept if no value repeats from one tab to another; otherwise the combined table has no key (the values stay), and Lattis says so with an example: “No key: F-001 is in January and in February”.
