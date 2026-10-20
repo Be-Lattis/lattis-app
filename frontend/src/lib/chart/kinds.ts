@@ -2,7 +2,7 @@
 // ruban et le dessin). Le classeur accepte les mêmes (internal/canvas/chart.go).
 
 import type { IconName } from '#lib/icons/icons.js';
-import { fmtNumber } from '#lib/i18n/index.js';
+import { fmtNumber, t, tAny } from '#lib/i18n/index.js';
 
 // Attention, les clés bar et column sont l'inverse du vocabulaire anglais
 // d'Excel : « bar » est l'histogramme (barres verticales, c:barChart
@@ -30,31 +30,43 @@ export type ChartKind =
 
 export interface KindInfo {
 	kind: ChartKind;
-	label: string;
+	readonly label: string;
 	icon: IconName;
-	hint: string;
+	readonly hint: string;
 }
+
+/** Type de graphique : libellé et aide relus dans la langue de l'interface. */
+const kind = (k: ChartKind, icon: IconName): KindInfo => ({
+kind: k,
+icon,
+get label() {
+return tAny(`chart.kind.${k}.label`);
+},
+get hint() {
+return tAny(`chart.kind.${k}.hint`);
+}
+});
 
 /** Tous les types, dans l'ordre du volet. */
 export const KINDS: KindInfo[] = [
-	{ kind: 'bar', label: 'Histogramme', icon: 'chart-bar', hint: 'Barres verticales' },
-	{ kind: 'column', label: 'Barres horizontales', icon: 'chart-column', hint: 'Barres horizontales' },
-	{ kind: 'line', label: 'Courbes', icon: 'chart-line', hint: 'Courbes' },
-	{ kind: 'area', label: 'Aires', icon: 'chart-area', hint: 'Aires' },
-	{ kind: 'pie', label: 'Secteurs', icon: 'chart-pie', hint: 'Secteurs' },
-	{ kind: 'doughnut', label: 'Anneau', icon: 'chart-doughnut', hint: 'Anneau' },
-	{ kind: 'scatter', label: 'Nuage de points', icon: 'chart-scatter', hint: 'Nuage de points' },
-	{ kind: 'combo', label: 'Combiné', icon: 'chart-combo', hint: 'Histogramme et courbes sur le même graphique (axe secondaire possible)' },
-	{ kind: 'bar3d', label: 'Histogramme 3D', icon: 'chart-bar3d', hint: 'Histogramme en perspective' },
-	{ kind: 'pie3d', label: 'Secteurs 3D', icon: 'chart-pie3d', hint: 'Secteurs en perspective' },
-	{ kind: 'map', label: 'Carte', icon: 'chart-map', hint: 'Points ou densité sur une carte OpenStreetMap, à partir de colonnes latitude et longitude' },
-	{ kind: 'waterfall', label: 'Cascade', icon: 'chart-waterfall', hint: 'Hausses et baisses successives, jusqu’au total' },
-	{ kind: 'treemap', label: 'Compartimentage', icon: 'chart-treemap', hint: 'Rectangles proportionnels aux valeurs (treemap)' },
-	{ kind: 'radar', label: 'Radar', icon: 'chart-radar', hint: 'Une branche par catégorie, un polygone par série' },
-	{ kind: 'funnel', label: 'Entonnoir', icon: 'chart-funnel', hint: 'Étapes successives d’un processus' },
-	{ kind: 'boxplot', label: 'Boîte à moustaches', icon: 'chart-boxplot', hint: 'Médiane, quartiles et extrêmes de chaque série' },
-	{ kind: 'histogram', label: 'Fréquences', icon: 'chart-histogram', hint: 'Histogramme de fréquences : répartition des valeurs par classes' },
-	{ kind: 'gauge', label: 'Jauge', icon: 'chart-gauge', hint: 'Une valeur sur un cadran, entre un minimum et un maximum' }
+	kind('bar', 'chart-bar'),
+	kind('column', 'chart-column'),
+	kind('line', 'chart-line'),
+	kind('area', 'chart-area'),
+	kind('pie', 'chart-pie'),
+	kind('doughnut', 'chart-doughnut'),
+	kind('scatter', 'chart-scatter'),
+	kind('combo', 'chart-combo'),
+	kind('bar3d', 'chart-bar3d'),
+	kind('pie3d', 'chart-pie3d'),
+	kind('map', 'chart-map'),
+	kind('waterfall', 'chart-waterfall'),
+	kind('treemap', 'chart-treemap'),
+	kind('radar', 'chart-radar'),
+	kind('funnel', 'chart-funnel'),
+	kind('boxplot', 'chart-boxplot'),
+	kind('histogram', 'chart-histogram'),
+	kind('gauge', 'chart-gauge')
 ];
 
 /** Types proposés par « Autres graphiques » (ruban) : au-delà des classiques. */
@@ -140,13 +152,12 @@ export function reorderSeries(
 /** Points lus au plus par graphique (canvas.MaxChartPoints). */
 export const MAX_POINTS = 2000;
 
-const int = (v: number) => fmtNumber(v);
 
 /** Coupure des données d'un graphique, à signaler sous le dessin et dans le volet (vide : aucune). */
 export function chartNote(info?: { total?: number; truncated?: boolean; sampled?: boolean } | null): string {
 	if (!info?.total) return '';
-	if (info.truncated) return `${int(MAX_POINTS)} premiers points sur ${int(info.total)}`;
-	if (info.sampled) return `Courbe réduite à ${int(MAX_POINTS)} points sur ${int(info.total)} (extrêmes gardés)`;
+	if (info.truncated) return t('chart.note.truncated', { max: MAX_POINTS, total: info.total });
+	if (info.sampled) return t('chart.note.sampled', { max: MAX_POINTS, total: info.total });
 	return '';
 }
 
@@ -163,21 +174,21 @@ export function chartNotes(
 	if (cut) out.push(cut + '.');
 	const first = info?.series?.[0]?.values ?? [];
 	const neg = first.filter((v) => v !== null && v < 0).length;
-	if (neg && ['pie', 'doughnut', 'pie3d', 'treemap'].includes(cfg.kind)) out.push(neg === 1 ? '1 valeur négative ignorée.' : `${int(neg)} valeurs négatives ignorées.`);
-	if (neg && cfg.kind === 'funnel') out.push(neg === 1 ? '1 valeur négative prise en valeur absolue.' : `${int(neg)} valeurs négatives prises en valeur absolue.`);
-	if (cfg.kind === 'scatter' && info?.labels?.length && !info.xValues?.some((v) => v !== null)) out.push('L’axe X n’est ni un nombre ni une date : chaque point est placé à son rang.');
-	if (SINGLE_SERIES.has(cfg.kind) && cfg.series.length > 1) out.push('Ce type ne dessine que la première série.');
+	if (neg && ['pie', 'doughnut', 'pie3d', 'treemap'].includes(cfg.kind)) out.push(t('chart.note.negativeIgnored', { n: neg }));
+	if (neg && cfg.kind === 'funnel') out.push(t('chart.note.negativeAbs', { n: neg }));
+	if (cfg.kind === 'scatter' && info?.labels?.length && !info.xValues?.some((v) => v !== null)) out.push(t('chart.note.scatterRank'));
+	if (SINGLE_SERIES.has(cfg.kind) && cfg.series.length > 1) out.push(t('chart.note.firstSeries'));
 	return out;
 }
 
 /** Résumé d'un graphique pour les lecteurs d'écran : type, séries, étendue. */
 export function chartSummary(kind: string, labels: string[], series: { name: string; values: (number | null)[] }[], total?: number): string {
-	const name = kindInfo(kind)?.label ?? 'Graphique';
-	const parts = [`${name}, ${series.length > 1 ? `${series.length} séries` : '1 série'}`];
-	if (labels.length) parts.push(`${int(total && total > labels.length ? total : labels.length)} points, de « ${labels[0]} » à « ${labels[labels.length - 1]} »`);
+	const name = kindInfo(kind)?.label ?? t('chart.chart');
+	const parts = [t('chart.summary.series', { name, n: series.length })];
+	if (labels.length) parts.push(t('chart.summary.points', { n: total && total > labels.length ? total : labels.length, first: labels[0], last: labels[labels.length - 1] }));
 	for (const s of series.slice(0, 6)) {
 		const vs = s.values.filter((v): v is number => v !== null);
-		if (vs.length) parts.push(`${s.name} : de ${fmtNumber(Math.min(...vs))} à ${fmtNumber(Math.max(...vs))}`);
+		if (vs.length) parts.push(t('chart.summary.range', { name: s.name, min: fmtNumber(Math.min(...vs)), max: fmtNumber(Math.max(...vs)) }));
 	}
 	return parts.join(' ; ') + '.';
 }

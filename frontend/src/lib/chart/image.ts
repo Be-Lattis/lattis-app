@@ -1,5 +1,6 @@
 // « Copier comme image » : un graphique dessiné en SVG devient une image
 // PNG à coller dans un courriel ou un traitement de texte.
+import { t } from '#lib/i18n/index.js';
 
 // Propriétés de style reprises sur chaque élément : la copie n'emporte pas
 // les feuilles de style de l'application.
@@ -31,17 +32,17 @@ export async function svgToPng(svg: SVGSVGElement, scale = 2): Promise<Blob> {
 		const img = new Image();
 		await new Promise<void>((ok, ko) => {
 			img.onload = () => ok();
-			img.onerror = () => ko(new Error('image illisible'));
+			img.onerror = () => ko(new Error(t('chart.image.unreadable')));
 			img.src = url;
 		});
 		const canvas = document.createElement('canvas');
 		canvas.width = Math.round(w * scale);
 		canvas.height = Math.round(h * scale);
 		const ctx = canvas.getContext('2d');
-		if (!ctx) throw new Error('dessin impossible');
+		if (!ctx) throw new Error(t('chart.image.noCanvas'));
 		ctx.scale(scale, scale);
 		ctx.drawImage(img, 0, 0, w, h);
-		return await new Promise<Blob>((ok, ko) => canvas.toBlob((b) => (b ? ok(b) : ko(new Error('image vide'))), 'image/png'));
+		return await new Promise<Blob>((ok, ko) => canvas.toBlob((b) => (b ? ok(b) : ko(new Error(t('chart.image.empty')))), 'image/png'));
 	} finally {
 		URL.revokeObjectURL(url);
 	}

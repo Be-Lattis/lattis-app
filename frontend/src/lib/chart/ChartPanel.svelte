@@ -9,7 +9,7 @@
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { BY_CATEGORY, CARTESIAN, KINDS, SECONDARY, SINGLE_SERIES, STACKABLE, chartFields, chartNotes, mapChoice, mapComplete, mapPatch, reorderSeries, seriesShape, type MapChoice, type MapGuess } from './kinds';
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { fmtNumber, t } from '#lib/i18n/index.js';
 
 	/** Une source possible du graphique (tableau ou TCD) et ses colonnes. */
 	export interface ChartSource {
@@ -101,11 +101,11 @@
 	const bounds = $derived(axes || config.kind === 'radar' || config.kind === 'gauge');
 	// Axe secondaire (Excel) : histogramme, courbes, aires, nuage, combiné.
 	const canSecondary = $derived(SECONDARY.has(config.kind));
-	const SHAPES = [
-		{ value: 'bar', label: 'Barres' },
-		{ value: 'line', label: 'Courbe' },
-		{ value: 'area', label: 'Aire' }
-	];
+	const SHAPES = $derived([
+		{ value: 'bar', label: t('chart.panel.shape.bar') },
+		{ value: 'line', label: t('chart.panel.shape.line') },
+		{ value: 'area', label: t('chart.panel.shape.area') }
+	]);
 	function setShape(k: number, v: string) {
 		const seriesKinds = config.series.map((_, j) => seriesShape(config.seriesKinds, j) as string);
 		seriesKinds[k] = v;
@@ -144,7 +144,7 @@
 		const cols = coords === 'single' ? [guess?.coord ?? ''] : [guess?.lat ?? '', guess?.lon ?? ''];
 		setMap({ coords, cols }, false);
 	}
-	const colOptions = $derived([{ value: none, label: '(choisir)' }, ...columns.map((c) => ({ value: c, label: c }))]);
+	const colOptions = $derived([{ value: none, label: t('chart.panel.choose') }, ...columns.map((c) => ({ value: c, label: c }))]);
 	const hasSecondary = $derived(canSecondary && config.series.some((_, k) => config.secondary?.[k]));
 	function toggleSecondary(k: number) {
 		const secondary = config.series.map((_, j) => !!config.secondary?.[j]);
@@ -153,113 +153,113 @@
 	}
 </script>
 
-<aside class="panel" use:resizePanel={{ key: 'chart', off: !resizable }} use:panelKeys={onclose} aria-label="Graphique">
-	<PanelHeader title="Graphique" help="graphiques" helpLabel="Aide sur les graphiques" {onclose} />
+<aside class="panel" use:resizePanel={{ key: 'chart', off: !resizable }} use:panelKeys={onclose} aria-label={t('chart.chart')}>
+	<PanelHeader title={t('chart.chart')} help="graphiques" helpLabel={t('chart.panel.help')} {onclose} />
 	{#if locked}<p class="locked" role="note"><Icon name="lock-sheet" size={14} /><span>{locked}</span></p>{/if}
 
 	<fieldset class="body" disabled={!!locked}>
 	<section>
-		<h3>Type</h3>
+		<h3>{t('chart.panel.type')}</h3>
 		<div class="kinds">
 			{#each KINDS as k (k.kind)}
 				<button class:on={config.kind === k.kind} title={k.hint} onclick={() => setKind(k.kind)}><Icon name={k.icon} size={16} />{k.label}</button>
 			{/each}
 		</div>
 		{#if stackable}
-			<label class="opt"><input type="checkbox" checked={!!config.stacked} onchange={(e) => set({ stacked: (e.currentTarget as HTMLInputElement).checked || undefined })} /> Empilé</label>
+			<label class="opt"><input type="checkbox" checked={!!config.stacked} onchange={(e) => set({ stacked: (e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('chart.panel.stacked')}</label>
 		{/if}
 	</section>
 
 	<section>
-		<h3>Données</h3>
+		<h3>{t('chart.panel.data')}</h3>
 		{#if isMap}
-		<div class="line">Coordonnées
-			<div class="seg" role="radiogroup" aria-label="Coordonnées">
-				<button role="radio" aria-checked={map.coords === 'pair'} class:on={map.coords === 'pair'} title="Une colonne de latitudes, une colonne de longitudes" onclick={() => setCoords('pair')}>2 colonnes</button>
-				<button role="radio" aria-checked={map.coords === 'single'} class:on={map.coords === 'single'} title="Latitude et longitude dans la même cellule, écrites de toute façon standard" onclick={() => setCoords('single')}>1 colonne</button>
+		<div class="line">{t('chart.panel.coords.label')}
+			<div class="seg" role="radiogroup" aria-label={t('chart.panel.coords.label')}>
+				<button role="radio" aria-checked={map.coords === 'pair'} class:on={map.coords === 'pair'} title={t('chart.panel.coords.pair.tooltip')} onclick={() => setCoords('pair')}>{t('chart.panel.coords.pair.label')}</button>
+				<button role="radio" aria-checked={map.coords === 'single'} class:on={map.coords === 'single'} title={t('chart.panel.coords.single.tooltip')} onclick={() => setCoords('single')}>{t('chart.panel.coords.single.label')}</button>
 			</div>
 		</div>
 		{#if map.coords === 'pair'}
-			<label class="line">Latitude
+			<label class="line">{t('chart.panel.latitude')}
 				<Select value={map.cols[0] ?? none} options={colOptions} onchange={(c) => setMapCol(0, c)} />
 			</label>
-			<label class="line">Longitude
+			<label class="line">{t('chart.panel.longitude')}
 				<Select value={map.cols[1] ?? none} options={colOptions} onchange={(c) => setMapCol(1, c)} />
 			</label>
-			<p class="hint">Nombres décimaux (48,8566 ou 48.8566), ou degrés 48°51'24"N.</p>
+			<p class="hint">{t('chart.panel.coords.pairHelp')}</p>
 		{:else}
-			<label class="line">Position
+			<label class="line">{t('chart.panel.position')}
 				<Select value={map.cols[0] ?? none} options={colOptions} onchange={(c) => setMapCol(0, c)} />
 			</label>
-			<p class="hint">Toute écriture standard : 48.8566, 2.3522 · 48,8566;2,3522 · 48°51'24"N 2°21'03"E · 48°51.4'N 2°21.05'E · N48.85 E2.35 · POINT(2.3522 48.8566) · geo:48.8566,2.3522</p>
+			<p class="hint">{t('chart.panel.coords.singleHelp')}</p>
 		{/if}
 		{#if map.draft}
 			<div class="draft">
-				<p class="hint">{mapComplete(map) ? 'Colonnes proposées : vérifiez-les, puis affichez la carte.' : 'Choisissez les colonnes de coordonnées : la carte se dessine ensuite.'}</p>
-				<button class="go" disabled={!mapComplete(map)} onclick={() => setMap({}, true)}>Afficher la carte</button>
+				<p class="hint">{mapComplete(map) ? t('chart.panel.draft.proposed') : t('chart.panel.draft.choose')}</p>
+				<button class="go" disabled={!mapComplete(map)} onclick={() => setMap({}, true)}>{t('chart.panel.draft.show')}</button>
 			</div>
 		{:else if invalid > 0}
-			<p class="warn">{invalid === 1 ? '1 valeur illisible ignorée' : `${invalid} valeurs illisibles ignorées`}</p>
+			<p class="warn">{t('chart.panel.invalid', { n: invalid })}</p>
 		{/if}
-		<label class="line">Nom
-			<Select value={map.name} options={[{ value: none, label: '(aucun)' }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(name) => setMap({ name }, false)} />
+		<label class="line">{t('chart.panel.name')}
+			<Select value={map.name} options={[{ value: none, label: t('chart.panel.noneM') }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(name) => setMap({ name }, false)} />
 		</label>
-		<label class="line">Valeur
-			<Select value={map.value} options={[{ value: none, label: '(aucune)' }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(value) => setMap({ value }, false)} />
+		<label class="line">{t('chart.panel.value')}
+			<Select value={map.value} options={[{ value: none, label: t('chart.panel.noneF') }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(value) => setMap({ value }, false)} />
 		</label>
-		<label class="line">Affichage
+		<label class="line">{t('chart.panel.display')}
 			<Select
 				value={config.mapMode || 'points'}
 				options={[
-					{ value: 'points', label: 'Points' },
-					{ value: 'heat', label: 'Densité (chaleur)' }
+					{ value: 'points', label: t('chart.panel.points') },
+					{ value: 'heat', label: t('chart.panel.heat') }
 				]}
 				onchange={(v) => set({ mapMode: v === 'points' ? undefined : v })}
 			/>
 		</label>
 		{#if config.mapMode === 'heat'}
-			<label class="line" title="La densité est une seule nappe de chaleur : passez en « Points » pour colorer par valeur">Couleur par
-				<Select value={none} options={[{ value: none, label: '(points seulement)' }]} disabled onchange={() => {}} />
+			<label class="line" title={t('chart.panel.colorBy.heatTooltip')}>{t('chart.panel.colorBy.label')}
+				<Select value={none} options={[{ value: none, label: t('chart.panel.colorBy.pointsOnly') }]} disabled onchange={() => {}} />
 			</label>
 		{:else}
-			<label class="line" title="Chaque valeur distincte de la colonne prend sa couleur, réparties sur tout le spectre">Couleur par
-				<Select value={config.colorBy ?? none} options={[{ value: none, label: '(une seule couleur)' }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(c) => set({ colorBy: c || undefined })} />
+			<label class="line" title={t('chart.panel.colorBy.tooltip')}>{t('chart.panel.colorBy.label')}
+				<Select value={config.colorBy ?? none} options={[{ value: none, label: t('chart.panel.colorBy.single') }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(c) => set({ colorBy: c || undefined })} />
 			</label>
 			{#if config.colorBy}
-				<label class="opt"><input type="checkbox" checked={config.legend !== 'none'} onchange={(e) => set({ legend: (e.currentTarget as HTMLInputElement).checked ? undefined : 'none' })} /> Légende des couleurs</label>
+				<label class="opt"><input type="checkbox" checked={config.legend !== 'none'} onchange={(e) => set({ legend: (e.currentTarget as HTMLInputElement).checked ? undefined : 'none' })} /> {t('chart.panel.colorLegend')}</label>
 			{/if}
-			<label class="line" title="Multiplie la taille des points ; la colonne Valeur règle déjà leur taille relative">Taille des points
+			<label class="line" title={t('chart.panel.pointSize.tooltip')}>{t('chart.panel.pointSize.label')}
 				<span class="ptscale">
 					<input type="range" min="0.25" max="4" step="0.25" value={config.mapScale ?? 1} onchange={(e) => { const v = Number((e.currentTarget as HTMLInputElement).value); set({ mapScale: v === 1 ? undefined : v }); }} />
 					<span>×{fmtNumber(config.mapScale ?? 1)}</span>
 				</span>
 			</label>
 		{/if}
-		<label class="opt" title="Par défaut, comme Excel, la carte ne montre que les lignes affichées par le filtre du tableau"><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> Lignes masquées par le filtre</label>
+		<label class="opt" title={t('chart.panel.hidden.mapTooltip')}><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('chart.panel.hidden.label')}</label>
 		<div class="line mapview">
-			<span>Vue</span>
+			<span>{t('chart.panel.view.label')}</span>
 			{#if config.mapView}
-				<span class="vv">Enregistrée (zoom {fmtNumber(config.mapView.zoom, { maximumFractionDigits: 1 })})</span>
-				<button type="button" title="Revenir à la vue ajustée aux points" onclick={() => set({ mapView: undefined })}>Recentrer</button>
+				<span class="vv">{t('chart.panel.view.saved', { zoom: fmtNumber(config.mapView.zoom, { maximumFractionDigits: 1 }) })}</span>
+				<button type="button" title={t('chart.panel.view.recenterTooltip')} onclick={() => set({ mapView: undefined })}>{t('chart.panel.view.recenter')}</button>
 			{:else}
-				<span class="vv">Ajustée aux points</span>
+				<span class="vv">{t('chart.panel.view.fitted')}</span>
 			{/if}
 		</div>
-		<p class="hint">Carte sélectionnée : la molette zoome, glisser déplace la carte (Alt+glisser déplace le graphique), double-clic ou + / − zooment ; un clic sur un point va à sa ligne dans le tableau.</p>
-		<p class="hint">Fond de carte © OpenStreetMap (tile.openstreetmap.org), soumis à l’autorisation réseau du classeur. La valeur règle la taille des points, ou le poids de chacun dans la densité.</p>
+		<p class="hint">{t('chart.panel.mapHelp')}</p>
+		<p class="hint">{t('chart.panel.mapTiles')}</p>
 		{:else}
 		{#if sources.length > 1}
-			<label class="line" title="Tableau ou tableau croisé dont le graphique trace les données">Source
-				<Select value={config.source} options={sources.map((s) => ({ value: s.name, label: s.pivot ? `${s.name} (TCD)` : s.name }))} onchange={setSource} />
+			<label class="line" title={t('chart.panel.source.tooltip')}>{t('chart.panel.source.label')}
+				<Select value={config.source} options={sources.map((s) => ({ value: s.name, label: s.pivot ? t('chart.panel.source.pivot', { name: s.name }) : s.name }))} onchange={setSource} />
 			</label>
 		{/if}
 		{#each filters as f, i (f.field)}
-			<div class="line filter" title="Le graphique ne lit que les lignes où {f.field} vaut {(f.values ?? []).join(' ou ')}">
-				<span>Filtre</span>
-				<span class="fv">{f.field} = {(f.values ?? []).join(', ')} <button type="button" title="Retirer le filtre : toutes les lignes du tableau" disabled={!!locked} onclick={() => dropFilter(i)}>✕</button></span>
+			<div class="line filter" title={t('chart.panel.filter.tooltip', { field: f.field, values: (f.values ?? []).join(t('chart.panel.filter.or')) })}>
+				<span>{t('chart.panel.filter.label')}</span>
+				<span class="fv">{f.field} = {(f.values ?? []).join(', ')} <button type="button" title={t('chart.panel.filter.remove')} disabled={!!locked} onclick={() => dropFilter(i)}>✕</button></span>
 			</div>
 		{/each}
-		<label class="line">Axe X
+		<label class="line">{t('chart.panel.axisX')}
 			<Select value={config.x} options={columns.map((c) => ({ value: c, label: c }))} onchange={(x) => set({ x, ...reorderSeries(config, config.series.filter((s) => s !== x)) })} />
 		</label>
 		<div class="series">
@@ -269,20 +269,20 @@
 					<input
 						type={SINGLE_SERIES.has(config.kind) ? 'radio' : 'checkbox'}
 						checked={k >= 0}
-						title={SINGLE_SERIES.has(config.kind) ? 'Ce type ne dessine qu’une série' : undefined}
+						title={SINGLE_SERIES.has(config.kind) ? t('chart.panel.singleSeries') : undefined}
 						onchange={(e) => toggleSeries(c, (e.currentTarget as HTMLInputElement).checked)}
 					/>
 					<span>{c}</span>
 					{#if k >= 0 && config.series.length > 1}
 						<span class="order">
-							<button type="button" title="Monter la série (ordre du dessin et de la légende)" aria-label="Monter la série {c}" disabled={k === 0} onclick={(e) => (e.preventDefault(), moveSeries(k, -1))}>▲</button>
-							<button type="button" title="Descendre la série" aria-label="Descendre la série {c}" disabled={k === config.series.length - 1} onclick={(e) => (e.preventDefault(), moveSeries(k, 1))}>▼</button>
+							<button type="button" title={t('chart.panel.series.up.tooltip')} aria-label={t('chart.panel.series.up.aria', { name: c })} disabled={k === 0} onclick={(e) => (e.preventDefault(), moveSeries(k, -1))}>▲</button>
+							<button type="button" title={t('chart.panel.series.down.tooltip')} aria-label={t('chart.panel.series.down.aria', { name: c })} disabled={k === config.series.length - 1} onclick={(e) => (e.preventDefault(), moveSeries(k, 1))}>▼</button>
 						</span>
 					{/if}
 					{#if k >= 0 && !byCategory && config.kind !== 'waterfall'}
 						<input
 							type="color"
-							title="Couleur de la série"
+							title={t('chart.panel.series.color')}
 							value={config.colors?.[k] || PALETTE[k % PALETTE.length]}
 							onchange={(e) => {
 								const colors = config.series.map((_, j) => config.colors?.[j] || PALETTE[j % PALETTE.length]);
@@ -291,35 +291,35 @@
 							}}
 						/>
 						{#if config.kind === 'combo'}
-							<Select value={seriesShape(config.seriesKinds, k)} options={SHAPES} onchange={(v) => setShape(k, v)} title="Forme de la série" />
+							<Select value={seriesShape(config.seriesKinds, k)} options={SHAPES} onchange={(v) => setShape(k, v)} title={t('chart.panel.series.shape')} />
 						{/if}
 						{#if canSecondary && config.series.length > 1}
 							<button
 								class="sec"
 								class:on={!!config.secondary?.[k]}
-								title={config.secondary?.[k] ? 'Série sur l’axe secondaire (à droite) : cliquer pour la remettre sur l’axe principal' : 'Tracer la série sur un axe secondaire, à droite, avec sa propre échelle'}
+								title={config.secondary?.[k] ? t('chart.panel.series.secondaryOn') : t('chart.panel.series.secondaryOff')}
 								onclick={(e) => {
 									e.preventDefault();
 									toggleSecondary(k);
-								}}>Axe 2</button
+								}}>{t('chart.panel.series.axis2')}</button
 							>
 						{/if}
 					{/if}
 				</label>
 			{/each}
 		</div>
-		<label class="opt" title="Par défaut, comme Excel, le graphique ne montre que les lignes affichées par le filtre du tableau"><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> Lignes masquées par le filtre</label>
+		<label class="opt" title={t('chart.panel.hidden.tooltip')}><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('chart.panel.hidden.label')}</label>
 		{#if config.kind === 'histogram'}
-			<label class="line">Classes<input value={config.bins ?? ''} onchange={(e) => set({ bins: num((e.currentTarget as HTMLInputElement).value) })} placeholder="auto" /></label>
+			<label class="line">{t('chart.panel.bins')}<input value={config.bins ?? ''} onchange={(e) => set({ bins: num((e.currentTarget as HTMLInputElement).value) })} placeholder="auto" /></label>
 		{/if}
 		{#if config.kind === 'line' || config.kind === 'area' || config.kind === 'combo'}
-			<label class="line" title="Comme Excel : une cellule vide coupe la courbe (intervalle), compte pour zéro, ou ses voisines sont reliées">Cellules vides
+			<label class="line" title={t('chart.panel.blanks.tooltip')}>{t('chart.panel.blanks.label')}
 				<Select
 					value={config.blanks || 'gap'}
 					options={[
-						{ value: 'gap', label: 'Intervalle' },
-						{ value: 'zero', label: 'Zéro' },
-						{ value: 'span', label: 'Relier les points' }
+						{ value: 'gap', label: t('chart.panel.blanks.gap') },
+						{ value: 'zero', label: t('chart.panel.blanks.zero') },
+						{ value: 'span', label: t('chart.panel.blanks.span') }
 					]}
 					onchange={(v) => set({ blanks: v === 'gap' ? undefined : v })}
 				/>
@@ -331,19 +331,19 @@
 
 	{#if byCategory && catLabels.length}
 		<section>
-			<h3>Couleurs</h3>
+			<h3>{t('chart.panel.colors')}</h3>
 			<div class="colors">
 				{#each catLabels as l, i (i)}
-					<label title={l}><input type="color" value={config.colors?.[i] || PALETTE[i % PALETTE.length]} onchange={(e) => setColorAt(i, (e.currentTarget as HTMLInputElement).value, catLabels.length)} /><span>{l || '(vide)'}</span></label>
+					<label title={l}><input type="color" value={config.colors?.[i] || PALETTE[i % PALETTE.length]} onchange={(e) => setColorAt(i, (e.currentTarget as HTMLInputElement).value, catLabels.length)} /><span>{l || t('remote.share.conflict.empty')}</span></label>
 				{/each}
 			</div>
-			{#if (info?.labels?.length ?? 0) > catLabels.length}<p class="hint">Les catégories suivantes reprennent la palette.</p>{/if}
+			{#if (info?.labels?.length ?? 0) > catLabels.length}<p class="hint">{t('chart.panel.paletteRepeat')}</p>{/if}
 		</section>
 	{:else if config.kind === 'waterfall'}
 		<section>
-			<h3>Couleurs</h3>
+			<h3>{t('chart.panel.colors')}</h3>
 			<div class="colors">
-				{#each ['Hausse', 'Baisse', 'Total'] as l, i (i)}
+				{#each [t('chart.waterfall.up'), t('chart.waterfall.down'), t('chart.waterfall.total')] as l, i (i)}
 					<label><input type="color" value={config.colors?.[i] || PALETTE[i % PALETTE.length]} onchange={(e) => setColorAt(i, (e.currentTarget as HTMLInputElement).value, 3)} /><span>{l}</span></label>
 				{/each}
 			</div>
@@ -351,36 +351,36 @@
 	{/if}
 
 	<section>
-		<h3>Titres</h3>
-		<label class="line">Graphique<input value={config.title ?? ''} onchange={(e) => set({ title: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder="(aucun)" /></label>
+		<h3>{t('chart.panel.titles')}</h3>
+		<label class="line">{t('chart.chart')}<input value={config.title ?? ''} onchange={(e) => set({ title: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder={t('chart.panel.noneM')} /></label>
 		{#if axes}
-			<label class="line">Axe X<input value={config.xTitle ?? ''} onchange={(e) => set({ xTitle: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder="(aucun)" /></label>
-			<label class="line">Axe Y<input value={config.yTitle ?? ''} onchange={(e) => set({ yTitle: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder="(aucun)" /></label>
+			<label class="line">{t('chart.panel.axisX')}<input value={config.xTitle ?? ''} onchange={(e) => set({ xTitle: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder={t('chart.panel.noneM')} /></label>
+			<label class="line">{t('chart.panel.axisY')}<input value={config.yTitle ?? ''} onchange={(e) => set({ yTitle: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder={t('chart.panel.noneM')} /></label>
 			{#if hasSecondary}
-				<label class="line">Axe Y 2<input value={config.y2Title ?? ''} onchange={(e) => set({ y2Title: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder="(aucun)" /></label>
+				<label class="line">{t('chart.panel.axisY2')}<input value={config.y2Title ?? ''} onchange={(e) => set({ y2Title: (e.currentTarget as HTMLInputElement).value || undefined })} placeholder={t('chart.panel.noneM')} /></label>
 			{/if}
 		{/if}
 	</section>
 
 	<section>
-		<h3>Éléments</h3>
+		<h3>{t('chart.panel.elements')}</h3>
 		{#if !isMap && config.kind !== 'gauge'}
-		<label class="line">Légende
+		<label class="line">{t('chart.panel.legend.label')}
 			<Select
 				value={config.legend || 'bottom'}
 				options={[
-					{ value: 'bottom', label: 'En bas' },
-					{ value: 'top', label: 'En haut' },
-					{ value: 'right', label: 'À droite' },
-					{ value: 'none', label: 'Aucune' }
+					{ value: 'bottom', label: t('chart.panel.legend.bottom') },
+					{ value: 'top', label: t('chart.panel.legend.top') },
+					{ value: 'right', label: t('chart.panel.legend.right') },
+					{ value: 'none', label: t('chart.panel.legend.none') }
 				]}
 				onchange={(v) => set({ legend: v === 'bottom' ? undefined : v })}
 			/>
 		</label>
 		{/if}
-		<label class="opt"><input type="checkbox" checked={!!config.labels} onchange={(e) => set({ labels: (e.currentTarget as HTMLInputElement).checked || undefined })} /> Étiquettes de données</label>
+		<label class="opt"><input type="checkbox" checked={!!config.labels} onchange={(e) => set({ labels: (e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('chart.panel.dataLabels')}</label>
 		{#if axes || config.kind === 'radar'}
-			<label class="opt"><input type="checkbox" checked={!config.noGrid} onchange={(e) => set({ noGrid: !(e.currentTarget as HTMLInputElement).checked || undefined })} /> Quadrillage</label>
+			<label class="opt"><input type="checkbox" checked={!config.noGrid} onchange={(e) => set({ noGrid: !(e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('chart.panel.grid')}</label>
 		{/if}
 		{#if bounds}
 			<div class="minmax">
@@ -390,7 +390,7 @@
 		{/if}
 	</section>
 	</fieldset>
-	<p class="hint">Glissez le graphique pour le déplacer, ses poignées pour le redimensionner. Clic droit : couper, copier, supprimer.{#if onSheet} Au clavier : flèches pour le déplacer, Maj+flèches pour le redimensionner, Tab pour passer au graphique suivant, Suppr pour le supprimer.{/if}</p>
+	<p class="hint">{t('chart.panel.moveHelp')}{#if onSheet} {t('chart.panel.keyboardHelp')}{/if}</p>
 </aside>
 
 <style>

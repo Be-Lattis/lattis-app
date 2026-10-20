@@ -1,1 +1,258 @@
-{}
+{
+	"chart": "Graphique",
+	"kind": {
+		"bar": {
+			"label": "Histogramme",
+			"hint": "Barres verticales"
+		},
+		"column": {
+			"label": "Barres horizontales",
+			"hint": "Barres horizontales"
+		},
+		"line": {
+			"label": "Courbes",
+			"hint": "Courbes"
+		},
+		"area": {
+			"label": "Aires",
+			"hint": "Aires"
+		},
+		"pie": {
+			"label": "Secteurs",
+			"hint": "Secteurs"
+		},
+		"doughnut": {
+			"label": "Anneau",
+			"hint": "Anneau"
+		},
+		"scatter": {
+			"label": "Nuage de points",
+			"hint": "Nuage de points"
+		},
+		"combo": {
+			"label": "Combiné",
+			"hint": "Histogramme et courbes sur le même graphique (axe secondaire possible)"
+		},
+		"bar3d": {
+			"label": "Histogramme 3D",
+			"hint": "Histogramme en perspective"
+		},
+		"pie3d": {
+			"label": "Secteurs 3D",
+			"hint": "Secteurs en perspective"
+		},
+		"map": {
+			"label": "Carte",
+			"hint": "Points ou densité sur une carte OpenStreetMap, à partir de colonnes latitude et longitude"
+		},
+		"waterfall": {
+			"label": "Cascade",
+			"hint": "Hausses et baisses successives, jusqu’au total"
+		},
+		"treemap": {
+			"label": "Compartimentage",
+			"hint": "Rectangles proportionnels aux valeurs (treemap)"
+		},
+		"radar": {
+			"label": "Radar",
+			"hint": "Une branche par catégorie, un polygone par série"
+		},
+		"funnel": {
+			"label": "Entonnoir",
+			"hint": "Étapes successives d’un processus"
+		},
+		"boxplot": {
+			"label": "Boîte à moustaches",
+			"hint": "Médiane, quartiles et extrêmes de chaque série"
+		},
+		"histogram": {
+			"label": "Fréquences",
+			"hint": "Histogramme de fréquences : répartition des valeurs par classes"
+		},
+		"gauge": {
+			"label": "Jauge",
+			"hint": "Une valeur sur un cadran, entre un minimum et un maximum"
+		}
+	},
+	"note": {
+		"truncated": "{max} premiers points sur {total}",
+		"sampled": "Courbe réduite à {max} points sur {total} (extrêmes gardés)",
+		"negativeIgnored": "{n, plural, =1 {1 valeur négative ignorée.} other {# valeurs négatives ignorées.}}",
+		"negativeAbs": "{n, plural, =1 {1 valeur négative prise en valeur absolue.} other {# valeurs négatives prises en valeur absolue.}}",
+		"scatterRank": "L’axe X n’est ni un nombre ni une date : chaque point est placé à son rang.",
+		"firstSeries": "Ce type ne dessine que la première série."
+	},
+	"summary": {
+		"series": "{name}, {n, plural, =1 {1 série} other {# séries}}",
+		"points": "{n} points, de « {first} » à « {last} »",
+		"range": "{name} : de {min} à {max}"
+	},
+	"box": {
+		"stats": "min {min}, Q1 {q1}, médiane {median}, Q3 {q3}, max {max}, moyenne {mean}",
+		"values": "{n} valeurs",
+		"outliers": "{n} extrêmes"
+	},
+	"legend": {
+		"more": "et {n} autres"
+	},
+	"table": {
+		"group": "Groupe",
+		"category": "Catégorie",
+		"median": "médiane {value}"
+	},
+	"waterfall": {
+		"up": "Hausse",
+		"down": "Baisse",
+		"total": "Total"
+	},
+	"radarMin": "Un radar demande au moins trois catégories",
+	"map": {
+		"pending": {
+			"aria": "Carte : coordonnées à choisir",
+			"text": "Choisissez les coordonnées dans le volet"
+		},
+		"density": "Densité",
+		"offline": {
+			"tooltip": "Le fond de carte vient de tile.openstreetmap.org : autorisez cet hôte (onglet Script › Accès réseau) ou vérifiez la connexion.",
+			"label": "Fond de carte indisponible"
+		},
+		"noPoint": "Aucun point : latitude et longitude attendues",
+		"clickHint": "Clic : aller à la ligne",
+		"legend": "Légende : {name}",
+		"legendItem": "{label} : {n, plural, one {# point} other {# points}}",
+		"zoomIn": {
+			"tooltip": "Zoom avant (+)",
+			"aria": "Zoom avant"
+		},
+		"zoomOut": {
+			"tooltip": "Zoom arrière (−)",
+			"aria": "Zoom arrière"
+		},
+		"recenter": "Recentrer sur les points"
+	},
+	"panel": {
+		"shape": {
+			"bar": "Barres",
+			"line": "Courbe",
+			"area": "Aire"
+		},
+		"choose": "(choisir)",
+		"help": "Aide sur les graphiques",
+		"type": "Type",
+		"stacked": "Empilé",
+		"data": "Données",
+		"coords": {
+			"label": "Coordonnées",
+			"pair": {
+				"label": "2 colonnes",
+				"tooltip": "Une colonne de latitudes, une colonne de longitudes"
+			},
+			"single": {
+				"label": "1 colonne",
+				"tooltip": "Latitude et longitude dans la même cellule, écrites de toute façon standard"
+			},
+			"pairHelp": "Nombres décimaux (48,8566 ou 48.8566), ou degrés 48°51'24\"N.",
+			"singleHelp": "Toute écriture standard : 48.8566, 2.3522 · 48,8566;2,3522 · 48°51'24\"N 2°21'03\"E · 48°51.4'N 2°21.05'E · N48.85 E2.35 · POINT(2.3522 48.8566) · geo:48.8566,2.3522"
+		},
+		"latitude": "Latitude",
+		"longitude": "Longitude",
+		"position": "Position",
+		"draft": {
+			"proposed": "Colonnes proposées : vérifiez-les, puis affichez la carte.",
+			"choose": "Choisissez les colonnes de coordonnées : la carte se dessine ensuite.",
+			"show": "Afficher la carte"
+		},
+		"invalid": "{n, plural, =1 {1 valeur illisible ignorée} other {# valeurs illisibles ignorées}}",
+		"name": "Nom",
+		"noneM": "(aucun)",
+		"value": "Valeur",
+		"noneF": "(aucune)",
+		"display": "Affichage",
+		"points": "Points",
+		"heat": "Densité (chaleur)",
+		"colorBy": {
+			"label": "Couleur par",
+			"heatTooltip": "La densité est une seule nappe de chaleur : passez en « Points » pour colorer par valeur",
+			"pointsOnly": "(points seulement)",
+			"tooltip": "Chaque valeur distincte de la colonne prend sa couleur, réparties sur tout le spectre",
+			"single": "(une seule couleur)"
+		},
+		"colorLegend": "Légende des couleurs",
+		"pointSize": {
+			"label": "Taille des points",
+			"tooltip": "Multiplie la taille des points ; la colonne Valeur règle déjà leur taille relative"
+		},
+		"hidden": {
+			"label": "Lignes masquées par le filtre",
+			"mapTooltip": "Par défaut, comme Excel, la carte ne montre que les lignes affichées par le filtre du tableau",
+			"tooltip": "Par défaut, comme Excel, le graphique ne montre que les lignes affichées par le filtre du tableau"
+		},
+		"view": {
+			"label": "Vue",
+			"saved": "Enregistrée (zoom {zoom})",
+			"recenterTooltip": "Revenir à la vue ajustée aux points",
+			"recenter": "Recentrer",
+			"fitted": "Ajustée aux points"
+		},
+		"mapHelp": "Carte sélectionnée : la molette zoome, glisser déplace la carte (Alt+glisser déplace le graphique), double-clic ou + / − zooment ; un clic sur un point va à sa ligne dans le tableau.",
+		"mapTiles": "Fond de carte © OpenStreetMap (tile.openstreetmap.org), soumis à l’autorisation réseau du classeur. La valeur règle la taille des points, ou le poids de chacun dans la densité.",
+		"source": {
+			"label": "Source",
+			"tooltip": "Tableau ou tableau croisé dont le graphique trace les données",
+			"pivot": "{name} (TCD)"
+		},
+		"filter": {
+			"tooltip": "Le graphique ne lit que les lignes où {field} vaut {values}",
+			"or": " ou ",
+			"label": "Filtre",
+			"remove": "Retirer le filtre : toutes les lignes du tableau"
+		},
+		"axisX": "Axe X",
+		"axisY": "Axe Y",
+		"axisY2": "Axe Y 2",
+		"singleSeries": "Ce type ne dessine qu’une série",
+		"series": {
+			"up": {
+				"tooltip": "Monter la série (ordre du dessin et de la légende)",
+				"aria": "Monter la série {name}"
+			},
+			"down": {
+				"tooltip": "Descendre la série",
+				"aria": "Descendre la série {name}"
+			},
+			"color": "Couleur de la série",
+			"shape": "Forme de la série",
+			"secondaryOn": "Série sur l’axe secondaire (à droite) : cliquer pour la remettre sur l’axe principal",
+			"secondaryOff": "Tracer la série sur un axe secondaire, à droite, avec sa propre échelle",
+			"axis2": "Axe 2"
+		},
+		"bins": "Classes",
+		"blanks": {
+			"label": "Cellules vides",
+			"tooltip": "Comme Excel : une cellule vide coupe la courbe (intervalle), compte pour zéro, ou ses voisines sont reliées",
+			"gap": "Intervalle",
+			"zero": "Zéro",
+			"span": "Relier les points"
+		},
+		"colors": "Couleurs",
+		"paletteRepeat": "Les catégories suivantes reprennent la palette.",
+		"titles": "Titres",
+		"elements": "Éléments",
+		"legend": {
+			"label": "Légende",
+			"bottom": "En bas",
+			"top": "En haut",
+			"right": "À droite",
+			"none": "Aucune"
+		},
+		"dataLabels": "Étiquettes de données",
+		"grid": "Quadrillage",
+		"moveHelp": "Glissez le graphique pour le déplacer, ses poignées pour le redimensionner. Clic droit : couper, copier, supprimer.",
+		"keyboardHelp": "Au clavier : flèches pour le déplacer, Maj+flèches pour le redimensionner, Tab pour passer au graphique suivant, Suppr pour le supprimer."
+	},
+	"image": {
+		"unreadable": "image illisible",
+		"noCanvas": "dessin impossible",
+		"empty": "image vide"
+	}
+}

@@ -34,7 +34,7 @@
 	import { colorCategories, groupColor } from './categories';
 	import { ZOOM_STEP, camView, fallbackTiles, heatRadius, hitPoint, panBy, parseCam, roundCam, viewCam, wheelZoom, zoomAt, MAX_ZOOM, MIN_ZOOM, type MapCam } from './mapview';
 	import { loadTile, tileNow } from './tiles';
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { fmtNumber, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		labels: string[];
@@ -348,19 +348,19 @@
 </script>
 
 {#if draft}
-<svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label="Carte : coordonnées à choisir">
+<svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={t('chart.map.pending.aria')}>
 	<rect {width} {height} fill="#e5e7eb" />
 	<rect x="0.5" y="0.5" width={width - 1} height={height - 1} fill="none" stroke="#c4c8cd" stroke-dasharray="4 3" />
 	<g transform="translate({width / 2} {height / 2 - 18})" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linejoin="round">
 		<path d="M -16 -10 L -6 -14 L 6 -10 L 16 -14 L 16 10 L 6 14 L -6 10 L -16 14 Z M -6 -14 L -6 10 M 6 -10 L 6 14" />
 	</g>
 	<text x={width / 2} y={height / 2 + 16} text-anchor="middle" class="draft">Carte</text>
-	<text x={width / 2} y={height / 2 + 34} text-anchor="middle" class="small muted">Choisissez les coordonnées dans le volet</text>
+	<text x={width / 2} y={height / 2 + 34} text-anchor="middle" class="small muted">{t('chart.map.pending.text')}</text>
 </svg>
 {:else}
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="mapbox" class:pan={interactive && pts.length > 0} class:dragging class:point={interactive && canGo && !!hotPt && !dragging} bind:this={box} onmouseenter={() => (hover = true)} onmouseleave={() => (hover = false)}>
-<svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={style.title || 'Carte'}>
+<svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={style.title || t('chart.kind.map.label')}>
 	<defs>
 		<clipPath id="map-{uid}"><rect x="0" y={top} width={w} height={h} /></clipPath>
 		<filter id="blur-{uid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation={CELL * 0.8} /></filter>
@@ -405,16 +405,16 @@
 			</linearGradient>
 		</defs>
 		<rect x="8" y={top + h - 22} width="70" height="8" fill="url(#ramp-{uid})" />
-		<text x="82" y={top + h - 14} class="small halo">Densité</text>
+		<text x="82" y={top + h - 14} class="small halo">{t('chart.map.density')}</text>
 	{/if}
 	{#if shown.length || stand.length}
 		<rect x={w - 98} y={top + h - 16} width="98" height="16" fill="#fff" fill-opacity="0.75" />
 		<text x={w - 4} y={top + h - 4} text-anchor="end" class="attr">© OpenStreetMap</text>
 	{:else if offline}
-		<text x={w - 6} y={top + h - 6} text-anchor="end" class="attr"><title>Le fond de carte vient de tile.openstreetmap.org : autorisez cet hôte (onglet Script › Accès réseau) ou vérifiez la connexion.</title>Fond de carte indisponible</text>
+		<text x={w - 6} y={top + h - 6} text-anchor="end" class="attr"><title>{t('chart.map.offline.tooltip')}</title>{t('chart.map.offline.label')}</text>
 	{/if}
 	{#if !pts.length}
-		<text x={w / 2} y={top + h / 2} text-anchor="middle" class="small halo">Aucun point : latitude et longitude attendues</text>
+		<text x={w / 2} y={top + h / 2} text-anchor="middle" class="small halo">{t('chart.map.noPoint')}</text>
 	{/if}
 </svg>
 {#if hotPt && !dragging}
@@ -423,26 +423,26 @@
 	<div class="maptip" style:left={left + 160 > w ? null : `${left}px`} style:right={left + 160 > w ? `${w - hotPt.x + hotPt.r + 8}px` : null} style:top="{Math.max(top + 2, hotPt.y - 14)}px">
 		{#if hotPt.label}<strong>{hotPt.label}</strong>{/if}
 		{#if coloring}
-			<span class="tiprow"><span class="sw" style:background={fill(hotPt.i)}></span>{style.colorBy} : {g !== undefined && g >= 0 && categories ? categories[g] : '(vide)'}</span>
+			<span class="tiprow"><span class="sw" style:background={fill(hotPt.i)}></span>{style.colorBy} : {g !== undefined && g >= 0 && categories ? categories[g] : t('remote.share.conflict.empty')}</span>
 		{/if}
 		{#if hotPt.v !== null && series[2]}<span class="tiprow">{series[2].name} : {fmtTip(hotPt.v)}</span>{/if}
 		{#if !hotPt.label && !coloring && (hotPt.v === null || !series[2])}<span class="tiprow">{tickLabel(hotPt.lat)}, {tickLabel(hotPt.lon)}</span>{/if}
-		{#if interactive && canGo}<span class="tiphint">Clic : aller à la ligne</span>{/if}
+		{#if interactive && canGo}<span class="tiphint">{t('chart.map.clickHint')}</span>{/if}
 	</div>
 {/if}
 {#if showLegend && coloring}
-	<div class="maplegend" style:max-height="{Math.max(48, h * 0.6)}px" aria-label="Légende : {style.colorBy}">
+	<div class="maplegend" style:max-height="{Math.max(48, h * 0.6)}px" aria-label={t('chart.map.legend', { name: style.colorBy ?? '' })}>
 		<div class="lt">{style.colorBy}</div>
 		{#each coloring.legend as e (e.label)}
-			<div class="le" title="{e.label} : {e.count} point{e.count > 1 ? 's' : ''}"><span class="sw" style:background={e.color}></span><span class="ll">{e.label}</span></div>
+			<div class="le" title={t('chart.map.legendItem', { label: e.label, n: e.count })}><span class="sw" style:background={e.color}></span><span class="ll">{e.label}</span></div>
 		{/each}
 	</div>
 {/if}
 {#if showControls}
 	<div class="mapctl" style:top="{top + 6}px">
-		<button type="button" title="Zoom avant (+)" aria-label="Zoom avant" disabled={view.z >= MAX_ZOOM} onclick={() => zoomBy(ZOOM_STEP)}>+</button>
-		<button type="button" title="Zoom arrière (−)" aria-label="Zoom arrière" disabled={view.z <= MIN_ZOOM} onclick={() => zoomBy(-ZOOM_STEP)}>−</button>
-		{#if cam}<button type="button" class="fit" title="Recentrer sur les points" aria-label="Recentrer sur les points" onclick={recenter}>
+		<button type="button" title={t('chart.map.zoomIn.tooltip')} aria-label={t('chart.map.zoomIn.aria')} disabled={view.z >= MAX_ZOOM} onclick={() => zoomBy(ZOOM_STEP)}>+</button>
+		<button type="button" title={t('chart.map.zoomOut.tooltip')} aria-label={t('chart.map.zoomOut.aria')} disabled={view.z <= MIN_ZOOM} onclick={() => zoomBy(-ZOOM_STEP)}>−</button>
+		{#if cam}<button type="button" class="fit" title={t('chart.map.recenter')} aria-label={t('chart.map.recenter')} onclick={recenter}>
 			<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9" /><circle cx="7" cy="7" r="1.6" fill="currentColor" stroke="none" /></svg>
 		</button>{/if}
 	</div>

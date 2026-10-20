@@ -14,7 +14,7 @@
 	import MapChart from './MapChart.svelte';
 	import type { MapCam } from './mapview';
 	import { ease, lerpSeries, progress, reducedMotion, sameSeries } from '../grid/anim';
-	import { fmtNumber, numberFormat } from '#lib/i18n/index.js';
+	import { fmtNumber, numberFormat, t } from '#lib/i18n/index.js';
 
 	export interface Series {
 		name: string;
@@ -174,7 +174,7 @@
 			return { labels: g.labels, series: ss, boxes: g.boxes };
 		}
 		const labels = xText ? f.labels.map((l, i) => xText!(i, l)) : f.labels;
-		if (kind === 'waterfall') return { labels: [...labels, 'Total'], series: ss.slice(0, 1), boxes: null };
+		if (kind === 'waterfall') return { labels: [...labels, t('chart.waterfall.total')], series: ss.slice(0, 1), boxes: null };
 		return { labels, series: SINGLE_SERIES.has(kind) ? ss.slice(0, 1) : ss, boxes: null };
 	}
 	const view = $derived(prepare(shown));
@@ -203,9 +203,9 @@
 		if (kind === 'gauge') return [];
 		if (kind === 'waterfall')
 			return [
-				{ name: 'Hausse', color: color(0) },
-				{ name: 'Baisse', color: color(1) },
-				{ name: 'Total', color: color(2) }
+				{ name: t('chart.waterfall.up'), color: color(0) },
+				{ name: t('chart.waterfall.down'), color: color(1) },
+				{ name: t('chart.waterfall.total'), color: color(2) }
 			];
 		if (BY_CATEGORY.has(kind)) return labels.map((l, i) => ({ name: l, color: color(i) }));
 		return series.map((s, k) => ({ name: s.name, color: color(k) }));
@@ -491,7 +491,7 @@
 	<MapChart labels={rawLabels} series={target} {width} {height} {style} {interactive} {onview} rows={map?.rows ?? undefined} categories={map?.categories ?? undefined} groups={map?.groups ?? undefined} {onpoint} />
 	{#if note}<div class="map-note">{note}</div>{/if}
 {:else}
-	<svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={style.title || 'Graphique'} aria-describedby={descId}>
+	<svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={style.title || t('chart.chart')} aria-describedby={descId}>
 		<rect {width} {height} fill="#fff" />
 		{#if style.title}<text x={width / 2} y="21" text-anchor="middle" class="title">{style.title}</text>{/if}
 
@@ -571,7 +571,11 @@
 					<line x1={b.cx - b.w / 4} x2={b.cx + b.w / 4} y1={vy(b.b.max)} y2={vy(b.b.max)} stroke="#4b5563" />
 					<line x1={b.cx - b.w / 4} x2={b.cx + b.w / 4} y1={vy(b.b.min)} y2={vy(b.b.min)} stroke="#4b5563" />
 					<rect x={b.cx - b.w / 2} y={vy(b.b.q3)} width={b.w} height={Math.max(1, vy(b.b.q1) - vy(b.b.q3))} fill={shade(c, 0.35)} stroke={c}>
-						<title>{series[b.k]?.name} — min {f(b.b.min)}, Q1 {f(b.b.q1)}, médiane {f(b.b.median)}, Q3 {f(b.b.q3)}, max {f(b.b.max)}, moyenne {f(b.b.mean)} ({fmtNumber(b.b.n)} valeurs{b.b.out ? `, ${fmtNumber(b.b.out)} extrêmes` : ''})</title>
+						<title
+						>{series[b.k]?.name} — {t('chart.box.stats', { min: f(b.b.min), q1: f(b.b.q1), median: f(b.b.median), q3: f(b.b.q3), max: f(b.b.max), mean: f(b.b.mean) })} ({t('chart.box.values', { n: b.b.n })}{b.b.out
+						? `, ${t('chart.box.outliers', { n: b.b.out })}`
+						: ''})</title
+						>
 					</rect>
 					<line x1={b.cx - b.w / 2} x2={b.cx + b.w / 2} y1={vy(b.b.median)} y2={vy(b.b.median)} stroke={shade(c, -0.4)} stroke-width="2" />
 					<path d="M {b.cx - 3} {vy(b.b.mean) - 3} l 6 6 m 0 -6 l -6 6" stroke={shade(c, -0.4)} />
@@ -635,7 +639,7 @@
 					<text x={width - 122} y={pad.top + i * 18 + 9} class="small"><title>{it.name}</title>{short(it.name, 18)}{radial && slices[i] ? ` (${pct.format(slices[i].part)})` : ''}</text>
 				{/each}
 				{#if legendItems.length > fit}
-					<text x={width - 122} y={pad.top + fit * 18 + 9} class="small"><title>{legendItems.slice(fit).map((it) => it.name).join(', ')}</title>… et {legendItems.length - fit} autres</text>
+					<text x={width - 122} y={pad.top + fit * 18 + 9} class="small"><title>{legendItems.slice(fit).map((it) => it.name).join(', ')}</title>… {t('chart.legend.more', { n: legendItems.length - fit })}</text>
 				{/if}
 			{:else}
 				{@const y0 = legend === 'top' ? (style.title ? 34 : 12) : height - legendH + 10 - noteH}
@@ -654,10 +658,10 @@
 	<p>{chartSummary(kind, goal.labels, goal.series, info?.total)}</p>
 	{#if kind !== 'map' && goal.labels.length}
 		<table>
-			<thead><tr><th>{kind === 'boxplot' ? 'Groupe' : 'Catégorie'}</th>{#each goal.series as s, k (k)}<th>{s.name}</th>{/each}</tr></thead>
+			<thead><tr><th>{kind === 'boxplot' ? t('chart.table.group') : t('chart.table.category')}</th>{#each goal.series as s, k (k)}<th>{s.name}</th>{/each}</tr></thead>
 			<tbody>
 				{#each goal.labels.slice(0, 50) as l, i (i)}
-					<tr><th>{l}</th>{#each goal.series as s, k (k)}<td>{kind === 'boxplot' ? (goal.boxes?.[i]?.[k] ? `médiane ${fmt(goal.boxes[i][k]!.median, k)}` : '') : s.values[i] == null ? '' : fmt(s.values[i]!, k)}</td>{/each}</tr>
+					<tr><th>{l}</th>{#each goal.series as s, k (k)}<td>{kind === 'boxplot' ? (goal.boxes?.[i]?.[k] ? t('chart.table.median', { value: fmt(goal.boxes[i][k]!.median, k) }) : '') : s.values[i] == null ? '' : fmt(s.values[i]!, k)}</td>{/each}</tr>
 				{/each}
 			</tbody>
 		</table>

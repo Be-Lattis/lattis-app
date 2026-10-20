@@ -3,7 +3,7 @@
 	// Chart.svelte : secteurs 3D, compartimentage, radar, entonnoir, jauge.
 	import { axisFormat, shortLabel, textOn, tickLabel, ticks } from './scale';
 	import { gaugeValue, pie3d, radarPoint, ringPath, shade, squarify } from './shapes';
-	import { numberFormat } from '#lib/i18n/index.js';
+	import { numberFormat, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		kind: string;
@@ -102,7 +102,7 @@
 			{/each}
 		{/each}
 	{:else}
-		<text x={C.x} y={C.y} text-anchor="middle" class="small">Un radar demande au moins trois catégories</text>
+		<text x={C.x} y={C.y} text-anchor="middle" class="small">{t('chart.radarMin')}</text>
 	{/if}
 {:else if kind === 'funnel'}
 	{#each labels as l, i (i)}
