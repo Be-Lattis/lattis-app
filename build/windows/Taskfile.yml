@@ -212,9 +212,10 @@ tasks:
           INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
 
   release:
-    summary: Builds the signed Windows release (lattis.exe, NSIS installer, MSIX)
+    summary: Builds the signed Windows release (lattis.exe, NSIS installers, MSIX)
     desc: |
-      Construit lattis.exe, le signe, puis en fait l'installeur NSIS et le paquet
+      Construit lattis.exe, le signe, puis en fait les deux installeurs NSIS (par
+      utilisateur et par machine) et le paquet
       MSIX, signés eux aussi quand un certificat est configuré (sinon : non
       signés, avec un avertissement). Résultats dans bin/.
       SIGN=false force des paquets non signés.
@@ -223,6 +224,13 @@ tasks:
         vars:
           ARCH: '{{.ARCH}}'
       - task: '{{if ne .SIGN "false"}}sign:exe{{else}}release:nosign{{end}}'
+      # Deux installeurs : par utilisateur (bin/lattis-<arch>-user-installer.exe,
+      # sans droits d'administration) et par machine (bin/lattis-<arch>-installer.exe).
+      - task: package:nsis
+        vars:
+          ARCH: '{{.ARCH}}'
+          INSTALL_SCOPE: user
+          SIGN: '{{.SIGN}}'
       - task: package:nsis
         vars:
           ARCH: '{{.ARCH}}'

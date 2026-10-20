@@ -1,7 +1,8 @@
 name: Release
 
 # Installeurs signés (phase 8) : sur un tag v*, construit et signe les paquets
-# Windows (NSIS + MSIX), macOS (.dmg universel notarisé) et Linux (AppImage,
+# Windows (deux installeurs NSIS, par utilisateur et par machine, l'exécutable
+# portable et le MSIX), macOS (.dmg universel notarisé) et Linux (AppImage,
 # .deb, .rpm), puis les publie dans une release GitHub, avec les notes tirées
 # des commits depuis le tag précédent (variable de dépôt RELEASE_DRAFT=true :
 # release laissée en brouillon). Un tag avec un tiret (v1.2.0-beta.1) donne
@@ -110,10 +111,15 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
-      # Avec le .pfx, makensis signe aussi l'installeur et le désinstalleur, et
-      # build-msix.ps1 signe le paquet (Publisher = sujet du certificat).
-      - name: Installeur NSIS
-        run: wails3 task windows:package:nsis
+      # Avec le .pfx, makensis signe aussi les installeurs et les désinstalleurs,
+      # et build-msix.ps1 signe le paquet (Publisher = sujet du certificat).
+      # Deux installeurs : par utilisateur (profil, sans droits d'administration,
+      # mise à jour silencieuse) et par machine (Program Files, droits
+      # d'administration).
+      - name: Installeurs NSIS (par utilisateur et par machine)
+        run: |
+          wails3 task windows:package:nsis INSTALL_SCOPE=user
+          wails3 task windows:package:nsis INSTALL_SCOPE=machine
       - name: Paquet MSIX
         run: wails3 task windows:package:msix ${{ steps.mode.outputs.mode != 'pfx' && 'SIGN=false' || '' }}
 
@@ -151,7 +157,10 @@ jobs:
           SIGN_MODE: ${{ steps.mode.outputs.mode }}
         run: |
           New-Item -ItemType Directory -Force dist, dist-unsigned | Out-Null
-          Copy-Item bin\lattis-amd64-installer.exe dist\Lattis-windows-x64-setup.exe
+          # Installeur par utilisateur sous le nom historique (lien du site), celui
+          # par machine à côté.
+          Copy-Item bin\lattis-amd64-user-installer.exe dist\Lattis-windows-x64-setup.exe
+          Copy-Item bin\lattis-amd64-installer.exe dist\Lattis-windows-x64-setup-machine.exe
           # Version portable : l'exécutable seul (signé comme les autres fichiers).
           Copy-Item bin\lattis.exe dist\Lattis-windows-x64-portable.exe
           $msix = (Get-ChildItem bin\*.msix | Select-Object -First 1).FullName
@@ -332,7 +341,7 @@ jobs:
         working-directory: dist
         run: |
           ls -l
-          for f in Lattis-windows-x64-setup.exe Lattis-windows-x64-portable.exe Lattis-macos-universal.dmg Lattis-linux-x64.AppImage Lattis-linux-x64.deb Lattis-linux-x64.rpm; do
+          for f in Lattis-windows-x64-setup.exe Lattis-windows-x64-setup-machine.exe Lattis-windows-x64-portable.exe Lattis-macos-universal.dmg Lattis-linux-x64.AppImage Lattis-linux-x64.deb Lattis-linux-x64.rpm; do
             [ -s "$f" ] || { echo "::error::$f manquant"; exit 1; }
           done
       - name: Sommes de contrôle, latest.json et signatures GPG

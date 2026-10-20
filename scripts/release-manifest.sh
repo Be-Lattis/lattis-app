@@ -14,7 +14,11 @@ case "$version" in *-*) prerelease=true ;; esac
 base="https://github.com/$repo/releases/download/$tag"
 
 # clé du manifeste, nom stable du fichier (celui que publie release.yml)
+# windows-setup : installeur par utilisateur ; windows-setup-machine : par
+# machine (Program Files). L'application choisit celui de son installation
+# (internal/update) et vérifie son empreinte ici.
 files="windows-setup Lattis-windows-x64-setup.exe
+windows-setup-machine Lattis-windows-x64-setup-machine.exe
 windows-portable Lattis-windows-x64-portable.exe
 windows-msix Lattis-windows-x64.msix
 macos-dmg Lattis-macos-universal.dmg
