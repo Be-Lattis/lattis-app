@@ -26,7 +26,7 @@
 	import { Catalog, displayHeaders, quote, translate, type SqlObject } from '#lib/sql/names.js';
 	import { load, record, save, search, when, type HistoryEntry } from '#lib/sql/history.js';
 	import { isWrite } from '#lib/sql/write.js';
-	import { DEFAULT_NAME_HINT, isDefaultTableName } from '#lib/grid/defaultname.js';
+	import { defaultNameHint, isDefaultTableName } from '#lib/grid/defaultname.js';
 	import { example, isReadOnly, type ExampleKind } from '#lib/sql/examples.js';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { clip, clipped } from '#lib/ui/menu.js';
@@ -474,7 +474,7 @@
 							<span>{open === o.sqlName ? '▾' : '▸'}</span>
 							<span class="kind" title={isReadOnly(o) ? t('shell.sqlView.pivot') : t('shell.sqlView.table')}><Icon name={isReadOnly(o) ? 'pivot-table' : 'table'} size={14} /></span>
 							{#if !isReadOnly(o) && isDefaultTableName(o.name)}
-								<strong class="default-name" title={DEFAULT_NAME_HINT}>{o.name}</strong>
+								<strong class="default-name" title={defaultNameHint()}>{o.name}</strong>
 							{:else}
 								<strong>{o.name}</strong>
 							{/if}

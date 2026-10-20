@@ -49,7 +49,7 @@
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
 	import { htmlTabsEnabled, loadSettings, mcpAvailable, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
 	import ThemeDialog from '#lib/shell/ThemeDialog.svelte';
-	import { resolveTheme, themeCatalog, themeExtras, themeId, workbookTheme, type WorkbookTheme } from '#lib/grid/theme.js';
+	import { resolveTheme, themeCatalog, themeExtras, themeId, themeLabel, workbookTheme, type WorkbookTheme } from '#lib/grid/theme.js';
 	import { isThemeRef } from '#lib/grid/colors.js';
 	import { applyTheme } from '#lib/grid/theme.svelte.js';
 	import { listenExternal } from '#lib/ai/external.svelte.js';
@@ -2064,7 +2064,7 @@
 		try {
 			docState = await DocumentService.SetTheme(th);
 			await reload();
-			notice = t('shell.notice.theme', { name: th.name });
+			notice = t('shell.notice.theme', { name: themeLabel(th) });
 		} catch (e) {
 			notice = err(e);
 		}
@@ -2348,7 +2348,7 @@
 		onpage={mode === 'doc' ? pageCmd : undefined}
 		pageBreaks={showBreaks}
 		onpagebreaks={mode === 'doc' ? (on) => (showBreaks = on) : undefined}
-		themes={themeCat.map((t) => ({ id: t.id, name: t.name, table: t.table, source: t.source, on: bookTheme.id === t.id }))}
+		themes={themeCat.map((t) => ({ id: t.id, name: themeLabel(t), table: t.table, source: t.source, on: bookTheme.id === t.id }))}
 		ontheme={mode === 'doc' && !docState.readOnly && !layoutShared ? chooseTheme : undefined}
 	/>
 
@@ -2811,7 +2811,7 @@
 	{/if}
 	{#if themeOpen}
 		<ThemeDialog
-			initial={{ id: bookTheme.id ?? undefined, name: bookTheme.name, table: bookTheme.table.base, source: bookTheme.source.base, accents: [bookTheme.colors.accent3, bookTheme.colors.accent4, bookTheme.colors.accent5, bookTheme.colors.accent6], dark: bookTheme.colors.dk2, light: bookTheme.colors.lt2 }}
+			initial={{ id: bookTheme.id ?? undefined, name: themeLabel(bookTheme), table: bookTheme.table.base, source: bookTheme.source.base, accents: [bookTheme.colors.accent3, bookTheme.colors.accent4, bookTheme.colors.accent5, bookTheme.colors.accent6], dark: bookTheme.colors.dk2, light: bookTheme.colors.lt2 }}
 			mine={themeCat.filter((t) => t.origin === 'user')}
 			onpreview={(t) => (themePreview = t)}
 			onapply={applyCustomTheme}

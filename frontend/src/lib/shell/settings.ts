@@ -2,7 +2,7 @@
 // section. Chaque réglage est une clé de la configuration (config.json de
 // l'utilisateur) que le serveur accepte d'écrire (config.UserEditable).
 // Ajouter un réglage : une entrée ici, et sa clé dans UserEditable.
-import { themeCatalog } from '#lib/grid/theme.js';
+import { themeCatalog, themeLabel } from '#lib/grid/theme.js';
 import { LANG_NAMES, LANGS, systemLang, t } from '#lib/i18n/index.js';
 
 /** État d'un réglage rendu par DocumentService.Settings. */
@@ -170,7 +170,7 @@ export const settingSections: SettingSection[] = [
 				get label() {
 					return t('shell.settings.theme.label');
 				},
-				choicesOf: (list) => themeCatalog(list).map((t) => ({ value: t.id, label: t.name, swatch: [t.table, t.source] })),
+				choicesOf: (list) => themeCatalog(list).map((th) => ({ value: th.id, label: themeLabel(th), swatch: [th.table, th.source] })),
 				get help() {
 					return t('shell.settings.theme.help');
 				}
