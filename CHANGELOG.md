@@ -8,6 +8,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Corrections
 
+- Édition web : le lien « Ouvrir dans le navigateur » d'un classeur partagé (/w/…) ouvre bien ce classeur, au lieu d'un classeur vide ; le menu Compte affiche le nom ou l'e-mail de l'utilisateur au lieu de « ? ».
 - Classeur partagé, Serveur Lattis injoignable ou session expirée : la page de connexion propose « Ouvrir quand même (en local) », qui ouvre la copie de ce poste (modifiable hors ligne, avec Réessayer et Détacher du serveur) ; avant, le classeur ne s'ouvrait plus du tout.
 - Classeurs partagés : quand le Serveur Lattis redémarre pour une mise à jour, l'application se réabonne aussitôt au suivi des changements, sans afficher de déconnexion.
 

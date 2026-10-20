@@ -45,15 +45,16 @@ func sessions() (sessionSource, error) {
 type FixedSession struct {
 	// Server : adresse du serveur (émetteur), normalisée.
 	Server string
-	// Fetch rend un jeton d'accès, le rôle PostgreSQL de l'utilisateur et la
-	// durée de validité du jeton.
-	Fetch func(ctx context.Context) (token, pgRole string, ttl time.Duration, err error)
+	// Fetch rend un jeton d'accès, l'utilisateur (rôle PostgreSQL, et son
+	// identifiant, e-mail et nom quand lattisd les donne) et la durée de
+	// validité du jeton.
+	Fetch func(ctx context.Context) (token string, user auth.User, ttl time.Duration, err error)
 	// Client lit la découverte (http.DefaultClient si nil).
 	Client *http.Client
 
 	mu     sync.Mutex
 	token  string
-	role   string
+	user   auth.User
 	expiry time.Time
 	disc   *auth.Discovery
 }
@@ -82,7 +83,7 @@ func (f *FixedSession) Session(ctx context.Context, server string) (auth.User, *
 		return auth.User{}, nil, err
 	}
 	f.mu.Lock()
-	disc, role := f.disc, f.role
+	disc, user := f.disc, f.user
 	f.mu.Unlock()
 	if disc == nil {
 		hc := f.Client
@@ -97,7 +98,7 @@ func (f *FixedSession) Session(ctx context.Context, server string) (auth.User, *
 		f.disc, disc = d, d
 		f.mu.Unlock()
 	}
-	return auth.User{PGRole: role}, disc, nil
+	return user, disc, nil
 }
 
 // tokenSkew : un jeton est redemandé une minute avant son expiration.
@@ -114,11 +115,11 @@ func (f *FixedSession) Token(ctx context.Context, server string) (string, error)
 	if f.token != "" && time.Until(f.expiry) > tokenSkew {
 		return f.token, nil
 	}
-	tok, role, ttl, err := f.Fetch(ctx)
+	tok, user, ttl, err := f.Fetch(ctx)
 	if err != nil {
 		return "", msg.Wrap(err, "session.tokenRefused", msg.Args{"err": err})
 	}
-	f.token, f.role, f.expiry = tok, role, time.Now().Add(ttl)
+	f.token, f.user, f.expiry = tok, user, time.Now().Add(ttl)
 	return tok, nil
 }
 
@@ -140,52 +141,58 @@ func (f *FixedSession) state() LattisState {
 		st.Name = f.disc.Name
 	}
 	st.ServerName = st.Name
-	st.User = &auth.User{PGRole: f.role}
+	u := f.user
+	st.User = &u
 	return LattisState{Enabled: true, Servers: []auth.ServerState{st}}
 }
 
 // TokenURL fait lire les jetons de la session à lattisd : GET url, avec le
 // secret du moteur en Authorization: Bearer ; réponse
-// {"access_token", "pg_role", "expires_in"}.
-func TokenURL(url, secret string, hc *http.Client) func(ctx context.Context) (string, string, time.Duration, error) {
+// {"access_token", "pg_role", "expires_in"}, et depuis le serveur 2852cec
+// "user_id", "email", "display_name" (libellé du compte ; facultatifs).
+func TokenURL(url, secret string, hc *http.Client) func(ctx context.Context) (string, auth.User, time.Duration, error) {
 	if hc == nil {
 		hc = &http.Client{Timeout: 15 * time.Second}
 	}
-	return func(ctx context.Context) (string, string, time.Duration, error) {
+	return func(ctx context.Context) (string, auth.User, time.Duration, error) {
+		var none auth.User
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
-			return "", "", 0, err
+			return "", none, 0, err
 		}
 		if secret != "" {
 			req.Header.Set("Authorization", "Bearer "+secret)
 		}
 		resp, err := hc.Do(req)
 		if err != nil {
-			return "", "", 0, err
+			return "", none, 0, err
 		}
 		defer resp.Body.Close()
 		body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		if err != nil {
-			return "", "", 0, err
+			return "", none, 0, err
 		}
 		if resp.StatusCode != http.StatusOK {
-			return "", "", 0, fmt.Errorf("%s : %s", url, resp.Status)
+			return "", none, 0, fmt.Errorf("%s : %s", url, resp.Status)
 		}
 		var t struct {
 			AccessToken string `json:"access_token"`
 			PGRole      string `json:"pg_role"`
 			ExpiresIn   int64  `json:"expires_in"`
+			UserID      string `json:"user_id"`
+			Email       string `json:"email"`
+			DisplayName string `json:"display_name"`
 		}
 		if err := json.Unmarshal(body, &t); err != nil {
-			return "", "", 0, msg.Wrap(err, "session.unreadableResponse", msg.Args{"url": url, "err": err})
+			return "", none, 0, msg.Wrap(err, "session.unreadableResponse", msg.Args{"url": url, "err": err})
 		}
 		if t.AccessToken == "" || t.PGRole == "" {
-			return "", "", 0, msg.New("session.missingTokenOrRole", msg.Args{"url": url})
+			return "", none, 0, msg.New("session.missingTokenOrRole", msg.Args{"url": url})
 		}
 		ttl := time.Duration(t.ExpiresIn) * time.Second
 		if ttl <= 0 {
 			ttl = 5 * time.Minute
 		}
-		return t.AccessToken, t.PGRole, ttl, nil
+		return t.AccessToken, auth.User{ID: t.UserID, Email: t.Email, DisplayName: t.DisplayName, PGRole: t.PGRole}, ttl, nil
 	}
 }

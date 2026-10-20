@@ -20,7 +20,7 @@ func TestFixedSession(t *testing.T) {
 			return
 		}
 		calls.Add(1)
-		w.Write([]byte(`{"access_token":"tok","pg_role":"lea@acme.fr","expires_in":900}`))
+		w.Write([]byte(`{"access_token":"tok","pg_role":"lea@acme.fr","expires_in":900,"user_id":"u1","email":"lea@acme.fr","display_name":"Léa Martin"}`))
 	}))
 	defer srv.Close()
 	f := &FixedSession{Server: "https://lattis.acme.fr", Fetch: TokenURL(srv.URL, "s3cret", nil)}
@@ -41,7 +41,7 @@ func TestFixedSession(t *testing.T) {
 	if _, err := f.Token(ctx, "https://autre.fr"); !errors.Is(err, ErrOtherServer) {
 		t.Fatalf("autre serveur : %v", err)
 	}
-	if st := f.state(); !st.Enabled || len(st.Servers) != 1 || st.Servers[0].User == nil || st.Servers[0].User.PGRole != "lea@acme.fr" {
+	if st := f.state(); !st.Enabled || len(st.Servers) != 1 || st.Servers[0].User == nil || st.Servers[0].User.PGRole != "lea@acme.fr" || st.Servers[0].User.DisplayName != "Léa Martin" || st.Servers[0].User.Email != "lea@acme.fr" || st.Servers[0].User.ID != "u1" {
 		t.Fatalf("état : %+v", st)
 	}
 	bad := &FixedSession{Server: "https://lattis.acme.fr", Fetch: TokenURL(srv.URL, "faux", nil)}

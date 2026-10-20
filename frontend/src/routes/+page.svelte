@@ -55,6 +55,7 @@
 	import { applyTheme } from '#lib/grid/theme.svelte.js';
 	import { listenExternal } from '#lib/ai/external.svelte.js';
 	import { isWeb } from '#lib/web/platform.js';
+	import { withoutWorkbookParam, workbookParam } from '#lib/web/workbooklink.js';
 	import { followViewport, installLongPress } from '#lib/ui/mobile.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import DocPage from '#lib/doc/DocPage.svelte';
@@ -1292,6 +1293,20 @@
 			try {
 				bench = await GridService.BenchRequested();
 				if (bench) return startDemo();
+				// Édition web : /app/?workbook=<id> (lien /w/<id> de lattisd) ouvre ce
+				// classeur partagé, déjà ouvert ou non ; le paramètre est retiré.
+				const wb = isWeb ? workbookParam(location.search) : '';
+				if (wb) {
+					history.replaceState(history.state, '', withoutWorkbookParam(location.href));
+					loadRecent();
+					await loadLattis();
+					const server = lattis.state.servers?.[0]?.url ?? '';
+					try {
+						return await openedRemote(await DocumentService.ShareOpen(server, wb, ''));
+					} catch (e) {
+						notice = err(e); // classeur absent ou interdit : on démarre comme d'habitude
+					}
+				}
 				loadRecent();
 				firstRun = await DocumentService.FirstLaunch().catch(() => false);
 				// Le moteur survit à la page (web : rechargement, onglet fermé
