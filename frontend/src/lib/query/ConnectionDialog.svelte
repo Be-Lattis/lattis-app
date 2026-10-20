@@ -17,7 +17,7 @@
 	import { connected, hostOf, userName } from '#lib/remote/lattis.js';
 	import ServerPicker from '#lib/remote/ServerPicker.svelte';
 	import { onMount } from 'svelte';
-	import { errorText, t } from '#lib/i18n/index.js';
+	import { errorText, msgCause, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		connection?: Connection | null;
@@ -120,7 +120,7 @@
 			await DocumentService.SaveConnection(c, password, remember);
 			onsaved(c.name.trim());
 		} catch (e) {
-			if (/la connexion « .* » existe déjà/.test(err(e))) refused = e;
+			if (msgCause(e)?.id === 'query.connectionExists' || /la connexion « .* » existe déjà/.test(err(e))) refused = e;
 			else error = err(e);
 		} finally {
 			busy = false;
