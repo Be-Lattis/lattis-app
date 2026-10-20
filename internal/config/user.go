@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Réglages modifiables depuis l'interface (Fichier › Paramètres) : écrits
@@ -22,7 +24,7 @@ import (
 // UserEditable liste les clés que l'interface peut écrire.
 var UserEditable = []string{"features.htmlTabs", "features.sharedWorkbooks", "features.coEditing", "ai.enabled", "ai.dataSharing", "ai.provider", "ai.model", "ai.keepConversation", "ai.localUrl", "mcp.confirmWrites",
 	"limits.undoDepth", "limits.scriptSeconds", "limits.sqlReadSeconds", "limits.sqlWriteSeconds",
-	"ui.theme", "ui.themes"}
+	"ui.theme", "ui.themes", "ui.language"}
 
 // UserVisible liste les clés que l'interface lit sans les écrire.
 var UserVisible = []string{"ui.builtinThemes"}
@@ -118,7 +120,7 @@ func (l *Loader) SetUser(ctx context.Context, path string, v any) (*Config, erro
 	userMu.Lock()
 	defer userMu.Unlock()
 	if l.Load(ctx).Locked(path) {
-		return nil, fmt.Errorf("%s : réglage imposé par la stratégie de votre organisation", path)
+		return nil, msg.New("config.locked", msg.Args{"path": path})
 	}
 	file := l.userFile()
 	if file == "" {

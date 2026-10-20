@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ErrTable signale une opération impossible sur un tableau entier
@@ -34,10 +35,10 @@ func (m *Model) RenameTable(ctx context.Context, old, name string) error {
 func (m *Model) renameTableAs(ctx context.Context, old, name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" || identifier(name) != name {
-		return fmt.Errorf("%w : « %s » n'est pas un nom de tableau (lettres, chiffres et _, sans espace)", ErrTable, name)
+		return msg.Wrap(ErrTable, "table.invalidName", msg.Args{"name": name})
 	}
 	if A1Like(name) {
-		return fmt.Errorf("%w : « %s » est une adresse de cellule, ambiguë comme nom de tableau (essayez « %s_ »)", ErrTable, name, name)
+		return msg.Wrap(ErrTable, "table.cellAddress", msg.Args{"name": name})
 	}
 	return m.Do(ctx, "Renommer le tableau", func(t *tx) error {
 		tb, err := t.editTable(old)
@@ -52,7 +53,7 @@ func (m *Model) renameTableAs(ctx context.Context, old, name string) error {
 			return err
 		}
 		if k > 0 {
-			return fmt.Errorf("%w : « %s » existe déjà", ErrTable, name)
+			return msg.Wrap(ErrTable, "table.nameTaken", msg.Args{"name": name})
 		}
 		return t.renameTable(tb, name)
 	})

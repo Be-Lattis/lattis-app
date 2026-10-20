@@ -215,7 +215,7 @@ func (r numRule) coerce(v Value) Value {
 // (anglais), « SUM;c » (cellules), « SUM;ec ».
 func (r numRule) key(name string) string {
 	flags := ""
-	if r.loc == EN {
+	if r.loc.Dot {
 		flags += "e"
 	}
 	if r.cells {

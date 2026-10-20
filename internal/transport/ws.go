@@ -79,6 +79,10 @@ type Hub struct {
 	// OnIdle est appelé quand la dernière connexion se ferme (le moteur
 	// peut alors annuler ce qui attend l'interface).
 	OnIdle func()
+	// Translate rend le texte d'une erreur d'appel dans la langue de la
+	// session et sa cause (identifiant et paramètres d'un message traduit,
+	// nil sinon) ; nil : err.Error().
+	Translate func(err error) (message string, cause any)
 
 	mu    sync.Mutex
 	conns map[*conn]struct{}
@@ -239,6 +243,9 @@ func (h *Hub) handle(c *conn, req request) {
 		var ce *Error
 		if err != nil && !errors.As(err, &ce) {
 			ce = callError(CodeServer, "RuntimeError", err.Error())
+			if h.Translate != nil {
+				ce.Message, ce.Data.Cause = h.Translate(err)
+			}
 		}
 		h.reply(c, req.ID, res, ce)
 	}()

@@ -25,10 +25,10 @@ type funcDef struct {
 }
 
 func (f funcDef) name(l Locale) string {
-	if l == EN {
-		return f.EN
+	if l.french() {
+		return f.FR
 	}
-	return f.FR
+	return f.EN
 }
 
 func (f funcDef) arity() string {

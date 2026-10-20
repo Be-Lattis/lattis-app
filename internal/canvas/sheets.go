@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ErrSheet signale une opération impossible sur un onglet.
@@ -202,7 +203,7 @@ func (m *Model) renameSheetAs(ctx context.Context, sheet int64, name string, lin
 			return err
 		}
 		if taken {
-			return fmt.Errorf("%w : « %s » existe déjà (les noms de feuilles ne tiennent pas compte des majuscules)", ErrSheet, name)
+			return msg.Wrap(ErrSheet, "sheet.nameTaken", msg.Args{"name": name})
 		}
 		if err := t.renameSheet(sheet, old, name); err != nil {
 			return err

@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/config"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Hôte des services : ce que le bureau (Wails) et la version web (moteur
@@ -85,10 +86,13 @@ type Platform struct {
 	// vrai sur le bureau ; en web, réglage du serveur (web_scripting) lu à
 	// l'ouverture de la session.
 	Scripting bool `json:"scripting"`
+	// Locale : langue du système (« fr-FR ») sur le bureau, pour le réglage
+	// ui.language « auto » ; vide en web (celle du navigateur).
+	Locale string `json:"locale,omitempty"`
 }
 
 // errNoScripting refuse un script quand l'hôte ne le permet pas.
-var errNoScripting = errors.New("les scripts sont désactivés sur ce serveur (scripting web non autorisé par l'administrateur)")
+var errNoScripting = msg.New("script.disabled", nil)
 
 // defaultHost sert aux services sans hôte attribué : Wails sur le bureau
 // (host_wails.go), aucun hôte dans le moteur web compilé avec -tags web.
@@ -227,7 +231,13 @@ func Start(ctx context.Context, grid *GridService, docs *DocumentService) error 
 // Platform décrit l'hôte à l'interface : version web (pas de boutons de
 // fenêtre, fichiers envoyés et téléchargés) et scripting permis (onglet
 // Script, boutons, pages web et serveur MCP masqués sinon).
-func (s *DocumentService) Platform() Platform { return s.sys().Platform() }
+func (s *DocumentService) Platform() Platform {
+	p := s.sys().Platform()
+	if !p.Web {
+		p.Locale = msg.SystemLocale()
+	}
+	return p
+}
 
 var errNoMCPWeb = errors.New("le serveur MCP local n'existe pas dans la version web")
 

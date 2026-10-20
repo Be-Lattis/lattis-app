@@ -8,23 +8,62 @@ import (
 	"unicode"
 )
 
-// Locale fixe le séparateur décimal et le séparateur d'arguments.
-type Locale int
+// Locale fixe la langue des noms de fonctions (et de VRAI/FAUX), le
+// séparateur décimal et le séparateur d'arguments, choisis à part :
+// l'allemand et l'espagnol écrivent 3,5 et SUMME(a; b) comme le français
+// (voir ForLanguage). La valeur zéro est le français. Les formules des
+// colonnes sont stockées en EN, quelle que soit la langue de l'utilisateur.
+type Locale struct {
+	Names NameLang
+	// Dot : décimale « . » et arguments séparés par « , » (3.5, SUM(a, b)) ;
+	// sinon décimale « , » et « ; » (3,5, SOMME(a; b)).
+	Dot bool
+}
+
+// NameLang : langue des noms de fonctions. Seuls le français et l'anglais ont
+// les leurs ; NamesDE et NamesES prennent les noms anglais en attendant.
+type NameLang uint8
 
 const (
-	FR Locale = iota // 3,5 et SOMME(a; b)
-	EN               // 3.5 et SUM(a, b)
+	NamesFR NameLang = iota
+	NamesEN
+	NamesDE
+	NamesES
 )
 
+var (
+	FR = Locale{}                          // 3,5 et SOMME(a; b)
+	EN = Locale{Names: NamesEN, Dot: true} // 3.5 et SUM(a, b)
+)
+
+// ForLanguage donne la locale des formules d'une langue de l'interface
+// (fr, en, de, es, zh) : « ; » et décimale « , » en français, allemand et
+// espagnol, « , » et « . » en anglais et en chinois ; noms français en
+// français, anglais ailleurs. Langue inconnue : le français.
+func ForLanguage(lang string) Locale {
+	switch strings.ToLower(lang) {
+	case "en", "zh":
+		return EN
+	case "de":
+		return Locale{Names: NamesDE}
+	case "es":
+		return Locale{Names: NamesES}
+	}
+	return FR
+}
+
+// french : noms français (fonctions, VRAI et FAUX).
+func (l Locale) french() bool { return l.Names == NamesFR }
+
 func (l Locale) sep() rune {
-	if l == EN {
+	if l.Dot {
 		return ','
 	}
 	return ';'
 }
 
 func (l Locale) decimal() rune {
-	if l == EN {
+	if l.Dot {
 		return '.'
 	}
 	return ','
@@ -247,7 +286,7 @@ func lex(src string, loc Locale) ([]token, error) {
 			toks = append(toks, token{kind: kind, pos: start})
 			i++
 			continue
-		case loc == EN && c == ';', loc == FR && (c == '.' || c == '\\'):
+		case loc.Dot && c == ';', !loc.Dot && (c == '.' || c == '\\'):
 			toks = append(toks, token{kind: tArraySep, text: string(c), pos: start})
 			i++
 			continue
@@ -554,7 +593,7 @@ func (p *parser) primary() (Node, error) {
 // les lignes par « ; ». Toutes les lignes ont le même nombre de valeurs.
 func (p *parser) array(open token) (Node, error) {
 	colSep, rowSep := tArraySep, tSep
-	if p.loc == EN {
+	if p.loc.Dot {
 		colSep, rowSep = tSep, tArraySep
 	}
 	var rows [][]Node
@@ -588,7 +627,7 @@ func (p *parser) array(open token) (Node, error) {
 			// En français, le « . » qui suit VRAI ou FAUX est lu avec le mot
 			// (les noms de fonction en contiennent) : c'est le séparateur.
 			word, dot := t.text, false
-			if p.loc == FR && strings.HasSuffix(word, ".") && strings.Count(word, ".") == 1 {
+			if !p.loc.Dot && strings.HasSuffix(word, ".") && strings.Count(word, ".") == 1 {
 				word, dot = strings.TrimSuffix(word, "."), true
 			}
 			switch strings.ToUpper(word) {
@@ -631,7 +670,7 @@ func (p *parser) array(open token) (Node, error) {
 
 // arrayColSep : séparateur des colonnes d'une constante matricielle.
 func arrayColSep(loc Locale) string {
-	if loc == EN {
+	if loc.Dot {
 		return ","
 	}
 	return "."
@@ -874,9 +913,9 @@ func format(b *strings.Builder, n Node, loc Locale) {
 		b.WriteString(`"` + strings.ReplaceAll(n.V, `"`, `""`) + `"`)
 	case BoolLit:
 		switch {
-		case loc == EN && n.V:
+		case !loc.french() && n.V:
 			b.WriteString("TRUE")
-		case loc == EN:
+		case !loc.french():
 			b.WriteString("FALSE")
 		default:
 			b.WriteString(Boolean(n.V).String())

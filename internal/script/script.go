@@ -25,6 +25,7 @@ import (
 
 	lua "github.com/yuin/gopher-lua"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/sqltext"
 	"github.com/lalamefine/lattis/internal/store"
 )
@@ -99,11 +100,11 @@ type Result struct {
 	Return any `json:"-"`
 }
 
-// Raisons d'arrêt.
+// Raisons d'arrêt (messages traduits, internal/msg).
 var (
-	ErrTimeout  = errors.New("script arrêté : durée maximale dépassée")
-	ErrStopped  = errors.New("script arrêté par l'utilisateur")
-	ErrMemory   = errors.New("script arrêté : trop de mémoire utilisée")
+	ErrTimeout  = msg.New("script.timeout", nil)
+	ErrStopped  = msg.New("script.stopped", nil)
+	ErrMemory   = msg.New("script.memory", nil)
 	ErrReadOnly = errors.New("ce script ne peut pas modifier le classeur")
 )
 

@@ -133,6 +133,8 @@ type Error struct {
 // ErrorData précise une erreur.
 type ErrorData struct {
 	Kind string `json:"kind"`
+	// Cause : précisions d'un message traduit (bridge.ErrorCause).
+	Cause any `json:"cause,omitempty"`
 }
 
 func (e *Error) Error() string { return e.Message }

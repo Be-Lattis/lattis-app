@@ -815,6 +815,12 @@ export interface Platform {
      * l'ouverture de la session.
      */
     "scripting": boolean;
+
+    /**
+     * Locale : langue du système (« fr-FR ») sur le bureau, pour le réglage
+     * ui.language « auto » ; vide en web (celle du navigateur).
+     */
+    "locale"?: string;
 }
 
 /**

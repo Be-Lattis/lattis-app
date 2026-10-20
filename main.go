@@ -137,6 +137,9 @@ func main() {
 		// Une panique est journalisée dans erreurs.log et signalée dans la
 		// barre d'état, sans arrêter l'application.
 		PanicHandler: bridge.PanicHandler,
+		// Erreurs traduites (internal/msg) : identifiant, paramètres et texte
+		// dans la langue de la session, en cause de l'erreur d'appel.
+		MarshalError: bridge.MarshalError,
 		// Fenêtre sans cadre : le runtime JavaScript de Wails repère les bords
 		// à saisir pour redimensionner. Il lit ces clés telles quelles (avec
 		// le point) et prend 5 px sinon, une bande trop fine à attraper ;

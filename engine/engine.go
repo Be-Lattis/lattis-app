@@ -83,6 +83,8 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 	}
 	e.hub = transport.NewHub(reg)
 	e.hub.Accept = &websocket.AcceptOptions{OriginPatterns: o.OriginPatterns}
+	// Messages du moteur dans la langue de la session (internal/msg).
+	e.hub.Translate = bridge.ErrorTranslator(e.docs)
 	secrets := o.Secrets
 	if secrets == nil {
 		secrets = &bridge.MemSecrets{}

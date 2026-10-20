@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -131,6 +132,35 @@ type Model struct {
 
 	// Partage sur un Serveur Lattis (nil : classeur local), voir SetSharing.
 	sharing Sharing
+
+	// Locale des formules de la session (langue de l'interface), voir
+	// SetLocale ; français par défaut.
+	locMu sync.Mutex
+	loc   formula.Locale
+}
+
+// SetLocale fixe la locale des formules de la session (formula.ForLanguage
+// de la langue de l'interface). Elle règle aujourd'hui la lecture des
+// nombres écrits en texte (Schema.Numbers, décision 0013) ; la saisie et
+// l'affichage des formules restent en français (docs/i18n.md, lot 5).
+func (m *Model) SetLocale(loc formula.Locale) {
+	m.locMu.Lock()
+	same := m.loc == loc
+	m.loc = loc
+	m.locMu.Unlock()
+	if !same {
+		// Résultats en cache calculés avec l'ancienne lecture.
+		m.cacheMu.Lock()
+		m.cache, m.depCache = nil, nil
+		m.cacheMu.Unlock()
+	}
+}
+
+// Locale : la locale des formules de la session.
+func (m *Model) Locale() formula.Locale {
+	m.locMu.Lock()
+	defer m.locMu.Unlock()
+	return m.loc
 }
 
 // Sharing décide, dans un classeur partagé sur un Serveur Lattis, quels

@@ -1923,6 +1923,13 @@ export function SetKey(table: string, i: number): $CancellablePromise<$models.Do
 }
 
 /**
+ * SetLanguage fixe la langue de la session (fr, en, de, es, zh).
+ */
+export function SetLanguage(lang: string): $CancellablePromise<void> {
+    return $Call.ByID(4114325508, lang);
+}
+
+/**
  * SetLineRules fixe la mise en forme conditionnelle de lignes (rows) ou de
  * colonnes entières i0 à i1 de la feuille (aucune règle : la retire).
  */

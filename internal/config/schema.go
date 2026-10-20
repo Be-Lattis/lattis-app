@@ -203,8 +203,9 @@ func Defaults() Tree {
 		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only",
 			"localUrl": "http://localhost:11434/v1"}, // Ollama
 		"mcp": Tree{"confirmWrites": false},
-		// Thème de couleur par défaut des classeurs (décision 0017).
-		"ui": Tree{"theme": DefaultTheme, "builtinThemes": true},
+		// Thème de couleur par défaut des classeurs (décision 0017). Langue :
+		// auto suit le système (docs/i18n.md).
+		"ui": Tree{"theme": DefaultTheme, "builtinThemes": true, "language": "auto"},
 		"limits": Tree{
 			"undoDepth":       float64(LimitRanges["limits.undoDepth"].Default),
 			"scriptSeconds":   float64(LimitRanges["limits.scriptSeconds"].Default),
@@ -346,6 +347,7 @@ var validators = []struct {
 	{"ai.keepConversation", isBool},
 	{"mcp.confirmWrites", isBool},
 	{"ui.theme", isIdent},
+	{"ui.language", oneOf("auto", "fr", "en", "de", "es", "zh")},
 	{"ui.builtinThemes", isBool},
 	{"ui.themes", isThemes},
 	{"ui.themes.*", isTheme},

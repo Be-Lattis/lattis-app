@@ -299,6 +299,8 @@ func (t *tx) schemaRaw() (*formula.Schema, error) {
 	s := &formula.Schema{Sheets: map[string]bool{}}
 	if t.m != nil {
 		s.Now, s.Seed = t.m.volatile()
+		// Nombres écrits en texte : selon la langue de la session (décision 0013).
+		s.Numbers = t.m.Locale()
 	}
 	sheets, err := t.sheetIDs()
 	if err != nil {

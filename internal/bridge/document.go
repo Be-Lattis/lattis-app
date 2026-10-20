@@ -19,6 +19,7 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/protocol"
@@ -120,13 +121,14 @@ type DocumentService struct {
 	data     dataWatch               // données du Data Lake liées : suivi en direct (data.go)
 	lost     string                  // file d'envoi du classeur fermé pas gardée (replace) : message pour State
 	sql      sqlRuns                 // requêtes en cours de l'onglet SQL (execute.go)
+	lang     langState               // langue de la session (lang.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState
 }
 
 var (
-	errNoDoc  = errors.New("aucun classeur ouvert")
+	errNoDoc  = msg.New("doc.none", nil)
 	errNoDemo = errors.New("aucune démonstration demandée au lancement (--demo)")
 )
 
@@ -171,6 +173,7 @@ func (s *DocumentService) replace(d *doc.Document) error {
 	s.doc, s.tables, s.memo = d, map[int64]*grid.Table{}, nil
 	s.mu.Unlock()
 	s.resetEvents()
+	applyLocale(d, s.sessionLang()) // locale des formules de la session
 	// Classeur partagé : suivi de son serveur (republications, connexion).
 	if d != nil {
 		s.watchShare(d)

@@ -34,7 +34,7 @@ func Functions(loc Locale) []FunctionInfo {
 		}
 		seen[f.EN] = true
 		other := EN
-		if loc == EN {
+		if !loc.french() {
 			other = FR
 		}
 		d := docs[f.EN]
