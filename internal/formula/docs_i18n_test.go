@@ -19,11 +19,14 @@ var capsWord = regexp.MustCompile(`\b[A-Z][A-Z0-9]*(?:\.[A-Z0-9]+)*\b`)
 // un exemple en anglais qui utilise la fonction et se réécrit dans chaque
 // locale.
 func TestDocsTranslated(t *testing.T) {
-	banned := map[string]bool{"TRUE": true, "FALSE": true}
+	banned := map[string]bool{"TRUE": true, "FALSE": true, "WAHR": true, "FALSCH": true, "VERDADERO": true, "FALSO": true}
 	for _, f := range funcs {
 		banned[f.EN] = true
 		banned[f.FR] = true
+		banned[namesDE[f.EN]] = true
+		banned[namesES[f.EN]] = true
 	}
+	delete(banned, "")
 	locales := []Locale{FR, EN, ForLanguage("de"), ForLanguage("es")}
 	checkText := func(lang msg.Lang, fn, what, s string) {
 		for _, m := range docMark.FindAllStringSubmatch(s, -1) {
@@ -158,6 +161,14 @@ func TestHelpCatalog(t *testing.T) {
 	}
 	if d := find(de, "SI").Args[2].Desc; !strings.Contains(d, "FAUX") {
 		t.Errorf("SI en allemand, locale française : %q", d)
+	}
+	// Allemand : noms, booléens et codes d'erreur allemands dans les textes.
+	deDE := HelpCatalog(ForLanguage("de"), msg.DE)
+	if f := find(deDE, "TEILERGEBNIS"); !strings.Contains(f.Args[0].Desc, "9 SUMME") || f.Example != "=TEILERGEBNIS(9; Verkäufe[Betrag])" {
+		t.Errorf("TEILERGEBNIS en allemand : %+v", f)
+	}
+	if f := find(deDE, "WENNFEHLER"); !strings.Contains(f.Args[1].Desc, "#WERT!") || !strings.Contains(find(deDE, "WENN").Args[2].Desc, "FALSCH") {
+		t.Errorf("WENNFEHLER en allemand : %+v", f)
 	}
 	// Français : le catalogue de toujours.
 	fr := HelpCatalog(FR, msg.FR)
