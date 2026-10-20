@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -254,5 +255,34 @@ func TestEngineStatic(t *testing.T) {
 		if !strings.Contains(b.String(), want) {
 			t.Errorf("%s : %q", path, b.String())
 		}
+	}
+}
+
+// Sous un préfixe (lattisd : --base-path /app), la page de repli cite ses
+// ressources et sa base SvelteKit sous le préfixe ; les ressources s'y servent.
+func TestEngineStaticBasePath(t *testing.T) {
+	page := `<link href="/_app/immutable/entry/start.js" rel="modulepreload"><script>__sk = { base: "", version: "1" }; import("/_app/immutable/entry/start.js")</script>`
+	files := fstest.MapFS{
+		"index.html":                    {Data: []byte(page)},
+		"_app/immutable/entry/start.js": {Data: []byte("export{}")},
+	}
+	_, srv := newEngine(t, Options{Static: files, BasePath: "/app"})
+	get := func(p string) (int, string) {
+		resp, err := http.Get(srv.URL + p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, string(b)
+	}
+	for _, p := range []string{"/app/", "/app/index.html", "/app/feuille/2"} {
+		code, body := get(p)
+		if code != 200 || !strings.Contains(body, `href="/app/_app/immutable/entry/start.js"`) || !strings.Contains(body, `import("/app/_app/immutable/entry/start.js")`) || !strings.Contains(body, `base: "/app"`) || strings.Contains(body, `"/_app/`) {
+			t.Errorf("%s : %d %q", p, code, body)
+		}
+	}
+	if code, body := get("/app/_app/immutable/entry/start.js"); code != 200 || body != "export{}" {
+		t.Errorf("ressource : %d %q", code, body)
 	}
 }

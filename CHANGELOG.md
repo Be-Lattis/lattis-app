@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Corrections
+
+- Édition web servie par un Serveur Lattis sous /app/ : la page restait blanche (ressources /_app/ en 404) ; le moteur sert maintenant la page avec ses chemins sous son préfixe (--base-path).
+
 ## 0.1.0-beta.3.1 (20/10/2026)
 
 ### Nouveautés

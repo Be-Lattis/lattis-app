@@ -18,6 +18,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 
 	"github.com/coder/websocket"
 	"github.com/lalamefine/lattis/internal/bridge"
@@ -107,7 +108,7 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 	e.mux.HandleFunc("POST "+base+"/upload/{id}", e.host.serveUpload)
 	e.mux.HandleFunc("GET "+base+"/download/{token}", e.host.serveDownload)
 	if o.Static != nil {
-		e.mux.Handle("GET "+base+"/", http.StripPrefix(base, spa(o.Static)))
+		e.mux.Handle("GET "+base+"/", http.StripPrefix(base, spa(o.Static, base)))
 		if base != "" {
 			// /app → /app/ : les chemins relatifs de la page (ressources, ws)
 			// partent du préfixe.
@@ -141,18 +142,56 @@ func (e *Engine) Close() error {
 
 // spa sert les fichiers du frontend, et index.html pour les autres chemins
 // (application d'une seule page : adapter-static, fallback index.html).
-func spa(files fs.FS) http.Handler {
+// Sous un préfixe (--base-path /app, lattisd), la page de repli de
+// SvelteKit cite ses ressources en absolu (/_app/…) et une base vide : elles
+// sont réécrites sous le préfixe (/app/_app/…, base "/app"), sinon la page
+// reste blanche (ressources en 404, lattisd ne route que /app/*).
+func spa(files fs.FS, base string) http.Handler {
 	fsrv := http.FileServerFS(files)
+	var once sync.Once
+	var page []byte
+	index := func(w http.ResponseWriter, r *http.Request) bool {
+		if base == "" {
+			return false
+		}
+		once.Do(func() {
+			if b, err := fs.ReadFile(files, "index.html"); err == nil {
+				page = rebase(b, base)
+			}
+		})
+		if page == nil {
+			return false
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache")
+		if r.Method != http.MethodHead {
+			w.Write(page)
+		}
+		return true
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
-		if p != "" {
-			if st, err := fs.Stat(files, p); err != nil || st.IsDir() {
-				r2 := r.Clone(r.Context())
-				r2.URL.Path = "/"
-				fsrv.ServeHTTP(w, r2)
+		if p == "" || p == "index.html" {
+			if index(w, r) {
 				return
 			}
+		} else if st, err := fs.Stat(files, p); err != nil || st.IsDir() {
+			if index(w, r) {
+				return
+			}
+			r2 := r.Clone(r.Context())
+			r2.URL.Path = "/"
+			fsrv.ServeHTTP(w, r2)
+			return
 		}
 		fsrv.ServeHTTP(w, r)
 	})
+}
+
+// rebase place sous le préfixe base les chemins absolus de la page de repli
+// (/_app/…) et sa base SvelteKit (base: "").
+func rebase(page []byte, base string) []byte {
+	s := strings.ReplaceAll(string(page), `"/_app/`, `"`+base+`/_app/`)
+	s = strings.Replace(s, `base: ""`, `base: "`+base+`"`, 1)
+	return []byte(s)
 }
