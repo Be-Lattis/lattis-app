@@ -2,8 +2,6 @@ package canvas
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"math"
 	"slices"
 	"strings"
@@ -95,7 +93,7 @@ func (m *Model) RangeToValues(ctx context.Context, sheet int64, r0, c0, r1, c1 i
 		}
 		if cols == 0 && cells == 0 {
 			if kept > 0 {
-				return errors.New(plural(kept, "La formule de la sélection déverse un tableau dynamique : elle est gardée", "Les formules de la sélection déversent des tableaux dynamiques : elles sont gardées"))
+				return msg.New("toValues.spillKept", msg.Args{"n": kept})
 			}
 			return msg.New("toValues.nothing", nil)
 		}
@@ -113,22 +111,22 @@ func (t *tx) valuesNote(tb Table, idx []int, cols, cells, kept int) {
 	var parts []string
 	switch {
 	case cols == 1 && len(idx) == 1:
-		parts = append(parts, fmt.Sprintf("Colonne « %s » convertie en valeurs (la formule est retirée", tb.Cols[idx[0]].Name))
+		parts = append(parts, t.say("toValues.column", msg.Args{"column": tb.Cols[idx[0]].Name}))
 	case cols > 0:
-		parts = append(parts, fmt.Sprintf("%d colonnes converties en valeurs (les formules sont retirées", cols))
+		parts = append(parts, t.say("toValues.columns", msg.Args{"n": cols}))
 	}
 	if cells > 0 {
-		s := plural(cells, "1 cellule convertie en valeur", fmt.Sprintf("%d cellules converties en valeurs", cells))
+		id := msg.ID("toValues.cells")
 		if len(parts) == 0 {
-			s = strings.ToUpper(s[:1]) + s[1:] + " (formules retirées"
+			id = "toValues.cellsAlone"
 		}
-		parts = append(parts, s)
+		parts = append(parts, t.say(id, msg.Args{"n": cells}))
 	}
 	note := strings.Join(parts, ", ")
 	if kept > 0 {
-		note += plural(kept, " ; 1 formule déversée gardée", fmt.Sprintf(" ; %d formules déversées gardées", kept))
+		note += t.say("toValues.spilledKept", msg.Args{"n": kept})
 	}
-	t.notes = append(t.notes, note+" ; Ctrl+Z pour annuler)")
+	t.notes = append(t.notes, note+t.say("toValues.undo", nil))
 }
 
 // columnsToValues fait des colonnes calculées idx de tb des colonnes de

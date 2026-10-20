@@ -3,7 +3,6 @@ package canvas
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
 	"slices"
 	"strings"
@@ -88,7 +87,7 @@ func (m *Model) PreviewPivotFormula(ctx context.Context, source, src string) (Ch
 			return nil
 		}
 		if miss := missingColumns(tb, cols); len(miss) > 0 {
-			out.Error = fmt.Sprintf("%s n'a pas les colonnes %s", tb.Name, quoteList(miss))
+			out.Error = m.say("pivot.tableMissingColumns", msg.Args{"table": tb.Name, "columns": quoteList(miss)})
 			return nil
 		}
 		expr, ok, err := t.rowLabelSQL(tb, en)
@@ -138,7 +137,7 @@ func (m *Model) SetPivotCalcField(ctx context.Context, id int64, old, name, src 
 		}
 		var cfg PivotConfig
 		if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-			return fmt.Errorf("%w : configuration illisible", ErrPivot)
+			return msg.Wrap(ErrPivot, "pivot.unreadableConfig", nil)
 		}
 		cfg = cfg.normalized()
 		calc := slices.Clone(cfg.Calc)

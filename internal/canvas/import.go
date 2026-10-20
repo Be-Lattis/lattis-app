@@ -175,7 +175,7 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 					if !userError(err) {
 						return err
 					}
-					res.Warnings = append(res.Warnings, fmt.Sprintf("%s[%s] : %s ; valeurs importées sans la formule %s", tb.Name, tb.Cols[i].Name, err, f))
+					res.Warnings = append(res.Warnings, m.say("import.formulaDropped", msg.Args{"table": tb.Name, "column": tb.Cols[i].Name, "err": err, "formula": f}))
 				}
 			}
 		}
@@ -188,7 +188,7 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 					case err == nil:
 						raw = formula.Format(n, formula.FR)
 					case userError(err):
-						res.Warnings = append(res.Warnings, fmt.Sprintf("%s, ligne %d, colonne %d : %s ; valeur importée sans la formule %s", s.Name, c.Row+1, c.Col+1, err, raw))
+						res.Warnings = append(res.Warnings, m.say("import.cellFormulaDropped", msg.Args{"sheet": s.Name, "row": c.Row + 1, "column": c.Col + 1, "err": err, "formula": raw}))
 						raw = c.Fallback
 					default:
 						return err

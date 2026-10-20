@@ -138,6 +138,16 @@ func (e *Error) Text(l Lang) string { return Format(l, e.ID, e.Args) }
 
 func (e *Error) Unwrap() error { return e.Err }
 
+// Msg : le message de l'erreur.
+func (e *Error) Msg() Message { return Message{ID: e.ID, Args: e.Args} }
+
+// Messager : une erreur qui porte un message (*Error, ou une erreur typée
+// dont Error() est Msg().String()) ; Text et le pont la traduisent.
+type Messager interface {
+	error
+	Msg() Message
+}
+
 // Is : même message (deux *Error de même identifiant).
 func (e *Error) Is(target error) bool {
 	t, ok := target.(*Error)
@@ -180,22 +190,22 @@ func (a Args) In(l Lang) Args {
 	return out
 }
 
-// Text rend err dans la langue l : traduite si c'est un *Error, ou si elle
-// en enveloppe un (fmt.Errorf("…: %w", e) : seul le texte de e change) ;
-// err.Error() sinon.
+// Text rend err dans la langue l : traduite si c'est un Messager (*Error,
+// erreur typée), ou si elle en enveloppe un (fmt.Errorf("…: %w", e) : seul
+// le texte de e change) ; err.Error() sinon.
 func Text(l Lang, err error) string {
 	if err == nil {
 		return ""
 	}
-	var e *Error
-	if !errors.As(err, &e) || l == FR {
+	var m Messager
+	if !errors.As(err, &m) || l == FR {
 		return err.Error()
 	}
-	s, fr := err.Error(), e.Error()
+	s, fr, tr := err.Error(), m.Error(), m.Msg().Text(l)
 	if s == fr {
-		return e.Text(l)
+		return tr
 	}
-	return strings.Replace(s, fr, e.Text(l), 1)
+	return strings.Replace(s, fr, tr, 1)
 }
 
 // render remplace les {paramètres} et choisit les pluriels de s ; hash est

@@ -147,7 +147,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 	switch s.Op {
 	case OpFilter:
 		if len(s.Conditions) == 0 {
-			return "", nil, errors.New("filtre sans condition")
+			return "", nil, msg.New("query.filterNoCondition", nil)
 		}
 		var conds []string
 		for _, c := range s.Conditions {
@@ -247,7 +247,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 			parts = 2
 		}
 		if parts > 100 {
-			return "", nil, errors.New("100 colonnes au plus")
+			return "", nil, msg.New("query.maxColumns", nil)
 		}
 		var out []Column
 		var sel []string
@@ -544,7 +544,7 @@ func expression(cols []Column, src string) (string, error) {
 				j++
 			}
 			if j >= len(rs) {
-				return "", errors.New("[ sans ] dans l'expression")
+				return "", msg.New("query.unbalancedBracket", nil)
 			}
 			k, err := find(cols, string(rs[i+1:j]))
 			if err != nil {

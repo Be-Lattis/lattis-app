@@ -144,11 +144,11 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 				return err
 			}
 		case a == rowsAxis && lo <= tb.Row:
-			what := "la ligne d'en-tête du tableau « %s » ne se supprime pas seule"
+			id := msg.ID("table.headerRowNotDeletable")
 			if tb.TwoLevel {
-				what = "les deux lignes d'en-tête du tableau « %s » ne se suppriment pas seules"
+				id = "table.headerRowsNotDeletable"
 			}
-			return fmt.Errorf("%w : "+what+" ; sélectionnez tout le tableau ou seulement des lignes de données", ErrTable, tb.Name)
+			return msg.Wrap(ErrTable, id, msg.Args{"table": tb.Name})
 		case a == rowsAxis:
 			if err := t.deleteTableRows(tb, lo-tb.Row-1, min(hi, last)-tb.Row-1); err != nil {
 				return err

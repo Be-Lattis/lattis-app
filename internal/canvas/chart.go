@@ -208,7 +208,7 @@ func checkChart(cfg ChartConfig) error {
 		return msg.Wrap(ErrChart, "chart.unknownMapMode", msg.Args{"mode": fmt.Sprintf("%q", cfg.MapMode)})
 	}
 	if cfg.Blanks != "" && cfg.Blanks != "gap" && cfg.Blanks != "zero" && cfg.Blanks != "span" {
-		return fmt.Errorf("%w : cellules vides %q inconnues (gap, zero ou span)", ErrChart, cfg.Blanks)
+		return msg.Wrap(ErrChart, "chart.unknownBlanks", msg.Args{"blanks": fmt.Sprintf("%q", cfg.Blanks)})
 	}
 	if cfg.Bins < 0 || cfg.Bins > 200 {
 		return msg.Wrap(ErrChart, "chart.binsRange", nil)
@@ -718,7 +718,7 @@ func (m *Model) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, 
 		return msg.Wrap(ErrChart, "chart.positionOutOfSheet", nil)
 	}
 	if width < MinChartWidth || height < MinChartHeight {
-		return fmt.Errorf("%w : taille minimale %d × %d pixels", ErrChart, MinChartWidth, MinChartHeight)
+		return msg.Wrap(ErrChart, "chart.minSize", msg.Args{"width": MinChartWidth, "height": MinChartHeight})
 	}
 	return m.Do(ctx, "Déplacer le graphique", func(t *tx) error {
 		if err := t.guardObject(`_lattis_charts`, id); err != nil {

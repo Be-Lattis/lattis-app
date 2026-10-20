@@ -210,7 +210,7 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 			return err
 		}
 		if err := p.SaveMeta(ctx, info.WorkbookID, layoutKind, out.base); err != nil {
-			return fmt.Errorf("mise en page : %w", err)
+			return msg.Wrap(err, "publish.layoutError", msg.Args{"err": err})
 		}
 		scripts, err := localScripts(ctx, rtx)
 		if err != nil {

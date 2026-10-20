@@ -409,7 +409,7 @@ func (t *tx) prepareSheetsMerge(plan MergePlan) (*sheetsMerge, error) {
 		}
 		fj.j = j
 		if cat != nil && mode == FamilyMerge && !fj.follows(main) {
-			sm.notes = append(sm.notes, fmt.Sprintf("« %s » a déjà une colonne « %s » : sa colonne de catégorie s'appelle « %s » et il ne suivra pas l'onglet à choix", j.plan.Name, cat.Name, j.plan.Category.Name))
+			sm.notes = append(sm.notes, t.say("note.categoryRenamed", msg.Args{"table": j.plan.Name, "column": cat.Name, "category": j.plan.Category.Name}))
 		}
 		if mode == FamilyOnce && len(fj.drop) > 0 {
 			same, err := t.sameData(append([]Table{j.srcs[0].tb}, fj.drop...))
@@ -417,7 +417,7 @@ func (t *tx) prepareSheetsMerge(plan MergePlan) (*sheetsMerge, error) {
 				return nil, err
 			}
 			if !same {
-				sm.notes = append(sm.notes, fmt.Sprintf("« %s » : seul l'exemplaire de « %s » est gardé (les autres onglets en avaient une autre version)", j.plan.Name, j.srcs[0].sheet))
+				sm.notes = append(sm.notes, t.say("note.familyKeptOne", msg.Args{"table": j.plan.Name, "sheet": j.srcs[0].sheet}))
 			}
 		}
 		sm.notes = append(sm.notes, j.notes...)
@@ -758,7 +758,7 @@ func (m *Model) MergePreview(ctx context.Context, plan MergePlan) (MergePreview,
 			if i == 0 {
 				p.Key, p.KeyNote, p.KeyKept = j.cols[j.key].Name, note, note == ""
 			} else if note != "" {
-				p.Notes = append(p.Notes, fmt.Sprintf("« %s » : %s", fj.j.plan.Name, note))
+				p.Notes = append(p.Notes, m.say("mergeSheets.familyNote", msg.Args{"table": fj.j.plan.Name, "note": note}))
 			}
 		}
 		gone, err := t.deletableSheets(sm.allSources())
@@ -1165,7 +1165,7 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 		}
 		res.Notes = append(res.Notes, kept...)
 		if len(pending) > 0 {
-			res.Notes = append(res.Notes, fmt.Sprintf("%s citai%s les anciens tableaux : à reprendre", plural(len(pending), "Une formule ou un objet", fmt.Sprintf("%d formules ou objets", len(pending))), plural(len(pending), "t", "ent")))
+			res.Notes = append(res.Notes, t.say("mergeSheets.pendingRefs", msg.Args{"n": len(pending)}))
 		}
 	}
 	// 6. Références (§8) : reprises sur les tableaux communs, une fois les
@@ -1259,7 +1259,7 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 	}
 	for _, fj := range sm.jobs[1:] {
 		if fj.keyNote != "" && fj.j.key >= 0 {
-			res.Notes = append(res.Notes, fmt.Sprintf("« %s » : %s", fj.j.plan.Name, fj.keyNote))
+			res.Notes = append(res.Notes, t.say("mergeSheets.familyNote", msg.Args{"table": fj.j.plan.Name, "note": fj.keyNote}))
 		}
 	}
 	if err := t.moveSheet(sheet, at); err != nil {
@@ -1278,42 +1278,38 @@ func (t *tx) mergeSheets(plan MergePlan) (MergeResult, error) {
 	res.Cells, res.PerValue = len(sm.cells), sm.perValue()
 	res.Notes = append(append(append([]string{}, j.notes...), sm.notes...), res.Notes...)
 	if sm.lost > 0 {
-		res.Notes = append(res.Notes, plural(sm.lost, "Une cellule libre tombait sur un tableau commun : elle n'est pas reprise", fmt.Sprintf("%d cellules libres tombaient sur un tableau commun : elles ne sont pas reprises", sm.lost)))
+		res.Notes = append(res.Notes, t.say("mergeSheets.cellsLost", msg.Args{"n": sm.lost}))
 	}
-	what := "supprimés"
-	if res.Old == MergeOldHide {
-		what = "masqués"
-	}
+	id := msg.ID("mergeSheets.doneSheets")
 	n := len(sm.sheets)
 	if sm.stacked {
-		n = len(j.srcs)
+		id, n = "mergeSheets.doneTables", len(j.srcs)
 	}
-	unit := "onglets regroupés"
-	if sm.stacked {
-		unit = "tableaux regroupés"
+	if res.Old == MergeOldHide {
+		id += "Hidden"
 	}
-	res.Notice = fmt.Sprintf("%d %s dans « %s » (%s), anciens %s %s", n, unit, j.plan.Name, plural(j.total, fmt.Sprintf("%d ligne", j.total), fmt.Sprintf("%d lignes", j.total)), map[bool]string{true: "tableaux", false: "onglets"}[sm.stacked], what)
+	res.Notice = t.say(id, msg.Args{"n": n, "table": j.plan.Name, "rows": j.total})
 	if len(sm.jobs) > 1 {
 		var others []string
 		for _, fj := range sm.jobs[1:] {
 			if fj.mode == FamilyOnce {
-				others = append(others, fj.j.plan.Name+" (gardé une fois)")
+				others = append(others, t.say("mergeSheets.keptOnce", msg.Args{"table": fj.j.plan.Name}))
 			} else {
 				others = append(others, fj.j.plan.Name)
 			}
 		}
-		res.Notice += " ; aussi " + strings.Join(others, ", ")
+		res.Notice += t.say("mergeSheets.alsoTables", msg.Args{"tables": strings.Join(others, ", ")})
 	}
 	if pv := sm.perValue(); pv > 0 {
-		res.Notice += " ; " + plural(pv, "une cellule par "+strings.ToLower(catName(j)), fmt.Sprintf("%d cellules par %s", pv, strings.ToLower(catName(j))))
+		res.Notice += t.say("mergeSheets.cellsPerValue", msg.Args{"n": pv, "category": strings.ToLower(t.catName(j))})
 	}
 	if keyNote != "" {
 		res.Notice += " ; " + keyNote
 	}
 	if nr := len(res.Rewritten); nr > 0 || len(pending) > 0 {
-		res.Notice += " ; " + refCounts(nr, len(pending))
+		res.Notice += " ; " + t.refCounts(nr, len(pending))
 	}
-	if h := summaryHint(j, res.Rewritten); h != "" {
+	if h := t.summaryHint(j, res.Rewritten); h != "" {
 		res.Notes = append(res.Notes, h)
 	}
 	for _, k := range kept {

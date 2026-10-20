@@ -59,9 +59,9 @@ func parseJSON(r io.Reader) (any, error) {
 		}
 		if err != nil {
 			if len(all) == 0 {
-				return nil, fmt.Errorf("JSON illisible : %w", err)
+				return nil, msg.Wrap(err, "json.unreadable", msg.Args{"err": err})
 			}
-			return nil, fmt.Errorf("JSON illisible (valeur %d) : %w", len(all)+1, err)
+			return nil, msg.Wrap(err, "json.unreadableValue", msg.Args{"n": len(all) + 1, "err": err})
 		}
 		all = append(all, v)
 	}

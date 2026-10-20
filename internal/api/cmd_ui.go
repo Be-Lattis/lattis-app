@@ -327,7 +327,7 @@ func (c *Call) dialog(d Dialog) (map[string]any, error) {
 			return nil, msg.New("api.fieldNoName", msg.Args{"field": i + 1})
 		}
 		if seen[f.Name] {
-			return nil, fmt.Errorf("champ %q en double", f.Name)
+			return nil, msg.New("api.fieldDuplicate", msg.Args{"field": fmt.Sprintf("%q", f.Name)})
 		}
 		seen[f.Name] = true
 		if f.Type == "" {
@@ -337,7 +337,7 @@ func (c *Call) dialog(d Dialog) (map[string]any, error) {
 			return nil, msg.New("api.fieldUnknownType", msg.Args{"field": fmt.Sprintf("%q", f.Name), "type": fmt.Sprintf("%q", f.Type)})
 		}
 		if (f.Type == "select" || f.Type == "radio") && len(f.Options) == 0 {
-			return nil, fmt.Errorf("champ %q : options manquantes", f.Name)
+			return nil, msg.New("api.fieldNoOptions", msg.Args{"field": fmt.Sprintf("%q", f.Name)})
 		}
 		if f.Label == "" {
 			f.Label = f.Name

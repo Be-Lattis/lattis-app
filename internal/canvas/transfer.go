@@ -642,11 +642,7 @@ func (t *tx) trimBottom(id int64) (int, error) {
 	if err := t.trashRows(tb, idList(empty)); err != nil {
 		return 0, err
 	}
-	if len(empty) == 1 {
-		t.notes = append(t.notes, "1 ligne vide retirée en bas du tableau (Ctrl+Z pour annuler)")
-	} else {
-		t.notes = append(t.notes, fmt.Sprintf("%d lignes vides retirées en bas du tableau (Ctrl+Z pour annuler)", len(empty)))
-	}
+	t.notes = append(t.notes, t.say("note.emptyRowsTrimmed", msg.Args{"n": len(empty)}))
 	return len(empty), nil
 }
 
@@ -977,16 +973,16 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				case empty && col.Formula == "":
 					idx = append(idx, i)
 				case header && col.Formula != "":
-					t.notes = append(t.notes, fmt.Sprintf("« %s » est une colonne calculée : son en-tête ne s'efface pas (clic droit › Supprimer la colonne pour la retirer)", clip(col.Name)))
+					t.notes = append(t.notes, m.say("note.computedHeaderNotCleared", msg.Args{"column": clip(col.Name)}))
 				case header:
-					t.notes = append(t.notes, fmt.Sprintf("L'en-tête « %s » ne s'efface pas : la colonne contient des données (sélectionnez toute la colonne puis Suppr pour la retirer)", clip(col.Name)))
+					t.notes = append(t.notes, m.say("note.headerHasData", msg.Args{"column": clip(col.Name)}))
 				}
 			}
 			if len(idx) == 0 {
 				return false, nil
 			}
 			if len(idx) == len(tb.Cols) {
-				t.notes = append(t.notes, fmt.Sprintf("Le tableau « %s » garde au moins une colonne", tb.Name))
+				t.notes = append(t.notes, m.say("note.tableKeepsOneColumn", msg.Args{"table": tb.Name}))
 				idx = idx[1:]
 			}
 			return false, t.dropColumns(tb, idx)
@@ -1078,11 +1074,8 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				}
 			}
 		}
-		switch {
-		case dropped == 1:
-			t.notes = append(t.notes, "1 ligne vide supprimée (Ctrl+Z pour annuler)")
-		case dropped > 1:
-			t.notes = append(t.notes, fmt.Sprintf("%d lignes vides supprimées (Ctrl+Z pour annuler)", dropped))
+		if dropped > 0 {
+			t.notes = append(t.notes, t.say("note.emptyRowsDeleted", msg.Args{"n": dropped}))
 		}
 		if err := t.clearPivotHand(sheet, zone); err != nil {
 			return err

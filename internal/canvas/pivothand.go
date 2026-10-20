@@ -839,7 +839,7 @@ func (t *tx) clearPivotHand(sheet int64, zone Rect) error {
 				}
 			}
 			if left {
-				t.notes = append(t.notes, fmt.Sprintf("L'en-tête « %s » ne s'efface pas : la colonne contient des valeurs (sélectionnez toute la colonne puis Suppr pour la retirer)", clip(h.Name)))
+				t.notes = append(t.notes, t.say("note.headerNotCleared", msg.Args{"column": clip(h.Name)}))
 				continue
 			}
 			drop = append(drop, j)

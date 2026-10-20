@@ -28,7 +28,7 @@ var (
 	ErrDesign = msg.New("workbook.designOnly", nil)
 	// Droits d'un classeur collaboratif (§8.1).
 	ErrReader   = msg.New("workbook.reader", nil)
-	ErrNoAccess = errors.New("Tableau inaccessible avec vos droits")
+	ErrNoAccess = msg.New("workbook.noAccess", nil)
 	// ErrLayout : cellules libres et mise en page d'un classeur
 	// collaboratif, réservées aux propriétaires et concepteurs (décision
 	// 0018 ; LayoutLock).

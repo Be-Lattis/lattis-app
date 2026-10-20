@@ -178,7 +178,7 @@ func XLSXTables(ctx context.Context, path string) ([]XLSXTable, error) {
 
 func (r *run) loadXLSX(src Source) (loaded, error) {
 	if src.Path == "" {
-		return loaded{}, errors.New("classeur Excel non choisi")
+		return loaded{}, msg.New("query.noExcelFile", nil)
 	}
 	sheets, closeFn, err := transfer.ReadXLSX(r.ctx, src.Path)
 	if err != nil {

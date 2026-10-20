@@ -11,6 +11,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/order"
 )
 
@@ -406,7 +407,7 @@ func (t *tx) refuse(tb Table, c Column, raw string, ev *Event) error {
 	e := ErrOutOfType{Table: tb.Name, Column: c.Name, Type: c.Type, Raw: raw}
 	if t.collect && ev != nil {
 		if len(ev.Refused) < maxRefused {
-			ev.Refused = append(ev.Refused, fmt.Sprintf("%s : « %s »", c.Name, raw))
+			ev.Refused = append(ev.Refused, t.say("workbook.refusedValue", msg.Args{"column": c.Name, "value": raw}))
 		}
 		ev.RefusedCount++
 		return nil

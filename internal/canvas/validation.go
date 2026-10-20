@@ -199,14 +199,14 @@ func (t *tx) columnList(sheet int64, ref formula.Ref, from, to int) ([]string, s
 	}
 	tb, ok := schema.Table(ref.Table)
 	if !ok {
-		return nil, fmt.Sprintf("le tableau « %s » n'existe plus", ref.Table)
+		return nil, t.say("validation.tableGone", msg.Args{"table": ref.Table})
 	}
 	found := false
 	for _, c := range tb.Cols {
 		found = found || strings.EqualFold(c.Name, strings.TrimSpace(ref.Col))
 	}
 	if !found {
-		return nil, fmt.Sprintf("la colonne « %s » n'existe plus dans « %s »", ref.Col, tb.Name)
+		return nil, t.say("validation.columnGone", msg.Args{"column": ref.Col, "table": tb.Name})
 	}
 	col := ref.Table + "[" + ref.Col + "]"
 	raw := "=UNIQUE(" + col + ")"
@@ -236,7 +236,7 @@ func (t *tx) rangeList(sheet int64, rg formula.CellRange) ([]string, string) {
 		}
 		id, ok := ids[strings.ToLower(rg.Sheet)]
 		if !ok {
-			return nil, fmt.Sprintf("la feuille « %s » n'existe plus", rg.Sheet)
+			return nil, t.say("validation.sheetGone", msg.Args{"sheet": rg.Sheet})
 		}
 		home = id
 	}
@@ -266,7 +266,7 @@ func (t *tx) namedList(name string) ([]string, string) {
 	}
 	v, ok := values[strings.ToLower(name)]
 	if !ok {
-		return nil, fmt.Sprintf("« %s » n'est ni une cellule nommée ni une plage", name)
+		return nil, t.say("validation.notNameOrRange", msg.Args{"name": name})
 	}
 	return distinctValues([]formula.Value{v}), ""
 }

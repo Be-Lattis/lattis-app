@@ -13,6 +13,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/series"
 )
 
@@ -232,7 +233,7 @@ func (t *tx) family(ms []*candidate) (TableFamily, error) {
 		if eq {
 			for k := 1; k < len(ms); k++ {
 				if e, err := t.sameData([]Table{ms[k-1].tb, ms[k].tb}); err == nil && !e {
-					f.Note = fmt.Sprintf("« %s » change dans « %s » : suivra le choix de l'onglet (ou n'en gardez qu'un exemplaire, celui du dernier onglet)", f.Name, ms[k].sheet)
+					f.Note = t.say("mergeSheets.followsChoice", msg.Args{"table": f.Name, "sheet": ms[k].sheet})
 					break
 				}
 			}

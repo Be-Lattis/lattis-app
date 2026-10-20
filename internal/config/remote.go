@@ -105,7 +105,7 @@ type jwsHeader struct {
 func verifyJWS(s string, key ed25519.PublicKey) ([]byte, error) {
 	parts := strings.Split(s, ".")
 	if len(parts) != 3 {
-		return nil, errors.New("configuration distante : ni JSON ni JWS compact")
+		return nil, msg.New("config.remoteFormat", nil)
 	}
 	if key == nil {
 		return nil, msg.New("config.remoteNoPublicKey", nil)
@@ -120,14 +120,14 @@ func verifyJWS(s string, key ed25519.PublicKey) ([]byte, error) {
 	}
 	sig, err := base64.RawURLEncoding.DecodeString(parts[2])
 	if err != nil {
-		return nil, errors.New("signature illisible")
+		return nil, msg.New("config.signatureUnreadable", nil)
 	}
 	if !ed25519.Verify(key, []byte(parts[0]+"."+parts[1]), sig) {
 		return nil, msg.New("config.signatureInvalid", nil)
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return nil, errors.New("signature : contenu illisible")
+		return nil, msg.New("config.signatureContent", nil)
 	}
 	return payload, nil
 }

@@ -534,7 +534,7 @@ func (s *DocumentService) AITranscript() []AILogEntry {
 }
 
 // errAIUndoLater : la réponse n'est plus la dernière modification.
-var errAIUndoLater = errors.New("d'autres modifications ont suivi : utilisez Ctrl+Z")
+var errAIUndoLater = msg.New("ai.undoLater", nil)
 
 // aiJournalTop rend les n dernières étapes du journal, non annulées, de la
 // plus récente à la plus ancienne.

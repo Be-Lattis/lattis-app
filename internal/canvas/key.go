@@ -2,9 +2,9 @@ package canvas
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // KeyCheck dit si la colonne i peut devenir la clé du tableau (identifiant de
@@ -38,18 +38,18 @@ func (t *tx) keyCheck(tb Table, i int) (string, error) {
 	// (une seule permise) ; ailleurs, toutes les cases doivent être remplies.
 	if c.Type == grid.Text {
 		if empty := total - filled; empty > 1 && distinct == total-empty+1 {
-			return fmt.Sprintf("%d cellules vides (une seule peut l'être)", empty), nil
+			return t.say("key.whyEmptyCells", msg.Args{"n": empty}), nil
 		}
 		if distinct < total {
-			return fmt.Sprintf("%d valeur(s) en double", total-distinct), nil
+			return t.say("key.whyDuplicates", msg.Args{"n": total - distinct}), nil
 		}
 		return "", nil
 	}
 	if filled < total {
-		return fmt.Sprintf("%d cellule(s) vide(s)", total-filled), nil
+		return t.say("key.whyEmpty", msg.Args{"n": total - filled}), nil
 	}
 	if distinct < filled {
-		return fmt.Sprintf("%d valeur(s) en double", filled-distinct), nil
+		return t.say("key.whyDuplicates", msg.Args{"n": filled - distinct}), nil
 	}
 	return "", nil
 }

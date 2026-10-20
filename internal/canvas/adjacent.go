@@ -273,11 +273,7 @@ func (t *tx) joinSheet(sheet int64) error {
 		var notes []string
 		for _, name := range order {
 			j := absorbed[name]
-			what := "« " + clip(j.first) + " » rattaché"
-			if j.n > 1 {
-				what = fmt.Sprintf("%d cellules (« %s »…) rattachées", j.n, clip(j.first))
-			}
-			notes = append(notes, fmt.Sprintf("%s au tableau « %s » (Ctrl+Z pour annuler)", what, name))
+			notes = append(notes, t.say("note.cellsAttached", msg.Args{"n": j.n, "first": clip(j.first), "table": name}))
 		}
 		t.notes = append(t.notes, notes...)
 	}()
@@ -317,11 +313,11 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 			}
 			switch {
 			case fixed[a.ID] != "" || fixed[b.ID] != "":
-				return false, t.separate(a, b, false, fixedWhy(a, b, fixed))
+				return false, t.separate(a, b, false, t.fixedWhy(a, b, fixed))
 			case a.Row != b.Row:
-				return false, t.separate(a, b, false, "en-têtes sur des lignes différentes")
+				return false, t.separate(a, b, false, t.say("note.why.headerRows", nil))
 			case a.TwoLevel != b.TwoLevel:
-				return false, t.separate(a, b, false, "en-têtes sur deux lignes d'un seul côté")
+				return false, t.separate(a, b, false, t.say("note.why.twoLevelOneSide", nil))
 			}
 			return false, t.joinTables(a, b)
 		}
@@ -333,9 +329,9 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 			if a.ID == b.ID || b.Top() != a.Bottom()+1 || a.Col > b.Right() || b.Col > a.Right() {
 				continue
 			}
-			why := "deux tableaux empilés ne fusionnent pas"
+			why := t.say("note.why.stacked", nil)
 			if fixed[a.ID] != "" || fixed[b.ID] != "" {
-				why = fixedWhy(a, b, fixed)
+				why = t.fixedWhy(a, b, fixed)
 			}
 			return false, t.separate(a, b, true, why)
 		}
@@ -402,7 +398,7 @@ func (t *tx) joinStep(sheet int64, absorbed func(tb Table, first string, n int))
 			continue
 		}
 		if c, ok := touching(tb, cells); ok {
-			t.notes = append(t.notes, fmt.Sprintf("« %s » reste à côté du tableau « %s » sans le rejoindre : %s", clip(c.Raw), tb.Name, fixed[tb.ID]))
+			t.notes = append(t.notes, t.say("note.staysBeside", msg.Args{"value": clip(c.Raw), "table": tb.Name, "why": t.say("note.fixed."+msg.ID(fixed[tb.ID]), nil)}))
 		}
 	}
 	return true, nil
@@ -423,9 +419,9 @@ func beyondRows(isl []cell, tb Table) bool {
 // sur le côté par la cellule c sans tenir dans ses lignes : à gauche, le
 // tableau part vers la droite ; à droite, l'îlot part vers la droite.
 func (t *tx) moveAside(tb Table, c cell, isl []cell) error {
-	what := "la liste"
+	list := ""
 	if len(isl) > 0 {
-		what = "la liste « " + clip(isl[0].Raw) + " »"
+		list = clip(isl[0].Raw)
 	}
 	if c.Col == tb.Col-1 {
 		if err := t.ensureGapRight(tb.Sheet, tb.ID, tb.Right(), tb.Right()+1, tb.Top(), tb.Bottom()); err != nil {
@@ -434,7 +430,11 @@ func (t *tx) moveAside(tb Table, c cell, isl []cell) error {
 		if err := t.moveTable(tb, 0, 1); err != nil {
 			return err
 		}
-		t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » décalé d'une colonne vers la droite : %s, à sa gauche et plus longue, reste entière en cellules libres (Ctrl+Z pour annuler)", tb.Name, what))
+		id := msg.ID("note.tableMovedRight")
+		if list == "" {
+			id = "note.tableMovedRightUnnamed"
+		}
+		t.notes = append(t.notes, t.say(id, msg.Args{"table": tb.Name, "list": list}))
 		return nil
 	}
 	in := map[[2]int]bool{}
@@ -444,15 +444,20 @@ func (t *tx) moveAside(tb Table, c cell, isl []cell) error {
 	if err := t.moveCells(tb.Sheet, func(x cell) bool { return in[[2]int{x.Row, x.Col}] }, 0, 1); err != nil {
 		return err
 	}
-	t.notes = append(t.notes, fmt.Sprintf("%s, à droite du tableau « %s » et plus longue, décalée d'une colonne : elle reste entière en cellules libres (Ctrl+Z pour annuler)", strings.ToUpper(what[:1])+what[1:], tb.Name))
+	id := msg.ID("note.listMovedRight")
+	if list == "" {
+		id = "note.listMovedRightUnnamed"
+	}
+	t.notes = append(t.notes, t.say(id, msg.Args{"table": tb.Name, "list": list}))
 	return nil
 }
 
-func fixedWhy(a, b Table, fixed map[int64]string) string {
+// fixedWhy : pourquoi a ou b, collés, ne fusionnent pas (fixedTables).
+func (t *tx) fixedWhy(a, b Table, fixed map[int64]string) string {
 	if w := fixed[a.ID]; w != "" {
-		return fmt.Sprintf("« %s » %s", a.Name, strings.TrimPrefix(w, "il "))
+		return t.say("note.fixedTable."+msg.ID(w), msg.Args{"table": a.Name})
 	}
-	return fmt.Sprintf("« %s » %s", b.Name, strings.TrimPrefix(fixed[b.ID], "il "))
+	return t.say("note.fixedTable."+msg.ID(fixed[b.ID]), msg.Args{"table": b.Name})
 }
 
 // separate écarte b de a, contre lequel il est collé : d'une colonne vers la
@@ -466,7 +471,7 @@ func (t *tx) separate(a, b Table, below bool, why string) error {
 		if err := t.moveTable(b, 1, 0); err != nil {
 			return err
 		}
-		t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » descendu d'une ligne, sous « %s » sans le rejoindre : %s", b.Name, a.Name, why))
+		t.notes = append(t.notes, t.say("note.tableMovedDown", msg.Args{"table": b.Name, "other": a.Name, "why": why}))
 		return nil
 	}
 	if err := t.ensureGapRight(b.Sheet, b.ID, b.Right(), b.Right()+1, b.Top(), b.Bottom()); err != nil {
@@ -475,7 +480,7 @@ func (t *tx) separate(a, b Table, below bool, why string) error {
 	if err := t.moveTable(b, 0, 1); err != nil {
 		return err
 	}
-	t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » décalé d'une colonne, à côté de « %s » sans le rejoindre : %s", b.Name, a.Name, why))
+	t.notes = append(t.notes, t.say("note.tableMovedAside", msg.Args{"table": b.Name, "other": a.Name, "why": why}))
 	return nil
 }
 
@@ -498,7 +503,7 @@ func (t *tx) absorbCell(sheet int64, tb Table, c cell, before int) (int, error) 
 		if raw != "" && isFormula(raw) {
 			raw = "'" + raw
 		}
-		t.notes = append(t.notes, fmt.Sprintf("La formule « %s » est entrée dans le tableau « %s » par sa valeur", clip(c.Raw), tb.Name))
+		t.notes = append(t.notes, t.say("note.formulaAsValue", msg.Args{"formula": clip(c.Raw), "table": tb.Name}))
 	}
 	if err := t.setFreeCell(sheet, c.Row, c.Col, ""); err != nil {
 		return 0, err
@@ -603,7 +608,7 @@ func (t *tx) adoptFree(tb Table) error {
 	for _, n := range ns {
 		ref, ok := tableRef(zone, tb.Name, headers, formula.ColumnLetters(n.col)+fmt.Sprint(n.row+1))
 		if !ok {
-			t.notes = append(t.notes, fmt.Sprintf("La cellule nommée « %s » est l'en-tête du tableau « %s » : son nom ne désigne plus rien", n.name, tb.Name))
+			t.notes = append(t.notes, t.say("note.namedCellIsHeader", msg.Args{"name": n.name, "table": tb.Name}))
 			continue
 		}
 		if err := t.rewriteRefs(refChange{Renames: formula.Renames{Names: lowerMap(n.name, ref)}}); err != nil {
@@ -612,7 +617,7 @@ func (t *tx) adoptFree(tb Table) error {
 		if err := t.deleteWhere(`_lattis_names`, `name = ?`, n.name); err != nil {
 			return err
 		}
-		t.notes = append(t.notes, fmt.Sprintf("La cellule nommée « %s » a rejoint le tableau « %s » : les formules lisent désormais %s", n.name, tb.Name, ref))
+		t.notes = append(t.notes, t.say("note.namedCellJoined", msg.Args{"name": n.name, "table": tb.Name, "ref": ref}))
 	}
 	// Contrôles liés : signalés.
 	cfgs, ids, err := t.configs(`_lattis_buttons`)
@@ -634,7 +639,7 @@ func (t *tx) adoptFree(tb Table) error {
 		}
 		r, c, ok := formula.CellRef("Cell_" + addr)
 		if ok && r >= tb.Row && r <= tb.Bottom() && c >= tb.Col && c <= tb.Right() {
-			t.notes = append(t.notes, fmt.Sprintf("Le contrôle « %s » est lié à %s, qui a rejoint le tableau « %s »", bc.Name, addr, tb.Name))
+			t.notes = append(t.notes, t.say("note.controlLinkJoined", msg.Args{"control": bc.Name, "cell": addr, "table": tb.Name}))
 		}
 	}
 	return nil
@@ -675,9 +680,9 @@ func (t *tx) fixedTables(tables []Table) (map[int64]string, error) {
 	out := map[int64]string{}
 	for _, tb := range tables {
 		if tb.choiceOnly() {
-			out[tb.ID] = "il suit le choix de l'onglet (choisissez « (Toutes) » pour l'agrandir)"
+			out[tb.ID] = "choice"
 		} else if tb.Filtered() {
-			out[tb.ID] = "il est filtré (effacez le filtre pour l'agrandir)"
+			out[tb.ID] = "filtered"
 		}
 	}
 	rs, err := t.query(`SELECT target FROM _lattis_queries WHERE target IS NOT NULL`)
@@ -690,7 +695,7 @@ func (t *tx) fixedTables(tables []Table) (map[int64]string, error) {
 		if err := rs.Scan(&id); err != nil {
 			return nil, err
 		}
-		out[id] = "il est chargé par une requête d'import"
+		out[id] = "query"
 	}
 	return out, rs.Err()
 }
@@ -712,7 +717,7 @@ func (t *tx) joinTables(a, b Table) error {
 			return err
 		}
 	}
-	t.notes = append(t.notes, fmt.Sprintf("Tableaux « %s » et « %s » fusionnés (Ctrl+Z pour annuler)", a.Name, b.Name))
+	t.notes = append(t.notes, t.say("note.tablesMerged", msg.Args{"table": a.Name, "other": b.Name}))
 	return nil
 }
 
@@ -790,7 +795,7 @@ func (t *tx) growSide(tb Table, row, col int, raw string, ev *Event, left bool) 
 	// Une formule fait une colonne calculée de tout le tableau : on le dit
 	// (audit 2 M8).
 	if isFormula(raw) {
-		t.notes = append(t.notes, fmt.Sprintf("Colonne calculée « %s » ajoutée à toutes les lignes du tableau « %s » (Ctrl+Z pour annuler)", name, tb.Name))
+		t.notes = append(t.notes, t.say("note.computedAdded", msg.Args{"column": name, "table": tb.Name}))
 	}
 	return nil
 }
@@ -951,7 +956,7 @@ func (t *tx) headerOver(sheet int64, tables []Table, cells []cell, fixed map[int
 			return false, err
 		}
 		name = kept[0]
-		t.notes = append(t.notes, fmt.Sprintf("Ligne d'en-têtes posée sur %s : un seul tableau « %s », leurs en-têtes redeviennent des données (Ctrl+Z pour annuler)", strings.Join(names, ", "), name))
+		t.notes = append(t.notes, t.say("note.headerRowOver", msg.Args{"tables": strings.Join(names, ", "), "table": name}))
 		return true, nil
 	}
 	return false, nil

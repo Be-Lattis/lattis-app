@@ -1,6 +1,8 @@
 package api
 
-import "fmt"
+import (
+	"github.com/lalamefine/lattis/internal/msg"
+)
 
 // Onglet à choix (canvas/choice.go) : une feuille porte une catégorie
 // (« Année ») et une valeur choisie sur son onglet (« Ventes · 2025 ▾ »),
@@ -151,7 +153,7 @@ sheets.new_choice("Feuille1", "Petit")`,
 					return nil, err
 				}
 				if !c.Has("value") {
-					return nil, fmt.Errorf("value : valeur attendue")
+					return nil, msg.New("api.valueExpected", nil)
 				}
 				d, _ := c.Doc()
 				return nil, d.NewSheetChoiceValue(c, s.ID, raw(c.Raw("value")))

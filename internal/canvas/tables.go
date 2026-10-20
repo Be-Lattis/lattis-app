@@ -358,7 +358,7 @@ func (t *tx) mergeRight(a, b Table) (Table, error) {
 			return a, err
 		}
 	} else if b.Key != 0 {
-		t.notes = append(t.notes, fmt.Sprintf("La clé de « %s » n'en est plus une : « %s » garde la sienne", b.Name, a.Name))
+		t.notes = append(t.notes, t.say("note.keyLost", msg.Args{"table": b.Name, "other": a.Name}))
 	}
 	merged, err := t.table(a.ID)
 	if err != nil {

@@ -257,7 +257,7 @@ func (t *tx) ensureKey(table, column string) error {
 		return err
 	}
 	if total != distinct {
-		return ErrKey{table, column, fmt.Sprintf("%d valeur(s) en double", total-distinct)}
+		return ErrKey{table, column, t.say("key.whyDuplicates", msg.Args{"n": total - distinct})}
 	}
 	index := tb.sql() + "_key"
 	t.keyed = tb.Name + "." + c.Name

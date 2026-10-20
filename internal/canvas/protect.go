@@ -470,16 +470,16 @@ func (m *Model) setProtection(ctx context.Context, table string, scope int64, on
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
-		what := "La structure du classeur"
+		target := "Workbook"
 		switch {
 		case table == structTable:
-			what = fmt.Sprintf("La structure de la feuille « %s »", name)
+			target = "SheetStructure"
 		case scope != workbookScope:
-			what = fmt.Sprintf("La feuille « %s »", name)
+			target = "Sheet"
 		}
 		if on {
 			if protected {
-				return msg.New("protect.alreadyProtected", msg.Args{"what": what})
+				return msg.New("protect.already"+msg.ID(target), msg.Args{"sheet": name})
 			}
 			if _, err := sqlTx.ExecContext(ctx, `INSERT INTO `+table+` (sheet, hash) VALUES (?, ?)`, scope, h); err != nil {
 				return err
@@ -500,7 +500,7 @@ func (m *Model) setProtection(ctx context.Context, table string, scope int64, on
 			return nil
 		}
 		if !protected {
-			return msg.New("protect.notProtected", msg.Args{"what": what})
+			return msg.New("protect.not"+msg.ID(target), msg.Args{"sheet": name})
 		}
 		if !checkPassword(stored, pw) {
 			return ErrPassword

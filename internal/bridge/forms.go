@@ -587,7 +587,7 @@ func (s *DocumentService) FormPreviewURL(ctx context.Context, server, id string)
 func (s *DocumentService) FormImage(ctx context.Context, server, id, kind, name, data string) (string, error) {
 	raw, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		return "", errors.New("image illisible")
+		return "", msg.New("forms.imageUnreadable", nil)
 	}
 	var ctype string
 	switch strings.ToLower(filepath.Ext(name)) {
@@ -662,7 +662,7 @@ func (s *DocumentService) FormSaveQR(ctx context.Context, name, ext, data string
 	case "png":
 		b, err := base64.StdEncoding.DecodeString(data)
 		if err != nil {
-			return "", errors.New("image illisible")
+			return "", msg.New("forms.imageUnreadable", nil)
 		}
 		raw = b
 	default:

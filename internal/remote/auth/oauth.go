@@ -249,7 +249,7 @@ func (c *client) post(ctx context.Context, endpoint string, form url.Values, out
 	req.Header.Set("Accept", "application/json")
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return fmt.Errorf("%s injoignable : %w", c.label(), err)
+		return msg.Wrap(err, "auth.unreachable", msg.Args{"server": c.label(), "err": err})
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))

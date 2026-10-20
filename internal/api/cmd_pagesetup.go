@@ -134,7 +134,7 @@ func (x pageSetupPatch) apply(p *canvas.PageSetup) error {
 				m := canvas.MarginsNarrow
 				p.Margins = &m
 			default:
-				return fmt.Errorf(`margins : "normal", "wide", "narrow" ou {top, bottom, left, right, header, footer} en cm`)
+				return msg.New("api.marginsExpected", nil)
 			}
 		} else {
 			m := p.PageMargins()

@@ -10,6 +10,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // DepTarget est un antécédent ou un dépendant d'une cellule : une colonne de
@@ -247,7 +248,7 @@ func (t *tx) depRanks(r depRef, tb *Table, own *Table, cur depRow) (from, to int
 		var id int64
 		err = t.row(`SELECT id FROM `+tb.sql()+` WHERE `+colSQL(keyCol.ID)+` = slt_key(?, '`+mode+`')`+coll+` ORDER BY _pos LIMIT 1`, v).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) {
-			return 0, 0, fmt.Sprintf("%s : clé « %v » introuvable", label, v), nil
+			return 0, 0, t.say("ref.keyNotFound", msg.Args{"label": label, "key": fmt.Sprint(v)}), nil
 		}
 		if err != nil {
 			return 0, 0, "", err
@@ -262,16 +263,16 @@ func (t *tx) depRanks(r depRef, tb *Table, own *Table, cur depRow) (from, to int
 	}
 	if from < 1 || from > tb.Rows {
 		if r.isRel {
-			side := "au-dessus"
+			id := msg.ID("ref.noRowAbove")
 			if r.rel > 0 {
-				side = "en dessous"
+				id = "ref.noRowBelow"
 			}
-			return 0, 0, fmt.Sprintf("%s : pas de ligne %d %s de la ligne %d (valeur vide)", label, max(r.rel, -r.rel), side, cur.rank), nil
+			return 0, 0, t.say(id, msg.Args{"label": label, "n": max(r.rel, -r.rel), "row": cur.rank}), nil
 		}
 		if from == to {
-			return 0, 0, fmt.Sprintf("%s : la ligne %d n'existe pas", label, from), nil
+			return 0, 0, t.say("ref.rowMissing", msg.Args{"label": label, "row": from}), nil
 		}
-		return 0, 0, fmt.Sprintf("%s : les lignes %d à %d n'existent pas", label, from, to), nil
+		return 0, 0, t.say("ref.rowsMissing", msg.Args{"label": label, "from": from, "to": to}), nil
 	}
 	return from, min(to, tb.Rows), "", nil
 }
@@ -292,9 +293,9 @@ func (t *tx) depPlace(base DepTarget, tb *Table, from, to int) (DepTarget, error
 	label := base.Table + "[" + base.Column + "]"
 	if count == 0 {
 		if from == to {
-			base.Note = fmt.Sprintf("%s : la ligne %d est masquée (filtre ou onglet)", label, from)
+			base.Note = t.say("ref.rowHidden", msg.Args{"label": label, "row": from})
 		} else {
-			base.Note = fmt.Sprintf("%s : les lignes %d à %d sont masquées (filtre ou onglet)", label, from, to)
+			base.Note = t.say("ref.rowsHidden", msg.Args{"label": label, "from": from, "to": to})
 		}
 		return base, nil
 	}
@@ -312,14 +313,14 @@ func (t *tx) depPlace(base DepTarget, tb *Table, from, to int) (DepTarget, error
 	}
 	if hidden > 0 && hidden >= max(x.Rows, 1) {
 		if from == to {
-			base.Note = fmt.Sprintf("%s : la ligne %d est masquée sur la feuille", label, from)
+			base.Note = t.say("ref.rowHiddenSheet", msg.Args{"label": label, "row": from})
 		} else {
-			base.Note = fmt.Sprintf("%s : les lignes %d à %d sont masquées sur la feuille", label, from, to)
+			base.Note = t.say("ref.rowsHiddenSheet", msg.Args{"label": label, "from": from, "to": to})
 		}
 		return base, nil
 	}
 	if count < to-from+1 {
-		x.Note = fmt.Sprintf("%s : %d des lignes %d à %d sont masquées (filtre ou onglet)", label, to-from+1-count, from, to)
+		x.Note = t.say("ref.someRowsHidden", msg.Args{"label": label, "n": to - from + 1 - count, "from": from, "to": to})
 	}
 	return x, nil
 }

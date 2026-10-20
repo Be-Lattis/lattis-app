@@ -47,7 +47,7 @@ func (t *tx) refreshShared(old Table, it ImportTable, res *QueryLoad) error {
 	}
 	for _, c := range old.Cols {
 		if c.Formula == "" && !used[c.ID] {
-			res.Warnings = append(res.Warnings, fmt.Sprintf("%s : la requête ne rend plus la colonne « %s », laissée vide", old.Name, c.Name))
+			res.Warnings = append(res.Warnings, t.say("note.queryColumnGone", msg.Args{"table": old.Name, "column": c.Name}))
 		}
 	}
 	// Tableau de passage, loin du contenu de la feuille, retiré ensuite.

@@ -3,7 +3,7 @@ package canvas
 import (
 	"database/sql"
 	"errors"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Tableau qui porte le nom de son onglet (demande de Louis) : renommer
@@ -37,7 +37,7 @@ func (t *tx) tableFollowsSheet(sheet int64, old, name string) error {
 		return nil
 	}
 	if to == "" || A1Like(to) {
-		t.notes = append(t.notes, fmt.Sprintf("Le tableau garde son nom « %s » : « %s » ne peut pas nommer un tableau", cur, name))
+		t.notes = append(t.notes, t.say("note.tableNameInvalid", msg.Args{"table": cur, "name": name}))
 		return nil
 	}
 	var k int
@@ -45,7 +45,7 @@ func (t *tx) tableFollowsSheet(sheet int64, old, name string) error {
 		return err
 	}
 	if k > 0 {
-		t.notes = append(t.notes, fmt.Sprintf("Le tableau garde son nom « %s » : « %s » est déjà le nom d'un autre tableau", cur, to))
+		t.notes = append(t.notes, t.say("note.tableNameTaken", msg.Args{"table": cur, "name": to}))
 		return nil
 	}
 	tb, err := t.editTable(cur)

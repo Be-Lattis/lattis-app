@@ -58,10 +58,12 @@ func (s *DocumentService) sessionLang() msg.Lang {
 	return msg.Resolve(config.Current().String("ui.language", msg.Auto), system)
 }
 
-// applyLocale donne au classeur la locale des formules de la langue l.
+// applyLocale donne au classeur la locale des formules de la langue l, et
+// la langue de ses notes (barre d'état, aperçus).
 func applyLocale(d *doc.Document, l msg.Lang) {
 	if d != nil && d.Model != nil {
 		d.SetLocale(formula.ForLanguage(string(l)))
+		d.SetLanguage(l)
 	}
 }
 
@@ -78,11 +80,12 @@ type ErrorCause struct {
 // errorCause : la cause d'une erreur dans la langue l ; faux pour une erreur
 // ordinaire (texte français, comme avant).
 func errorCause(l msg.Lang, err error) (ErrorCause, bool) {
-	var e *msg.Error
-	if !errors.As(err, &e) {
+	var m msg.Messager
+	if !errors.As(err, &m) {
 		return ErrorCause{}, false
 	}
-	return ErrorCause{ID: e.ID, Args: e.Args.In(l), Message: msg.Text(l, err)}, true
+	c := m.Msg()
+	return ErrorCause{ID: c.ID, Args: c.Args.In(l), Message: msg.Text(l, err)}, true
 }
 
 // MarshalError traduit les erreurs rendues à l'interface du bureau (option

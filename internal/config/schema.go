@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
 	"net/url"
 	"strconv"
@@ -440,11 +439,11 @@ func isStringList(v any) error {
 func isHTTPSURL(v any) error {
 	s, ok := v.(string)
 	if !ok {
-		return errors.New("adresse attendue")
+		return msg.New("config.addressExpected", nil)
 	}
 	u, err := url.Parse(s)
 	if err != nil || u.Scheme != "https" || u.Host == "" {
-		return errors.New("adresse https:// attendue")
+		return msg.New("config.httpsExpected", nil)
 	}
 	return nil
 }
@@ -454,7 +453,7 @@ func isHTTPSURL(v any) error {
 func isLocalOrHTTPSURL(v any) error {
 	s, ok := v.(string)
 	if !ok {
-		return errors.New("adresse attendue")
+		return msg.New("config.addressExpected", nil)
 	}
 	u, err := url.Parse(s)
 	if err == nil && u.Host != "" {
@@ -468,7 +467,7 @@ func isLocalOrHTTPSURL(v any) error {
 			}
 		}
 	}
-	return errors.New("adresse https://, ou http://localhost ou http://127.0.0.1, attendue")
+	return msg.New("config.httpsOrLocalExpected", nil)
 }
 
 func isPublicKey(v any) error {
@@ -490,6 +489,6 @@ func oneOf(values ...string) validator {
 				}
 			}
 		}
-		return fmt.Errorf("valeur attendue parmi : %s", strings.Join(values, ", "))
+		return msg.New("config.valueAmong", msg.Args{"values": strings.Join(values, ", ")})
 	}
 }

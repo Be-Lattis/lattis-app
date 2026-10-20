@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
 )
 
@@ -23,7 +22,7 @@ const (
 // SetZoom fixe le zoom de la feuille, en pour cent (10 à 400).
 func (m *Model) SetZoom(ctx context.Context, sheet int64, pct int) error {
 	if pct < ZoomMin || pct > ZoomMax {
-		return fmt.Errorf("zoom : entre %d %% et %d %%", ZoomMin, ZoomMax)
+		return msg.New("sheet.zoomRange", msg.Args{"min": ZoomMin, "max": ZoomMax})
 	}
 	changed := false
 	err := m.db.Write(ctx, func(sqlTx *sql.Tx) error {

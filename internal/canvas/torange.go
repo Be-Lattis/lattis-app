@@ -192,20 +192,20 @@ func (t *tx) toRange(tb Table) error {
 		return err
 	}
 
-	note := fmt.Sprintf("Tableau « %s » converti en plage", tb.Name)
+	note := t.say("range.converted", msg.Args{"table": tb.Name})
 	if kept > 0 {
-		note += fmt.Sprintf(", %s", plural(kept, "colonne calculée gardée en formules", fmt.Sprintf("%d colonnes calculées gardées en formules", kept)))
+		note += t.say("range.keptFormulas", msg.Args{"n": kept})
 	}
 	if n := countComputed(tb) - kept; n > 0 {
-		note += fmt.Sprintf(", %s", plural(n, "colonne calculée remplacée par ses valeurs", fmt.Sprintf("%d colonnes calculées remplacées par leurs valeurs", n)))
+		note += t.say("range.replacedByValues", msg.Args{"n": n})
 	}
 	if rewritten > 0 {
-		note += fmt.Sprintf(" ; %s", plural(rewritten, "1 formule réécrite en adresses de cellules", fmt.Sprintf("%d formules réécrites en adresses de cellules", rewritten)))
+		note += t.say("range.rewritten", msg.Args{"n": rewritten})
 	}
 	if broken > 0 {
-		note += fmt.Sprintf(" ; %s", plural(broken, "1 formule cite encore le tableau (#REF!)", fmt.Sprintf("%d formules citent encore le tableau (#REF!)", broken)))
+		note += t.say("range.broken", msg.Args{"n": broken, "ref": "#REF!"})
 	}
-	t.notes = append(t.notes, note+" (Ctrl+Z pour annuler)")
+	t.notes = append(t.notes, note+t.say("note.undoHint", nil))
 	return nil
 }
 
@@ -804,7 +804,7 @@ func (t *tx) formatAsTable(sheet int64, row, col int) (string, error) {
 		r0, c0, r1, c1 = min(r0, p[0]), min(c0, p[1]), max(r1, p[0]), max(c1, p[1])
 	}
 	if !found {
-		t.notes = append(t.notes, "Plage vide : elle n'est plus marquée comme plage")
+		t.notes = append(t.notes, t.say("range.emptyUnmarked", nil))
 		return "", nil
 	}
 	tables, err := t.tables(sheet)
@@ -911,7 +911,7 @@ func (t *tx) formatAsTable(sheet int64, row, col int) (string, error) {
 			return "", err
 		}
 	}
-	t.notes = append(t.notes, fmt.Sprintf("Plage mise sous forme de tableau « %s » (Ctrl+Z pour annuler)", name))
+	t.notes = append(t.notes, t.say("note.rangeToTable", msg.Args{"table": name}))
 	// Sous un onglet à choix réglé sur une valeur, le tableau la suit (§6.5).
 	return name, t.followNewTable(tb.ID)
 }
@@ -1182,11 +1182,11 @@ func (t *tx) splitAt(tb Table, i, j int) error {
 	if err := t.keepName(names, keep, tb.Name); err != nil {
 		return err
 	}
-	what := "à la colonne vide"
+	id := msg.ID("note.tableSplitColumn")
 	if j > i {
-		what = "aux colonnes vides"
+		id = "note.tableSplitColumns"
 	}
-	t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » coupé en deux %s : « %s » et « %s » (Ctrl+Z pour annuler)", tb.Name, what, names[0], names[1]))
+	t.notes = append(t.notes, t.say(id, msg.Args{"table": tb.Name, "first": names[0], "second": names[1]}))
 	return nil
 }
 

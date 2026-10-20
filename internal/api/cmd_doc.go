@@ -351,7 +351,7 @@ func init() {
 				src, _ := c.Str("source")
 				fn, _ := c.Str("function")
 				if (name == "") == (src == "") {
-					return nil, fmt.Errorf("donner name ou source")
+					return nil, msg.New("api.nameOrSource", nil)
 				}
 				if name != "" {
 					d, err := c.Doc()

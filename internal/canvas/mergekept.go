@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"strings"
 )
 
@@ -61,7 +62,7 @@ func (t *tx) keptSheets(tables []Table, gone map[int64]bool) ([]string, error) {
 		if len(what) == 0 {
 			what = []string{"une page"}
 		}
-		out = append(out, fmt.Sprintf("« %s » gardée (onglet en orange) : elle contient aussi %s (à supprimer à la main si besoin)", sheetName, strings.Join(what, ", ")))
+		out = append(out, t.say("note.sheetKept", msg.Args{"sheet": sheetName, "what": strings.Join(what, ", ")}))
 	}
 	return out, nil
 }

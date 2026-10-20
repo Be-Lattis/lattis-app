@@ -2,7 +2,6 @@ package canvas
 
 import (
 	"context"
-	"fmt"
 	"slices"
 	"strings"
 
@@ -73,7 +72,7 @@ func (t *tx) setTwoLevel(tb Table, on bool) error {
 		if err := t.moveTable(tb, 1, 0); err != nil {
 			return err
 		}
-		t.notes = append(t.notes, fmt.Sprintf("Tableau « %s » descendu d'une ligne pour faire place à ses groupes d'en-têtes", tb.Name))
+		t.notes = append(t.notes, t.say("note.tableMovedForGroups", msg.Args{"table": tb.Name}))
 		return flag()
 	}
 	groups, err := t.groupsAbove(tb)
@@ -110,15 +109,14 @@ func (t *tx) setTwoLevel(tb Table, on bool) error {
 		}
 	}
 	if n > 0 || single > 0 {
-		msg := fmt.Sprintf("Ligne au-dessus de « %s » reprise en groupes d'en-têtes", tb.Name)
 		var parts []string
 		if n > 0 {
-			parts = append(parts, fmt.Sprintf("%d %s « Groupe.Nom »", n, plural(n, "colonne renommée", "colonnes renommées")))
+			parts = append(parts, t.say("twoLevel.renamed", msg.Args{"n": n}))
 		}
 		if single > 0 {
-			parts = append(parts, fmt.Sprintf("%d sur un niveau (groupe et en-tête fusionnés : en-tête automatique ou répété)", single))
+			parts = append(parts, t.say("twoLevel.single", msg.Args{"n": single}))
 		}
-		t.notes = append(t.notes, msg+" ("+strings.Join(parts, ", ")+")")
+		t.notes = append(t.notes, t.say("note.groupsFromAbove", msg.Args{"table": tb.Name, "details": strings.Join(parts, ", ")}))
 	}
 	return nil
 }
@@ -381,7 +379,7 @@ func (t *tx) setGroups(tb Table, lo, hi int, g string) error {
 		}
 		if columnNameTaken(tb, c.ID, name) {
 			if g == "" {
-				t.notes = append(t.notes, fmt.Sprintf("La colonne « %s » garde son nom complet : « %s » est déjà pris dans le tableau « %s »", c.Name, sub, tb.Name))
+				t.notes = append(t.notes, t.say("note.columnKeepsFullName", msg.Args{"column": c.Name, "name": sub, "table": tb.Name}))
 				continue
 			}
 			name = freeColumnNameExcept(tb, c.ID, name)
@@ -430,7 +428,7 @@ func (t *tx) absorbBand(sheet int64, tables []Table) (bool, error) {
 				if err := t.setGroups(tb, c.Col-tb.Col, c.Col-tb.Col, g); err != nil {
 					return false, err
 				}
-				t.notes = append(t.notes, fmt.Sprintf("« %s » devient le groupe d'en-têtes de la colonne « %s »", clip(g), tb.Cols[c.Col-tb.Col].Name))
+				t.notes = append(t.notes, t.say("note.groupFromAbove", msg.Args{"group": clip(g), "column": tb.Cols[c.Col-tb.Col].Name}))
 			}
 			return true, nil
 		}
@@ -476,7 +474,7 @@ func (t *tx) singleLevel(tb Table, i int) error {
 	c := tb.Cols[i]
 	g, sub := splitGroup(c.Name)
 	if g == "" {
-		t.notes = append(t.notes, fmt.Sprintf("La colonne « %s » est déjà sur un niveau", c.Name))
+		t.notes = append(t.notes, t.say("note.columnAlreadySingle", msg.Args{"column": c.Name}))
 		return nil
 	}
 	lo, hi := groupSpan(tb, i)
@@ -490,14 +488,14 @@ func (t *tx) singleLevel(tb Table, i int) error {
 	if err := t.rename(tb, c, name); err != nil {
 		return err
 	}
-	why := fmt.Sprintf("elle quitte le groupe « %s »", g)
+	why := t.say("twoLevel.whyLeavesGroup", msg.Args{"group": g})
 	switch {
 	case name == g:
-		why = "son groupe devient son nom"
+		why = t.say("twoLevel.whyGroupBecomesName", nil)
 	case lo == hi:
-		why = fmt.Sprintf("le groupe « %s » est retiré", g)
+		why = t.say("twoLevel.whyGroupRemoved", msg.Args{"group": g})
 	}
-	t.notes = append(t.notes, fmt.Sprintf("Colonne « %s » sur un niveau, renommée « %s » (%s) ; Défusionner la remet sur deux lignes", c.Name, name, why))
+	t.notes = append(t.notes, t.say("note.columnSingle", msg.Args{"column": c.Name, "name": name, "why": why}))
 	return nil
 }
 
@@ -534,14 +532,14 @@ func (t *tx) joinGroup(tb Table, lo, hi int) error {
 		}
 		tb.Cols[k].Name = name
 	}
-	msg := fmt.Sprintf("Groupe d'en-têtes « %s » sur %d colonnes", g, hi-lo+1)
+	note := t.say("note.groupMerged", msg.Args{"group": g, "n": hi - lo + 1})
 	if placeholder {
-		msg += " : tapez son nom dans la bande"
+		note += t.say("twoLevel.typeName", nil)
 	}
 	if len(lost) > 0 {
-		msg += fmt.Sprintf(" (remplace « %s »)", strings.Join(lost, " », « "))
+		note += t.say("twoLevel.replaces", msg.Args{"names": strings.Join(lost, " », « ")})
 	}
-	t.notes = append(t.notes, msg)
+	t.notes = append(t.notes, note)
 	return nil
 }
 
@@ -574,11 +572,11 @@ func (t *tx) unmergeBand(tables []Table, r0, c0, r1, c1 int) error {
 			if err := t.setGroups(tb, lo+1, hi, ""); err != nil {
 				return err
 			}
-			t.notes = append(t.notes, fmt.Sprintf("Groupe « %s » défusionné : il reste sur « %s », %s sur un niveau", g, tb.Cols[lo].Name, plural(hi-lo, "l'autre colonne passe", fmt.Sprintf("les %d autres colonnes passent", hi-lo))))
+			t.notes = append(t.notes, t.say("note.groupUnmerged", msg.Args{"group": g, "column": tb.Cols[lo].Name, "n": hi - lo}))
 		}
 	}
 	if single > 0 && len(t.notes) == said {
-		t.notes = append(t.notes, "Colonne sur un niveau : pour lui donner un groupe, tapez-le dans la bande au-dessus de son en-tête, ou renommez-la « Groupe.Nom »")
+		t.notes = append(t.notes, t.say("note.singleLevelHint", nil))
 	}
 	return nil
 }

@@ -334,7 +334,7 @@ func (c *Call) optionsParam(name string) (map[string]any, error) {
 	}
 	m, ok := c.Raw(name).(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("%s : table d'options attendue", name)
+		return nil, msg.New("api.optionsTable", msg.Args{"name": name})
 	}
 	return m, nil
 }

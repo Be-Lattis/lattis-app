@@ -193,7 +193,7 @@ func (j *mergeJob) hasCat() bool { return j.plan.Category != nil }
 func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 	j := &mergeJob{plan: plan, key: -1}
 	if len(plan.Tables) < 2 && !(plan.single && len(plan.Tables) == 1) {
-		return nil, fmt.Errorf("%w : choisissez au moins deux tableaux", ErrMergeSheets)
+		return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.chooseTwoTables", nil)
 	}
 	switch plan.Old {
 	case "", MergeOldDelete, MergeOldHide:
@@ -242,7 +242,7 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 			refuse(err.Error())
 		}
 		if tb.Filtered() {
-			refuse(fmt.Sprintf("« %s » est filtré : retirez d'abord le filtre (des lignes masquées seraient regroupées sans qu'on les voie)", tb.Name))
+			refuse(t.say("mergeSheets.filtered", msg.Args{"table": tb.Name}))
 		}
 	}
 	// Colonnes.
@@ -362,7 +362,7 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 			for k := 2; names[strings.ToLower(cat.Name)]; k++ {
 				cat.Name = fmt.Sprintf("%s (onglet %d)", base, k)
 			}
-			j.notes = append(j.notes, fmt.Sprintf("Une colonne s'appelle déjà « %s » : la catégorie s'appelle « %s »", base, cat.Name))
+			j.notes = append(j.notes, t.say("mergeSheets.categoryNameTaken", msg.Args{"column": base, "category": cat.Name}))
 		}
 		j.plan.Category = cat
 	} else {
@@ -398,7 +398,7 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 		return nil, err
 	}
 	if !strings.EqualFold(free, name) && strings.TrimSpace(plan.Name) != "" {
-		j.notes = append(j.notes, fmt.Sprintf("Le nom « %s » est déjà pris : le tableau s'appelle « %s »", name, free))
+		j.notes = append(j.notes, t.say("mergeSheets.tableNameTaken", msg.Args{"name": name, "table": free}))
 	}
 	j.plan.Name = free
 	if strings.TrimSpace(plan.Sheet) == "" {
@@ -463,12 +463,12 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 		case !some:
 		case cites:
 			j.valued[i] = true
-			j.notes = append(j.notes, fmt.Sprintf("« %s » : la formule lit tout le tableau de son onglet, la colonne garde ses valeurs", c.Name))
+			j.notes = append(j.notes, t.say("mergeSheets.formulaReadsTable", msg.Args{"column": c.Name}))
 		case all && len(slices.Compact(slices.Clone(fs))) == 1:
 			j.formulas[i] = fs[0]
 		default:
 			j.valued[i] = true
-			j.notes = append(j.notes, fmt.Sprintf("« %s » : la formule n'est pas la même dans tous les onglets, la colonne garde ses valeurs", c.Name))
+			j.notes = append(j.notes, t.say("mergeSheets.formulaDiffers", msg.Args{"column": c.Name}))
 		}
 		// Valeurs gardées : le type est celui des résultats (une part en
 		// décimal dans une colonne d'abord saisie en entiers), quand il se
@@ -517,11 +517,11 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 	for _, c := range j.cols {
 		for ti, p := range c.Paired {
 			if p {
-				j.notes = append(j.notes, fmt.Sprintf("« %s » (%s) → « %s »", c.From[ti], j.srcs[ti].sheet, c.Name))
+				j.notes = append(j.notes, t.say("mergeSheets.columnRenamed", msg.Args{"from": c.From[ti], "sheet": j.srcs[ti].sheet, "column": c.Name}))
 			}
 		}
 		if c.Text {
-			j.notes = append(j.notes, fmt.Sprintf("« %s » passe en texte (types différents d'un onglet à l'autre)", c.Name))
+			j.notes = append(j.notes, t.say("mergeSheets.columnToText", msg.Args{"column": c.Name}))
 		}
 	}
 	j.plan.Columns = j.cols
@@ -660,7 +660,7 @@ func (t *tx) mergeKeyCheck(j *mergeJob) (string, error) {
 	for si, s := range j.srcs {
 		k := s.from[j.key]
 		if k < 0 {
-			return fmt.Sprintf("Pas de clé : « %s » n'a pas de colonne « %s »", s.sheet, j.cols[j.key].Name), nil
+			return t.say("mergeSheets.noKeyColumn", msg.Args{"sheet": s.sheet, "column": j.cols[j.key].Name}), nil
 		}
 		c := s.tb.Cols[k]
 		x := convertExpr(s.tb.sql()+"."+colSQL(c.ID), c.Type, typ)
@@ -682,9 +682,9 @@ func (t *tx) mergeKeyCheck(j *mergeJob) (string, error) {
 		val = "(vide)"
 	}
 	if a == b {
-		return fmt.Sprintf("Pas de clé : %s est %d fois dans %s", val, n, j.srcs[a].sheet), nil
+		return t.say("mergeSheets.noKeyRepeated", msg.Args{"value": val, "n": n, "sheet": j.srcs[a].sheet}), nil
 	}
-	return fmt.Sprintf("Pas de clé : %s est dans %s et dans %s", val, j.srcs[a].sheet, j.srcs[b].sheet), nil
+	return t.say("mergeSheets.noKeyTwoSheets", msg.Args{"value": val, "sheet": j.srcs[a].sheet, "other": j.srcs[b].sheet}), nil
 }
 
 // deletableSheets : feuilles sources qui ne contiendront plus rien une fois
@@ -749,17 +749,17 @@ func dedupe(vals []string) []string {
 }
 
 // refCounts : « 14 formules reprises, 2 à reprendre à la main ».
-func refCounts(done, left int) string {
+func (t *tx) refCounts(done, left int) string {
 	var parts []string
 	if done > 0 {
-		parts = append(parts, plural(done, "une formule reprise", fmt.Sprintf("%d formules reprises", done)))
+		parts = append(parts, t.say("mergeSheets.refsDone", msg.Args{"n": done}))
 	}
 	if left > 0 {
-		what := plural(left, "une à reprendre à la main", fmt.Sprintf("%d à reprendre à la main", left))
+		id := msg.ID("mergeSheets.refsLeft")
 		if done == 0 {
-			what = plural(left, "une formule à reprendre à la main", fmt.Sprintf("%d formules à reprendre à la main", left))
+			id = "mergeSheets.refsLeftAlone"
 		}
-		parts = append(parts, what)
+		parts = append(parts, t.say(id, msg.Args{"n": left}))
 	}
 	return strings.Join(parts, ", ")
 }

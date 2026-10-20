@@ -285,7 +285,7 @@ func (t *tx) setSheetChoice(sheet int64, table string, column string, value stri
 // l'onglet par ce champ »), réglé sur value ("" : toutes les valeurs) ; une
 // étape d'annulation.
 func (m *Model) SetSheetChoice(ctx context.Context, sheet int64, table, column, value string) error {
-	return m.Do(ctx, fmt.Sprintf("Choisir par « %s »", column), func(t *tx) error {
+	return m.Do(ctx, m.say("sheet.chooseByLabel", msg.Args{"column": column}), func(t *tx) error {
 		if err := t.guard(sheet); err != nil {
 			return err
 		}

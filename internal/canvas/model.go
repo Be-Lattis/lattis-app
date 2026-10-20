@@ -21,6 +21,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -137,7 +138,37 @@ type Model struct {
 	// SetLocale ; français par défaut.
 	locMu sync.Mutex
 	loc   formula.Locale
+	// Langue de la session (messages de la barre d'état, notes rendues à
+	// l'interface), voir SetLanguage ; français par défaut.
+	lang msg.Lang
 }
+
+// SetLanguage fixe la langue de la session : les notes et messages que le
+// modèle rend à l'interface (TakeNotice, aperçus) s'écrivent dans cette
+// langue. Les erreurs, elles, se traduisent au pont (*msg.Error).
+func (m *Model) SetLanguage(l msg.Lang) {
+	m.locMu.Lock()
+	m.lang = l
+	m.locMu.Unlock()
+}
+
+// Language : la langue de la session (français par défaut).
+func (m *Model) Language() msg.Lang {
+	m.locMu.Lock()
+	defer m.locMu.Unlock()
+	if m.lang == "" {
+		return msg.FR
+	}
+	return m.lang
+}
+
+// say : le message id dans la langue de la session.
+func (m *Model) say(id msg.ID, args msg.Args) string {
+	return msg.Format(m.Language(), id, args)
+}
+
+// say : le message id dans la langue de la session.
+func (t *tx) say(id msg.ID, args msg.Args) string { return t.m.say(id, args) }
 
 // SetLocale fixe la locale des formules de la session (formula.ForLanguage
 // de la langue de l'interface). Elle règle aujourd'hui la lecture des

@@ -155,7 +155,7 @@ func (p *PageSetup) Check() error {
 		return msg.New("pageSetup.scaleRange", nil)
 	}
 	if p.FitWide < 0 || p.FitTall < 0 || p.FitWide > 999 || p.FitTall > 999 {
-		return fmt.Errorf("ajustement : entre 0 (automatique) et 999 pages")
+		return msg.New("pageSetup.fitRange", nil)
 	}
 	if p.FirstPage < 0 {
 		return msg.New("pageSetup.firstPagePositive", nil)
@@ -163,7 +163,7 @@ func (p *PageSetup) Check() error {
 	if m := p.Margins; m != nil {
 		for _, v := range []float64{m.Top, m.Bottom, m.Left, m.Right, m.Header, m.Footer} {
 			if v < 0 || v > 50 || math.IsNaN(v) {
-				return fmt.Errorf("marges : entre 0 et 50 cm")
+				return msg.New("pageSetup.marginsRange", nil)
 			}
 		}
 		w, h := p.PaperMM()
@@ -356,7 +356,7 @@ func ParseA1Range(s string) (Rect, error) {
 	r0, c0, ok0 := parseA1Cell(a)
 	r1, c1, ok1 := parseA1Cell(b)
 	if !ok0 || !ok1 {
-		return Rect{}, fmt.Errorf("plage %q : adresse A1 attendue (A1:F20)", s)
+		return Rect{}, msg.New("pageSetup.rangeA1", msg.Args{"range": fmt.Sprintf("%q", s)})
 	}
 	return Rect{R0: min(r0, r1), C0: min(c0, c1), R1: max(r0, r1), C1: max(c0, c1)}, nil
 }

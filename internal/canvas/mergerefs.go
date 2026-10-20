@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Regrouper des onglets, lot 2 (docs/conception/regrouper-onglets-semblables.md,
@@ -58,7 +59,7 @@ func (t *tx) mergeTargets(j *mergeJob) (map[string]mergeTarget, string, error) {
 		}
 		low := strings.ToLower(text.String)
 		if other, dup := seen[low]; dup {
-			return nil, fmt.Sprintf("« %s » et « %s » ont la même valeur de catégorie", other, s.sheet), nil
+			return nil, t.say("mergeSheets.sameCategory", msg.Args{"sheet": other, "other": s.sheet}), nil
 		}
 		seen[low] = s.sheet
 		value, crit := formula.CategoryNodes(formula.FromSQL(s.cat, cat.Type))
@@ -748,18 +749,18 @@ func (t *tx) planMergeRefsAll(jobs []*mergeJob, plain map[string]string, dropped
 		}
 		if tbl, _ := m["table"].(string); p.isOld(tbl) {
 			out.pending = append(out.pending, PendingRef{Kind: "query", Where: "Requête « " + name + " »", Formula: "lit « " + tbl + " »",
-				Why: "une requête lit tout le tableau : à reprendre (étape Filtrer sur " + catName(j) + ")"})
+				Why: t.say("mergeSheets.queryReadsTable", msg.Args{"category": t.catName(j)})})
 		}
 	}
 	rs.Close()
 	return out, rs.Err()
 }
 
-func catName(j *mergeJob) string {
+func (t *tx) catName(j *mergeJob) string {
 	if j.hasCat() {
 		return j.plan.Category.Name
 	}
-	return "la catégorie"
+	return t.say("mergeSheets.theCategory", nil)
 }
 
 // applyMergeRefs écrit la reprise préparée. L'annulation remet le texte
@@ -783,7 +784,7 @@ func (t *tx) applyMergeRefs(ups []refUpdate) error {
 
 // summaryHint : une feuille qui faisait une synthèse par onglet (au moins
 // trois formules reprises) gagnerait à devenir un tableau croisé.
-func summaryHint(j *mergeJob, rewritten []PendingRef) string {
+func (t *tx) summaryHint(j *mergeJob, rewritten []PendingRef) string {
 	if !j.hasCat() {
 		return ""
 	}
@@ -800,7 +801,7 @@ func summaryHint(j *mergeJob, rewritten []PendingRef) string {
 	}
 	for _, s := range order {
 		if count[s] >= 3 {
-			return fmt.Sprintf("La feuille « %s » fait une synthèse par %s : un tableau croisé sur « %s » (%s en lignes) la remplacerait et suivrait les nouvelles lignes", s, strings.ToLower(j.plan.Category.Name), j.plan.Name, j.plan.Category.Name)
+			return t.say("mergeSheets.summaryHint", msg.Args{"sheet": s, "category": strings.ToLower(j.plan.Category.Name), "table": j.plan.Name, "column": j.plan.Category.Name})
 		}
 	}
 	return ""

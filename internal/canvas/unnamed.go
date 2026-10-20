@@ -2,7 +2,6 @@ package canvas
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/grid"
@@ -253,7 +252,7 @@ func (t *tx) reheadYoung(sheet int64, row, col int) error {
 		if err := t.promoteInPlace(tb); err != nil {
 			return err
 		}
-		t.notes = append(t.notes, fmt.Sprintf("1re ligne de « %s » prise comme en-têtes : elle se distingue maintenant des suivantes (Ctrl+Z pour annuler)", tb.Name))
+		t.notes = append(t.notes, t.say("note.firstRowHeaders", msg.Args{"table": tb.Name}))
 		return nil
 	}
 	return nil

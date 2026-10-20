@@ -1,8 +1,6 @@
 package config
 
 import (
-	"errors"
-	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
 	"slices"
 	"strings"
@@ -85,7 +83,7 @@ func isTheme(v any) error {
 		return msg.New("config.themeName", nil)
 	}
 	if !hexColor(get("table")) || !hexColor(get("source")) {
-		return errors.New("couleurs table et source attendues (#rrggbb)")
+		return msg.New("config.themeColors", nil)
 	}
 	if a := get("accents"); a != nil {
 		list, ok := a.([]any)
@@ -94,13 +92,13 @@ func isTheme(v any) error {
 		}
 		for _, c := range list {
 			if !hexColor(c) {
-				return errors.New("accents : couleurs #rrggbb attendues")
+				return msg.New("config.themeAccentColors", nil)
 			}
 		}
 	}
 	for _, k := range []string{"dark", "light"} {
 		if v := get(k); v != nil && !hexColor(v) {
-			return fmt.Errorf("%s : couleur #rrggbb attendue", k)
+			return msg.New("config.themeColor", msg.Args{"key": k})
 		}
 	}
 	return nil

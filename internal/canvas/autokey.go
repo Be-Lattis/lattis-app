@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Clé posée d'office et numérotation automatique (demande de Louis,
@@ -77,7 +78,7 @@ func (t *tx) autoKey(id int64) error {
 	t.keyed = keyed
 	t.autoKeyed = c.Name
 	if !t.undoBirth {
-		t.notes = append(t.notes, fmt.Sprintf("Clé posée sur %s (Ctrl+Z pour annuler)", c.Name))
+		t.notes = append(t.notes, t.say("note.keySet", msg.Args{"column": c.Name}))
 	}
 	return nil
 }

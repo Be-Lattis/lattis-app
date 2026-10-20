@@ -1045,7 +1045,7 @@ func ReadManifest(path string) (Manifest, error) {
 			return readManifest(f)
 		}
 	}
-	return Manifest{}, fmt.Errorf("%w : manifeste absent", ErrFormat)
+	return Manifest{}, msg.Wrap(ErrFormat, "archive.noManifest", msg.Args{"kind": ErrFormat})
 }
 
 func unquote(v string) string {
@@ -1116,7 +1116,7 @@ func readManifest(f *zip.File) (Manifest, error) {
 		}
 	}
 	if m.FormatVersion == 0 {
-		return m, fmt.Errorf("%w : manifeste sans format_version", ErrFormat)
+		return m, msg.Wrap(ErrFormat, "archive.noFormatVersion", msg.Args{"kind": ErrFormat})
 	}
 	return m, sc.Err()
 }

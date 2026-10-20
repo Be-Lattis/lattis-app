@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
@@ -255,12 +254,12 @@ func (t *tx) footKind(tb Table, row, col int, raw string) (kind, why string, err
 	// À droite d'un libellé de total gardé à part (« Total » puis 245) : la
 	// valeur de cette ligne de total, pas une ligne de données.
 	if total, err := t.totalLeft(tb, row, col); err != nil || total {
-		return outTotal, "valeur de la ligne de total", err
+		return outTotal, t.say("legend.why.totalValue", nil), err
 	}
 	src := strings.TrimSpace(raw)
 	switch {
 	case isFormula(src):
-		return outTotal, "une formule sous le tableau reste à part (ligne de total)", nil
+		return outTotal, t.say("legend.why.formulaBelow", nil), nil
 	case totalLabel(src):
 		// Une colonne qui a déjà des valeurs de cette forme (« Total
 		// Access ») : une donnée de plus.
@@ -274,11 +273,11 @@ func (t *tx) footKind(tb Table, row, col int, raw string) (kind, why string, err
 				return "", "", nil
 			}
 		}
-		return outTotal, "ligne de total", nil
+		return outTotal, t.say("legend.why.totalRow", nil), nil
 	case strings.HasPrefix(src, "'"):
 		return "", "", nil
 	case noteRe.MatchString(src):
-		return outNote, "note sous le tableau", nil
+		return outNote, t.say("legend.why.noteBelow", nil), nil
 	}
 	c := tb.Cols[col-tb.Col]
 	typed := c.Formula == "" && c.Type != grid.Text && c.Type != ""
@@ -292,7 +291,7 @@ func (t *tx) footKind(tb Table, row, col int, raw string) (kind, why string, err
 			return "", "", err
 		}
 		if any == 1 {
-			return outNote, fmt.Sprintf("un texte sous la colonne « %s » ne la change pas en texte", c.Name), nil
+			return outNote, t.say("legend.whyTextUnder", msg.Args{"column": c.Name}), nil
 		}
 	}
 	if n := utf8.RuneCountInString(src); text && n >= 25 && strings.Contains(src, " ") && c.Type == grid.Text {
@@ -301,7 +300,7 @@ func (t *tx) footKind(tb Table, row, col int, raw string) (kind, why string, err
 			return "", "", err
 		}
 		if n > 2*longest {
-			return outNote, "phrase sous le tableau", nil
+			return outNote, t.say("legend.why.sentenceBelow", nil), nil
 		}
 	}
 	return "", "", nil
@@ -315,11 +314,11 @@ func (t *tx) keepOut(tb Table, row, col int, raw, kind, why string) error {
 	if err := t.markOut(tb.Sheet, row, col, kind); err != nil {
 		return err
 	}
-	what := "note"
+	id := msg.ID("note.keptAsNote")
 	if kind == outTotal {
-		what = "total"
+		id = "note.keptAsTotal"
 	}
-	t.notes = append(t.notes, fmt.Sprintf("« %s » gardé comme %s hors du tableau « %s » : %s (clic droit : Ajouter au tableau)", clip(raw), what, tb.Name, why))
+	t.notes = append(t.notes, t.say(id, msg.Args{"value": clip(raw), "table": tb.Name, "why": why}))
 	return nil
 }
 
@@ -615,7 +614,7 @@ func (m *Model) RowToNote(ctx context.Context, table string, n int) error {
 		var qname string
 		switch err := t.row(`SELECT name FROM _lattis_queries WHERE target = ?`, tb.ID).Scan(&qname); {
 		case err == nil:
-			t.notes = append(t.notes, fmt.Sprintf("Ligne sortie du tableau « %s » ; l'actualisation de la requête « %s » l'y remettra (la ligne gardée à part descendra d'une ligne) : filtrez-la dans la requête pour l'en retirer pour de bon", tb.Name, qname))
+			t.notes = append(t.notes, m.say("note.rowLeftQuery", msg.Args{"table": tb.Name, "query": qname}))
 		case !errors.Is(err, sql.ErrNoRows):
 			return err
 		}

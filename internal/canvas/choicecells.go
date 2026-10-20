@@ -352,7 +352,7 @@ func (t *tx) setTableFollow(tb Table, follow bool) (string, error) {
 			return "", err
 		}
 		if has {
-			return fmt.Sprintf("« %s » suit %s", tb.Name, what), nil
+			return t.say("follow.follows", msg.Args{"table": tb.Name, "what": what}), nil
 		}
 		v := ""
 		if !ch.All {
@@ -362,9 +362,9 @@ func (t *tx) setTableFollow(tb Table, follow bool) (string, error) {
 			return "", err
 		}
 		if v == "" {
-			return fmt.Sprintf("« %s » suit %s : sa colonne « %s » est à remplir (onglet sur « (Toutes) »)", tb.Name, what, ch.Name), nil
+			return t.say("follow.followsFill", msg.Args{"table": tb.Name, "what": what, "column": ch.Name}), nil
 		}
-		return fmt.Sprintf("« %s » suit %s (%s)", tb.Name, what, v), nil
+		return t.say("follow.followsValue", msg.Args{"table": tb.Name, "what": what, "value": v}), nil
 	}
 	if !has {
 		return "", t.setFollowFlag(tb, nil)
@@ -388,12 +388,12 @@ func (t *tx) setTableFollow(tb Table, follow bool) (string, error) {
 		if err := t.setFollowFlag(tb, nil); err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("« %s » ne suit plus %s : il est le même pour toutes les valeurs (colonne « %s » retirée)", tb.Name, what, col.Name), t.trimAfterDrop(tb.ID)
+		return t.say("follow.stopsDropped", msg.Args{"table": tb.Name, "what": what, "column": col.Name}), t.trimAfterDrop(tb.ID)
 	}
 	if err := t.setFollowFlag(tb, 0); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("« %s » ne suit plus %s ; sa colonne « %s » est gardée (elle contient %d valeurs différentes)", tb.Name, what, col.Name, n), nil
+	return t.say("follow.stopsKept", msg.Args{"table": tb.Name, "what": what, "column": col.Name, "n": n}), nil
 }
 
 // addChoiceColumn ajoute la colonne de catégorie en dernier, au type de la
@@ -473,6 +473,6 @@ func (t *tx) followNewTable(id int64) error {
 		}
 		return err
 	}
-	t.notes = append(t.notes, fmt.Sprintf("Ce tableau suit %s (%s). Clic droit › Tableau › Suivre %s pour ne plus le suivre", FollowLabel(ch.Name), ch.Value, FollowLabel(ch.Name)))
+	t.notes = append(t.notes, t.say("note.tableFollows", msg.Args{"label": FollowLabel(ch.Name), "value": ch.Value}))
 	return nil
 }

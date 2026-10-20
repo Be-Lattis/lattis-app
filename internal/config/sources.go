@@ -197,7 +197,7 @@ func (s *FlagSource) Load(context.Context) (Tree, error) {
 	for _, p := range s.Pairs {
 		k, v, ok := strings.Cut(p, "=")
 		if !ok || strings.TrimSpace(k) == "" {
-			return nil, fmt.Errorf("--set %q : forme attendue chemin=valeur", p)
+			return nil, msg.New("configCli.setOption", msg.Args{"option": fmt.Sprintf("%q", p)})
 		}
 		setPath(t, strings.TrimSpace(k), parseScalar(v))
 	}

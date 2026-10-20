@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -231,7 +230,7 @@ func (m *Model) PreviewChoiceFormula(ctx context.Context, sheet int64, src strin
 			}
 		}
 		if len(out.Tables) == 0 && len(all) == 0 {
-			out.Error = fmt.Sprintf("Aucun tableau de la feuille n'a les colonnes %s", quoteList(cols))
+			out.Error = m.say("sheet.noTableWithColumnsHint", msg.Args{"columns": quoteList(cols)})
 			return nil
 		}
 		sortChoiceValues(all)
@@ -280,7 +279,7 @@ func quoteList(cols []string) string {
 // value la valeur affichée d'abord ("" : toutes) ; une étape d'annulation.
 func (m *Model) SetSheetChoiceFormula(ctx context.Context, sheet int64, name, src, value string) error {
 	name = strings.TrimSpace(name)
-	return m.Do(ctx, fmt.Sprintf("Choisir par « %s »", name), func(t *tx) error {
+	return m.Do(ctx, m.say("sheet.chooseByLabel", msg.Args{"column": name}), func(t *tx) error {
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
@@ -336,12 +335,12 @@ func (t *tx) setFormulaFollow(tb Table, ch *SheetChoice, follow bool, what strin
 		if err := t.setFollowFlag(tb, nil); err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("« %s » suit %s", tb.Name, what), nil
+		return t.say("follow.follows", msg.Args{"table": tb.Name, "what": what}), nil
 	}
 	if err := t.setFollowFlag(tb, 0); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("« %s » ne suit plus %s", tb.Name, what), nil
+	return t.say("follow.stops", msg.Args{"table": tb.Name, "what": what}), nil
 }
 
 // frenchNumber lit un nombre écrit comme FormatNumber (2025, 1,5, -3).

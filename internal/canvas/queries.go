@@ -313,7 +313,7 @@ func (t *tx) loadQuery(id int64, qname string, it ImportTable, res *QueryLoad) e
 			// est renommée (« Note 2 »).
 			name := freeColumnName(tb, c.Name)
 			if name != c.Name {
-				res.Warnings = append(res.Warnings, fmt.Sprintf("%s : la requête rend maintenant une colonne « %s », la colonne saisie devient « %s »", tb.Name, c.Name, name))
+				res.Warnings = append(res.Warnings, t.say("note.queryColumnRenamed", msg.Args{"table": tb.Name, "column": c.Name, "name": name}))
 			}
 			if err := t.addColumn(tb, next, name, c.Type, len(tb.Cols)); err != nil {
 				return err

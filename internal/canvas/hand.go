@@ -180,7 +180,7 @@ func (t *tx) keyWhy(tb Table, idx []int) (string, error) {
 	for _, i := range idx {
 		c := tb.Cols[i]
 		if c.Formula != "" {
-			return fmt.Sprintf("« %s » est une colonne calculée", c.Name), nil
+			return t.say("hand.whyComputed", msg.Args{"column": c.Name}), nil
 		}
 		cols = append(cols, colSQL(c.ID))
 		nulls = append(nulls, colSQL(c.ID)+" IS NULL")
@@ -191,10 +191,10 @@ func (t *tx) keyWhy(tb Table, idx []int) (string, error) {
 		return "", err
 	}
 	if empty > 0 {
-		return fmt.Sprintf("%d ligne(s) avec une case vide", empty), nil
+		return t.say("hand.whyEmptyRows", msg.Args{"n": empty}), nil
 	}
 	if distinct < total {
-		return fmt.Sprintf("%d combinaison(s) en double", total-distinct), nil
+		return t.say("hand.whyDuplicates", msg.Args{"n": total - distinct}), nil
 	}
 	return "", nil
 }
@@ -592,7 +592,7 @@ func (t *tx) handBefore(qid int64, old Table, headers []string, warnings *[]stri
 	}
 	if !hi.keyed && len(hc.order) > 0 {
 		if hc.key == handRow {
-			*warnings = append(*warnings, fmt.Sprintf("%s : pas de colonne clé choisie, les valeurs saisies suivent le rang des lignes", old.Name))
+			*warnings = append(*warnings, t.say("hand.noKey", msg.Args{"table": old.Name}))
 		}
 		if err := t.setHandKey(&hc.hi, hc.key); err != nil {
 			return nil, err
@@ -668,7 +668,7 @@ func (t *tx) handAfter(hc *handCarry, tb Table, loaded int, ids map[int64]int64,
 			return err
 		}
 	} else if len(hc.order) > 0 {
-		*warnings = append(*warnings, fmt.Sprintf("%s : la colonne clé « %s » n'est plus dans le résultat ; les valeurs saisies sont mises de côté (choisissez une autre clé ou rétablissez la colonne)", tb.Name, hc.key))
+		*warnings = append(*warnings, t.say("hand.keyGone", msg.Args{"table": tb.Name, "key": hc.key}))
 	}
 	// Valeurs mises de côté auparavant.
 	kept := map[string]map[int64]handCell{}
@@ -751,13 +751,13 @@ func (t *tx) handAfter(hc *handCarry, tb Table, loaded int, ids map[int64]int64,
 		back++
 	}
 	if aside > 0 {
-		*warnings = append(*warnings, fmt.Sprintf("%s : %s, mises de côté (elles reviendront si la ligne revient)", tb.Name, plural(aside, "valeurs saisies d'une ligne disparue", fmt.Sprintf("valeurs saisies de %d lignes disparues", aside))))
+		*warnings = append(*warnings, t.say("hand.setAside", msg.Args{"table": tb.Name, "n": aside}))
 	}
 	if dups > 0 {
-		*warnings = append(*warnings, fmt.Sprintf("%s : %s en double dans « %s », valeurs saisies mises de côté", tb.Name, plural(dups, "clé", fmt.Sprintf("%d clés", dups)), hc.key))
+		*warnings = append(*warnings, t.say("hand.duplicateKeys", msg.Args{"table": tb.Name, "n": dups, "key": hc.key}))
 	}
 	if back > 0 {
-		*warnings = append(*warnings, fmt.Sprintf("%s : %s, rattachées à leur ligne revenue", tb.Name, plural(back, "valeurs mises de côté", fmt.Sprintf("valeurs mises de côté de %d lignes", back))))
+		*warnings = append(*warnings, t.say("hand.reattached", msg.Args{"table": tb.Name, "n": back}))
 	}
 	if len(do) > 0 {
 		// Chaque instruction a son inverse au même rang : l'annulation les

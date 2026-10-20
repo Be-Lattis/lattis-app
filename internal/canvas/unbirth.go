@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"strings"
 )
 
@@ -96,21 +96,21 @@ func (m *Model) undone(name string) {
 	if !ok || !strings.HasPrefix(what, "du tableau ") && !strings.HasPrefix(what, "des tableaux ") {
 		return
 	}
-	next := "l'action"
+	next := m.say("unbirth.nextAction", nil)
 	if st, err := m.bus.State(context.Background()); err == nil {
 		switch st.Undo {
 		case "Saisie":
-			next = "la saisie"
+			next = m.say("unbirth.nextTyping", nil)
 		case "Coller":
-			next = "le collage"
+			next = m.say("unbirth.nextPaste", nil)
 		case "":
 		default:
-			next = "« " + st.Undo + " »"
+			next = m.say("unbirth.nextStep", msg.Args{"step": st.Undo})
 		}
 	}
-	msg := fmt.Sprintf("Tableau %s défait : les cellules restent libres (Ctrl+Z de nouveau annule %s)", strings.TrimPrefix(what, "du tableau "), next)
+	text := m.say("note.unbirthOne", msg.Args{"table": strings.TrimPrefix(what, "du tableau "), "next": next})
 	if tables, ok := strings.CutPrefix(what, "des tableaux "); ok {
-		msg = fmt.Sprintf("Tableaux %s défaits : les cellules restent libres (Ctrl+Z de nouveau annule %s)", tables, next)
+		text = m.say("note.unbirthMany", msg.Args{"tables": tables, "next": next})
 	}
-	m.note([]string{msg})
+	m.note([]string{text})
 }

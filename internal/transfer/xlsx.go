@@ -150,7 +150,7 @@ func (x *xlsxFile) load() error {
 		} `xml:"definedNames>definedName"`
 	}
 	if err := x.decode(wbFile, &wb); err != nil {
-		return fmt.Errorf("%w (classeur illisible : %v)", ErrNotXLSX, err)
+		return msg.Wrap(ErrNotXLSX, "transfer.notXlsxUnreadable", msg.Args{"kind": ErrNotXLSX, "err": err})
 	}
 	x.date1904 = wb.Pr.Date1904 == "1" || wb.Pr.Date1904 == "true"
 	byID, byType, err := x.rels(wbPath)

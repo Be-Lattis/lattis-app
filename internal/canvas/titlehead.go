@@ -168,11 +168,11 @@ func (m *Model) TitleToHeader(ctx context.Context, table string) error {
 				return err
 			}
 		}
-		what := fmt.Sprintf("En-têtes de « %s » remplacés par la ligne du dessus", tb.Name)
+		id := msg.ID("note.headersFromAbove")
 		if keep {
-			what += " ; l'ancien en-tête est devenu la 1re ligne"
+			id = "note.headersFromAboveKept"
 		}
-		t.notes = append(t.notes, what+" (Ctrl+Z pour annuler)")
+		t.notes = append(t.notes, t.say(id, msg.Args{"table": tb.Name}))
 		return nil
 	})
 }

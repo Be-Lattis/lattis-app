@@ -71,7 +71,7 @@ func (c *Call) mapTile(z, x, y int) (string, error) {
 		return "", err
 	}
 	if !r.OK {
-		return "", fmt.Errorf("tuile %d/%d/%d : statut %d", z, x, y, r.Status)
+		return "", msg.New("api.tileStatus", msg.Args{"z": z, "x": x, "y": y, "status": r.Status})
 	}
 	ctype := r.Headers["content-type"]
 	if !strings.HasPrefix(ctype, "image/") {

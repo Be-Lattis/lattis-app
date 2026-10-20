@@ -214,7 +214,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 					if kind == "" || t.noLegend {
 						return ErrQueryTable
 					}
-					return t.keepOut(tb, row, col, raw, kind, "sur la ligne gardée à part sous un tableau de requête")
+					return t.keepOut(tb, row, col, raw, kind, t.say("legend.why.queryKeptRow", nil))
 				}
 				outs, err := t.outCells(sheet)
 				if err != nil {
@@ -245,7 +245,7 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				noteRe.MatchString(raw) && !inAny(tables, row, col):
 				// « ← à vérifier » à côté d'une ligne : une remarque, pas une
 				// colonne.
-				return t.keepOut(tb, row, col, raw, outNote, "remarque à côté du tableau")
+				return t.keepOut(tb, row, col, raw, outNote, t.say("legend.why.remarkBeside", nil))
 			case inRows && col == tb.Col-1 && !empty && !inAny(tables, row, col) && !rightOfAny(tables, tb, row, col):
 				// Juste à gauche : nouvelle première colonne. Juste à droite d'un autre
 				// tableau, c'est lui qui la prend (et les deux fusionnent).
@@ -631,7 +631,7 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 		}
 	}
 	if len(titles) > 0 {
-		t.notes = append(t.notes, fmt.Sprintf("« %s » gardé comme titre au-dessus du tableau (clic droit sur l'en-tête pour changer)", clip(strings.Join(titles, " "))))
+		t.notes = append(t.notes, t.say("note.titleKept", msg.Args{"title": clip(strings.Join(titles, " "))}))
 	}
 	name, err := t.tableName(sheet, top, c0)
 	if err != nil {

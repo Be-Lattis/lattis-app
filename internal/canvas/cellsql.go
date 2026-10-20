@@ -2,7 +2,6 @@ package canvas
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -122,7 +121,7 @@ func (m *Model) CellSQL(ctx context.Context, q string, sheet int64) (string, err
 				}
 			}
 			if v.IsErr() {
-				failed = fmt.Errorf("%s vaut %s", formula.CellText(formula.CellName(r, c)), v.String())
+				failed = msg.New("cellSql.cellValue", msg.Args{"cell": formula.CellText(formula.CellName(r, c)), "value": v.String()})
 				return orig
 			}
 			return sqlCellValue(v)
