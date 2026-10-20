@@ -6,7 +6,7 @@
 // Les colonnes du résultat reprennent le texte saisi comme en-tête.
 
 import type { ColumnType } from '#lib/grid/format.js';
-import { lower } from '#lib/i18n/index.js';
+import { lower, t } from '#lib/i18n/index.js';
 
 export interface SqlColumn {
 	name: string;
@@ -271,7 +271,13 @@ export function translate(src: string, catalog: Catalog): Translation {
 	const a = analyze(src, catalog);
 	if (a.ambiguous.length > 0) {
 		const x = a.ambiguous[0];
-		throw new Error(`Colonne « ${x.name} » ambiguë : présente dans ${x.tables.map((o) => `« ${o.name} »`).join(' et ')}. Préciser le tableau, par exemple ${quote(x.tables[0].name)}.${quote(x.name)}.`);
+		throw new Error(
+		t('sql.ambiguous', {
+		column: x.name,
+		tables: x.tables.map((o) => `« ${o.name} »`).join(t('sql.and')),
+		example: `${quote(x.tables[0].name)}.${quote(x.name)}`
+		})
+		);
 	}
 	const repl = new Map<number, string>();
 	for (const r of a.resolved) {

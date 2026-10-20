@@ -5,6 +5,7 @@
 import type { ColumnType } from '#lib/grid/format.js';
 import { quote, type SqlObject } from './names';
 import { count } from './result';
+import { t, tAny } from '#lib/i18n/index.js';
 
 export type ExampleKind = 'select' | 'insert' | 'update' | 'delete';
 
@@ -27,18 +28,12 @@ export function placeholder(type: ColumnType, today = new Date()): string {
 			return `'${today.getFullYear()}-${p(today.getMonth() + 1)}-${p(today.getDate())}'`;
 		}
 		default:
-			return "'texte'";
+			return `'${t('sql.example.text')}'`;
 	}
 }
 
-const typeHint: Record<ColumnType, string> = {
-	integer: 'entier',
-	decimal: 'décimal',
-	text: 'texte',
-	boolean: 'booléen : 1 ou 0',
-	date: 'date AAAA-MM-JJ',
-	formula: 'calculée'
-};
+/** Indication du type d'une colonne, en commentaire des exemples. */
+	const typeHint = (type: ColumnType) => tAny(`sql.example.type.${type}`);
 
 /** Colonnes qu'on peut écrire (les colonnes calculées se remplissent seules). */
 const writable = (o: SqlObject) => o.columns.filter((c) => c.type !== 'formula');
@@ -54,8 +49,8 @@ function list(items: { text: string; note?: string }[], indent: string, sep = ',
 	const width = Math.max(0, ...items.map((x) => x.text.length)) + sep.length;
 	return items
 		.map((x, i) => {
-			const t = x.text + (i < items.length - 1 ? sep : '');
-			return x.note ? `${indent}${t.padEnd(width)}  -- ${x.note}` : `${indent}${t}`;
+			const s = x.text + (i < items.length - 1 ? sep : '');
+			return x.note ? `${indent}${s.padEnd(width)}  -- ${x.note}` : `${indent}${s}`;
 		})
 		.join('\n');
 }
@@ -68,14 +63,13 @@ export function example(o: SqlObject, kind: ExampleKind, today = new Date()): st
 	const lines = count(o.rows ?? 0);
 	switch (kind) {
 		case 'select': {
-			const what = isReadOnly(o) ? 'du tableau croisé' : 'du tableau';
 			return [
-				`-- Toutes les colonnes ${what} ${o.name} (${lines})`,
+			`-- ${isReadOnly(o) ? t('sql.example.selectPivot', { name: o.name, rows: lines }) : t('sql.example.select', { name: o.name, rows: lines })}`,
 				'SELECT',
 				cols.length ? list(cols.map((c) => ({ text: quote(c.name) })), '  ') : '  *',
 				`FROM ${table}`,
-				`-- WHERE ${first || 'colonne'} = ${cols[0] ? placeholder(cols[0].type, today) : "'valeur'"}`,
-				`-- ORDER BY ${first || 'colonne'} DESC`,
+				`-- WHERE ${first || t('sql.example.column')} = ${cols[0] ? placeholder(cols[0].type, today) : `'${t('sql.example.value')}'`}`,
+				`-- ORDER BY ${first || t('sql.example.column')} DESC`,
 				'LIMIT 100;'
 			].join('\n');
 		}
@@ -83,12 +77,12 @@ export function example(o: SqlObject, kind: ExampleKind, today = new Date()): st
 			const w = writable(o);
 			const skipped = cols.length - w.length;
 			return [
-				`-- Ajoute une ligne à la fin de ${o.name}${skipped ? ' (les colonnes calculées se remplissent seules)' : ''}`,
-				'-- Ctrl+Z annule l\'ajout.',
+				`-- ${skipped ? t('sql.example.insertComputed', { name: o.name }) : t('sql.example.insert', { name: o.name })}`,
+				`-- ${t('sql.example.insertUndo')}`,
 				`INSERT INTO ${table} (`,
 				list(w.map((c) => ({ text: quote(c.name) })), '  '),
 				') VALUES (',
-				list(w.map((c) => ({ text: placeholder(c.type, today), note: `${c.name} (${typeHint[c.type]})` })), '  '),
+				list(w.map((c) => ({ text: placeholder(c.type, today), note: `${c.name} (${typeHint(c.type)})` })), '  '),
 				');'
 			].join('\n');
 		}
@@ -97,19 +91,19 @@ export function example(o: SqlObject, kind: ExampleKind, today = new Date()): st
 			const set = writable(o).filter((c) => c !== key);
 			const assigned = set.length ? set : writable(o);
 			return [
-				`-- Modifie les lignes de ${o.name} qui vérifient la condition`,
-				'-- Sans WHERE, toutes les lignes sont modifiées. Ctrl+Z annule.',
+				`-- ${t('sql.example.update', { name: o.name })}`,
+				`-- ${t('sql.example.updateWarn')}`,
 				`UPDATE ${table}`,
 				'SET',
-				list(assigned.map((c) => ({ text: `${quote(c.name)} = ${placeholder(c.type, today)}`, note: typeHint[c.type] })), '  '),
+				list(assigned.map((c) => ({ text: `${quote(c.name)} = ${placeholder(c.type, today)}`, note: typeHint(c.type) })), '  '),
 				key ? `WHERE ${quote(key.name)} = ${placeholder(key.type, today)};` : 'WHERE 0;'
 			].join('\n');
 		}
 		case 'delete': {
 			const key = keyColumn(o);
 			return [
-				`-- Supprime les lignes de ${o.name} qui vérifient la condition`,
-				'-- Sans WHERE, tout le tableau est vidé. Ctrl+Z annule.',
+				`-- ${t('sql.example.delete', { name: o.name })}`,
+				`-- ${t('sql.example.deleteWarn')}`,
 				`DELETE FROM ${table}`,
 				key ? `WHERE ${quote(key.name)} = ${placeholder(key.type, today)};` : 'WHERE 0;'
 			].join('\n');

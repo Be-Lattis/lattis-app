@@ -12,6 +12,7 @@
 	import { tags } from '@lezer/highlight';
 	import { analyze, errorSpan, statementAt, statements, type Catalog } from './names';
 	import { complete } from './complete';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		value: string;
@@ -43,7 +44,7 @@
 		table: Decoration.mark({ class: 'cm-slt-table' }),
 		alias: Decoration.mark({ class: 'cm-slt-alias' }),
 		column: Decoration.mark({ class: 'cm-slt-column' }),
-		ambiguous: Decoration.mark({ class: 'cm-slt-ambiguous', attributes: { title: 'Colonne présente dans plusieurs tableaux : préciser le tableau' } })
+		ambiguous: Decoration.mark({ class: 'cm-slt-ambiguous', attributes: { title: t('sql.editor.ambiguous') } })
 	};
 	function decorate(v: EditorView): DecorationSet {
 		const b = new RangeSetBuilder<Decoration>();
@@ -165,7 +166,7 @@
 					bracketMatching(),
 					closeBrackets(),
 					highlightActiveLine,
-					placeholder('SELECT … FROM Tableau — Ctrl+Espace pour les noms'),
+					placeholder(t('sql.editor.placeholder')),
 					sql({ dialect: SQLite, upperCaseKeywords: true }),
 					syntaxHighlighting(style),
 					names,

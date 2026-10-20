@@ -3708,6 +3708,33 @@ export interface MessageParams {
 	'shell.zoom.level': Record<never, never>;
 	'shell.zoom.out': Record<never, never>;
 	'shell.zoom.slider': Record<never, never>;
+	'sql.ambiguous': { column: number | string; example: number | string; tables: number | string };
+	'sql.and': Record<never, never>;
+	'sql.complete.table': { rows: number | string };
+	'sql.editor.ambiguous': Record<never, never>;
+	'sql.editor.placeholder': Record<never, never>;
+	'sql.example.column': Record<never, never>;
+	'sql.example.delete': { name: number | string };
+	'sql.example.deleteWarn': Record<never, never>;
+	'sql.example.insert': { name: number | string };
+	'sql.example.insertComputed': { name: number | string };
+	'sql.example.insertUndo': Record<never, never>;
+	'sql.example.select': { name: number | string; rows: number | string };
+	'sql.example.selectPivot': { name: number | string; rows: number | string };
+	'sql.example.text': Record<never, never>;
+	'sql.example.type.boolean': Record<never, never>;
+	'sql.example.type.date': Record<never, never>;
+	'sql.example.type.decimal': Record<never, never>;
+	'sql.example.type.formula': Record<never, never>;
+	'sql.example.type.integer': Record<never, never>;
+	'sql.example.type.text': Record<never, never>;
+	'sql.example.update': { name: number | string };
+	'sql.example.updateWarn': Record<never, never>;
+	'sql.example.value': Record<never, never>;
+	'sql.rows': { n: number | string };
+	'sql.when.minutes': { n: number | string };
+	'sql.when.now': Record<never, never>;
+	'sql.when.yesterday': { time: number | string };
 }
 
 /** Clé d’un message du catalogue. */

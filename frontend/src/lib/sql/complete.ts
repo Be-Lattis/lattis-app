@@ -4,7 +4,7 @@
 import { typeLabel } from '#lib/grid/format.js';
 import { count } from './result';
 import { analyze, quote, statementAt, tokenize, KEYWORDS, type Catalog } from './names';
-import { lower } from '#lib/i18n/index.js';
+import { lower, t } from '#lib/i18n/index.js';
 
 export interface Suggestion {
 	label: string;
@@ -85,7 +85,7 @@ function completeIn(src: string, pos: number, catalog: Catalog, explicit: boolea
 
 	const tables = () => {
 		for (const o of catalog.objects)
-			options.push({ label: o.name, apply: write(o.name), kind: 'table', detail: `tableau · ${count(o.rows)}`, boost: 5 });
+			options.push({ label: o.name, apply: write(o.name), kind: 'table', detail: t('sql.complete.table', { rows: count(o.rows) }), boost: 5 });
 	};
 	if (prevSig && prevSig.kind === 'word' && tableWords.includes(prevSig.text.toUpperCase())) {
 		tables();

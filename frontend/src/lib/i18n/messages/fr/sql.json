@@ -1,1 +1,39 @@
-{}
+{
+	"when": {
+		"now": "à l'instant",
+		"minutes": "il y a {n} min",
+		"yesterday": "hier {time}"
+	},
+	"rows": "{n, plural, one {# ligne} other {# lignes}}",
+	"example": {
+		"text": "texte",
+		"value": "valeur",
+		"column": "colonne",
+		"type": {
+			"integer": "entier",
+			"decimal": "décimal",
+			"text": "texte",
+			"boolean": "booléen : 1 ou 0",
+			"date": "date AAAA-MM-JJ",
+			"formula": "calculée"
+		},
+		"select": "Toutes les colonnes du tableau {name} ({rows})",
+		"selectPivot": "Toutes les colonnes du tableau croisé {name} ({rows})",
+		"insert": "Ajoute une ligne à la fin de {name}",
+		"insertComputed": "Ajoute une ligne à la fin de {name} (les colonnes calculées se remplissent seules)",
+		"insertUndo": "Ctrl+Z annule l'ajout.",
+		"update": "Modifie les lignes de {name} qui vérifient la condition",
+		"updateWarn": "Sans WHERE, toutes les lignes sont modifiées. Ctrl+Z annule.",
+		"delete": "Supprime les lignes de {name} qui vérifient la condition",
+		"deleteWarn": "Sans WHERE, tout le tableau est vidé. Ctrl+Z annule."
+	},
+	"complete": {
+		"table": "tableau · {rows}"
+	},
+	"ambiguous": "Colonne « {column} » ambiguë : présente dans {tables}. Préciser le tableau, par exemple {example}.",
+	"and": " et ",
+	"editor": {
+		"ambiguous": "Colonne présente dans plusieurs tableaux : préciser le tableau",
+		"placeholder": "SELECT … FROM Tableau — Ctrl+Espace pour les noms"
+	}
+}

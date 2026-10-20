@@ -1,6 +1,6 @@
 // Historique des requêtes de l'onglet SQL, gardé sur ce poste (localStorage) :
 // la plus récente en tête, sans doublon, 100 au plus.
-import { fmtDate, fmtTime, lower } from '#lib/i18n/index.js';
+import { fmtDate, fmtTime, lower, t } from '#lib/i18n/index.js';
 
 export interface HistoryEntry {
 	sql: string;
@@ -50,13 +50,13 @@ export function save(list: HistoryEntry[]) {
 /** « à l'instant », « il y a 5 min », « hier 14:02 », « 12/10 09:30 ». */
 export function when(at: number, now = Date.now()): string {
 	const s = Math.round((now - at) / 1000);
-	if (s < 60) return "à l'instant";
-	if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
+	if (s < 60) return t('sql.when.now');
+	if (s < 3600) return t('sql.when.minutes', { n: Math.floor(s / 60) });
 	const d = new Date(at);
 	const hm = fmtTime(d, { hour: '2-digit', minute: '2-digit' });
 	const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
 	const days = Math.round((day(new Date(now)) - day(d)) / 86400000);
 	if (days === 0) return hm;
-	if (days === 1) return `hier ${hm}`;
+	if (days === 1) return t('sql.when.yesterday', { time: hm });
 	return `${fmtDate(d, { day: '2-digit', month: '2-digit' })} ${hm}`;
 }
