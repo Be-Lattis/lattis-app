@@ -71,9 +71,9 @@
 		},
 		"detach": {
 			"local": "«{title}» pasará a ser un libro local normal: dejará de sincronizarse con {server}.",
-			"serverKept": "El libro del servidor no se modifica: los demás miembros lo conservan tal cual, y puede volver a abrirlo desde el servidor.",
-			"pending": "{n, plural, one {# cambio aún no enviado al servidor se quedará} other {# cambios aún no enviados al servidor se quedarán}} en este libro local, sin enviarse.",
-			"cached": "Elegirá dónde guardar el libro local (su copia actual es solo una caché de Lattis).",
+			"serverKept": "El libro del servidor no cambia: podrá volver a abrirlo desde el servidor.",
+			"pending": "{n, plural, one {# cambio no enviado se quedará} other {# cambios no enviados se quedarán}} en este libro local.",
+			"cached": "Elegirá dónde guardar el libro local.",
 			"final": "La desvinculación no se puede deshacer."
 		},
 		"retryNotice": "Intentando conectar de nuevo…",
@@ -109,7 +109,7 @@
 		"alone": "Trabajo conjunto: de momento solo usted",
 		"with": "Trabajando junto con {names}",
 		"withMore": "Trabajando junto con {names} y {n} más",
-		"title": "Trabajo conjunto en este libro (carpeta compartida): los datos de las tablas se editan entre todos, el resto espera a que esté solo.",
+		"title": "Trabajo conjunto: los datos de las tablas se editan juntos.",
 		"since": " desde {time}",
 		"joining": " (uniéndose)",
 		"conflicts": "{n, plural, one {# conflicto} other {# conflictos}}"
@@ -151,7 +151,7 @@
 		"onSave": " · en cada guardado",
 		"sending": "Enviando…",
 		"update": "Actualizar",
-		"help": "Solo se envían las columnas elegidas de estas tablas; el resto del libro no sale de este equipo. Clic derecho en la tabla › Compartir en el Data Lake de Lattis… para cambiarlas o quitarlas."
+		"help": "Solo se envían las columnas elegidas; el resto no sale del equipo."
 	},
 	"cap": {
 		"yes": "sí",
@@ -205,7 +205,7 @@
 	"prefill": {
 		"title": "Enlaces rellenados previamente · «{title}»",
 		"noParam": "Ningún campo tiene nombre corto: asígnele uno en la pestaña Campos («Nombre corto en el enlace»).",
-		"help": "Elija los campos que rellena el enlace y luego una fila por enlace (un código QR por sede, por ejemplo). Quien responde puede cambiar el valor, salvo en un campo bloqueado por el enlace.",
+		"help": "Elija los campos que rellena el enlace y luego una fila por enlace.",
 		"locked": "bloqueado",
 		"hide": "Ocultar",
 		"show": "Enlace y código QR",
@@ -215,7 +215,7 @@
 	"preview": {
 		"membersReserved": "Este servidor reserva la lista de miembros a los propietarios del libro: pídales que usen «Ver como…».",
 		"noTable": "Ninguna tabla publicada.",
-		"intro": "Compruebe lo que un miembro ve y puede hacer: las filas se muestran como el servidor se las da a ese miembro, incluidos los filtros y las reglas avanzadas.",
+		"intro": "Compruebe lo que un miembro ve y puede hacer.",
 		"member": "Miembro",
 		"choose": "Elegir…",
 		"table": "Tabla",
@@ -290,10 +290,10 @@
 				"tooltip": "La tabla vuelve a la versión del servidor"
 			}
 		},
-		"layout": "Diseño de página: {n, plural, one {# elemento modificado} other {# elementos modificados}} en ambos lados desde la apertura (ancho, formato, celda libre…). Gana la última versión guardada; tras más de 24 horas sin conexión, gana la versión de sus compañeros.",
+		"layout": "Diseño de página: {n, plural, one {# elemento modificado} other {# elementos modificados}} en ambos lados desde la apertura. Gana la última versión guardada.",
 		"none": "Ningún conflicto pendiente.",
-		"local": "Un compañero ha modificado estas celdas al mismo tiempo que usted: su valor, el más reciente, se muestra en todas partes. «Conservar el mío» restablece el suyo para todos los equipos.",
-		"remote": "Un compañero ha modificado estas celdas mientras usted las modificaba. Su valor sigue mostrándose hasta que elija.",
+		"local": "Un compañero modificó estas celdas al mismo tiempo que usted: su valor se muestra en todas partes.",
+		"remote": "Un compañero modificó estas celdas mientras usted las editaba: su valor sigue mostrándose hasta que elija.",
 		"keepAllMine": "Conservar todos los míos",
 		"keepAllTheirs": "Conservar todos los suyos",
 		"goto": "Ir a la celda",
@@ -310,7 +310,7 @@
 		"address": "Dirección del servidor",
 		"continue": "Continuar",
 		"device": {
-			"help": "En otro dispositivo (teléfono, otro equipo), abra la dirección de abajo y escriba el código; luego inicie sesión con {provider}.",
+			"help": "En otro dispositivo, abra la dirección de abajo, escriba el código e inicie sesión con {provider}.",
 			"copy": "Copiar el código",
 			"valid": "Código válido durante {time} más.",
 			"expired": "Código caducado.",
@@ -318,7 +318,7 @@
 		},
 		"browser": {
 			"help": "Termine de iniciar sesión con {provider} en su navegador y vuelva a Lattis.",
-			"note": "La página se ha abierto en el navegador del sistema. ¿No se ha abierto nada? Cancele y elija «desde otro dispositivo»."
+			"note": "¿No se abrió nada? Cancele y elija «desde otro dispositivo»."
 		},
 		"invitation": "por invitación",
 		"otherDevice": "Iniciar sesión desde otro dispositivo (escribir un código)",
@@ -429,7 +429,7 @@
 		"help": "Ayuda: compartir como formulario",
 		"reading": "Leyendo la tabla…",
 		"openToYou": "Formularios de esta tabla abiertos para usted:",
-		"already": "Esta tabla ya tiene {n, plural, one {un formulario} other {# formularios}}. Varios formularios pueden rellenar la misma tabla.",
+		"already": "Esta tabla ya tiene {n, plural, one {un formulario} other {# formularios}}.",
 		"responses": "{n, plural, one {# respuesta} other {# respuestas}}",
 		"edit": "Modificar…",
 		"newForm": "Nuevo formulario…",
@@ -457,7 +457,7 @@
 			"required": "Obligatorio",
 			"settings": "Configuración del campo",
 			"help": "Ayuda",
-			"positionHelp": "La rellena el navegador de quien responde cuando pulsa «Mi ubicación» (nunca automáticamente), con la precisión indicada.",
+			"positionHelp": "Lo rellena el navegador cuando el encuestado toca «Mi ubicación».",
 			"positionColumn": "Columna «{name}»: «lat, lon».",
 			"positionColumns": "Columnas «{lat}» y «{lon}».",
 			"placeholder": "Texto de ejemplo",
@@ -483,7 +483,7 @@
 				"tel": "Teléfono",
 				"url": "Dirección web"
 			},
-			"listFrom": "Lista tomada de «{source}», releída por el servidor en cada visualización ({n} valores hoy).",
+			"listFrom": "Lista de «{source}» ({n} valores hoy).",
 			"listValues": "Valores de la lista (uno por línea)",
 			"copiedFrom": "{copied} de «{source}»",
 			"param": "Nombre corto en el enlace",
@@ -562,7 +562,7 @@
 			"desktop": "Equipo",
 			"browser": {
 				"label": "Abrir la vista previa en el navegador",
-				"tooltip": "Guarda el borrador y abre la página real del servidor (enlace válido durante 10 minutos, respuestas no guardadas)"
+				"tooltip": "Guarda el borrador y abre la página del servidor (respuestas no guardadas)"
 			}
 		},
 		"saving": "Guardando…",
@@ -596,11 +596,11 @@
 			},
 			"table": {
 				"title": "Publicar solo esta tabla",
-				"detail": "Solo se envían las columnas elegidas; el libro se queda en su equipo, sin ponerse a disposición."
+				"detail": "Solo se envían las columnas elegidas; el libro se queda en su equipo."
 			},
 			"shared": {
 				"title": "Añadir esta tabla al libro compartido",
-				"detail": "Recomendado. Se crea en el servidor con sus filas; los miembros la reciben y la modifican según sus derechos. Después se puede compartir en el Data Lake desde este mismo menú."
+				"detail": "Recomendado. Se crea en el servidor con sus filas, para los miembros según sus derechos."
 			},
 			"tableAlone": "Publicar esta tabla sola en el Data Lake"
 		},
@@ -609,7 +609,7 @@
 			"notInCollab": "El libro está compartido en directo, pero esta tabla no forma parte de él.",
 			"howTitle": "¿Cómo quiere compartir esta tabla?",
 			"notPublished": "Esta tabla no está en un libro publicado.",
-			"whyCollab": "Un libro compartido en directo no se vuelve a publicar: su lista de tablas se fija al publicarlo, y una tabla creada después se queda en su equipo."
+			"whyCollab": "Un libro compartido en directo no se vuelve a publicar: una tabla creada después se queda en su equipo."
 		},
 		"push": {
 			"done": "Origen «{table}» actualizado",
@@ -932,18 +932,18 @@
 			"roles": "Roles que asignar",
 			"submit": "Invitar",
 			"gives": "Podrá:",
-			"help": "Una persona ya conocida por el servidor recibe sus roles de inmediato; si no, en su primer inicio de sesión.",
+			"help": "Efectivo de inmediato o en su primer inicio de sesión.",
 			"custom": "Los roles personalizados se pueden asignar una vez que la persona es miembro."
 		},
 		"people": "Personas",
 		"search": "Buscar un miembro",
 		"tag": {
 			"pipeline": {
-				"tooltip": "Miembro técnico de una canalización de ingesta: desaparece con la canalización, en el servidor"
+				"tooltip": "Miembro técnico de una canalización de ingesta"
 			},
 			"team": {
 				"label": "equipo {names}",
-				"tooltip": "Miembro del libro a través de su equipo: los roles de su equipo se cambian en «Equipos»"
+				"tooltip": "Miembro a través de su equipo: los roles se cambian en «Equipos»"
 			},
 			"lastOwner": {
 				"label": "último propietario",
@@ -975,7 +975,7 @@
 			"label": "Asignar un rol a un equipo:",
 			"role": "Rol del equipo",
 			"submit": "Asignar el rol",
-			"help": "Los miembros de un equipo tienen sus roles mientras pertenezcan a él. Los equipos se crean en la administración del servidor; grupos del directorio: más adelante."
+			"help": "Los miembros de un equipo tienen sus roles mientras formen parte de él."
 		},
 		"noTeam": "No hay equipos en este servidor: los propietarios del servidor los crean en su administración («Equipos»)."
 	},
@@ -986,7 +986,7 @@
 			"designer": "estructura, no los derechos"
 		},
 		"filtersSaved": "Filtros de «{table}» guardados para {role}",
-		"intro": "Cada miembro tiene uno o varios roles; un rol da acceso tabla por tabla, que los filtros pueden limitar a ciertas filas. Los derechos de los roles se suman.",
+		"intro": "Un rol da acceso por tabla, limitado por filtros; los roles se suman.",
 		"learnMore": "Más información",
 		"matrix": {
 			"aria": "Lo que permite cada rol",
@@ -1009,9 +1009,9 @@
 		},
 		"detail": {
 			"title": "{role}: acceso tabla por tabla",
-			"owner": "Propietario: ve y modifica todas las filas, cambia la estructura (columnas, tablas, diseño de página, scripts) y administra miembros, roles y reglas. Nada que definir aquí.",
-			"designer": "Diseñador: ve y modifica todas las filas y cambia la estructura (columnas, tablas, diseño de página, scripts), pero no administra los derechos. Nada que definir aquí.",
-			"frozen": "Libro congelado: todos los miembros lo ven todo, sin cambiar nada. El acceso por tabla y los filtros son los de un libro compartido en directo."
+			"owner": "Propietario: todos los derechos, incluidos miembros, roles y reglas. Nada que definir aquí.",
+			"designer": "Diseñador: todos los derechos salvo la gestión de derechos. Nada que definir aquí.",
+			"frozen": "Libro fijo: todos los miembros lo ven todo, sin modificar nada."
 		},
 		"drop": {
 			"confirm": "¿Eliminar el rol «{name}»? Sus miembros pierden los derechos que daba.",
@@ -1057,7 +1057,7 @@
 			"noCondition": "Sin condición: todas las filas.",
 			"save": "Guardar los filtros"
 		},
-		"oldSheet": "Hoja publicada antes de que el servidor conociera las hojas: su acceso se define en cada una de sus tablas.",
+		"oldSheet": "Hoja antigua: su acceso se define en cada una de sus tablas.",
 		"noTable": "Ninguna tabla publicada: el acceso al libro se aplicará a las tablas que se añadan.",
 		"teams": "Equipos con este rol:",
 		"noTeams": "Ningún equipo tiene este rol (Miembros › Equipos).",
@@ -1074,8 +1074,8 @@
 	"rules": {
 		"added": "{n, plural, one {Regla añadida} other {# reglas añadidas}}",
 		"removed": "Regla quitada",
-		"collabOnly": "Reglas avanzadas: solo libros compartidos en directo (un libro congelado está en solo lectura para todos).",
-		"intro": "Una regla avanzada retira un derecho sobre una tabla, sea cual sea el acceso del rol: no más eliminaciones, no más adiciones, modificar solo ciertas filas. Los propietarios y diseñadores no están sujetos a ella, salvo que se les nombre.",
+		"collabOnly": "Reglas avanzadas: solo libros compartidos en directo.",
+		"intro": "Una regla avanzada retira un derecho sobre una tabla, sea cual sea el acceso del rol.",
 		"current": "Reglas en vigor",
 		"remove": {
 			"tooltip": "Quitar esta regla",
@@ -1137,7 +1137,7 @@
 			"policies": "Reglas añadidas:",
 			"grants": "Derechos concedidos a:",
 			"changed": "Reglas generadas quitadas o modificadas",
-			"recompileHelp": "Recompilar restablece las reglas generadas por Lattis. Las reglas y derechos añadidos a mano siguen señalados aquí hasta que se quiten en PostgreSQL.",
+			"recompileHelp": "Recompilar restablece las reglas de Lattis, sin quitar las añadidas a mano.",
 			"recompiled": "Derechos recompilados",
 			"recompile": "Recompilar los derechos"
 		},
@@ -1181,7 +1181,7 @@
 		"refresh": {
 			"legend": "Cargada por la consulta «{query}»: actualización",
 			"local": "Desde este equipo, con sus conexiones: sus actualizaciones reemplazan las filas para todos los miembros",
-			"lake": "Origen del Data Lake: la tabla también se envía al Data Lake del servidor, al que otros libros pueden vincularse (se configura justo después de publicar)"
+			"lake": "Origen del Data Lake: la tabla también se envía al Data Lake, para otros libros"
 		},
 		"uncheckedPrivate": "Las tablas no marcadas siguen siendo privadas: solo en este equipo.",
 		"publishing": "Publicando…",
@@ -1249,7 +1249,7 @@
 		"readOnly": "La tabla insertada es de solo lectura y se actualiza cuando cambian los datos.",
 		"choose": "Elija unos datos para ver sus columnas.",
 		"yourSources": "Sus orígenes enviados",
-		"yourSourcesHelp": "Tablas publicadas solas desde sus libros locales, en este servidor; cada una se administra desde su libro (clic derecho en la tabla › Compartir en el Data Lake de Lattis…).",
+		"yourSourcesHelp": "Tablas publicadas solas desde sus libros locales; cada una se administra desde su libro.",
 		"inserting": "Insertando…",
 		"insert": "Insertar"
 	},
@@ -1265,13 +1265,13 @@
 			"tooltip": "Quitar este servidor de la lista de este equipo",
 			"confirm": "¿Quitar «{name}» de la lista?",
 			"signedOut": "Se cerrará su sesión en este servidor en este equipo.",
-			"nothingDeleted": "No se elimina nada en el servidor: sus libros, sus datos y sus derechos siguen allí, y puede volver a añadirlo en cualquier momento.",
-			"inUse": "El libro abierto «{title}» está publicado en este servidor: sigue abierto a partir de su copia en este equipo, pero dejará de sincronizarse hasta que vuelva a añadir este servidor e inicie sesión en él.",
+			"nothingDeleted": "No se elimina nada en el servidor; podrá volver a añadirlo.",
+			"inUse": "El libro abierto «{title}» está publicado en este servidor: dejará de sincronizarse hasta que se vuelva a añadir el servidor.",
 			"queries": "Las consultas y los libros que usan este servidor le pedirán que inicie sesión en él."
 		},
 		"rename": {
 			"label": "Cambiar nombre",
-			"tooltip": "Dar a este servidor otro nombre en este equipo (el servidor no se modifica)",
+			"tooltip": "Cambiar el nombre de este servidor solo en este equipo",
 			"aria": "Nombre del servidor en este equipo",
 			"empty": "Escriba un nombre para este servidor.",
 			"tooLong": "Nombre demasiado largo: {max} caracteres como máximo.",
@@ -1282,7 +1282,6 @@
 		"add": {
 			"title": "Añadir un servidor",
 			"submit": "Añadir e iniciar sesión…",
-			"help": "La dirección se comprueba con el servidor y luego se abre su página de inicio de sesión.",
 			"locked": "Su organización define la lista de servidores: no puede añadir ninguno."
 		}
 	},

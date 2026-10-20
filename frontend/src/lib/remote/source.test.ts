@@ -61,7 +61,7 @@ describe('shareWays', () => {
 		expect(w.map((x) => x.way)).toEqual(['workbook', 'table']);
 		expect(w[0].title).toContain('gestion des droits');
 		expect(w[0].disabled).toBe('');
-		expect(w[1].detail).toContain('sans être mis à disposition');
+		expect(w[1].detail).toContain('le classeur reste sur votre poste');
 	});
 	it('classeur publié sans ce tableau : republier, ou fermé avec la raison', () => {
 		expect(shareWays('table', '')[0].title).toContain('Republier');

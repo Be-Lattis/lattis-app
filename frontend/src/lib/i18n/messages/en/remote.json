@@ -71,9 +71,9 @@
 		},
 		"detach": {
 			"local": "“{title}” will become a regular local workbook: it will no longer sync with {server}.",
-			"serverKept": "The workbook on the server is not changed: other members keep it as is, and you can reopen it from the server.",
-			"pending": "{n, plural, one {# change not yet sent to the server will stay} other {# changes not yet sent to the server will stay}} in this local workbook, without being sent.",
-			"cached": "You will choose where to save the local workbook (its current copy is only a Lattis cache).",
+			"serverKept": "The server workbook does not change: you can reopen it from the server.",
+			"pending": "{n, plural, one {# unsent change will stay} other {# unsent changes will stay}} in this local workbook.",
+			"cached": "You will choose where to save the local workbook.",
 			"final": "Detaching cannot be undone."
 		},
 		"retryNotice": "Trying to connect again…",
@@ -109,7 +109,7 @@
 		"alone": "Working together: just you for now",
 		"with": "Working together with {names}",
 		"withMore": "Working together with {names} and {n} others",
-		"title": "Working together on this workbook (shared folder): table data is edited together, everything else waits until you are alone.",
+		"title": "Working together: table data is edited together.",
 		"since": " since {time}",
 		"joining": " (joining)",
 		"conflicts": "{n, plural, one {# conflict} other {# conflicts}}"
@@ -151,7 +151,7 @@
 		"onSave": " · on every save",
 		"sending": "Sending…",
 		"update": "Update",
-		"help": "Only the chosen columns of these tables are sent; the rest of the workbook does not leave this computer. Right-click the table › Share to Lattis Data Lake… to change or remove them."
+		"help": "Only the chosen columns are sent; the rest does not leave the computer."
 	},
 	"cap": {
 		"yes": "yes",
@@ -205,7 +205,7 @@
 	"prefill": {
 		"title": "Prefilled links · “{title}”",
 		"noParam": "No field has a short name: give one in the Fields tab (“Short name in the link”).",
-		"help": "Choose the fields the link fills in, then one row per link (one QR code per site, for example). The respondent can change the value, except for a field locked by the link.",
+		"help": "Choose the fields the link fills in, then one row per link.",
 		"locked": "locked",
 		"hide": "Hide",
 		"show": "Link and QR code",
@@ -215,7 +215,7 @@
 	"preview": {
 		"membersReserved": "This server restricts the member list to the workbook's owners: ask them to use “View as…”.",
 		"noTable": "No published table.",
-		"intro": "Check what a member sees and can do: rows are shown as the server gives them to that member, including filters and advanced rules.",
+		"intro": "Check what a member sees and can do.",
 		"member": "Member",
 		"choose": "Choose…",
 		"table": "Table",
@@ -290,10 +290,10 @@
 				"tooltip": "The table goes back to the server version"
 			}
 		},
-		"layout": "Page layout: {n, plural, one {# item changed} other {# items changed}} on both sides since opening (width, formatting, free cell…). The last saved version wins; after more than 24 hours offline, your colleagues' version wins.",
+		"layout": "Page layout: {n, plural, one {# item changed} other {# items changed}} on both sides since opening. The last saved version wins.",
 		"none": "No pending conflicts.",
-		"local": "These cells were changed by a colleague at the same time as you: their value, the most recent, is shown everywhere. “Keep mine” restores yours for all computers.",
-		"remote": "These cells were changed by a colleague while you were changing them. Your value stays displayed until you choose.",
+		"local": "A colleague changed these cells at the same time as you: their value is shown everywhere.",
+		"remote": "A colleague changed these cells while you were editing: your value stays shown until you choose.",
 		"keepAllMine": "Keep all mine",
 		"keepAllTheirs": "Keep all theirs",
 		"goto": "Go to cell",
@@ -310,7 +310,7 @@
 		"address": "Server address",
 		"continue": "Continue",
 		"device": {
-			"help": "On another device (phone, another computer), open the address below and enter the code, then sign in with {provider}.",
+			"help": "On another device, open the address below, enter the code, then sign in with {provider}.",
 			"copy": "Copy code",
 			"valid": "Code valid for another {time}.",
 			"expired": "Code expired.",
@@ -318,7 +318,7 @@
 		},
 		"browser": {
 			"help": "Finish signing in with {provider} in your browser, then come back to Lattis.",
-			"note": "The page opened in the system browser. Nothing opened? Cancel and choose “from another device”."
+			"note": "Nothing opened? Cancel and choose “from another device”."
 		},
 		"invitation": "by invitation",
 		"otherDevice": "Sign in from another device (enter a code)",
@@ -429,7 +429,7 @@
 		"help": "Help: share as a form",
 		"reading": "Reading the table…",
 		"openToYou": "Forms of this table open to you:",
-		"already": "This table already has {n, plural, one {a form} other {# forms}}. Several forms can fill the same table.",
+		"already": "This table already has {n, plural, one {a form} other {# forms}}.",
 		"responses": "{n, plural, one {# response} other {# responses}}",
 		"edit": "Edit…",
 		"newForm": "New form…",
@@ -457,7 +457,7 @@
 			"required": "Required",
 			"settings": "Field settings",
 			"help": "Help",
-			"positionHelp": "Filled in by the respondent's browser when they tap “My location” (never automatically), with the accuracy shown.",
+			"positionHelp": "Filled in by the browser when the respondent taps “My location”.",
 			"positionColumn": "Column “{name}”: “lat, lon”.",
 			"positionColumns": "Columns “{lat}” and “{lon}”.",
 			"placeholder": "Placeholder text",
@@ -483,7 +483,7 @@
 				"tel": "Phone",
 				"url": "Web address"
 			},
-			"listFrom": "List taken from “{source}”, reread by the server on every display ({n} values today).",
+			"listFrom": "List from “{source}” ({n} values today).",
 			"listValues": "List values (one per line)",
 			"copiedFrom": "{copied} from “{source}”",
 			"param": "Short name in the link",
@@ -562,7 +562,7 @@
 			"desktop": "Computer",
 			"browser": {
 				"label": "Open the preview in the browser",
-				"tooltip": "Saves the draft and opens the real server page (link valid for 10 minutes, responses not saved)"
+				"tooltip": "Saves the draft and opens the server page (responses not saved)"
 			}
 		},
 		"saving": "Saving…",
@@ -596,11 +596,11 @@
 			},
 			"table": {
 				"title": "Publish only this table",
-				"detail": "Only the chosen columns are sent; the workbook stays on your computer, without being made available."
+				"detail": "Only the chosen columns are sent; the workbook stays on your computer."
 			},
 			"shared": {
 				"title": "Add this table to the shared workbook",
-				"detail": "Recommended. It is created on the server with its rows; members receive it and edit it according to their rights. It can then be shared to the Data Lake from this same menu."
+				"detail": "Recommended. Created on the server with its rows, for members according to their rights."
 			},
 			"tableAlone": "Publish this table alone to the Data Lake"
 		},
@@ -609,7 +609,7 @@
 			"notInCollab": "The workbook is shared live, but this table is not part of it.",
 			"howTitle": "How do you want to share this table?",
 			"notPublished": "This table is not in a published workbook.",
-			"whyCollab": "A workbook shared live is not republished: its list of tables is set when it is published, and a table created afterward stays on your computer."
+			"whyCollab": "A workbook shared live is not republished: a table created afterwards stays on your computer."
 		},
 		"push": {
 			"done": "Source “{table}” updated",
@@ -932,18 +932,18 @@
 			"roles": "Roles to give",
 			"submit": "Invite",
 			"gives": "Will be able to:",
-			"help": "A person already known to the server receives their roles right away, otherwise at their first sign-in.",
+			"help": "Effective right away, or at their first sign-in.",
 			"custom": "Custom roles can be given once the person is a member."
 		},
 		"people": "People",
 		"search": "Search for a member",
 		"tag": {
 			"pipeline": {
-				"tooltip": "Technical member of an ingestion pipeline: it disappears with the pipeline, on the server side"
+				"tooltip": "Technical member of an ingestion pipeline"
 			},
 			"team": {
 				"label": "team {names}",
-				"tooltip": "Member of the workbook through their team: their team roles are changed in “Teams”"
+				"tooltip": "Member through their team: roles are changed in “Teams”"
 			},
 			"lastOwner": {
 				"label": "last owner",
@@ -975,7 +975,7 @@
 			"label": "Give a role to a team:",
 			"role": "Team role",
 			"submit": "Give the role",
-			"help": "Team members have its roles as long as they belong to it. Teams are created in the server's administration; directory groups: later."
+			"help": "Team members have its roles as long as they belong to it."
 		},
 		"noTeam": "No teams on this server: the server's owners create them in its administration (“Teams”)."
 	},
@@ -986,7 +986,7 @@
 			"designer": "structure, not rights"
 		},
 		"filtersSaved": "Filters of “{table}” saved for {role}",
-		"intro": "Each member has one or more roles; a role gives access per table, which filters can limit to certain rows. Role rights add up.",
+		"intro": "A role gives access per table, limited by filters; roles add up.",
 		"learnMore": "Learn more",
 		"matrix": {
 			"aria": "What each role allows",
@@ -1009,9 +1009,9 @@
 		},
 		"detail": {
 			"title": "{role}: access table by table",
-			"owner": "Owner: sees and edits all rows, changes the structure (columns, tables, page layout, scripts) and manages members, roles and rules. Nothing to set here.",
-			"designer": "Designer: sees and edits all rows and changes the structure (columns, tables, page layout, scripts), but does not manage rights. Nothing to set here.",
-			"frozen": "Frozen workbook: all members see everything, without changing anything. Per-table access and filters are those of a workbook shared live."
+			"owner": "Owner: all rights, including members, roles and rules. Nothing to set here.",
+			"designer": "Designer: all rights except managing rights. Nothing to set here.",
+			"frozen": "Frozen workbook: all members see everything, without changing anything."
 		},
 		"drop": {
 			"confirm": "Delete role “{name}”? Its members lose the rights it gave.",
@@ -1057,7 +1057,7 @@
 			"noCondition": "No condition: all rows.",
 			"save": "Save filters"
 		},
-		"oldSheet": "Sheet published before the server knew about sheets: its access is set on each of its tables.",
+		"oldSheet": "Older sheet: its access is set on each of its tables.",
 		"noTable": "No published table: the workbook access will apply to tables that are added.",
 		"teams": "Teams with this role:",
 		"noTeams": "No team has this role (Members › Teams).",
@@ -1074,8 +1074,8 @@
 	"rules": {
 		"added": "{n, plural, one {Rule added} other {# rules added}}",
 		"removed": "Rule removed",
-		"collabOnly": "Advanced rules: workbooks shared live only (a frozen workbook is read-only for everyone).",
-		"intro": "An advanced rule removes a right on a table, whatever the role's access: no more deleting, no more adding, editing only certain rows. Owners and designers are not subject to it, unless they are named.",
+		"collabOnly": "Advanced rules: workbooks shared live only.",
+		"intro": "An advanced rule removes a right on a table, whatever the role's access.",
 		"current": "Rules in place",
 		"remove": {
 			"tooltip": "Remove this rule",
@@ -1137,7 +1137,7 @@
 			"policies": "Rules added:",
 			"grants": "Rights given to:",
 			"changed": "Generated rules removed or changed",
-			"recompileHelp": "Recompiling restores the rules generated by Lattis. Rules and rights added by hand remain flagged here until they are removed in PostgreSQL.",
+			"recompileHelp": "Recompiling restores Lattis's rules, without removing those added by hand.",
 			"recompiled": "Rights recompiled",
 			"recompile": "Recompile rights"
 		},
@@ -1181,7 +1181,7 @@
 		"refresh": {
 			"legend": "Loaded by the query “{query}”: refresh",
 			"local": "From this computer, with your connections: your refreshes replace the rows for all members",
-			"lake": "Data Lake source: the table is also sent to the server's Data Lake, which other workbooks can link to (set up right after publishing)"
+			"lake": "Data Lake source: the table is also sent to the Data Lake, for other workbooks"
 		},
 		"uncheckedPrivate": "Unchecked tables stay private: on this computer only.",
 		"publishing": "Publishing…",
@@ -1249,7 +1249,7 @@
 		"readOnly": "The inserted table is read-only and updates when the data changes.",
 		"choose": "Choose data to see its columns.",
 		"yourSources": "Your pushed sources",
-		"yourSourcesHelp": "Tables published alone from your local workbooks, on this server; each is managed from its workbook (right-click the table › Share to Lattis Data Lake…).",
+		"yourSourcesHelp": "Tables published alone from your local workbooks; each is managed from its workbook.",
 		"inserting": "Inserting…",
 		"insert": "Insert"
 	},
@@ -1265,13 +1265,13 @@
 			"tooltip": "Remove this server from this computer's list",
 			"confirm": "Remove “{name}” from the list?",
 			"signedOut": "You will be signed out of this server on this computer.",
-			"nothingDeleted": "Nothing is deleted on the server: its workbooks, its data and your rights remain there, and you can add it again at any time.",
-			"inUse": "The open workbook “{title}” is published on this server: it stays open from its copy on this computer, but will no longer sync until you add this server again and sign in to it.",
+			"nothingDeleted": "Nothing is deleted on the server; you can add it again.",
+			"inUse": "The open workbook “{title}” is published on this server: it will no longer sync until the server is added again.",
 			"queries": "Queries and workbooks that use this server will ask you to sign in to it."
 		},
 		"rename": {
 			"label": "Rename",
-			"tooltip": "Give this server another name on this computer (the server is not changed)",
+			"tooltip": "Rename this server on this computer only",
 			"aria": "Server name on this computer",
 			"empty": "Enter a name for this server.",
 			"tooLong": "Name too long: {max} characters at most.",
@@ -1282,7 +1282,6 @@
 		"add": {
 			"title": "Add a server",
 			"submit": "Add and sign in…",
-			"help": "The address is checked with the server, then its sign-in page opens.",
 			"locked": "Your organization sets the list of servers: you cannot add any."
 		}
 	},

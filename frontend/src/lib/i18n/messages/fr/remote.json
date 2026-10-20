@@ -71,9 +71,9 @@
 		},
 		"detach": {
 			"local": "« {title} » deviendra un classeur local ordinaire : il ne se synchronisera plus avec {server}.",
-			"serverKept": "Le classeur du serveur n’est pas modifié : les autres membres le gardent tel quel, et vous pourrez le rouvrir depuis le serveur.",
-			"pending": "{n, plural, one {# modification pas encore envoyée au serveur restera} other {# modifications pas encore envoyées au serveur resteront}} dans ce classeur local, sans partir.",
-			"cached": "Vous allez choisir où enregistrer le classeur local (sa copie actuelle n’est qu’un cache de Lattis).",
+			"serverKept": "Le classeur du serveur ne change pas : vous pourrez le rouvrir depuis le serveur.",
+			"pending": "{n, plural, one {# modification non envoyée restera} other {# modifications non envoyées resteront}} dans ce classeur local.",
+			"cached": "Vous allez choisir où enregistrer le classeur local.",
 			"final": "Ce détachement ne s’annule pas."
 		},
 		"retryNotice": "Nouvel essai de connexion…",
@@ -109,7 +109,7 @@
 		"alone": "À plusieurs : vous seul pour le moment",
 		"with": "À plusieurs avec {names}",
 		"withMore": "À plusieurs avec {names} et {n} autres",
-		"title": "Travail à plusieurs sur ce classeur (dossier partagé) : les données des tableaux se modifient ensemble, le reste attend que vous soyez seul.",
+		"title": "Travail à plusieurs : les données des tableaux se modifient ensemble.",
 		"since": " depuis {time}",
 		"joining": " (en train de rejoindre)",
 		"conflicts": "{n, plural, one {# conflit} other {# conflits}}"
@@ -151,7 +151,7 @@
 		"onSave": " · à chaque enregistrement",
 		"sending": "Envoi…",
 		"update": "Mettre à jour",
-		"help": "Seules les colonnes choisies de ces tableaux sont envoyées ; le reste du classeur ne quitte pas le poste. Clic droit sur le tableau › Partager au Data Lake Lattis… pour les modifier ou les retirer."
+		"help": "Seules les colonnes choisies sont envoyées ; le reste ne quitte pas le poste."
 	},
 	"cap": {
 		"yes": "oui",
@@ -205,7 +205,7 @@
 	"prefill": {
 		"title": "Liens pré-remplis · « {title} »",
 		"noParam": "Aucun champ n’a de nom court : donnez-en un dans l’onglet Champs (« Nom court dans le lien »).",
-		"help": "Choisissez les champs à remplir par le lien, puis une ligne par lien (un QR code par site, par exemple). Le répondant peut modifier la valeur, sauf pour un champ verrouillé par le lien.",
+		"help": "Choisissez les champs remplis par le lien, puis une ligne par lien.",
 		"locked": "verrouillé",
 		"hide": "Masquer",
 		"show": "Lien et QR code",
@@ -215,7 +215,7 @@
 	"preview": {
 		"membersReserved": "Ce serveur réserve la liste des membres aux propriétaires du classeur : demandez-leur « Voir en tant que… ».",
 		"noTable": "Aucun tableau publié.",
-		"intro": "Vérifiez ce qu’un membre voit et peut faire : les lignes s’affichent telles que le serveur les lui donne, filtres et règles avancées compris.",
+		"intro": "Vérifiez ce qu’un membre voit et peut faire.",
 		"member": "Membre",
 		"choose": "Choisir…",
 		"table": "Tableau",
@@ -290,10 +290,10 @@
 				"tooltip": "Le tableau reprend la version du serveur"
 			}
 		},
-		"layout": "Mise en page : {n, plural, one {# élément changé} other {# éléments changés}} des deux côtés depuis l'ouverture (largeur, mise en forme, cellule libre…). La dernière version enregistrée l'emporte ; après plus de 24 h sans connexion, c'est celle des collègues.",
+		"layout": "Mise en page : {n, plural, one {# élément changé} other {# éléments changés}} des deux côtés depuis l'ouverture. La dernière version enregistrée l'emporte.",
 		"none": "Aucun conflit en attente.",
-		"local": "Ces cellules ont été modifiées par un collègue en même temps que vous : sa valeur, la plus récente, est affichée partout. « Garder la mienne » remet la vôtre pour tous les postes.",
-		"remote": "Ces cellules ont été modifiées par un collègue pendant que vous les changiez. Votre valeur reste affichée jusqu'à votre choix.",
+		"local": "Un collègue a modifié ces cellules en même temps que vous : sa valeur est affichée partout.",
+		"remote": "Un collègue a modifié ces cellules pendant votre saisie : votre valeur reste affichée jusqu'à votre choix.",
 		"keepAllMine": "Garder toutes les miennes",
 		"keepAllTheirs": "Garder toutes les siennes",
 		"goto": "Aller à la cellule",
@@ -310,7 +310,7 @@
 		"address": "Adresse du serveur",
 		"continue": "Continuer",
 		"device": {
-			"help": "Sur un autre appareil (téléphone, autre ordinateur), ouvrez l’adresse ci-dessous et saisissez le code, puis connectez-vous avec {provider}.",
+			"help": "Sur un autre appareil, ouvrez l’adresse ci-dessous, saisissez le code, puis connectez-vous avec {provider}.",
 			"copy": "Copier le code",
 			"valid": "Code valable encore {time}.",
 			"expired": "Code expiré.",
@@ -318,7 +318,7 @@
 		},
 		"browser": {
 			"help": "Terminez la connexion avec {provider} dans votre navigateur, puis revenez à Lattis.",
-			"note": "La page s’est ouverte dans le navigateur du système. Rien ne s’est ouvert ? Annulez et choisissez « depuis un autre appareil »."
+			"note": "Rien ne s’est ouvert ? Annulez et choisissez « depuis un autre appareil »."
 		},
 		"invitation": "sur invitation",
 		"otherDevice": "Se connecter depuis un autre appareil (code à saisir)",
@@ -429,7 +429,7 @@
 		"help": "Aide : partager comme formulaire",
 		"reading": "Lecture du tableau…",
 		"openToYou": "Formulaires de ce tableau qui vous sont ouverts :",
-		"already": "Ce tableau a déjà {n, plural, one {un formulaire} other {# formulaires}}. Plusieurs formulaires peuvent remplir le même tableau.",
+		"already": "Ce tableau a déjà {n, plural, one {un formulaire} other {# formulaires}}.",
 		"responses": "{n, plural, one {# réponse} other {# réponses}}",
 		"edit": "Modifier…",
 		"newForm": "Nouveau formulaire…",
@@ -457,7 +457,7 @@
 			"required": "Obligatoire",
 			"settings": "Réglages du champ",
 			"help": "Aide",
-			"positionHelp": "Rempli par le navigateur du répondant quand il touche « Ma position » (jamais automatiquement), avec la précision affichée.",
+			"positionHelp": "Rempli par le navigateur quand le répondant touche « Ma position ».",
 			"positionColumn": "Colonne « {name} » : « lat, lon ».",
 			"positionColumns": "Colonnes « {lat} » et « {lon} ».",
 			"placeholder": "Texte indicatif",
@@ -483,7 +483,7 @@
 				"tel": "Téléphone",
 				"url": "Adresse web"
 			},
-			"listFrom": "Liste tirée de « {source} », relue par le serveur à chaque affichage ({n} valeurs aujourd’hui).",
+			"listFrom": "Liste tirée de « {source} » ({n} valeurs aujourd’hui).",
 			"listValues": "Valeurs de la liste (une par ligne)",
 			"copiedFrom": "{copied} depuis « {source} »",
 			"param": "Nom court dans le lien",
@@ -562,7 +562,7 @@
 			"desktop": "Ordinateur",
 			"browser": {
 				"label": "Ouvrir l’aperçu dans le navigateur",
-				"tooltip": "Enregistre le brouillon et ouvre la vraie page du serveur (lien valable 10 minutes, réponses non enregistrées)"
+				"tooltip": "Enregistre le brouillon et ouvre la page du serveur (réponses non enregistrées)"
 			}
 		},
 		"saving": "Enregistrement…",
@@ -596,11 +596,11 @@
 			},
 			"table": {
 				"title": "Publier uniquement ce tableau",
-				"detail": "Seules les colonnes choisies sont envoyées ; le classeur reste sur votre poste, sans être mis à disposition."
+				"detail": "Seules les colonnes choisies sont envoyées ; le classeur reste sur votre poste."
 			},
 			"shared": {
 				"title": "Ajouter ce tableau au classeur partagé",
-				"detail": "Recommandé. Il est créé sur le serveur avec ses lignes ; les membres le reçoivent et le modifient selon leurs droits. Il se partage ensuite au Data Lake depuis ce même menu."
+				"detail": "Recommandé. Créé sur le serveur avec ses lignes, pour les membres selon leurs droits."
 			},
 			"tableAlone": "Publier ce tableau seul au Data Lake"
 		},
@@ -609,7 +609,7 @@
 			"notInCollab": "Le classeur est partagé en direct, mais ce tableau n’en fait pas partie.",
 			"howTitle": "Comment partager ce tableau ?",
 			"notPublished": "Ce tableau n’est pas dans un classeur publié.",
-			"whyCollab": "Un classeur partagé en direct ne se republie pas : la liste de ses tableaux est fixée à sa publication, et un tableau créé ensuite reste sur votre poste."
+			"whyCollab": "Un classeur partagé en direct ne se republie pas : un tableau créé ensuite reste sur votre poste."
 		},
 		"push": {
 			"done": "Source « {table} » mise à jour",
@@ -932,18 +932,18 @@
 			"roles": "Rôles à donner",
 			"submit": "Inviter",
 			"gives": "Pourra :",
-			"help": "Une personne déjà connue du serveur reçoit ses rôles tout de suite, sinon à sa première connexion.",
+			"help": "Effectif tout de suite, ou à sa première connexion.",
 			"custom": "Les rôles personnalisés se donnent une fois la personne membre."
 		},
 		"people": "Personnes",
 		"search": "Chercher un membre",
 		"tag": {
 			"pipeline": {
-				"tooltip": "Membre technique d’un pipeline d’ingestion : il disparaît avec le pipeline, côté serveur"
+				"tooltip": "Membre technique d’un pipeline d’ingestion"
 			},
 			"team": {
 				"label": "équipe {names}",
-				"tooltip": "Membre du classeur par son équipe : ses rôles d’équipe se changent dans « Équipes »"
+				"tooltip": "Membre par son équipe : ses rôles se changent dans « Équipes »"
 			},
 			"lastOwner": {
 				"label": "dernier propriétaire",
@@ -975,7 +975,7 @@
 			"label": "Donner un rôle à une équipe :",
 			"role": "Rôle de l’équipe",
 			"submit": "Donner le rôle",
-			"help": "Les membres d’une équipe ont ses rôles tant qu’ils en font partie. Les équipes se créent dans l’administration du serveur ; groupes d’annuaire : plus tard."
+			"help": "Les membres d’une équipe ont ses rôles tant qu’ils en font partie."
 		},
 		"noTeam": "Aucune équipe sur ce serveur : les propriétaires du serveur les créent dans son administration (« Équipes »)."
 	},
@@ -986,7 +986,7 @@
 			"designer": "structure, pas les droits"
 		},
 		"filtersSaved": "Filtres de « {table} » enregistrés pour {role}",
-		"intro": "Chaque membre a un ou plusieurs rôles ; un rôle donne un accès par tableau, que des filtres peuvent limiter à certaines lignes. Les droits des rôles s’additionnent.",
+		"intro": "Un rôle donne un accès par tableau, limité par des filtres ; les rôles s’additionnent.",
 		"learnMore": "En savoir plus",
 		"matrix": {
 			"aria": "Ce que chaque rôle permet",
@@ -1009,9 +1009,9 @@
 		},
 		"detail": {
 			"title": "{role} : accès tableau par tableau",
-			"owner": "Propriétaire : voit et modifie toutes les lignes, change la structure (colonnes, tableaux, mise en page, scripts) et gère les membres, les rôles et les règles. Rien à régler ici.",
-			"designer": "Concepteur : voit et modifie toutes les lignes et change la structure (colonnes, tableaux, mise en page, scripts), mais ne gère pas les droits. Rien à régler ici.",
-			"frozen": "Classeur figé : tous les membres voient tout, sans rien modifier. Les accès par tableau et les filtres sont ceux d’un classeur partagé en direct."
+			"owner": "Propriétaire : tous les droits, dont les membres, les rôles et les règles. Rien à régler ici.",
+			"designer": "Concepteur : tous les droits sauf la gestion des droits. Rien à régler ici.",
+			"frozen": "Classeur figé : tous les membres voient tout, sans rien modifier."
 		},
 		"drop": {
 			"confirm": "Supprimer le rôle « {name} » ? Ses membres perdent les droits qu’il donnait.",
@@ -1057,7 +1057,7 @@
 			"noCondition": "Sans condition : toutes les lignes.",
 			"save": "Enregistrer les filtres"
 		},
-		"oldSheet": "Feuille publiée avant que le serveur connaisse les feuilles : son accès est posé sur chacun de ses tableaux.",
+		"oldSheet": "Feuille ancienne : son accès est posé sur chacun de ses tableaux.",
 		"noTable": "Aucun tableau publié : l’accès au classeur vaudra pour les tableaux ajoutés.",
 		"teams": "Équipes de ce rôle :",
 		"noTeams": "Aucune équipe n’a ce rôle (Membres › Équipes).",
@@ -1074,8 +1074,8 @@
 	"rules": {
 		"added": "{n, plural, one {Règle ajoutée} other {# règles ajoutées}}",
 		"removed": "Règle retirée",
-		"collabOnly": "Règles avancées : classeurs partagés en direct seulement (un classeur figé est en lecture seule pour tous).",
-		"intro": "Une règle avancée retire un droit sur un tableau, quel que soit l’accès du rôle : ne plus supprimer, ne plus ajouter, ne modifier que certaines lignes. Les propriétaires et concepteurs n’y sont pas soumis, sauf s’ils sont nommés.",
+		"collabOnly": "Règles avancées : classeurs partagés en direct seulement.",
+		"intro": "Une règle avancée retire un droit sur un tableau, quel que soit l’accès du rôle.",
 		"current": "Règles en place",
 		"remove": {
 			"tooltip": "Retirer cette règle",
@@ -1137,7 +1137,7 @@
 			"policies": "Règles ajoutées :",
 			"grants": "Droits donnés à :",
 			"changed": "Règles générées retirées ou modifiées",
-			"recompileHelp": "Recompiler remet les règles générées par Lattis. Les règles et droits ajoutés à la main restent signalés ici tant qu’ils ne sont pas retirés dans PostgreSQL.",
+			"recompileHelp": "Recompiler remet les règles de Lattis, sans retirer celles ajoutées à la main.",
 			"recompiled": "Droits recompilés",
 			"recompile": "Recompiler les droits"
 		},
@@ -1181,7 +1181,7 @@
 		"refresh": {
 			"legend": "Chargé par la requête « {query} » : actualisation",
 			"local": "Depuis ce poste, avec vos connexions : vos actualisations remplacent les lignes pour tous les membres",
-			"lake": "Source du Data Lake : le tableau est aussi envoyé au Data Lake du serveur, que d'autres classeurs peuvent lier (réglée juste après la publication)"
+			"lake": "Source du Data Lake : le tableau est aussi envoyé au Data Lake, pour d'autres classeurs"
 		},
 		"uncheckedPrivate": "Les tableaux non cochés restent privés : sur ce poste seulement.",
 		"publishing": "Publication…",
@@ -1249,7 +1249,7 @@
 		"readOnly": "Le tableau inséré est en lecture seule et se met à jour quand la donnée change.",
 		"choose": "Choisissez une donnée pour voir ses colonnes.",
 		"yourSources": "Vos sources poussées",
-		"yourSourcesHelp": "Tableaux publiés seuls depuis vos classeurs locaux, sur ce serveur ; chacun se gère depuis son classeur (clic droit sur le tableau › Partager au Data Lake Lattis…).",
+		"yourSourcesHelp": "Tableaux publiés seuls depuis vos classeurs locaux ; chacun se gère depuis son classeur.",
 		"inserting": "Insertion…",
 		"insert": "Insérer"
 	},
@@ -1265,13 +1265,13 @@
 			"tooltip": "Retirer ce serveur de la liste de ce poste",
 			"confirm": "Retirer « {name} » de la liste ?",
 			"signedOut": "Vous serez déconnecté de ce serveur sur ce poste.",
-			"nothingDeleted": "Rien n’est supprimé sur le serveur : ses classeurs, ses données et vos droits y restent, et vous pourrez l’ajouter de nouveau à tout moment.",
-			"inUse": "Le classeur ouvert « {title} » est publié sur ce serveur : il reste ouvert depuis sa copie sur ce poste, mais ne se synchronisera plus tant que vous n’aurez pas ajouté ce serveur de nouveau et ne vous y serez pas reconnecté.",
+			"nothingDeleted": "Rien n’est supprimé sur le serveur ; vous pourrez l’ajouter de nouveau.",
+			"inUse": "Le classeur ouvert « {title} » est publié sur ce serveur : il ne se synchronisera plus tant que le serveur ne sera pas ajouté de nouveau.",
 			"queries": "Les requêtes et classeurs qui utilisent ce serveur vous demanderont de vous y connecter."
 		},
 		"rename": {
 			"label": "Renommer",
-			"tooltip": "Donner à ce serveur un autre nom sur ce poste (le serveur n’est pas modifié)",
+			"tooltip": "Renommer ce serveur sur ce poste seulement",
 			"aria": "Nom du serveur sur ce poste",
 			"empty": "Saisissez un nom pour ce serveur.",
 			"tooLong": "Nom trop long : {max} caractères au plus.",
@@ -1282,7 +1282,6 @@
 		"add": {
 			"title": "Ajouter un serveur",
 			"submit": "Ajouter et se connecter…",
-			"help": "L’adresse est vérifiée auprès du serveur, puis sa page de connexion s’ouvre.",
 			"locked": "Votre organisation fixe la liste des serveurs : vous ne pouvez pas en ajouter."
 		}
 	},

@@ -117,11 +117,11 @@ describe('partage', () => {
 		const s = state({ server: 'http://localhost:8080', serverName: '', title: 'Nids', mode: 'collaborative', canManage: true, pending: 2 });
 		const q = detachQuestion(s, true);
 		expect(q[0]).toBe('« Nids » deviendra un classeur local ordinaire : il ne se synchronisera plus avec localhost:8080.');
-		expect(q.join(' ')).toContain('Le classeur du serveur n’est pas modifié');
-		expect(q.join(' ')).toContain('2 modifications pas encore envoyées au serveur resteront dans ce classeur local');
+		expect(q.join(' ')).toContain('Le classeur du serveur ne change pas');
+		expect(q.join(' ')).toContain('2 modifications non envoyées resteront dans ce classeur local');
 		expect(q.join(' ')).toContain('choisir où enregistrer');
 		expect(q[q.length - 1]).toBe('Ce détachement ne s’annule pas.');
-		expect(detachQuestion({ ...s, pending: 0 }, false).join(' ')).not.toMatch(/en attente|pas encore envoyée|choisir/);
+		expect(detachQuestion({ ...s, pending: 0 }, false).join(' ')).not.toMatch(/en attente|non envoyée|choisir/);
 	});
 
 	it('décrit un conflit', () => {

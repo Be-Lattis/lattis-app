@@ -71,9 +71,9 @@
 		},
 		"detach": {
 			"local": "„{title}“ wird zu einer normalen lokalen Arbeitsmappe: Sie wird nicht mehr mit {server} synchronisiert.",
-			"serverKept": "Die Arbeitsmappe auf dem Server wird nicht geändert: Die anderen Mitglieder behalten sie unverändert, und Sie können sie vom Server erneut öffnen.",
-			"pending": "{n, plural, one {# noch nicht an den Server gesendete Änderung bleibt} other {# noch nicht an den Server gesendete Änderungen bleiben}} in dieser lokalen Arbeitsmappe, ohne gesendet zu werden.",
-			"cached": "Sie wählen aus, wo die lokale Arbeitsmappe gespeichert wird (ihre aktuelle Kopie ist nur ein Lattis-Cache).",
+			"serverKept": "Die Arbeitsmappe auf dem Server ändert sich nicht: Sie können sie vom Server erneut öffnen.",
+			"pending": "{n, plural, one {# nicht gesendete Änderung bleibt} other {# nicht gesendete Änderungen bleiben}} in dieser lokalen Arbeitsmappe.",
+			"cached": "Sie wählen gleich, wo die lokale Arbeitsmappe gespeichert wird.",
 			"final": "Das Trennen lässt sich nicht rückgängig machen."
 		},
 		"retryNotice": "Neuer Verbindungsversuch…",
@@ -109,7 +109,7 @@
 		"alone": "Gemeinsam bearbeiten: vorerst nur Sie",
 		"with": "Gemeinsam mit {names}",
 		"withMore": "Gemeinsam mit {names} und {n} weiteren",
-		"title": "Gemeinsame Bearbeitung dieser Arbeitsmappe (freigegebener Ordner): Tabellendaten werden gemeinsam bearbeitet, alles andere wartet, bis Sie allein sind.",
+		"title": "Gemeinsames Bearbeiten: Tabellendaten werden zusammen geändert.",
 		"since": " seit {time}",
 		"joining": " (tritt bei)",
 		"conflicts": "{n, plural, one {# Konflikt} other {# Konflikte}}"
@@ -151,7 +151,7 @@
 		"onSave": " · bei jedem Speichern",
 		"sending": "Wird gesendet…",
 		"update": "Aktualisieren",
-		"help": "Nur die gewählten Spalten dieser Tabellen werden gesendet; der Rest der Arbeitsmappe verlässt diesen Computer nicht. Rechtsklick auf die Tabelle › Im Lattis Data Lake freigeben…, um sie zu ändern oder zu entfernen."
+		"help": "Nur die ausgewählten Spalten werden gesendet; der Rest verlässt den Computer nicht."
 	},
 	"cap": {
 		"yes": "ja",
@@ -205,7 +205,7 @@
 	"prefill": {
 		"title": "Vorausgefüllte Links · „{title}“",
 		"noParam": "Kein Feld hat einen Kurznamen: Geben Sie einen auf der Registerkarte Felder an („Kurzname im Link“).",
-		"help": "Wählen Sie die Felder, die der Link ausfüllt, dann eine Zeile pro Link (zum Beispiel ein QR-Code pro Standort). Der Antwortende kann den Wert ändern, außer bei einem durch den Link gesperrten Feld.",
+		"help": "Wählen Sie die vom Link ausgefüllten Felder, dann eine Zeile pro Link.",
 		"locked": "gesperrt",
 		"hide": "Ausblenden",
 		"show": "Link und QR-Code",
@@ -215,7 +215,7 @@
 	"preview": {
 		"membersReserved": "Dieser Server beschränkt die Mitgliederliste auf die Besitzer der Arbeitsmappe: Bitten Sie sie, „Anzeigen als…“ zu verwenden.",
 		"noTable": "Keine veröffentlichte Tabelle.",
-		"intro": "Prüfen Sie, was ein Mitglied sieht und tun kann: Die Zeilen werden so angezeigt, wie der Server sie diesem Mitglied liefert, einschließlich Filtern und erweiterten Regeln.",
+		"intro": "Prüfen Sie, was ein Mitglied sieht und tun kann.",
 		"member": "Mitglied",
 		"choose": "Auswählen…",
 		"table": "Tabelle",
@@ -290,10 +290,10 @@
 				"tooltip": "Die Tabelle kehrt zur Version des Servers zurück"
 			}
 		},
-		"layout": "Seitenlayout: {n, plural, one {# Element} other {# Elemente}} seit dem Öffnen auf beiden Seiten geändert (Breite, Formatierung, freie Zelle…). Die zuletzt gespeicherte Version gewinnt; nach mehr als 24 Stunden offline gewinnt die Version Ihrer Kollegen.",
+		"layout": "Seitenlayout: {n, plural, one {# Element} other {# Elemente}} seit dem Öffnen auf beiden Seiten geändert. Die zuletzt gespeicherte Version gewinnt.",
 		"none": "Keine ausstehenden Konflikte.",
-		"local": "Diese Zellen wurden von einem Kollegen gleichzeitig mit Ihnen geändert: Sein Wert, der neueste, wird überall angezeigt. „Meinen behalten“ stellt Ihren für alle Computer wieder her.",
-		"remote": "Diese Zellen wurden von einem Kollegen geändert, während Sie sie bearbeitet haben. Ihr Wert bleibt angezeigt, bis Sie wählen.",
+		"local": "Ein Kollege hat diese Zellen gleichzeitig mit Ihnen geändert: Sein Wert wird überall angezeigt.",
+		"remote": "Ein Kollege hat diese Zellen während Ihrer Eingabe geändert: Ihr Wert bleibt bis zu Ihrer Wahl angezeigt.",
 		"keepAllMine": "Alle meine behalten",
 		"keepAllTheirs": "Alle anderen behalten",
 		"goto": "Zur Zelle wechseln",
@@ -310,7 +310,7 @@
 		"address": "Serveradresse",
 		"continue": "Weiter",
 		"device": {
-			"help": "Öffnen Sie auf einem anderen Gerät (Telefon, anderer Computer) die Adresse unten und geben Sie den Code ein, dann melden Sie sich mit {provider} an.",
+			"help": "Öffnen Sie auf einem anderen Gerät die Adresse unten, geben Sie den Code ein und melden Sie sich mit {provider} an.",
 			"copy": "Code kopieren",
 			"valid": "Code noch {time} gültig.",
 			"expired": "Code abgelaufen.",
@@ -318,7 +318,7 @@
 		},
 		"browser": {
 			"help": "Schließen Sie die Anmeldung mit {provider} in Ihrem Browser ab und kehren Sie dann zu Lattis zurück.",
-			"note": "Die Seite wurde im Systembrowser geöffnet. Nichts hat sich geöffnet? Brechen Sie ab und wählen Sie „von einem anderen Gerät“."
+			"note": "Nichts geöffnet? Brechen Sie ab und wählen Sie „von einem anderen Gerät“."
 		},
 		"invitation": "auf Einladung",
 		"otherDevice": "Von einem anderen Gerät anmelden (Code eingeben)",
@@ -429,7 +429,7 @@
 		"help": "Hilfe: als Formular freigeben",
 		"reading": "Tabelle wird gelesen…",
 		"openToYou": "Für Sie geöffnete Formulare dieser Tabelle:",
-		"already": "Diese Tabelle hat bereits {n, plural, one {ein Formular} other {# Formulare}}. Mehrere Formulare können dieselbe Tabelle füllen.",
+		"already": "Diese Tabelle hat bereits {n, plural, one {ein Formular} other {# Formulare}}.",
 		"responses": "{n, plural, one {# Antwort} other {# Antworten}}",
 		"edit": "Bearbeiten…",
 		"newForm": "Neues Formular…",
@@ -457,7 +457,7 @@
 			"required": "Erforderlich",
 			"settings": "Feldeinstellungen",
 			"help": "Hilfe",
-			"positionHelp": "Wird vom Browser des Antwortenden ausgefüllt, wenn er auf „Mein Standort“ tippt (nie automatisch), mit der angezeigten Genauigkeit.",
+			"positionHelp": "Wird vom Browser ausgefüllt, wenn der Teilnehmer auf „Mein Standort“ tippt.",
 			"positionColumn": "Spalte „{name}“: „lat, lon“.",
 			"positionColumns": "Spalten „{lat}“ und „{lon}“.",
 			"placeholder": "Platzhaltertext",
@@ -483,7 +483,7 @@
 				"tel": "Telefon",
 				"url": "Webadresse"
 			},
-			"listFrom": "Liste aus „{source}“, vom Server bei jeder Anzeige neu gelesen (heute {n} Werte).",
+			"listFrom": "Liste aus „{source}“ (heute {n} Werte).",
 			"listValues": "Werte der Liste (einer pro Zeile)",
 			"copiedFrom": "{copied} aus „{source}“",
 			"param": "Kurzname im Link",
@@ -562,7 +562,7 @@
 			"desktop": "Computer",
 			"browser": {
 				"label": "Vorschau im Browser öffnen",
-				"tooltip": "Speichert den Entwurf und öffnet die echte Serverseite (Link 10 Minuten gültig, Antworten werden nicht gespeichert)"
+				"tooltip": "Speichert den Entwurf und öffnet die Serverseite (Antworten werden nicht gespeichert)"
 			}
 		},
 		"saving": "Wird gespeichert…",
@@ -596,11 +596,11 @@
 			},
 			"table": {
 				"title": "Nur diese Tabelle veröffentlichen",
-				"detail": "Nur die gewählten Spalten werden gesendet; die Arbeitsmappe bleibt auf Ihrem Computer, ohne bereitgestellt zu werden."
+				"detail": "Nur die ausgewählten Spalten werden gesendet; die Arbeitsmappe bleibt auf Ihrem Computer."
 			},
 			"shared": {
 				"title": "Diese Tabelle zur freigegebenen Arbeitsmappe hinzufügen",
-				"detail": "Empfohlen. Sie wird mit ihren Zeilen auf dem Server erstellt; die Mitglieder erhalten sie und bearbeiten sie gemäß ihren Rechten. Anschließend kann sie über dasselbe Menü im Data Lake freigegeben werden."
+				"detail": "Empfohlen. Mit ihren Zeilen auf dem Server erstellt, für die Mitglieder gemäß ihren Rechten."
 			},
 			"tableAlone": "Diese Tabelle allein im Data Lake veröffentlichen"
 		},
@@ -609,7 +609,7 @@
 			"notInCollab": "Die Arbeitsmappe ist live freigegeben, aber diese Tabelle gehört nicht dazu.",
 			"howTitle": "Wie möchten Sie diese Tabelle freigeben?",
 			"notPublished": "Diese Tabelle ist in keiner veröffentlichten Arbeitsmappe.",
-			"whyCollab": "Eine live freigegebene Arbeitsmappe wird nicht erneut veröffentlicht: Ihre Liste der Tabellen wird bei der Veröffentlichung festgelegt, und eine danach erstellte Tabelle bleibt auf Ihrem Computer."
+			"whyCollab": "Eine live freigegebene Arbeitsmappe wird nicht erneut veröffentlicht: Eine danach erstellte Tabelle bleibt auf Ihrem Computer."
 		},
 		"push": {
 			"done": "Quelle „{table}“ aktualisiert",
@@ -932,18 +932,18 @@
 			"roles": "Zu vergebende Rollen",
 			"submit": "Einladen",
 			"gives": "Kann dann:",
-			"help": "Eine dem Server bereits bekannte Person erhält ihre Rollen sofort, sonst bei ihrer ersten Anmeldung.",
+			"help": "Sofort wirksam oder bei der ersten Anmeldung.",
 			"custom": "Benutzerdefinierte Rollen können vergeben werden, sobald die Person Mitglied ist."
 		},
 		"people": "Personen",
 		"search": "Mitglied suchen",
 		"tag": {
 			"pipeline": {
-				"tooltip": "Technisches Mitglied einer Ingestion-Pipeline: Es verschwindet serverseitig mit der Pipeline"
+				"tooltip": "Technisches Mitglied einer Ingestion-Pipeline"
 			},
 			"team": {
 				"label": "Team {names}",
-				"tooltip": "Mitglied der Arbeitsmappe über sein Team: Die Teamrollen werden unter „Teams“ geändert"
+				"tooltip": "Mitglied über sein Team: Rollen werden unter „Teams“ geändert"
 			},
 			"lastOwner": {
 				"label": "letzter Besitzer",
@@ -975,7 +975,7 @@
 			"label": "Einem Team eine Rolle vergeben:",
 			"role": "Rolle des Teams",
 			"submit": "Rolle vergeben",
-			"help": "Die Mitglieder eines Teams haben dessen Rollen, solange sie ihm angehören. Teams werden in der Serververwaltung erstellt; Verzeichnisgruppen: später."
+			"help": "Teammitglieder haben die Rollen des Teams, solange sie dazugehören."
 		},
 		"noTeam": "Keine Teams auf diesem Server: Die Besitzer des Servers erstellen sie in seiner Verwaltung („Teams“)."
 	},
@@ -986,7 +986,7 @@
 			"designer": "Struktur, nicht die Rechte"
 		},
 		"filtersSaved": "Filter von „{table}“ für {role} gespeichert",
-		"intro": "Jedes Mitglied hat eine oder mehrere Rollen; eine Rolle gewährt Zugriff pro Tabelle, den Filter auf bestimmte Zeilen beschränken können. Die Rechte der Rollen addieren sich.",
+		"intro": "Eine Rolle gewährt Zugriff pro Tabelle, durch Filter begrenzt; Rollen addieren sich.",
 		"learnMore": "Weitere Informationen",
 		"matrix": {
 			"aria": "Was jede Rolle erlaubt",
@@ -1009,9 +1009,9 @@
 		},
 		"detail": {
 			"title": "{role}: Zugriff Tabelle für Tabelle",
-			"owner": "Besitzer: sieht und bearbeitet alle Zeilen, ändert die Struktur (Spalten, Tabellen, Seitenlayout, Skripts) und verwaltet Mitglieder, Rollen und Regeln. Hier gibt es nichts festzulegen.",
-			"designer": "Designer: sieht und bearbeitet alle Zeilen und ändert die Struktur (Spalten, Tabellen, Seitenlayout, Skripts), verwaltet aber keine Rechte. Hier gibt es nichts festzulegen.",
-			"frozen": "Fixierte Arbeitsmappe: Alle Mitglieder sehen alles, ohne etwas zu ändern. Zugriffe pro Tabelle und Filter sind die einer live freigegebenen Arbeitsmappe."
+			"owner": "Besitzer: alle Rechte, einschließlich Mitglieder, Rollen und Regeln. Hier gibt es nichts festzulegen.",
+			"designer": "Designer: alle Rechte außer der Rechteverwaltung. Hier gibt es nichts festzulegen.",
+			"frozen": "Fixierte Arbeitsmappe: Alle Mitglieder sehen alles, ohne etwas zu ändern."
 		},
 		"drop": {
 			"confirm": "Rolle „{name}“ löschen? Ihre Mitglieder verlieren die Rechte, die sie gewährt hat.",
@@ -1057,7 +1057,7 @@
 			"noCondition": "Keine Bedingung: alle Zeilen.",
 			"save": "Filter speichern"
 		},
-		"oldSheet": "Blatt, das veröffentlicht wurde, bevor der Server Blätter kannte: Sein Zugriff wird für jede seiner Tabellen festgelegt.",
+		"oldSheet": "Älteres Blatt: Sein Zugriff wird für jede seiner Tabellen festgelegt.",
 		"noTable": "Keine veröffentlichte Tabelle: Der Zugriff auf die Arbeitsmappe gilt für hinzugefügte Tabellen.",
 		"teams": "Teams mit dieser Rolle:",
 		"noTeams": "Kein Team hat diese Rolle (Mitglieder › Teams).",
@@ -1074,8 +1074,8 @@
 	"rules": {
 		"added": "{n, plural, one {Regel hinzugefügt} other {# Regeln hinzugefügt}}",
 		"removed": "Regel entfernt",
-		"collabOnly": "Erweiterte Regeln: nur live freigegebene Arbeitsmappen (eine fixierte Arbeitsmappe ist für alle schreibgeschützt).",
-		"intro": "Eine erweiterte Regel entzieht ein Recht für eine Tabelle, unabhängig vom Zugriff der Rolle: nicht mehr löschen, nicht mehr hinzufügen, nur bestimmte Zeilen bearbeiten. Besitzer und Designer unterliegen ihr nicht, es sei denn, sie werden genannt.",
+		"collabOnly": "Erweiterte Regeln: nur für live freigegebene Arbeitsmappen.",
+		"intro": "Eine erweiterte Regel entzieht ein Recht für eine Tabelle, unabhängig vom Zugriff der Rolle.",
 		"current": "Bestehende Regeln",
 		"remove": {
 			"tooltip": "Diese Regel entfernen",
@@ -1137,7 +1137,7 @@
 			"policies": "Hinzugefügte Regeln:",
 			"grants": "Rechte vergeben an:",
 			"changed": "Generierte Regeln entfernt oder geändert",
-			"recompileHelp": "Das Neukompilieren stellt die von Lattis generierten Regeln wieder her. Von Hand hinzugefügte Regeln und Rechte werden hier weiter gemeldet, bis sie in PostgreSQL entfernt werden.",
+			"recompileHelp": "Neu kompilieren stellt die Regeln von Lattis wieder her, ohne manuell hinzugefügte zu entfernen.",
 			"recompiled": "Rechte neu kompiliert",
 			"recompile": "Rechte neu kompilieren"
 		},
@@ -1181,7 +1181,7 @@
 		"refresh": {
 			"legend": "Geladen durch die Abfrage „{query}“: Aktualisierung",
 			"local": "Von diesem Computer, mit Ihren Verbindungen: Ihre Aktualisierungen ersetzen die Zeilen für alle Mitglieder",
-			"lake": "Data-Lake-Quelle: Die Tabelle wird auch an den Data Lake des Servers gesendet, mit dem andere Arbeitsmappen sich verknüpfen können (direkt nach der Veröffentlichung eingerichtet)"
+			"lake": "Data-Lake-Quelle: Die Tabelle wird auch an den Data Lake gesendet, für andere Arbeitsmappen"
 		},
 		"uncheckedPrivate": "Nicht aktivierte Tabellen bleiben privat: nur auf diesem Computer.",
 		"publishing": "Wird veröffentlicht…",
@@ -1249,7 +1249,7 @@
 		"readOnly": "Die eingefügte Tabelle ist schreibgeschützt und wird aktualisiert, wenn sich die Daten ändern.",
 		"choose": "Wählen Sie Daten aus, um ihre Spalten zu sehen.",
 		"yourSources": "Ihre übertragenen Quellen",
-		"yourSourcesHelp": "Allein aus Ihren lokalen Arbeitsmappen veröffentlichte Tabellen, auf diesem Server; jede wird über ihre Arbeitsmappe verwaltet (Rechtsklick auf die Tabelle › Im Lattis Data Lake freigeben…).",
+		"yourSourcesHelp": "Allein aus Ihren lokalen Arbeitsmappen veröffentlichte Tabellen; jede wird über ihre Arbeitsmappe verwaltet.",
 		"inserting": "Wird eingefügt…",
 		"insert": "Einfügen"
 	},
@@ -1265,13 +1265,13 @@
 			"tooltip": "Diesen Server aus der Liste dieses Computers entfernen",
 			"confirm": "„{name}“ aus der Liste entfernen?",
 			"signedOut": "Sie werden auf diesem Computer von diesem Server abgemeldet.",
-			"nothingDeleted": "Auf dem Server wird nichts gelöscht: Seine Arbeitsmappen, seine Daten und Ihre Rechte bleiben dort erhalten, und Sie können ihn jederzeit wieder hinzufügen.",
-			"inUse": "Die geöffnete Arbeitsmappe „{title}“ ist auf diesem Server veröffentlicht: Sie bleibt aus ihrer Kopie auf diesem Computer geöffnet, wird aber nicht mehr synchronisiert, bis Sie diesen Server wieder hinzufügen und sich bei ihm anmelden.",
+			"nothingDeleted": "Auf dem Server wird nichts gelöscht; Sie können ihn wieder hinzufügen.",
+			"inUse": "Die geöffnete Arbeitsmappe „{title}“ ist auf diesem Server veröffentlicht: Sie wird nicht mehr synchronisiert, bis der Server wieder hinzugefügt wird.",
 			"queries": "Abfragen und Arbeitsmappen, die diesen Server verwenden, fordern Sie zur Anmeldung bei ihm auf."
 		},
 		"rename": {
 			"label": "Umbenennen",
-			"tooltip": "Diesem Server auf diesem Computer einen anderen Namen geben (der Server wird nicht geändert)",
+			"tooltip": "Diesen Server nur auf diesem Computer umbenennen",
 			"aria": "Servername auf diesem Computer",
 			"empty": "Geben Sie einen Namen für diesen Server ein.",
 			"tooLong": "Name zu lang: höchstens {max} Zeichen.",
@@ -1282,7 +1282,6 @@
 		"add": {
 			"title": "Server hinzufügen",
 			"submit": "Hinzufügen und anmelden…",
-			"help": "Die Adresse wird beim Server geprüft, dann öffnet sich seine Anmeldeseite.",
 			"locked": "Ihre Organisation legt die Liste der Server fest: Sie können keine hinzufügen."
 		}
 	},

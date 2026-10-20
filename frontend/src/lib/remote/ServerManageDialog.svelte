@@ -236,7 +236,6 @@
 						/>
 						<button class="primary" disabled={busy || !address.trim()} onclick={add}><Icon name="plus" size={13} />{t('remote.servers.add.submit')}</button>
 					</div>
-					<p class="muted">{t('remote.servers.add.help')}</p>
 				{:else}
 					<p class="muted">{t('remote.servers.add.locked')}</p>
 				{/if}
