@@ -1,1 +1,525 @@
-{}
+{
+	"conn": {
+		"web": "Web (API)",
+		"lattis": "Lattis Server",
+		"dialog": {
+			"webOk": "The server responds.",
+			"ok": "Connection successful.",
+			"nameInvalid": {
+				"title": "Invalid connection name",
+				"message": "The connection name can't be empty: it identifies the connection in the workbook's queries.\n\nGive it a name."
+			},
+			"nameTaken": "Connection name already taken",
+			"aria": "{kind} connection",
+			"webTitle": "Connect to a web API",
+			"dbTitle": "{kind} database",
+			"host": "Server",
+			"port": "Port",
+			"instance": {
+				"label": "Instance",
+				"placeholder": "(default) or SQLEXPRESS"
+			},
+			"database": {
+				"label": "Database",
+				"optional": "(optional)"
+			},
+			"user": {
+				"label": "User",
+				"windows": "empty: Windows authentication"
+			},
+			"ssl": {
+				"label": "Encryption (SSL/TLS)",
+				"driver": "Driver setting",
+				"prefer": "If the server offers it",
+				"disable": "Disabled",
+				"require": "Required",
+				"verify": "Required, certificate verified"
+			},
+			"web": {
+				"url": "API address",
+				"urlPlaceholder": "https://api.example.com/v1",
+				"header": "Token header",
+				"user": "User (Basic)",
+				"userPlaceholder": "empty: token only"
+			},
+			"orgServer": "Your organization's server",
+			"noServer": "No server: add one with “Manage servers…”",
+			"version": "version {version}",
+			"invitation": "by invitation",
+			"connected": "Signed in: {user}",
+			"notConnected": "Not signed in",
+			"signIn": "Sign in…",
+			"name": "Connection name",
+			"token": "Token",
+			"remembered": "(remembered)",
+			"remember": "Remember in the system keychain",
+			"help": {
+				"lattis": "No password is saved: the connection uses your session on the server (Account menu in the title bar), and whatever your rights let you read there. As a query source, it is used only for reading (on a replica when the server advertises one).",
+				"web": "The token is never saved in the workbook; it is only sent to addresses that start with the connection's address",
+				"bearer": ": Bearer is added to a bare token",
+				"db": "The password is never saved in the workbook. The connection is used only for reading",
+				"readOnly": "read-only transaction",
+				"selectOnly": "SELECT queries only, transaction always rolled back"
+			},
+			"test": "Test"
+		}
+	},
+	"sourceKind": {
+		"csv": "Text or CSV file",
+		"xlsx": "Excel workbook",
+		"json": "JSON file",
+		"parquet": "Parquet file",
+		"sqlite": "SQLite database (file)",
+		"table": "Workbook table",
+		"query": "Other query",
+		"sql": "Workbook SQL query",
+		"postgres": "PostgreSQL",
+		"mysql": "MySQL / MariaDB",
+		"sqlserver": "SQL Server",
+		"web": "Web (JSON API)",
+		"lattis": "Lattis Server",
+		"formula": "Formula (linked table)"
+	},
+	"op": {
+		"select": {
+			"label": "Choose columns",
+			"hint": "Keep some columns, in the order you want"
+		},
+		"remove": {
+			"label": "Remove columns",
+			"hint": "Remove columns"
+		},
+		"rename": {
+			"label": "Rename",
+			"hint": "Rename a column"
+		},
+		"type": {
+			"label": "Data type",
+			"hint": "Change a column's type (a value that can't be converted becomes empty)"
+		},
+		"filter": {
+			"label": "Filter rows",
+			"hint": "Keep the rows that meet conditions"
+		},
+		"sort": {
+			"label": "Sort",
+			"hint": "Sort the rows"
+		},
+		"distinct": {
+			"label": "Remove duplicates",
+			"hint": "Keep one row per value (of all columns or of some)"
+		},
+		"top": {
+			"label": "Keep top rows",
+			"hint": "Keep the first N rows"
+		},
+		"split": {
+			"label": "Split column",
+			"hint": "Split a text column by delimiter"
+		},
+		"replace": {
+			"label": "Replace values",
+			"hint": "Replace one value with another"
+		},
+		"transform": {
+			"label": "Format",
+			"hint": "TRIM, UPPERCASE, lowercase"
+		},
+		"addcolumn": {
+			"label": "Custom column",
+			"hint": "New column calculated by a SQLite expression ([Column] refers to a column)"
+		},
+		"index": {
+			"label": "Index column",
+			"hint": "Number the rows"
+		},
+		"group": {
+			"label": "Group by",
+			"hint": "Group rows and calculate aggregates"
+		},
+		"unpivot": {
+			"label": "Unpivot",
+			"hint": "Turn columns into rows (attribute, value)"
+		},
+		"pivot": {
+			"label": "Pivot",
+			"hint": "Turn a column's values into columns"
+		},
+		"merge": {
+			"label": "Merge",
+			"hint": "Join another query or a table on common columns"
+		},
+		"append": {
+			"label": "Append",
+			"hint": "Add the rows of another query or of a table at the end"
+		}
+	},
+	"type": {
+		"text": "Text",
+		"integer": "Whole number",
+		"decimal": "Decimal",
+		"date": "Date",
+		"boolean": "True/False",
+		"auto": "Auto"
+	},
+	"cmp": {
+		"eq": "equals",
+		"ne": "does not equal",
+		"gt": "is greater than",
+		"ge": "is greater than or equal to",
+		"lt": "is less than",
+		"le": "is less than or equal to",
+		"contains": "contains",
+		"notcontains": "does not contain",
+		"begins": "begins with",
+		"ends": "ends with",
+		"empty": "is empty",
+		"notempty": "is not empty"
+	},
+	"agg": {
+		"sum": "Sum",
+		"avg": "Average",
+		"count": "Count rows",
+		"countdistinct": "Count distinct",
+		"min": "Min",
+		"max": "Max"
+	},
+	"join": {
+		"left": "Left outer (all rows from the first, matching rows from the second)",
+		"inner": "Inner (only matching rows)",
+		"full": "Full outer (all rows from both)",
+		"right": "Right outer (all rows from the second)",
+		"anti": "Left anti (rows from the first with no match)"
+	},
+	"default": {
+		"custom": "Custom",
+		"index": "Index",
+		"count": "Count",
+		"attribute": "Attribute",
+		"value": "Value"
+	},
+	"password": {
+		"title": "Password",
+		"header": "Connection “{name}”",
+		"stored": "This workbook wants to connect with your password saved on this computer.",
+		"storedHelp": "Allow it if you know this workbook: the permission is remembered for it on this computer. A workbook received from an unknown source shouldn't get it.",
+		"allow": "Allow",
+		"other": "Enter another password",
+		"refuse": "Deny",
+		"refused": "The server rejected the password.",
+		"asked": "The server asks for a password.",
+		"remember": "Remember on this computer (system keychain)",
+		"never": "It is never saved in the workbook."
+	},
+	"host": {
+		"group": {
+			"file": "File",
+			"database": "Database",
+			"other": "Other sources"
+		},
+		"source": {
+			"csv": "Text/CSV",
+			"sqlite": "SQLite database"
+		},
+		"noExcelTable": "No table of two or more rows in this workbook.",
+		"noTable": "The workbook has no table.",
+		"refreshingAll": "Refreshing all queries…",
+		"refreshing": "Refreshing…",
+		"passwordAbandoned": "Refresh canceled: no password entered.",
+		"refreshedAll": "{n, plural, one {# query refreshed} other {# queries refreshed}}",
+		"nothingToRefresh": "No loaded query to refresh",
+		"loaded": "Table “{table}”: {n, plural, one {# row loaded} other {# rows loaded}}",
+		"saved": "Query “{name}” saved",
+		"deleted": "Query “{name}” deleted (Ctrl+Z to undo)",
+		"deletedTable": "Query “{name}” deleted; table {table} stays on its sheet (Ctrl+Z to undo)",
+		"connDeleted": "Connection “{name}” deleted (Ctrl+Z to undo)",
+		"forgotten": "Password for “{name}” forgotten",
+		"panel": {
+			"title": "Queries & Connections",
+			"help": "Help on queries and connections"
+		},
+		"queries": "Queries",
+		"editQuery": "Edit query “{name}”",
+		"refreshedOn": "Refreshed on {date}",
+		"connectionOnly": "Connection only",
+		"refresh": "Refresh",
+		"load": "Load",
+		"more": "More actions",
+		"edit": "Edit",
+		"delete": "Delete",
+		"noQuery": "No query: Data › Get Data.",
+		"connections": "Connections",
+		"editConn": "Edit connection “{name}”",
+		"tokenRemembered": "token remembered",
+		"passwordRemembered": "password remembered",
+		"forgetToken": "Forget token",
+		"forgetPassword": "Forget password",
+		"newConn": "New connection…"
+	},
+	"source": {
+		"passwordRequired": "Password required to list the tables.",
+		"need": {
+			"file": "Choose a file.",
+			"xlsxTable": "Choose a table from the workbook.",
+			"table": "Choose a table.",
+			"query": "Choose a query.",
+			"connection": "Choose a connection and a table (or write a SQL query).",
+			"fileTable": "Choose a table (or write a SQL query).",
+			"sql": "Write a SQL query.",
+			"formula": "Write a formula that starts with =.",
+			"url": "The address must start with http:// or https://."
+		},
+		"title": "Source",
+		"kind": "Source type",
+		"file": {
+			"label": "File",
+			"placeholder": "File path",
+			"browse": "Browse…"
+		},
+		"csv": {
+			"delimiter": "Delimiter",
+			"auto": "Detected automatically",
+			"semicolon": "Semicolon (;)",
+			"comma": "Comma (,)",
+			"tab": "Tab",
+			"pipe": "Vertical bar (|)"
+		},
+		"xlsx": {
+			"table": "table {n}"
+		},
+		"recordPath": {
+			"label": "Record path",
+			"placeholder": "empty: the root or its only array; e.g. data.items"
+		},
+		"json": {
+			"help": "Array of objects, or one JSON object per line (NDJSON). Nested objects become “parent.child” columns."
+		},
+		"parquet": {
+			"help": "Each column of the file gives a column (“parent.child” for a struct; a list becomes text)."
+		},
+		"table": "Table",
+		"query": "Query",
+		"queryHelp": "The query starts from the other query's result (reference): changing the other query also changes this one.",
+		"newConn": "New…",
+		"web": {
+			"url": "Address (GET)",
+			"urlPlaceholder": "https://api.example.com/v1/customers?page=1",
+			"headers": "Headers (one per line, “Name: value”)",
+			"auth": "Authentication",
+			"public": "None (public API)",
+			"help": "Headers are saved in the workbook: a token or an API key goes through a Web connection (kept in the system keychain)."
+		},
+		"tables": "Tables and views",
+		"search": "Search",
+		"view": "(view)",
+		"sql": {
+			"label": "SQL query (read-only)",
+			"dbHelp": "Filter here if you can: the query runs on the server, the steps afterwards in Lattis.",
+			"fileHelp": "The file is opened read-only; the steps apply afterwards.",
+			"workbook": "SQL query on the workbook (read-only)",
+			"workbookHelp": "As in the SQL tab: the query is reread on every refresh.",
+			"sheet": "Cell[A1] addresses without a sheet are read from “{sheet}”."
+		},
+		"formula": {
+			"label": "Formula (dynamic table)",
+			"help": "The table recalculates when its sources change (without steps; with steps, on refresh, F5)."
+		}
+	},
+	"step": {
+		"need": {
+			"columns": "Check at least one column.",
+			"name": "Enter a name.",
+			"nameExpr": "Enter a name and an expression.",
+			"mergeOther": "Choose the query or table to merge.",
+			"keys": "Choose the matching columns on both sides.",
+			"appendOther": "Choose the query or table to append."
+		},
+		"or": "Or",
+		"and": "And",
+		"remove": "Remove",
+		"filter": {
+			"add": "Add a condition",
+			"help": "Numbers and dates are typed as in the grid (3,5; 31/12/2026). Contains, begins with and ends with are not case-sensitive."
+		},
+		"column": "Column",
+		"newName": "New name",
+		"type": "Type",
+		"distinct": {
+			"help": "No column checked: a row is a duplicate if all its values are identical."
+		},
+		"unpivot": {
+			"attribute": "Attribute column"
+		},
+		"valueColumn": "Value column",
+		"select": {
+			"help": "Check the columns to keep; ↑ ↓ change their order."
+		},
+		"up": "Move up",
+		"down": "Move down",
+		"split": {
+			"delimiter": "Delimiter",
+			"parts": "Number of columns"
+		},
+		"replace": {
+			"value": "Value to find",
+			"with": "Replace with",
+			"help": "In a text column, each occurrence is replaced; elsewhere, the whole value."
+		},
+		"transform": {
+			"trim": "Trim spaces (TRIM)",
+			"upper": "UPPERCASE",
+			"lower": "lowercase"
+		},
+		"addcolumn": {
+			"name": "New column name",
+			"expr": "Formula (SQLite)",
+			"placeholder": "[Quantity] * [Price]",
+			"help": "Available columns: {columns}. Examples: [Price] * 1.2, upper([City]), [LastName] || ' ' || [FirstName], CASE WHEN [Amount] > 100 THEN 'large' ELSE 'small' END."
+		},
+		"autoType": "Auto (inferred from the values)",
+		"name": "Name",
+		"index": {
+			"start": "Start at"
+		},
+		"merge": {
+			"with": "Merge with",
+			"keys": "Matching columns (first query ↔ second):",
+			"addKey": "Add a matching column",
+			"join": "Join kind",
+			"columns": "Columns to take from the second (none checked: all except the matching columns):"
+		},
+		"append": {
+			"from": "Append the rows of",
+			"help": "Columns are matched by name; a column missing on one side stays empty."
+		},
+		"group": {
+			"by": "Group by:",
+			"aggs": "Aggregates:",
+			"add": "Add an aggregate"
+		},
+		"sort": {
+			"by": "Sort by",
+			"then": "Then by",
+			"inOrder": "In order",
+			"asc": "Ascending",
+			"reverse": "Reversed",
+			"desc": "Descending",
+			"custom": "Custom order (optional, values separated by “;”)",
+			"customPlaceholder": "High; Medium; Low",
+			"add": "Add level"
+		},
+		"top": {
+			"count": "Number of rows"
+		},
+		"pivot": {
+			"column": "Column whose values become columns",
+			"agg": "Aggregate",
+			"help": "50 distinct values at most; the other columns group the rows."
+		}
+	},
+	"editor": {
+		"otherQuery": "Query {name}",
+		"otherTable": "Table {name}",
+		"needName": "Give the query a name.",
+		"tab": {
+			"home": "Home",
+			"transform": "Transform",
+			"addColumn": "Add Column"
+		},
+		"group": {
+			"close": "Close",
+			"columns": "Manage Columns",
+			"rows": "Reduce Rows",
+			"combine": "Combine",
+			"table": "Table",
+			"anyColumn": "Any Column",
+			"textColumn": "Text Column",
+			"general": "General"
+		},
+		"cmd": {
+			"closeLoad": {
+				"label": "Close & Load",
+				"hint": "Save the query and load its result into a table"
+			},
+			"save": {
+				"hint": "Save the query without loading it (connection only)"
+			},
+			"cancel": {
+				"hint": "Close the query editor without saving the changes (the workbook stays open)"
+			},
+			"refresh": {
+				"label": "Refresh preview",
+				"hint": "Reread the sources"
+			},
+			"source": {
+				"label": "Source…",
+				"hint": "Change the query's source"
+			},
+			"sql": {
+				"label": "View SQL",
+				"hint": "Show the preview's SQL"
+			},
+			"undo": {
+				"label": "Undo",
+				"hint": "Undo the last action on the steps (Ctrl+Z)"
+			},
+			"redo": {
+				"label": "Redo",
+				"hint": "Redo the undone action (Ctrl+Y)"
+			},
+			"sortDialog": "Sort…",
+			"asc": {
+				"hint": "Sort by the chosen columns, ascending"
+			},
+			"desc": {
+				"hint": "Sort by the chosen columns, descending"
+			},
+			"mergeQueries": "Merge Queries",
+			"appendQueries": "Append Queries",
+			"unpivot": "Unpivot Columns",
+			"pivot": "Pivot Column"
+		},
+		"title": "Query Editor",
+		"tabs": "Ribbon tabs",
+		"close": {
+			"tooltip": "Cancel: close the query editor without saving (the workbook stays open)",
+			"aria": "Cancel and close the query editor"
+		},
+		"errorStep": "Step {n} ({label})",
+		"previousStep": "preview of the previous step",
+		"header": {
+			"tooltip": "{name}: {type} — right-click or ▾: column menu; Ctrl or Shift: several columns",
+			"menu": "Menu for column {name}"
+		},
+		"computing": "Computing the preview…",
+		"noData": "No data.",
+		"status": {
+			"size": "{columns, plural, one {# column} other {# columns}}, {rows, plural, one {# row} other {# rows}}",
+			"sample": "preview computed on the first 1,000 rows of each source",
+			"shown": "({n} shown)"
+		},
+		"hideSql": "Hide SQL",
+		"properties": "Properties",
+		"applied": "Applied steps",
+		"step": {
+			"edit": "Edit step",
+			"delete": "Delete step"
+		},
+		"help": "A new step is inserted after the chosen step. Click a column header to choose it (Ctrl or Shift: several); its ▾ or a right-click opens the column menu.",
+		"menu": {
+			"count": "({n} columns)",
+			"chosen": "{n} columns chosen",
+			"keep": "Remove other columns",
+			"rename": "Rename…",
+			"type": "Change type",
+			"replace": "Replace values…",
+			"split": "Split column…",
+			"asc": "Sort ascending",
+			"desc": "Sort descending",
+			"filter": "Filter rows…",
+			"group": "Group by…",
+			"unpivotOthers": "Unpivot other columns",
+			"pivot": "Pivot column…"
+		}
+	}
+}

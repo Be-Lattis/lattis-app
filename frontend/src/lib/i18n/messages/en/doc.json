@@ -1,1 +1,175 @@
-{}
+{
+	"consent": {
+		"warning": "Only allow it if you trust the person who gave you this workbook. If in doubt, choose “Don't run”: the rest of the workbook remains usable.",
+		"site": "The “{name}” tab shows the external site {url}, which has never been allowed in this workbook on this computer before (received workbook, or tab changed elsewhere). This site runs in the tab, without access to the workbook.",
+		"page": "The “{name}” tab contains a web page (HTML and JavaScript) that has never been allowed on this computer before (received workbook, or page changed elsewhere). A page can read and change the workbook, run its buttons' actions, ask you questions and, with your approval, contact websites.",
+		"title": "Run a web page from the workbook?",
+		"ok": "Allow",
+		"cancel": "Don't run",
+		"code": "Page code"
+	},
+	"web": {
+		"lost": "Connection to the Lattis engine lost",
+		"canceled": "Call canceled",
+		"pick": {
+			"title": "Choose a file",
+			"help": "The chosen file is sent to the Lattis server.",
+			"choose": "Choose a file…"
+		},
+		"pdf": {
+			"windows": "“Microsoft Print to PDF” printer",
+			"browser": "“Save as PDF” destination"
+		}
+	},
+	"pivot": {
+		"expand": "Expand",
+		"collapse": "Collapse",
+		"expandName": "Expand {name}",
+		"collapseName": "Collapse {name}",
+		"error": "PivotTable: {error}",
+		"empty": "PivotTable of “{source}”: choose fields (right-click › Edit…)."
+	},
+	"chart": {
+		"error": "Chart “{name}”: {error}"
+	},
+	"button": {
+		"default": "Button",
+		"runs": "Runs {what}",
+		"noAction": "No linked action",
+		"nothing": "This button runs nothing: right-click to link a script to it.",
+		"noActionOption": "(no action)",
+		"run": "Run",
+		"wholeScript": "the whole script",
+		"function": "the function {name}()",
+		"script": "Script",
+		"background": "Fill",
+		"text": "Text",
+		"help": "Clicking the button runs its action; right-click to come back here.",
+		"try": "Try"
+	},
+	"rightClickEdit": "right-click: edit",
+	"control": {
+		"linked": "linked cell: {cell}",
+		"kept": "value kept in the control",
+		"deleted": "Control deleted",
+		"choice": "Choice {n}",
+		"gone": "This control no longer exists: delete it from the text.",
+		"insertTitle": "Insert: {kind}",
+		"editTitle": "Edit: {kind}",
+		"type": "Type",
+		"name": "Name (for scripts)",
+		"auto": "automatic",
+		"label": "Label",
+		"buttonText": "Button text",
+		"placeholder": "Placeholder text (optional)",
+		"keptIn": "Value kept in",
+		"inControl": "the control (no linked cell)",
+		"sheet": "sheet {name}",
+		"cell": "Cell",
+		"choices": {
+			"source": "Source of the choices",
+			"typed": "Typed",
+			"column": "Table column",
+			"from": "Choices taken from (distinct values)",
+			"list": "Choices (one per line)"
+		},
+		"script": "Script (on every change)",
+		"help": "The control's value is the linked cell's value (in this document, or on a sheet to read it in formulas). Scripts drive it with controls.get / controls.set and controls.on(\"change\", …)."
+	},
+	"page": {
+		"escapes": "The page keeps trying to open another address: it has been stopped.",
+		"navBlocked": "Page “{name}”: navigation to another address blocked, the page was reloaded.",
+		"urlSet": "Tab “{name}”: web page {url} (Ctrl+Z to undo)",
+		"saved": "Page “{name}” saved (Ctrl+Z to undo)",
+		"save": "Save",
+		"preview": {
+			"label": "Preview",
+			"tooltip": "Show the draft in the preview, without saving it (Ctrl+Enter)"
+		},
+		"show": {
+			"label": "Show",
+			"tooltip": "Go back to the page (the draft still needs to be saved)"
+		},
+		"discard": "Discard changes",
+		"keys": "Ctrl+S: save · Ctrl+Enter: preview",
+		"edit": {
+			"label": "Edit",
+			"html": "HTML page",
+			"tooltip": "Edit the page's HTML, CSS and JavaScript"
+		},
+		"site": {
+			"label": "Website…",
+			"tooltip": "Show an external web page in this tab"
+		},
+		"reload": {
+			"label": "Reload",
+			"tooltip": "Reload the page"
+		},
+		"openBrowser": "Open in the browser",
+		"blank": "Blank page: the site may refuse to be shown in a frame (open it in the browser).",
+		"unsaved": "Unsaved changes",
+		"blocked": {
+			"title": "This web page was not run.",
+			"help": "It has never been allowed on this computer before (received workbook, or page changed elsewhere). Only allow it if you trust the person who gave you this workbook.",
+			"preview": "Preview (Ctrl+Enter) runs the code shown in the editor.",
+			"decide": "Decide…"
+		},
+		"frame": "Page {name}",
+		"pasteHint": "Paste: use Ctrl+V in the text",
+		"noTableChart": "No table in the workbook: create one on a sheet to chart it here.",
+		"noTablePivot": "No table in the workbook: create one on a sheet to analyze it here.",
+		"placeholder": "Type here… (Insert: charts and buttons)",
+		"aria": "Document {name}",
+		"grip": "Drag to resize"
+	},
+	"clip": {
+		"chartPasted": "Chart pasted",
+		"pivotPasted": "PivotTable pasted",
+		"chartCopied": "Chart copied: Ctrl+V in the text or on a sheet",
+		"pivotCopied": "PivotTable copied: Ctrl+V in the text or on a sheet",
+		"cutAnywhere": "Item cut: Ctrl+V in the text or on a sheet",
+		"copiedAnywhere": "Item copied: Ctrl+V in the text or on a sheet",
+		"cutText": "Item cut: right-click › Paste in the text",
+		"copiedText": "Item copied: right-click › Paste in the text"
+	},
+	"panel": {
+		"source": "Source table",
+		"missing": "{name} (not found)",
+		"height": "Height (px)",
+		"deleteChart": "Delete chart",
+		"help": "Help on buttons and controls",
+		"close": "Close the pane",
+		"insert": "Insert",
+		"save": "Save"
+	},
+	"link": {
+		"title": "Link",
+		"address": "Address",
+		"selection": "The selected text becomes a link.",
+		"inserted": "The address is inserted as a link.",
+		"ctrlClick": "Ctrl+click on a link opens it in the browser.",
+		"apply": "Apply",
+		"remove": "Remove link"
+	},
+	"menu": {
+		"pasteItem": "Paste item ({what})",
+		"what": {
+			"chart": "chart",
+			"pivot": "PivotTable",
+			"control": "control",
+			"button": "button"
+		},
+		"spelling": "Shift + right-click: spelling suggestions",
+		"pivot": "PivotTable",
+		"field": "Field (text, check box, list, file)…",
+		"image": "Image…",
+		"link": "Link…",
+		"title": {
+			"pivot": "PivotTable",
+			"control": "Control"
+		},
+		"pasteAfter": "Paste item after",
+		"runAction": "Run action",
+		"edit": "Edit…"
+	}
+}

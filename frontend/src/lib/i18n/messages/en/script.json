@@ -1,1 +1,238 @@
-{}
+{
+	"lint": {
+		"longComment": "unfinished long comment: “]]” is missing",
+		"accent": {
+			"index": "write [{quoted}] instead of .{word}",
+			"plain": "use a name without accents",
+			"name": "a Lua name can't contain accented letters (“{word}”): {hint}"
+		},
+		"hex": "incomplete hexadecimal number",
+		"exponent": "incomplete exponent in the number",
+		"unterminated": {
+			"double": "unfinished string: the closing \" is missing (for several lines, use [[ ... ]])",
+			"single": "unfinished string: the closing ' is missing (for several lines, use [[ ... ]])"
+		},
+		"longString": "unfinished long string: “]]” is missing",
+		"char": {
+			"neq": "“not equal” is written ~= in Lua, not !=",
+			"not": "“not” is written not in Lua, not !",
+			"tilde": "“~” alone doesn't exist: “not equal” is written ~=",
+			"and": "“and” is written and in Lua, not &&",
+			"or": "“or” is written or in Lua, not ||",
+			"typographic": "typographic quote “{char}”: use \" or '",
+			"backtick": "“`” doesn't exist in Lua: use \" or '",
+			"unexpected": "unexpected character “{char}”"
+		},
+		"eof": "the end of the script",
+		"expected": "“{token}” expected, found {found}",
+		"expectedWhat": "“{token}” expected {what}, found {found}",
+		"compareHint": " (to compare, use ==)",
+		"endExpected": "“end” expected to close {opener} on line {line}, found {found}",
+		"noContinue": "Lua has no “continue”: put the rest of the loop in an if",
+		"reserved": "“{word}” is a Lua reserved word: it can't be used as a name ({what})",
+		"nameExpected": "name expected ({what}), found {found}",
+		"noLabel": "no visible label “::{name}::” for this goto",
+		"labelDefined": "label “::{name}::” already defined on line {line}",
+		"gotoScope": "the goto on line {line} jumps into the scope of local variable “{name}”: declare it before the goto",
+		"extraEnd": "extra “end”: no block to close",
+		"withoutIf": "“{word}” without “if”",
+		"untilWithoutRepeat": "“until” without “repeat”",
+		"unexpectedStatement": "unexpected statement: {found}",
+		"overridesGlobal": "this assignment replaces the predefined “{name}”",
+		"globalVar": "global variable “{name}”: prefer “local {name} = ...”",
+		"globalFunc": "global function “{name}”: prefer “local function {name}”",
+		"breakOutside": "“break” outside a loop",
+		"lastStatement": "“{word}” must be the last statement of its block (before “end”, “else” or “until”)",
+		"what": {
+			"ifCond": "after the if condition",
+			"elseifCond": "after the elseif condition",
+			"whileCond": "after the while condition",
+			"closeRepeat": "to close the repeat",
+			"funcName": "function name",
+			"localName": "local variable name",
+			"gotoLabel": "goto label",
+			"label": "label",
+			"closeLabel": "to close the label",
+			"forVar": "for loop variable",
+			"forBounds": "between the start and the end of the for loop",
+			"forDo": "after the for loop bounds",
+			"forInDo": "after “for ... in ...”",
+			"openParams": "to open the function parameters",
+			"param": "function parameter",
+			"closeParams": "to close the function parameters",
+			"assignment": "in the assignment",
+			"closeKey": "to close the key",
+			"afterKey": "after the key [ ... ]",
+			"closeParen": "to close the parenthesis",
+			"field": "field name after the dot",
+			"closeIndex": "to close the index",
+			"method": "method name after “:”"
+		},
+		"forIn": "“=” or “in” expected after the for loop variable, found {found}",
+		"assignCall": "you can't assign a value to the result of a function call",
+		"assignExpr": "this expression can't receive a value",
+		"compound": "Lua has no “{op}=” operator: write x = x {bin} value",
+		"concatAssign": "Lua has no “..=” operator: write s = s .. value",
+		"compareNotAssign": "“==” compares two values; to assign, use a single =",
+		"incomplete": "incomplete statement: a function call or an assignment (=) is expected",
+		"incompleteFound": "incomplete statement: a function call or an assignment (=) is expected, found {found}",
+		"floorDiv": "Lua 5.1 has no “//” operator: use math.floor(a / b)",
+		"vararg": "“...” can only be used in a function declared with “...” in its parameters",
+		"tableClose": "“}” expected to close the table opened on line {line} (separate the items with commas), found {found}",
+		"unavailableName": "“{name}” is not available: {why}",
+		"undefinedHint": "“{name}” is not defined: did you mean “{hint}”?",
+		"undefined": "“{name}” is not defined (variable never assigned nor declared with local)",
+		"colonCall": "write {base}.{name}(...) with a dot: “:” would pass {base} as the first argument",
+		"parenLine": "this “(” at the start of a line continues the call on the previous line; add “;” at the end of the previous line if that's not intended",
+		"exprEof": "expression expected, but the script ends there",
+		"exprEnd": "unexpected “end”: an expression is missing before it, or there is an extra “end”",
+		"exprKeyword": "expression expected, found the reserved word “{word}”",
+		"exprEquals": "unexpected “=”: a value is missing before it, or to compare use ==",
+		"exprFound": "expression expected, found {found}",
+		"argsExpected": "arguments expected after “:name”, found {found}",
+		"callClose": "“)” expected to close the call opened on line {line} (separate the arguments with commas), found {found}",
+		"deprecated": "{name} is an old name: use {use}",
+		"unavailableMember": "{name} is not available: {why}",
+		"noMemberHint": "{name} doesn't exist: did you mean {hint}?",
+		"noMember": "{name} doesn't exist",
+		"arity": {
+			"atLeast": "at least {min} arguments",
+			"exactly": "{n, plural, =1 {# argument} other {# arguments}}",
+			"between": "{min} to {max} arguments",
+			"given": "{n, plural, one {# given} other {# given}}",
+			"message": "{path} expects {want}, {given}: {signature}"
+		}
+	},
+	"category": {
+		"syntaxe": "Language basics: conditions, loops, functions",
+		"db": "SQL data (db)",
+		"sheets": "Sheets (sheets)",
+		"cells": "Cells (cells)",
+		"tables": "Tables (tables)",
+		"columns": "Columns (columns)",
+		"ui": "Selection and dialog boxes (ui)",
+		"controls": "Controls and events (controls)",
+		"events": "Workbook events (events)",
+		"objects": "Charts, PivotTables and buttons",
+		"workbook": "Workbook and scripts (doc, scripts)",
+		"http": "HTTP and HTTPS requests (http)",
+		"base": "Basic functions",
+		"string": "Text (string)",
+		"table": "Lua tables (table)",
+		"math": "Math (math)",
+		"os": "Date and time (os)"
+	},
+	"unavailable": {
+		"files": "no file access in a script",
+		"modules": "no module loading in a script",
+		"code": "no code loading in a script",
+		"debug": "debug library not available",
+		"coroutine": "coroutine library not available",
+		"none": "not available in a script",
+		"programs": "no program launching in a script",
+		"env": "no access to environment variables"
+	},
+	"editor": {
+		"noProblem": "No problems detected",
+		"errors": "{n, plural, one {# error} other {# errors}}",
+		"warnings": "{n, plural, one {# warning} other {# warnings}}",
+		"next": "click to go to the next one (F8)"
+	},
+	"controls": {
+		"label": "Label: {label}"
+	},
+	"pick": {
+		"banner": "Click a control (button, field…) to insert its name in the script — Esc to cancel."
+	},
+	"picker": {
+		"filter": "Filter by name, type or tab",
+		"aria": "Workbook controls",
+		"noMatch": "No control matches.",
+		"none": "No control in the workbook: Insert › Button or Field.",
+		"onSheet": {
+			"label": "Choose on the sheet",
+			"tooltip": "Show the sheets: clicking a control inserts its name; Esc cancels"
+		}
+	},
+	"network": {
+		"badHost": "Host name expected: api.example.com, or an https://… address",
+		"aria": "Network access",
+		"title": "Workbook network access",
+		"help": "Before the first HTTP request to a host (http.get, http.post… in a script or an HTML page), Lattis asks for your permission. Hosts allowed with “Remember for this workbook” are listed here: they are remembered on this computer, not in the file (a received workbook always asks again). The MCP server only reaches these hosts.",
+		"remove": {
+			"label": "Remove",
+			"tooltip": "Remove: the next request will ask again"
+		},
+		"none": "No remembered host.",
+		"host": "Host to allow",
+		"allow": "Allow"
+	},
+	"ref": {
+		"title": "Lua reference",
+		"help": "Help on Lua scripts",
+		"search": "Search: query, date, uppercase…",
+		"results": "{n, plural, one {# result} other {# results}}",
+		"deprecated": "Old name: prefer",
+		"insert": "Insert the example",
+		"noMatch": "No function matches."
+	},
+	"dialog": {
+		"hideCode": "Hide code",
+		"showCode": "View code ({n, plural, one {# line} other {# lines}})",
+		"required": "“{label}” is required",
+		"number": "“{label}”: number expected",
+		"integer": "“{label}”: whole number expected",
+		"min": "“{label}”: at least {min}",
+		"max": "“{label}”: at most {max}",
+		"warning": "Warning.",
+		"code": "Script code"
+	},
+	"view": {
+		"example": {
+			"line1": "Example: the list of the workbook's tables and their columns.",
+			"line2": "db.query, db.rows, db.insert, db.execute…: see the “Reference” button.",
+			"columns": "column(s)"
+		},
+		"newName": "New script",
+		"saved": "Script saved in the workbook",
+		"nameRefused": "Script name rejected",
+		"running": "Running…",
+		"stopped": "Stopped after {secs} s",
+		"done": "Finished in {secs} s",
+		"writes": "{n, plural, one {# row written} other {# rows written}}",
+		"undoAll": "(Ctrl+Z to undo everything)",
+		"renamed": "Script renamed “{name}”",
+		"copy": "{name} (copy)",
+		"copyN": "{name} (copy {n})",
+		"duplicated": "Script duplicated: “{name}”",
+		"title": "Workbook scripts",
+		"locked": "{why}: you can read and run them.",
+		"renameAria": "New script name",
+		"empty": "No script saved in this workbook.",
+		"menuTitle": "Script “{name}”",
+		"rename": "Rename",
+		"duplicate": "Duplicate",
+		"delete": "Delete",
+		"orOpen": "Or open a workbook script, on the left.",
+		"nameAria": "Script name",
+		"run": {
+			"label": "Run",
+			"tooltip": "Run (Ctrl+Enter)"
+		},
+		"stop": "Stop",
+		"save": {
+			"label": "Save",
+			"tooltip": "Save the script (Ctrl+S)"
+		},
+		"reference": "Reference",
+		"pick": {
+			"label": "Point to a control",
+			"tooltip": "Insert at the cursor the name of a button, a field or another control of the workbook"
+		},
+		"network": {
+			"tooltip": "Hosts that the workbook's scripts and HTML pages can reach over HTTP"
+		},
+		"output": "Output",
+		"keys": "Ctrl+Enter: run · Ctrl+S: save the script"
+	}
+}

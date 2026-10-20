@@ -1,1 +1,258 @@
-{}
+{
+	"chart": "Chart",
+	"kind": {
+		"bar": {
+			"label": "Column",
+			"hint": "Vertical bars"
+		},
+		"column": {
+			"label": "Bar",
+			"hint": "Horizontal bars"
+		},
+		"line": {
+			"label": "Line",
+			"hint": "Lines"
+		},
+		"area": {
+			"label": "Area",
+			"hint": "Areas"
+		},
+		"pie": {
+			"label": "Pie",
+			"hint": "Pie slices"
+		},
+		"doughnut": {
+			"label": "Doughnut",
+			"hint": "Doughnut"
+		},
+		"scatter": {
+			"label": "Scatter",
+			"hint": "Scatter plot"
+		},
+		"combo": {
+			"label": "Combo",
+			"hint": "Columns and lines on the same chart (secondary axis possible)"
+		},
+		"bar3d": {
+			"label": "3-D Column",
+			"hint": "Columns in perspective"
+		},
+		"pie3d": {
+			"label": "3-D Pie",
+			"hint": "Pie in perspective"
+		},
+		"map": {
+			"label": "Map",
+			"hint": "Points or density on an OpenStreetMap map, from latitude and longitude columns"
+		},
+		"waterfall": {
+			"label": "Waterfall",
+			"hint": "Successive increases and decreases, up to the total"
+		},
+		"treemap": {
+			"label": "Treemap",
+			"hint": "Rectangles proportional to the values (treemap)"
+		},
+		"radar": {
+			"label": "Radar",
+			"hint": "One spoke per category, one polygon per series"
+		},
+		"funnel": {
+			"label": "Funnel",
+			"hint": "Successive stages of a process"
+		},
+		"boxplot": {
+			"label": "Box & Whisker",
+			"hint": "Median, quartiles and extremes of each series"
+		},
+		"histogram": {
+			"label": "Histogram",
+			"hint": "Frequency histogram: distribution of the values into bins"
+		},
+		"gauge": {
+			"label": "Gauge",
+			"hint": "One value on a dial, between a minimum and a maximum"
+		}
+	},
+	"note": {
+		"truncated": "First {max} points of {total}",
+		"sampled": "Line reduced to {max} points of {total} (extremes kept)",
+		"negativeIgnored": "{n, plural, =1 {1 negative value ignored.} other {# negative values ignored.}}",
+		"negativeAbs": "{n, plural, =1 {1 negative value taken as its absolute value.} other {# negative values taken as their absolute value.}}",
+		"scatterRank": "The X axis is neither a number nor a date: each point is placed at its rank.",
+		"firstSeries": "This type only draws the first series."
+	},
+	"summary": {
+		"series": "{name}, {n, plural, =1 {1 series} other {# series}}",
+		"points": "{n} points, from “{first}” to “{last}”",
+		"range": "{name}: from {min} to {max}"
+	},
+	"box": {
+		"stats": "min {min}, Q1 {q1}, median {median}, Q3 {q3}, max {max}, mean {mean}",
+		"values": "{n} values",
+		"outliers": "{n} outliers"
+	},
+	"legend": {
+		"more": "and {n} more"
+	},
+	"table": {
+		"group": "Group",
+		"category": "Category",
+		"median": "median {value}"
+	},
+	"waterfall": {
+		"up": "Increase",
+		"down": "Decrease",
+		"total": "Total"
+	},
+	"radarMin": "A radar chart needs at least three categories",
+	"map": {
+		"pending": {
+			"aria": "Map: coordinates to choose",
+			"text": "Choose the coordinates in the pane"
+		},
+		"density": "Density",
+		"offline": {
+			"tooltip": "The base map comes from tile.openstreetmap.org: allow this host (Script tab › Network access) or check your connection.",
+			"label": "Base map unavailable"
+		},
+		"noPoint": "No points: latitude and longitude expected",
+		"clickHint": "Click: go to the row",
+		"legend": "Legend: {name}",
+		"legendItem": "{label}: {n, plural, one {# point} other {# points}}",
+		"zoomIn": {
+			"tooltip": "Zoom in (+)",
+			"aria": "Zoom in"
+		},
+		"zoomOut": {
+			"tooltip": "Zoom out (−)",
+			"aria": "Zoom out"
+		},
+		"recenter": "Recenter on the points"
+	},
+	"panel": {
+		"shape": {
+			"bar": "Columns",
+			"line": "Line",
+			"area": "Area"
+		},
+		"choose": "(choose)",
+		"help": "Help on charts",
+		"type": "Type",
+		"stacked": "Stacked",
+		"data": "Data",
+		"coords": {
+			"label": "Coordinates",
+			"pair": {
+				"label": "2 columns",
+				"tooltip": "One column of latitudes, one column of longitudes"
+			},
+			"single": {
+				"label": "1 column",
+				"tooltip": "Latitude and longitude in the same cell, written in any standard way"
+			},
+			"pairHelp": "Decimal numbers (48.8566 or 48,8566), or degrees 48°51'24\"N.",
+			"singleHelp": "Any standard notation: 48.8566, 2.3522 · 48,8566;2,3522 · 48°51'24\"N 2°21'03\"E · 48°51.4'N 2°21.05'E · N48.85 E2.35 · POINT(2.3522 48.8566) · geo:48.8566,2.3522"
+		},
+		"latitude": "Latitude",
+		"longitude": "Longitude",
+		"position": "Position",
+		"draft": {
+			"proposed": "Suggested columns: check them, then show the map.",
+			"choose": "Choose the coordinate columns: the map is drawn next.",
+			"show": "Show map"
+		},
+		"invalid": "{n, plural, =1 {1 unreadable value ignored} other {# unreadable values ignored}}",
+		"name": "Name",
+		"noneM": "(none)",
+		"value": "Value",
+		"noneF": "(none)",
+		"display": "Display",
+		"points": "Points",
+		"heat": "Density (heat)",
+		"colorBy": {
+			"label": "Color by",
+			"heatTooltip": "Density is a single heat layer: switch to “Points” to color by value",
+			"pointsOnly": "(points only)",
+			"tooltip": "Each distinct value of the column gets its own color, spread across the whole spectrum",
+			"single": "(single color)"
+		},
+		"colorLegend": "Color legend",
+		"pointSize": {
+			"label": "Point size",
+			"tooltip": "Multiplies the size of the points; the Value column already sets their relative size"
+		},
+		"hidden": {
+			"label": "Rows hidden by the filter",
+			"mapTooltip": "By default, like Excel, the map only shows the rows displayed by the table's filter",
+			"tooltip": "By default, like Excel, the chart only shows the rows displayed by the table's filter"
+		},
+		"view": {
+			"label": "View",
+			"saved": "Saved (zoom {zoom})",
+			"recenterTooltip": "Go back to the view fitted to the points",
+			"recenter": "Recenter",
+			"fitted": "Fitted to the points"
+		},
+		"mapHelp": "Map selected: the mouse wheel zooms, dragging moves the map (Alt+drag moves the chart), double-click or + / − zoom; clicking a point goes to its row in the table.",
+		"mapTiles": "Base map © OpenStreetMap (tile.openstreetmap.org), subject to the workbook's network permission. The value sets the size of the points, or the weight of each one in the density.",
+		"source": {
+			"label": "Source",
+			"tooltip": "Table or PivotTable whose data the chart plots",
+			"pivot": "{name} (PivotTable)"
+		},
+		"filter": {
+			"tooltip": "The chart only reads the rows where {field} is {values}",
+			"or": " or ",
+			"label": "Filter",
+			"remove": "Remove the filter: all the table's rows"
+		},
+		"axisX": "X axis",
+		"axisY": "Y axis",
+		"axisY2": "Y axis 2",
+		"singleSeries": "This type only draws one series",
+		"series": {
+			"up": {
+				"tooltip": "Move the series up (drawing and legend order)",
+				"aria": "Move series {name} up"
+			},
+			"down": {
+				"tooltip": "Move the series down",
+				"aria": "Move series {name} down"
+			},
+			"color": "Series color",
+			"shape": "Series shape",
+			"secondaryOn": "Series on the secondary axis (right): click to put it back on the primary axis",
+			"secondaryOff": "Plot the series on a secondary axis, on the right, with its own scale",
+			"axis2": "Axis 2"
+		},
+		"bins": "Bins",
+		"blanks": {
+			"label": "Empty cells",
+			"tooltip": "Like Excel: an empty cell breaks the line (gap), counts as zero, or its neighbors are connected",
+			"gap": "Gap",
+			"zero": "Zero",
+			"span": "Connect data points"
+		},
+		"colors": "Colors",
+		"paletteRepeat": "The following categories reuse the palette.",
+		"titles": "Titles",
+		"elements": "Elements",
+		"legend": {
+			"label": "Legend",
+			"bottom": "Bottom",
+			"top": "Top",
+			"right": "Right",
+			"none": "None"
+		},
+		"dataLabels": "Data labels",
+		"grid": "Gridlines",
+		"moveHelp": "Drag the chart to move it, its handles to resize it. Right-click: cut, copy, delete.",
+		"keyboardHelp": "With the keyboard: arrows to move it, Shift+arrows to resize it, Tab to go to the next chart, Del to delete it."
+	},
+	"image": {
+		"unreadable": "unreadable image",
+		"noCanvas": "can't draw",
+		"empty": "empty image"
+	}
+}

@@ -1,1 +1,230 @@
-{}
+{
+	"result": {
+		"none": "No rows",
+		"firstOf": "First {n} rows of {total}",
+		"firstOfMore": "First {n} rows of more than {total}"
+	},
+	"steps": "{n, plural, one {# step} other {# steps}}",
+	"errors": "{n, plural, one {# error} other {# errors}}",
+	"changes": "{n, plural, one {# change} other {# changes}}",
+	"cost": {
+		"small": "< ${min} for this conversation",
+		"about": "≈ ${cost} for this conversation"
+	},
+	"context": {
+		"plain": "Context: {where}",
+		"selection": "Context: {where}, selection {selection}"
+	},
+	"suggest": {
+		"repair": "Repair the tables on this sheet",
+		"name": "Name all the tables in the workbook automatically.",
+		"contents": "What does this workbook contain?",
+		"analysis": "Suggest an analysis of my data",
+		"pivot": "Create a relevant PivotTable with a chart",
+		"explain": "Explain the selection {selection} of {table}",
+		"pivotsFor": "Suggest PivotTables for {table}",
+		"analyze": "Analyze {table} ({n, plural, one {# row} other {# rows}})",
+		"types": "Check the types of {table}",
+		"duplicates": "Find duplicates in {table}"
+	},
+	"retryIn": "Retry in {n} s",
+	"retry": "Retry",
+	"sharing": {
+		"label": {
+			"sample": "Structure and sample rows",
+			"full": "Entire workbook",
+			"schema": "Structure only"
+		},
+		"summary": {
+			"sample": "it sees the workbook's structure and a few sample rows on each read (20 at most).",
+			"full": "it can read the entire content of the workbook.",
+			"schema": "it sees the workbook's structure (sheets, tables, columns, types), without the cell values."
+		}
+	},
+	"external": {
+		"changes": "{n, plural, one {# change} other {# changes}}",
+		"reads": "{n, plural, one {# read} other {# reads}}",
+		"errors": "{n, plural, one {# error} other {# errors}}",
+		"connected": "{client} connected",
+		"waiting": "Waiting for a connection",
+		"undo": {
+			"nothing": "No change to undo.",
+			"checking": "Checking…",
+			"tooltip": "Undoes in one go what {client} changed in this series",
+			"running": "Undoing…",
+			"label": "Undo these changes"
+		},
+		"intro": "Open Claude Desktop or Claude Code and ask, for example, “What does my Lattis workbook contain?”: each action will appear here.",
+		"confirm": {
+			"label": "Ask before changing",
+			"help": "Lattis asks for your approval before each change to the workbook; reads go through without asking."
+		}
+	},
+	"goto": {
+		"label": "Go to",
+		"tooltip": "Go to “{target}”"
+	},
+	"setup": {
+		"intro": "With a Claude subscription (Pro, Max, Team), you don't need an API key: you chat in Claude Desktop or Claude Code, which acts on the open workbook, and Lattis shows what is done.",
+		"sharing": {
+			"before": "The “Data sent to the assistant” setting (File › Settings › AI Assistant) also applies to Claude:",
+			"after": "After a change, restart Claude so that it sees the new list of tools."
+		},
+		"badge": {
+			"connected": "Connected",
+			"configured": "Configured",
+			"installed": "Installed",
+			"notInstalled": "Not installed",
+			"notFound": "Not found"
+		},
+		"desktop": {
+			"help": "Claude's desktop app. Lattis appears in the conversation's tools.",
+			"done": "Configured ✓ — restart Claude Desktop (quit it completely, then open it again).",
+			"download": "Download Claude Desktop",
+			"manual": "Configure manually",
+			"mergeInto": "To merge into"
+		},
+		"configuring": "Configuring…",
+		"reconfigure": "Configure again",
+		"configure": "Configure",
+		"code": {
+			"help": "Claude's assistant in the terminal (or in its desktop app). Lattis is added for all your projects.",
+			"done": {
+				"before": "Configured ✓ — open a new Claude Code session:",
+				"after": "shows Lattis there."
+			},
+			"notFound": "claude command not found on this computer",
+			"install": "Install Claude Code",
+			"manual": "Command to run yourself"
+		}
+	},
+	"connect": {
+		"claudeApps": "Claude Desktop or Claude Code",
+		"keySaved": "Key saved in the system keychain.",
+		"keyValid": "Valid key: it is saved in the system keychain.",
+		"aria": "Assistant connection",
+		"title": "Connect the assistant",
+		"close": "Close the connection",
+		"managed": "The provider and the model are chosen by your organization, which routes the assistant through its gateway.",
+		"gatewayNoKey": "Connected through your organization's gateway: there is no key to enter.",
+		"gatewayKeySaved": "Your personal key for the gateway is saved in the system keychain.",
+		"forgetKey": "Forget the key",
+		"gatewayPaste": "Paste the personal key your organization gave you for its gateway.",
+		"personalKey": "Personal key",
+		"pasteTooltip": "Paste from the clipboard",
+		"ways": "Connection method",
+		"apiKey": "API key",
+		"recommended": "recommended",
+		"desktop": {
+			"tooltip": "Drive Lattis from Claude Desktop or Claude Code (MCP server)",
+			"labelDialog": "Desktop app…",
+			"label": "Desktop app",
+			"help": "A provider's desktop app drives Lattis with your subscription to that provider, without an API key.",
+			"claude": {
+				"before": "A Claude subscription can't be used directly in another application, but",
+				"and": "and",
+				"after": "can drive Lattis. You talk to Claude in its app; Lattis shows what it does (“From Claude”) and can undo everything."
+			},
+			"needsDesktop": "This method requires the Lattis desktop app.",
+			"maxTeam": "Max or Team subscribers: your monthly API credits also pay for an API key (“API key” tab), which keeps the conversation in Lattis."
+		},
+		"providerModel": "Provider and model",
+		"provider": "Provider",
+		"model": "Model",
+		"defaultModel": "default model",
+		"local": {
+			"help": "The model runs on this computer (Ollama, LM Studio…): no data leaves the computer, and there is no key.",
+			"url": "Local model address",
+			"experimental": "Experimental: small models are worse at calling Lattis's tools."
+		},
+		"keyStored": "A {provider} API key is saved in the system keychain.",
+		"step1": {
+			"create": "Create a key",
+			"console": "in the {provider} console.",
+			"open": "Open the console",
+			"credits": "A new key only works with credits: add some in",
+			"billing": "Billing",
+			"maxTeam": "Claude Max or Team subscriber? Link this organization in claude.ai › Settings › Billing to receive your monthly API credits ($100 to $500).",
+			"other": "Depending on the provider, the account needs credits or a payment method."
+		},
+		"step2": "Paste it here.",
+		"keyHint": "A {provider} key usually starts with “{hint}”.",
+		"step3": {
+			"verify": "Verify and save",
+			"keychain": "The key is kept in the system keychain, never in the workbook."
+		},
+		"start": "Get started",
+		"providerApp": "Provider and app"
+	},
+	"panel": {
+		"title": "AI Assistant",
+		"modelUsed": "Model used",
+		"connect": {
+			"label": "Connection",
+			"tooltip": "Connection: API key, Claude subscription, model"
+		},
+		"new": {
+			"label": "New",
+			"tooltip": "New conversation (the current conversation stays in the list)"
+		},
+		"conversations": "Conversations",
+		"close": {
+			"tooltip": "Close the pane (Esc)"
+		},
+		"noConversation": "No conversation for this workbook.",
+		"conv": {
+			"current": "Current conversation",
+			"resume": "Resume this conversation",
+			"inProgress": "in progress",
+			"delete": "Delete this conversation",
+			"deleteName": "Delete “{title}”"
+		},
+		"unavailable": "The assistant is not available in this version.",
+		"loading": "Loading…",
+		"enable": {
+			"title": "Turn on the assistant",
+			"intro": "The AI Assistant reads the structure of your tables, suggests an approach and can add calculated columns, keys, PivotTables and charts. Everything it changes in one answer can be undone in one go.",
+			"how": "It goes through an AI provider with your API key, through a model installed on this computer, or through Claude Desktop with your Claude subscription. It never receives the whole workbook.",
+			"locked": "The AI Assistant is turned off by your organization's policy.",
+			"check": "Turn on the AI Assistant",
+			"settings": "Also available in File › Settings › Features.",
+			"learnMore": "Learn more (F1 help)"
+		},
+		"source": {
+			"aria": "Conversation",
+			"lattis": "In Lattis",
+			"claude": "From Claude"
+		},
+		"log": "Conversation with the assistant",
+		"empty": "Describe what you want to analyze: the assistant reads the workbook's structure, suggests an approach and can create calculated columns, keys, PivotTables and charts.",
+		"noDoc": "First open or create a workbook (File › New).",
+		"compact": "Earlier messages were summarized for the assistant; they are still shown here",
+		"undone": "{n, plural, =1 {Change undone} other {Changes undone}}",
+		"undo": {
+			"tooltip": "Undoes everything this answer changed",
+			"later": "Other changes came after it: use Ctrl+Z",
+			"label": "Undo this answer"
+		},
+		"resume": "Resumes the answer where it stopped",
+		"copy": "Copy the answer",
+		"link": {
+			"aria": "Open a link",
+			"question": "Open this link suggested by the assistant? Everything in its address is sent to",
+			"open": "Open"
+		},
+		"contextTooltip": "Attached to each message: the assistant knows what you are looking at",
+		"message": {
+			"aria": "Message to the assistant",
+			"notReady": "Connect the assistant first (Connection)",
+			"noDoc": "Open a workbook first",
+			"placeholder": "Your message (Enter to send, Shift+Enter for a new line)"
+		},
+		"stop": {
+			"label": "Stop",
+			"tooltip": "Stop the answer (Esc)"
+		},
+		"send": "Send",
+		"sharingTooltip": "Data sent to the assistant (File › Settings › AI Assistant)",
+		"costTooltip": "Approximate cost based on the tokens used, billed by the provider"
+	}
+}
