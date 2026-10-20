@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FunctionDoc } from '#lib/grid/autocomplete.js';
 import { buildIndex, findFunction, functionAt, functionCategories, helpPages, loadHelpPages, pageById, pages, parseTarget, searchHelp, sections, targetPage, viewTarget, type HelpPage } from './help';
 import { blockText, inline, parse, type Block } from './markdown';
+import { LANGS } from '#lib/i18n/index.js';
 
 const fns: FunctionDoc[] = [
 	{ name: 'SOMME', other: 'SUM', arity: '', category: 'Agrégats', description: 'Additionne les valeurs.', example: '=SOMME(Ventes[Montant])' },
@@ -130,22 +131,37 @@ describe('pages par langue', () => {
 		expect(await loadHelpPages('en')).toBe(en);
 		expect(en.map((p) => p.id)).toEqual(pages.map((p) => p.id));
 	});
-	it('anglais : chaque page traduite, avec les titres et ancres du français', async () => {
-		const en = await loadHelpPages('en');
-		for (const [i, p] of en.entries()) {
-			expect(p.title, p.id).not.toBe(pages[i].title);
-			expect(headings(p), p.id).toEqual(headings(pages[i]));
-		}
-	});
-	it('anglais : liens internes valides', async () => {
-		const en = await loadHelpPages('en');
-		for (const p of en)
-			for (const href of links(p)) {
-				const t = parseTarget(href);
-				if (!('page' in t)) continue;
-				expect(pageById(href.split('#')[0], en), `${p.id} → ${href}`).toBeDefined();
-				if (t.anchor) expect(sections(pageById(t.page, en)!).some((x) => x.anchor === t.anchor), `${p.id} → ${href}`).toBe(true);
+	for (const l of ['en', 'de'] as const) {
+		it(`${l} : chaque page traduite, avec les titres et ancres du français`, async () => {
+			const list = await loadHelpPages(l);
+			for (const [i, p] of list.entries()) {
+				expect(p.title, p.id).not.toBe(pages[i].title);
+				expect(headings(p), p.id).toEqual(headings(pages[i]));
 			}
+		});
+		it(`${l} : liens internes valides`, async () => {
+			const list = await loadHelpPages(l);
+			for (const p of list)
+				for (const href of links(p)) {
+					const t = parseTarget(href);
+					if (!('page' in t)) continue;
+					expect(pageById(href.split('#')[0], list), `${p.id} → ${href}`).toBeDefined();
+					if (t.anchor) expect(sections(pageById(t.page, list)!).some((x) => x.anchor === t.anchor), `${p.id} → ${href}`).toBe(true);
+				}
+		});
+	}
+	it('allemand : touches, menus et formules à l’allemande', async () => {
+		const de = await loadHelpPages('de');
+		for (const p of de) {
+			const text = p.blocks.map(blockText).join('\n');
+			expect(text.split('„').length, p.id).toBe(text.split('“').length); // „…“
+			expect(text.match(/[«»”]|\b(Ctrl|Shift|Maj|Échap|Entrée|Suppr|Del|Enter|PgDn|PgUp|Pg\.Suiv|Pg\.Préc)\b|(Fichier|Accueil|Données|Insertion|Affichage|Révision|File|Home|Data|Insert|View|Review) ›/g), p.id).toBeNull();
+			for (const c of code(p.blocks).filter((x) => /^=/.test(x))) {
+				const bare = c.replace(/"[^"]*"/g, '""').replace(/\{[^}]*\}/g, '{}');
+				expect(bare, `${p.id} : ${c}`).not.toMatch(/(?<!\d),|,(?!\d)/); // « ; » sépare, « , » est décimale
+				expect(bare, `${p.id} : ${c}`).not.toMatch(/\b(SOMME|MOYENNE|SI|NBVAL|RECHERCHEV|ANNEE|TEXTE|GAUCHE|FILTRE|REQUETE)\(/);
+			}
+		}
 	});
 	it('anglais : typographie, touches et formules à l’anglaise', async () => {
 		const en = await loadHelpPages('en');
@@ -159,9 +175,12 @@ describe('pages par langue', () => {
 			}
 		}
 	});
-	it('une langue sans pages traduites garde le français', async () => {
-		const de = await loadHelpPages('de');
-		expect(de.map((p) => p.title)).toEqual(pages.map((p) => p.title));
+	// Une langue encore sans pages (s'il en reste une) garde le français.
+	const withPages = new Set(Object.keys(import.meta.glob('./pages/*/*.md')).map((f) => f.split('/')[2]));
+	const bare = LANGS.find((l) => l !== 'fr' && !withPages.has(l));
+	it.skipIf(!bare)('une langue sans pages traduites garde le français', async () => {
+		const list = await loadHelpPages(bare);
+		expect(list.map((p) => p.title)).toEqual(pages.map((p) => p.title));
 	});
 	it('index et recherche dans la langue des pages', async () => {
 		const en = await loadHelpPages('en');
@@ -169,5 +188,8 @@ describe('pages par langue', () => {
 		expect(searchHelp(index, 'keys').some((h) => h.target === 'prise-en-main#cles')).toBe(true);
 		expect(searchHelp(index, 'freeze panes').some((h) => h.target === 'cellules#figer-les-volets')).toBe(true);
 		expect(searchHelp(index, 'SUMIF')[0].target).toBe('fonction:SOMME.SI');
+		const de = buildIndex(fns, await loadHelpPages('de'));
+		expect(searchHelp(de, 'schlüssel').some((h) => h.target === 'prise-en-main#cles')).toBe(true);
+		expect(searchHelp(de, 'fenster fixieren').some((h) => h.target === 'cellules#figer-les-volets')).toBe(true);
 	});
 });
