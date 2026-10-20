@@ -77,7 +77,7 @@
 	import { refusedNotice } from '#lib/remote/share.js';
 	import { pushSummary, type SourceLink } from '#lib/remote/source.js';
 	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
-	import { canRepublish, detachQuestion, goneError, RETRY_NOTICE, roleChip, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
+	import { canRepublish, detachQuestion, goneError, retryNotice, roleChip, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
@@ -694,7 +694,7 @@
 	async function retryShare() {
 		if (shareRetrying || !share?.shared) return;
 		shareRetrying = true;
-		notice = RETRY_NOTICE;
+		notice = retryNotice();
 		try {
 			await DocumentService.ShareRetry();
 			// La réponse arrive par share:changed ; sans elle, le serveur ne répond toujours pas.
