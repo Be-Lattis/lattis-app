@@ -1,1 +1,1327 @@
-{}
+{
+	"share": {
+		"mode": {
+			"frozen": "冻结",
+			"collaborative": "协作"
+		},
+		"role": {
+			"owner": "所有者",
+			"designer": "设计者",
+			"editor": "编辑者",
+			"participant": "参与者",
+			"reader": "查看者"
+		},
+		"roleDetail": {
+			"owner": "全部权限，包括管理访问权限",
+			"designer": "除访问权限外的全部：结构、页面布局、自由单元格、脚本",
+			"editor": "读取、添加、编辑和删除行；不包括结构和页面布局",
+			"participant": "读取全部内容、添加行、编辑和删除自己的行",
+			"reader": "仅读取"
+		},
+		"roleChip": {
+			"custom": "自定义访问权限",
+			"customDetail": "自定义访问权限：你的权限取决于各表格（角色由所有者定义）",
+			"detail": "你是此工作簿的{role}：{detail}{frozen}{more}",
+			"frozen": "（冻结的工作簿：只读）",
+			"more": "；角色：{roles}"
+		},
+		"type": {
+			"text": "文本",
+			"integer": "整数",
+			"decimal": "小数",
+			"date": "日期",
+			"datetime": "日期和时间",
+			"boolean": "布尔值"
+		},
+		"blocking": {
+			"none": "请至少选中一个要发布的表格。",
+			"problem": "“{table}”：{problem}",
+			"invalid": "“{table}”：{n, plural, other {# 个无效输入}}需要更正，或将某列接受为文本",
+			"sameName": "“{first}”和“{second}”：在服务器上名称相同（服务器不区分大小写）"
+		},
+		"offline": {
+			"pending": "（{n, plural, other {# 项更改}}待发送）",
+			"loginRequired": "需要登录到 {server}",
+			"collaborative": "{why}。离线：服务器恢复后将发送你的更改{pending}。",
+			"readOnly": "{why}：此共享工作簿为只读。"
+		},
+		"serverDown": {
+			"named": "{server} 无响应",
+			"host": "服务器 {server} 无响应"
+		},
+		"gone": {
+			"revoked": "你已无权访问 {server} 上的此工作簿。",
+			"deleted": "此工作簿已从 {server} 中删除。",
+			"pending": "{what}本地副本中仍有 {n, plural, other {# 项未发送的更改}}。"
+		},
+		"banner": {
+			"saveCopy": "保存本地副本…",
+			"forget": "从最近使用中移除",
+			"login": "登录…",
+			"retry": "重试",
+			"workOnCopy": "使用本地副本",
+			"detach": "与服务器分离…",
+			"newVersion": "有新版本可用（版本 {version}）",
+			"reload": "重新加载",
+			"held": "{n, plural, other {# 项更改无法到达服务器}}",
+			"conflicts": "{n, plural, other {# 个冲突：单元格}}在此期间已被同事更改",
+			"view": "查看",
+			"readOnly": "{reason} — 版本 {version}",
+			"readOnlyOn": "{reason} — {server} 上的版本 {version}"
+		},
+		"detach": {
+			"local": "“{title}”将成为普通的本地工作簿：它将不再与 {server} 同步。",
+			"serverKept": "服务器上的工作簿不会更改：其他成员仍保留原样，你也可以从服务器重新打开它。",
+			"pending": "{n, plural, other {尚未发送到服务器的 # 项更改将保留}}在此本地工作簿中，不会发送。",
+			"cached": "你将选择本地工作簿的保存位置（其当前副本只是 Lattis 缓存）。",
+			"final": "分离操作无法撤消。"
+		},
+		"retryNotice": "正在尝试重新连接…",
+		"when": {
+			"today": "于 {time}",
+			"date": "于 {date} {time}"
+		},
+		"conflict": {
+			"empty": "（空白）",
+			"text": "{change}：{theirs}（你：{mine}）",
+			"modified": "已更改",
+			"modifiedBy": "由 {author} 更改",
+			"modifiedWhen": "更改{when}",
+			"modifiedByWhen": "由 {author} 更改{when}"
+		},
+		"refused": "{n, plural, other {# 个与固定类型不符的值未粘贴}}（共享表格）：{list}{more}"
+	},
+	"data": {
+		"root": "数据湖根目录",
+		"unknownFolder": "未知文件夹",
+		"type": {
+			"text": "文本",
+			"integer": "整数",
+			"number": "数字",
+			"date": "日期",
+			"timestamp": "日期和时间",
+			"boolean": "真 / 假",
+			"unknown": "未知类型"
+		}
+	},
+	"coedit": {
+		"otherUser": "另一位用户",
+		"alone": "协同工作：目前只有你",
+		"with": "正与 {names} 协同工作",
+		"withMore": "正与 {names} 及其他 {n} 人协同工作",
+		"title": "在此工作簿（共享文件夹）上协同工作：表格数据可以共同编辑，其他内容要等到只剩你一人时才能编辑。",
+		"since": "，自 {time} 起",
+		"joining": "（正在加入）",
+		"conflicts": "{n, plural, other {# 个冲突}}"
+	},
+	"lattis": {
+		"continuePassword": "使用密码继续",
+		"continueWith": "使用 {provider} 继续",
+		"notConnected": "未登录",
+		"account": {
+			"none": "帐户：未登录到 Lattis 服务器",
+			"title": "帐户：{servers}",
+			"on": "{user}，位于 {server}"
+		},
+		"remaining": {
+			"minutes": "{m} 分 {s} 秒",
+			"seconds": "{s} 秒"
+		}
+	},
+	"banner": {
+		"reloading": "正在重新加载…",
+		"connecting": "正在连接…",
+		"hideDetails": "隐藏详细信息",
+		"details": "详细信息"
+	},
+	"serverPicker": {
+		"empty": "未连接服务器",
+		"aria": "服务器",
+		"manage": {
+			"label": "管理服务器…",
+			"tooltip": "添加服务器、登录到服务器或将其从列表中移除"
+		}
+	},
+	"tableSources": {
+		"title": "数据湖源（不含工作簿的表格）",
+		"pipeline": {
+			"label": "管道",
+			"tooltip": "由以此工作簿为源的管道提供数据"
+		},
+		"onSave": " · 每次保存时",
+		"sending": "正在发送…",
+		"update": "更新",
+		"help": "只发送这些表格中所选的列；工作簿的其余部分不会离开本计算机。右键单击表格 › 共享到 Lattis 数据湖… 可更改或移除它们。"
+	},
+	"cap": {
+		"yes": "是",
+		"some": "部分",
+		"no": "否",
+		"label": "{label}：{word}"
+	},
+	"formQR": {
+		"copied": "已复制表单链接",
+		"saved": "二维码已保存：{path}",
+		"aria": "链接的二维码",
+		"copy": "复制链接",
+		"png": {
+			"label": "二维码（PNG）…",
+			"tooltip": "PNG 图像，用于文档或海报"
+		},
+		"svg": {
+			"label": "二维码（SVG）…",
+			"tooltip": "矢量图像，任意尺寸都清晰"
+		}
+	},
+	"columnPicker": {
+		"count": "{n} / {total}",
+		"all": "全部",
+		"none": "无",
+		"search": {
+			"placeholder": "搜索",
+			"aria": "搜索列"
+		},
+		"aria": "列",
+		"key": "键",
+		"noMatch": "没有匹配的列。",
+		"noColumn": "此表格没有列。"
+	},
+	"account": {
+		"aria": "帐户",
+		"head": "Lattis 服务器",
+		"managed": "由你的组织设置",
+		"signOut": "注销",
+		"notConnected": "未登录 · {host}",
+		"signIn": "登录…",
+		"noServer": "没有服务器。",
+		"noServerManaged": "没有服务器。你的组织尚未设置任何服务器。",
+		"rights": {
+			"label": "管理“{title}”的访问权限…",
+			"tooltip": "成员、角色、限制、“以…身份查看”"
+		},
+		"connectServer": "连接到服务器…"
+	},
+	"closeEsc": "关闭（Esc）",
+	"prefill": {
+		"title": "预填链接 · “{title}”",
+		"noParam": "没有字段具有短名称：请在“字段”选项卡中指定一个（“链接中的短名称”）。",
+		"help": "选择链接要填写的字段，然后每个链接一行（例如每个站点一个二维码）。填写者可以更改该值，被链接锁定的字段除外。",
+		"locked": "已锁定",
+		"hide": "隐藏",
+		"show": "链接和二维码",
+		"remove": "移除此链接",
+		"add": "+ 添加链接"
+	},
+	"preview": {
+		"membersReserved": "此服务器只向工作簿所有者显示成员列表：请让他们使用“以…身份查看”。",
+		"noTable": "没有已发布的表格。",
+		"intro": "检查某位成员能看到什么、能做什么：行按服务器提供给该成员的方式显示，包括筛选和高级规则。",
+		"member": "成员",
+		"choose": "选择…",
+		"table": "表格",
+		"tableAria": "要查看的表格",
+		"reload": "重新加载",
+		"verdict": {
+			"in": "，在“{table}”中："
+		},
+		"rows": "{n, plural, other {# 个可见行}}，只读。",
+		"rowsTruncated": "{n, plural, other {# 个可见行}}（前 1,000 行），只读。",
+		"noRow": "此成员看不到任何行。",
+		"chooseMember": "请选择一位成员，或在“成员”中其所在行或某个角色上使用“以…身份查看”。"
+	},
+	"open": {
+		"title": "从服务器打开",
+		"signIn": "登录到 Lattis 服务器以查看其工作簿。",
+		"reading": "正在读取工作簿…",
+		"empty": "此服务器上没有与你共享的工作簿。",
+		"version": "版本 {version}",
+		"republishing": "正在准备新版本",
+		"loading": "正在加载工作簿…",
+		"cached": "工作簿保存在本计算机上：离线时仍可使用。"
+	},
+	"audience": {
+		"inherit": "继承文件夹的受众",
+		"current": "当前受众",
+		"rowsWhere": "满足 {predicate} 的行",
+		"allRows": "所有行",
+		"filtered": "已筛选",
+		"keepName": "保留 {name}",
+		"removeName": "移除 {name}",
+		"keep": "保留",
+		"remove": "移除",
+		"email": {
+			"placeholder": "name@example.com",
+			"aria": "此人的电子邮件地址"
+		},
+		"or": "或",
+		"team": "团队",
+		"aTeam": "团队…",
+		"dontAdd": "不添加",
+		"visibleIf": "行可见的条件…",
+		"assist": "{who} 可以看到的表格“{table}”中的行",
+		"someone": "此人或团队",
+		"add": "添加人员或团队"
+	},
+	"folder": {
+		"rootName": "根目录",
+		"aria": "文件夹：{path}",
+		"search": "搜索文件夹",
+		"tree": "数据湖文件夹",
+		"collapse": "折叠",
+		"expand": "展开",
+		"noMatch": "没有匹配的文件夹。",
+		"name": {
+			"placeholder": "文件夹名称",
+			"aria": "{parent} 中新文件夹的名称"
+		},
+		"create": "创建",
+		"in": "在“{parent}”中",
+		"new": "在“{parent}”中新建文件夹"
+	},
+	"conflicts": {
+		"aria": "冲突",
+		"title": "冲突（{n}）",
+		"held": {
+			"table": "表格",
+			"title": "“{table}”：{n, plural, other {# 项更改无法提交}}",
+			"text": "服务器收到了更改，但每次尝试都失败：{error}。你的值仍显示在本计算机上；其他更改正常提交。",
+			"abandon": {
+				"label": "放弃",
+				"tooltip": "表格恢复为服务器版本"
+			}
+		},
+		"layout": "页面布局：自打开以来双方都更改了 {n, plural, other {# 项}}（宽度、格式、自由单元格…）。以最后保存的版本为准；离线超过 24 小时后，以同事的版本为准。",
+		"none": "没有待处理的冲突。",
+		"local": "这些单元格在你更改的同时被同事更改：其值（最新的值）显示在所有地方。“保留我的”会为所有计算机恢复你的值。",
+		"remote": "这些单元格在你更改时被同事更改。在你做出选择之前，仍显示你的值。",
+		"keepAllMine": "全部保留我的",
+		"keepAllTheirs": "全部保留对方的",
+		"goto": "转到单元格",
+		"rowGone": "行已删除或被筛选隐藏",
+		"row": "第 {row} 行",
+		"keepMine": "保留我的",
+		"keepTheirs": "保留对方的"
+	},
+	"login": {
+		"badUrl": "请输入服务器地址，例如 https://lattis.acme.com。",
+		"noProvider": "此服务器未提供任何登录方式。",
+		"title": "登录到 Lattis 服务器",
+		"titleOn": "登录到 {server}",
+		"address": "服务器地址",
+		"continue": "继续",
+		"device": {
+			"help": "在另一台设备（手机、另一台计算机）上打开下面的地址并输入代码，然后使用 {provider} 登录。",
+			"copy": "复制代码",
+			"valid": "代码在 {time} 内有效。",
+			"expired": "代码已过期。",
+			"waiting": "Lattis 正在等待确认…"
+		},
+		"browser": {
+			"help": "在浏览器中使用 {provider} 完成登录，然后返回 Lattis。",
+			"note": "页面已在系统浏览器中打开。什么都没打开？请取消并选择“从另一台设备”。"
+		},
+		"invitation": "仅限受邀",
+		"otherDevice": "从另一台设备登录（输入代码）",
+		"imposed": "你的组织要求使用此登录方式。",
+		"otherServer": "其他服务器",
+		"cancel": "取消登录"
+	},
+	"forms": {
+		"reason": {
+			"publish": "发布到服务器…",
+			"addShared": "添加到共享工作簿…"
+		},
+		"widget": {
+			"text": "单行文本",
+			"textarea": "长文本",
+			"number": "数字",
+			"date": "日期",
+			"datetime": "日期和时间",
+			"checkbox": "复选框",
+			"yesno": "是 / 否",
+			"radio": "选项按钮",
+			"list": "可搜索列表"
+		},
+		"copiedOn": "列表复制于 {date}",
+		"copied": "已复制列表",
+		"accent": {
+			"green": "绿色",
+			"teal": "青色",
+			"blue": "蓝色",
+			"indigo": "靛蓝",
+			"purple": "紫色",
+			"red": "红色",
+			"orange": "橙色",
+			"slate": "石板灰"
+		},
+		"position": "位置",
+		"check": {
+			"noTitle": "表单没有标题。",
+			"titleLength": "标题：最多 120 个字符。",
+			"introLength": "简介：最多 2,000 个字符。",
+			"submitLength": "按钮：最多 40 个字符。",
+			"privacyLength": "数据保护声明：最多 1,000 个字符。",
+			"closedLength": "关闭消息：最多 500 个字符。",
+			"thanksLink": "感谢消息：不能有链接或重定向。",
+			"noField": "没有字段：请至少选中一列。",
+			"sections": "最多 {n} 个分区。",
+			"paramShared": "短名称“{param}”被多个字段使用。",
+			"emptySection": "某个分区标题没有文本。",
+			"labelLength": "{label}：标签最多 200 个字符。",
+			"helpLength": "{label}：帮助最多 500 个字符。",
+			"emptyList": "{label}：列表为空。",
+			"defaultNotInList": "{label}：默认值不在列表中。",
+			"defaultOutOfBounds": "{label}：默认值超出范围。",
+			"minMax": "{label}：最小值大于最大值。",
+			"listVisible": "{label}：列表值将对所有填写者可见。",
+			"requiredRestricted": "{label}为必填项，但某项限制禁止向此表格添加行：表单也将被阻止。",
+			"lockedNoParam": "{label}：被链接锁定的字段需要短名称。",
+			"publicOpen": "公共链接没有截止日期或回复数上限。"
+		},
+		"state": {
+			"draft": "草稿",
+			"open": "开放",
+			"paused": "已暂停",
+			"closed": "已关闭"
+		}
+	},
+	"formDialog": {
+		"receivedColumn": "接收时间",
+		"refused": "表单已保存，但部分受众被拒绝：{list}",
+		"draftSaved": "表单“{title}”的草稿已保存",
+		"opened": "表单“{title}”已开放",
+		"token": {
+			"receivedAt": "接收时间（日期和时间）",
+			"respondent": "填写者（电子邮件地址）",
+			"formTitle": "表单（其标题）",
+			"nextNumber": "下一个编号",
+			"fixed": "固定值"
+		},
+		"receivedAdded": "列“{name}”已添加到表格",
+		"image": {
+			"logoTooBig": "图像过大：徽标最大 200 KB。",
+			"bannerTooBig": "图像过大：横幅最大 1 MB。",
+			"unreadable": "无法读取的图像"
+		},
+		"thisServer": "此服务器",
+		"access": {
+			"aria": "填写者",
+			"members": {
+				"label": "工作簿成员",
+				"detail": "在工作簿上拥有角色的任何人，包括查看者。使用 Lattis 登录。"
+			},
+			"audience": {
+				"label": "选定的人员和团队",
+				"detail": "他们无需成为工作簿成员即可填写。使用 Lattis 登录。"
+			},
+			"serverAccounts": {
+				"label": "在 {server} 上拥有帐户的任何人",
+				"detail": "适用于面向整个组织的内部表单。使用 Lattis 登录。"
+			},
+			"public": {
+				"label": "公共链接",
+				"detail": "拥有链接的任何人，无需登录：即将在 Lattis 中推出。",
+				"disabled": "已在此服务器上关闭（由其所有者设置）。"
+			}
+		},
+		"titleForm": "表单“{title}”",
+		"titleShare": "将“{table}”共享为表单",
+		"help": "帮助：共享为表单",
+		"reading": "正在读取表格…",
+		"openToYou": "此表格中向你开放的表单：",
+		"already": "此表格已有 {n, plural, other {# 个表单}}。多个表单可以填写同一个表格。",
+		"responses": "{n, plural, other {# 条回复}}",
+		"edit": "编辑…",
+		"newForm": "新建表单…",
+		"done": "表单“{title}”已开放。回复将实时作为表格的新行到达。",
+		"prefill": {
+			"label": "预填链接…",
+			"tooltip": "填写字段的链接及其二维码",
+			"saveFirst": "请先保存草稿"
+		},
+		"tab": {
+			"fields": "字段",
+			"appearance": "外观",
+			"access": "访问"
+		},
+		"field": {
+			"move": {
+				"aria": "移动（Alt+↑ / Alt+↓）",
+				"tooltip": "拖动以移动（Alt+↑ / Alt+↓）"
+			},
+			"include": "包含在表单中",
+			"position": "填写者的位置",
+			"column": "列“{name}”",
+			"label": "标签",
+			"widget": "字段类型",
+			"required": "必填",
+			"settings": "字段设置",
+			"help": "帮助",
+			"positionHelp": "当填写者点击“我的位置”时由其浏览器填写（绝不会自动填写），并显示精度。",
+			"positionColumn": "列“{name}”：“lat, lon”。",
+			"positionColumns": "列“{lat}”和“{lon}”。",
+			"placeholder": "占位文本",
+			"default": {
+				"label": "默认值",
+				"none": "无",
+				"today": "今天",
+				"now": "现在",
+				"year": "当前年份",
+				"respondent": "填写者的电子邮件地址"
+			},
+			"value": "值",
+			"hidden": "隐藏：设置默认值但不显示",
+			"min": "最小值",
+			"max": "最大值",
+			"step": "步长",
+			"unit": "单位",
+			"maxLength": "最大长度",
+			"format": {
+				"label": "格式",
+				"free": "任意",
+				"email": "电子邮件地址",
+				"tel": "电话",
+				"url": "网址"
+			},
+			"listFrom": "列表取自“{source}”，每次显示时由服务器重新读取（目前 {n} 个值）。",
+			"listValues": "列表值（每行一个）",
+			"copiedFrom": "{copied}，来自“{source}”",
+			"param": "链接中的短名称",
+			"locked": "被链接锁定"
+		},
+		"section": {
+			"label": "分区标题",
+			"remove": "移除分区标题",
+			"description": {
+				"placeholder": "简短说明（可选）",
+				"aria": "分区说明"
+			},
+			"add": "+ 分区标题"
+		},
+		"choice": {
+			"title": "选择标签 · “{name}”",
+			"aria": "类别值",
+			"field": "一个字段",
+			"fixedAria": "固定的类别值"
+		},
+		"serverValues": {
+			"title": "由服务器设置的值",
+			"help": "不显示字段，每个值写入选定的列。",
+			"auto": "编号键接收由服务器设置的下一个编号。",
+			"column": "列",
+			"add": "+ 由服务器设置的值",
+			"addReceived": {
+				"label": "添加列 {name}",
+				"tooltip": "为所有成员向表格添加一列"
+			}
+		},
+		"look": {
+			"title": "标题",
+			"intro": "简介",
+			"markdown": "**粗体**、*斜体*、[链接](https://…)、以“-”开头的列表。",
+			"logo": "徽标",
+			"serverLogo": "服务器的徽标",
+			"logoHint": "PNG、JPEG 或 SVG，最大 200 KB",
+			"banner": "横幅",
+			"bannerHint": "最大 1 MB；服务器会移除照片中的 GPS 位置",
+			"color": "颜色",
+			"accent": "强调色",
+			"pages": "页面",
+			"paged": "每页一个分区（下一步、上一步、进度条）",
+			"button": "按钮",
+			"thanks": "感谢消息",
+			"another": "“提交另一份回复”按钮",
+			"thanksHint": "仅支持粗体和斜体：不能有链接或重定向。",
+			"closed": {
+				"label": "已关闭",
+				"placeholder": "表单已关闭、已满或尚未开放时显示的消息"
+			},
+			"privacy": {
+				"label": "数据",
+				"placeholder": "数据保护声明，显示在按钮上方",
+				"template": "从模板开始"
+			},
+			"lang": {
+				"label": "语言",
+				"fr": "法语",
+				"en": "英语"
+			}
+		},
+		"audience": {
+			"title": "人员和团队",
+			"team": "团队 {name}",
+			"toAdd": "（待添加）",
+			"address": "电子邮件地址",
+			"add": "添加",
+			"teamChoose": "团队…",
+			"identity": "回复以表单的身份“表单：{title}”写入：填写者对工作簿没有任何权限。"
+		},
+		"preview": {
+			"aria": "预览宽度",
+			"phone": "手机",
+			"desktop": "计算机",
+			"browser": {
+				"label": "在浏览器中打开预览",
+				"tooltip": "保存草稿并打开服务器上的真实页面（链接 10 分钟内有效，回复不会保存）"
+			}
+		},
+		"saving": "正在保存…",
+		"saveDraft": "保存草稿",
+		"save": "保存",
+		"open": "开放表单"
+	},
+	"source": {
+		"mode": {
+			"replace": {
+				"label": "全部替换",
+				"detail": "数据变为发送的表格。"
+			},
+			"append": {
+				"label": "追加",
+				"detail": "行添加到已接收的行之后（日志、读数）。"
+			},
+			"upsert": {
+				"label": "按键更新",
+				"detail": "键相同：更新该行；否则添加。不删除任何内容。"
+			}
+		},
+		"way": {
+			"republish": {
+				"title": "连同此表格重新发布工作簿",
+				"detail": "工作簿连同此表格重新发布；其角色和筛选将适用。"
+			},
+			"publish": {
+				"title": "发布工作簿并管理访问权限",
+				"detail": "整个工作簿连同角色和筛选一起上传到服务器；之后再共享该表格。"
+			},
+			"table": {
+				"title": "仅发布此表格",
+				"detail": "只发送所选的列；工作簿保留在你的计算机上，不会对外提供。"
+			},
+			"shared": {
+				"title": "将此表格添加到共享工作簿",
+				"detail": "推荐。它将连同其中的行一起在服务器上创建；成员会收到它，并按各自的权限编辑。之后可从同一菜单将其共享到数据湖。"
+			},
+			"tableAlone": "将此表格单独发布到数据湖"
+		},
+		"chooser": {
+			"localTitle": "此表格只在你的计算机上",
+			"notInCollab": "工作簿已实时共享，但此表格不在其中。",
+			"howTitle": "要如何共享此表格？",
+			"notPublished": "此表格不在已发布的工作簿中。",
+			"whyCollab": "实时共享的工作簿不会重新发布：其表格列表在发布时即已确定，之后创建的表格会保留在你的计算机上。"
+		},
+		"push": {
+			"done": "源“{table}”已更新",
+			"read": "源“{table}”已更新：{n, plural, other {读取了 # 行}}",
+			"inserted": "{n, plural, other {添加 # 行}}",
+			"updated": "{n, plural, other {更新 # 行}}",
+			"deleted": "{n, plural, other {删除 # 行}}",
+			"rejected": "{n, plural, other {拒绝 # 行}}",
+			"unchanged": "，无任何更改",
+			"reject": "；第 {row} 行，{column}“{value}”：{error}",
+			"blanked": "；{n, plural, other {# 个值以空白发送}}（错误或与类型不符的输入）"
+		},
+		"status": {
+			"tableGone": "表格已从工作簿中删除：源不再接收任何内容",
+			"suspended": "源已暂停：不再发送任何内容",
+			"failed": "上次更新失败：{error}",
+			"never": "从未更新",
+			"today": "今天 {time}",
+			"on": "{date}",
+			"updated": "更新于{when} · {n, plural, other {# 行}}"
+		},
+		"localWorkbook": "本地工作簿",
+		"suspended": "已暂停",
+		"pending": "等待发送",
+		"failedOn": "失败于 {date}",
+		"updatedOn": "更新于 {date}",
+		"never": "从未更新",
+		"sqlName": {
+			"length": "最多 63 个字符",
+			"start": "以小写字母开头",
+			"chars": "仅限不带重音的小写字母、数字和 _"
+		},
+		"problem": {
+			"server": "请登录到 Lattis 服务器",
+			"name": "请为数据集命名",
+			"columns": "请至少选中一列",
+			"key": "请选择用于标识行的列",
+			"filter": "需要更正某个行筛选"
+		},
+		"onSave": "每次保存时",
+		"onDemand": "按需"
+	},
+	"rights": {
+		"level": {
+			"none": "无",
+			"reader": "查看者",
+			"participant": "参与者",
+			"editor": "编辑者"
+		},
+		"builtin": {
+			"owner": "所有者",
+			"designer": "设计者",
+			"editor": "编辑者",
+			"participant": "参与者",
+			"reader": "查看者"
+		},
+		"members": "{n, plural, other {# 位成员}}",
+		"op": {
+			"eq": "等于",
+			"ne": "不等于",
+			"lt": "小于",
+			"le": "小于或等于",
+			"gt": "大于",
+			"ge": "大于或等于",
+			"contains": "包含",
+			"starts": "开头是",
+			"empty": "为空",
+			"filled": "不为空"
+		},
+		"me": "登录的人员",
+		"team": "其所在的某个团队",
+		"sentence": {
+			"none": "所有行均可见",
+			"prefix": "可见条件：",
+			"team": "{column} 为 {team}",
+			"notTeam": "{column} 不为 {team}",
+			"and": " 且 "
+		},
+		"prompt": {
+			"write": "为{subject}编写一个 Lattis 行筛选。",
+			"columns": "它是基于以下列的布尔 SQL 表达式（PostgreSQL）：{columns}。",
+			"noColumn": "（没有列）",
+			"reader": "读取数据的人写作 current_user（其电子邮件地址）。",
+			"readerTeams": "读取数据的人写作 current_user（其电子邮件地址）；其团队：{teams}。",
+			"answer": "不要使用分号或注释。只回答表达式本身（用于粘贴到“自由 SQL”中），然后用一句话说明它的作用。",
+			"rule": "我的规则："
+		},
+		"literal": {
+			"notNumber": "“{value}”不是数字",
+			"notInteger": "“{value}”不是整数",
+			"notBoolean": "“{value}”不是 true 或 false",
+			"notDate": "“{value}”不是日期（dd/mm/yyyy）"
+		},
+		"condition": {
+			"unknownColumn": "未知列：{column}",
+			"teamUnsupported": "“我的团队”：此服务器不支持团队（需要更新 lattisd）",
+			"teamText": "“我的团队”只能与文本列（团队名称）比较",
+			"teamOp": "“我的团队”：只能使用等于或不等于",
+			"meText": "“我”只能与文本列（此人的电子邮件地址）比较",
+			"meOp": "“我”：只能使用等于或不等于"
+		},
+		"free": {
+			"forbidden": "字符串之外不允许使用“{char}”",
+			"parens": "括号不匹配",
+			"unclosed": "字符串或名称未闭合"
+		},
+		"command": {
+			"all": "全部",
+			"select": "读取",
+			"insert": "添加",
+			"update": "编辑",
+			"delete": "删除"
+		},
+		"sql": {
+			"ownRows": "自己的行",
+			"noRight": "无权限",
+			"filtered": "筛选视图",
+			"restriction": "限制“{label}”",
+			"yours": "你的权限",
+			"noRole": "无角色",
+			"allRights": "全部权限（结构、页面布局、脚本）",
+			"allRightsOwner": "全部权限（结构、页面布局、脚本、权限）",
+			"builtinRole": "内置角色",
+			"customRole": "自定义角色",
+			"teams": "{n, plural, other {团队}} {names}",
+			"allRoles": "所有角色",
+			"restrictionName": "限制",
+			"restrictionKind": "限制"
+		}
+	},
+	"filter": {
+		"theseRows": "这些行",
+		"column": "列",
+		"condition": "条件",
+		"value": "值",
+		"theValue": "值…",
+		"and": "且",
+		"snippet": {
+			"value": "值",
+			"equal": "等于某个值（文本用单引号括起）",
+			"me": "current_user：读取数据的人的电子邮件地址",
+			"teamLabel": "为 {team}",
+			"team": "lattis.my_teams()：读取数据的人所在的团队",
+			"and": {
+				"label": "且",
+				"tooltip": "两个条件都满足"
+			},
+			"or": {
+				"label": "或",
+				"tooltip": "满足任一条件"
+			},
+			"empty": {
+				"label": "为空",
+				"tooltip": "空单元格"
+			}
+		},
+		"mode": {
+			"aria": "筛选形式",
+			"form": {
+				"label": "表单",
+				"tooltip": "以通俗语言表示的条件",
+				"disabled": "此 SQL 筛选无法转换为表单"
+			},
+			"sql": "自由 SQL"
+		},
+		"assist": {
+			"label": "使用助手编写",
+			"tooltip": "打开助手并附带一个待补充的请求；助手只会收到列的名称和类型"
+		},
+		"noTeams": "“其所在的某个团队”：此服务器不支持团队",
+		"placeholder": {
+			"date": "dd/mm/yyyy",
+			"boolean": "true 或 false",
+			"number": "数字"
+		},
+		"remove": "移除条件",
+		"add": "+ 条件",
+		"insertColumns": "要插入的列",
+		"inserts": "{what}：插入 {sql}",
+		"sqlAria": "SQL 筛选",
+		"insertSnippets": "要插入的代码片段"
+	},
+	"access": {
+		"cap": {
+			"read": {
+				"label": "查看",
+				"hint": "读取表格的行"
+			},
+			"add": {
+				"label": "添加行",
+				"hint": "添加新行"
+			},
+			"editOwn": {
+				"label": "编辑自己的行",
+				"hint": "编辑或删除此人添加的行"
+			},
+			"editAll": {
+				"label": "编辑所有行",
+				"hint": "编辑或删除所有人的行"
+			},
+			"manage": {
+				"label": "结构和权限",
+				"hint": "列、表格、页面布局、脚本；权限：仅限所有者"
+			}
+		},
+		"designerManage": "结构，不含权限",
+		"frozen": "冻结的工作簿：通过重新发布来更改数据",
+		"allows": {
+			"none": "无访问权限",
+			"reader": "查看",
+			"participant": "查看、添加、编辑自己的行",
+			"editor": "查看和编辑全部内容"
+		},
+		"word": {
+			"none": "无",
+			"reader": "查看者",
+			"participant": "参与者",
+			"editor": "编辑者"
+		},
+		"mixed": "因表格而异",
+		"likeSheet": "与工作表相同：{allows}",
+		"likeWorkbook": "与工作簿相同：{allows}",
+		"readFilter": "只能看到满足 {text} 的行",
+		"writeFilter": "只能编辑满足 {text} 的行",
+		"rule": {
+			"cannot": "不能{verb}（高级规则）",
+			"onlyWhere": "只能{verb}满足 {text} 的行（高级规则）"
+		},
+		"onlyIn": "仅在 {tables} 中",
+		"inTable": "“{table}”：{why}",
+		"summary": {
+			"allWithRights": "全部内容，包括权限",
+			"seeStructureRights": "查看、结构和权限",
+			"allWithStructure": "编辑全部内容，包括结构",
+			"seeStructure": "查看和更改结构",
+			"seeEditAll": "查看和编辑全部内容",
+			"seeEditAllNoAdd": "查看和编辑所有行，不能添加",
+			"seeAddOwn": "查看、添加、编辑自己的行",
+			"seeOwnNoAdd": "查看和编辑自己的行，不能添加",
+			"seeAdd": "查看和添加行",
+			"seeOnly": "仅查看",
+			"none": "无访问权限",
+			"partly": "{summary}（部分）"
+		},
+		"verb": {
+			"select": "查看",
+			"insert": "添加",
+			"update": "编辑",
+			"delete": "删除",
+			"all": "查看或编辑"
+		},
+		"action": {
+			"select": "查看",
+			"insert": "添加",
+			"update": "编辑",
+			"delete": "删除",
+			"all": "全部"
+		},
+		"nor": "或",
+		"or": "或",
+		"ofRole": "{role}角色的",
+		"ofRoles": "{roles}和{last}角色的",
+		"sentence": {
+			"nobody": "任何人都不能在“{table}”中{verbs}行，所有者和设计者除外。",
+			"nobodyExcept": "任何人都不能在“{table}”中{verbs}行，满足 {cond} 的行除外（所有者和设计者不受此限）。",
+			"membersNever": "{who}成员不能在“{table}”中{verbs}行。",
+			"membersOnly": "{who}成员在“{table}”中只能{verbs}满足 {cond} 的行。"
+		},
+		"preset": {
+			"noDelete": {
+				"label": "禁止删除",
+				"hint": "除所有者和设计者外，任何人都不能删除行",
+				"rule": "不能删除"
+			},
+			"appendOnly": {
+				"label": "仅添加",
+				"hint": "可以添加行，但不能编辑或删除现有行",
+				"rule": "仅添加"
+			},
+			"status": {
+				"label": "只编辑具有以下状态的行…",
+				"hint": "只要行具有此状态，就可以编辑和删除",
+				"rule": "取决于状态"
+			},
+			"ownNoCreate": {
+				"label": "编辑自己的行但不能新建",
+				"hint": "用于“查看、添加、编辑自己的行”角色：该角色将无法再添加行",
+				"rule": "不能添加"
+			}
+		},
+		"problem": {
+			"table": "请选择一个表格。",
+			"who": "请至少选择一个角色。",
+			"commands": "请至少选择一个操作。",
+			"predicate": "请添加条件，或选择“无”作为例外。",
+			"missingValue": "某个条件没有值。"
+		},
+		"email": {
+			"empty": "请输入此人的电子邮件地址。",
+			"invalid": "“{email}”不是电子邮件地址。"
+		}
+	},
+	"members": {
+		"invited": "已向 {email} 发送邀请",
+		"roleGiven": "已将角色 {role} 授予 {who}",
+		"roleRemoved": "已移除 {who} 的角色 {role}",
+		"removeAll": {
+			"confirm": "要移除 {who} 的访问权限吗？{n, plural, other {将移除其 # 个角色}}。",
+			"done": "已移除 {who} 的访问权限",
+			"teamKept": "移除其个人角色；其团队的角色仍保留",
+			"tooltip": "移除其所有角色",
+			"aria": "移除 {who} 的访问权限",
+			"team": "移除该团队的所有角色"
+		},
+		"addRole": "+ 角色",
+		"theTeam": "{name} 团队",
+		"invite": {
+			"title": "邀请人员",
+			"email": "要邀请的电子邮件地址",
+			"roles": "要授予的角色",
+			"submit": "邀请",
+			"gives": "将能够：",
+			"help": "服务器已知的人员会立即获得其角色，否则在首次登录时获得。",
+			"custom": "此人成为成员后才能授予自定义角色。"
+		},
+		"people": "人员",
+		"search": "搜索成员",
+		"tag": {
+			"pipeline": {
+				"tooltip": "数据摄取管道的技术成员：它会随管道一起在服务器端消失"
+			},
+			"team": {
+				"label": "团队 {names}",
+				"tooltip": "通过所在团队成为工作簿成员：其团队角色在“团队”中更改"
+			},
+			"lastOwner": {
+				"label": "最后一位所有者",
+				"tooltip": "工作簿始终至少保留一位所有者：请先将此角色授予其他人"
+			}
+		},
+		"rolesOf": "{who} 的角色",
+		"removeRole": {
+			"aria": "移除 {who} 的角色 {role}",
+			"tooltip": "移除此角色"
+		},
+		"via": "通过团队 {names} 获得：在“团队”中移除",
+		"giveRole": "向 {who} 授予角色",
+		"viewAs": {
+			"label": "以…身份查看",
+			"tooltip": "按 {who} 看到的样子查看表格"
+		},
+		"noMatch": "没有匹配的成员。",
+		"none": "没有成员。",
+		"pending": "待处理的邀请",
+		"until": "截至 {date}",
+		"revoked": "已取消对 {email} 的邀请",
+		"revoke": "取消邀请",
+		"teams": "团队",
+		"teamsUnsupported": "团队和目录组：此服务器尚未提供。",
+		"noMember": "没有成员",
+		"noTeamRole": "没有团队在此工作簿上拥有角色。",
+		"teamGive": {
+			"label": "向团队授予角色：",
+			"role": "团队角色",
+			"submit": "授予角色",
+			"help": "只要仍属于团队，团队成员就拥有该团队的角色。团队在服务器的管理界面中创建；目录组：以后提供。"
+		},
+		"noTeam": "此服务器上没有团队：服务器所有者可在其管理界面（“团队”）中创建团队。"
+	},
+	"roles": {
+		"teamCount": "{n, plural, other {# 个团队}}",
+		"kind": {
+			"owner": "全部权限",
+			"designer": "结构，不含权限"
+		},
+		"filtersSaved": "已为 {role} 保存“{table}”的筛选",
+		"intro": "每位成员有一个或多个角色；角色按表格授予访问权限，筛选可将其限制为某些行。各角色的权限会叠加。",
+		"learnMore": "了解详细信息",
+		"matrix": {
+			"aria": "每个角色允许的操作",
+			"role": "角色",
+			"members": "成员",
+			"select": "逐个表格设置此角色的权限"
+		},
+		"viewAs": {
+			"tooltip": "按此角色的成员看到的样子查看表格",
+			"nobody": "没有人拥有此角色",
+			"aria": "以 {role} 角色成员的身份查看"
+		},
+		"legend": {
+			"some": "部分（某些行或某些表格）"
+		},
+		"created": "已创建角色“{name}”：在下方设置访问权限之前，它不授予任何权限",
+		"new": {
+			"placeholder": "新角色",
+			"aria": "新角色的名称"
+		},
+		"detail": {
+			"title": "{role}：逐个表格的访问权限",
+			"owner": "所有者：查看和编辑所有行，更改结构（列、表格、页面布局、脚本），并管理成员、角色和规则。此处无需设置。",
+			"designer": "设计者：查看和编辑所有行并更改结构（列、表格、页面布局、脚本），但不管理权限。此处无需设置。",
+			"frozen": "冻结的工作簿：所有成员都能查看全部内容，但不能更改任何内容。按表格的访问权限和筛选与实时共享的工作簿相同。"
+		},
+		"drop": {
+			"confirm": "要删除角色“{name}”吗？其成员将失去该角色授予的权限。",
+			"done": "已删除角色“{name}”",
+			"label": "删除角色"
+		},
+		"tree": {
+			"workbook": "整个工作簿",
+			"workbookAccess": "工作簿访问权限",
+			"level": "级别“{word}”",
+			"sheet": "工作表",
+			"sheetAccess": "工作表 {name} 的访问权限",
+			"mixed": "因表格而异",
+			"fromWorkbook": "继承自工作簿",
+			"fromSheet": "继承自工作表",
+			"tableAccess": "表格 {name} 的访问权限"
+		},
+		"filter": {
+			"seesAll": "可以看到所有行",
+			"editRead": "编辑 {table} 的可见行",
+			"limitRead": "限制 {table} 的可见行",
+			"edit": "编辑",
+			"limit": "限制…",
+			"writesOwn": "添加行，编辑和删除自己的行",
+			"writesAll": "添加、编辑和删除所有行",
+			"editWrite": "编辑 {table} 的可编辑行",
+			"limitWrite": "限制 {table} 的可编辑行"
+		},
+		"advancedRules": "高级规则",
+		"editor": {
+			"aria": "{role} 在 {table} 上的筛选",
+			"read": {
+				"label": "只能看到满足以下条件的行…",
+				"prefix": "可以看到满足以下条件的行：",
+				"assist": "{role} 角色成员可以看到的表格“{table}”中的行"
+			},
+			"write": {
+				"label": "只能添加和编辑满足以下条件的行…",
+				"prefix": "可以添加和编辑满足以下条件的行：",
+				"assist": "{role} 角色成员可以添加或编辑的表格“{table}”中的行"
+			},
+			"fixes": "保存后，此表格的访问权限将设置为“{level}”。",
+			"noCondition": "无条件：所有行。",
+			"save": "保存筛选"
+		},
+		"oldSheet": "此工作表在服务器支持工作表之前发布：其访问权限设置在它的每个表格上。",
+		"noTable": "没有已发布的表格：工作簿访问权限将应用于以后添加的表格。",
+		"teams": "拥有此角色的团队：",
+		"noTeams": "没有团队拥有此角色（成员 › 团队）。",
+		"local": {
+			"title": "仅在你的计算机上",
+			"help": "这些表格不在共享工作簿中：其他人看不到它们。",
+			"add": {
+				"label": "将“{table}”添加到共享工作簿",
+				"tooltip": "在共享工作簿中为所有成员创建“{table}”，包括其中的行"
+			},
+			"offline": "离线"
+		}
+	},
+	"rules": {
+		"added": "{n, plural, other {已添加 # 条规则}}",
+		"removed": "已移除规则",
+		"collabOnly": "高级规则：仅适用于实时共享的工作簿（冻结的工作簿对所有人都是只读的）。",
+		"intro": "高级规则会移除对某个表格的一项权限，无论角色的访问权限如何：不能再删除、不能再添加、只能编辑某些行。所有者和设计者不受其约束，除非明确指定他们。",
+		"current": "现有规则",
+		"remove": {
+			"tooltip": "移除此规则",
+			"aria": "移除规则 {label}"
+		},
+		"none": "没有规则：只应用角色的访问权限和筛选。",
+		"new": "新建规则",
+		"presets": "预设",
+		"for": "适用于",
+		"forWhom": "适用对象",
+		"allRoles": "所有角色",
+		"someRoles": "部分角色",
+		"targetRoles": "相关角色",
+		"exceptOwners": "所有者和设计者除外。",
+		"forbid": "禁止",
+		"actions": "受限操作",
+		"exception": "例外",
+		"exceptWhere": "满足以下条件的行除外…",
+		"allowed": {
+			"label": "只允许用于满足以下条件的行…",
+			"prefix": "允许用于满足以下条件的行：",
+			"none": "添加条件",
+			"assist": "表格“{table}”中仍允许执行该操作的行"
+		},
+		"name": "名称",
+		"optional": "（可选）",
+		"perAction": "在服务器上添加 {n} 项限制，每个操作一项。",
+		"add": "添加规则"
+	},
+	"rightsDialog": {
+		"tab": {
+			"members": "成员",
+			"roles": "角色和权限",
+			"rules": "高级规则",
+			"preview": "以…身份查看",
+			"drift": "偏差"
+		},
+		"title": "管理“{title}”的访问权限",
+		"frozen": "冻结的工作簿：对所有人只读",
+		"reload": {
+			"tooltip": "从服务器重新加载权限",
+			"aria": "刷新"
+		},
+		"help": "帮助：管理访问权限",
+		"link": {
+			"aria": "工作簿链接",
+			"tooltip": "该链接会为任何有访问权限的人在 Lattis（或浏览器）中打开工作簿",
+			"copied": "已复制"
+		},
+		"tabs": "管理访问权限",
+		"reading": "正在读取权限…",
+		"drift": {
+			"count": "{n, plural, other {# 处偏差}}",
+			"warning": "{n, plural, other {# 个表格}}的规则在 Lattis 之外（在服务器上）被更改。",
+			"show": "显示偏差",
+			"frozen": "冻结的工作簿：不可能有偏差（对所有人只读）。",
+			"none": "没有偏差：服务器上的规则和权限与 Lattis 生成的一致。",
+			"intro": "在 Lattis 之外（在 PostgreSQL 中手动）更改的规则或权限：",
+			"policies": "添加的规则：",
+			"grants": "授予权限的对象：",
+			"changed": "被移除或更改的生成规则",
+			"recompileHelp": "重新编译会恢复 Lattis 生成的规则。手动添加的规则和权限在 PostgreSQL 中被移除之前，仍会在此处标出。",
+			"recompiled": "权限已重新编译",
+			"recompile": "重新编译权限"
+		},
+		"sending": "正在发送到服务器…",
+		"designerOnly": "设计者：仅可查看和检查"
+	},
+	"shareDialog": {
+		"checking": "正在检查工作簿…",
+		"why": {
+			"noTables": "没有可发布的内容：请先创建表格（插入 › 表格，或在数据上按 Ctrl+L），然后重新打开此对话框。",
+			"blocked": "发布前需要解决 {n, plural, other {# 个问题}}（见上文）。",
+			"server": "请选择服务器，或连接到服务器（管理服务器…）。",
+			"title": "请为发布的工作簿指定标题。",
+			"cannotCreate": "你的帐户无法在此服务器上创建工作簿。"
+		},
+		"republishTitle": "重新发布工作簿",
+		"publishTitle": "发布到服务器",
+		"republishHelp": "{server} 上的“{title}”· {mode} · 版本 {version}：新版本将一次性替换已发布的版本。",
+		"cannotCreate": "你的帐户无法在此服务器上创建工作簿：请向其所有者申请“工作簿创建者”角色。",
+		"mode": "模式",
+		"frozenHelp": "：对所有人只读；由你重新发布新版本",
+		"collaborativeHelp": "：每个人按各自的权限编辑，他人的更改实时到达",
+		"tables": "表格",
+		"noTables": {
+			"before": "此工作簿没有可发布的表格。只有表格才会被发布：请关闭此对话框，选择你的数据，然后",
+			"menu": "插入 › 表格",
+			"or": "（或",
+			"after": "），再回来发布。"
+		},
+		"rows": "{n, plural, other {# 行}}",
+		"private": {
+			"label": "私有",
+			"tooltip": "私有表格：保留在本计算机上，从不发送到服务器"
+		},
+		"rename": "{problem} — 请在工作簿中将其重命名",
+		"frozenTypes": "发布时固定的类型：{columns}",
+		"invalid": "列“{name}”（{type}）：{n, plural, other {# 个无效输入}}",
+		"fixOr": "— 请更正，或",
+		"acceptText": "将该列接受为文本",
+		"computed": "计算列以其公式发布，而不是以其值发布。",
+		"refresh": {
+			"legend": "由查询“{query}”加载：刷新",
+			"local": "从本计算机使用你的连接刷新：你的刷新将为所有成员替换这些行",
+			"lake": "数据湖源：该表格也会发送到服务器的数据湖，其他工作簿可以链接到它（发布后立即设置）"
+		},
+		"uncheckedPrivate": "未选中的表格保持私有：仅在本计算机上。",
+		"publishing": "正在发布…",
+		"republish": "重新发布",
+		"publish": "发布"
+	},
+	"dataShare": {
+		"title": {
+			"source": "数据湖源 · “{table}”",
+			"dataset": "Lattis 数据湖 · “{name}”",
+			"share": "将“{table}”共享到 Lattis 数据湖"
+		},
+		"help": "帮助：共享到数据湖",
+		"whyNotWorkbook": "为什么不共享整个工作簿？",
+		"ways": "共享方式",
+		"go": {
+			"republish": "重新发布工作簿…",
+			"publish": "发布工作簿…",
+			"shared": "添加到工作簿…"
+		},
+		"reading": "正在读取目录…",
+		"folder": "文件夹",
+		"columns": "公开的列",
+		"audience": "受众",
+		"usedBy": "使用者",
+		"readBy": "{email} 于 {date} 读取",
+		"advanced": "高级选项",
+		"sqlProposed": "服务器建议的 SQL 名称",
+		"withDescription": "含说明",
+		"description": {
+			"label": "说明",
+			"placeholder": "数据集包含的内容，供查找它的人参考"
+		},
+		"sqlName": {
+			"label": "SQL 名称",
+			"fixed": "创建时确定",
+			"placeholder": "由服务器建议",
+			"help": "SQL 查询所用视图的名称：小写字母、数字、_。"
+		},
+		"withdraw": {
+			"label": "停止共享",
+			"tooltip": "视图将消失；使用它的工作簿保留其最后一份副本"
+		},
+		"share": "共享"
+	},
+	"catalog": {
+		"pushedTooltip": "从本地工作簿“{workbook}”单独发布的表格（推送的源）",
+		"aria": "从 Lattis 数据湖插入",
+		"title": "Lattis 数据湖",
+		"search": {
+			"placeholder": "搜索数据集…",
+			"aria": "搜索"
+		},
+		"tree": "目录",
+		"signIn": "登录到服务器以查看其数据。",
+		"noMatch": "没有匹配的数据集。",
+		"empty": "此服务器上没有与你共享的数据。",
+		"dropRoot": "拖放到此处：放到根目录",
+		"pushed": {
+			"before": "从本地工作簿推送的源",
+			"after": "：由其作者更新，工作簿无需发布。"
+		},
+		"view": "视图",
+		"modified": "修改于 {date}",
+		"readOnly": "插入的表格是只读的，并在数据集更改时更新。",
+		"choose": "选择一个数据集以查看其列。",
+		"yourSources": "你推送的源",
+		"yourSourcesHelp": "从你的本地工作簿单独发布到此服务器的表格；每个表格都从其工作簿中管理（右键单击表格 › 共享到 Lattis 数据湖…）。",
+		"inserting": "正在插入…",
+		"insert": "插入"
+	},
+	"servers": {
+		"badUrl": "请输入服务器地址，例如 https://lattis.acme.com（http 仅限本地）。",
+		"title": "管理服务器",
+		"disabled": "共享工作簿已关闭：文件 › 设置 › 功能。",
+		"managed": "由你的组织设置",
+		"connected": "已登录：{user}",
+		"notConnected": "未登录",
+		"remove": {
+			"managed": "由你的组织设置的服务器：它会保留在列表中",
+			"tooltip": "从本计算机的列表中移除此服务器",
+			"confirm": "要从列表中移除“{name}”吗？",
+			"signedOut": "你将在本计算机上从此服务器注销。",
+			"nothingDeleted": "服务器上的任何内容都不会被删除：其工作簿、数据和你的权限仍保留在服务器上，你可以随时重新添加它。",
+			"inUse": "打开的工作簿“{title}”已发布在此服务器上：它将继续从本计算机上的副本打开，但在你重新添加此服务器并登录之前，将不再同步。",
+			"queries": "使用此服务器的查询和工作簿将要求你登录到它。"
+		},
+		"rename": {
+			"label": "重命名",
+			"tooltip": "在本计算机上为此服务器指定另一个名称（服务器本身不会更改）",
+			"aria": "此服务器在本计算机上的名称",
+			"empty": "请输入此服务器的名称。",
+			"tooLong": "名称过长：最多 {max} 个字符。",
+			"serverName": "服务器上的名称：{name}",
+			"reset": "还原"
+		},
+		"emptyAdd": "没有服务器。请在下方添加一个。",
+		"add": {
+			"title": "添加服务器",
+			"submit": "添加并登录…",
+			"help": "将向服务器验证该地址，然后打开其登录页面。",
+			"locked": "你的组织设置了服务器列表：你无法添加服务器。"
+		}
+	},
+	"sourceForm": {
+		"suspended": "源“{table}”已暂停：不再发送任何内容",
+		"savedNotUpdated": "源“{table}”已保存，但未更新：{error}",
+		"withdrawn": "源“{name}”已从数据湖中移除",
+		"reading": "正在从服务器读取…",
+		"banner": "工作簿保留在你的计算机上：只发送选中的列。",
+		"columns": "发送的列",
+		"computed": "计算列以其值发送，而不是以其公式发送。",
+		"sqlPlaceholder": "根据名称建议",
+		"mode": "更新",
+		"key": {
+			"label": "键",
+			"aria": "键列",
+			"choose": "选择列…"
+		},
+		"modeChanged": "适用于以后的更新（旧版服务器会拒绝它：这时请移除该源，然后重新发布）。",
+		"sending": {
+			"label": "发送",
+			"onSave": "每次保存工作簿时（Ctrl+S）",
+			"suspend": {
+				"label": "暂停该源（不再发送任何内容）",
+				"tooltip": "数据集连同其最后的行保留在目录中"
+			},
+			"refused": "被服务器拒绝的值计入状态栏；其余部分照常写入。"
+		},
+		"withdraw": {
+			"label": "移除该源",
+			"tooltip": "数据集将离开目录；使用它的工作簿保留其最后一份副本"
+		},
+		"push": {
+			"label": "立即更新",
+			"tooltip": "立即发送表格的行",
+			"suspended": "源已暂停"
+		},
+		"back": "返回",
+		"saveUpdate": "保存并更新",
+		"publish": "发布源"
+	}
+}
