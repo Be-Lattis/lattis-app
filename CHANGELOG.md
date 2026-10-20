@@ -14,6 +14,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Fichier › Paramètres : « Réinitialiser les paramètres par défaut… », en bas de la fenêtre, remet tous les réglages de la fenêtre (fonctionnalités, assistant IA, langue, thème, limites, mises à jour) à leur valeur par défaut, après confirmation, sans redémarrer. Les réglages imposés par l'organisation restent tels quels ; thèmes créés, serveurs Lattis et leurs connexions, clés d'API, fichiers récents et choix du fournisseur de l'IA sont gardés.
 
+### Changements
+
+- Collage : la même règle d'en-tête qu'à la saisie. La première ligne d'un bloc collé (depuis Excel, une page web, une autre feuille) est l'en-tête si elle n'a que des textes, même quand elle ressemble aux suivantes (« Nom | Ville » puis « Léa | Paris ») ; un nombre, une date, une heure, un booléen, un pourcentage ou un montant (« Pays | 2024 », « 10 | 20 ») en fait une ligne de données, sous un en-tête « Colonne 1 », « Colonne 2 »… (clic droit › « Utiliser la première ligne comme en-têtes » pour la reprendre). Collé en première ligne de la feuille, où rien ne tient au-dessus, l'en-tête « Colonne n » prend la place de la première ligne collée et le bloc descend d'une ligne. Vaut aussi pour un collage contre d'autres cellules et pour un tableau déplacé ou copié vers une zone libre. La barre d'état le dit comme à la saisie.
+
 ## 0.3.1-beta (21/10/2026)
 
 ### Changements

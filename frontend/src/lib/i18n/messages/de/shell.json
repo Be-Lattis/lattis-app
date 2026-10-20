@@ -481,7 +481,6 @@
 		"created": "Tabelle „{table}“ erstellt{more}",
 		"widened": "Spalte {column} von {from} zu {to} geändert (Strg+Z zum Rückgängigmachen)",
 		"invalidValue": "Wert passt nicht zum Typ: Zelle als Fehler markiert",
-		"pastedHeadless": "Tabelle „{table}“ ohne Überschriften erstellt{more}: bei Bedarf Rechtsklick › Tabelle › „Überschrift herauslösen“",
 		"pasted": "Tabelle „{table}“ erstellt{more} ({n, plural, one {# Zeile} other {# Zeilen}})",
 		"pastedSplit": "Tabelle „{table}“ erstellt{more} ({n, plural, one {# Zeile} other {# Zeilen}}; Strg+Z: rückgängig machen, die Zellen bleiben frei)",
 		"defaultColumn": "Spalte {n}",

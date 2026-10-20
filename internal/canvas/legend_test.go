@@ -182,8 +182,11 @@ func TestLegendPaste(t *testing.T) {
 			"Feuille1@A1:Produit|Prix×2 Tableau1@D1:Ville|Pop×2"},
 		{"deux tableaux empilés", [][]string{{"Produit", "Prix"}, {"Pommes", "2"}, {"", ""}, {"Ville", "Pop"}, {"Lyon", "500"}},
 			"Feuille1@A1:Produit|Prix×1 Tableau1@A4:Ville|Pop×1"},
+		// Règle de la saisie (21/10/2026) : des années dans la 1re ligne en
+		// font une donnée ; en ligne 1, l'en-tête « Colonne n » prend sa place
+		// et le bloc descend d'une ligne.
 		{"en-têtes années", [][]string{{"Pays", "2024", "2025"}, {"France", "10", "11"}, {"Italie", "8", "9"}},
-			"Feuille1@A1:Pays|2024|2025×2"},
+			"Feuille1@A1:Colonne 1|Colonne 2|Colonne 3×3"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := open(t)

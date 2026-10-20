@@ -1550,11 +1550,12 @@ func TestPivotAsView(t *testing.T) {
 	}
 }
 
-// Un bloc entièrement textuel collé dans le vide : données, en-têtes « Colonne n » au-dessus.
+// Un bloc dont la 1re ligne a un nombre, collé dans le vide : données,
+// en-têtes « Colonne n » au-dessus (règle de la saisie, décision 0005).
 func TestPasteWithoutHeader(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	if _, err := d.Paste(ctx, 1, 3, 0, [][]string{{"Alice", "Paris"}, {"Bob", "Lyon"}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 3, 0, [][]string{{"Alice", "31"}, {"Bob", "40"}}); err != nil {
 		t.Fatal(err)
 	}
 	l, _ := d.Layout(ctx, 1)

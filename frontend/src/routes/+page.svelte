@@ -1635,7 +1635,9 @@
 			const ev = await DocumentService.Paste(sheetId, row, col, block);
 			await reload();
 			if (ev.refusedCount) return refusedNotice(ev);
-			if (ev.created && ev.headless) return t('shell.notice.pastedHeadless', { table: ev.created, more: autoKeyNote(ev) });
+			// Même règle d'en-tête qu'à la saisie (décision 0005), mêmes messages.
+			if (ev.created && ev.unnamed) return t('shell.notice.createdUnnamed', { table: ev.created, more: autoKeyNote(ev) });
+			if (ev.created && ev.headless) return t('shell.notice.createdHeadless', { table: ev.created, more: autoKeyNote(ev) });
 			if (ev.created) return t(ev.split ? 'shell.notice.pastedSplit' : 'shell.notice.pasted', { table: ev.created, more: autoKeyNote(ev), n: block.length - 1 });
 		},
 		rangeStats: (t, first, count, cols) => DocumentService.RangeStats(sheetId, t.id, first, count, cols),

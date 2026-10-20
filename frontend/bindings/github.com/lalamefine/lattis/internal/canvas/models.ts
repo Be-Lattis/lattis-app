@@ -617,14 +617,15 @@ export interface Event {
     "invalid": boolean;
 
     /**
-     * Headless : tableau collé sans ligne d'en-tête reconnue (« Colonne n »).
+     * Headless : tableau tapé ou collé sans ligne d'en-tête reconnue
+     * (« Colonne n »).
      */
     "headless": boolean;
 
     /**
-     * Unnamed : tableau tapé dont la 1re ligne a du texte et une valeur
-     * d'un autre type (« Léa | 31 ») : toutes les lignes sont des données,
-     * sous un en-tête « Colonne n » posé au-dessus (unnamed.go).
+     * Unnamed : tableau tapé ou collé dont la 1re ligne a du texte et une
+     * valeur d'un autre type (« Léa | 31 ») : toutes les lignes sont des
+     * données, sous un en-tête « Colonne n » posé au-dessus (unnamed.go).
      */
     "unnamed"?: boolean;
 

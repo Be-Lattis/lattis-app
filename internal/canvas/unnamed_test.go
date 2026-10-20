@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/lalamefine/lattis/internal/grid"
@@ -199,22 +200,83 @@ func TestTypedFirstRowSessionLocale(t *testing.T) {
 	}
 }
 
-// Collage d'un bloc : sa propre règle (hasHeader), inchangée ; un bloc tout
-// en texte dont la 1re ligne ressemble aux suivantes reste sans en-têtes.
-func TestPastedBlockKeepsItsRule(t *testing.T) {
+// Collage : la règle de la saisie (décision 0005, Louis, 21/10/2026 : « même
+// règle partout »). Une 1re ligne de textes est l'en-tête, même quand elle
+// ressemble aux suivantes ; un nombre, une date… en fait une donnée, sous un
+// en-tête « Colonne n ». Collé en ligne 1 (rien au-dessus), une ligne est
+// insérée : l'en-tête prend la 1re ligne du collage, le bloc descend d'une
+// ligne ; sans place dessous pour cela, les cellules restent libres, comme
+// tapées. Le collage cellule par cellule suit la même règle.
+func TestPastedBlockFollowsTypedRule(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name     string
+		row      int
+		block    [][]string
+		want     string
+		unnamed  bool
+		headless bool
+	}{
+		{"textes", 3, [][]string{{"Nom", "Ville"}, {"Léa", "Paris"}}, "Feuille1@A4:Nom|Ville×1", false, false},
+		{"Pays | 2024", 3, [][]string{{"Pays", "2024"}, {"France", "12"}}, "Feuille1@A3:Colonne 1|Colonne 2×2", true, true},
+		{"Pays | 2024 en A1", 0, [][]string{{"Pays", "2024", "2025"}, {"France", "12", "13"}, {"Italie", "8", "9"}}, "Feuille1@A1:Colonne 1|Colonne 2|Colonne 3×3", true, true},
+		{"nombres en A1", 0, [][]string{{"10", "20"}, {"30", "40"}}, "Feuille1@A1:Colonne 1|Colonne 2×2", false, true},
+		{"textes en A1", 0, [][]string{{"Pays", "Capitale"}, {"France", "Paris"}, {"Italie", "Rome"}}, "Feuille1@A1:Pays|Capitale×2", false, false},
+		{"le reste du bloc descend", 0, [][]string{{"Pays", "2024"}, {"France", "1"}, {"", ""}, {"Ville", "Pop"}, {"Lyon", "500"}},
+			"Feuille1@A1:Colonne 1|Colonne 2×2 Tableau1@A5:Ville|Pop×1", true, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := open(t)
+			ev, err := d.Paste(ctx, 1, tc.row, 0, tc.block)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := layoutOf(t, d); got != tc.want {
+				t.Fatalf("\n got %s\nwant %s", got, tc.want)
+			}
+			if ev.Unnamed != tc.unnamed || ev.Headless != tc.headless {
+				t.Fatalf("événement : %+v", ev)
+			}
+			check(t, d, tc.name)
+		})
+	}
+
+	// En A1, la 1re ligne collée est la 1re ligne de données ; promue, elle
+	// redevient l'en-tête (en ligne 2).
 	d := open(t)
-	if _, err := d.Paste(context.Background(), 1, 3, 0, [][]string{{"Nom", "Ville"}, {"Léa", "Paris"}}); err != nil {
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "2024"}, {"France", "12"}}); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := layoutOf(t, d), "Feuille1@A3:Colonne 1|Colonne 2×2"; got != want {
-		t.Fatalf("collé :\n got %s\nwant %s", got, want)
+	if err := d.PromoteHeader(ctx, "Feuille1"); err != nil {
+		t.Fatal(err)
 	}
+	if got, want := layoutOf(t, d), "Feuille1@A2:Pays|2024×1"; got != want {
+		t.Fatalf("promu :\n got %s\nwant %s", got, want)
+	}
+
+	// Pas de place sous le bloc pour la ligne insérée : cellules libres.
 	d = open(t)
-	if _, err := d.Paste(context.Background(), 1, 3, 0, [][]string{{"Pays", "2024"}, {"France", "12"}}); err != nil {
+	typeIn(t, d, 3, 0, [][]string{{"x"}})
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "2024"}, {"France", "12"}}); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := layoutOf(t, d), "Feuille1@A4:Pays|2024×1"; got != want {
-		t.Fatalf("années collées :\n got %s\nwant %s", got, want)
+	if got, want := layoutOf(t, d), "A1=Pays B1=2024 A2=France B2=12 A4=x"; got != want {
+		t.Fatalf("sans place dessous :\n got %s\nwant %s", got, want)
+	}
+
+	// Cellule par cellule (une ligne collée sous des cellules libres).
+	for _, tc := range []struct{ first, want string }{
+		{"Nom|Ville", "Feuille1@A3:Nom|Ville×1"},
+		{"Pays|2024", "Feuille1@A2:Colonne 1|Colonne 2×2"},
+	} {
+		d := open(t)
+		typeIn(t, d, 2, 0, [][]string{strings.Split(tc.first, "|")})
+		if _, err := d.Paste(ctx, 1, 3, 0, [][]string{{"France", "12"}}); err != nil {
+			t.Fatal(err)
+		}
+		if got := layoutOf(t, d); got != tc.want {
+			t.Fatalf("cellule par cellule sous %s :\n got %s\nwant %s", tc.first, got, tc.want)
+		}
 	}
 }
 

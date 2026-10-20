@@ -3821,7 +3821,6 @@ export interface MessageParams {
 	'shell.notice.noTableToExport': Record<never, never>;
 	'shell.notice.notFound': { name: number | string };
 	'shell.notice.pasted': { more: number | string; n: number | string; table: number | string };
-	'shell.notice.pastedHeadless': { more: number | string; table: number | string };
 	'shell.notice.pastedSplit': { more: number | string; n: number | string; table: number | string };
 	'shell.notice.recalcNoQuery': Record<never, never>;
 	'shell.notice.recalculated': Record<never, never>;

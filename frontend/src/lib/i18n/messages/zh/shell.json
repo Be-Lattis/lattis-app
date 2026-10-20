@@ -481,7 +481,6 @@
 		"created": "已创建表格“{table}”{more}",
 		"widened": "列 {column} 已从 {from} 更改为 {to}（按 Ctrl+Z 撤消）",
 		"invalidValue": "值与类型不符：单元格已标记为错误",
-		"pastedHeadless": "已创建表格“{table}”，无标题{more}：如有需要，请右键单击 › 表格 › “将标题移出”",
 		"pasted": "已创建表格“{table}”{more}（{n, plural, other {# 行}}）",
 		"pastedSplit": "已创建表格“{table}”{more}（{n, plural, other {# 行}}；Ctrl+Z：撤消，单元格保持为自由单元格）",
 		"defaultColumn": "列{n}",

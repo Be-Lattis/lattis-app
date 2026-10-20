@@ -44,11 +44,12 @@ type Event struct {
 	From    grid.Type `json:"from"`    // élargissement
 	To      grid.Type `json:"to"`
 	Invalid bool      `json:"invalid"` // saisie hors type dans une colonne au type fixé
-	// Headless : tableau collé sans ligne d'en-tête reconnue (« Colonne n »).
+	// Headless : tableau tapé ou collé sans ligne d'en-tête reconnue
+	// (« Colonne n »).
 	Headless bool `json:"headless"`
-	// Unnamed : tableau tapé dont la 1re ligne a du texte et une valeur
-	// d'un autre type (« Léa | 31 ») : toutes les lignes sont des données,
-	// sous un en-tête « Colonne n » posé au-dessus (unnamed.go).
+	// Unnamed : tableau tapé ou collé dont la 1re ligne a du texte et une
+	// valeur d'un autre type (« Léa | 31 ») : toutes les lignes sont des
+	// données, sous un en-tête « Colonne n » posé au-dessus (unnamed.go).
 	Unnamed bool `json:"unnamed,omitempty"`
 	// Keyed : colonne devenue clé pour une formule (« Tableau.Colonne »).
 	Keyed string `json:"keyed"`
@@ -352,7 +353,8 @@ func (t *tx) input(sheet int64, row, col int, raw string, ev *Event) error {
 				return t.markOut(sheet, row, col, outNote)
 			}
 		}
-		// Collage cellule par cellule : comme avant, deux lignes suffisent.
+		// Collage cellule par cellule : deux lignes suffisent (pas de carré
+		// de 2 × 2) ; l'en-tête suit la règle de la saisie (textRow).
 		name, err := t.birthOf(sheet, row, col, !t.pasting)
 		if name != "" {
 			ev.Created = name
@@ -525,20 +527,21 @@ func (t *tx) newColumn(tb Table, pos int, name string) (Table, error) {
 
 // birth crée un tableau si la cellule saisie appartient à une zone de
 // cellules libres d'au moins MinRows lignes. La première ligne de la zone
-// donne les en-têtes (saisie : seulement si elle n'a que des textes, voir
-// birthOf).
+// donne les en-têtes si elle n'a que des textes (voir birthOf).
 func (t *tx) birth(sheet int64, row, col int) (string, error) {
 	return t.birthOf(sheet, row, col, false)
 }
 
-// birthOf est birth ; typed (saisie) : la zone doit aussi remplir un carré
-// de 2 × 2 (dense), une liste d'une seule colonne reste libre, et la 1re
-// ligne n'est l'en-tête que si elle n'a que des textes (textRow, décision de
-// Louis du 20/10/2026) : une valeur d'un autre type (nombre, date, heure,
-// booléen, pourcentage, montant) en fait une donnée, sous un en-tête
-// « Colonne n » posé au-dessus quand la place est libre (headRoom ; sinon
-// les cellules restent libres). Un tableau déplacé ou relu (notes, titres)
-// renaît sans ces conditions.
+// birthOf est birth. La 1re ligne n'est l'en-tête que si elle n'a que des
+// textes (textRow, décision de Louis du 20/10/2026 pour la saisie, étendue
+// le 21/10/2026 au collage, au déplacement et à la relecture : « même règle
+// partout ») : une valeur d'un autre type (nombre, date, heure, booléen,
+// pourcentage, montant) en fait une donnée, sous un en-tête « Colonne n »
+// posé au-dessus quand la place est libre (headRoom ; sinon les cellules
+// restent libres). typed (saisie) : la zone doit aussi remplir un carré de
+// 2 × 2 (dense), une liste d'une seule colonne reste libre ; un collage
+// cellule par cellule, un tableau déplacé ou relu (notes, titres) renaissent
+// sans cette condition.
 func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	cells, err := t.cells(sheet)
 	if err != nil {
@@ -600,7 +603,7 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	}
 	headers, data, top := grid2[0], grid2[1:], r0
 	unnamed := false
-	if typed && !textRow(grid2[0]) {
+	if !textRow(grid2[0]) {
 		// Décision de Louis (20/10/2026) : la 1re ligne tapée est l'en-tête,
 		// sauf si elle a une valeur qui n'est pas un texte (« Léa | 31 »,
 		// 10 | 20, une date…) : alors toutes les lignes tapées sont des
@@ -609,7 +612,10 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 		// place libre au-dessus (ligne 1, titre, autre tableau, tableau
 		// croisé, fusion, plage), les cellules restent libres (comme dans
 		// Excel, où une liste n'est pas un tableau ; « Mettre sous forme de
-		// tableau » les reprend).
+		// tableau » les reprend). Même règle, depuis le 21/10/2026, pour un
+		// collage cellule par cellule et un tableau déplacé ou relu ; un
+		// bloc collé dans une zone vide insère la ligne qui manque
+		// (pasteIslands).
 		room, err := t.headRoom(sheet, r0, c0, c1)
 		if err != nil || !room {
 			return "", err
@@ -617,19 +623,6 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 		// Un texte dans la ligne (« Léa | 31 ») : la barre d'état propose
 		// d'en faire l'en-tête ; une liste sans texte (10 | 20) : non.
 		headers, data, top, unnamed = autoHeaders(c1-c0+1), grid2, r0-1, typedHeader(grid2)
-	} else if !typed && !typedHeader(grid2) {
-		// Relu ou déplacé, une liste de valeurs (10, 20, 30) : la première
-		// ligne reste une donnée, les colonnes s'appellent « Colonne n » et
-		// l'en-tête se place au-dessus. Sans place libre au-dessus, les
-		// cellules restent libres.
-		if r0 == 0 {
-			return "", nil
-		}
-		free, err := t.areaFree(sheet, r0-1, c0-1, r0-1, c1+1)
-		if err != nil || !free {
-			return "", err
-		}
-		headers, data, top = autoHeaders(c1-c0+1), grid2, r0-1
 	}
 	for _, c := range cells {
 		if c.Row >= r0 && c.Row <= r1 && c.Col >= c0 && c.Col <= c1 {
@@ -659,11 +652,12 @@ func (t *tx) birthOf(sheet int64, row, col int, typed bool) (string, error) {
 	return name, t.autoKey(tb.ID)
 }
 
-// typedHeader : la première ligne d'un îlot relu ou déplacé donne les
-// en-têtes si elle a au moins un texte. Une première ligne sans texte
-// (nombre, date, heure, booléen, pourcentage) est une donnée, pas un titre,
-// même au-dessus de valeurs d'autres types : 10 au-dessus de 20 et 30, ou
-// une date en tête d'une liste mixte.
+// typedHeader : la première ligne d'un îlot a au moins un texte (« Léa |
+// 31 », « Pays | 2024 ») ; prise pour des données (textRow), la barre
+// d'état propose d'en faire l'en-tête (Event.Unnamed). Une première ligne
+// sans texte (nombre, date, heure, booléen, pourcentage) : non, même
+// au-dessus de valeurs d'autres types (10 au-dessus de 20 et 30, une date en
+// tête d'une liste mixte).
 func typedHeader(rows [][]string) bool {
 	if len(rows) < 2 {
 		return true

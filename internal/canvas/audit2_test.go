@@ -44,10 +44,11 @@ func TestClearSplitKeepsName(t *testing.T) {
 }
 
 // Audit 2 I6 : un tableau croisé à coin vide et des dates en en-tête,
-// collés. Tapés, la règle de la saisie (décision 0005, 20/10/2026) : une
-// 1re ligne de textes (coin vide compris) est l'en-tête, comme collée ; des
-// dates dans la 1re ligne en font une donnée (en ligne 1, sans place pour
-// l'en-tête au-dessus : cellules libres).
+// collés ou tapés : la même règle (décision 0005, 20 et 21/10/2026). Une
+// 1re ligne de textes (coin vide compris) est l'en-tête ; des dates dans la
+// 1re ligne en font une donnée. En ligne 1, sans place pour l'en-tête
+// au-dessus : collées, une ligne est insérée pour l'en-tête « Colonne n » ;
+// tapées, les cellules restent libres.
 func TestPasteHeaderLikeTyping(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
@@ -56,7 +57,7 @@ func TestPasteHeaderLikeTyping(t *testing.T) {
 		typed string
 	}{
 		{"coin vide", [][]string{{"", "Jan", "Fév"}, {"Nord", "1", "2"}, {"Sud", "3", "4"}}, "Feuille1@A1:Colonne 1|Jan|Fév×2", "Feuille1@A1:Colonne 1|Jan|Fév×2"},
-		{"dates en en-tête", [][]string{{"Pays", "01/01/2024", "01/02/2024"}, {"France", "1", "2"}, {"Italie", "3", "4"}}, "Feuille1@A1:Pays|01/01/2024|01/02/2024×2",
+		{"dates en en-tête", [][]string{{"Pays", "01/01/2024", "01/02/2024"}, {"France", "1", "2"}, {"Italie", "3", "4"}}, "Feuille1@A1:Colonne 1|Colonne 2|Colonne 3×3",
 			"A1=Pays B1=01/01/2024 C1=01/02/2024 A2=France B2=1 C2=2 A3=Italie B3=3 C3=4"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

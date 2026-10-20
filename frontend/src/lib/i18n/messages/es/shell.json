@@ -481,7 +481,6 @@
 		"created": "Tabla «{table}» creada{more}",
 		"widened": "Columna {column} cambiada de {from} a {to} (Ctrl+Z para deshacer)",
 		"invalidValue": "El valor no corresponde al tipo: celda marcada como error",
-		"pastedHeadless": "Tabla «{table}» creada sin encabezados{more}: clic derecho › Tabla › «Sacar el encabezado» si es necesario",
 		"pasted": "Tabla «{table}» creada{more} ({n, plural, one {# fila} other {# filas}})",
 		"pastedSplit": "Tabla «{table}» creada{more} ({n, plural, one {# fila} other {# filas}}; Ctrl+Z: la deshace, las celdas quedan libres)",
 		"defaultColumn": "Columna {n}",

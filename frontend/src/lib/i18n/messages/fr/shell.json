@@ -481,7 +481,6 @@
 		"created": "Tableau « {table} » créé{more}",
 		"widened": "Colonne {column} passée de {from} à {to} (Ctrl+Z pour annuler)",
 		"invalidValue": "Valeur hors type : cellule marquée en erreur",
-		"pastedHeadless": "Tableau « {table} » créé sans en-têtes{more} : clic droit › Tableau › « Sortir l'en-tête » si besoin",
 		"pasted": "Tableau « {table} » créé{more} ({n, plural, one {# ligne} other {# lignes}})",
 		"pastedSplit": "Tableau « {table} » créé{more} ({n, plural, one {# ligne} other {# lignes}} ; Ctrl+Z : le défaire, les cellules restent libres)",
 		"defaultColumn": "Colonne {n}",

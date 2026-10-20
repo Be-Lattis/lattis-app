@@ -481,7 +481,6 @@
 		"created": "Table “{table}” created{more}",
 		"widened": "Column {column} changed from {from} to {to} (Ctrl+Z to undo)",
 		"invalidValue": "Value does not match the type: cell marked as an error",
-		"pastedHeadless": "Table “{table}” created without headers{more}: right-click › Table › “Move header out” if needed",
 		"pasted": "Table “{table}” created{more} ({n, plural, one {# row} other {# rows}})",
 		"pastedSplit": "Table “{table}” created{more} ({n, plural, one {# row} other {# rows}}; Ctrl+Z: undo it, the cells stay free)",
 		"defaultColumn": "Column {n}",

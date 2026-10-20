@@ -89,34 +89,6 @@ func TestTypedHeader(t *testing.T) {
 	}
 }
 
-// En-tête d'un bloc collé : texte au-dessus de valeurs typées, ou, tout en
-// texte, vote des colonnes sur la longueur des valeurs.
-func TestHasHeader(t *testing.T) {
-	for _, tt := range []struct {
-		rows [][]string
-		want bool
-	}{
-		{[][]string{{"Prix"}, {"3"}, {"4"}}, true},
-		{[][]string{{"Code", "Quand"}, {"12", "01/10/2026"}, {"x7", "hier"}, {"40", "05/09/2026"}}, true},
-		{[][]string{{"Code", "Nom"}, {"A", "x"}, {"B", "y"}, {"A", "x"}}, true},
-		{[][]string{{"Nom", "Ville"}, {"Dupont;007", "Lyon"}, {"Martin;12", "Rome"}}, true},
-		{[][]string{{"Ville", "Pays"}, {"Lyon", "FR"}, {"Rome", "IT"}}, true},
-		// Données : longueurs égales à la première, valeurs variées, première
-		// valeur répétée, en-têtes en double, deux lignes seulement.
-		{[][]string{{"Jean"}, {"Paul"}, {"Anne"}}, false},
-		{[][]string{{"Paris"}, {"Lyon"}, {"Nantes"}}, false},
-		{[][]string{{"Lyon"}, {"Rome"}, {"Lyon"}}, false},
-		{[][]string{{"Nom", "Nom"}, {"a", "b"}, {"c", "d"}}, false},
-		{[][]string{{"Produit", "produit"}, {"1", "2"}, {"3", "4"}}, true},
-		{[][]string{{"Nom"}, {"Dupont"}}, false},
-		{[][]string{{"10:30"}, {"abc"}, {"def"}}, false},
-	} {
-		if got := hasHeader(tt.rows, len(tt.rows[0])); got != tt.want {
-			t.Errorf("hasHeader(%v) = %v", tt.rows, got)
-		}
-	}
-}
-
 // Les saisies « à la Excel » des cellules libres sont reconnues (audit n° 7).
 func TestFreeCellValues(t *testing.T) {
 	ctx := context.Background()
