@@ -20,6 +20,7 @@
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode, type Size } from './fit';
 	import { platform, scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
+	import { lattis } from '#lib/remote/lattis.svelte.js';
 	import { keyLabel, pdfPrinterHint } from '#lib/web/platform.js';
 	import { isNarrow, revealX } from '#lib/ui/mobile.js';
 	import type { IconName } from '#lib/icons/icons.js';
@@ -319,6 +320,8 @@
 	// Onglet Mise en page.
 	const pg = (a: PageAction) => (onpage ? () => onpage(a) : undefined);
 	const ps = $derived(pageSetup ?? { header: {}, footer: {} });
+	/** Connecté à au moins un Serveur Lattis (bouton en grand dans Données). */
+	const lattisSignedIn = $derived(sharedWorkbooksEnabled() && (lattis.state.servers ?? []).some((x) => !!x.user));
 	const mPreset = $derived(marginPreset(ps));
 	const marginHint = (k: keyof typeof MARGINS) => {
 		const m = MARGINS[k];
@@ -695,6 +698,8 @@
 				compact: true,
 				commands: readOnly([
 					{ label: t('ribbon.cmd.fromTable.label'), icon: 'sheet', size: 'big', run: data('table'), hint: t('ribbon.cmd.fromTable.tooltip') },
+					// Connecté à un Serveur Lattis : son bouton passe en grand, à côté (demande de Louis, 21/10).
+					...(lattisSignedIn ? [{ label: t('ribbon.cmd.lattisServer.label'), icon: 'link' as const, size: 'big' as const, run: data('lattis'), hint: t('ribbon.cmd.lattisServer.tooltip') }] : []),
 					{ label: t('ribbon.cmd.csv.label'), icon: 'file-csv', size: 'small' as const, run: data('csv'), hint: t('ribbon.cmd.csv.tooltip') },
 					{ label: t('ribbon.cmd.xlsx.label'), icon: 'table', size: 'small' as const, run: data('xlsx'), hint: t('ribbon.cmd.xlsx.tooltip') },
 					{
@@ -720,7 +725,7 @@
 						]
 					},
 					// Serveur Lattis : bouton à lui, à côté des bases de données (comme les sources propres d'Excel).
-					...(sharedWorkbooksEnabled() ? [{ label: t('ribbon.cmd.lattisServer.label'), icon: 'link' as const, size: 'small' as const, run: data('lattis'), hint: t('ribbon.cmd.lattisServer.tooltip') }] : []),
+					...(sharedWorkbooksEnabled() && !lattisSignedIn ? [{ label: t('ribbon.cmd.lattisServer.label'), icon: 'link' as const, size: 'small' as const, run: data('lattis'), hint: t('ribbon.cmd.lattisServer.tooltip') }] : []),
 					{ label: t('ribbon.cmd.web.label'), icon: 'web', size: 'small' as const, run: data('web'), hint: t('ribbon.cmd.web.tooltip') },
 				])
 			},
