@@ -36,7 +36,7 @@ export const fold = (s: string) =>
 /** Ancre d'un titre : « Clés et types » → « cles-et-types ». */
 export function slug(s: string): string {
 	return fold(s)
-		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/[^\p{L}\p{N}]+/gu, '-') // lettres de toute écriture (titres chinois)
 		.replace(/^-|-$/g, '');
 }
 
