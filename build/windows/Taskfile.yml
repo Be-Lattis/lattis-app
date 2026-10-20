@@ -98,11 +98,8 @@ tasks:
     summary: Packages the application
     cmds:
       - task: '{{if eq (.FORMAT | default "nsis") "msix"}}create:msix:package{{else}}create:nsis:installer{{end}}'
-        vars:
-          INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
     vars:
       FORMAT: '{{.FORMAT | default "nsis"}}'
-      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
 
   generate:syso:
     summary: Generates Windows `.syso` file
@@ -120,34 +117,31 @@ tasks:
       - task: package:nsis
         vars:
           ARCH: '{{.ARCH}}'
-          INSTALL_SCOPE: '{{.INSTALL_SCOPE}}'
     vars:
       ARCH: '{{.ARCH | default ARCH}}'
-      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
 
   # Installeur NSIS à partir de bin/lattis.exe tel qu'il est (sans le
   # reconstruire : release le signe avant). Avec un certificat
   # (WINDOWS_CERT_PATH ou WINDOWS_CERT_THUMBPRINT), makensis signe
   # l'installeur et le désinstalleur par build/windows/sign.ps1.
+  # Un seul installeur (bin/lattis-<arch>-installer.exe) : on y choisit
+  # d'installer pour soi seul ou pour tous les utilisateurs du poste
+  # (build/windows/nsis/lattis_scope.nsh).
   package:nsis:
     summary: Creates the NSIS installer from the existing bin/lattis.exe (no rebuild)
     dir: build/windows/nsis
-    preconditions:
-      - sh: '[ "{{.INSTALL_SCOPE}}" = "user" ] || [ "{{.INSTALL_SCOPE}}" = "machine" ]'
-        msg: "INSTALL_SCOPE must be 'user' or 'machine', got '{{.INSTALL_SCOPE}}'"
     cmds:
       # Create the Microsoft WebView2 bootstrapper if it doesn't exist
       - wails3 generate webview2bootstrapper -dir "{{.ROOT_DIR}}/build/windows/nsis"
       - |
         {{if eq OS "windows"}}
-        makensis {{if eq .INSTALL_SCOPE "user"}}-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user {{end}}{{if .SIGNING}}-DSIGN_SCRIPT="{{.ROOT_DIR}}\build\windows\sign.ps1" {{end}}-DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}.exe" project.nsi
+        makensis {{if .SIGNING}}-DSIGN_SCRIPT="{{.ROOT_DIR}}\build\windows\sign.ps1" {{end}}-DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}.exe" project.nsi
         {{else}}
-        makensis {{if eq .INSTALL_SCOPE "user"}}-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user {{end}}-DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe" project.nsi
+        makensis -DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe" project.nsi
         {{end}}
     vars:
       ARCH: '{{.ARCH | default ARCH}}'
       ARG_FLAG: '{{if eq .ARCH "amd64"}}AMD64{{else}}ARM64{{end}}'
-      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
       SIGNING: '{{if and (ne .SIGN "false") (or (env "WINDOWS_CERT_PATH") (env "WINDOWS_CERT_THUMBPRINT"))}}true{{end}}'
 
   create:msix:package:
@@ -208,14 +202,12 @@ tasks:
     summary: Creates the NSIS installer, signed (installer and uninstaller)
     cmds:
       - task: create:nsis:installer
-        vars:
-          INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
 
   release:
-    summary: Builds the signed Windows release (lattis.exe, NSIS installers, MSIX)
+    summary: Builds the signed Windows release (lattis.exe, NSIS installer, MSIX)
     desc: |
-      Construit lattis.exe, le signe, puis en fait les deux installeurs NSIS (par
-      utilisateur et par machine) et le paquet
+      Construit lattis.exe, le signe, puis en fait l'installeur NSIS (pour
+      l'utilisateur ou pour tous, au choix à l'installation) et le paquet
       MSIX, signés eux aussi quand un certificat est configuré (sinon : non
       signés, avec un avertissement). Résultats dans bin/.
       SIGN=false force des paquets non signés.
@@ -224,17 +216,9 @@ tasks:
         vars:
           ARCH: '{{.ARCH}}'
       - task: '{{if ne .SIGN "false"}}sign:exe{{else}}release:nosign{{end}}'
-      # Deux installeurs : par utilisateur (bin/lattis-<arch>-user-installer.exe,
-      # sans droits d'administration) et par machine (bin/lattis-<arch>-installer.exe).
       - task: package:nsis
         vars:
           ARCH: '{{.ARCH}}'
-          INSTALL_SCOPE: user
-          SIGN: '{{.SIGN}}'
-      - task: package:nsis
-        vars:
-          ARCH: '{{.ARCH}}'
-          INSTALL_SCOPE: machine
           SIGN: '{{.SIGN}}'
       - task: package:msix
         vars:

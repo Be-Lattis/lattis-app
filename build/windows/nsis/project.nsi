@@ -28,8 +28,7 @@ Unicode true
 ## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "${INFO_PROJECTNAME}.exe"
 ## !define UNINST_KEY_NAME     "UninstKeyInRegistry"  # Default "${INFO_COMPANYNAME}${INFO_PRODUCTNAME}"
 ####
-## !define REQUEST_EXECUTION_LEVEL "admin"            # Default "admin"  see also https://nsis.sourceforge.io/Docs/Chapter4.html
-## !define WAILS_INSTALL_SCOPE     "user"             # Default "machine" - set to "user" for per-user install ($LOCALAPPDATA) without UAC prompt
+## Lattis : RequestExecutionLevel user impose (wails_tools.nsh), portee choisie a l'execution (lattis_scope.nsh).
 ####
 ## Include the wails tools
 ####
@@ -49,7 +48,7 @@ VIAddVersionKey "ProductName"     "${INFO_PRODUCTNAME}"
 # Enable HiDPI support. https://nsis.sourceforge.io/Reference/ManifestDPIAware
 ManifestDPIAware true
 
-!include "MUI.nsh"
+!include "MUI2.nsh"
 
 !define MUI_ICON "..\icon.ico"
 !define MUI_UNICON "..\icon.ico"
@@ -57,15 +56,26 @@ ManifestDPIAware true
 !define MUI_FINISHPAGE_NOAUTOCLOSE # Wait on the INSTFILES page so the user can take a look into the details of the installation steps
 !define MUI_ABORTWARNING # This will warn the user if they exit from the installer.
 
+!define MUI_PAGE_CUSTOMFUNCTION_PRE lattis.welcomePre
 !insertmacro MUI_PAGE_WELCOME # Welcome to the installer page.
 # !insertmacro MUI_PAGE_LICENSE "resources\eula.txt" # Adds a EULA page to the installer
+## Lattis : page "Type d'installation", pour moi seulement / pour tous les utilisateurs (lattis_scope.nsh).
+Page custom lattis.scopePage lattis.scopeLeave
+!define MUI_PAGE_CUSTOMFUNCTION_PRE lattis.directoryPre
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW lattis.directoryShow
 !insertmacro MUI_PAGE_DIRECTORY # In which folder install page.
 !insertmacro MUI_PAGE_INSTFILES # Installing page.
 !insertmacro MUI_PAGE_FINISH # Finished installation page.
 
 !insertmacro MUI_UNPAGE_INSTFILES # Uninstalling page
 
-!insertmacro MUI_LANGUAGE "English" # Set the Language of the installer
+## Lattis : la langue du systeme si elle est ici, l'anglais (la premiere) sinon.
+!insertmacro MUI_LANGUAGE "English"
+!insertmacro MUI_LANGUAGE "French"
+!insertmacro MUI_LANGUAGE "German"
+!insertmacro MUI_LANGUAGE "Spanish"
+!insertmacro MUI_LANGUAGE "SimpChinese"
+!include /CHARSET=UTF8 "lattis_lang.nsh"
 
 ## The following two statements can be used to sign the installer and the uninstaller. The path to the binaries are provided in %1
 #!uninstfinalize 'signtool --file "%1"'
@@ -79,61 +89,19 @@ ManifestDPIAware true
 !endif
 
 Name "${INFO_PRODUCTNAME}"
-## Lattis : deux installeurs par version (docs/release/publier.md).
-##   par utilisateur (-DWAILS_INSTALL_SCOPE=user) : %LOCALAPPDATA%\Programs\Lattis, HKCU,
-##     sans droits d'administration ; publie sous Lattis-windows-x64-setup.exe ;
-##   par machine (defaut) : Program Files, HKLM, droits d'administration ;
-##     publie sous Lattis-windows-x64-setup-machine.exe.
-!if "${WAILS_INSTALL_SCOPE}" == "user"
-    OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-user-installer.exe"
-    InstallDir "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
-!else
-    OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe"
-    InstallDir "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
-!endif
+## Lattis : un seul installeur, publie sous Lattis-windows-x64-setup.exe
+## (docs/release/publier.md). Pas d'InstallDir : le dossier depend de la portee
+## (lattis.applyScope), $INSTDIR n'est rempli avant .onInit que par /D=.
+OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe"
 ShowInstDetails show # This will always show the installation details.
 
-## Mise a jour lancee par Lattis a sa fermeture (internal/update) :
-##   setup.exe /S /UPDATE [/RELAUNCH] /D=<dossier d'installation>
+## Ligne de commande (deploiement, mise a jour lancee par Lattis a sa fermeture) :
+##   setup.exe [/S] [/CurrentUser | /AllUsers] [/UPDATE] [/RELAUNCH] [/D=<dossier>]
+## /CurrentUser, /AllUsers et la portee par defaut : lattis_scope.nsh ;
 ## /UPDATE : ne recree pas le raccourci du Bureau (l'utilisateur a pu le retirer) ;
-## /RELAUNCH : rouvre Lattis apres l'installation (sans droits d'administration).
-Var lattisUpdate
-Var lattisRelaunch
-
-!if "${WAILS_INSTALL_SCOPE}" == "user"
-    !define LATTIS_OTHER_SCOPE_ROOT HKLM
-    !define LATTIS_OTHER_SCOPE_TEXT "Lattis is already installed for all users of this computer (Program Files).$\r$\n$\r$\nInstalling it for your account as well gives you two copies: this one will open .lattis files and lattis:// links for you, and it updates itself without administrator rights. You can uninstall the other copy from Settings > Apps.$\r$\n$\r$\nContinue?"
-!else
-    !define LATTIS_OTHER_SCOPE_ROOT HKCU
-    !define LATTIS_OTHER_SCOPE_TEXT "Lattis is already installed for your account only (AppData\Local\Programs).$\r$\n$\r$\nInstalling it for all users as well gives you two copies, and your per-user copy keeps opening .lattis files and lattis:// links for you. You can uninstall it from Settings > Apps.$\r$\n$\r$\nContinue?"
-!endif
-
-Function .onInit
-   !insertmacro wails.checkArchitecture
-
-   ${GetParameters} $R0
-   ClearErrors
-   ${GetOptions} $R0 "/UPDATE" $R1
-   ${IfNot} ${Errors}
-       StrCpy $lattisUpdate 1
-   ${EndIf}
-   ClearErrors
-   ${GetOptions} $R0 "/RELAUNCH" $R1
-   ${IfNot} ${Errors}
-       StrCpy $lattisRelaunch 1
-   ${EndIf}
-
-   ; Les deux installeurs coexistent mal : prevenir si l'autre est deja la.
-   ${IfNot} ${Silent}
-       SetRegView 64
-       ReadRegStr $R2 ${LATTIS_OTHER_SCOPE_ROOT} "${UNINST_KEY}" "UninstallString"
-       ${If} $R2 != ""
-           MessageBox MB_YESNO|MB_ICONEXCLAMATION "${LATTIS_OTHER_SCOPE_TEXT}" IDYES lattis_other_ok
-           Quit
-           lattis_other_ok:
-       ${EndIf}
-   ${EndIf}
-FunctionEnd
+## /RELAUNCH : rouvre Lattis apres l'installation (sans droits d'administration) ;
+## /D= : dossier d'installation, toujours en dernier, sans guillemets.
+!include "lattis_scope.nsh"
 
 ; Lattis lance la mise a jour en se fermant : attendre que lattis.exe soit
 ; libre (30 s au plus) avant de le remplacer.
@@ -179,13 +147,13 @@ Section
     !insertmacro wails.writeUninstaller
 
     ${If} $lattisRelaunch == 1
-        !if "${WAILS_INSTALL_SCOPE}" == "user"
-            Exec '"$INSTDIR\${PRODUCT_EXECUTABLE}"'
-        !else
+        ${If} $lattisIsAdmin == 1
             ; Installeur eleve : relance par l'Explorateur, donc sans les droits
             ; d'administration.
             Exec '"$WINDIR\explorer.exe" "$INSTDIR\${PRODUCT_EXECUTABLE}"'
-        !endif
+        ${Else}
+            Exec '"$INSTDIR\${PRODUCT_EXECUTABLE}"'
+        ${EndIf}
     ${EndIf}
 SectionEnd
 

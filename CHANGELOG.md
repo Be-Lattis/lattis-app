@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Changements
+
+- Un seul installeur Windows, `Lattis-windows-x64-setup.exe`, qui demande pour qui installer, comme celui de Python : « Installer pour moi seulement » (choix par défaut : dans votre profil, sans droits d'administration, mises à jour sans invite de Windows) ou « Installer pour tous les utilisateurs de ce poste » (Program Files). Il s'ouvre sans demander de droits ; Windows ne les demande que si l'on choisit tous les utilisateurs. Une installation existante, y compris faite par l'un des deux installeurs de la 0.3.0-beta, est cochée d'office et mise à jour sur place ; la mise à jour automatique des 0.3.0-beta continue de fonctionner. L'installeur suit la langue de Windows (français, anglais, allemand, espagnol, chinois). Pour un déploiement : `/S /AllUsers` ou `/S /CurrentUser`.
+
 ### Corrections
 
 - Une colonne calculée (Montant = Prix × Quantité) sert de champ de tableau croisé dynamique, en valeurs comme en lignes, au lieu d'être refusée ; la somme garde le format de la colonne (€).

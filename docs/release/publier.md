@@ -23,8 +23,7 @@ Les noms ne contiennent pas la version : le lien `releases/latest/download/<nom>
 
 | Système | Fichier | Lien direct (dernière version) |
 |---|---|---|
-| Windows 10/11, installeur pour l'utilisateur | `Lattis-windows-x64-setup.exe` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-windows-x64-setup.exe> |
-| Windows 10/11, installeur pour la machine | `Lattis-windows-x64-setup-machine.exe` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-windows-x64-setup-machine.exe> |
+| Windows 10/11, installeur | `Lattis-windows-x64-setup.exe` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-windows-x64-setup.exe> |
 | Windows 10/11, portable | `Lattis-windows-x64-portable.exe` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-windows-x64-portable.exe> |
 | Windows 10/11, MSIX | `Lattis-windows-x64.msix` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-windows-x64.msix> |
 | macOS (Apple Silicon et Intel) | `Lattis-macos-universal.dmg` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/Lattis-macos-universal.dmg> |
@@ -34,7 +33,28 @@ Les noms ne contiennent pas la version : le lien `releases/latest/download/<nom>
 | Empreintes | `SHA256SUMS.txt` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/SHA256SUMS.txt> |
 | Manifeste | `latest.json` | <https://github.com/Be-Lattis/lattis-app/releases/latest/download/latest.json> |
 
-**Deux installeurs (Windows).** `Lattis-windows-x64-setup.exe` installe Lattis **pour l'utilisateur** : dans `%LOCALAPPDATA%\Programs\Lattis`, clé de désinstallation sous `HKCU`, raccourcis et associations de l'utilisateur, sans droits d'administration ; c'est celui des postes sans droits d'administration, et celui qui se met à jour sans invite de Windows. `Lattis-windows-x64-setup-machine.exe` l'installe **pour la machine** : dans `Program Files\Lattis\Lattis`, clé sous `HKLM`, pour tous les comptes, avec les droits d'administration (sa mise à jour automatique passe par l'invite UAC). Les deux viennent du même `build/windows/nsis/project.nsi` (`wails3 task windows:package:nsis INSTALL_SCOPE=user`, puis `INSTALL_SCOPE=machine` : `bin/lattis-amd64-user-installer.exe` et `bin/lattis-amd64-installer.exe`). Ils peuvent coexister, mais chacun prévient s'il trouve l'autre déjà installé (sauf en silencieux, `/S`) ; pour l'utilisateur, la copie par utilisateur l'emporte (ses associations `HKCU` passent devant celles de `HKLM`). Les réglages, classeurs récents et caches sont dans le profil (`%APPDATA%\Lattis`, `%LOCALAPPDATA%\Lattis`), communs aux deux installations et à la version portable. Options de la ligne de commande, en plus de celles de NSIS (`/S`, `/D=dossier`, en dernier) : `/UPDATE` (ne recrée pas le raccourci du Bureau) et `/RELAUNCH` (rouvre Lattis après l'installation, sans les droits d'administration), utilisées par la mise à jour automatique.
+**Un installeur (Windows), deux façons d'installer.** `Lattis-windows-x64-setup.exe` démarre **sans droits d'administration** (pas d'invite UAC à l'ouverture) et demande, comme l'installeur de Python, pour qui installer :
+
+- « Installer pour moi seulement » (choix par défaut) : dans `%LOCALAPPDATA%\Programs\Lattis`, clé de désinstallation sous `HKCU`, raccourcis et associations de l'utilisateur, sans droits d'administration ; c'est le choix des postes sans droits d'administration, et l'installation qui se met à jour sans invite de Windows ;
+- « Installer pour tous les utilisateurs de ce poste » : dans `Program Files\Lattis\Lattis`, clé sous `HKLM`, pour tous les comptes ; l'installeur se relance alors avec les droits d'administration (invite UAC, bouclier sur le bouton Suivant) ; refusée, on reste sur la page du choix. Sa mise à jour automatique passe aussi par l'invite UAC.
+
+Si Lattis est déjà installé, la page coche l'installation existante (« déjà installé ») et l'installeur la met à jour sur place, dans son dossier ; c'est aussi le cas des installations faites par les deux installeurs de la 0.3.0-beta (même clé de désinstallation `LattisLattis`, mêmes dossiers). Les deux installations peuvent coexister, mais l'installeur prévient quand on choisit l'autre (sauf en silencieux) ; pour l'utilisateur, la copie par utilisateur l'emporte (ses associations `HKCU` passent devant celles de `HKLM`). Le désinstalleur retire l'installation de son dossier, et demande les droits d'administration si c'est celle pour tous. Les réglages, classeurs récents et caches sont dans le profil (`%APPDATA%\Lattis`, `%LOCALAPPDATA%\Lattis`), communs aux deux installations et à la version portable. Textes de l'installeur en français, anglais, allemand, espagnol et chinois simplifié, selon la langue de Windows (l'anglais sinon). Construction : `wails3 task windows:package:nsis` (`build/windows/nsis/project.nsi`, `lattis_scope.nsh`, `lattis_lang.nsh`) donne `bin/lattis-amd64-installer.exe`.
+
+Ligne de commande (déploiement) :
+
+| Option | Effet |
+|---|---|
+| `/S` | silencieux |
+| `/CurrentUser` | pour l'utilisateur, sans jamais demander de droits |
+| `/AllUsers` | pour tous les utilisateurs ; si l'installeur n'a pas les droits d'administration, il se relance avec l'invite UAC, attend et rend le code de sortie de l'installation |
+| ni l'un ni l'autre | avec `/D=`, la portée de l'installation de ce dossier (pour tous sous Program Files) ; sans `/D=`, celle de l'installation existante (les deux : pour tous si l'installeur a déjà les droits, pour l'utilisateur sinon) ; sinon la page du choix, ou en silencieux pour tous si l'installeur a les droits d'administration (outil de déploiement), pour l'utilisateur sinon |
+| `/UPDATE` | ne recrée pas le raccourci du Bureau (mise à jour automatique) |
+| `/RELAUNCH` | rouvre Lattis après l'installation, sans les droits d'administration (mise à jour automatique) |
+| `/D=dossier` | dossier d'installation, en dernier, sans guillemets |
+
+Exemples : `Lattis-windows-x64-setup.exe /S /AllUsers` (déploiement sur un parc, lancé avec les droits), `Lattis-windows-x64-setup.exe /S /CurrentUser`. Désinstallation silencieuse : `"<dossier>\uninstall.exe" /S`.
+
+**Compatibilité 0.3.0-beta.** La release publie aussi `Lattis-windows-x64-setup-machine.exe`, **copie exacte** de `Lattis-windows-x64-setup.exe`, avec son entrée `windows-setup-machine` dans `latest.json` : la 0.3.0-beta installée pour tous les utilisateurs cherche sa mise à jour sous ce nom (voir [Mise à jour automatique](#mise-à-jour-automatique)). Ne pas l'annoncer sur le site ; la retirer quand plus aucune 0.3.0-beta par machine n'est en service.
 
 **Version portable (Windows).** `Lattis-windows-x64-portable.exe` est l'exécutable seul, lancé sans installation (clé USB, poste sans droits d'administration). Les liens `lattis://` marchent : l'application les déclare pour l'utilisateur au premier lancement, si aucune version installée ne le fait déjà. Ne sont pas faits : l'association des fichiers `.lattis` (double-clic), le raccourci du menu Démarrer et l'entrée dans Ajout/Suppression de programmes. Les réglages, classeurs récents et caches restent dans le profil de l'utilisateur (`%APPDATA%`, `%LOCALAPPDATA%`), communs avec une version installée. Il faut WebView2, présent sur Windows 10 à jour et Windows 11.
 
@@ -81,11 +101,13 @@ L'application de bureau (`internal/update`) lit la liste des versions par l'API 
 
 | Installation détectée | Fichier téléchargé | Application, à la fermeture de Lattis |
 |---|---|---|
-| pour l'utilisateur (`InstallLocation` de `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\LattisLattis` = dossier de l'exécutable) | `Lattis-windows-x64-setup.exe` | `setup.exe /S /UPDATE [/RELAUNCH] /D=<dossier>`, sans élévation |
-| pour la machine (même clé sous `HKLM`) | `Lattis-windows-x64-setup-machine.exe` | idem, lancé avec l'invite UAC ; refusée, la mise à jour reste prête et la barre d'état en donne la raison |
+| pour l'utilisateur (`InstallLocation` de `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\LattisLattis` = dossier de l'exécutable) | `Lattis-windows-x64-setup.exe` | `setup.exe /S /CurrentUser /UPDATE [/RELAUNCH] /D=<dossier>`, sans élévation |
+| pour tous les utilisateurs (même clé sous `HKLM`) | `Lattis-windows-x64-setup.exe` | `setup.exe /S /AllUsers /UPDATE [/RELAUNCH] /D=<dossier>`, lancé avec l'invite UAC ; refusée, la mise à jour reste prête et la barre d'état en donne la raison |
 | portable (ni l'une ni l'autre) | `Lattis-windows-x64-portable.exe` | téléchargé à côté (`lattis.exe.new`), mis à la place de l'exécutable (l'ancien devient `.old`, supprimé au lancement suivant) ; dossier en lecture seule : le clic ouvre la page de la version |
 | MSIX | — | rien : Windows (Store, App Installer) le met à jour |
 | macOS, Linux | — | la nouvelle version est signalée, le clic ouvre sa page |
+
+**Versions 0.3.0-beta déjà installées.** Leur code (avant l'installeur unique) cherche, dans la liste des fichiers de la release GitHub puis dans `latest.json` par son nom, `Lattis-windows-x64-setup.exe` pour une installation pour l'utilisateur et `Lattis-windows-x64-setup-machine.exe` pour une installation pour la machine, et lance ce fichier avec `/S /UPDATE [/RELAUNCH] /D=<dossier>`, **sans** `/CurrentUser` ni `/AllUsers` (avec l'invite UAC pour la machine). D'où, pour qu'elles se mettent à jour : la release publie l'installeur aussi sous l'ancien nom par machine (même fichier, entrée `windows-setup-machine` de `latest.json`), et l'installeur, sans option de portée, prend celle de l'installation dont le dossier est `/D=` (`HKLM` : pour tous, il a déjà les droits par l'invite UAC ; `HKCU` : pour l'utilisateur, sans élévation). La mise à jour arrive donc dans le même dossier, avec la même clé de désinstallation.
 
 « Redémarrez l'application pour appliquer la mise à jour » ferme Lattis par le chemin habituel (questions d'enregistrement, écouteurs `before_close`) puis relance l'application après l'installation (`/RELAUNCH`) ; une fermeture ordinaire installe aussi la mise à jour, sans relance. L'installeur attend que `lattis.exe` soit libre (30 s au plus) avant de le remplacer.
 
@@ -93,7 +115,7 @@ L'application de bureau (`internal/update`) lit la liste des versions par l'API 
 
 Désactivation : Fichier › Paramètres › Mises à jour, ou `updates.check = false` dans la configuration d'entreprise (en stratégie : verrouillé, voir [configuration-entreprise.md](../configuration-entreprise.md)). Rien en édition web.
 
-**À éprouver sur une vraie version** (les tests passent par un faux GitHub local) : la construction des deux installeurs par makensis en CI, l'installation silencieuse par-dessus une installation existante (attente de `lattis.exe`, `/D=`, relance), l'invite UAC et la relance sans élévation par l'Explorateur, le remplacement de l'exécutable portable en cours d'exécution, les redirections réelles de GitHub vers `objects.githubusercontent.com`. Pour cela : publier une pré-version `vX.Y.Z-beta.1`, l'installer de chacune des trois façons, puis publier `vX.Y.Z-beta.2`.
+**À éprouver sur une vraie version** (les tests passent par un faux GitHub local) : la construction de l'installeur par makensis en CI, la page du choix et la relance élevée pour tous les utilisateurs (et son refus), la mise à jour d'une 0.3.0-beta installée de chacune des deux façons, l'installation silencieuse par-dessus une installation existante (attente de `lattis.exe`, `/D=`, relance), l'invite UAC et la relance sans élévation par l'Explorateur, le remplacement de l'exécutable portable en cours d'exécution, les redirections réelles de GitHub vers `objects.githubusercontent.com`. Pour cela : publier une pré-version `vX.Y.Z-beta.1`, l'installer de chacune des trois façons, puis publier `vX.Y.Z-beta.2`.
 
 ## Notes de version
 

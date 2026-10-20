@@ -27,19 +27,11 @@
 !endif
 !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINST_KEY_NAME}"
 
-!ifndef WAILS_INSTALL_SCOPE
-    !define WAILS_INSTALL_SCOPE "machine"
-!endif
-
-!ifndef REQUEST_EXECUTION_LEVEL
-    !if "${WAILS_INSTALL_SCOPE}" == "user"
-        !define REQUEST_EXECUTION_LEVEL "user"
-    !else
-        !define REQUEST_EXECUTION_LEVEL "admin"
-    !endif
-!endif
-
-RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
+## Lattis : un seul installeur, lance SANS droits d'administration (manifeste
+## asInvoker, pas d'invite UAC au demarrage) ; il ne les demande que pour une
+## installation pour tous les utilisateurs, en se relancant (lattis_scope.nsh).
+## La portee est choisie a l'execution : $lattisScope ("user" ou "machine").
+RequestExecutionLevel user
 
 !ifdef ARG_WAILS_AMD64_BINARY
     !define SUPPORTS_AMD64
@@ -122,48 +114,32 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
 !macro wails.writeUninstaller
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
+    ; Lattis : SHCTX = HKCU pour l'utilisateur, HKLM pour tous les utilisateurs
+    ; (contexte pose par wails.setShellContext d'apres $lattisScope).
     SetRegView 64
-    !if "${WAILS_INSTALL_SCOPE}" == "user"
-        WriteRegStr HKCU "${UNINST_KEY}" "Publisher" "${INFO_COMPANYNAME}"
-        WriteRegStr HKCU "${UNINST_KEY}" "DisplayName" "${INFO_PRODUCTNAME}"
-        WriteRegStr HKCU "${UNINST_KEY}" "DisplayVersion" "${INFO_PRODUCTVERSION}"
-        WriteRegStr HKCU "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\${PRODUCT_EXECUTABLE}"
-        ; Lattis : dossier lu par l'application pour savoir comment elle est installee (internal/update).
-        WriteRegStr HKCU "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
-        WriteRegStr HKCU "${UNINST_KEY}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
-        WriteRegStr HKCU "${UNINST_KEY}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
+    WriteRegStr SHCTX "${UNINST_KEY}" "Publisher" "${INFO_COMPANYNAME}"
+    WriteRegStr SHCTX "${UNINST_KEY}" "DisplayName" "${INFO_PRODUCTNAME}"
+    WriteRegStr SHCTX "${UNINST_KEY}" "DisplayVersion" "${INFO_PRODUCTVERSION}"
+    WriteRegStr SHCTX "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+    ; Lattis : dossier lu par l'application pour savoir comment elle est installee (internal/update).
+    WriteRegStr SHCTX "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
+    WriteRegStr SHCTX "${UNINST_KEY}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
+    WriteRegStr SHCTX "${UNINST_KEY}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
 
-        ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
-        IntFmt $0 "0x%08X" $0
-        WriteRegDWORD HKCU "${UNINST_KEY}" "EstimatedSize" "$0"
-    !else
-        WriteRegStr HKLM "${UNINST_KEY}" "Publisher" "${INFO_COMPANYNAME}"
-        WriteRegStr HKLM "${UNINST_KEY}" "DisplayName" "${INFO_PRODUCTNAME}"
-        WriteRegStr HKLM "${UNINST_KEY}" "DisplayVersion" "${INFO_PRODUCTVERSION}"
-        WriteRegStr HKLM "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\${PRODUCT_EXECUTABLE}"
-        WriteRegStr HKLM "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
-        WriteRegStr HKLM "${UNINST_KEY}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
-        WriteRegStr HKLM "${UNINST_KEY}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
-
-        ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
-        IntFmt $0 "0x%08X" $0
-        WriteRegDWORD HKLM "${UNINST_KEY}" "EstimatedSize" "$0"
-    !endif
+    ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
+    IntFmt $0 "0x%08X" $0
+    WriteRegDWORD SHCTX "${UNINST_KEY}" "EstimatedSize" "$0"
 !macroend
 
 !macro wails.deleteUninstaller
     Delete "$INSTDIR\uninstall.exe"
 
     SetRegView 64
-    !if "${WAILS_INSTALL_SCOPE}" == "user"
-        DeleteRegKey HKCU "${UNINST_KEY}"
-    !else
-        DeleteRegKey HKLM "${UNINST_KEY}"
-    !endif
+    DeleteRegKey SHCTX "${UNINST_KEY}"
 !macroend
 
 !macro wails.setShellContext
-    ${If} ${REQUEST_EXECUTION_LEVEL} == "admin"
+    ${If} $lattisScope == "machine"
         SetShellVarContext all
     ${else}
         SetShellVarContext current
@@ -184,7 +160,7 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
         Goto ok
     ${EndIf}
 
-    ${If} ${REQUEST_EXECUTION_LEVEL} == "user"
+    ${If} $lattisScope != "machine"
         # If the installer is run in user level, check the user specific key exists and is not empty then webview2 is already installed
 	    ReadRegStr $0 HKCU "Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" "pv"
         ${If} $0 != ""
