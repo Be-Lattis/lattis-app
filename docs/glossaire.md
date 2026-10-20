@@ -43,6 +43,36 @@ Ce document fixe les mots de l'interface, de l'aide intégrée (`frontend/src/li
 | **zone de nom** | La case à gauche de la barre de formule (adresse ou nom de la cellule active). | name box |
 | **Annuler / Rétablir** | Ctrl+Z, Ctrl+Y. | Défaire, Refaire |
 
+## Traductions (anglais, référence des autres langues)
+
+Choisis au lot 4 (docs/i18n.md) ; les traductions allemande, espagnole et chinoise partent de ces termes et du vocabulaire d'Excel dans leur langue. Ruban : onglets en casse de titre (File, Home, Insert, Page Layout, Data, Formulas, Review, View), libellés et groupes en casse de phrase (Merge & center, Sort & filter, Freeze panes). Touches à l'anglaise (Ctrl+Shift+L, Esc, Enter, Del), guillemets “…”, pas d'espace avant « : » et « ; ».
+
+| Français | Anglais |
+|---|---|
+| classeur, feuille, onglet, tableau | workbook, sheet, tab, table |
+| cellule libre, colonne calculée, colonne saisie | free cell, calculated column, typed column |
+| clé, type fixé / inféré | key, fixed / inferred type |
+| tableau croisé dynamique (TCD) | PivotTable (`TCD1` reste tel quel : c'est une donnée) |
+| requête, connexion, Requêtes et connexions | query, connection, Queries & Connections |
+| Obtenir des données, Éditeur de requête, Fermer et charger | Get Data, Query Editor, Close & Load |
+| Serveur Lattis, Data Lake Lattis, donnée du Data Lake | Lattis Server, Lattis Data Lake, dataset |
+| propriétaire, concepteur, éditeur, participant, lecteur | owner, designer, editor, participant, viewer |
+| classeur figé / collaboratif, partagé en direct | frozen / collaborative workbook, shared live |
+| se connecter (à un serveur), connecté | sign in, signed in |
+| travailler à plusieurs | work together (co-editing) |
+| Regrouper des onglets, onglet à choix, Choisir par | Combine tabs, choice tab, Choose by |
+| Protéger le classeur, Protéger la structure | Protect Workbook, Protect structure |
+| volet, ruban, barre d'état, zone de nom | pane, ribbon, status bar, Name Box |
+| mise en forme conditionnelle, validation des données | conditional formatting, data validation |
+| Reproduire la mise en forme, Convertir (texte en colonnes) | Format painter, Text to columns |
+| Standard (format), Valider (barre de formule) | General, Enter |
+| contrôle, liste de choix | check, choice list |
+| mettre de côté, résultat déversé | set aside, spilled result |
+| formulaire, intertitre, lien pré-rempli | form, section heading, prefilled link |
+| poste, trousseau du système | computer, system keychain |
+| Basculer sur…, groupe d'en-têtes | Go to…, header group |
+| Histogramme, Barres, Fréquences | Column, Bar, Histogram |
+
 ## Écarts connus
 
 Corrigés avec ce glossaire (audit du 19/10/2026, M10) : l'onglet « SCRIPT » devient « Script » partout (ruban, aide, messages, documentation) ; le nom affiché par défaut d'un tableau croisé sans nom ; « Refaire » de l'éditeur de requête devient « Rétablir » ; l'apostrophe typographique des fichiers `.ts` hors grille, rubans et assistant ; un commentaire périmé sur les adresses A1 (`internal/transfer/xlsxformula.go`) ; les erreurs de connexion courantes de PostgreSQL, MySQL et SQL Server sont traduites (`internal/query/driverfr.go`).
