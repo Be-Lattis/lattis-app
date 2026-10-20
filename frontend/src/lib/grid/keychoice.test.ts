@@ -38,3 +38,15 @@ describe('question de la jointure (colonnes saisies)', () => {
 		expect(handQuestion(base)).toBeNull();
 	});
 });
+
+describe('cause du moteur (texte traduit)', () => {
+	const err = (id: string, args: Record<string, unknown>) => Object.assign(new Error('x'), { cause: { id, args, message: 'key to choose…' } });
+	it('clé', () => {
+		expect(keyQuestion('key to choose', err('key.chooseWhy', { table: 'Produits', column: 'Code', why: 'duplicates' }))).toEqual({ table: 'Produits', column: 'Code', why: 'duplicates' });
+		expect(keyQuestion('key to choose', err('key.choose', { table: 'Produits', column: 'Code' }))?.why).toBe('');
+	});
+	it('jointure', () => {
+		expect(handQuestion('join', err('hand.chooseJoin', { table: 'Suivi', columns: '« Nid », « Code site »' }))).toEqual({ table: 'Suivi', columns: ['Nid', 'Code site'] });
+		expect(handQuestion('join', err('hand.chooseJoinNone', { table: 'Suivi' }))).toEqual({ table: 'Suivi', columns: [] });
+	});
+});

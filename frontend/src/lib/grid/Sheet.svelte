@@ -8899,8 +8899,8 @@
 			message = errorText(e);
 			// Formule refusée : la saisie n'est pas perdue, l'éditeur se rouvre.
 			const k = message.indexOf('formule : ');
-			const q = key ? null : keyQuestion(message);
-			const hq = key ? null : handQuestion(message);
+			const q = key ? null : keyQuestion(message, e);
+			const hq = key ? null : handQuestion(message, e);
 			if (q) {
 				// Recherche dans un tableau sans clé : la boîte demande quoi utiliser.
 				message = '';

@@ -103,7 +103,7 @@ export function favoriteNameProblem(raw: string): NameProblem | null {
 }
 
 /** Identifiants des messages du moteur (internal/msg) qui disent qu'un nom est pris. */
-const TAKEN_IDS = ['table.nameTaken', 'sheet.nameTaken'];
+const TAKEN_IDS = ['table.nameTaken', 'sheet.nameTaken', 'button.nameTaken', 'query.nameTaken', 'script.nameTaken', 'column.nameTaken', 'table.columnExists', 'customSort.listExists', 'import.tableExists', 'mergeSheets.tableNameTaken', 'pivot.duplicateField'];
 
 /**
  * Refus du moteur ou du serveur (exception) mis en forme pour la boîte :
