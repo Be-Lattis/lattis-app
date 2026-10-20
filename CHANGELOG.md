@@ -23,6 +23,9 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Classeur partagé : une saisie en attente dans un tableau dont un collègue venait de renommer ou supprimer une colonne (ou le tableau) laissait le poste « hors ligne » pour toujours ; la nouvelle structure est maintenant reçue, la saisie part sous le nouveau nom de la colonne, et celle d'une colonne ou d'un tableau supprimés est écartée.
 - Classeur partagé : une erreur passagère du serveur (interblocage, délai dépassé, serveur occupé ou redémarré) n'annule plus la modification comme un refus ; elle reste en attente et part au tour suivant.
+- Classeur partagé rouvert après un plantage pendant un travail hors ligne : la session interrompue est proposée en récupération au lieu d'être remplacée par la version du serveur ; une copie locale abîmée est mise de côté, jamais écrasée.
+- Classeur partagé hors ligne : si sa copie locale ne peut pas être enregistrée à la fermeture (disque plein, fichier bloqué), les modifications pas encore envoyées sont gardées et proposées en récupération, avec un message, au lieu d'être perdues.
+- Classeur partagé : une cellule libre ou un changement de mise en page fait juste avant d'ouvrir un autre classeur part maintenant au serveur (ou attend la reconnexion) au lieu d'être perdu.
 
 ## 0.1.0-beta.3.2 (20/10/2026)
 

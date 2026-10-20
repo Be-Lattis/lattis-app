@@ -555,3 +555,10 @@ func (d *Document) Close() error {
 	trace.Logf(1, trace.Doc, "fermeture de %s", cmp.Or(d.arc.Path, "Classeur sans titre"))
 	return d.arc.Close()
 }
+
+// Release ferme le classeur en gardant son répertoire de travail : ses
+// modifications non enregistrées sont proposées en récupération (Orphans).
+func (d *Document) Release() error {
+	trace.Logf(1, trace.Doc, "fermeture de %s, répertoire de travail gardé", cmp.Or(d.arc.Path, "Classeur sans titre"))
+	return d.arc.Release()
+}

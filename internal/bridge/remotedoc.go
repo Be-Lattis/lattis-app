@@ -52,20 +52,37 @@ func remoteDoc(d *doc.Document) *workbook.State {
 // (file d'envoi, conflits) : hors ligne, elles partiront à la prochaine
 // ouverture une fois le serveur revenu, même si l'utilisateur a répondu
 // « Ne pas enregistrer » (en ligne, elles seraient déjà parties ; le
-// cache n'est pas un fichier de l'utilisateur). Décision 0014.
-func keepCollabQueue(d *doc.Document) {
+// cache n'est pas un fichier de l'utilisateur). Décision 0014. Une erreur
+// rendue : le cache n'a pas pu être enregistré ; l'appelant garde alors le
+// répertoire de travail (récupération au prochain lancement) au lieu de
+// le fermer, et le dit (errQueueKept).
+func keepCollabQueue(d *doc.Document) error {
 	r := remoteDoc(d)
 	if r == nil || r.Mode != workbook.Collaborative || d.ReadOnly() {
-		return
+		return nil
 	}
 	ctx := context.Background()
 	pending, conflicts, err := workbook.Unsent(ctx, d.DB().Read())
 	if err != nil || pending+conflicts == 0 && !d.Share.LayoutUnsent() {
-		return
+		return nil
 	}
 	if err := saveDoc(ctx, d, ""); err != nil {
 		trace.Logf(1, trace.Doc, "cache de « %s » non enregistré (%d étape(s) en attente) : %v", r.Title, pending, err)
+		return fmt.Errorf("La copie locale de « %s » n'a pas pu être enregistrée : ses modifications pas encore envoyées sont gardées et proposées en récupération (Fichier › Ouvrir, ou au prochain lancement de Lattis)", r.Title)
 	}
+	return nil
+}
+
+// closeKeeping ferme le classeur d en gardant sa file d'envoi
+// (keepCollabQueue) ; si elle n'a pas pu être enregistrée, le répertoire de
+// travail reste (récupération) et l'erreur est rendue.
+func closeKeeping(d *doc.Document) error {
+	if err := keepCollabQueue(d); err != nil {
+		d.Release()
+		return err
+	}
+	d.Close()
+	return nil
 }
 
 // serverLabel : nom du serveur, sinon son hôte.

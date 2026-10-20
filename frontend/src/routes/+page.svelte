@@ -938,7 +938,12 @@
 			}
 		}
 		sheet?.closeOverlays();
-		await DocumentService.CloseDocument();
+		// Fermé dans tous les cas ; une erreur dit que la file d'envoi d'un
+		// classeur partagé n'a pas pu être gardée (récupération au lancement).
+		const kept = await DocumentService.CloseDocument().then(
+			() => '',
+			(e) => err(e)
+		);
 		docState = { open: false, path: '', title: '', dirty: false, undo: '', redo: '' };
 		layout = null;
 		share = null;
@@ -947,6 +952,7 @@
 		view = 'grid';
 		mode = 'closed';
 		workbook++;
+		if (kept) notice = kept;
 		if (quitting) {
 			quitting = false;
 			await DocumentService.QuitApp();

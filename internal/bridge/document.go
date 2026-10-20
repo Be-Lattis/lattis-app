@@ -118,6 +118,7 @@ type DocumentService struct {
 	share    shareState              // classeur partagé : suivi du serveur (sharing.go)
 	coedit   coeditState             // travail à plusieurs sur un dossier partagé (coedit.go)
 	data     dataWatch               // données du Data Lake liées : suivi en direct (data.go)
+	lost     string                  // file d'envoi du classeur fermé pas gardée (replace) : message pour State
 	sql      sqlRuns                 // requêtes en cours de l'onglet SQL (execute.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
@@ -151,8 +152,8 @@ func (s *DocumentService) ServiceShutdown() error {
 	if s.doc == nil {
 		return nil
 	}
-	keepCollabQueue(s.doc)
-	if dirty, _ := s.doc.Dirty(context.Background()); dirty {
+	kept := keepCollabQueue(s.doc) == nil
+	if dirty, _ := s.doc.Dirty(context.Background()); !kept || dirty {
 		// Garder le répertoire de travail (récupération au prochain
 		// lancement), mais libérer le fichier pour les autres postes.
 		s.doc.Unlock()
@@ -164,7 +165,7 @@ func (s *DocumentService) ServiceShutdown() error {
 // Orphans liste les sessions interrompues à proposer au démarrage.
 func (s *DocumentService) Orphans() ([]archive.Orphan, error) { return archive.Orphans() }
 
-func (s *DocumentService) replace(d *doc.Document) {
+func (s *DocumentService) replace(d *doc.Document) error {
 	s.mu.Lock()
 	old := s.doc
 	s.doc, s.tables, s.memo = d, map[int64]*grid.Table{}, nil
@@ -181,12 +182,17 @@ func (s *DocumentService) replace(d *doc.Document) {
 	// qu'il se ferme ; celle du nouveau commence.
 	s.stopCoEdit()
 	s.startCoEdit(d)
+	var lost error
 	if old != nil {
-		keepCollabQueue(old)
-		old.Close()
+		if lost = closeKeeping(old); lost != nil {
+			s.mu.Lock()
+			s.lost = lost.Error()
+			s.mu.Unlock()
+		}
 	}
 	// Conversation de l'assistant : propre au classeur.
 	s.aiReplaced(d)
+	return lost
 }
 
 // New crée un classeur vide.
@@ -490,6 +496,11 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 	if st.Remote = remoteDoc(d); st.Remote != nil {
 		st.Title = st.Remote.Title
 	}
+	// File d'envoi du classeur précédent qui n'a pas pu être gardée
+	// (replace) : dit une fois, au classeur suivant.
+	s.mu.Lock()
+	st.Notice, s.lost = s.lost, ""
+	s.mu.Unlock()
 	// Moteur d'une session web : les chemins du serveur ne sont pas montrés.
 	if HidePaths && st.Path != "" {
 		st.Path = filepath.Base(st.Path)

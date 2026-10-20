@@ -169,6 +169,9 @@ func (s *DocumentService) collab() *collab.Engine {
 // connexion perdue et retrouvée) ; arrête le suivi du classeur précédent.
 func (s *DocumentService) watchShare(d *doc.Document) {
 	s.share.mu.Lock()
+	// Classeur précédent (ouverture d'un autre) : sa mise en page en
+	// attente part d'abord, comme à la fermeture.
+	s.flushLayoutLocked()
 	if s.share.cancel != nil {
 		s.share.cancel()
 		s.share.cancel = nil
@@ -311,19 +314,25 @@ func (s *DocumentService) followCollab(ctx context.Context, d *doc.Document, eng
 func (s *DocumentService) stopShare() {
 	s.share.mu.Lock()
 	defer s.share.mu.Unlock()
-	// Mise en page modifiée pas encore partie (LayoutDelay) : envoyée
-	// avant de fermer ; hors ligne, le cache est gardé (keepCollabQueue).
-	if eng := s.share.sync; eng != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		eng.FlushLayout(ctx)
-		cancel()
-	}
+	s.flushLayoutLocked()
 	if s.share.cancel != nil {
 		s.share.cancel()
 		s.share.cancel = nil
 	}
 	unbindCollab(s.share.doc)
 	s.share.sync, s.share.doc, s.share.retry = nil, nil, nil
+}
+
+// flushLayoutLocked envoie la mise en page modifiée pas encore partie
+// (LayoutDelay) du classeur suivi, avant d'en arrêter le suivi ; hors
+// ligne, elle est notée en attente et le cache est gardé (keepCollabQueue).
+// s.share.mu tenu.
+func (s *DocumentService) flushLayoutLocked() {
+	if eng := s.share.sync; eng != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		eng.FlushLayout(ctx)
+		cancel()
+	}
 }
 
 // unbindCollab débranche la synchronisation d'un classeur qui n'est plus
@@ -737,9 +746,29 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 	}
 	var d *doc.Document
 	fresh := true
+	aside := ""
 	if _, err := os.Stat(path); err == nil {
-		if d, err = doc.Open(ctx, path); err == nil {
+		d, err = doc.Open(ctx, path)
+		var rec *archive.RecoverableError
+		var bad *archive.OpenError
+		switch {
+		case err == nil:
 			fresh = false
+		case errors.As(err, &rec):
+			// Session interrompue (plantage) sur ce cache : elle garde les
+			// modifications pas encore envoyées ; proposée en récupération
+			// plutôt que rechargée du serveur par-dessus.
+			return OpenResult{Recoverable: &rec.Orphan}, nil
+		case errors.As(err, &bad) && bad.Salvage:
+			// Cache abîmé : mis de côté (sa file pourra être récupérée par
+			// Fichier › Ouvrir), le classeur est rechargé du serveur.
+			aside = strings.TrimSuffix(path, filepath.Ext(path)) + " (abîmé " + time.Now().Format("2006-01-02 15h04") + ")" + filepath.Ext(path)
+			if rerr := os.Rename(path, aside); rerr != nil {
+				return OpenResult{}, err
+			}
+		default:
+			// Verrouillé, illisible : le cache n'est jamais écrasé.
+			return OpenResult{}, err
 		}
 	}
 	if d == nil {
@@ -787,6 +816,9 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 	}
 	st, err := s.State(ctx)
 	st.Notice = d.TakeOpenNotice()
+	if aside != "" {
+		st.Notice = fmt.Sprintf("La copie locale de « %s » était abîmée : rechargée depuis le serveur ; l'ancienne est gardée dans %s", st.Title, aside)
+	}
 	return OpenResult{State: st}, err
 }
 

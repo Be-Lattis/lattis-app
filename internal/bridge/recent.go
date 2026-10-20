@@ -185,8 +185,12 @@ func (s *DocumentService) Recent(ctx context.Context) []RecentFile {
 // CloseDocument ferme le classeur ouvert (les modifications non enregistrées sont
 // perdues : l'interface demande d'abord).
 func (s *DocumentService) CloseDocument(ctx context.Context) error {
-	s.replace(nil)
-	return nil
+	// File d'envoi pas gardée : le message, le classeur est fermé quand même.
+	err := s.replace(nil)
+	s.mu.Lock()
+	s.lost = ""
+	s.mu.Unlock()
+	return err
 }
 
 // dropRecent retire r de la liste (classeur du serveur : par serveur et
