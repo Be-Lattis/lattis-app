@@ -614,6 +614,18 @@ func (w *writer) Meta(ctx context.Context, schemaName, kind, key string) ([]byte
 	return (&reader{s: w.s}).Meta(ctx, schemaName, kind, key)
 }
 
+func (w *writer) PublishScript(ctx context.Context, workbookID, name, source string) (int, error) {
+	v, err := (&publisher{s: w.s}).PublishScript(ctx, workbookID, name, source)
+	if err != nil {
+		return 0, err
+	}
+	w.wrote = true
+	if b := w.s.f.books[workbookID]; b != nil && b.state == "published" {
+		w.notes = append(w.notes, [2]string{"wb_" + b.slug, "*meta"})
+	}
+	return v, nil
+}
+
 func (w *writer) SaveMeta(ctx context.Context, workbookID, kind string, payload []byte) error {
 	if err := (&publisher{s: w.s}).SaveMeta(ctx, workbookID, kind, payload); err != nil {
 		return err

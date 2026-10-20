@@ -44,6 +44,9 @@ func (m *Model) SaveScript(ctx context.Context, id int64, name, source string) (
 		return 0, errors.New("script : nom vide")
 	}
 	err := m.Do(ctx, "Enregistrer le script", func(t *tx) error {
+		if err := t.scriptsLock(); err != nil {
+			return err
+		}
 		var k int
 		if err := t.row(`SELECT count(*) FROM _lattis_scripts WHERE name = ? AND id <> ?`, name, id).Scan(&k); err != nil {
 			return err
@@ -80,6 +83,9 @@ func (m *Model) SaveScript(ctx context.Context, id int64, name, source string) (
 // DeleteScript supprime un script de la bibliothèque.
 func (m *Model) DeleteScript(ctx context.Context, id int64) error {
 	return m.Do(ctx, "Supprimer le script", func(t *tx) error {
+		if err := t.scriptsLock(); err != nil {
+			return err
+		}
 		var name, source string
 		if err := t.row(`SELECT name, source FROM _lattis_scripts WHERE id = ?`, id).Scan(&name, &source); err != nil {
 			return err

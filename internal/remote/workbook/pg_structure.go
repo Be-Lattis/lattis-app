@@ -151,6 +151,11 @@ func (w pgWriter) Fill(ctx context.Context, schema, table string, cols []RemoteC
 	return w.tx.SendBatch(ctx, b).Close()
 }
 
+// PublishScript publie une nouvelle version d'un script.
+func (w pgWriter) PublishScript(ctx context.Context, workbookID, name, source string) (int, error) {
+	return pgPublisher{tx: w.tx}.PublishScript(ctx, workbookID, name, source)
+}
+
 // Meta lit un objet de mise en page pour le réécrire et note sa version
 // (lattis_xid) pour SaveMeta : le serveur refuse ensuite (40001) d'écrire
 // par-dessus une autre version, enregistrée entre-temps par un autre

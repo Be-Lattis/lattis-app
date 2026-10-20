@@ -334,3 +334,20 @@ func TestPostgresLoadFollowers(t *testing.T) {
 	}
 	t.Logf("%d postes : connexions ouvertes sur la base %s, pire délai jusqu'au dernier poste %v", n, conns, worst)
 }
+
+// Constat 20, contre PostgreSQL : publish_script et relecture des scripts.
+func TestPostgresScriptsShared(t *testing.T) {
+	p := pgSetupClients(t)
+	ctx := context.Background()
+	_, err := p.alice.d.Model.SaveScript(ctx, 0, "Bonjour", `print("bonjour")`)
+	must(t, err)
+	_, err = p.alice.e.SyncScripts(ctx, false)
+	must(t, err)
+	_, err = p.bob.e.SyncScripts(ctx, true)
+	must(t, err)
+	var src string
+	must(t, p.bob.d.DB().Read().QueryRow(`SELECT source FROM _lattis_scripts WHERE name = 'Bonjour'`).Scan(&src))
+	if src != `print("bonjour")` {
+		t.Fatalf("Bob : %q", src)
+	}
+}

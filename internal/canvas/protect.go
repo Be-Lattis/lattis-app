@@ -298,6 +298,21 @@ func (t *tx) layoutLock() error {
 	return nil
 }
 
+// ErrScriptsShared : scripts d'un classeur collaboratif modifiés par qui
+// n'en est ni propriétaire ni concepteur (ils se partagent avec tous les
+// membres ; audit du mode en ligne, constat 20).
+var ErrScriptsShared = errors.New("Seuls les propriétaires et concepteurs modifient les scripts de ce classeur partagé")
+
+// scriptsLock refuse de changer les scripts d'un classeur collaboratif à
+// qui n'en est ni propriétaire ni concepteur (même règle que la mise en
+// page, LayoutLocker).
+func (t *tx) scriptsLock() error {
+	if t.layoutLock() != nil {
+		return ErrScriptsShared
+	}
+	return nil
+}
+
 // guardTab refuse de changer l'onglet d'une feuille (nom, place, couleur,
 // masquage, suppression) si le classeur ou la structure de la feuille est
 // protégé.

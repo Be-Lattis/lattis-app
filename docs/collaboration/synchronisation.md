@@ -151,6 +151,10 @@ Tout ce qui n'est ni données ni structure d'un tableau publié vit dans l'objet
 
 **Ordre dans le tour.** File (données, structure) → catégories d'onglets à choix → structure, tableaux ajoutés et données des autres → mise en page. Un tableau reçu (§2.10) n'ajoute à la base que sa part de la mise en page (`arrivedBase`) : le reste de la feuille arrive par la fusion.
 
+### 2.15 Scripts (audit du mode en ligne, constat 20)
+
+Publiés avec le classeur (`publish_script`), les scripts se partagent ensuite comme la mise en page (`workbook.SyncScripts`, `collab.Engine.SyncScripts`, à chaque tour du suivi quand la signature des scripts locaux change, et à la connexion et sur `*meta`). Base : empreinte de chaque script au dernier accord avec le serveur (`_lattis_info`, `scripts_base`). Changé ici par un propriétaire ou un concepteur : publié (nouvelle version) ; changé sur le serveur : reçu (hors journal), message « Script « X » mis à jour par un concepteur… ». Les autres membres ne modifient pas les scripts (`canvas.ErrScriptsShared`, onglet Script avec le motif) ; ils les lisent et les exécutent. Un script reçu ne s'exécute qu'après l'accord de l'utilisateur sur cette version (`internal/trust`, empreinte du source). Reste : un script supprimé n'est pas retiré du serveur (pas de fonction pour cela).
+
 ## 3. Essais
 
 - `internal/remote/collab/sync_test.go` (faux serveur) : échos écartés (et revenus avec un serveur ancien, `Fake.Legacy`), ligne écrite par un collègue puis par soi revenue à la réception (`lattis_other_xid`), même utilisateur sur deux postes (`Fake.AsDevice`), point de reprise retenu par une transaction longue (`Fake.Hold` : un seul rechargement, témoin instantané, ou `xmax` avec `Fake.Before10`, oublié ensuite), auteur de sa ligne sans écho, filtre d'écriture (`Fake.Forbid`) qui ne refuse qu'une cellule ou qu'une ligne de l'étape, point de reprise non couvert (`Fake.PurgeTombstones` : tableau relu, ligne locale pas encore envoyée gardée) ou inconnu, ajouts simultanés en fin de tableau (même ordre, clés distinctes) ; `internal/order` : `TestDistinct`.

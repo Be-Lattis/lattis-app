@@ -70,9 +70,11 @@
 		controls?: () => Promise<ControlInfo[]>;
 		/** Pipette : true affiche la grille pour y cliquer un contrôle, false revient à l'onglet Script. */
 		showSheet?: (on: boolean) => void;
+		/** Classeur partagé sans droit de conception : les scripts se lisent et s'exécutent, sans se modifier (le motif). */
+		locked?: string;
 	}
 
-	let { scripts, save, remove, run, stop, subscribe, network, controls, showSheet }: Props = $props();
+	let { scripts, save, remove, run, stop, subscribe, network, controls, showSheet, locked = '' }: Props = $props();
 	let netOpen = $state(false);
 
 	// Contrôles du classeur, relus au plus toutes les 2 secondes (ils changent
@@ -386,8 +388,9 @@ end
 <div class="script">
 	<aside class="library">
 		<h2>Scripts du classeur</h2>
+		{#if locked}<p class="locked" role="note">{locked} : vous pouvez les lire et les exécuter.</p>{/if}
 		<!-- Action à part, au-dessus de la liste (pas un script de la liste). -->
-		<button class="new" onclick={fresh}><Icon name="new-file" size={14} />Nouveau script</button>
+		<button class="new" onclick={fresh} disabled={!!locked} title={locked || undefined}><Icon name="new-file" size={14} />Nouveau script</button>
 		<div class="items" role="list">
 		{#each scripts as s (s.id)}
 			{#if renaming === s.id}
@@ -476,6 +479,14 @@ end
 </div>
 
 <style>
+	.locked {
+		margin: 0 0 6px;
+		padding: 4px 6px;
+		font-size: 11px;
+		color: #7c4a03;
+		background: #fdf3e1;
+		border-radius: 3px;
+	}
 	.script {
 		/* Contexte d'empilement propre : rien de la vue ne passe au-dessus du volet d'aide. */
 		isolation: isolate;

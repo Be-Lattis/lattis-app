@@ -259,7 +259,6 @@ func (r *roster) staleSessions(now time.Time) []string {
 	return out
 }
 
-
 // --- Rejoindre -------------------------------------------------------------------
 
 // Ticket est la demande acceptée d'une session qui rejoint : elle ouvre

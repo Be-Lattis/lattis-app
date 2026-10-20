@@ -139,7 +139,7 @@ LATTIS_PG_TEST=1 LATTIS_TEST_PG_URL=postgres://postgres:pg@127.0.0.1:55433/postg
 ## 7. Reste à faire
 
 - ~~Synchronisation des classeurs collaboratifs (étape 5)~~ : faite, voir `synchronisation.md`.
-- Accord à la première exécution d'un script publié (§11 : aujourd'hui, l'accord par empreinte du source d'`internal/trust` s'applique).
+- ~~Accord à la première exécution d'un script publié~~ : l'accord par empreinte du source d'`internal/trust` s'applique à chaque nouvelle version, y compris celles reçues d'un concepteur après la publication (`synchronisation.md` §2.15).
 - ~~Écran Partager (invitations, rôles)~~ : fait, voir `droits.md`.
 - Graphiques ou TCD d'un auteur qui citent un de ses tableaux privés : publiés tels quels, ils s'affichent en erreur chez les lecteurs (non filtrés).
 - Les réglages locaux d'un lecteur sur un tableau publié (filtre, mise en forme) ne survivent pas à un rechargement.

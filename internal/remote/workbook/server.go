@@ -291,6 +291,10 @@ type Writer interface {
 	// l'écrit (lattis.save_meta, concepteurs et propriétaires).
 	Meta(ctx context.Context, schema, kind, key string) ([]byte, error)
 	SaveMeta(ctx context.Context, workbookID, kind string, payload []byte) error
+	// PublishScript publie une nouvelle version d'un script
+	// (lattis.publish_script, concepteurs et propriétaires ; « *meta ») et
+	// rend son numéro.
+	PublishScript(ctx context.Context, workbookID, name, source string) (int, error)
 	// Xact rend l'identifiant (xid8, en texte) de la transaction, "" si
 	// elle n'a rien écrit (pg_current_xact_id_if_assigned) : le poste le
 	// garde pour écarter ses propres écritures des changements reçus

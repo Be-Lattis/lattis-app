@@ -64,6 +64,9 @@ type Engine struct {
 	// stuck : échecs de suite de la première étape de la file, serveur
 	// joignable (held.go) ; sous run.
 	stuck stuckStep
+	// scripts : signature des scripts au dernier accord avec le serveur
+	// (SyncScripts) ; sous run.
+	scripts string
 	// rereads : tableaux à relire en entier, droits de lecture changés
 	// (RefreshRights) ; sous mu.
 	rereads map[int64]bool

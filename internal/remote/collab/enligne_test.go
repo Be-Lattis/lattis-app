@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/internal/remote/workbook/workbooktest"
@@ -253,5 +254,41 @@ func TestAmbiguousCommit(t *testing.T) {
 	}
 	if r.Conflicts > 0 {
 		t.Errorf("faux conflit sur sa propre écriture : %+v", r)
+	}
+}
+
+// Constat 20 : un script enregistré par la propriétaire après la
+// publication part chez les autres membres ; un éditeur ne modifie pas les
+// scripts.
+func TestScriptsShared(t *testing.T) {
+	ctx := context.Background()
+	_, alice, bob, _ := setup(t)
+	_, err := alice.d.Model.SaveScript(ctx, 0, "Bonjour", `print("bonjour")`)
+	must(t, err)
+	_, err = alice.e.SyncScripts(ctx, false)
+	must(t, err)
+	rep, err := bob.e.SyncScripts(ctx, true)
+	must(t, err)
+	var src string
+	must(t, bob.d.DB().Read().QueryRow(`SELECT source FROM _lattis_scripts WHERE name = 'Bonjour'`).Scan(&src))
+	if src != `print("bonjour")` || len(rep.Notices) == 0 {
+		t.Fatalf("Bob : %q, %v", src, rep.Notices)
+	}
+	// Alice le corrige : Bob reçoit la nouvelle version.
+	var id int64
+	must(t, alice.d.DB().Read().QueryRow(`SELECT id FROM _lattis_scripts WHERE name = 'Bonjour'`).Scan(&id))
+	_, err = alice.d.Model.SaveScript(ctx, id, "Bonjour", `print("salut")`)
+	must(t, err)
+	_, err = alice.e.SyncScripts(ctx, false)
+	must(t, err)
+	_, err = bob.e.SyncScripts(ctx, true)
+	must(t, err)
+	must(t, bob.d.DB().Read().QueryRow(`SELECT source FROM _lattis_scripts WHERE name = 'Bonjour'`).Scan(&src))
+	if src != `print("salut")` {
+		t.Errorf("Bob après la correction : %q", src)
+	}
+	// Bob, éditeur : refusé.
+	if _, err := bob.d.Model.SaveScript(ctx, 0, "À moi", `print(1)`); !errors.Is(err, canvas.ErrScriptsShared) {
+		t.Errorf("éditeur : %v", err)
 	}
 }

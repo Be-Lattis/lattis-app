@@ -1466,7 +1466,6 @@
 					}
 					// Depuis l'accueil : un classeur neuf, refermé si l'import est annulé.
 					const started = mode !== 'doc';
-
 					if (started) await startDoc();
 					const r = await DocumentService.Import('');
 					if (r.cancelled) {
@@ -2609,6 +2608,7 @@
 					{#if mode === 'doc'}
 						<ScriptView
 							{scripts}
+							locked={layoutShared ? 'Seuls les propriétaires et concepteurs modifient les scripts de ce classeur partagé' : ''}
 							save={async (id, name, source) => {
 								const nid = await DocumentService.SaveScript(id, name, source);
 								await reload();
@@ -3287,7 +3287,6 @@
 		cursor: pointer;
 	}
 	.statusbar {
-
 		display: flex;
 		align-items: center;
 		gap: 14px;

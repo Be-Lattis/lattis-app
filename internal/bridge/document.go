@@ -69,12 +69,12 @@ type OpenResult struct {
 	// CoEdit : avec Locked, « Travailler à plusieurs » (OpenTogether)
 	// remplace « Ouvrir quand même » (travail à plusieurs sur un dossier
 	// partagé, features.coEditing).
-	CoEdit    bool `json:"coEdit,omitempty"`
+	CoEdit bool `json:"coEdit,omitempty"`
 	// Shared : le fichier est celui de l'auteur d'un classeur partagé en direct ;
 	// l'interface l'ouvre depuis le serveur (en ligne, synchronisé) plutôt
 	// que le fichier (OpenLocalCopy l'ouvre tel quel, serveur injoignable).
-	Shared *RecentFile `json:"shared,omitempty"`
-	Cancelled bool `json:"cancelled"`
+	Shared    *RecentFile `json:"shared,omitempty"`
+	Cancelled bool        `json:"cancelled"`
 }
 
 // DamagedFile décrit un classeur endommagé.

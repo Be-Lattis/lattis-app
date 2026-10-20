@@ -212,6 +212,13 @@ func (w *worker) cycle(ctx context.Context) {
 		err = w.e.PublishChoices(ctx, full)
 	}
 	if err == nil {
+		// Scripts changés ici par un concepteur, ou sur le serveur
+		// (connexion, « *meta »).
+		var r Report
+		r, err = w.e.SyncScripts(ctx, full || meta)
+		rep.add(r)
+	}
+	if err == nil {
 		var r Report
 		switch {
 		case full || meta:

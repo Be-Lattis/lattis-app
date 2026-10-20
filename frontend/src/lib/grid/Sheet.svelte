@@ -11230,7 +11230,6 @@
 						<hr />
 						<div class="menu-title" data-shed="1" title={clipped(col?.name) ? col?.name : undefined}>Colonne « {clip(col?.name)} »</div>
 						{#if source.setType && !col?.formula && !why}
-
 							<!-- Le menu ▾ de la colonne (tri, filtre, type, clé), sous son en-tête. -->
 							<button data-shed="1" onclick={() => openFilter(m.e, m.i)}>Type de données et clé…</button>
 						{/if}
