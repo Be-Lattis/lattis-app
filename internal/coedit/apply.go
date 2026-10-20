@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -17,6 +16,7 @@ import (
 	"github.com/lalamefine/lattis/internal/archive"
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/oplog"
 )
 
@@ -356,31 +356,31 @@ func (e *Engine) applyReady(ctx context.Context, ev *Event) error {
 		ev.Data = true
 	}
 	if n > 0 {
-		e.note(ev, receivedNotice(p.by))
+		e.note(ev, receivedNotice(e.lang(), p.by))
 	}
 	if len(conflicts) > 0 {
 		ev.State = true
-		e.note(ev, fmt.Sprintf("%d conflit(s) : des cellules que vous aviez modifiées ont pris la valeur d'un collègue (volet Conflits)", len(conflicts)))
+		e.note(ev, e.say("coedit.conflicts", msg.Args{"n": len(conflicts)}))
 	}
 	if len(res.Failed) > 0 {
-		e.note(ev, fmt.Sprintf("%d ligne(s) reçue(s) n'ont pas pu être appliquées : %s", len(res.Failed), res.Failed[0]))
+		e.note(ev, e.say("coedit.rowsNotApplied", msg.Args{"n": len(res.Failed), "first": res.Failed[0]}))
 	}
 	if len(p.barrier) > 0 {
 		e.mu.Lock()
 		first := e.stale == ""
-		e.stale = fmt.Sprintf("%s a modifié le classeur hors des données des tableaux pendant votre déconnexion : rouvrez-le pour voir ses changements ; d'ici là, enregistrer par-dessus le fichier demandera confirmation", p.barrier[0])
-		msg := e.stale
+		e.stale = e.say("coedit.stale", msg.Args{"who": p.barrier[0]})
+		text := e.stale
 		e.mu.Unlock()
 		if first {
 			ev.State = true
-			e.note(ev, msg)
+			e.note(ev, text)
 		}
 	}
 	return nil
 }
 
 // receivedNotice : « 3 modifications reçues de Bob ».
-func receivedNotice(by map[string]int) string {
+func receivedNotice(l msg.Lang, by map[string]int) string {
 	names := make([]string, 0, len(by))
 	for n := range by {
 		names = append(names, n)
@@ -388,15 +388,11 @@ func receivedNotice(by map[string]int) string {
 	sort.Strings(names)
 	var parts []string
 	for _, n := range names {
-		who := n
-		if who == "" {
-			who = "un autre poste"
+		var who any = n
+		if n == "" {
+			who = msg.M("coedit.anotherMachine", nil)
 		}
-		if by[n] == 1 {
-			parts = append(parts, "1 modification reçue de "+who)
-		} else {
-			parts = append(parts, fmt.Sprintf("%d modifications reçues de %s", by[n], who))
-		}
+		parts = append(parts, msg.Format(l, "coedit.received", msg.Args{"n": by[n], "who": who}))
 	}
 	return strings.Join(parts, ", ")
 }

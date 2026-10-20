@@ -131,9 +131,7 @@ func Invoke(ctx context.Context, host Host, name string, args map[string]any) (a
 	if kc := (canvas.ErrKeyChoice{}); errors.As(err, &kc) {
 		// Formule qui cherche dans un tableau sans clé : l'appelant choisit
 		// par une commande, puis recommence.
-		err = fmt.Errorf("%w. Choisissez, puis recommencez : tables.set_key(%q, %q) fait de la colonne la clé, "+
-			"ou tables.keep_row_numbers(%q) garde les numéros de ligne (outils tables_set_key, tables_keep_row_numbers)",
-			err, kc.Table, kc.Column, kc.Table)
+		err = msg.Wrap(err, "api.keyChoiceHint", msg.Args{"err": err, "table": strconv.Quote(kc.Table), "column": strconv.Quote(kc.Column)})
 	}
 	if cmd.Write {
 		host.Changed(ctx)

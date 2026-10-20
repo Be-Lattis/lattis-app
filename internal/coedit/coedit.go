@@ -30,6 +30,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/trace"
 )
@@ -178,7 +179,7 @@ type Engine struct {
 // session demande à rejoindre (Run).
 func New(d *doc.Document, opt Options) (*Engine, error) {
 	if d.Path() == "" {
-		return nil, errors.New("travail à plusieurs : classeur jamais enregistré")
+		return nil, msg.New("coedit.neverSaved", nil)
 	}
 	e := newEngine(d, opt)
 	e.sid = newSession(e.me)
@@ -328,7 +329,7 @@ func (e *Engine) tick(ctx context.Context) *Event {
 	now := time.Now()
 	entries, err := os.ReadDir(e.dir)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		e.setOffline(&ev, "Dossier partagé injoignable : vos modifications partiront à son retour")
+		e.setOffline(&ev, e.say("coedit.offline", nil))
 		return e.flush(&ev)
 	}
 	if !e.isActive() {
@@ -350,10 +351,10 @@ func (e *Engine) tick(ctx context.Context) *Event {
 	e.updatePeers(&ev, live)
 	e.welcomeJoiners(ctx, &ev, live)
 	if err := e.drain(ctx); err != nil {
-		e.setOffline(&ev, "Dossier partagé injoignable : vos modifications partiront à son retour ("+err.Error()+")")
+		e.setOffline(&ev, e.say("coedit.offlineErr", msg.Args{"err": err}))
 	}
 	if err := e.receive(ctx, &ev, entries); err != nil {
-		e.note(&ev, "Modifications des autres postes non appliquées : "+err.Error())
+		e.note(&ev, e.say("coedit.receiveFailed", msg.Args{"err": err}))
 	}
 	if now.Sub(e.lastBeat) >= e.t.Beat {
 		e.beat()
@@ -414,19 +415,19 @@ func (e *Engine) updatePeers(ev *Event, live []Presence) {
 		if q, ok := had[p.Session]; !ok {
 			ev.State = true
 			if p.State == StateReady {
-				e.note(ev, p.Name()+" travaille aussi sur ce classeur")
+				e.note(ev, e.say("coedit.alsoWorking", msg.Args{"who": p.Who()}))
 			}
 		} else if q.State != p.State {
 			ev.State = true
 			if p.State == StateReady {
-				e.note(ev, p.Name()+" a rejoint le classeur")
+				e.note(ev, e.say("coedit.joined", msg.Args{"who": p.Who()}))
 			}
 		}
 	}
 	for _, p := range old {
 		if !now[p.Session] {
 			ev.State = true
-			e.note(ev, p.Name()+" a quitté le classeur")
+			e.note(ev, e.say("coedit.left", msg.Args{"who": p.Who()}))
 		}
 	}
 }
@@ -463,11 +464,11 @@ func (e *Engine) welcomeJoiners(ctx context.Context, ev *Event, live []Presence)
 			for _, p := range joiners {
 				e.refused[p.Session] = true
 			}
-			e.note(ev, fmt.Sprintf("%s demande à travailler aussi sur ce classeur, mais l'enregistrement a échoué : %v", joiners[0].Name(), err))
+			e.note(ev, e.say("coedit.joinSaveFailed", msg.Args{"who": joiners[0].Who(), "err": err}))
 			return active
 		}
 		e.localOnly.Store(false)
-		e.note(ev, joiners[0].Name()+" rejoint le classeur : vos modifications ont été enregistrées pour qu'il les voie")
+		e.note(ev, e.say("coedit.joining", msg.Args{"who": joiners[0].Who()}))
 	}
 	if !active {
 		// Premier passage au travail à plusieurs : les journaux restés d'une
@@ -477,7 +478,7 @@ func (e *Engine) welcomeJoiners(ctx context.Context, ev *Event, live []Presence)
 			for _, p := range joiners {
 				e.refused[p.Session] = true
 			}
-			e.note(ev, "Travail à plusieurs impossible : "+err.Error())
+			e.note(ev, e.say("coedit.startFailed", msg.Args{"err": err}))
 			return false
 		}
 		ev.State = true
@@ -529,7 +530,7 @@ func (e *Engine) clearDir() {
 // identifiants partagés des lignes, relevé de tous les tableaux, journal.
 func (e *Engine) activate(ctx context.Context, applied map[string]int64) error {
 	if e.d.Share.Info() != nil {
-		return errors.New("classeur partagé sur un Serveur Lattis : il a déjà sa synchronisation")
+		return msg.New("coedit.sharedOnServer", nil)
 	}
 	if err := assignIDs(ctx, e.d.DB(), applied); err != nil {
 		return err
@@ -594,14 +595,23 @@ func (e *Engine) mine(journal string) bool { return sessionOf(journal) == e.sid 
 // change autre chose que les données des tableaux.
 type TogetherError struct{ Others []string }
 
-func (e TogetherError) Error() string {
-	who := strings.Join(e.Others, ", ")
-	verb := "travaille"
-	if len(e.Others) > 1 {
-		verb = "travaillent"
-	}
-	return fmt.Sprintf("Pendant le travail à plusieurs, seules les données des tableaux se modifient (%s %s aussi sur ce classeur) : les cellules libres, la mise en forme, les colonnes, les feuilles et les autres objets se changent quand vous êtes seul", who, verb)
+func (e TogetherError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e TogetherError) Msg() msg.Message {
+	return msg.M("coedit.together", msg.Args{"who": strings.Join(e.Others, ", "), "n": len(e.Others)})
 }
+
+// lang : la langue de la session du classeur.
+func (e *Engine) lang() msg.Lang {
+	if e.d == nil || e.d.Model == nil {
+		return msg.FR
+	}
+	return e.d.Language()
+}
+
+// say : le message id dans la langue de la session du classeur.
+func (e *Engine) say(id msg.ID, args msg.Args) string { return msg.Format(e.lang(), id, args) }
 
 // watch voit chaque instruction des étapes du bus (oplog.SetWatch).
 func (e *Engine) watch(q string) error {

@@ -162,7 +162,7 @@ func (s *DocumentService) openQuestion(path string) (q *FileQuestion, coEdit boo
 	if others := coedit.Others(path, coeditTiming); len(others) > 0 {
 		var names []string
 		for _, p := range others {
-			names = append(names, s.say("coedit.personOnMachine", msg.Args{"name": p.Name(), "machine": p.Machine}))
+			names = append(names, s.say("coedit.personOnMachine", msg.Args{"name": p.Who(), "machine": p.Machine}))
 		}
 		return &FileQuestion{Path: path, Message: s.say("coedit.openedBy", msg.Args{"file": filepath.Base(path), "names": strings.Join(names, ", ")})}, true
 	}

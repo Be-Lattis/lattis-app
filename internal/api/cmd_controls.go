@@ -449,7 +449,7 @@ func drain(ctx context.Context, host Host, q *eventQueue, res *ScriptResult) err
 			return nil
 		}
 		if round == maxRounds {
-			res.Error = "trop d'évènements en chaîne (un écouteur change-t-il la valeur de son propre contrôle ?)"
+			res.Error = msg.Format(msg.FR, "api.eventLoop", nil)
 			return nil
 		}
 		for _, ev := range evs {

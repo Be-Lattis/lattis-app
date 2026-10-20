@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/archive"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // --- Dossier, sessions, présences --------------------------------------------
@@ -63,13 +64,17 @@ type Presence struct {
 }
 
 // Name donne le nom affiché d'une présence : « Alice (PC-COMPTA) ».
-func (p Presence) Name() string {
+func (p Presence) Name() string { return fmt.Sprint(p.Who()) }
+
+// Who : le nom de la personne, ou un message (« un autre utilisateur »)
+// quand la session n'en donne pas.
+func (p Presence) Who() any {
 	who := p.User
 	if who == "" {
 		who = p.Login
 	}
 	if who == "" {
-		who = "un autre utilisateur"
+		return msg.M("archive.holder.someone", nil)
 	}
 	return who
 }
@@ -276,8 +281,15 @@ type NoAnswerError struct {
 	Who string
 }
 
-func (e *NoAnswerError) Error() string {
-	return fmt.Sprintf("%s n'a pas répondu à la demande de travail à plusieurs (version de Lattis plus ancienne, travail à plusieurs désactivé sur son poste, ou poste injoignable)", e.Who)
+func (e *NoAnswerError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *NoAnswerError) Msg() msg.Message {
+	var who any = e.Who
+	if e.Who == "" {
+		who = msg.M("coedit.openerMachine", nil)
+	}
+	return msg.M("coedit.noAnswer", msg.Args{"who": who})
 }
 
 // Join demande à rejoindre le travail à plusieurs sur le classeur path :
@@ -291,7 +303,7 @@ func Join(ctx context.Context, path string, t Timing) (*Ticket, error) {
 	p := Presence{V: 1, Session: newSession(me), User: me.User, Login: me.Login, Machine: me.Machine, PID: me.PID, Since: now.UTC().Truncate(time.Second), State: StateJoining}
 	dir := DirOf(path)
 	if err := writePresence(dir, p); err != nil {
-		return nil, fmt.Errorf("travail à plusieurs impossible : le dossier de « %s » n'accepte pas l'écriture (%w)", filepath.Base(path), err)
+		return nil, msg.Wrap(err, "coedit.folderReadOnly", msg.Args{"file": filepath.Base(path), "err": err})
 	}
 	r := newRoster(p.Session, t.Stale)
 	deadline := now.Add(t.JoinWait)
@@ -326,9 +338,6 @@ func Join(ctx context.Context, path string, t Timing) (*Ticket, error) {
 			return &Ticket{path: path, dir: dir, p: p}, nil
 		}
 		if now.After(deadline) {
-			if who == "" {
-				who = "Le poste qui a ouvert le classeur"
-			}
 			return fail(&NoAnswerError{Who: who})
 		}
 		if now.Sub(lastBeat) >= t.Beat {
