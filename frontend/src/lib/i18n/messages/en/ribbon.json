@@ -1,1 +1,682 @@
-{}
+{
+	"tabs": {
+		"file": "File",
+		"home": "Home",
+		"insert": "Insert",
+		"pageLayout": "Page Layout",
+		"data": "Data",
+		"formulas": "Formulas",
+		"review": "Review",
+		"view": "View",
+		"ai": "Assistant ✦",
+		"sql": "SQL",
+		"script": "Script",
+		"help": "Help"
+	},
+	"tabsAria": "Ribbon tabs",
+	"aiButton": {
+		"label": "Assistant",
+		"open": "Open the AI Assistant (Alt+I)",
+		"close": "Close the AI Assistant (Alt+I)"
+	},
+	"helpButton": {
+		"tooltip": "Help (F1)",
+		"aria": "Help"
+	},
+	"fold": {
+		"pinTooltip": "Pin the ribbon (Ctrl+F1)",
+		"foldTooltip": "Collapse the ribbon: only the tabs remain (Ctrl+F1)",
+		"pinAria": "Pin the ribbon",
+		"foldAria": "Collapse the ribbon"
+	},
+	"hideMenu": {
+		"aria": "Ribbon groups",
+		"hide": "Hide the “{group}” group",
+		"show": "Show “{group}” again",
+		"showAll": "Show all again",
+		"none": "No hidden group in this tab"
+	},
+	"color": {
+		"choose": "Choose the color",
+		"chooseAria": "{command}: choose the color",
+		"aria": "{command}: {color}",
+		"tooltip": "{tip} ({color})",
+		"noFill": "No fill",
+		"auto": "Automatic"
+	},
+	"comboAria": "{command}: {value}",
+	"withKeys": "{label} ({keys})",
+	"fontSize": "Font size (points)",
+	"file": {
+		"new": "New",
+		"open": "Open…",
+		"recent": "Open a recent file",
+		"recentNone": "No recent files",
+		"openRemote": "Open from a server…",
+		"close": "Close",
+		"save": "Save",
+		"saveAs": "Save as…",
+		"download": "Download a copy",
+		"share": "Publish to a server…",
+		"rights": "Manage access…",
+		"republish": "Republish…",
+		"reconnect": "Retry the connection",
+		"detach": "Detach from the server…",
+		"import": "Import (CSV, Excel)…",
+		"export": "Export",
+		"exportTable": "The table as CSV…",
+		"exportSheet": "The whole sheet as CSV…",
+		"exportXlsx": "The Excel workbook (.xlsx)…",
+		"exportOds": "The OpenDocument workbook (.ods)…",
+		"print": "Print / PDF…",
+		"settings": "Settings…",
+		"help": "Help",
+		"report": "Report a problem…",
+		"about": "About Lattis…",
+		"demo": "Demo: 1M rows"
+	},
+	"numberFormat": {
+		"number": "Number",
+		"percent": "Percentage",
+		"currency": "Currency",
+		"date": "Date",
+		"time": "Time",
+		"text": "Text",
+		"general": "General"
+	},
+	"group": {
+		"undo": "Undo",
+		"clipboard": "Clipboard",
+		"font": "Font",
+		"borders": "Borders",
+		"alignment": "Alignment",
+		"number": "Number",
+		"styles": "Styles",
+		"cells": "Cells",
+		"editing": "Editing",
+		"tables": "Tables",
+		"charts": "Charts",
+		"controls": "Controls",
+		"pageSetup": "Page setup",
+		"scale": "Scale to fit",
+		"sheetOptions": "Sheet options",
+		"getData": "Get data",
+		"queries": "Queries & connections",
+		"sortFilter": "Sort & filter",
+		"dataTools": "Data tools",
+		"library": "Library",
+		"audit": "Auditing",
+		"calculation": "Calculation",
+		"notes": "Notes",
+		"protect": "Protect",
+		"show": "Show",
+		"theme": "Theme",
+		"bench": "Benchmarks (prototype)",
+		"paragraph": "Paragraph",
+		"print": "Print",
+		"links": "Links",
+		"printing": "Printing"
+	},
+	"launch": {
+		"font": "Format cells: font (Ctrl+1)",
+		"borders": "Format cells: border (Ctrl+1)",
+		"alignment": "Format cells: alignment (Ctrl+1)",
+		"number": "Format cells: number, date, time… (Ctrl+1)",
+		"pageSetup": "Page setup…: page, margins, header and footer, sheet",
+		"scale": "Page setup…: scaling",
+		"sheetOptions": "Page setup…: sheet"
+	},
+	"cmd": {
+		"undo": {
+			"label": "Undo",
+			"tooltip": "Undo: {action} (Ctrl+Z)",
+			"none": "Nothing to undo",
+			"docTooltip": "Undo the last change to the text (Ctrl+Z)"
+		},
+		"redo": {
+			"label": "Redo",
+			"tooltip": "Redo: {action} (Ctrl+Y)",
+			"none": "Nothing to redo",
+			"docTooltip": "Redo (Ctrl+Y)"
+		},
+		"paste": {
+			"label": "Paste",
+			"tooltip": "Paste (Ctrl+V)",
+			"docTooltip": "Paste the text (Ctrl+V)"
+		},
+		"cut": {
+			"label": "Cut",
+			"tooltip": "Cut (Ctrl+X)"
+		},
+		"copy": {
+			"label": "Copy",
+			"tooltip": "Copy (Ctrl+C)"
+		},
+		"painter": {
+			"label": "Format painter",
+			"tooltip": "Copy the formatting of the active cell"
+		},
+		"bold": {
+			"label": "Bold",
+			"tooltip": "Bold (Ctrl+B)"
+		},
+		"italic": {
+			"label": "Italic",
+			"tooltip": "Italic (Ctrl+I)"
+		},
+		"underline": {
+			"label": "Underline",
+			"tooltip": "Underline (Ctrl+U)"
+		},
+		"strike": {
+			"label": "Strikethrough",
+			"tooltip": "Strikethrough"
+		},
+		"fontColor": {
+			"label": "Font color",
+			"tooltip": "Font color (▾: choose the shade)"
+		},
+		"fillColor": {
+			"label": "Fill color",
+			"tooltip": "Fill color (▾: choose the shade)"
+		},
+		"highlight": {
+			"label": "Highlight",
+			"tooltip": "Highlight color (▾: choose the shade)"
+		},
+		"clearChars": {
+			"label": "Clear",
+			"tooltip": "Clear the character formatting"
+		},
+		"bordersAll": {
+			"label": "All",
+			"tooltip": "All borders"
+		},
+		"bordersOutline": {
+			"label": "Outline",
+			"tooltip": "Outside border of the selection"
+		},
+		"bordersNone": {
+			"label": "None",
+			"tooltip": "Remove the borders"
+		},
+		"alignTop": {
+			"label": "Top",
+			"tooltip": "Top align"
+		},
+		"alignMiddle": {
+			"label": "Middle",
+			"tooltip": "Middle align"
+		},
+		"alignBottom": {
+			"label": "Bottom",
+			"tooltip": "Bottom align"
+		},
+		"alignLeft": {
+			"label": "Left",
+			"tooltip": "Align left",
+			"tooltipOn": "Align left (click: back to general alignment)"
+		},
+		"alignCenter": {
+			"label": "Center",
+			"tooltip": "Center",
+			"tooltipOn": "Center (click: back to general alignment)"
+		},
+		"alignRight": {
+			"label": "Right",
+			"tooltip": "Align right",
+			"tooltipOn": "Align right (click: back to general alignment)"
+		},
+		"justify": {
+			"label": "Justify",
+			"tooltip": "Justify"
+		},
+		"wrap": {
+			"label": "Wrap text",
+			"tooltip": "Show the text on several lines in the cell"
+		},
+		"merge": {
+			"label": "Merge & center",
+			"tooltip": "Merge the selected free cells into one, content centered",
+			"tooltipOn": "Unmerge the cells"
+		},
+		"numberFormat": {
+			"label": "Number format",
+			"tooltip": "Number format of the selection",
+			"number": "Number (0.00)",
+			"date": "Short date",
+			"more": "More number formats…"
+		},
+		"currency": {
+			"label": "Currency",
+			"tooltip": "Currency format (€)"
+		},
+		"percent": {
+			"label": "Percentage",
+			"tooltip": "Percent style (0.25 shows as 25%)"
+		},
+		"date": {
+			"label": "Date",
+			"tooltip": "Short date; Ctrl+1 for the other date and time formats"
+		},
+		"fixed2": {
+			"label": "0.00",
+			"tooltip": "Number with two decimal places"
+		},
+		"decimalMore": {
+			"label": "Increase decimal",
+			"tooltip": "Show one more decimal place"
+		},
+		"decimalLess": {
+			"label": "Decrease decimal",
+			"tooltip": "Show one less decimal place"
+		},
+		"conditional": {
+			"label": "Conditional formatting",
+			"tooltip": "Highlight cells, data bars, color scales, icon sets, rules manager"
+		},
+		"formatAsTable": {
+			"label": "Format as table",
+			"tooltip": "Make a table from the range or block of cells of the active cell, its first row as headers (Ctrl+L)"
+		},
+		"insert": {
+			"label": "Insert",
+			"tooltip": "Insert a row or a column",
+			"row": "Insert a row (above)",
+			"column": "Insert a column (to the left)"
+		},
+		"delete": {
+			"label": "Delete",
+			"tooltip": "Delete the row or column of the active cell",
+			"row": "Delete the row",
+			"column": "Delete the column"
+		},
+		"format": {
+			"label": "Format",
+			"tooltip": "Format cells, hide and unhide",
+			"cells": "Format cells…",
+			"hideRows": "Hide rows",
+			"hideColumns": "Hide columns",
+			"showRows": "Unhide rows",
+			"showColumns": "Unhide columns"
+		},
+		"autoSum": {
+			"label": "AutoSum",
+			"tooltip": "SUM of the table column above (Alt+=)"
+		},
+		"fill": {
+			"label": "Fill",
+			"tooltip": "Copy the first row or column of the selection",
+			"down": "Down",
+			"right": "Right"
+		},
+		"clear": {
+			"label": "Clear",
+			"tooltip": "Clear the formats, contents or note of the selection",
+			"formats": "Clear formats",
+			"contents": "Clear contents",
+			"note": "Clear note"
+		},
+		"sortFilter": {
+			"label": "Sort & filter",
+			"tooltip": "Sort the table by the active column, filter it",
+			"az": "Sort A to Z",
+			"za": "Sort Z to A",
+			"clearFilters": "Clear filters"
+		},
+		"sortCustom": {
+			"label": "Custom sort…",
+			"tooltip": "Sort the table by the active column in a chosen order (Days, Months, free order)"
+		},
+		"filter": {
+			"label": "Filter",
+			"tooltip": "Filter the table by the active column (Ctrl+Shift+L)"
+		},
+		"find": {
+			"label": "Find",
+			"tooltip": "Find (Ctrl+F)"
+		},
+		"replace": {
+			"label": "Replace",
+			"tooltip": "Replace (Ctrl+H)"
+		},
+		"pivot": {
+			"label": "PivotTable",
+			"tooltip": "PivotTable from the active table: then click the cell where to place it, on any sheet (Esc: cancel; “New sheet” in the status bar). Double-click a PivotTable to edit it",
+			"docTooltip": "PivotTable from a table of the workbook, inserted in the text and recalculated with it"
+		},
+		"table": {
+			"label": "Table",
+			"tooltip": "Make a table from the range or block of cells of the active cell (Ctrl+L)"
+		},
+		"dataLake": {
+			"label": "Lattis Data Lake",
+			"tooltip": "Insert at the active cell a dataset from the Lattis Data Lake catalog: linked table, read-only, updated live"
+		},
+		"form": {
+			"label": "Form",
+			"tooltip": "Share the active table as a form (Lattis Server)"
+		},
+		"chart": {
+			"tooltip": "{chart} of the active table",
+			"tooltipBar": "{chart} of the active table: vertical bars (Alt+F1)",
+			"docTooltip": "{chart} of a table of the workbook, inserted in the text"
+		},
+		"moreCharts": {
+			"label": "Other charts",
+			"tooltip": "Other charts: {list}"
+		},
+		"button": {
+			"label": "Button",
+			"tooltip": "Action button at the active cell: a click runs a script from the Script tab (or nothing)",
+			"docTooltip": "Button in the text: a click runs a script from the Script tab (or one of its functions)"
+		},
+		"field": {
+			"label": "Field",
+			"tooltip": "Control linked to a cell: text field, text area, check box, drop-down list or file (type chosen in the dialog)",
+			"tooltipScript": "Control linked to a cell: text field, text area, check box, drop-down list or file (type chosen in the dialog); it can also run a script",
+			"docTooltip": "Control linked to a cell of a sheet: text field, text area, check box, drop-down list or file",
+			"docTooltipScript": "Control linked to a cell of a sheet: text field, text area, check box, drop-down list or file, which scripts can drive (controls.*)"
+		},
+		"margins": {
+			"label": "Margins",
+			"tooltip": "Margins: {preset}",
+			"customName": "custom",
+			"custom": "Custom margins…",
+			"preset": "{name} — top and bottom: {topBottom}, left and right: {leftRight}"
+		},
+		"orientation": {
+			"label": "Orientation",
+			"tooltipPortrait": "Orientation: portrait",
+			"tooltipLandscape": "Orientation: landscape",
+			"portrait": "Portrait",
+			"landscape": "Landscape"
+		},
+		"size": {
+			"label": "Size",
+			"tooltip": "Paper size: {paper}",
+			"item": "{name} ({size})",
+			"more": "More paper sizes…"
+		},
+		"printArea": {
+			"label": "Print area",
+			"tooltip": "Print only part of the sheet",
+			"tooltipOn": "A print area is set: only it is printed",
+			"set": "Set print area",
+			"clear": "Clear print area"
+		},
+		"breaks": {
+			"label": "Breaks",
+			"tooltip": "Manual page break above and to the left of the active cell (the new page starts there)",
+			"insert": "Insert page break",
+			"remove": "Remove page break",
+			"reset": "Reset all page breaks"
+		},
+		"printTitles": {
+			"label": "Print titles",
+			"tooltip": "Rows to repeat at top and columns to repeat at left of each printed page"
+		},
+		"width": {
+			"label": "Width",
+			"tooltip": "Width: {fit} (shrinks the sheet so it fits on that number of pages)"
+		},
+		"height": {
+			"label": "Height",
+			"tooltip": "Height: {fit}"
+		},
+		"scale": {
+			"label": "Scale",
+			"tooltip": "Print scale: {scale}",
+			"tooltipFitted": "{scale}: choosing a scale stops fitting",
+			"percent": "{n}%",
+			"custom": "Custom…"
+		},
+		"printPdf": {
+			"label": "Print / PDF…",
+			"tooltip": "Print the sheet or save it as PDF (Ctrl+P)"
+		},
+		"showGridlines": {
+			"label": "View gridlines",
+			"tooltipOn": "Hide the sheet gridlines on screen",
+			"tooltipOff": "Show the sheet gridlines on screen"
+		},
+		"printGridlines": {
+			"label": "Print gridlines",
+			"tooltip": "Print the gridlines of all cells"
+		},
+		"showHeadings": {
+			"label": "View headings",
+			"tooltipOn": "Letters and numbers only while typing a formula",
+			"tooltipOff": "Always show column letters and row numbers"
+		},
+		"printHeadings": {
+			"label": "Print headings",
+			"tooltip": "Print column letters and row numbers"
+		},
+		"fromTable": {
+			"label": "From table",
+			"tooltip": "New query from a table of the workbook"
+		},
+		"csv": {
+			"label": "Text/CSV",
+			"tooltip": "New query from a CSV file (transformation steps, refreshable)"
+		},
+		"xlsx": {
+			"label": "Excel workbook",
+			"tooltip": "New query from a table of an .xlsx workbook"
+		},
+		"otherFiles": {
+			"label": "Other files",
+			"tooltip": "New query from a JSON or Parquet file, or a SQLite database",
+			"sqlite": "SQLite database"
+		},
+		"database": {
+			"label": "Database",
+			"tooltip": "New query on a database (read-only)"
+		},
+		"lattisServer": {
+			"label": "Lattis Server",
+			"tooltip": "New query on a table of a Lattis Server or a dataset of its Data Lake (read-only)"
+		},
+		"web": {
+			"label": "Web",
+			"tooltip": "New query from a web API that responds in JSON (read-only)"
+		},
+		"refreshAll": {
+			"label": "Refresh all",
+			"tooltip": "Reread the sources of all loaded queries, replace their tables and recalculate (Ctrl+Alt+F5)"
+		},
+		"queries": {
+			"label": "Queries & connections",
+			"tooltip": "Pane of the workbook's import queries and connections"
+		},
+		"sortAsc": {
+			"label": "Sort A → Z",
+			"tooltip": "Sort the table by the active column, ascending"
+		},
+		"sortDesc": {
+			"label": "Sort Z → A",
+			"tooltip": "Sort the table by the active column, descending"
+		},
+		"clearFilter": {
+			"label": "Clear",
+			"tooltipOn": "Clear the filters of the active table",
+			"tooltipOff": "Clear: the table of the active cell is not filtered"
+		},
+		"errorsOnly": {
+			"label": "Errors only",
+			"tooltipOn": "Show all rows of the active column again",
+			"tooltipOff": "Show only the entries of the active column that don't match its type"
+		},
+		"textToColumns": {
+			"label": "Text to columns",
+			"tooltip": "Convert text to columns: split the contents of the selected column (delimiters or fixed width) into several columns"
+		},
+		"dedup": {
+			"label": "Remove duplicates",
+			"tooltip": "Delete the duplicate rows of the active table"
+		},
+		"validation": {
+			"label": "Data validation",
+			"tooltip": "Drop-down list: values allowed in the selection (or a whole table column), other entries are rejected"
+		},
+		"mergeSheets": {
+			"label": "Combine tabs…",
+			"tooltip": "Combine the tables of several tabs with the same columns (one per month, per year, per city…) into a single table, with a category column"
+		},
+		"insertFunction": {
+			"label": "Insert function",
+			"tooltip": "Choose a function and start the formula in the active cell (Shift+F3)"
+		},
+		"reference": {
+			"tooltip": "REFERENCE(Table[Column], key): the Lattis VLOOKUP"
+		},
+		"showLinks": {
+			"label": "Show links",
+			"tooltip": "Link arrows of all selected cells: blue from what their formulas read, red to the formulas that read them; a click in the grid (or Esc) clears them"
+		},
+		"calculate": {
+			"label": "Calculate",
+			"tooltip": "Recalculate formulas and refresh TODAY, NOW and RAND (F9, or F5 outside an imported table)"
+		},
+		"toValues": {
+			"label": "Convert to values",
+			"tooltip": "Replace the formulas of the selection with their current values: calculated columns (which become entered columns, with the type of their values) and free cells (Ctrl+Z to undo)"
+		},
+		"note": {
+			"new": "New note",
+			"edit": "Edit note",
+			"tooltipNew": "Note on the active cell: red corner, shown on hover (Shift+F2)",
+			"tooltipEdit": "Edit the note of the active cell (Shift+F2)"
+		},
+		"deleteNote": {
+			"label": "Delete note",
+			"tooltip": "Delete the note of the active cell",
+			"tooltipNone": "Delete note: the active cell has none"
+		},
+		"protectSheet": {
+			"tooltip": "{action}: no more changes to its contents (optional password)"
+		},
+		"protectStructure": {
+			"protect": "Protect structure",
+			"unprotect": "Unprotect structure",
+			"tooltipUnprotect": "Unprotect the sheet structure",
+			"tooltipByBook": "Structure of all sheets protected with the workbook (Review › Unprotect workbook)",
+			"tooltipSheet": "Protect structure: not needed, the whole sheet is already protected",
+			"tooltip": "Protect structure: everything is locked except entry in tables (free cells, formatting, columns, tables, objects and tab); optional password"
+		},
+		"protectWorkbook": {
+			"protect": "Protect workbook",
+			"unprotect": "Unprotect workbook",
+			"tooltipUnprotect": "Unprotect the workbook structure",
+			"tooltip": "Protect the workbook structure: adding, deleting, renaming or moving sheets is refused"
+		},
+		"pageBreaks": {
+			"tooltipOn": "Hide the page breaks (dotted lines) and the print area",
+			"tooltipOff": "Show the print page breaks (dotted lines) and the print area"
+		},
+		"gridlines": {
+			"label": "Gridlines",
+			"tooltipOn": "Hide the sheet gridlines",
+			"tooltipOff": "Show the sheet gridlines"
+		},
+		"headings": {
+			"label": "A1 headings"
+		},
+		"animate": {
+			"label": "Animations",
+			"tooltipOn": "Turn off the selection frame animation",
+			"tooltipOff": "Animate the selection frame (it slides to the new cell)"
+		},
+		"zoom": {
+			"label": "Zoom",
+			"tooltip": "Sheet zoom: {zoom} (Ctrl+mouse wheel, or the slider in the status bar)"
+		},
+		"zoom100": {
+			"label": "100%",
+			"tooltip": "Back to 100% zoom"
+		},
+		"freeze": {
+			"label": "Freeze panes",
+			"tooltipOn": "Frozen panes: {rows, plural, one {# row} other {# rows}}, {cols, plural, one {# column} other {# columns}}",
+			"tooltipOff": "Keep rows and columns visible while scrolling",
+			"unfreeze": "Unfreeze panes",
+			"cell": "Freeze panes (at the active cell)",
+			"row": "Freeze top row",
+			"col": "Freeze first column"
+		},
+		"theme": {
+			"label": "Theme",
+			"tooltip": "Colors of the workbook's tables: ordinary tables and tables from an external source (theme: {theme})",
+			"customName": "custom",
+			"customize": "Customize…"
+		},
+		"bench": {
+			"label": "Benchmark the grid"
+		},
+		"bullets": {
+			"label": "Bullets",
+			"tooltip": "Bulleted list"
+		},
+		"numbered": {
+			"label": "Numbering",
+			"tooltip": "Numbered list"
+		},
+		"quote": {
+			"label": "Quote",
+			"tooltip": "Quote (indent and line on the left)"
+		},
+		"code": {
+			"label": "Code",
+			"tooltip": "Code block (monospace font)"
+		},
+		"style": {
+			"label": "Style",
+			"tooltip": "Paragraph style: normal or heading",
+			"normal": "Normal",
+			"h1": "Heading 1",
+			"h2": "Heading 2",
+			"h3": "Heading 3"
+		},
+		"docPrint": {
+			"label": "Print / PDF",
+			"tooltip": "Print the document, or save it as PDF ({printer}), charts and PivotTables included"
+		},
+		"link": {
+			"label": "Link",
+			"tooltip": "Link to a web page (Ctrl+click to open it)"
+		},
+		"image": {
+			"label": "Image",
+			"tooltip": "Insert an image (saved in the workbook)"
+		}
+	},
+	"protect": {
+		"sheet": {
+			"locked": "sheet protected",
+			"protect": "Protect sheet",
+			"unprotect": "Unprotect sheet"
+		},
+		"doc": {
+			"locked": "document protected",
+			"protect": "Protect document",
+			"unprotect": "Unprotect document"
+		},
+		"html": {
+			"locked": "page protected",
+			"protect": "Protect page",
+			"unprotect": "Unprotect page"
+		}
+	},
+	"gate": {
+		"hint": "{command}: {reason}",
+		"noWorkbook": "{command}: open or create a workbook",
+		"workbookStructure": "the workbook structure is protected (this command creates a sheet)",
+		"layoutShared": "only owners and designers change the free cells and layout of this shared workbook",
+		"layoutLocked": "Only owners and designers change the free cells and layout of this shared workbook",
+		"ownProtected": "{locked} (Review › {unprotect})",
+		"bookProtected": "workbook protected (Review › Unprotect workbook)",
+		"structureByBook": "sheet structure protected (Review › Unprotect workbook)",
+		"structure": "structure protected (Review › Unprotect structure)"
+	}
+}

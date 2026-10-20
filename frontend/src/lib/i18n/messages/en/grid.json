@@ -1,1 +1,1520 @@
-{}
+{
+	"a11y": {
+		"header": "column header {column}",
+		"table": "table {table}",
+		"empty": "empty",
+		"computed": "calculated column",
+		"error": "formula error",
+		"selection": "Selection {range}, {rows, plural, one {# row} other {# rows}} by {cols, plural, one {# column} other {# columns}}",
+		"editing": "Editing {addr}",
+		"enterTable": "Table {table}"
+	},
+	"autocomplete": {
+		"rowValue": "row value",
+		"table": "table",
+		"name": "named cell",
+		"letNameOrCalc": "{calc} or {name}",
+		"letNameOrCalc.help": "{desc} Or one more name ({name}), followed by its value."
+	},
+	"controls": {
+		"kind": {
+			"button": "Button",
+			"input": "Text field",
+			"textarea": "Text area",
+			"checkbox": "Check box",
+			"select": "Drop-down list",
+			"file": "File"
+		},
+		"title": {
+			"link": "Linked cell: {cell}",
+			"value": "Value kept in the control",
+			"noAction": "No linked action",
+			"action": "Action ({event}): {handler}",
+			"listener": "Listener ({event}): {handler}"
+		},
+		"noAction": "No action linked to this button: right-click › Edit button… to choose one",
+		"file": {
+			"pick": "Choose a file",
+			"choose": "Choose a file…",
+			"none": "No file"
+		},
+		"copied": "Button copied: right-click a cell › Paste button",
+		"pasted": "Button pasted",
+		"editor": {
+			"label": "Label",
+			"placeholder": "Placeholder text (optional)",
+			"buttonText": "Button text",
+			"aria": "Control",
+			"insert": "Insert: {kind}",
+			"edit": "Edit: {kind}",
+			"help": "Help on buttons and controls",
+			"kind": "Type",
+			"name": "Name (for scripts)",
+			"name.placeholder": "automatic",
+			"link": "Linked cell (optional)",
+			"link.placeholder": "none: value kept in the control",
+			"source": "Source of the choices",
+			"source.list": "Typed",
+			"source.column": "Table column",
+			"source.column.tooltip": "Distinct values of a table column, kept up to date with it",
+			"source.column.none": "No table in the workbook",
+			"column": "Column (distinct values)",
+			"notFound": "{name} (not found)",
+			"options": "Choices (one per line)",
+			"pick": {
+				"address": "Active field: a click in the workbook puts the cell's address here.",
+				"value": "Active field: a click in the workbook puts the cell's value here."
+			},
+			"script": "Script",
+			"script.none": "(no action)",
+			"action": "Action",
+			"action.all": "Run the whole script",
+			"action.call": "Call {fn}()",
+			"listeners": "Script listeners (controls.on)",
+			"colors": "Custom colors",
+			"colors.normal": "Normal",
+			"colors.hover": "Hover",
+			"colors.active": "Click",
+			"colors.text": "Text",
+			"live": "Settings apply to the control right away."
+		},
+		"error": {
+			"noLabel": "Give the control a label",
+			"badLink": "Invalid linked cell (“B3” for example); leave empty to keep the value in the control",
+			"noColumn": "Choose the column that gives the choices"
+		},
+		"input": {
+			"aria": "Input box"
+		},
+		"menu": {
+			"title": "{kind} “{name}”",
+			"run": "Run the action",
+			"edit": "Edit…",
+			"resize": "Resize",
+			"resize.hint": "Drag a handle to resize the button"
+		},
+		"note": {
+			"noScript": "No script in the library (Script tab): the control is created without an action, to link later.",
+			"input": "The text is written to the linked cell when leaving the field or with Enter, then the action runs.",
+			"textarea": "The text is written to the linked cell when leaving the area or with Ctrl+Enter, then the action runs.",
+			"file": "The path of the chosen file is written to the linked cell, then the action runs.",
+			"value": "The value is written to the linked cell, then the action runs; everything is undone at once (Ctrl+Z).",
+			"button": "A click on the button runs the action; everything it changes is undone at once (Ctrl+Z)."
+		},
+		"running": "“{name}”: running…",
+		"paste": "Paste button"
+	},
+	"cf": {
+		"iconSet": {
+			"3arrows": "3 arrows (colored)",
+			"3arrowsgray": "3 arrows (gray)",
+			"3triangles": "3 triangles",
+			"4arrows": "4 arrows (colored)",
+			"4arrowsgray": "4 arrows (gray)",
+			"5arrows": "5 arrows (colored)",
+			"5arrowsgray": "5 arrows (gray)",
+			"3traffic": "3 traffic lights (unrimmed)",
+			"3trafficrim": "3 traffic lights (rimmed)",
+			"3signs": "3 signs",
+			"4traffic": "4 traffic lights",
+			"4redblack": "Red to black",
+			"3symbols": "3 symbols (circled)",
+			"3symbols2": "3 symbols (uncircled)",
+			"3flags": "3 flags",
+			"3stars": "3 stars",
+			"4rating": "4 ratings",
+			"5rating": "5 ratings",
+			"5quarters": "5 quarters",
+			"5boxes": "5 boxes"
+		},
+		"iconGroup": {
+			"directional": "Directional",
+			"shapes": "Shapes",
+			"indicators": "Indicators",
+			"ratings": "Ratings"
+		},
+		"range": {
+			"tooBig": "Range too large (more than {max} cells): select entire rows or columns",
+			"missing": "Enter a range",
+			"noColumn": "Column not found: {ref}",
+			"invalid": "Invalid range: {ref}",
+			"unknown": "Unrecognized reference: {ref}"
+		},
+		"date": {
+			"yesterday": "Yesterday",
+			"today": "Today",
+			"tomorrow": "Tomorrow",
+			"last7": "In the last 7 days",
+			"lastweek": "Last week",
+			"thisweek": "This week",
+			"nextweek": "Next week",
+			"lastmonth": "Last month",
+			"thismonth": "This month",
+			"nextmonth": "Next month"
+		},
+		"op": {
+			"between": "between",
+			"notbetween": "not between",
+			"eq": "equal to",
+			"ne": "not equal to",
+			"gt": "greater than",
+			"lt": "less than",
+			"ge": "greater than or equal to",
+			"le": "less than or equal to"
+		},
+		"textOp": {
+			"contains": "containing",
+			"notcontains": "not containing",
+			"begins": "beginning with",
+			"ends": "ending with"
+		},
+		"style": {
+			"lightRedDarkRed": "Light red fill with dark red text",
+			"yellowDarkYellow": "Yellow fill with dark yellow text",
+			"greenDarkGreen": "Green fill with dark green text",
+			"lightRedFill": "Light red fill",
+			"redText": "Red text",
+			"redBorder": "Red border",
+			"bold": "Bold"
+		},
+		"barColor": {
+			"blue": "Blue",
+			"green": "Green",
+			"red": "Red",
+			"orange": "Orange",
+			"lightBlue": "Light blue",
+			"purple": "Purple"
+		},
+		"scale": {
+			"greenYellowRed": "Green - Yellow - Red",
+			"redYellowGreen": "Red - Yellow - Green",
+			"greenWhiteRed": "Green - White - Red",
+			"redWhiteGreen": "Red - White - Green",
+			"blueWhiteRed": "Blue - White - Red",
+			"redWhiteBlue": "Red - White - Blue",
+			"whiteRed": "White - Red",
+			"redWhite": "Red - White",
+			"greenWhite": "Green - White",
+			"whiteGreen": "White - Green",
+			"greenYellow": "Green - Yellow",
+			"yellowGreen": "Yellow - Green",
+			"tooltip": "{colors} color scale"
+		},
+		"describe": {
+			"compare": "Cell value {op} {value}",
+			"between": "Cell value between {from} and {to}",
+			"notBetween": "Cell value not between {from} and {to}",
+			"contains": "Text that contains “{value}”",
+			"notContains": "Text that does not contain “{value}”",
+			"begins": "Text that begins with “{value}”",
+			"ends": "Text that ends with “{value}”",
+			"empty": "Blank cell",
+			"notEmpty": "Non-blank cell",
+			"error": "Error value",
+			"noError": "No errors",
+			"date": "Date: {when}",
+			"dup": "Duplicate values",
+			"unique": "Unique values",
+			"top": "Top {n} values",
+			"topPct": "Top {n}%",
+			"bottom": "Bottom {n} values",
+			"bottomPct": "Bottom {n}%",
+			"stdDevAbove": "{n, plural, one {# std dev} other {# std dev}} above average",
+			"stdDevBelow": "{n, plural, one {# std dev} other {# std dev}} below average",
+			"aboveOrEqual": "Equal to or above average",
+			"belowOrEqual": "Equal to or below average",
+			"above": "Above average",
+			"below": "Below average",
+			"formula": "Formula: {formula}",
+			"bar": "Data bar",
+			"scale": "{n}-color scale",
+			"icons": "Icon set: {set}"
+		},
+		"error": {
+			"noSelection": "Select the cells to format",
+			"notInTable": "The active cell is not in a table",
+			"value": "Enter a value",
+			"values": "Enter both values",
+			"pct": "Enter a percentage from 1 to 100",
+			"count": "Enter a number from 1 to 1000",
+			"text": "Enter a text",
+			"rank": "Enter a rank from 1 to 1000",
+			"formula": "Enter a formula"
+		},
+		"quick": {
+			"gt": "Greater than",
+			"lt": "Less than",
+			"between": "Between",
+			"eq": "Equal to",
+			"contains": "Text that contains",
+			"date": "A date occurring",
+			"dup": "Duplicate values",
+			"top": "Top 10 items",
+			"bottom": "Bottom 10 items",
+			"above": "Above average",
+			"below": "Below average",
+			"forRange": "for the selected range",
+			"with": "with"
+		},
+		"kind": {
+			"value": "Format all cells based on their values",
+			"contains": "Format only cells that contain",
+			"rank": "Format only top or bottom ranked values",
+			"avg": "Format only values that are above or below average",
+			"dup": "Format only unique or duplicate values",
+			"formula": "Use a formula to determine which cells to format"
+		},
+		"cfvo": {
+			"auto": "Automatic",
+			"min": "Lowest value",
+			"max": "Highest value",
+			"num": "Number",
+			"pct": "Percent",
+			"pctl": "Percentile"
+		},
+		"avg": {
+			"above": "above",
+			"below": "below",
+			"aboveOrEqual": "equal or above",
+			"belowOrEqual": "equal or below",
+			"above1": "1 std dev above",
+			"below1": "1 std dev below",
+			"above2": "2 std dev above",
+			"below2": "2 std dev below",
+			"above3": "3 std dev above",
+			"below3": "3 std dev below",
+			"ofRange": "the average for the selected range"
+		},
+		"cond": {
+			"value": "Cell value",
+			"text": "Specific text",
+			"date": "Dates occurring",
+			"empty": "Blanks",
+			"notempty": "No blanks",
+			"error": "Errors",
+			"noerror": "No errors"
+		},
+		"scope": {
+			"selection": "Current selection",
+			"sheet": "This worksheet",
+			"table": "This table: {table}"
+		},
+		"menu": {
+			"highlight": "Highlight cells rules",
+			"topBottom": "Top/bottom rules",
+			"bars": "Data bars",
+			"scales": "Color scales",
+			"icons": "Icon sets",
+			"newRule": "New rule…",
+			"clear": "Clear rules",
+			"manage": "Manage rules…",
+			"quick": {
+				"gt": "Greater than…",
+				"lt": "Less than…",
+				"between": "Between…",
+				"eq": "Equal to…",
+				"contains": "Text that contains…",
+				"date": "A date occurring…",
+				"dup": "Duplicate values…",
+				"top": "Top 10 items…",
+				"topPct": "Top 10%…",
+				"bottom": "Bottom 10 items…",
+				"bottomPct": "Bottom 10%…",
+				"above": "Above average…",
+				"below": "Below average…"
+			},
+			"more": "More rules…",
+			"clear.selection": "Clear rules from selected cells",
+			"clear.sheet": "Clear rules from entire sheet",
+			"clear.table": "Clear rules from this table"
+		},
+		"bar": {
+			"gradient": "Gradient fill",
+			"solid": "Solid fill",
+			"gradient.tooltip": "{color} data bar (gradient)",
+			"solid.tooltip": "{color} data bar (solid)",
+			"fill": "Fill:",
+			"border": "Solid border",
+			"negative": "Negative bars:",
+			"only": "Show bar only"
+		},
+		"lead": {
+			"gt": "Format cells that are GREATER THAN:",
+			"lt": "Format cells that are LESS THAN:",
+			"between": "Format cells that are BETWEEN:",
+			"eq": "Format cells that are EQUAL TO:",
+			"contains": "Format cells that contain the text:",
+			"date": "Format cells that contain a date occurring:",
+			"dup": "Format cells that contain:",
+			"top": "Format cells that rank in the TOP:",
+			"topPct": "Format cells that rank in the TOP (in %):",
+			"bottom": "Format cells that rank in the BOTTOM:",
+			"bottomPct": "Format cells that rank in the BOTTOM (in %):",
+			"above": "Format cells that are ABOVE AVERAGE:",
+			"below": "Format cells that are BELOW AVERAGE:"
+		},
+		"placeholder": {
+			"text": "text",
+			"valueOrDate": "value or date",
+			"value": "value"
+		},
+		"and": "and",
+		"dup": {
+			"dup": "duplicate",
+			"unique": "unique",
+			"values": "values",
+			"ofRange": "values in the selected range"
+		},
+		"edit": {
+			"title": {
+				"edit": "Edit formatting rule",
+				"new": "New formatting rule"
+			},
+			"kind": "Select a rule type:",
+			"desc": "Edit the rule description:",
+			"value": "Format all cells based on their values:",
+			"style": "Format style:",
+			"contains": "Format only cells with:",
+			"rank": "Format values that rank in the:",
+			"avg": "Format values that are:",
+			"dup": "Format all:",
+			"formula": "Format values where this formula is true:",
+			"formula.help": "In a table, [@Column] means the cell in the same row (an address in the first data row, such as $C2, also applies to each row). Outside a table, the formula is written for the top-left cell of the range: its relative addresses follow each cell."
+		},
+		"vstyle": {
+			"scale2": "2-color scale",
+			"scale3": "3-color scale"
+		},
+		"grid": {
+			"min": "Minimum",
+			"mid": "Midpoint",
+			"max": "Maximum",
+			"kind": "Type:",
+			"value": "Value:",
+			"color": "Color:",
+			"lowest": "(lowest value)",
+			"highest": "(highest value)",
+			"auto": "(automatic)"
+		},
+		"preview": "Preview:",
+		"icons": {
+			"style": "Icon style:",
+			"reverse": "Reverse icon order",
+			"only": "Show icon only",
+			"icon": "Icon",
+			"value": "Value",
+			"kind": "Type",
+			"when": "when value is",
+			"whenLast": "when {op} {value}"
+		},
+		"rank": {
+			"top": "Top",
+			"bottom": "Bottom",
+			"pct": "% of the selected range"
+		},
+		"customFormat": "Custom format",
+		"customFormat.more": "Custom format…",
+		"letter": {
+			"bold": "B",
+			"italic": "I",
+			"underline": "U"
+		},
+		"font": "Font:",
+		"fontColor": "Font color",
+		"fillColor": "Fill color",
+		"border": "Border",
+		"borderColor": "Border color",
+		"appliesTo": "Applies to:",
+		"appliesTo.placeholder": "current selection",
+		"stop": "Stop if true",
+		"stop.tooltip": "The following rules no longer apply to the cells that meet this one",
+		"manager": {
+			"title": "Conditional formatting rules manager",
+			"scope": "Show formatting rules for:",
+			"edit": "Edit rule…",
+			"delete": "Delete rule",
+			"duplicate": "Duplicate rule",
+			"up": "Move up (higher priority)",
+			"down": "Move down (lower priority)",
+			"col": {
+				"rule": "Rule (applied in order shown)",
+				"format": "Format",
+				"appliesTo": "Applies to"
+			},
+			"none": {
+				"selection": "No rules on the selection.",
+				"sheet": "No rules on this sheet."
+			},
+			"apply": "Apply"
+		},
+		"unavailable": "Conditional formatting unavailable"
+	},
+	"color": {
+		"standard": {
+			"darkRed": "Dark red",
+			"red": "Red",
+			"orange": "Orange",
+			"yellow": "Yellow",
+			"lightGreen": "Light green",
+			"green": "Green",
+			"lightBlue": "Light blue",
+			"blue": "Blue",
+			"darkBlue": "Dark blue",
+			"purple": "Purple"
+		},
+		"slot": {
+			"lt1": "Background 1",
+			"dk1": "Text 1",
+			"lt2": "Background 2",
+			"dk2": "Text 2",
+			"accent1": "Accent 1",
+			"accent2": "Accent 2",
+			"accent3": "Accent 3",
+			"accent4": "Accent 4",
+			"accent5": "Accent 5",
+			"accent6": "Accent 6"
+		},
+		"hue": {
+			"white": "White",
+			"black": "Black",
+			"gray": "Gray",
+			"red": "Red",
+			"orange": "Orange",
+			"yellow": "Yellow",
+			"green": "Green",
+			"teal": "Teal",
+			"blue": "Blue",
+			"purple": "Purple",
+			"pink": "Pink"
+		},
+		"lighter": "lighter {pct}%",
+		"darker": "darker {pct}%",
+		"button": {
+			"tooltip": "{label}: {color}",
+			"none": "none"
+		},
+		"palette": {
+			"theme": "Theme colors",
+			"standard": "Standard colors",
+			"recent": "Recent colors",
+			"more": "More colors…"
+		}
+	},
+	"customSort": {
+		"summary": {
+			"list": "list “{name}”",
+			"reversed": "{order} (reversed)"
+		},
+		"error": {
+			"noValues": "No values to order",
+			"noName": "Name the list to save",
+			"exists": "The list “{name}” already exists"
+		},
+		"title": "Custom sort",
+		"heading": "Custom sort – “{field}”",
+		"loading": "Loading values…",
+		"orderFrom": "Order based on:",
+		"orderFrom.values": "the values of the column (free order)",
+		"orderFrom.list": "List “{name}”: {values}…",
+		"orderFrom.workbookList": "List “{name}” (workbook): {values}…",
+		"hint": "Drag the values to order them, or select one and use the buttons (keyboard: Alt+↑ / Alt+↓, Alt+Home / Alt+End). Values missing from the order follow in ascending order, blank cells stay at the end.",
+		"items": {
+			"aria": "Order of the values"
+		},
+		"absent": "missing",
+		"absent.tooltip": "Value of the order missing from the data: kept for when it appears",
+		"empty": "No values (the column is empty).",
+		"move": {
+			"first": "First",
+			"first.tooltip": "Move to first (Alt+Home)",
+			"up": "Up",
+			"up.tooltip": "Move up (Alt+↑)",
+			"down": "Down",
+			"down.tooltip": "Move down (Alt+↓)",
+			"last": "Last",
+			"last.tooltip": "Move to last (Alt+End)"
+		},
+		"direction": "Direction",
+		"direction.forward": "In this order (first to last)",
+		"direction.reverse": "Reversed (last to first)",
+		"save": "Save this order as a custom list of the workbook, for other columns",
+		"save.name": "Name:",
+		"save.name.placeholder": "Sizes, Priorities…",
+		"applied": "Custom sort applied (Ctrl+Z to undo)"
+	},
+	"defaultName": {
+		"hint": "Default name: rename the table"
+	},
+	"formulaError": {
+		"name": {
+			"ref": "#NAME?: {ref} doesn't exist. Write Cell[{cell}] for a free cell, [Column] for the row's value in a table, Table[Column] for a whole column, or Table[Column][row] for a single value.",
+			"unknown": "#NAME?: unknown name. Check the name of the function, table, column or named cell."
+		},
+		"value": {
+			"text": "#VALUE!: Cell[{cell}] contains text, not a number or a date.",
+			"column": "#VALUE!: a whole column Table[Column] is used where a single value is expected. Write Table[Column][row], or [Column] in a row of the table.",
+			"type": "#VALUE!: unexpected value type (text where a number is expected, or invalid argument)."
+		},
+		"div0": "#DIV/0!: division by zero (or by a blank cell).",
+		"ref": "#REF!: invalid reference, the table or column was deleted or renamed.",
+		"circ": "#CIRC!: circular reference, the formula depends on its own value (for example SUM(Table[X]) in column X). Make it read other cells or columns; for a running total, read the previous row: [Total][-1].",
+		"na": "#N/A: value not found (REFERENCE, MATCH…); check the key you are looking up.",
+		"num": "#NUM!: invalid or out-of-range number.",
+		"spill": "#SPILL!: the dynamic array can't spill, cells in its path are already filled.",
+		"calc": "#CALC!: the dynamic array is empty (no rows match)."
+	},
+	"filter": {
+		"cond": {
+			"kind": {
+				"number": "Number filters",
+				"date": "Date filters",
+				"text": "Text filters"
+			},
+			"op": {
+				"eq": "Equals",
+				"ne": "Does not equal",
+				"begins": "Begins with",
+				"ends": "Ends with",
+				"contains": "Contains",
+				"notcontains": "Does not contain",
+				"gt": "Is greater than",
+				"ge": "Is greater than or equal to",
+				"lt": "Is less than",
+				"le": "Is less than or equal to",
+				"between": "Between",
+				"top": "Top 10",
+				"bottom": "Bottom 10",
+				"above": "Above average",
+				"below": "Below average"
+			},
+			"date": {
+				"lt": "Before",
+				"gt": "After",
+				"le": "Before or on",
+				"ge": "After or on"
+			},
+			"topN": "Top {n}",
+			"bottomN": "Bottom {n}",
+			"between": "{op} {from} and {to}",
+			"one": "{op} “{value}”",
+			"joinOr": "{a} or {b}",
+			"joinAnd": "{a} and {b}",
+			"missingValue": "Enter the value of the condition"
+		},
+		"values": {
+			"noMatch": "No value matches the search",
+			"noneChecked": "Check at least one value"
+		},
+		"blanks": "(Blanks)",
+		"search": {
+			"placeholder": "Search",
+			"aria": "Search for a value"
+		},
+		"loading": "Loading values…",
+		"selectAllResults": "(Select all search results)",
+		"selectAll": "(Select all)",
+		"noMatch": "No value matches.",
+		"notFiltered": "The table of the active cell is not filtered",
+		"chooseOne": "Choose at least one value",
+		"placeActive": "Put the active cell in a table column to filter",
+		"clearOf": "Clear filter from “{field}”",
+		"computed": "Calculated column: sorted and filtered on its values; its type follows its formula.",
+		"custom": "Custom filter…",
+		"active": "Active filter: {conds}",
+		"custom.heading": "Show rows where “{column}”:",
+		"custom.and": "And",
+		"custom.or": "Or",
+		"custom.cond": "Condition {n}",
+		"custom.none": "(none)",
+		"custom.number": "number",
+		"custom.date": "dd/mm/yyyy",
+		"custom.wildcards": "* stands for any series of characters, ? for a single one.",
+		"firstValues": "Only the first 1,000 values are listed.",
+		"errorsOnly": "Entries not matching the type only ({n})",
+		"custom.back": "‹ List of values"
+	},
+	"find": {
+		"count": "{k} of {total}",
+		"replaced": {
+			"all": "{n, plural, one {# cell replaced} other {# cells replaced}} (Ctrl+Z to undo)",
+			"selection": "{n, plural, one {# cell replaced} other {# cells replaced}} in the selection (Ctrl+Z to undo)"
+		},
+		"notFound": {
+			"all": "No cells found",
+			"selection": "No cells found in the selection"
+		},
+		"none": "No results",
+		"aria": "Find and replace",
+		"replace": {
+			"hide": "Hide replace",
+			"show": "Show replace",
+			"tooltip": "Replace (Ctrl+H)"
+		},
+		"placeholder": "Find",
+		"prev": "Previous",
+		"prev.tooltip": "Previous (Shift+Enter or Shift+F3)",
+		"next": "Next",
+		"next.tooltip": "Next (Enter or F3)",
+		"close": "Close find",
+		"close.tooltip": "Close (Esc)",
+		"replaceBy": "Replace with",
+		"zone": "Within: {zone}",
+		"zone.selection.tooltip": "The selection limits the search; select a single cell to search the whole sheet",
+		"zone.selection.aria": "Within the selection {range}",
+		"zone.sheet.tooltip": "The whole sheet; select several cells to limit the search",
+		"zone.sheet.aria": "Within the whole sheet",
+		"zone.sheet": "sheet",
+		"replaceOne": "Replace",
+		"replaceOne.tooltip": "Replaces the found cell, then moves to the next one",
+		"replaceAll": "Replace all",
+		"replaceAll.tooltip": "Replaces all occurrences (Ctrl+Z to undo)"
+	},
+	"sort": {
+		"number": {
+			"asc": "Sort smallest to largest",
+			"desc": "Sort largest to smallest"
+		},
+		"date": {
+			"asc": "Sort oldest to newest",
+			"desc": "Sort newest to oldest"
+		},
+		"text": {
+			"asc": "Sort A to Z",
+			"desc": "Sort Z to A"
+		},
+		"placeActive": "Put the active cell in a table column to sort"
+	},
+	"type": {
+		"integer": "Integer",
+		"decimal": "Decimal",
+		"text": "Text",
+		"boolean": "Boolean",
+		"date": "Date",
+		"formula": "Calculated",
+		"title": {
+			"fixed": "Data type · fixed",
+			"inferred": "Data type · inferred"
+		},
+		"pending": "{n, plural, one {# value can't become “{type}”: it will be kept and marked as an error.} other {# values can't become “{type}”: they will be kept and marked as errors.}}",
+		"convertAnyway": "Convert anyway",
+		"aria": "Data type",
+		"fixed": {
+			"tooltip": "Fixed type"
+		},
+		"inferred": {
+			"tooltip": "Inferred type: choosing it fixes it"
+		},
+		"convert": {
+			"tooltip": "Convert to {type}"
+		},
+		"revert": "Switch back to {type} ({n, plural, one {# value marked} other {# values marked}} as errors)",
+		"errors": "{n, plural, one {# value} other {# values}} not matching the column type",
+		"computed": "Calculated column",
+		"toValues": {
+			"tooltip": "The formula is removed: the column keeps its current values, with the type of those values (Ctrl+Z to undo)"
+		}
+	},
+	"syntax": {
+		"unclosedQuote": "unclosed quote",
+		"badNumber": "invalid number",
+		"unknownError": "unknown error",
+		"unclosedBracket": "unclosed bracket",
+		"unexpectedChar": "unexpected character “{char}”",
+		"missingCloseParen": "a closing parenthesis “)” is missing",
+		"missingOperatorOrParen": "an operator or “)” is missing before “{word}”",
+		"badCellAddress": "invalid cell address: Cell[{addr}]",
+		"rowFromOne": "table rows are counted from 1",
+		"rowExpected": "row expected in brackets",
+		"missingCloseParenOf": "a closing parenthesis “)” is missing for {name}",
+		"missingSepOrParen": "“{sep}” or “)” is missing before “{word}”",
+		"missingValue": "a value is missing",
+		"missingValueAfter": "a value is missing after “{word}”",
+		"missingValueBefore": "a value is missing before “{word}”",
+		"empty": "the formula is empty",
+		"unexpected": "unexpected “{word}”",
+		"extraCloseParen": "extra closing parenthesis “)”",
+		"sepOutside": "“{sep}” outside the parentheses of a function",
+		"missingOperator": "an operator is missing before “{word}”"
+	},
+	"hidden": {
+		"band": {
+			"choice": "⧩ {n, plural, one {# row} other {# rows}} with other values of “{category}” (tab choice): typing here adds a row",
+			"filter": "⧩ {n, plural, one {# row hidden} other {# rows hidden}} by the filter"
+		},
+		"refusal": "Rows hidden by the filter of table “{table}”: clear the filter to change them"
+	},
+	"pivot": {
+		"zone": {
+			"filters": "Filters",
+			"filters.hint": "Drag a field here to filter the whole report",
+			"cols": "Columns",
+			"cols.hint": "Its values become columns (one field)",
+			"rows": "Rows",
+			"rows.hint": "Drag here the fields that group the rows",
+			"values": "Values",
+			"values.hint": "Drag here the fields to summarize"
+		},
+		"agg": {
+			"sum": "Sum",
+			"count": "Count",
+			"countDistinct": "Distinct count",
+			"avg": "Average",
+			"min": "Min",
+			"max": "Max"
+		},
+		"show": {
+			"none": "No calculation",
+			"pctTotal": "% of grand total",
+			"pctCol": "% of column total",
+			"pctRow": "% of row total"
+		},
+		"format": {
+			"auto": "Automatic (source format)",
+			"number": "Number (1,235)",
+			"number2": "Number, 2 decimals (1,234.50)",
+			"currency": "Currency (€1,235)",
+			"currency2": "Currency, 2 decimals (€1,234.50)",
+			"percent": "Percentage (12.3%)"
+		},
+		"rowCount": "Count of rows",
+		"valueLabel": "{agg} of {field}",
+		"move": {
+			"up": "Move up",
+			"down": "Move down",
+			"first": "Move to beginning",
+			"last": "Move to end",
+			"to": "Move to {zone}"
+		},
+		"handKept": "{n, plural, one {Values entered on a row no longer in the PivotTable, set aside: they will come back with its label.} other {Values entered on # rows no longer in the PivotTable, set aside: they will come back with their labels.}}",
+		"place": {
+			"create": "Click the cell where to place the PivotTable (Esc: cancel)",
+			"move": "Click the cell where to move the PivotTable “{name}” (Esc: cancel)",
+			"created": "PivotTable created (Ctrl+Z to undo)",
+			"moved": "PivotTable moved (Ctrl+Z to undo)",
+			"same": "The PivotTable is already at this place",
+			"cancelled": "PivotTable placement cancelled"
+		},
+		"filter": {
+			"all": "(All)",
+			"count": "({n} values)",
+			"aria": "Filter of {field}",
+			"title": "Filter “{field}”",
+			"several": "(Multiple items)",
+			"field": "Field:",
+			"reportField": "“{field}” · report filter"
+		},
+		"summarizeBy": "Summarize by",
+		"menu": {
+			"chooseValues": "Choose values…",
+			"clearFilter": "Clear filter",
+			"customSort": "Custom sort…",
+			"sourceOrder": "Source order",
+			"removeField": "Remove field",
+			"editCalc": "Edit calculated field…",
+			"removeCalc": "Remove calculated field",
+			"addTo": "Add to {zone}",
+			"removeFromReport": "Remove from report",
+			"title": "PivotTable “{name}”",
+			"titleOf": "PivotTable of “{source}”",
+			"source": "Change source…",
+			"source.tooltip": "Attach the PivotTable to another table: the fields that exist there are kept",
+			"move": "Move",
+			"move.tooltip": "The next click on a cell (on this sheet or another) places the top-left corner of the PivotTable there; Esc cancels"
+		},
+		"calc": {
+			"title": "Calculated field",
+			"title.edit": "Calculated field “{name}”",
+			"intro": "A formula on the columns of each row of “{source}”: rows are grouped by its result, in Rows, Columns or Filters (or summarized in Values).",
+			"name": "Field name:",
+			"add": "Add",
+			"add.label": "Calculated field…",
+			"add.tooltip": "A field whose value is calculated for each row of the source: =YEAR([Date]), =LEFT([Code],2)… It groups the rows in Rows or Columns, filters, or is summarized like a column."
+		},
+		"panel": {
+			"title": "PivotTable fields",
+			"help": "Help on PivotTables",
+			"name": {
+				"tooltip": "The PivotTable is queried in the SQL tab under this name and serves as a source for charts"
+			},
+			"source": "{name} · source:"
+		},
+		"defaultName": "PivotTable",
+		"search": {
+			"field": "Search for a field",
+			"clear": "Clear search"
+		},
+		"fields": {
+			"choose": "Choose fields to add to report:",
+			"aria": "Fields of table {table}",
+			"computed": "Calculated column: it can't be used as a PivotTable field yet",
+			"add": "Add to an area",
+			"add.aria": "Add “{name}” to an area",
+			"noMatch": "No field matches “{search}”."
+		},
+		"zones": {
+			"hint": "Drag fields between areas below:"
+		},
+		"source": {
+			"change": "Change source:",
+			"choose": "Choose a table…",
+			"tooltip": "Source table of the PivotTable"
+		},
+		"empty": "The report is empty: check fields above, or drag them into the areas. Numbers go to Values, everything else to Rows.",
+		"noValues": "Add a field to Values to calculate totals (sum, count, average…).",
+		"handForget": "Forget the values set aside",
+		"handForget.tooltip": "Clear these values (Ctrl+Z to undo)",
+		"grandTotals": "Grand totals",
+		"subtotals": "Subtotals",
+		"subtotals.top": "At top of group",
+		"subtotals.bottom": "At bottom of group",
+		"subtotals.none": "None",
+		"defer": "Defer layout update",
+		"update": "Update",
+		"update.tooltip": "Apply the changes to the PivotTable",
+		"pending": "Pending changes: the PivotTable is not up to date yet (they also apply when the pane closes).",
+		"delete": "Delete PivotTable",
+		"valueSettings": "Value field settings",
+		"valueSettings.menu": "Value field settings…",
+		"valueSettings.source": "Source: {field}",
+		"valueSettings.rowCount": "count of rows",
+		"valueSettings.name": "Custom name",
+		"valueSettings.show": "Show values as",
+		"valueSettings.format": "Number format",
+		"valueSettings.pctFormat": "A percentage keeps its own format.",
+		"error": "PivotTable: {error}",
+		"readOnly": "A PivotTable can't be edited cell by cell: double-click it to change its fields",
+		"partial": "Part of a PivotTable can't be cleared: select all of it to delete it, or right-click › Delete PivotTable",
+		"deleted": "PivotTable “{name}” deleted (Ctrl+Z to undo)",
+		"placeActive": "Put the active cell in a table to create a PivotTable",
+		"pasted": "PivotTable pasted (Ctrl+Z to undo)",
+		"overlap": "The area would overlap the PivotTable “{name}”: move it on its own (select it, then drag its border, or right-click › Move)",
+		"deletedMany": "{n} PivotTables deleted (Ctrl+Z to undo)",
+		"partialCut": "Part of a PivotTable can't be cut: select all of it to move it, or copy its values (Ctrl+C)",
+		"fold": "Expand / Collapse",
+		"fold.expand": "Expand",
+		"fold.collapse": "Collapse",
+		"fold.expandAll": "Expand all",
+		"fold.collapseAll": "Collapse all"
+	},
+	"readFail": "The table “{table}” couldn't be reread; it will be reloaded.",
+	"refLink": {
+		"becomes": "“{column}” becomes a reference to “{table}”: Ctrl+click or right-click › Go to…",
+		"cites": "Rows that cite “{value}” ({n})",
+		"noCites": "No row cites “{value}”",
+		"missing": "“{value}” doesn't exist in {table}",
+		"go": "Go to “{table}” › {value}",
+		"go.tooltip": "Goes to the row “{value}” of table “{table}” (Alt+← to go back)",
+		"cite": {
+			"tooltip": "Filters “{table}” on {column} = {value} and goes to the first row (Alt+← to go back)"
+		}
+	},
+	"validation": {
+		"notAllowed": "“{value}” is not allowed here: choose from the list ({list}), Alt+↓ to open it",
+		"missingSource": "Enter the source range: Table[Column], Cell[A1:A10] or Sheet2!Cell[A1:A10] (“Select” to pick it)",
+		"missingValues": "Enter at least one value (one per line, or separated by “;”)",
+		"preview": {
+			"notFound": "Source not found: {error}",
+			"empty": "The range contains no values",
+			"values": "{n, plural, one {# value} other {# values}}: {list}"
+		},
+		"sourceError": "“{value}” can't be checked: the source of the list ({src}) can't be read ({error})",
+		"sourceEmpty": "“{value}” is not allowed here: the range of the list ({src}) is empty",
+		"target": {
+			"onSheet": "{what} ({sheet})",
+			"col": "column {col}",
+			"cols": "columns {range}",
+			"row": "row {row}",
+			"rows": "rows {range}",
+			"tableCol": "column “{column}” of table {table}",
+			"tableCols": "columns “{from}” to “{to}” of table {table}",
+			"cell": "cell {addr}",
+			"cells": "cells {range}",
+			"tableCells": "cells {range} of table {table}"
+		},
+		"readImpossible": "can't be read here",
+		"removed": "Validation removed",
+		"list": {
+			"set": "Drop-down list: {n, plural, one {# allowed value} other {# allowed values}} (Alt+↓ to open it)",
+			"source": "Drop-down list taken from {src}, reread each time it opens (Alt+↓ to open it)",
+			"help": "Values allowed in the selection, one per line (or separated by “;”). A ▾ arrow offers the list in the cell (Alt+↓); any other entry is rejected. On a whole table column, the list also applies to rows added later.",
+			"placeholder": "Yes\nNo"
+		},
+		"pick": "Select the source range (on this sheet or another), then Enter (Esc: cancel)",
+		"pick.oneColumn": "A source range covers a single table column, or free cells",
+		"range": {
+			"help": "The values of the range (distinct, without blanks, in order) are reread each time the list opens and at each entry: a table column (Customers[City]), cells (Cell[A1:A10], Sheet2!Cell[A1:A10]) or a named cell. The reference follows renames and moves.",
+			"aria": "Source range",
+			"placeholder": "Customers[City]"
+		},
+		"pick.source": "Source range:",
+		"title": "Data validation — {target}",
+		"source": "Source of the list",
+		"mode": {
+			"list": "Typed values",
+			"range": "Range"
+		},
+		"pick.tooltip": "Pick the range in the sheet (Enter to come back)",
+		"pick.button": "Select",
+		"reading": "Reading the range…",
+		"clear": "Clear validation",
+		"listMenu": {
+			"notFound": "List not found: {error}",
+			"reading": "Reading the list…",
+			"empty": "The range of the list is empty"
+		}
+	},
+	"spill": {
+		"tip": "Spilled result of the formula in {addr} — right-click: convert to table"
+	},
+	"tabChoice": {
+		"clear": "Stop filtering the tab",
+		"clear.tooltip": "The tab loses its ▾ “{name}”: the tables and PivotTables of the sheet show all their rows again (Ctrl+Z to undo)",
+		"byField": "Filter the tab by this field",
+		"byColumn": "Filter the tab by this column",
+		"computed": "A calculated column can't be used as a tab choice: take an entered column (Year, Month, City…)",
+		"tooMany": "“{column}” is empty, or has more than {max} distinct values: too many for the tab's list; take a column such as Year, Month or City",
+		"byField.tooltip": "The sheet tab gets a ▾ to choose a value of “{column}”: this PivotTable, the other PivotTables of the sheet built on a table that has “{column}”, and the tables of the sheet that have it only show the rows with that value (the source table, if it is on another sheet, is not filtered). It starts on all values. Ctrl+Z to undo.",
+		"byColumn.tooltip": "The sheet tab gets a ▾ to choose a value of “{column}”: each table of the sheet that has the column “{column}”, and the PivotTables built on them, only show the rows with that value. It starts on all values. Ctrl+Z to undo.",
+		"replaces": "{text} Replaces the choice by “{name}”.",
+		"notice": {
+			"cleared": "The tab no longer filters by “{column}”: all rows are shown again (Ctrl+Z to undo)",
+			"set": "The tab filters by “{column}”: its ▾ arrow chooses the value shown (Alt+↓); Ctrl+Z to undo"
+		}
+	},
+	"textCols": {
+		"dateOrder": {
+			"DMY": "DMY",
+			"MDY": "MDY",
+			"YMD": "YMD",
+			"DYM": "DYM",
+			"MYD": "MYD",
+			"YDM": "YDM"
+		},
+		"format": {
+			"text": "Text",
+			"skip": "Do not import column (skip)",
+			"general": "General",
+			"date": "Date",
+			"notImported": "Skip column",
+			"legend": "Column {n} data format",
+			"hint": "“General” converts numbers and dates, everything else becomes text. Click a column of the preview to choose its format."
+		},
+		"sep": {
+			"comma": ", (comma)",
+			"period": ". (period)",
+			"space": "space",
+			"apostrophe": "' (apostrophe)",
+			"none": "none"
+		},
+		"step": {
+			"kind": "Original data type",
+			"separators": "Delimiters",
+			"formats": "Column data format"
+		},
+		"title": "Convert text to columns",
+		"heading": "Convert text to columns wizard – step {step} of 3: {name}",
+		"note": {
+			"table": "Table {table}, column {column}: the first part stays in the column, the following ones become new columns inserted to the right.",
+			"tableWithHeader": "Table {table}, column {column} (header included): the first part stays in the column, the following ones become new columns inserted to the right.",
+			"cells": "{n, plural, one {# text cell} other {# text cells}} to convert."
+		},
+		"kind": {
+			"legend": "Choose the file type that best describes your data",
+			"delimited": "Delimited",
+			"delimited.help": "– Characters such as commas or tabs separate each field.",
+			"fixed": "Fixed width",
+			"fixed.help": "– Fields are aligned in columns with spaces between each field."
+		},
+		"preview": "Data preview",
+		"preview.selection": "Preview of selected data",
+		"delim": {
+			"tab": "Tab",
+			"semicolon": "Semicolon",
+			"comma": "Comma",
+			"space": "Space",
+			"other": "Other:",
+			"other.aria": "Other delimiter"
+		},
+		"merge": "Treat consecutive delimiters as one",
+		"quote": "Text qualifier:",
+		"quote.none": "none",
+		"fixed": {
+			"hint": "Lines with arrows signify a column break. To create a break line, click at the desired position. To delete a break line, double-click on the line. To move a break line, drag it."
+		},
+		"break": {
+			"tooltip": "Drag to move, double-click to delete"
+		},
+		"dest": "Destination:",
+		"dest.table.tooltip": "In a table, the first part stays in the column and the following ones are inserted to the right",
+		"dest.tooltip": "First cell where to write the columns, for example $B$2",
+		"advanced": "Advanced…",
+		"advanced.open": "Advanced ▴",
+		"decimal": "Decimal separator:",
+		"thousands": "Thousands separator:",
+		"back": "< Back",
+		"next": "Next >",
+		"finish": "Finish",
+		"confirm": "Do you want to replace the contents of the destination cells?",
+		"confirm.title": "Replace contents",
+		"oneColumn": "Text to columns can only convert one column at a time: select cells from a single column",
+		"done": "Text converted into {n, plural, one {# column} other {# columns}} (Ctrl+Z to undo)",
+		"done.table": "Text converted into {n, plural, one {# column} other {# columns}} (table {table}) (Ctrl+Z to undo)"
+	},
+	"theme": {
+		"custom": "Custom",
+		"builtin": {
+			"vert-bleu": "Green and blue",
+			"bleu-orange": "Blue and orange",
+			"violet-sarcelle": "Purple and teal",
+			"sarcelle-violet": "Teal and purple",
+			"gris-bleu": "Gray and blue",
+			"orange-bleu": "Orange and blue",
+			"bordeaux-gris": "Burgundy and gray"
+		}
+	},
+	"titleHead": {
+		"offer": "This row looks like the headers of “{table}”"
+	},
+	"format": {
+		"tab": {
+			"number": "Number",
+			"align": "Alignment",
+			"font": "Font",
+			"border": "Border",
+			"fill": "Fill"
+		},
+		"sampleText": "Text",
+		"title": "Format cells",
+		"category": "Category",
+		"category.standard": "General",
+		"category.standard.help": "No specific format: the value as it was entered or calculated.",
+		"category.number": "Number",
+		"category.number.help": "Number of decimal places and thousands separator.",
+		"category.currency": "Currency",
+		"category.currency.help": "Amount in euros.",
+		"category.percent": "Percentage",
+		"category.percent.help": "The value multiplied by 100, followed by %.",
+		"category.date": "Date",
+		"category.date.help": "A date (or an Excel serial number) displayed according to the chosen pattern.",
+		"category.time": "Time",
+		"category.time.help": "A time (or a date and time) displayed according to the chosen pattern.",
+		"category.text": "Text",
+		"category.text.help": "The content is displayed as it was entered.",
+		"sample": "Sample",
+		"decimals": "Decimal places",
+		"thousands": "Use 1000 separator (,)",
+		"dateType": "Type",
+		"align": {
+			"legend": "Text alignment",
+			"horizontal": "Horizontal",
+			"general": "General",
+			"left": "Left",
+			"center": "Center",
+			"right": "Right",
+			"vertical": "Vertical",
+			"top": "Top",
+			"bottom": "Bottom"
+		},
+		"textControl": "Text control",
+		"wrap": "Wrap text",
+		"merge": "Merge cells",
+		"merge.tooltip": "Select several free cells (outside tables) to merge them",
+		"font": "Font",
+		"font.style": "Font style",
+		"font.regular": "Regular",
+		"font.italic": "Italic",
+		"font.bold": "Bold",
+		"font.boldItalic": "Bold italic",
+		"font.size": "Size",
+		"font.underline": "Underline",
+		"font.strike": "Strikethrough",
+		"color": "Color",
+		"color.auto": "Automatic",
+		"preview": "Preview",
+		"border": {
+			"presets": "Presets",
+			"none": "None",
+			"outline": "Outline",
+			"all": "All",
+			"edges": "Border (click an edge)",
+			"top": "Top",
+			"bottom": "Bottom",
+			"left": "Left",
+			"right": "Right",
+			"help": "The chosen edges apply to each cell of the selection; “Outline” draws around the selection."
+		},
+		"fill": "Background color",
+		"fill.none": "No fill"
+	},
+	"readOnly": {
+		"notYours": "Row of another member: as a participant, you can only change your own rows"
+	},
+	"formula": {
+		"pickHint": "Formula in progress: click a cell or a column to insert its reference; Enter confirms, Esc cancels",
+		"refPlace": "Put the formula cursor after “(”, “,” or an operator to insert a reference there",
+		"refRange": "This range can't become a reference: a range covers a single column of a table",
+		"refOneColumn": "A range can only cover a single column of a table: drag within a column, or over free cells",
+		"error": "Formula: {error}",
+		"validate": "Enter",
+		"validate.tooltip": "Confirm the formula (Enter)",
+		"validate.error": "The formula has an error: fix it to confirm it"
+	},
+	"rights": {
+		"filtered": "View filtered by your rights"
+	},
+	"key": {
+		"autoNumber": "numbered automatically: an added row gets the next number",
+		"hint": "This column seems to identify each row: click to make it the table's key",
+		"set": "“{name}” is now the key of table {table} (Ctrl+Z to undo)",
+		"lookupCancelled": "lookup cancelled: the formula is not saved",
+		"autoNumberKey": "key, {tip}",
+		"isKey": "table key",
+		"accept": "Make it the table's key",
+		"dismiss": "Don't suggest again",
+		"note": "Table key: its values identify the rows.",
+		"note.auto": "Table key: its values identify the rows. An added row gets the next number.",
+		"remove": "Remove the key",
+		"checking": "Checking the key…",
+		"use": "Use as key",
+		"use.replace": "Use as key (instead of the current one)",
+		"impossible": "Key not possible: {why}",
+		"sequence": "Sequence of numbers: a row added at the end gets the next number."
+	},
+	"painter": {
+		"hint": "Format painter: select the cells to format (Esc to cancel)"
+	},
+	"merge": {
+		"selectSeveral": "Select several free cells to merge them",
+		"inTable": "Merge & center doesn't apply in a table: a table keeps one cell per value. Merge free cells, outside tables.",
+		"done": "Cells merged and centered",
+		"done.cleared": "Cells merged: only the top-left value is kept ({n, plural, one {# cleared} other {# cleared}}, Ctrl+Z to undo)"
+	},
+	"quoted": "“{text}”",
+	"twoLevel": {
+		"split": "{names} on two lines: type the group in the band above (without a group, the column stays on one level)"
+	},
+	"size": {
+		"range": "Size between 4 and 1,000 pixels",
+		"rowHeight": "Row height (pixels)",
+		"colWidth": "Column width (pixels)"
+	},
+	"freeze": {
+		"place": "Put the active cell below the rows and to the right of the columns to freeze",
+		"tooBig": "The part to freeze is larger than the screen: scroll the sheet up, or choose a cell higher up or further left"
+	},
+	"note": {
+		"pinEmpty": "Write the note before pinning it",
+		"none": "The active cell has no note",
+		"edit": "Edit note",
+		"delete": "Delete note",
+		"insert": "Insert note",
+		"unpin": "Unpin (tooltip on hover)",
+		"pin": "Pin: always show the note",
+		"placeholder": "Cell note"
+	},
+	"table": {
+		"alreadyIn": "The active cell is already in a table",
+		"placeActive": "Put the active cell in a table",
+		"deletedMany": "{n} tables deleted (Ctrl+Z to undo)",
+		"deleted": "Table “{name}” deleted (Ctrl+Z to undo)",
+		"renamed": "Table renamed “{name}”"
+	},
+	"status": {
+		"group": "{table} · header group “{group}” ({n, plural, one {# column} other {# columns}})",
+		"groupEmpty": "{table} · header group (empty)",
+		"errors": "{n, plural, one {# error} other {# errors}}",
+		"type": {
+			"fixed": "{type} (fixed)",
+			"inferred": "{type} (inferred)"
+		},
+		"oneLevel": "on one level",
+		"badType": "“{value}” is not of type {type}",
+		"perf": {
+			"fetch": "block p50 {ms}",
+			"draw": "render {ms}",
+			"fps": "{n} fps",
+			"edit": "entry {ms}"
+		},
+		"average": "Average: {value}",
+		"count": "Count: {n}",
+		"sum": "Sum: {value}",
+		"computing": "Calculating totals…",
+		"tooBig": "Selection too large for totals",
+		"loading": "(rows loading)"
+	},
+	"chart": {
+		"copied": "Chart copied: Ctrl+V to paste it at the active cell",
+		"copiedImage": "Chart copied as an image: paste it into an email or a document",
+		"copyImageFailed": "Couldn't copy the image: {error}",
+		"pasted": "Chart pasted",
+		"pivotInserted": "Chart of PivotTable “{name}” inserted",
+		"placeActive": "Put the active cell in a table to insert a chart",
+		"mapInserted": "Map inserted: choose its coordinates in the pane",
+		"noNumbers": "The table has no number column to plot",
+		"inserted": "Chart inserted: click it to edit it, drag it to move it",
+		"nth": "Chart {n} of {total}",
+		"aria": "Chart",
+		"aria.titled": "Chart “{title}”",
+		"error": "Chart: {error}",
+		"paste": "Paste chart",
+		"copyImage": "Copy as image",
+		"pasteHere": "Paste a chart at the active cell",
+		"delete": "Delete chart"
+	},
+	"query": {
+		"readOnly": "Table loaded by a query: its cells can't be edited; change the query (Data › Queries) then refresh (F5)"
+	},
+	"dedup": {
+		"removed": "{n, plural, one {# duplicate row deleted} other {# duplicate rows deleted}} (Ctrl+Z to undo)",
+		"none": "No duplicates",
+		"title": "Remove duplicates from “{table}”",
+		"help": "Two rows are duplicates when the checked columns have the same values. The first one is kept.",
+		"allColumns": "(All columns)",
+		"computing": "Calculating…",
+		"noneWith": "No duplicate rows with these columns.",
+		"willRemove": "{n, plural, one {# duplicate row will be deleted.} other {# duplicate rows will be deleted.}}"
+	},
+	"rows": {
+		"headerNoDelete": "The header row can't be deleted: delete the table or its columns"
+	},
+	"audit": {
+		"none": "No links: the selection contains neither a formula nor a cell read by a formula",
+		"links": "Links of {n, plural, one {# cell} other {# cells}}: {pre, plural, one {# precedent} other {# precedents}}, {dep, plural, one {# dependent} other {# dependents}}",
+		"away": "({n} on other sheets)",
+		"cut": "first {n} cells only",
+		"clear": "a click in the grid (or Esc) clears them"
+	},
+	"cells": {
+		"copied": "Cells copied (Ctrl+Z to undo)",
+		"moved": "Cells moved (Ctrl+Z to undo)",
+		"deleted": "Cells deleted (Ctrl+Z to undo)"
+	},
+	"fill": {
+		"series": "Series filled (Ctrl+Z to undo)",
+		"limit": "Fill limited to 10,000 cells",
+		"down": "Filled down (Ctrl+Z to undo)",
+		"right": "Filled right (Ctrl+Z to undo)"
+	},
+	"repeat": {
+		"nothing": "Nothing to repeat"
+	},
+	"endMode": "End: an arrow goes to the edge of the region",
+	"recalculated": "Recalculated",
+	"protect": {
+		"structure": "Sheet structure protected (Review › Unprotect structure)"
+	},
+	"names": {
+		"refused": {
+			"column": "Column name rejected",
+			"table": "Table name rejected",
+			"group": "Header group rejected",
+			"cell": "Cell name rejected"
+		},
+		"column": {
+			"invalid": "Invalid column name",
+			"empty": "The column name can't be empty.\n\nType a name, or Esc to keep the old one."
+		},
+		"cell": {
+			"inTable": "Only a free cell can be named; a table is referenced by its name: {table}",
+			"set": "Cell named “{name}”",
+			"removed": "Name removed"
+		}
+	},
+	"edit": {
+		"multiLimit": "Ctrl+Enter: selection limited to 10,000 cells"
+	},
+	"clear": {
+		"limit": "Clearing limited to 1,000 cells for now"
+	},
+	"copy": {
+		"limit": "Copy limited to 100,000 cells for now",
+		"reading": "Reading the rows to copy…",
+		"changed": "The table changed during the copy: try again"
+	},
+	"clipboard": {
+		"unavailable": "The clipboard is not accessible",
+		"cut": "Selection cut: paste it with Ctrl+V (Esc to cancel)",
+		"copied": "{n, plural, one {# cell copied} other {# cells copied}}",
+		"unavailable.copy": "The clipboard is not accessible: use Ctrl+C",
+		"unavailable.paste": "The clipboard is not accessible: use Ctrl+V",
+		"pasted": "Pasted (Ctrl+Z to undo)",
+		"pastedRows": "{n, plural, one {# row pasted} other {# rows pasted}}"
+	},
+	"typeMix": {
+		"date": "{n, plural, one {# value that is not a date} other {# values that are not dates}} out of {total}",
+		"boolean": "{n, plural, one {# non-Boolean value} other {# non-Boolean values}} out of {total}",
+		"number": "{n, plural, one {# non-numeric value} other {# non-numeric values}} out of {total}"
+	},
+	"nameBadge": {
+		"default": {
+			"tooltip": "“{name}”: default name: rename the table. Click to give it a meaningful name (it is used in formulas, SQL and charts)"
+		},
+		"tooltip": "Table “{name}”: click to rename it"
+	},
+	"follow": {
+		"tooltip": "This table follows the choice tab: it only shows its rows where {name} = {value} (the others are hidden, not deleted; a row you enter gets this value). The tab's ▾ arrow changes the value. Click the badge: menu “Follow {follow}”, uncheck it so this table shows all its rows",
+		"empty": "(empty)"
+	},
+	"bench": {
+		"running": "Benchmark running…",
+		"result": "Scrolling: {fps} fps, frame p95 {frame} ms, {janky} frames > 33 ms, {missing}/{drawn} incomplete frames · Jump: p50 {jump} ms · Entry: p50 {edit} ms"
+	},
+	"lines": {
+		"insertRows": "Insert {n, plural, one {a row} other {# rows}}",
+		"deleteRows": "Delete rows",
+		"deleteRow": "Delete row",
+		"insertCols": "Insert {n, plural, one {a column} other {# columns}}",
+		"deleteCols": "Delete columns",
+		"deleteCol": "Delete column",
+		"insert": "Insert…",
+		"dialog": {
+			"rowAbove": "Entire row (above)",
+			"row": "Entire row",
+			"colLeft": "Entire column (to the left)",
+			"col": "Entire column"
+		}
+	},
+	"menu": {
+		"clearAll": {
+			"tooltip": "Empties the cells: values, formatting, merges, notes and validations"
+		},
+		"clearContents": "Clear contents",
+		"formatCells": "Format cells…",
+		"conditionalFormat": "Conditional formatting…",
+		"rowHeight": "Row height…",
+		"autoFitRows": "AutoFit row height",
+		"autoFitRows.tooltip": "Height based on the contents (double-click the edge of the row number)",
+		"colWidth": "Column width…",
+		"autoFitCols": "AutoFit column width",
+		"autoFitCols.tooltip": "Width based on the displayed contents (double-click the edge of the header)",
+		"hide": "Hide",
+		"unhide": "Unhide",
+		"filterColumn": "Filter the column…",
+		"clearTableFilter": "Clear the table filter",
+		"table": "Table “{name}”",
+		"deleteTable": "Delete table",
+		"deleteTable.confirm": "Delete this table and its {n} rows? Ctrl+Z will undo it.",
+		"toValues": "Convert to values",
+		"toValues.many.tooltip": "The {n} calculated columns of the selection become entered columns: they keep their current values, without a formula (Ctrl+Z to undo)",
+		"toValues.tooltip": "The calculated column becomes an entered column: it keeps its current values, without a formula (Ctrl+Z to undo)",
+		"promote": "Use first row as headers",
+		"promote.tooltip": "The 1st data row gives the column names and becomes the header, in its place; the current header disappears (Ctrl+Z to undo)",
+		"rowToNote": "Take this row out of the table (total or note)",
+		"rowToNote.tooltip": "The row stays just below the table, kept apart as a total or note (Ctrl+Z to undo)",
+		"sortFilter": "Sort & filter",
+		"insert": "Insert",
+		"rowAbove": "Row above",
+		"rowBelow": "Row below",
+		"column": "Column “{name}”",
+		"renameColumn": "Rename column",
+		"typeAndKey": "Data type and key…",
+		"validation": "Data validation…",
+		"insertColumn": "Insert column",
+		"left": "To the left",
+		"right": "To the right",
+		"headerToTitle": "Take the header out",
+		"headerToTitle.tooltip": "The 1st data row becomes the header; the current header stays above the table, as a title (except “Column n” names)",
+		"titleToHeader": "Use the row above as headers",
+		"titleToHeader.tooltip": "The cells typed just above the table become the names of its columns; the current header becomes the 1st data row (except “Column n” names)",
+		"twoLevel": {
+			"off": "Remove header groups",
+			"off.tooltip": "The columns get back their full name “Group.Name” on a single row; the band of groups disappears",
+			"on": "Headers on 2 rows (groups above)",
+			"on.tooltip": "The row just above the table becomes a band of groups: “FORESTRY” placed above Name and Status gives the columns “FORESTRY.Name” and “FORESTRY.Status”. Merged cells or not."
+		},
+		"follow": "Follow {what}",
+		"follow.off.tooltip": "The table shows all its rows, whatever the value of the tab",
+		"follow.off.column.tooltip": "The table shows all its rows, whatever the value of the tab (its column “{name}” is removed if it has only one value)",
+		"follow.on.formula.tooltip": "The table only shows the rows whose formula {formula} gives the displayed value (it must have the columns)",
+		"follow.on.tooltip": "The table gets the column “{name}”, filled with the displayed value, and only shows its rows",
+		"refresh": "Refresh the query",
+		"refresh.tooltip": "Reruns the query “{name}” (F5 in the table)",
+		"handKey": "Key of the entered columns…",
+		"handKey.tooltip": "Column of the result that links the entered values to their rows from one refresh to the next",
+		"handForget": "Forget the values set aside ({n, plural, one {# row} other {# rows}})",
+		"handForget.tooltip": "Values entered on rows that disappeared from the result, kept in case they come back (Ctrl+Z to undo)",
+		"addShared": "Add to the shared workbook…",
+		"addShared.tooltip": "This table is only on your computer: create it in the shared workbook, with its rows, for all members",
+		"shareData": "Share to the Lattis Data Lake…",
+		"shareData.tooltip": "Make this table readable from other workbooks on the server (Lattis Data Lake catalog)",
+		"pushSource": "Update the Data Lake source",
+		"pushSource.tooltip": "Sends the rows of this table to its Data Lake source now (chosen columns only; the workbook is not published)",
+		"toRange": "Convert to range",
+		"toRange.tooltip": "The table becomes free cells, in the same place",
+		"ask": "Ask the Assistant…",
+		"asHeader": "Use as headers of “{table}”",
+		"asHeader.tooltip": "The cells of this row, above the columns of the table, become its headers; the current header becomes the 1st data row (except “Column n” names)",
+		"join": "Add to the table",
+		"join.tooltip": "This cell is kept outside the neighboring table (note, total); it joins it",
+		"asTable": "Format as table",
+		"asTable.tooltip": "The range becomes a table again (its first row gives the headers)",
+		"spillLinked": "Convert to linked table",
+		"spillLinked.tooltip": "A table loaded by the formula replaces the spilled result: it recalculates when its sources change (read-only columns, entered columns possible on the right)",
+		"spillValues": "Convert to table (values)",
+		"spillValues.tooltip": "An ordinary table keeps the current values of the spilled result, with no link to the formula",
+		"rangeToValues": {
+			"tooltip": "The formulas of the selection are replaced with their current values (Ctrl+Z to undo)"
+		},
+		"asGroups": "Use as header groups of the table",
+		"asGroups.tooltip": "The cells of this row, merged or not, become the header groups of table “{table}”"
+	},
+	"sig": {
+		"optional": "(optional)",
+		"example": "Example:"
+	},
+	"nameBox": {
+		"table": "Table name: edit then Enter to rename it",
+		"table.default": "Default name: rename the table (edit then Enter)",
+		"column": "Column[row]: edit the name then Enter to rename the column",
+		"cell": "Cell name: type a name then Enter to name it, or the name of a cell to go to it",
+		"size": "{rows}R × {cols}C"
+	},
+	"formulaBar": {
+		"aria": "Formula bar",
+		"computed": "Calculated column: applies to {n, plural, one {the row} other {the # rows}}",
+		"computed.tooltip": "The formula is that of the whole column: it applies to each of its rows."
+	},
+	"sheet": {
+		"aria": "Sheet {name}"
+	},
+	"editor": {
+		"readOnly": "read-only",
+		"freeCell": "Free cell"
+	},
+	"keyDialog": {
+		"title": "Lookup key",
+		"heading": "The lookup in “{table}” uses:",
+		"index": "the current row number of the table (index)",
+		"notKey": "“{column}” can't be used as a key: {why}",
+		"column": "the column “{column}”, which becomes the table's key (duplicates will be rejected)",
+		"notKey.note": "“{column}” can't be used as a key: {why}.",
+		"index.note": "The number changes if you sort or insert rows. Lattis will no longer suggest a key for this table."
+	},
+	"handDialog": {
+		"title": "Key of the entered columns",
+		"heading": "The values entered next to “{table}” follow its rows by:",
+		"columns": "the columns “{name}”",
+		"column": "the column “{name}”",
+		"rank": "the position of the rows (not recommended)",
+		"rank.note": "If the query returns its rows in another order, or adds or removes some, the entered values will end up next to other rows.",
+		"change": {
+			"note": "The values already entered stay on their rows; those set aside (rows that disappeared) are forgotten. Duplicates and blanks in the column are rejected."
+		},
+		"key": {
+			"note": "At each refresh, a value comes back to the row with the same “{key}”; if that row disappears, the value is set aside and comes back with it."
+		},
+		"none": {
+			"note": "No column of the result identifies its rows (duplicate values or blanks): add one to the query (an identifier) for a reliable join."
+		}
+	},
+	"functions": {
+		"title": "Insert function ({n} available)",
+		"search": "Search (SUM, VLOOKUP, date, text…)",
+		"repeat": "{n, plural, one {The last argument can be repeated.} other {The last # arguments can be repeated.}}",
+		"english": "in French: {name}"
+	},
+	"keys": {
+		"enter": "Enter",
+		"escape": "Esc"
+	}
+}

@@ -1,1 +1,39 @@
-{}
+{
+	"when": {
+		"now": "just now",
+		"minutes": "{n} min ago",
+		"yesterday": "yesterday {time}"
+	},
+	"rows": "{n, plural, one {# row} other {# rows}}",
+	"example": {
+		"text": "text",
+		"value": "value",
+		"column": "column",
+		"type": {
+			"integer": "integer",
+			"decimal": "decimal",
+			"text": "text",
+			"boolean": "boolean: 1 or 0",
+			"date": "date YYYY-MM-DD",
+			"formula": "calculated"
+		},
+		"select": "All columns of table {name} ({rows})",
+		"selectPivot": "All columns of PivotTable {name} ({rows})",
+		"insert": "Adds a row at the end of {name}",
+		"insertComputed": "Adds a row at the end of {name} (calculated columns fill themselves)",
+		"insertUndo": "Ctrl+Z undoes the addition.",
+		"update": "Changes the rows of {name} that meet the condition",
+		"updateWarn": "Without WHERE, all rows are changed. Ctrl+Z undoes.",
+		"delete": "Deletes the rows of {name} that meet the condition",
+		"deleteWarn": "Without WHERE, the whole table is emptied. Ctrl+Z undoes."
+	},
+	"complete": {
+		"table": "table · {rows}"
+	},
+	"ambiguous": "Ambiguous column “{column}”: present in {tables}. Specify the table, for example {example}.",
+	"and": " and ",
+	"editor": {
+		"ambiguous": "Column present in several tables: specify the table",
+		"placeholder": "SELECT … FROM Table — Ctrl+Space for names"
+	}
+}

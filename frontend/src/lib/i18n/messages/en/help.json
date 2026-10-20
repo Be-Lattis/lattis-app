@@ -1,1 +1,39 @@
-{}
+{
+	"title": "Help",
+	"where": {
+		"function": "Function",
+		"shortcut": "Shortcut",
+		"settings": "Settings"
+	},
+	"back": "Previous page",
+	"report": {
+		"label": "Report a problem",
+		"tooltip": "Opens the page for creating an issue on GitHub (version prefilled)"
+	},
+	"close": {
+		"tooltip": "Close help (Esc)",
+		"aria": "Close help"
+	},
+	"search": {
+		"placeholder": "Search: SUMIF, key, chart, db.query…",
+		"aria": "Search help"
+	},
+	"toc": "Contents",
+	"results": {
+		"count": "{n, plural, one {# result} other {# results}}",
+		"first": "First {n} results",
+		"none": "Nothing matches."
+	},
+	"fn": {
+		"english": "French name:",
+		"category": "Category:",
+		"arguments": "Arguments",
+		"optional": "optional",
+		"repeatable": "repeatable",
+		"example": "Example",
+		"seeAlso": "See also",
+		"loading": "Loading the function catalog…",
+		"unknown": "Unknown function: {name}.",
+		"unavailable": "Catalog unavailable."
+	}
+}
