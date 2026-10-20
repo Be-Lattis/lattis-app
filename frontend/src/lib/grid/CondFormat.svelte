@@ -21,6 +21,7 @@
 
 <script lang="ts">
 	import { tick } from 'svelte';
+	import { errorText, lower, t, tAny } from '#lib/i18n/index.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { dismiss } from './dismiss';
 	import ColorButton from './ColorButton.svelte';
@@ -78,7 +79,7 @@
 			error = '';
 			return true;
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 			return false;
 		} finally {
 			busy = false;
@@ -93,7 +94,7 @@
 			return false;
 		}
 		if (!where.length) {
-			error = 'Sélectionnez les cellules à mettre en forme';
+			error = t('grid.cf.error.noSelection');
 			return false;
 		}
 		return run(prependRule(host.sheetRules(), { ...rule, id: rule.id ?? newRuleId() }, where));
@@ -105,12 +106,12 @@
 		let drop: (l: Loc) => boolean;
 		if (what === 'sheet') drop = () => true;
 		else if (what === 'table') {
-			const t = host.activeTable();
-			if (!t) {
-				error = 'La cellule active n’est pas dans un tableau';
+			const tb = host.activeTable();
+			if (!tb) {
+				error = t('grid.cf.error.notInTable');
 				return;
 			}
-			drop = (l) => l.k === 'tbl' && l.t === t.id;
+			drop = (l) => l.k === 'tbl' && l.t === tb.id;
 		} else {
 			const s = host.selection();
 			const sel = host.selectionLocs();
@@ -137,19 +138,19 @@
 		screen = { kind: 'quick', q: { op, pct, value: op === 'top' || op === 'bottom' ? '10' : '', to: '', when: 'yesterday', dup: 'dup', style: 0 } };
 	}
 
-	const QUICK_TITLES: Record<Quick['op'], string> = {
-		gt: 'Supérieur à',
-		lt: 'Inférieur à',
-		between: 'Entre',
-		eq: 'Égal à',
-		contains: 'Texte qui contient',
-		date: 'Une date se produisant',
-		dup: 'Valeurs en double',
-		top: '10 premiers éléments',
-		bottom: '10 derniers éléments',
-		above: 'Au-dessus de la moyenne',
-		below: 'En dessous de la moyenne'
-	};
+	const QUICK_TITLES: Record<Quick['op'], string> = $derived({
+		gt: t('grid.cf.quick.gt'),
+		lt: t('grid.cf.quick.lt'),
+		between: t('grid.cf.quick.between'),
+		eq: t('grid.cf.quick.eq'),
+		contains: t('grid.cf.quick.contains'),
+		date: t('grid.cf.quick.date'),
+		dup: t('grid.cf.quick.dup'),
+		top: t('grid.cf.quick.top'),
+		bottom: t('grid.cf.quick.bottom'),
+		above: t('grid.cf.quick.above'),
+		below: t('grid.cf.quick.below')
+	});
 
 	function quickRule(q: Quick): Rule | string {
 		const style = RULE_STYLES[q.style]?.style ?? RULE_STYLES[0].style;
@@ -159,10 +160,10 @@
 			case 'lt':
 			case 'eq':
 			case 'contains':
-				if (!v) return 'Indiquez une valeur';
+				if (!v) return t('grid.cf.error.value');
 				return { op: q.op === 'gt' ? '>' : q.op === 'lt' ? '<' : q.op === 'eq' ? '=' : 'contains', value: v, style };
 			case 'between':
-				if (!v || !q.to.trim()) return 'Indiquez les deux valeurs';
+				if (!v || !q.to.trim()) return t('grid.cf.error.values');
 				return { op: 'between', value: v, to: q.to.trim(), style };
 			case 'date':
 				return { op: 'date', value: q.when, style };
@@ -171,7 +172,7 @@
 			case 'top':
 			case 'bottom': {
 				const n = Number(v);
-				if (!Number.isInteger(n) || n < 1 || n > (q.pct ? 100 : 1000)) return q.pct ? 'Indiquez un pourcentage de 1 à 100' : 'Indiquez un nombre de 1 à 1000';
+				if (!Number.isInteger(n) || n < 1 || n > (q.pct ? 100 : 1000)) return q.pct ? t('grid.cf.error.pct') : t('grid.cf.error.count');
 				return { op: q.op, value: String(n), pct: q.pct, style };
 			}
 			case 'above':
@@ -243,14 +244,14 @@
 		id?: string;
 	}
 
-	const KINDS: { kind: Kind; label: string }[] = [
-		{ kind: 'value', label: 'Mettre en forme toutes les cellules d’après leur valeur' },
-		{ kind: 'contains', label: 'Appliquer une mise en forme uniquement aux cellules qui contiennent' },
-		{ kind: 'rank', label: 'Appliquer une mise en forme uniquement aux valeurs rangées parmi les premières ou les dernières valeurs' },
-		{ kind: 'avg', label: 'Appliquer une mise en forme uniquement aux valeurs au-dessus ou en dessous de la moyenne' },
-		{ kind: 'dup', label: 'Appliquer une mise en forme uniquement aux valeurs uniques ou aux doublons' },
-		{ kind: 'formula', label: 'Utiliser une formule pour déterminer pour quelles cellules le format sera appliqué' }
-	];
+	const KINDS: { kind: Kind; label: string }[] = $derived([
+		{ kind: 'value', label: t('grid.cf.kind.value') },
+		{ kind: 'contains', label: t('grid.cf.kind.contains') },
+		{ kind: 'rank', label: t('grid.cf.kind.rank') },
+		{ kind: 'avg', label: t('grid.cf.kind.avg') },
+		{ kind: 'dup', label: t('grid.cf.kind.dup') },
+		{ kind: 'formula', label: t('grid.cf.kind.formula') }
+	]);
 
 	function draftOf(r?: Rule, applies = ''): Draft {
 		const d: Draft = {
@@ -356,11 +357,11 @@
 				switch (d.cond) {
 					case 'value': {
 						const args = RULE_OPS.find((o) => o.op === d.op)?.args ?? 1;
-						if (!d.value.trim() || (args === 2 && !d.to.trim())) return 'Indiquez ' + (args === 2 ? 'les deux valeurs' : 'une valeur');
+						if (!d.value.trim() || (args === 2 && !d.to.trim())) return args === 2 ? t('grid.cf.error.values') : t('grid.cf.error.value');
 						return { ...base, op: d.op, value: d.value.trim(), to: args === 2 ? d.to.trim() : undefined, style };
 					}
 					case 'text':
-						if (!d.value) return 'Indiquez un texte';
+						if (!d.value) return t('grid.cf.error.text');
 						return { ...base, op: d.textOp, value: d.value, style };
 					case 'date':
 						return { ...base, op: 'date', value: d.when, style };
@@ -369,7 +370,7 @@
 				}
 			case 'rank': {
 				const n = Number(d.n);
-				if (!Number.isInteger(n) || n < 1 || n > (d.pct ? 100 : 1000)) return d.pct ? 'Indiquez un pourcentage de 1 à 100' : 'Indiquez un rang de 1 à 1000';
+				if (!Number.isInteger(n) || n < 1 || n > (d.pct ? 100 : 1000)) return d.pct ? t('grid.cf.error.pct') : t('grid.cf.error.rank');
 				return { ...base, op: d.top, value: String(n), pct: d.pct || undefined, style };
 			}
 			case 'avg': {
@@ -380,7 +381,7 @@
 				return { ...base, op: d.dup, style };
 			case 'formula': {
 				const f = d.formula.trim();
-				if (f === '' || f === '=') return 'Indiquez une formule';
+				if (f === '' || f === '=') return t('grid.cf.error.formula');
 				return { ...base, op: 'formula', value: f.startsWith('=') ? f : '=' + f, style };
 			}
 		}
@@ -427,38 +428,38 @@
 		else onclose();
 	}
 
-	const CFVO_LABELS: Record<CfvoKind, string> = {
-		auto: 'Automatique',
-		min: 'Valeur la plus basse',
-		max: 'Valeur la plus élevée',
-		num: 'Nombre',
-		pct: 'Pourcentage',
-		pctl: 'Centile'
-	};
+	const CFVO_LABELS: Record<CfvoKind, string> = $derived({
+		auto: t('grid.cf.cfvo.auto'),
+		min: t('grid.cf.cfvo.min'),
+		max: t('grid.cf.cfvo.max'),
+		num: t('grid.cf.cfvo.num'),
+		pct: t('grid.cf.cfvo.pct'),
+		pctl: t('grid.cf.cfvo.pctl')
+	});
 	const cfvoOptions = (kinds: CfvoKind[]) => kinds.map((k) => ({ value: k, label: CFVO_LABELS[k] }));
 
-	const AVG_OPTIONS = [
-		{ value: 'above', label: 'au-dessus' },
-		{ value: 'below', label: 'en dessous' },
-		{ value: 'above=', label: 'égales ou au-dessus' },
-		{ value: 'below=', label: 'égales ou en dessous' },
-		{ value: 'above1', label: '1 écart type au-dessus' },
-		{ value: 'below1', label: '1 écart type en dessous' },
-		{ value: 'above2', label: '2 écarts types au-dessus' },
-		{ value: 'below2', label: '2 écarts types en dessous' },
-		{ value: 'above3', label: '3 écarts types au-dessus' },
-		{ value: 'below3', label: '3 écarts types en dessous' }
-	];
+	const AVG_OPTIONS = $derived([
+		{ value: 'above', label: t('grid.cf.avg.above') },
+		{ value: 'below', label: t('grid.cf.avg.below') },
+		{ value: 'above=', label: t('grid.cf.avg.aboveOrEqual') },
+		{ value: 'below=', label: t('grid.cf.avg.belowOrEqual') },
+		{ value: 'above1', label: t('grid.cf.avg.above1') },
+		{ value: 'below1', label: t('grid.cf.avg.below1') },
+		{ value: 'above2', label: t('grid.cf.avg.above2') },
+		{ value: 'below2', label: t('grid.cf.avg.below2') },
+		{ value: 'above3', label: t('grid.cf.avg.above3') },
+		{ value: 'below3', label: t('grid.cf.avg.below3') }
+	]);
 
-	const COND_OPTIONS: { value: Cond; label: string }[] = [
-		{ value: 'value', label: 'Valeur de la cellule' },
-		{ value: 'text', label: 'Texte spécifique' },
-		{ value: 'date', label: 'Dates se produisant' },
-		{ value: 'empty', label: 'Cellules vides' },
-		{ value: 'notempty', label: 'Aucune cellule vide' },
-		{ value: 'error', label: 'Erreurs' },
-		{ value: 'noerror', label: 'Aucune erreur' }
-	];
+	const COND_OPTIONS: { value: Cond; label: string }[] = $derived([
+		{ value: 'value', label: t('grid.cf.cond.value') },
+		{ value: 'text', label: t('grid.cf.cond.text') },
+		{ value: 'date', label: t('grid.cf.cond.date') },
+		{ value: 'empty', label: t('grid.cf.cond.empty') },
+		{ value: 'notempty', label: t('grid.cf.cond.notempty') },
+		{ value: 'error', label: t('grid.cf.cond.error') },
+		{ value: 'noerror', label: t('grid.cf.cond.noerror') }
+	]);
 
 	/** Jeu d'icônes choisi : seuils par défaut si le nombre d'icônes change. */
 	function setIcons(d: Draft, set: IconSetId) {
@@ -500,9 +501,9 @@
 	});
 
 	const scopeOptions = $derived([
-		{ value: 'selection' as const, label: 'Sélection actuelle' },
-		{ value: 'sheet' as const, label: 'Cette feuille de calcul' },
-		...tables.map((t) => ({ value: t.id, label: `Ce tableau : ${t.name}` }))
+		{ value: 'selection' as const, label: t('grid.cf.scope.selection') },
+		{ value: 'sheet' as const, label: t('grid.cf.scope.sheet') },
+		...tables.map((tb) => ({ value: tb.id, label: t('grid.cf.scope.table', { table: tb.name }) }))
 	]);
 
 	function move(d: -1 | 1) {
@@ -680,7 +681,7 @@
 	{@const m = screen}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="cf-menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={onclose} onkeydown={(e) => e.key === 'Escape' && onclose()}>
-		{#each [['hl', 'Règles de mise en surbrillance des cellules'], ['tb', 'Règles des valeurs plus/moins élevées'], ['bar', 'Barres de données'], ['scale', 'Nuances de couleurs'], ['icons', 'Jeux d’icônes']] as [id, label] (id)}
+		{#each [['hl', t('grid.cf.menu.highlight')], ['tb', t('grid.cf.menu.topBottom')], ['bar', t('grid.cf.menu.bars')], ['scale', t('grid.cf.menu.scales')], ['icons', t('grid.cf.menu.icons')]] as [id, label] (id)}
 			<button class="item" class:open={m.sub === id} onmouseenter={(e) => openSub(id, e)} onclick={(e) => openSub(id, e)}>
 				<canvas use:paint={{ w: 22, h: 18, draw: id === 'hl'
 						? (ctx) => {
@@ -706,52 +707,52 @@
 			</button>
 		{/each}
 		<hr />
-		<button class="item" onmouseenter={() => (m.sub = null)} onclick={() => editNew(false)}><span class="pad"></span>Nouvelle règle…</button>
-		<button class="item" class:open={m.sub === 'clear'} onmouseenter={(e) => openSub('clear', e)} onclick={(e) => openSub('clear', e)}><span class="pad"></span>Effacer les règles<span class="chev">›</span></button>
+		<button class="item" onmouseenter={() => (m.sub = null)} onclick={() => editNew(false)}><span class="pad"></span>{t('grid.cf.menu.newRule')}</button>
+		<button class="item" class:open={m.sub === 'clear'} onmouseenter={(e) => openSub('clear', e)} onclick={(e) => openSub('clear', e)}><span class="pad"></span>{t('grid.cf.menu.clear')}<span class="chev">›</span></button>
 		<button
 			class="item"
 			onmouseenter={() => (m.sub = null)}
 			onclick={() => {
 				loadManager();
 				screen = { kind: 'manager' };
-			}}><span class="pad"></span>Gérer les règles…</button
+			}}><span class="pad"></span>{t('grid.cf.menu.manage')}</button
 		>
 		{#if error}<p class="note error">{error}</p>{/if}
 
 		{#if m.sub}
 			<div class="cf-sub" class:left={subLeft} style:top="{m.subY}px">
 				{#if m.sub === 'hl'}
-					<button onclick={() => quick('gt')}>Supérieur à…</button>
-					<button onclick={() => quick('lt')}>Inférieur à…</button>
-					<button onclick={() => quick('between')}>Entre…</button>
-					<button onclick={() => quick('eq')}>Égal à…</button>
-					<button onclick={() => quick('contains')}>Texte qui contient…</button>
-					<button onclick={() => quick('date')}>Une date se produisant…</button>
-					<button onclick={() => quick('dup')}>Valeurs en double…</button>
+					<button onclick={() => quick('gt')}>{t('grid.cf.menu.quick.gt')}</button>
+					<button onclick={() => quick('lt')}>{t('grid.cf.menu.quick.lt')}</button>
+					<button onclick={() => quick('between')}>{t('grid.cf.menu.quick.between')}</button>
+					<button onclick={() => quick('eq')}>{t('grid.cf.menu.quick.eq')}</button>
+					<button onclick={() => quick('contains')}>{t('grid.cf.menu.quick.contains')}</button>
+					<button onclick={() => quick('date')}>{t('grid.cf.menu.quick.date')}</button>
+					<button onclick={() => quick('dup')}>{t('grid.cf.menu.quick.dup')}</button>
 					<hr />
-					<button onclick={() => editNew(false)}>Autres règles…</button>
+					<button onclick={() => editNew(false)}>{t('grid.cf.menu.more')}</button>
 				{:else if m.sub === 'tb'}
-					<button onclick={() => quick('top')}>10 valeurs les plus élevées…</button>
-					<button onclick={() => quick('top', true)}>10 % les plus élevés…</button>
-					<button onclick={() => quick('bottom')}>10 valeurs les moins élevées…</button>
-					<button onclick={() => quick('bottom', true)}>10 % les moins élevés…</button>
-					<button onclick={() => quick('above')}>Valeurs supérieures à la moyenne…</button>
-					<button onclick={() => quick('below')}>Valeurs inférieures à la moyenne…</button>
+					<button onclick={() => quick('top')}>{t('grid.cf.menu.quick.top')}</button>
+					<button onclick={() => quick('top', true)}>{t('grid.cf.menu.quick.topPct')}</button>
+					<button onclick={() => quick('bottom')}>{t('grid.cf.menu.quick.bottom')}</button>
+					<button onclick={() => quick('bottom', true)}>{t('grid.cf.menu.quick.bottomPct')}</button>
+					<button onclick={() => quick('above')}>{t('grid.cf.menu.quick.above')}</button>
+					<button onclick={() => quick('below')}>{t('grid.cf.menu.quick.below')}</button>
 					<hr />
-					<button onclick={() => editNew(false)}>Autres règles…</button>
+					<button onclick={() => editNew(false)}>{t('grid.cf.menu.more')}</button>
 				{:else if m.sub === 'bar'}
-					<div class="gal-title">Remplissage dégradé</div>
+					<div class="gal-title">{t('grid.cf.bar.gradient')}</div>
 					<div class="gal">
 						{#each BAR_COLORS as b (b.color)}
-							<button class="thumb" title="Barre de données {b.label.toLowerCase()} (dégradé)" onclick={() => gallery({ op: 'bar', style: {}, bar: { color: b.color, gradient: true } })}>
+							<button class="thumb" title={t('grid.cf.bar.gradient.tooltip', { color: lower(b.label) })} onclick={() => gallery({ op: 'bar', style: {}, bar: { color: b.color, gradient: true } })}>
 								<canvas use:paint={{ w: 34, h: 30, draw: barThumb(b.color, true) }}></canvas>
 							</button>
 						{/each}
 					</div>
-					<div class="gal-title">Remplissage uni</div>
+					<div class="gal-title">{t('grid.cf.bar.solid')}</div>
 					<div class="gal">
 						{#each BAR_COLORS as b (b.color)}
-							<button class="thumb" title="Barre de données {b.label.toLowerCase()} (uni)" onclick={() => gallery({ op: 'bar', style: {}, bar: { color: b.color, gradient: false } })}>
+							<button class="thumb" title={t('grid.cf.bar.solid.tooltip', { color: lower(b.label) })} onclick={() => gallery({ op: 'bar', style: {}, bar: { color: b.color, gradient: false } })}>
 								<canvas use:paint={{ w: 34, h: 30, draw: barThumb(b.color, false) }}></canvas>
 							</button>
 						{/each}
@@ -764,12 +765,12 @@
 								screen.d.kind = 'value';
 								screen.d.vstyle = 'bar';
 							}
-						}}>Autres règles…</button
+						}}>{t('grid.cf.menu.more')}</button
 					>
 				{:else if m.sub === 'scale'}
 					<div class="gal four">
 						{#each SCALE_PRESETS as p (p.label)}
-							<button class="thumb" title="Nuances {p.label}" onclick={() => gallery({ op: 'scale', style: {}, scale: scaleRule(p.colors) })}>
+							<button class="thumb" title={t('grid.cf.scale.tooltip', { colors: p.label })} onclick={() => gallery({ op: 'scale', style: {}, scale: scaleRule(p.colors) })}>
 								<canvas use:paint={{ w: 30, h: 30, draw: scaleThumb(p.colors) }}></canvas>
 							</button>
 						{/each}
@@ -782,7 +783,7 @@
 								screen.d.kind = 'value';
 								screen.d.vstyle = 'scale3';
 							}
-						}}>Autres règles…</button
+						}}>{t('grid.cf.menu.more')}</button
 					>
 				{:else if m.sub === 'icons'}
 					{#each ICON_GROUPS as g (g.label)}
@@ -803,12 +804,12 @@
 								screen.d.kind = 'value';
 								screen.d.vstyle = 'icons';
 							}
-						}}>Autres règles…</button
+						}}>{t('grid.cf.menu.more')}</button
 					>
 				{:else if m.sub === 'clear'}
-					<button onclick={() => clearRules('selection')}>Effacer les règles des cellules sélectionnées</button>
-					<button onclick={() => clearRules('sheet')}>Effacer les règles de la feuille entière</button>
-					<button disabled={!host.activeTable()} onclick={() => clearRules('table')}>Effacer les règles de ce tableau</button>
+					<button onclick={() => clearRules('selection')}>{t('grid.cf.menu.clear.selection')}</button>
+					<button onclick={() => clearRules('sheet')}>{t('grid.cf.menu.clear.sheet')}</button>
+					<button disabled={!host.activeTable()} onclick={() => clearRules('table')}>{t('grid.cf.menu.clear.table')}</button>
 				{/if}
 			</div>
 		{/if}
@@ -820,43 +821,33 @@
 	<div class="cf-dlg" role="dialog" aria-modal="true" aria-label={QUICK_TITLES[q.op]} tabindex="-1" use:modal use:autofocus onkeydown={(e) => keys(e, quickOk)}>
 		<div class="title">{QUICK_TITLES[q.op]}</div>
 		<p class="lead">
-			{#if q.op === 'gt'}Appliquer une mise en forme aux cellules qui sont SUPÉRIEURES À :
-			{:else if q.op === 'lt'}Appliquer une mise en forme aux cellules qui sont INFÉRIEURES À :
-			{:else if q.op === 'between'}Appliquer une mise en forme aux cellules qui sont ENTRE :
-			{:else if q.op === 'eq'}Appliquer une mise en forme aux cellules qui sont ÉGALES À :
-			{:else if q.op === 'contains'}Appliquer une mise en forme aux cellules qui contiennent le texte :
-			{:else if q.op === 'date'}Appliquer une mise en forme aux cellules qui contiennent une date se produisant :
-			{:else if q.op === 'dup'}Appliquer une mise en forme aux cellules qui contiennent :
-			{:else if q.op === 'top'}Appliquer une mise en forme aux cellules qui se classent parmi les PREMIERS{q.pct ? ' (en %)' : ''} :
-			{:else if q.op === 'bottom'}Appliquer une mise en forme aux cellules qui se classent parmi les DERNIERS{q.pct ? ' (en %)' : ''} :
-			{:else if q.op === 'above'}Appliquer une mise en forme aux cellules qui sont AU-DESSUS DE LA MOYENNE :
-			{:else}Appliquer une mise en forme aux cellules qui sont EN DESSOUS DE LA MOYENNE :{/if}
+			{q.op === 'top' || q.op === 'bottom' ? tAny(`grid.cf.lead.${q.op}${q.pct ? 'Pct' : ''}`) : tAny(`grid.cf.lead.${q.op}`)}
 		</p>
 		<div class="row">
 			{#if q.op === 'gt' || q.op === 'lt' || q.op === 'eq' || q.op === 'contains'}
-				<input bind:value={q.value} placeholder={q.op === 'contains' ? 'texte' : 'valeur ou date'} />
+				<input bind:value={q.value} placeholder={q.op === 'contains' ? t('grid.cf.placeholder.text') : t('grid.cf.placeholder.valueOrDate')} />
 			{:else if q.op === 'between'}
-				<input bind:value={q.value} placeholder="valeur" /><span>et</span><input bind:value={q.to} placeholder="valeur" />
+				<input bind:value={q.value} placeholder={t('grid.cf.placeholder.value')} /><span>{t('grid.cf.and')}</span><input bind:value={q.to} placeholder={t('grid.cf.placeholder.value')} />
 			{:else if q.op === 'date'}
 				<Select bind:value={q.when} options={DATE_WHENS} />
 			{:else if q.op === 'dup'}
 				<Select
 					bind:value={q.dup}
 					options={[
-						{ value: 'dup', label: 'en double' },
-						{ value: 'unique', label: 'uniques' }
+						{ value: 'dup', label: t('grid.cf.dup.dup') },
+						{ value: 'unique', label: t('grid.cf.dup.unique') }
 					]}
 				/>
-				<span>valeurs</span>
+				<span>{t('grid.cf.dup.values')}</span>
 			{:else if q.op === 'top' || q.op === 'bottom'}
 				<input class="num" type="number" min="1" max={q.pct ? 100 : 1000} bind:value={q.value} />{#if q.pct}<span>%</span>{/if}
 			{:else}
-				<span>pour la plage sélectionnée</span>
+				<span>{t('grid.cf.quick.forRange')}</span>
 			{/if}
-			<span>avec</span>
+			<span>{t('grid.cf.quick.with')}</span>
 			<Select
 				bind:value={q.style}
-				options={[...RULE_STYLES.map((s, k) => ({ value: k, label: s.label })), { value: -1, label: 'Format personnalisé…' }]}
+				options={[...RULE_STYLES.map((s, k) => ({ value: k, label: s.label })), { value: -1, label: t('grid.cf.customFormat.more') }]}
 				onchange={(v) => v === -1 && quickCustom()}
 			/>
 		</div>
@@ -864,8 +855,8 @@
 		{#if error}<p class="note error">{error}</p>{/if}
 		<div class="foot">
 			<span class="sp"></span>
-			<button class="primary" disabled={busy} onclick={quickOk}>OK</button>
-			<button onclick={onclose}>Annuler</button>
+			<button class="primary" disabled={busy} onclick={quickOk}>{t('common.ok')}</button>
+			<button onclick={onclose}>{t('common.cancel')}</button>
 		</div>
 	</div>
 	</div>
@@ -877,38 +868,38 @@
 		class="cf-dlg wide"
 		role="dialog"
 		aria-modal="true"
-		aria-label={screen.editing ? 'Modifier la règle de mise en forme' : 'Nouvelle règle de mise en forme'}
+		aria-label={screen.editing ? t('grid.cf.edit.title.edit') : t('grid.cf.edit.title.new')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => keys(e, editOk, editCancel)}
 	>
-		<div class="title">{screen.editing ? 'Modifier la règle de mise en forme' : 'Nouvelle règle de mise en forme'}</div>
-		<div class="label">Sélectionnez un type de règle :</div>
+		<div class="title">{screen.editing ? t('grid.cf.edit.title.edit') : t('grid.cf.edit.title.new')}</div>
+		<div class="label">{t('grid.cf.edit.kind')}</div>
 		<div class="kinds">
 			{#each KINDS as k (k.kind)}
 				<button class:on={d.kind === k.kind} onclick={() => (d.kind = k.kind)}>► {k.label}</button>
 			{/each}
 		</div>
-		<div class="label">Modifiez la description de la règle :</div>
+		<div class="label">{t('grid.cf.edit.desc')}</div>
 		<div class="desc">
 			{#if d.kind === 'value'}
-				<div class="sub">Mettre en forme toutes les cellules d’après leur valeur :</div>
+				<div class="sub">{t('grid.cf.edit.value')}</div>
 				<div class="row">
-					<span>Style de mise en forme :</span>
+					<span>{t('grid.cf.edit.style')}</span>
 					<Select
 						bind:value={d.vstyle}
 						options={[
-							{ value: 'scale2', label: 'Échelle à deux couleurs' },
-							{ value: 'scale3', label: 'Échelle à trois couleurs' },
-							{ value: 'bar', label: 'Barre de données' },
-							{ value: 'icons', label: 'Jeux d’icônes' }
+							{ value: 'scale2', label: t('grid.cf.vstyle.scale2') },
+							{ value: 'scale3', label: t('grid.cf.vstyle.scale3') },
+							{ value: 'bar', label: t('grid.cf.describe.bar') },
+							{ value: 'icons', label: t('grid.cf.menu.icons') }
 						]}
 					/>
 				</div>
 				{#if d.vstyle === 'scale2' || d.vstyle === 'scale3'}
 					<div class="grid" class:three={d.vstyle === 'scale3'}>
-						<span></span><b>Minimum</b>{#if d.vstyle === 'scale3'}<b>Point médian</b>{/if}<b>Maximum</b>
-						<span>Type :</span>
+						<span></span><b>{t('grid.cf.grid.min')}</b>{#if d.vstyle === 'scale3'}<b>{t('grid.cf.grid.mid')}</b>{/if}<b>{t('grid.cf.grid.max')}</b>
+						<span>{t('grid.cf.grid.kind')}</span>
 						{#each d.vstyle === 'scale3' ? [0, 1, 2] : [0, 2] as k (k)}
 							<Select
 								bind:value={d.scale[k].kind}
@@ -918,62 +909,62 @@
 								}}
 							/>
 						{/each}
-						<span>Valeur :</span>
+						<span>{t('grid.cf.grid.value')}</span>
 						{#each d.vstyle === 'scale3' ? [0, 1, 2] : [0, 2] as k (k)}
-							{#if d.scale[k].kind === 'min' || d.scale[k].kind === 'max'}<input disabled value="(valeur {k === 0 ? 'la plus basse' : 'la plus élevée'})" />{:else}<input
+							{#if d.scale[k].kind === 'min' || d.scale[k].kind === 'max'}<input disabled value={k === 0 ? t('grid.cf.grid.lowest') : t('grid.cf.grid.highest')} />{:else}<input
 									type="number"
 									bind:value={d.scale[k].value}
 								/>{/if}
 						{/each}
-						<span>Couleur :</span>
+						<span>{t('grid.cf.grid.color')}</span>
 						{#each d.vstyle === 'scale3' ? [0, 1, 2] : [0, 2] as k (k)}
 							<input type="color" bind:value={d.scale[k].color} />
 						{/each}
 					</div>
 				{:else if d.vstyle === 'bar'}
 					<div class="grid">
-						<span></span><b>Minimum</b><b>Maximum</b>
-						<span>Type :</span>
+						<span></span><b>{t('grid.cf.grid.min')}</b><b>{t('grid.cf.grid.max')}</b>
+						<span>{t('grid.cf.grid.kind')}</span>
 						<Select bind:value={d.bar.min!.kind} options={cfvoOptions(['auto', 'min', 'num', 'pct', 'pctl'])} />
 						<Select bind:value={d.bar.max!.kind} options={cfvoOptions(['auto', 'max', 'num', 'pct', 'pctl'])} />
-						<span>Valeur :</span>
+						<span>{t('grid.cf.grid.value')}</span>
 						{#each [d.bar.min!, d.bar.max!] as c, k (k)}
-							{#if c.kind === 'num' || c.kind === 'pct' || c.kind === 'pctl'}<input type="number" bind:value={c.value} />{:else}<input disabled value="(automatique)" />{/if}
+							{#if c.kind === 'num' || c.kind === 'pct' || c.kind === 'pctl'}<input type="number" bind:value={c.value} />{:else}<input disabled value={t('grid.cf.grid.auto')} />{/if}
 						{/each}
 					</div>
 					<div class="row">
-						<span>Remplissage :</span>
+						<span>{t('grid.cf.bar.fill')}</span>
 						<Select
 							value={d.bar.gradient === false ? 'solid' : 'gradient'}
 							options={[
-								{ value: 'gradient', label: 'Remplissage dégradé' },
-								{ value: 'solid', label: 'Remplissage uni' }
+								{ value: 'gradient', label: t('grid.cf.bar.gradient') },
+								{ value: 'solid', label: t('grid.cf.bar.solid') }
 							]}
 							onchange={(v) => (d.bar.gradient = v === 'gradient')}
 						/>
-						<span>Couleur :</span><input type="color" bind:value={d.bar.color} />
+						<span>{t('grid.cf.grid.color')}</span><input type="color" bind:value={d.bar.color} />
 					</div>
 					<div class="row">
-						<label><input type="checkbox" bind:checked={d.bar.border} /> Bordure pleine</label>
-						<span>Barres négatives :</span><input type="color" value={d.bar.neg ?? '#ff0000'} oninput={(e) => (d.bar.neg = (e.currentTarget as HTMLInputElement).value)} />
-						<label><input type="checkbox" bind:checked={d.bar.only} /> Afficher la barre uniquement</label>
+						<label><input type="checkbox" bind:checked={d.bar.border} /> {t('grid.cf.bar.border')}</label>
+						<span>{t('grid.cf.bar.negative')}</span><input type="color" value={d.bar.neg ?? '#ff0000'} oninput={(e) => (d.bar.neg = (e.currentTarget as HTMLInputElement).value)} />
+						<label><input type="checkbox" bind:checked={d.bar.only} /> {t('grid.cf.bar.only')}</label>
 					</div>
-					<div class="row"><span>Aperçu :</span><canvas use:paint={{ w: 90, h: 22, draw: barThumb(d.bar.color, d.bar.gradient !== false) }}></canvas></div>
+					<div class="row"><span>{t('grid.cf.preview')}</span><canvas use:paint={{ w: 90, h: 22, draw: barThumb(d.bar.color, d.bar.gradient !== false) }}></canvas></div>
 				{:else}
 					<div class="row">
-						<span>Style d’icône :</span>
+						<span>{t('grid.cf.icons.style')}</span>
 						<Select value={d.icons.set} options={Object.entries(ICON_SETS).map(([k, s]) => ({ value: k as IconSetId, label: s.label }))} onchange={(v) => setIcons(d, v)} />
 						<canvas use:paint={{ w: ICON_SETS[d.icons.set].icons.length * 18 + 4, h: 16, draw: iconsThumb(d.icons.set) }}></canvas>
-						<label><input type="checkbox" bind:checked={d.icons.reverse} /> Ordre inverse des icônes</label>
-						<label><input type="checkbox" bind:checked={d.icons.only} /> Afficher l’icône uniquement</label>
+						<label><input type="checkbox" bind:checked={d.icons.reverse} /> {t('grid.cf.icons.reverse')}</label>
+						<label><input type="checkbox" bind:checked={d.icons.only} /> {t('grid.cf.icons.only')}</label>
 					</div>
 					<div class="icon-rows">
-						<div class="ihead"><span>Icône</span><span></span><span>Valeur</span><span>Type</span></div>
+						<div class="ihead"><span>{t('grid.cf.icons.icon')}</span><span></span><span>{t('grid.cf.icons.value')}</span><span>{t('grid.cf.icons.kind')}</span></div>
 						{#each [...d.icons.points.keys()].reverse() as k (k)}
 							{@const p = d.icons.points[k] as IconPoint}
 							<div class="irow">
 								<canvas use:paint={{ w: 18, h: 18, draw: iconOne(d.icons.set, d.icons.reverse ? ICON_SETS[d.icons.set].icons.length - 2 - k : k + 1) }}></canvas>
-								<span>lorsque la valeur est</span>
+								<span>{t('grid.cf.icons.when')}</span>
 								<Select
 									value={p.gt ? '>' : '>='}
 									options={[
@@ -986,90 +977,89 @@
 								<Select
 									bind:value={p.kind}
 									options={[
-										{ value: 'num', label: 'Nombre' },
-										{ value: 'pct', label: 'Pourcentage' },
-										{ value: 'pctl', label: 'Centile' }
+										{ value: 'num', label: t('grid.cf.cfvo.num') },
+										{ value: 'pct', label: t('grid.cf.cfvo.pct') },
+										{ value: 'pctl', label: t('grid.cf.cfvo.pctl') }
 									]}
 								/>
 							</div>
 						{/each}
 						<div class="irow">
 							<canvas use:paint={{ w: 18, h: 18, draw: iconOne(d.icons.set, d.icons.reverse ? ICON_SETS[d.icons.set].icons.length - 1 : 0) }}></canvas>
-							<span>lorsque {d.icons.points[0]?.gt ? '<=' : '<'} {d.icons.points[0]?.value ?? ''}</span>
+							<span>{t('grid.cf.icons.whenLast', { op: d.icons.points[0]?.gt ? '<=' : '<', value: d.icons.points[0]?.value ?? '' })}</span>
 						</div>
 					</div>
 				{/if}
 			{:else if d.kind === 'contains'}
-				<div class="sub">Appliquer une mise en forme uniquement aux cellules contenant :</div>
+				<div class="sub">{t('grid.cf.edit.contains')}</div>
 				<div class="row">
 					<Select bind:value={d.cond} options={COND_OPTIONS} />
 					{#if d.cond === 'value'}
 						{@const args = RULE_OPS.find((o) => o.op === d.op)?.args ?? 1}
 						<Select bind:value={d.op} options={RULE_OPS.map((o) => ({ value: o.op, label: o.label }))} />
-						<input bind:value={d.value} placeholder="valeur ou date" />
-						{#if args === 2}<span>et</span><input bind:value={d.to} placeholder="valeur ou date" />{/if}
+						<input bind:value={d.value} placeholder={t('grid.cf.placeholder.valueOrDate')} />
+						{#if args === 2}<span>{t('grid.cf.and')}</span><input bind:value={d.to} placeholder={t('grid.cf.placeholder.valueOrDate')} />{/if}
 					{:else if d.cond === 'text'}
 						<Select bind:value={d.textOp} options={TEXT_OPS.map((o) => ({ value: o.op, label: o.label }))} />
-						<input bind:value={d.value} placeholder="texte" />
+						<input bind:value={d.value} placeholder={t('grid.cf.placeholder.text')} />
 					{:else if d.cond === 'date'}
 						<Select bind:value={d.when} options={DATE_WHENS} />
 					{/if}
 				</div>
 			{:else if d.kind === 'rank'}
-				<div class="sub">Appliquer une mise en forme aux valeurs figurant dans les :</div>
+				<div class="sub">{t('grid.cf.edit.rank')}</div>
 				<div class="row">
 					<Select
 						bind:value={d.top}
 						options={[
-							{ value: 'top', label: 'Haut' },
-							{ value: 'bottom', label: 'Bas' }
+							{ value: 'top', label: t('grid.cf.rank.top') },
+							{ value: 'bottom', label: t('grid.cf.rank.bottom') }
 						]}
 					/>
 					<input class="num" type="number" min="1" bind:value={d.n} />
-					<label><input type="checkbox" bind:checked={d.pct} /> % de la plage sélectionnée</label>
+					<label><input type="checkbox" bind:checked={d.pct} /> {t('grid.cf.rank.pct')}</label>
 				</div>
 			{:else if d.kind === 'avg'}
-				<div class="sub">Appliquer une mise en forme aux valeurs qui sont :</div>
-				<div class="row"><Select bind:value={d.avg} options={AVG_OPTIONS} /><span>la moyenne de la plage sélectionnée</span></div>
+				<div class="sub">{t('grid.cf.edit.avg')}</div>
+				<div class="row"><Select bind:value={d.avg} options={AVG_OPTIONS} /><span>{t('grid.cf.avg.ofRange')}</span></div>
 			{:else if d.kind === 'dup'}
-				<div class="sub">Mettre en forme tout :</div>
+				<div class="sub">{t('grid.cf.edit.dup')}</div>
 				<div class="row">
 					<Select
 						bind:value={d.dup}
 						options={[
-							{ value: 'dup', label: 'en double' },
-							{ value: 'unique', label: 'uniques' }
+							{ value: 'dup', label: t('grid.cf.dup.dup') },
+							{ value: 'unique', label: t('grid.cf.dup.unique') }
 						]}
 					/>
-					<span>valeurs de la plage sélectionnée</span>
+					<span>{t('grid.cf.dup.ofRange')}</span>
 				</div>
 			{:else}
-				<div class="sub">Appliquer une mise en forme aux valeurs pour lesquelles cette formule est vraie :</div>
+				<div class="sub">{t('grid.cf.edit.formula')}</div>
 				<div class="row"><input class="formula" bind:value={d.formula} spellcheck="false" /></div>
 				<p class="note">
-					Dans un tableau, [@Colonne] désigne la cellule de la même ligne (une adresse de la première ligne de données, comme $C2, vaut aussi pour chaque ligne). Hors tableau, la formule est écrite pour la cellule en haut à gauche de la plage :
-					ses adresses relatives suivent chaque cellule.
+					{t('grid.cf.edit.formula.help')}
 				</p>
 			{/if}
 			{#if d.kind !== 'value'}
 				<div class="row format">
-					<span>Aperçu :</span>
+					<span>{t('grid.cf.preview')}</span>
 					<span class="sample" style={styleCss(d.style)}>AaBbCcYyZz</span>
 					<Select
 						value={presetOf(d.style)}
-						options={[{ value: -1, label: 'Format personnalisé' }, ...RULE_STYLES.map((s, k) => ({ value: k, label: s.label }))]}
+						options={[{ value: -1, label: t('grid.cf.customFormat') }, ...RULE_STYLES.map((s, k) => ({ value: k, label: s.label }))]}
 						onchange={(v) => v >= 0 && setPreset(d, v)}
 					/>
 				</div>
 				<div class="row format">
-					<label title="Gras"><input type="checkbox" checked={!!d.style.b} onchange={(e) => (d.style = { ...d.style, b: e.currentTarget.checked || undefined })} /> <b>G</b></label>
-					<label title="Italique"><input type="checkbox" checked={!!d.style.i} onchange={(e) => (d.style = { ...d.style, i: e.currentTarget.checked || undefined })} /> <i>I</i></label>
-					<label title="Souligné"><input type="checkbox" checked={!!d.style.u} onchange={(e) => (d.style = { ...d.style, u: e.currentTarget.checked || undefined })} /> <u>S</u></label>
-					<label title="Barré"><input type="checkbox" checked={!!d.style.x} onchange={(e) => (d.style = { ...d.style, x: e.currentTarget.checked || undefined })} /> <s>abc</s></label>
-					<span>Police :</span>
-					<ColorButton label="Couleur de police" value={d.style.fg} none="Automatique" onpick={(c) => (d.style = { ...d.style, fg: c ?? undefined })} />
-					<span>Remplissage :</span>
-					<ColorButton label="Couleur de remplissage" value={d.style.bg} none="Aucun remplissage" onpick={(c) => (d.style = { ...d.style, bg: c ?? undefined })} />
+					<label title={t('grid.format.font.bold')}><input type="checkbox" checked={!!d.style.b} onchange={(e) => (d.style = { ...d.style, b: e.currentTarget.checked || undefined })} /> <b>{t('grid.cf.letter.bold')}</b></label>
+					<label title={t('grid.format.font.italic')}><input type="checkbox" checked={!!d.style.i} onchange={(e) => (d.style = { ...d.style, i: e.currentTarget.checked || undefined })} /> <i>{t('grid.cf.letter.italic')}</i></label>
+					<label title={t('grid.format.font.underline')}><input type="checkbox" checked={!!d.style.u} onchange={(e) => (d.style = { ...d.style, u: e.currentTarget.checked || undefined })} /> <u>{t('grid.cf.letter.underline')}</u></label>
+					<label title={t('grid.format.font.strike')}><input type="checkbox" checked={!!d.style.x} onchange={(e) => (d.style = { ...d.style, x: e.currentTarget.checked || undefined })} /> <s>abc</s></label>
+					<span>{t('grid.cf.font')}</span>
+					<ColorButton label={t('grid.cf.fontColor')} value={d.style.fg} none={t('grid.format.color.auto')} onpick={(c) => (d.style = { ...d.style, fg: c ?? undefined })} />
+					<span>{t('grid.cf.bar.fill')}</span>
+					<ColorButton label={t('grid.cf.fillColor')} value={d.style.bg} none={t('grid.format.fill.none')} onpick={(c) => (d.style = { ...d.style, bg: c ?? undefined })} />
 					<label
 						><input
 							type="checkbox"
@@ -1078,22 +1068,22 @@
 								const on = e.currentTarget.checked || undefined;
 								d.style = { ...d.style, bt: on, bb: on, bl: on, br: on, bc: on ? (d.style.bc ?? '#c00000') : undefined };
 							}}
-						/> Bordure</label
+						/> {t('grid.cf.border')}</label
 					>
-					{#if hasBorder(d.style)}<ColorButton label="Couleur de la bordure" value={d.style.bc ?? '#c00000'} onpick={(c) => c && (d.style = { ...d.style, bc: c })} />{/if}
+					{#if hasBorder(d.style)}<ColorButton label={t('grid.cf.borderColor')} value={d.style.bc ?? '#c00000'} onpick={(c) => c && (d.style = { ...d.style, bc: c })} />{/if}
 				</div>
 			{/if}
 		</div>
 		<div class="row">
-			<span>S’applique à :</span>
-			<input class="applies" bind:value={d.applies} placeholder="sélection actuelle" spellcheck="false" />
-			<label title="Les règles suivantes ne s’appliquent plus aux cellules qui vérifient celle-ci"><input type="checkbox" bind:checked={d.stop} /> Interrompre si vrai</label>
+			<span>{t('grid.cf.appliesTo')}</span>
+			<input class="applies" bind:value={d.applies} placeholder={t('grid.cf.appliesTo.placeholder')} spellcheck="false" />
+			<label title={t('grid.cf.stop.tooltip')}><input type="checkbox" bind:checked={d.stop} /> {t('grid.cf.stop')}</label>
 		</div>
 		{#if error}<p class="note error">{error}</p>{/if}
 		<div class="foot">
 			<span class="sp"></span>
-			<button class="primary" disabled={busy} onclick={editOk}>OK</button>
-			<button onclick={editCancel}>Annuler</button>
+			<button class="primary" disabled={busy} onclick={editOk}>{t('common.ok')}</button>
+			<button onclick={editCancel}>{t('common.cancel')}</button>
 		</div>
 	</div>
 	</div>
@@ -1104,29 +1094,29 @@
 		class="cf-dlg manager"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Gestionnaire des règles de mise en forme conditionnelle"
+		aria-label={t('grid.cf.manager.title')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => (e.stopPropagation(), e.key === 'Escape' && onclose())}
 	>
-		<div class="title">Gestionnaire des règles de mise en forme conditionnelle</div>
+		<div class="title">{t('grid.cf.manager.title')}</div>
 		<div class="row">
-			<span>Afficher les règles de mise en forme pour :</span>
+			<span>{t('grid.cf.manager.scope')}</span>
 			<Select bind:value={scope} options={scopeOptions} />
 		</div>
 		<div class="row tools">
-			<button onclick={() => editNew(true)}>Nouvelle règle…</button>
-			<button disabled={!picked} onclick={editPicked}>Modifier la règle…</button>
-			<button disabled={!picked} onclick={remove}>Supprimer la règle</button>
-			<button disabled={!picked} onclick={duplicate}>Dupliquer la règle</button>
-			<button disabled={!picked} title="Monter (priorité plus haute)" onclick={() => move(-1)}>▲</button>
-			<button disabled={!picked} title="Descendre (priorité plus basse)" onclick={() => move(1)}>▼</button>
+			<button onclick={() => editNew(true)}>{t('grid.cf.menu.newRule')}</button>
+			<button disabled={!picked} onclick={editPicked}>{t('grid.cf.manager.edit')}</button>
+			<button disabled={!picked} onclick={remove}>{t('grid.cf.manager.delete')}</button>
+			<button disabled={!picked} onclick={duplicate}>{t('grid.cf.manager.duplicate')}</button>
+			<button disabled={!picked} title={t('grid.cf.manager.up')} onclick={() => move(-1)}>▲</button>
+			<button disabled={!picked} title={t('grid.cf.manager.down')} onclick={() => move(1)}>▼</button>
 		</div>
 		<div class="table">
-			<div class="thead"><span>Règle (appliquée dans l’ordre indiqué)</span><span>Format</span><span>S’applique à</span><span>Interrompre si vrai</span></div>
+			<div class="thead"><span>{t('grid.cf.manager.col.rule')}</span><span>{t('grid.cf.manager.col.format')}</span><span>{t('grid.cf.manager.col.appliesTo')}</span><span>{t('grid.cf.stop')}</span></div>
 			<div class="tbody">
 				{#if shown.length === 0}
-					<p class="note">Aucune règle {scope === 'selection' ? 'sur la sélection' : 'sur cette feuille'}.</p>
+					<p class="note">{scope === 'selection' ? t('grid.cf.manager.none.selection') : t('grid.cf.manager.none.sheet')}</p>
 				{/if}
 				{#each shown as m (m.key)}
 					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -1160,9 +1150,9 @@
 		{#if error}<p class="note error">{error}</p>{/if}
 		<div class="foot">
 			<span class="sp"></span>
-			<button class="primary" disabled={busy} onclick={() => managerApply(true)}>OK</button>
-			<button onclick={onclose}>Fermer</button>
-			<button disabled={busy} onclick={() => managerApply(false)}>Appliquer</button>
+			<button class="primary" disabled={busy} onclick={() => managerApply(true)}>{t('common.ok')}</button>
+			<button onclick={onclose}>{t('common.close')}</button>
+			<button disabled={busy} onclick={() => managerApply(false)}>{t('grid.cf.manager.apply')}</button>
 		</div>
 	</div>
 	</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { errorText, t } from '#lib/i18n/index.js';
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { panelKeys } from '#lib/ui/focus.js';
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
@@ -16,7 +17,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { IconName } from '#lib/icons/icons.js';
 	import Select from '#lib/ui/Select.svelte';
-	import { DEFAULT_NAME_HINT, isDefaultTableName } from './defaultname';
+	import { defaultNameHint, isDefaultTableName } from './defaultname';
 	import { dismiss, dismissPanel } from './dismiss.js';
 	import { searchValues, valuesFilter, type PanelValue } from './filtercond.js';
 	import CustomSort from './CustomSort.svelte';
@@ -211,7 +212,7 @@
 	let search = $state('');
 	const used = $derived(usedFields(draft));
 	const visible = $derived(flds.filter((f) => matchField(f.name, search)));
-	const countVisible = $derived(matchField('Nombre de lignes', search));
+	const countVisible = $derived(matchField(t('grid.pivot.rowCount'), search));
 
 	function toggle(field: string, on: boolean) {
 		change(on ? addField(draft, field, flds) : removeField(draft, field));
@@ -233,7 +234,7 @@
 		closeAll();
 		if (e.dataTransfer) {
 			e.dataTransfer.effectAllowed = 'move';
-			e.dataTransfer.setData('text/plain', field || 'Nombre de lignes');
+			e.dataTransfer.setData('text/plain', field || t('grid.pivot.rowCount'));
 		}
 	}
 
@@ -377,23 +378,23 @@
 		const field = zoneItems(draft, zone)[i];
 		if (zone === 'values') {
 			const v = draft.values![i];
-			items.push({ label: 'Synthétiser par', head: true });
+			items.push({ label: t('grid.pivot.summarizeBy'), head: true });
 			for (const [agg, label] of aggs())
 				items.push({ label: `${label}`, checked: v.agg === agg, disabled: !v.field && agg !== 'count', run: () => change(setValue(draft, i, { agg })) });
-			items.push({ label: 'Paramètres des champs de valeurs…', run: () => openSettings(zone, i) });
+			items.push({ label: t('grid.pivot.valueSettings.menu'), run: () => openSettings(zone, i) });
 			items.push({ label: '', sep: true });
 		} else if (zone === 'filters') {
-			items.push({ label: 'Choisir les valeurs…', disabled: !filterValues, run: () => openFilter(i) });
+			items.push({ label: t('grid.pivot.menu.chooseValues'), disabled: !filterValues, run: () => openFilter(i) });
 			const f = draft.filters![i];
-			items.push({ label: 'Effacer le filtre', disabled: !f.values.length, run: () => change(setFilter(draft, f.field, [])) });
+			items.push({ label: t('grid.pivot.menu.clearFilter'), disabled: !f.values.length, run: () => change(setFilter(draft, f.field, [])) });
 			items.push({ label: '', sep: true });
 		} else if (field !== ROW_COUNT) {
 			// Champ des lignes ou des colonnes : tri de ses étiquettes (les vides toujours à la fin).
 			const custom = !!draft.orders?.[field];
-			items.push({ label: 'Trier de A à Z', checked: !custom && draft.sort?.[field] === 'asc', run: () => sortField(field, 'asc') });
-			items.push({ label: 'Trier de Z à A', checked: !custom && draft.sort?.[field] === 'desc', run: () => sortField(field, 'desc') });
-			items.push({ label: 'Tri personnalisé…', checked: custom, disabled: !filterValues, run: () => (customField = field) });
-			items.push({ label: 'Ordre de la source', checked: !custom && !draft.sort?.[field], run: () => sortField(field, null) });
+			items.push({ label: t('grid.sort.text.asc'), checked: !custom && draft.sort?.[field] === 'asc', run: () => sortField(field, 'asc') });
+			items.push({ label: t('grid.sort.text.desc'), checked: !custom && draft.sort?.[field] === 'desc', run: () => sortField(field, 'desc') });
+			items.push({ label: t('grid.pivot.menu.customSort'), checked: custom, disabled: !filterValues, run: () => (customField = field) });
+			items.push({ label: t('grid.pivot.menu.sourceOrder'), checked: !custom && !draft.sort?.[field], run: () => sortField(field, null) });
 			items.push({ label: '', sep: true });
 		}
 		if (zone !== 'values' && field !== ROW_COUNT && tabChoice) {
@@ -402,11 +403,12 @@
 			items.push({ label: '', sep: true });
 		}
 		for (const m of moveCommands(draft, zone, i)) {
-			if (m.label === 'Déplacer vers Filtres') items.push({ label: '', sep: true });
+			// Séparateur avant les déplacements vers une autre zone (le premier : Filtres).
+			if (m.to === 'filters' && zone !== 'filters') items.push({ label: '', sep: true });
 			items.push({ label: m.label, disabled: m.disabled, run: () => moveAndFocus(zone, i, m.to, m.at) });
 		}
 		items.push({ label: '', sep: true });
-		items.push({ label: 'Supprimer le champ', danger: true, run: () => removeAndFocus(zone, i) });
+		items.push({ label: t('grid.pivot.menu.removeField'), danger: true, run: () => removeAndFocus(zone, i) });
 		openMenu(opener, zone === 'values' ? valueLabel(draft.values![i]) : field, items, byKey);
 	}
 
@@ -415,19 +417,19 @@
 		// Champ calculé : sa formule d'abord (ce qui est propre à ce champ).
 		const calc = calcOf(field);
 		if (calc && oncalc) {
-			items.push({ label: 'Modifier le champ calculé…', title: calc.text, run: () => (calcEdit = { old: calc.name, name: calc.name, formula: calc.text ?? '' }) });
-			items.push({ label: 'Supprimer le champ calculé', danger: true, run: () => removeCalc(calc.name) });
+			items.push({ label: t('grid.pivot.menu.editCalc'), title: calc.text, run: () => (calcEdit = { old: calc.name, name: calc.name, formula: calc.text ?? '' }) });
+			items.push({ label: t('grid.pivot.menu.removeCalc'), danger: true, run: () => removeCalc(calc.name) });
 			items.push({ label: '', sep: true });
 		}
 		for (const { zone, title } of ZONES)
 			items.push({
-				label: `Ajouter à ${title}`,
+				label: t('grid.pivot.menu.addTo', { zone: title }),
 				disabled: (zone !== 'values' && (field === ROW_COUNT || zoneItems(draft, zone).includes(field))) || !isUsable(flds.find((f) => f.name === field) ?? { name: '', type: '' }),
 				run: () => change(insertAt(draft, zone, field, flds))
 			});
 		items.push({ label: '', sep: true });
-		items.push({ label: 'Retirer du rapport', disabled: !used.has(field), danger: true, run: () => change(removeField(draft, field)) });
-		openMenu(opener, field === ROW_COUNT ? 'Nombre de lignes' : field, items, byKey);
+		items.push({ label: t('grid.pivot.menu.removeFromReport'), disabled: !used.has(field), danger: true, run: () => change(removeField(draft, field)) });
+		openMenu(opener, field === ROW_COUNT ? t('grid.pivot.rowCount') : field, items, byKey);
 	}
 
 	/** Retire un champ calculé (et des zones) ; le brouillon en attente part d'abord. */
@@ -438,7 +440,7 @@
 			await flush(); // les changements en attente d'abord : ils ne reprennent pas l'ancienne liste
 			await oncalc?.(name, name, '');
 		} catch (e) {
-			calcFailed = String((e as Error)?.message ?? e);
+			calcFailed = errorText(e);
 		}
 	}
 
@@ -521,7 +523,7 @@
 			if (filt?.field !== f.field) return;
 			filt.values = vals.map((v) => ({ ...v, on: f.values.length === 0 || f.values.includes(v.text) }));
 		} catch (err) {
-			if (filt) filt.error = String(err instanceof Error ? err.message : err);
+			if (filt) filt.error = errorText(err);
 		}
 	}
 
@@ -558,14 +560,14 @@
 	{@const preview = calcPreview}
 	{@const save = oncalc}
 	<RowFormulaDialog
-		title={ce.old ? `Champ calculé « ${ce.old} »` : 'Champ calculé'}
-		intro="Une formule sur les colonnes de chaque ligne de « {config.source} » : les lignes sont regroupées par son résultat, en Lignes, en Colonnes ou en Filtres (ou synthétisées en Valeurs)."
-		nameLabel="Nom du champ :"
+		title={ce.old ? t('grid.pivot.calc.title.edit', { name: ce.old }) : t('grid.pivot.calc.title')}
+		intro={t('grid.pivot.calc.intro', { source: config.source })}
+		nameLabel={t('grid.pivot.calc.name')}
 		name={ce.name}
 		formula={ce.formula}
 		guess={!ce.old}
 		help={formulaHelp}
-		okLabel={ce.old ? 'OK' : 'Ajouter'}
+		okLabel={ce.old ? t('common.ok') : t('grid.pivot.calc.add')}
 		{preview}
 		onok={async (name, f) => {
 			await flush();
@@ -576,29 +578,29 @@
 	/>
 {/if}
 
-<aside class="panel" bind:this={panelEl} use:resizePanel={{ key: 'pivot', off: !resizable }} use:panelKeys={onclose} aria-label="Champs de tableau croisé dynamique">
-	<PanelHeader title="Champs de tableau croisé dynamique" help="tcd" helpLabel="Aide sur les tableaux croisés" {onclose}>
-		<span class="sub" title="Le tableau croisé dynamique s'interroge dans l'onglet SQL sous ce nom et sert de source aux graphiques">
-			{config.name ?? 'Tableau croisé dynamique'} · source :
-			{#if isDefaultTableName(config.source)}<span class="default-name" title={DEFAULT_NAME_HINT}>{config.source}</span>{:else}{config.source}{/if}
+<aside class="panel" bind:this={panelEl} use:resizePanel={{ key: 'pivot', off: !resizable }} use:panelKeys={onclose} aria-label={t('grid.pivot.panel.title')}>
+	<PanelHeader title={t('grid.pivot.panel.title')} help="tcd" helpLabel={t('grid.pivot.panel.help')} {onclose}>
+		<span class="sub" title={t('grid.pivot.panel.name.tooltip')}>
+			{t('grid.pivot.panel.source', { name: config.name ?? t('grid.pivot.defaultName') })}
+			{#if isDefaultTableName(config.source)}<span class="default-name" title={defaultNameHint()}>{config.source}</span>{:else}{config.source}{/if}
 		</span>
 	</PanelHeader>
 	{#if locked}<p class="locked" role="note"><Icon name="lock-sheet" size={14} /><span>{locked}</span></p>{/if}
 
 	<div class="search">
 		<Icon name="search" size={14} />
-		<input bind:value={search} placeholder="Rechercher un champ" aria-label="Rechercher un champ" onkeydown={(e) => e.key === 'Escape' && search && (e.stopPropagation(), (search = ''))} />
-		{#if search}<button class="icon-btn small" title="Effacer la recherche" aria-label="Effacer la recherche" onclick={() => (search = '')}><Icon name="win-close" size={12} /></button>{/if}
+		<input bind:value={search} placeholder={t('grid.pivot.search.field')} aria-label={t('grid.pivot.search.field')} onkeydown={(e) => e.key === 'Escape' && search && (e.stopPropagation(), (search = ''))} />
+		{#if search}<button class="icon-btn small" title={t('grid.pivot.search.clear')} aria-label={t('grid.pivot.search.clear')} onclick={() => (search = '')}><Icon name="win-close" size={12} /></button>{/if}
 	</div>
 
 	<fieldset class="body" disabled={!!locked}>
-	<p class="label">Choisissez les champs à inclure dans le rapport :</p>
-	<ul class="fields" class:drop-out={dragging && drag?.from} aria-label="Champs du tableau {config.source}" ondragover={overList} ondrop={dropList}>
+	<p class="label">{t('grid.pivot.fields.choose')}</p>
+	<ul class="fields" class:drop-out={dragging && drag?.from} aria-label={t('grid.pivot.fields.aria', { table: config.source })} ondragover={overList} ondrop={dropList}>
 		{#each visible as f (f.name)}
 			{@const usable = isUsable(f)}
 			{@const id = `pf-${f.name}`}
 			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions (la case reste l'élément du clavier ; le clic sur la ligne n'est qu'une cible agrandie) -->
-			<li class="field" class:used={used.has(f.name)} class:off={!usable} draggable={usable} ondragstart={(e) => startDrag(e, f.name)} ondragend={endDrag} onclick={(e) => usable && rowClick(e, f.name)} title={usable ? undefined : 'Colonne calculée : elle ne sert pas encore de champ de tableau croisé'}>
+			<li class="field" class:used={used.has(f.name)} class:off={!usable} draggable={usable} ondragstart={(e) => startDrag(e, f.name)} ondragend={endDrag} onclick={(e) => usable && rowClick(e, f.name)} title={usable ? undefined : t('grid.pivot.fields.computed')}>
 				<input type="checkbox" {id} checked={used.has(f.name)} disabled={!usable} onchange={(e) => toggle(f.name, (e.currentTarget as HTMLInputElement).checked)} />
 				<span class="ticon"><Icon name={fieldIcon(f.type)} size={16} /></span>
 				<label for={id} class="fname">{f.name}</label>
@@ -606,8 +608,8 @@
 					<button
 						class="icon-btn more"
 						aria-haspopup="menu"
-						aria-label="Ajouter « {f.name} » à une zone"
-						title="Ajouter à une zone"
+						aria-label={t('grid.pivot.fields.add.aria', { name: f.name })}
+						title={t('grid.pivot.fields.add')}
 						onclick={(e) => fieldMenu(f.name, e.currentTarget, e.detail === 0)}><Icon name="chevron-down" size={14} /></button
 					>
 				{/if}
@@ -619,23 +621,23 @@
 			<li class="field pseudo" class:used={on} draggable="true" ondragstart={(e) => startDrag(e, ROW_COUNT)} ondragend={endDrag} onclick={(e) => rowClick(e, ROW_COUNT)}>
 				<input type="checkbox" id="pf--count" checked={on} onchange={(e) => toggle(ROW_COUNT, (e.currentTarget as HTMLInputElement).checked)} />
 				<span class="ticon"><Icon name="autosum" size={16} /></span>
-				<label for="pf--count" class="fname">Nombre de lignes</label>
+				<label for="pf--count" class="fname">{t('grid.pivot.rowCount')}</label>
 			</li>
 		{/if}
 		{#if !visible.length && !countVisible}
-			<li class="none">Aucun champ ne correspond à « {search.trim()} ».</li>
+			<li class="none">{t('grid.pivot.fields.noMatch', { search: search.trim() })}</li>
 		{/if}
 	</ul>
 	{#if oncalc && calcPreview}
 		<button
 			class="add-calc"
-			title="Un champ dont la valeur est calculée pour chaque ligne de la source : =ANNEE([Date]), =GAUCHE([Code];2)… Il regroupe les lignes en Lignes ou en Colonnes, filtre ou se synthétise comme une colonne."
-			onclick={() => (calcEdit = { old: '', name: '', formula: '' })}><Icon name="function" size={14} />Champ calculé…</button
+			title={t('grid.pivot.calc.add.tooltip')}
+			onclick={() => (calcEdit = { old: '', name: '', formula: '' })}><Icon name="function" size={14} />{t('grid.pivot.calc.add.label')}</button
 		>
 		{#if calcFailed}<p class="calc-error" role="alert">{calcFailed}</p>{/if}
 	{/if}
 
-	<p class="label">Faites glisser les champs dans les zones voulues :</p>
+	<p class="label">{t('grid.pivot.zones.hint')}</p>
 	<div class="zones">
 		{#each ZONES as z (z.zone)}
 			{@const items = zoneItems(draft, z.zone)}
@@ -692,42 +694,42 @@
 		{#if onsource && sources.length}
 			<!-- Comme « Changer la source de données » d'Excel : les champs présents dans le nouveau tableau sont gardés. -->
 			<div class="source" bind:this={sourceEl}>
-				<span>Changer la source :</span>
-				<Select value="" options={[{ value: '', label: 'Choisir un tableau…' }, ...sources.map((n) => ({ value: n, label: n }))]} onchange={(n) => n && onsource(n)} title="Tableau source du tableau croisé" />
+				<span>{t('grid.pivot.source.change')}</span>
+				<Select value="" options={[{ value: '', label: t('grid.pivot.source.choose') }, ...sources.map((n) => ({ value: n, label: n }))]} onchange={(n) => n && onsource(n)} title={t('grid.pivot.source.tooltip')} />
 			</div>
 		{/if}
 	{:else if isEmpty(draft)}
-		<p class="note">Le rapport est vide : cochez des champs ci-dessus, ou glissez-les dans les zones. Les nombres vont en Valeurs, le reste en Lignes.</p>
+		<p class="note">{t('grid.pivot.empty')}</p>
 	{:else if !draft.values?.length}
-		<p class="note">Ajoutez un champ en Valeurs pour calculer des totaux (somme, nombre, moyenne…).</p>
+		<p class="note">{t('grid.pivot.noValues')}</p>
 	{/if}
 	{#if handNote}
 		<!-- Colonnes saisies à droite du TCD (décision 0008) : valeurs d'étiquettes absentes. -->
 		<p class="pending" role="note">
 			{handNote}
-			{#if onforgethand}<button class="link" title="Effacer ces valeurs (Ctrl+Z pour annuler)" onclick={() => onforgethand()}>Oublier les valeurs mises de côté</button>{/if}
+			{#if onforgethand}<button class="link" title={t('grid.pivot.handForget.tooltip')} onclick={() => onforgethand()}>{t('grid.pivot.handForget')}</button>{/if}
 		</p>
 	{/if}
 
 	<footer>
-		<label class="opt"><input type="checkbox" checked={!draft.noGrandTotal} onchange={(e) => change({ ...clone(draft), noGrandTotal: !(e.currentTarget as HTMLInputElement).checked || undefined })} /> Totaux généraux</label>
+		<label class="opt"><input type="checkbox" checked={!draft.noGrandTotal} onchange={(e) => change({ ...clone(draft), noGrandTotal: !(e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('grid.pivot.grandTotals')}</label>
 		{#if (draft.rowFields?.length ?? 0) > 1}
 			<!-- Plusieurs champs en lignes : arborescence, sous-totaux des groupes (Excel). -->
 			<label class="opt subtotals"
-				>Sous-totaux
+				>{t('grid.pivot.subtotals')}
 				<select value={draft.subtotals ?? ''} onchange={(e) => change({ ...clone(draft), subtotals: (e.currentTarget as HTMLSelectElement).value || undefined })}>
-					<option value="">En haut du groupe</option>
-					<option value="bottom">En bas du groupe</option>
-					<option value="none">Aucun</option>
+					<option value="">{t('grid.pivot.subtotals.top')}</option>
+					<option value="bottom">{t('grid.pivot.subtotals.bottom')}</option>
+					<option value="none">{t('grid.pivot.subtotals.none')}</option>
 				</select>
 			</label>
 		{/if}
 		<div class="update">
-			<label class="opt"><input type="checkbox" checked={defer} onchange={(e) => setDefer((e.currentTarget as HTMLInputElement).checked)} /> Différer la mise à jour</label>
-			<button class="primary apply" disabled={!defer || !dirty} onclick={flush} title="Appliquer les changements au tableau croisé"><Icon name="refresh" size={14} />Mettre à jour</button>
+			<label class="opt"><input type="checkbox" checked={defer} onchange={(e) => setDefer((e.currentTarget as HTMLInputElement).checked)} /> {t('grid.pivot.defer')}</label>
+			<button class="primary apply" disabled={!defer || !dirty} onclick={flush} title={t('grid.pivot.update.tooltip')}><Icon name="refresh" size={14} />{t('grid.pivot.update')}</button>
 		</div>
-		{#if defer && dirty}<p class="pending">Modifications en attente : le tableau croisé n'est pas encore à jour (elles s'appliquent aussi à la fermeture du volet).</p>{/if}
-		<button class="delete" onclick={ondelete}><Icon name="trash" size={14} />Supprimer le tableau croisé</button>
+		{#if defer && dirty}<p class="pending">{t('grid.pivot.pending')}</p>{/if}
+		<button class="delete" onclick={ondelete}><Icon name="trash" size={14} />{t('grid.pivot.delete')}</button>
 	</footer>
 	</fieldset>
 </aside>
@@ -774,7 +776,7 @@
 		bind:this={popEl}
 		role="dialog"
 		tabindex="-1"
-		aria-label="Paramètres des champs de valeurs"
+		aria-label={t('grid.pivot.valueSettings')}
 		style={posStyle(s.pos)}
 		use:dismissPanel={() => closeSettings(focusIn(popEl))}
 		onkeydown={(e) => {
@@ -783,25 +785,25 @@
 			if (e.key === 'Enter' && e.target instanceof HTMLInputElement) applySettings();
 		}}
 	>
-		<div class="pop-title">Paramètres des champs de valeurs</div>
-		<p class="pop-note">Source : {s.field || 'nombre de lignes'}</p>
-		<label class="line">Nom personnalisé<input bind:value={s.label} placeholder={valueLabel({ field: s.field || undefined, agg: s.agg as never })} /></label>
+		<div class="pop-title">{t('grid.pivot.valueSettings')}</div>
+		<p class="pop-note">{t('grid.pivot.valueSettings.source', { field: s.field || t('grid.pivot.valueSettings.rowCount') })}</p>
+		<label class="line">{t('grid.pivot.valueSettings.name')}<input bind:value={s.label} placeholder={valueLabel({ field: s.field || undefined, agg: s.agg as never })} /></label>
 		<label class="line"
-			>Synthétiser par<Select
+			>{t('grid.pivot.summarizeBy')}<Select
 				value={s.agg}
 				width="100%"
 				options={aggs().map(([a, label]) => ({ value: a as string, label, disabled: !s.field && a !== 'count' }))}
 				onchange={(a) => (s.agg = a)}
 			/></label
 		>
-		<label class="line">Afficher les valeurs<Select value={s.show} width="100%" options={shows().map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.show = v)} /></label>
+		<label class="line">{t('grid.pivot.valueSettings.show')}<Select value={s.show} width="100%" options={shows().map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.show = v)} /></label>
 		<label class="line"
-			>Format de nombre<Select value={s.show ? '' : s.format} width="100%" disabled={!!s.show} options={formats().map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.format = v)} /></label
+			>{t('grid.pivot.valueSettings.format')}<Select value={s.show ? '' : s.format} width="100%" disabled={!!s.show} options={formats().map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.format = v)} /></label
 		>
-		{#if s.show}<p class="pop-note">Un pourcentage garde son propre format.</p>{/if}
+		{#if s.show}<p class="pop-note">{t('grid.pivot.valueSettings.pctFormat')}</p>{/if}
 		<div class="foot">
-			<button class="primary" onclick={applySettings}>OK</button>
-			<button onclick={() => closeSettings()}>Annuler</button>
+			<button class="primary" onclick={applySettings}>{t('common.ok')}</button>
+			<button onclick={() => closeSettings()}>{t('common.cancel')}</button>
 		</div>
 	</div>
 {/if}
@@ -813,7 +815,7 @@
 		bind:this={popEl}
 		role="dialog"
 		tabindex="-1"
-		aria-label="Filtre de {f.field}"
+		aria-label={t('grid.pivot.filter.aria', { field: f.field })}
 		style={posStyle(f.pos)}
 		use:dismissPanel={() => closeFilter(focusIn(popEl))}
 		onkeydown={(e) => {
@@ -822,13 +824,13 @@
 			if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) applyFilter();
 		}}
 	>
-		<div class="pop-title">Filtrer « {f.field} »</div>
+		<div class="pop-title">{t('grid.pivot.filter.title', { field: f.field })}</div>
 		<div class="search">
 			<Icon name="search" size={14} />
-			<input bind:value={f.search} placeholder="Rechercher" aria-label="Rechercher une valeur" />
+			<input bind:value={f.search} placeholder={t('grid.filter.search.placeholder')} aria-label={t('grid.filter.search.aria')} />
 		</div>
 		{#if !f.values}
-			<p class="pop-note">{f.error || 'Chargement des valeurs…'}</p>
+			<p class="pop-note">{f.error || t('grid.filter.loading')}</p>
 		{:else}
 			<div class="values">
 				<label class="all">
@@ -842,22 +844,22 @@
 							f.error = '';
 						}}
 					/>
-					{f.search.trim() ? '(Sélectionner tous les résultats)' : '(Sélectionner tout)'}
+					{f.search.trim() ? t('grid.filter.selectAllResults') : t('grid.filter.selectAll')}
 				</label>
 				{#each filtShown as v (v.text)}
 					<label>
 						<input type="checkbox" bind:checked={v.on} onchange={() => (f.error = '')} />
-						<span class="what">{v.text === '' ? '(Vides)' : v.text}</span>
+						<span class="what">{v.text === '' ? t('grid.filter.blanks') : v.text}</span>
 						<span class="count">{v.count}</span>
 					</label>
 				{/each}
-				{#if !filtShown.length}<p class="pop-note">Aucune valeur ne correspond.</p>{/if}
+				{#if !filtShown.length}<p class="pop-note">{t('grid.filter.noMatch')}</p>{/if}
 			</div>
 			{#if f.error}<p class="pop-note err">{f.error}</p>{/if}
 		{/if}
 		<div class="foot">
-			<button class="primary" disabled={!f.values} onclick={applyFilter}>OK</button>
-			<button onclick={() => closeFilter()}>Annuler</button>
+			<button class="primary" disabled={!f.values} onclick={applyFilter}>{t('common.ok')}</button>
+			<button onclick={() => closeFilter()}>{t('common.cancel')}</button>
 		</div>
 	</div>
 {/if}

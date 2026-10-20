@@ -31,6 +31,75 @@
 			"noAction": "Aucune action liée",
 			"action": "Action ({event}) : {handler}",
 			"listener": "Écouteur ({event}) : {handler}"
+		},
+		"noAction": "Aucune action liée à ce bouton : clic droit › Modifier le bouton… pour en choisir une",
+		"file": {
+			"pick": "Choisir un fichier",
+			"choose": "Choisir un fichier…",
+			"none": "Aucun fichier"
+		},
+		"copied": "Bouton copié : clic droit sur une cellule › Coller le bouton",
+		"pasted": "Bouton collé",
+		"editor": {
+			"label": "Libellé",
+			"placeholder": "Texte indicatif (facultatif)",
+			"buttonText": "Texte du bouton",
+			"aria": "Contrôle",
+			"insert": "Insérer : {kind}",
+			"edit": "Modifier : {kind}",
+			"help": "Aide sur les boutons et contrôles",
+			"kind": "Type",
+			"name": "Nom (pour les scripts)",
+			"name.placeholder": "automatique",
+			"link": "Cellule liée (facultative)",
+			"link.placeholder": "aucune : valeur gardée dans le contrôle",
+			"source": "Source des choix",
+			"source.list": "Saisis",
+			"source.column": "Colonne d’un tableau",
+			"source.column.tooltip": "Valeurs distinctes d’une colonne de tableau, à jour avec lui",
+			"source.column.none": "Aucun tableau dans le classeur",
+			"column": "Colonne (valeurs distinctes)",
+			"notFound": "{name} (introuvable)",
+			"options": "Choix (un par ligne)",
+			"pick": {
+				"address": "Champ actif : un clic dans le classeur y met l’adresse de la cellule.",
+				"value": "Champ actif : un clic dans le classeur y met la valeur de la cellule."
+			},
+			"script": "Script",
+			"script.none": "(aucune action)",
+			"action": "Action",
+			"action.all": "Exécuter tout le script",
+			"action.call": "Appeler {fn}()",
+			"listeners": "Écouteurs des scripts (controls.on)",
+			"colors": "Couleurs personnalisées",
+			"colors.normal": "Normal",
+			"colors.hover": "Survol",
+			"colors.active": "Clic",
+			"colors.text": "Texte",
+			"live": "Les réglages s’appliquent aussitôt au contrôle."
+		},
+		"error": {
+			"noLabel": "Donnez un libellé au contrôle",
+			"badLink": "Cellule liée invalide (« B3 » par exemple) ; laissez vide pour garder la valeur dans le contrôle",
+			"noColumn": "Choisissez la colonne qui donne les choix"
+		},
+		"input": {
+			"aria": "Zone de saisie"
+		},
+		"menu": {
+			"title": "{kind} « {name} »",
+			"run": "Exécuter l’action",
+			"edit": "Modifier…",
+			"resize": "Redimensionner",
+			"resize.hint": "Glissez une poignée pour redimensionner le bouton"
+		},
+		"note": {
+			"noScript": "Aucun script dans la bibliothèque (onglet Script) : le contrôle est créé sans action, à lier plus tard.",
+			"input": "Le texte est écrit dans la cellule liée en quittant la zone ou avec Entrée, puis l’action s’exécute.",
+			"textarea": "Le texte est écrit dans la cellule liée en quittant la zone ou avec Ctrl+Entrée, puis l’action s’exécute.",
+			"file": "Le chemin du fichier choisi est écrit dans la cellule liée, puis l’action s’exécute.",
+			"value": "La valeur est écrite dans la cellule liée, puis l’action s’exécute ; tout s’annule d’un coup (Ctrl+Z).",
+			"button": "Un clic sur le bouton exécute l’action ; tout ce qu’elle modifie s’annule d’un coup (Ctrl+Z)."
 		}
 	},
 	"cf": {
@@ -126,7 +195,8 @@
 			"greenWhite": "Vert - Blanc",
 			"whiteGreen": "Blanc - Vert",
 			"greenYellow": "Vert - Jaune",
-			"yellowGreen": "Jaune - Vert"
+			"yellowGreen": "Jaune - Vert",
+			"tooltip": "Nuances {colors}"
 		},
 		"describe": {
 			"compare": "Valeur de la cellule {op} {value}",
@@ -157,6 +227,223 @@
 			"bar": "Barre de données",
 			"scale": "Échelle à {n} couleurs",
 			"icons": "Jeu d’icônes : {set}"
+		},
+		"error": {
+			"noSelection": "Sélectionnez les cellules à mettre en forme",
+			"notInTable": "La cellule active n’est pas dans un tableau",
+			"value": "Indiquez une valeur",
+			"values": "Indiquez les deux valeurs",
+			"pct": "Indiquez un pourcentage de 1 à 100",
+			"count": "Indiquez un nombre de 1 à 1000",
+			"text": "Indiquez un texte",
+			"rank": "Indiquez un rang de 1 à 1000",
+			"formula": "Indiquez une formule"
+		},
+		"quick": {
+			"gt": "Supérieur à",
+			"lt": "Inférieur à",
+			"between": "Entre",
+			"eq": "Égal à",
+			"contains": "Texte qui contient",
+			"date": "Une date se produisant",
+			"dup": "Valeurs en double",
+			"top": "10 premiers éléments",
+			"bottom": "10 derniers éléments",
+			"above": "Au-dessus de la moyenne",
+			"below": "En dessous de la moyenne",
+			"forRange": "pour la plage sélectionnée",
+			"with": "avec"
+		},
+		"kind": {
+			"value": "Mettre en forme toutes les cellules d’après leur valeur",
+			"contains": "Appliquer une mise en forme uniquement aux cellules qui contiennent",
+			"rank": "Appliquer une mise en forme uniquement aux valeurs rangées parmi les premières ou les dernières valeurs",
+			"avg": "Appliquer une mise en forme uniquement aux valeurs au-dessus ou en dessous de la moyenne",
+			"dup": "Appliquer une mise en forme uniquement aux valeurs uniques ou aux doublons",
+			"formula": "Utiliser une formule pour déterminer pour quelles cellules le format sera appliqué"
+		},
+		"cfvo": {
+			"auto": "Automatique",
+			"min": "Valeur la plus basse",
+			"max": "Valeur la plus élevée",
+			"num": "Nombre",
+			"pct": "Pourcentage",
+			"pctl": "Centile"
+		},
+		"avg": {
+			"above": "au-dessus",
+			"below": "en dessous",
+			"aboveOrEqual": "égales ou au-dessus",
+			"belowOrEqual": "égales ou en dessous",
+			"above1": "1 écart type au-dessus",
+			"below1": "1 écart type en dessous",
+			"above2": "2 écarts types au-dessus",
+			"below2": "2 écarts types en dessous",
+			"above3": "3 écarts types au-dessus",
+			"below3": "3 écarts types en dessous",
+			"ofRange": "la moyenne de la plage sélectionnée"
+		},
+		"cond": {
+			"value": "Valeur de la cellule",
+			"text": "Texte spécifique",
+			"date": "Dates se produisant",
+			"empty": "Cellules vides",
+			"notempty": "Aucune cellule vide",
+			"error": "Erreurs",
+			"noerror": "Aucune erreur"
+		},
+		"scope": {
+			"selection": "Sélection actuelle",
+			"sheet": "Cette feuille de calcul",
+			"table": "Ce tableau : {table}"
+		},
+		"menu": {
+			"highlight": "Règles de mise en surbrillance des cellules",
+			"topBottom": "Règles des valeurs plus/moins élevées",
+			"bars": "Barres de données",
+			"scales": "Nuances de couleurs",
+			"icons": "Jeux d’icônes",
+			"newRule": "Nouvelle règle…",
+			"clear": "Effacer les règles",
+			"manage": "Gérer les règles…",
+			"quick": {
+				"gt": "Supérieur à…",
+				"lt": "Inférieur à…",
+				"between": "Entre…",
+				"eq": "Égal à…",
+				"contains": "Texte qui contient…",
+				"date": "Une date se produisant…",
+				"dup": "Valeurs en double…",
+				"top": "10 valeurs les plus élevées…",
+				"topPct": "10 % les plus élevés…",
+				"bottom": "10 valeurs les moins élevées…",
+				"bottomPct": "10 % les moins élevés…",
+				"above": "Valeurs supérieures à la moyenne…",
+				"below": "Valeurs inférieures à la moyenne…"
+			},
+			"more": "Autres règles…",
+			"clear.selection": "Effacer les règles des cellules sélectionnées",
+			"clear.sheet": "Effacer les règles de la feuille entière",
+			"clear.table": "Effacer les règles de ce tableau"
+		},
+		"bar": {
+			"gradient": "Remplissage dégradé",
+			"solid": "Remplissage uni",
+			"gradient.tooltip": "Barre de données {color} (dégradé)",
+			"solid.tooltip": "Barre de données {color} (uni)",
+			"fill": "Remplissage :",
+			"border": "Bordure pleine",
+			"negative": "Barres négatives :",
+			"only": "Afficher la barre uniquement"
+		},
+		"lead": {
+			"gt": "Appliquer une mise en forme aux cellules qui sont SUPÉRIEURES À :",
+			"lt": "Appliquer une mise en forme aux cellules qui sont INFÉRIEURES À :",
+			"between": "Appliquer une mise en forme aux cellules qui sont ENTRE :",
+			"eq": "Appliquer une mise en forme aux cellules qui sont ÉGALES À :",
+			"contains": "Appliquer une mise en forme aux cellules qui contiennent le texte :",
+			"date": "Appliquer une mise en forme aux cellules qui contiennent une date se produisant :",
+			"dup": "Appliquer une mise en forme aux cellules qui contiennent :",
+			"top": "Appliquer une mise en forme aux cellules qui se classent parmi les PREMIERS :",
+			"topPct": "Appliquer une mise en forme aux cellules qui se classent parmi les PREMIERS (en %) :",
+			"bottom": "Appliquer une mise en forme aux cellules qui se classent parmi les DERNIERS :",
+			"bottomPct": "Appliquer une mise en forme aux cellules qui se classent parmi les DERNIERS (en %) :",
+			"above": "Appliquer une mise en forme aux cellules qui sont AU-DESSUS DE LA MOYENNE :",
+			"below": "Appliquer une mise en forme aux cellules qui sont EN DESSOUS DE LA MOYENNE :"
+		},
+		"placeholder": {
+			"text": "texte",
+			"valueOrDate": "valeur ou date",
+			"value": "valeur"
+		},
+		"and": "et",
+		"dup": {
+			"dup": "en double",
+			"unique": "uniques",
+			"values": "valeurs",
+			"ofRange": "valeurs de la plage sélectionnée"
+		},
+		"edit": {
+			"title": {
+				"edit": "Modifier la règle de mise en forme",
+				"new": "Nouvelle règle de mise en forme"
+			},
+			"kind": "Sélectionnez un type de règle :",
+			"desc": "Modifiez la description de la règle :",
+			"value": "Mettre en forme toutes les cellules d’après leur valeur :",
+			"style": "Style de mise en forme :",
+			"contains": "Appliquer une mise en forme uniquement aux cellules contenant :",
+			"rank": "Appliquer une mise en forme aux valeurs figurant dans les :",
+			"avg": "Appliquer une mise en forme aux valeurs qui sont :",
+			"dup": "Mettre en forme tout :",
+			"formula": "Appliquer une mise en forme aux valeurs pour lesquelles cette formule est vraie :",
+			"formula.help": "Dans un tableau, [@Colonne] désigne la cellule de la même ligne (une adresse de la première ligne de données, comme $C2, vaut aussi pour chaque ligne). Hors tableau, la formule est écrite pour la cellule en haut à gauche de la plage : ses adresses relatives suivent chaque cellule."
+		},
+		"vstyle": {
+			"scale2": "Échelle à deux couleurs",
+			"scale3": "Échelle à trois couleurs"
+		},
+		"grid": {
+			"min": "Minimum",
+			"mid": "Point médian",
+			"max": "Maximum",
+			"kind": "Type :",
+			"value": "Valeur :",
+			"color": "Couleur :",
+			"lowest": "(valeur la plus basse)",
+			"highest": "(valeur la plus élevée)",
+			"auto": "(automatique)"
+		},
+		"preview": "Aperçu :",
+		"icons": {
+			"style": "Style d’icône :",
+			"reverse": "Ordre inverse des icônes",
+			"only": "Afficher l’icône uniquement",
+			"icon": "Icône",
+			"value": "Valeur",
+			"kind": "Type",
+			"when": "lorsque la valeur est",
+			"whenLast": "lorsque {op} {value}"
+		},
+		"rank": {
+			"top": "Haut",
+			"bottom": "Bas",
+			"pct": "% de la plage sélectionnée"
+		},
+		"customFormat": "Format personnalisé",
+		"customFormat.more": "Format personnalisé…",
+		"letter": {
+			"bold": "G",
+			"italic": "I",
+			"underline": "S"
+		},
+		"font": "Police :",
+		"fontColor": "Couleur de police",
+		"fillColor": "Couleur de remplissage",
+		"border": "Bordure",
+		"borderColor": "Couleur de la bordure",
+		"appliesTo": "S’applique à :",
+		"appliesTo.placeholder": "sélection actuelle",
+		"stop": "Interrompre si vrai",
+		"stop.tooltip": "Les règles suivantes ne s’appliquent plus aux cellules qui vérifient celle-ci",
+		"manager": {
+			"title": "Gestionnaire des règles de mise en forme conditionnelle",
+			"scope": "Afficher les règles de mise en forme pour :",
+			"edit": "Modifier la règle…",
+			"delete": "Supprimer la règle",
+			"duplicate": "Dupliquer la règle",
+			"up": "Monter (priorité plus haute)",
+			"down": "Descendre (priorité plus basse)",
+			"col": {
+				"rule": "Règle (appliquée dans l’ordre indiqué)",
+				"format": "Format",
+				"appliesTo": "S’applique à"
+			},
+			"none": {
+				"selection": "Aucune règle sur la sélection.",
+				"sheet": "Aucune règle sur cette feuille."
+			},
+			"apply": "Appliquer"
 		}
 	},
 	"color": {
@@ -198,13 +485,58 @@
 			"pink": "Rose"
 		},
 		"lighter": "plus clair {pct} %",
-		"darker": "plus foncé {pct} %"
+		"darker": "plus foncé {pct} %",
+		"button": {
+			"tooltip": "{label} : {color}",
+			"none": "aucune"
+		},
+		"palette": {
+			"theme": "Couleurs du thème",
+			"standard": "Couleurs standard",
+			"recent": "Couleurs récentes",
+			"more": "Autres couleurs…"
+		}
 	},
 	"customSort": {
 		"summary": {
 			"list": "liste « {name} »",
 			"reversed": "{order} (à rebours)"
-		}
+		},
+		"error": {
+			"noValues": "Aucune valeur à ranger",
+			"noName": "Nommez la liste à enregistrer",
+			"exists": "La liste « {name} » existe déjà"
+		},
+		"title": "Tri personnalisé",
+		"heading": "Tri personnalisé – « {field} »",
+		"loading": "Chargement des valeurs…",
+		"orderFrom": "Ordre d'après :",
+		"orderFrom.values": "les valeurs de la colonne (ordre libre)",
+		"orderFrom.list": "Liste « {name} » : {values}…",
+		"orderFrom.workbookList": "Liste « {name} » (classeur) : {values}…",
+		"hint": "Glissez les valeurs pour les ranger, ou sélectionnez-en une et utilisez les boutons (au clavier : Alt+↑ / Alt+↓, Alt+Début / Alt+Fin). Les valeurs absentes de l'ordre suivent dans l'ordre croissant, les cellules vides restent à la fin.",
+		"items": {
+			"aria": "Ordre des valeurs"
+		},
+		"absent": "absente",
+		"absent.tooltip": "Valeur de l'ordre absente des données : gardée pour quand elle apparaîtra",
+		"empty": "Aucune valeur (la colonne est vide).",
+		"move": {
+			"first": "En premier",
+			"first.tooltip": "Placer en premier (Alt+Début)",
+			"up": "Monter",
+			"up.tooltip": "Monter (Alt+↑)",
+			"down": "Descendre",
+			"down.tooltip": "Descendre (Alt+↓)",
+			"last": "En dernier",
+			"last.tooltip": "Placer en dernier (Alt+Fin)"
+		},
+		"direction": "Sens",
+		"direction.forward": "Dans cet ordre (du premier au dernier)",
+		"direction.reverse": "À rebours (du dernier au premier)",
+		"save": "Enregistrer cet ordre comme liste personnalisée du classeur, pour d'autres colonnes",
+		"save.name": "Nom :",
+		"save.name.placeholder": "Tailles, Priorités…"
 	},
 	"defaultName": {
 		"hint": "Nom par défaut : renommez le tableau"
@@ -267,7 +599,16 @@
 		"values": {
 			"noMatch": "Aucune valeur ne correspond à la recherche",
 			"noneChecked": "Cochez au moins une valeur"
-		}
+		},
+		"blanks": "(Vides)",
+		"search": {
+			"placeholder": "Rechercher",
+			"aria": "Rechercher une valeur"
+		},
+		"loading": "Chargement des valeurs…",
+		"selectAllResults": "(Sélectionner tous les résultats)",
+		"selectAll": "(Sélectionner tout)",
+		"noMatch": "Aucune valeur ne correspond."
 	},
 	"find": {
 		"count": "{k} sur {total}",
@@ -380,7 +721,85 @@
 			"created": "Tableau croisé créé (Ctrl+Z pour annuler)",
 			"moved": "Tableau croisé déplacé (Ctrl+Z pour annuler)",
 			"same": "Le tableau croisé est déjà à cette place"
-		}
+		},
+		"filter": {
+			"all": "(Tous)",
+			"count": "({n} valeurs)",
+			"aria": "Filtre de {field}",
+			"title": "Filtrer « {field} »"
+		},
+		"summarizeBy": "Synthétiser par",
+		"menu": {
+			"chooseValues": "Choisir les valeurs…",
+			"clearFilter": "Effacer le filtre",
+			"customSort": "Tri personnalisé…",
+			"sourceOrder": "Ordre de la source",
+			"removeField": "Supprimer le champ",
+			"editCalc": "Modifier le champ calculé…",
+			"removeCalc": "Supprimer le champ calculé",
+			"addTo": "Ajouter à {zone}",
+			"removeFromReport": "Retirer du rapport"
+		},
+		"calc": {
+			"title": "Champ calculé",
+			"title.edit": "Champ calculé « {name} »",
+			"intro": "Une formule sur les colonnes de chaque ligne de « {source} » : les lignes sont regroupées par son résultat, en Lignes, en Colonnes ou en Filtres (ou synthétisées en Valeurs).",
+			"name": "Nom du champ :",
+			"add": "Ajouter",
+			"add.label": "Champ calculé…",
+			"add.tooltip": "Un champ dont la valeur est calculée pour chaque ligne de la source : =ANNEE([Date]), =GAUCHE([Code];2)… Il regroupe les lignes en Lignes ou en Colonnes, filtre ou se synthétise comme une colonne."
+		},
+		"panel": {
+			"title": "Champs de tableau croisé dynamique",
+			"help": "Aide sur les tableaux croisés",
+			"name": {
+				"tooltip": "Le tableau croisé dynamique s'interroge dans l'onglet SQL sous ce nom et sert de source aux graphiques"
+			},
+			"source": "{name} · source :"
+		},
+		"defaultName": "Tableau croisé dynamique",
+		"search": {
+			"field": "Rechercher un champ",
+			"clear": "Effacer la recherche"
+		},
+		"fields": {
+			"choose": "Choisissez les champs à inclure dans le rapport :",
+			"aria": "Champs du tableau {table}",
+			"computed": "Colonne calculée : elle ne sert pas encore de champ de tableau croisé",
+			"add": "Ajouter à une zone",
+			"add.aria": "Ajouter « {name} » à une zone",
+			"noMatch": "Aucun champ ne correspond à « {search} »."
+		},
+		"zones": {
+			"hint": "Faites glisser les champs dans les zones voulues :"
+		},
+		"source": {
+			"change": "Changer la source :",
+			"choose": "Choisir un tableau…",
+			"tooltip": "Tableau source du tableau croisé"
+		},
+		"empty": "Le rapport est vide : cochez des champs ci-dessus, ou glissez-les dans les zones. Les nombres vont en Valeurs, le reste en Lignes.",
+		"noValues": "Ajoutez un champ en Valeurs pour calculer des totaux (somme, nombre, moyenne…).",
+		"handForget": "Oublier les valeurs mises de côté",
+		"handForget.tooltip": "Effacer ces valeurs (Ctrl+Z pour annuler)",
+		"grandTotals": "Totaux généraux",
+		"subtotals": "Sous-totaux",
+		"subtotals.top": "En haut du groupe",
+		"subtotals.bottom": "En bas du groupe",
+		"subtotals.none": "Aucun",
+		"defer": "Différer la mise à jour",
+		"update": "Mettre à jour",
+		"update.tooltip": "Appliquer les changements au tableau croisé",
+		"pending": "Modifications en attente : le tableau croisé n'est pas encore à jour (elles s'appliquent aussi à la fermeture du volet).",
+		"delete": "Supprimer le tableau croisé",
+		"valueSettings": "Paramètres des champs de valeurs",
+		"valueSettings.menu": "Paramètres des champs de valeurs…",
+		"valueSettings.source": "Source : {field}",
+		"valueSettings.rowCount": "nombre de lignes",
+		"valueSettings.name": "Nom personnalisé",
+		"valueSettings.show": "Afficher les valeurs",
+		"valueSettings.format": "Format de nombre",
+		"valueSettings.pctFormat": "Un pourcentage garde son propre format."
 	},
 	"readFail": "Le tableau « {table} » n'a pas pu être relu ; il sera rechargé.",
 	"refLink": {
@@ -442,13 +861,145 @@
 		"format": {
 			"text": "Texte",
 			"skip": "Ignorer la colonne",
-			"general": "Standard"
-		}
+			"general": "Standard",
+			"date": "Date",
+			"notImported": "Colonne non distribuée",
+			"legend": "Format des données en colonne {n}",
+			"hint": "« Standard » convertit les nombres et les dates, le reste devient du texte. Cliquez sur une colonne de l'aperçu pour choisir son format."
+		},
+		"sep": {
+			"comma": ", (virgule)",
+			"period": ". (point)",
+			"space": "espace",
+			"apostrophe": "' (apostrophe)",
+			"none": "aucun"
+		},
+		"step": {
+			"kind": "Type des données",
+			"separators": "Séparateurs",
+			"formats": "Format des colonnes"
+		},
+		"title": "Convertir le texte en colonnes",
+		"heading": "Assistant Conversion – Étape {step} sur 3 : {name}",
+		"note": {
+			"table": "Tableau {table}, colonne {column} : la première partie reste dans la colonne, les suivantes deviennent de nouvelles colonnes insérées à droite.",
+			"tableWithHeader": "Tableau {table}, colonne {column} (en-tête compris) : la première partie reste dans la colonne, les suivantes deviennent de nouvelles colonnes insérées à droite.",
+			"cells": "{n, plural, one {# cellule} other {# cellules}} de texte à convertir."
+		},
+		"kind": {
+			"legend": "Choisissez le type de fichier qui décrit le mieux vos données",
+			"delimited": "Délimité",
+			"delimited.help": "– Des caractères tels que des virgules ou des tabulations séparent chaque champ.",
+			"fixed": "Largeur fixe",
+			"fixed.help": "– Les champs sont alignés en colonnes, séparés par des espaces."
+		},
+		"preview": "Aperçu de données",
+		"preview.selection": "Aperçu des données sélectionnées",
+		"delim": {
+			"tab": "Tabulation",
+			"semicolon": "Point-virgule",
+			"comma": "Virgule",
+			"space": "Espace",
+			"other": "Autre :",
+			"other.aria": "Autre séparateur"
+		},
+		"merge": "Interpréter des séparateurs identiques consécutifs comme uniques",
+		"quote": "Identificateur de texte :",
+		"quote.none": "aucun",
+		"fixed": {
+			"hint": "Les lignes avec flèche signalent un saut de colonne. Pour créer un saut de colonne, cliquez à la position désirée. Pour effacer un saut de colonne, double-cliquez sur la ligne. Pour déplacer un saut de colonne, faites-le glisser."
+		},
+		"break": {
+			"tooltip": "Glisser pour déplacer, double-clic pour supprimer"
+		},
+		"dest": "Destination :",
+		"dest.table.tooltip": "Dans un tableau, la première partie reste dans la colonne et les suivantes sont insérées à droite",
+		"dest.tooltip": "Première cellule où écrire les colonnes, par exemple $B$2",
+		"advanced": "Avancé…",
+		"advanced.open": "Avancé ▴",
+		"decimal": "Séparateur décimal :",
+		"thousands": "Séparateur des milliers :",
+		"back": "< Précédent",
+		"next": "Suivant >",
+		"finish": "Terminer",
+		"confirm": "Voulez-vous remplacer le contenu des cellules de destination ?",
+		"confirm.title": "Remplacer le contenu"
 	},
 	"theme": {
 		"custom": "Personnalisé"
 	},
 	"titleHead": {
 		"offer": "Cette ligne ressemble aux en-têtes de « {table} »"
+	},
+	"format": {
+		"tab": {
+			"number": "Nombre",
+			"align": "Alignement",
+			"font": "Police",
+			"border": "Bordure",
+			"fill": "Remplissage"
+		},
+		"sampleText": "Texte",
+		"title": "Format de cellule",
+		"category": "Catégorie",
+		"category.standard": "Standard",
+		"category.standard.help": "Pas de format particulier : la valeur telle qu’elle est saisie ou calculée.",
+		"category.number": "Nombre",
+		"category.number.help": "Nombre de décimales et séparateur de milliers.",
+		"category.currency": "Monétaire",
+		"category.currency.help": "Montant en euros.",
+		"category.percent": "Pourcentage",
+		"category.percent.help": "La valeur multipliée par 100, suivie de %.",
+		"category.date": "Date",
+		"category.date.help": "Une date (ou un numéro de série d’Excel) affichée selon le modèle choisi.",
+		"category.time": "Heure",
+		"category.time.help": "Une heure (ou une date et une heure) affichée selon le modèle choisi.",
+		"category.text": "Texte",
+		"category.text.help": "Le contenu est affiché tel qu’il est saisi.",
+		"sample": "Exemple",
+		"decimals": "Nombre de décimales",
+		"thousands": "Utiliser le séparateur de milliers ( )",
+		"dateType": "Type",
+		"align": {
+			"legend": "Alignement du texte",
+			"horizontal": "Horizontal",
+			"general": "Standard",
+			"left": "Gauche",
+			"center": "Centré",
+			"right": "Droite",
+			"vertical": "Vertical",
+			"top": "Haut",
+			"bottom": "Bas"
+		},
+		"textControl": "Contrôle du texte",
+		"wrap": "Renvoyer à la ligne automatiquement",
+		"merge": "Fusionner les cellules",
+		"merge.tooltip": "Sélectionnez plusieurs cellules libres (hors tableau) pour les fusionner",
+		"font": "Police",
+		"font.style": "Style",
+		"font.regular": "Normal",
+		"font.italic": "Italique",
+		"font.bold": "Gras",
+		"font.boldItalic": "Gras italique",
+		"font.size": "Taille",
+		"font.underline": "Souligné",
+		"font.strike": "Barré",
+		"color": "Couleur",
+		"color.auto": "Automatique",
+		"preview": "Aperçu",
+		"border": {
+			"presets": "Présélections",
+			"none": "Aucune",
+			"outline": "Contour",
+			"all": "Toutes",
+			"edges": "Bordure (cliquez un bord)",
+			"top": "Haut",
+			"bottom": "Bas",
+			"left": "Gauche",
+			"right": "Droite",
+			"help": "Les bords choisis valent pour chaque cellule de la sélection ; « Contour » trace le tour de la sélection."
+		},
+		"fill": "Couleur de fond",
+		"fill.none": "Aucun remplissage"
 	}
 }

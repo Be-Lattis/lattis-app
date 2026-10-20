@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n/index.js';
 	// Bouton de couleur (pastille) qui ouvre la palette d'Excel
 	// (ColorPalette) : mise en forme conditionnelle, boîtes de dialogue.
 	import ColorPalette from './ColorPalette.svelte';
@@ -21,7 +22,7 @@
 	let pos = $state({ x: 0, y: 0 });
 	let btn: HTMLButtonElement;
 	const shown = $derived(value ? String(resolveColor(value, tableTheme.current.colors)) : '');
-	const title = $derived(`${label} : ${value ? colorName(value, tableTheme.current.colors) : (none ?? 'aucune')}`);
+	const title = $derived(t('grid.color.button.tooltip', { label, color: value ? colorName(value, tableTheme.current.colors) : (none ?? t('grid.color.button.none')) }));
 
 	function toggle() {
 		const r = btn.getBoundingClientRect();

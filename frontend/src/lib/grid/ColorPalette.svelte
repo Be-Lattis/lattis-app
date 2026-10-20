@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n/index.js';
 	// Palette de couleur, comme Excel (décision 0017) : couleurs du thème et
 	// leurs variantes (gardées comme références au thème), couleurs standard,
 	// couleurs récentes, Aucun remplissage ou Automatique, Autres couleurs….
@@ -96,19 +97,19 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="cp" bind:this={el} onkeydown={key}>
-	<div class="sec">Couleurs du thème</div>
-	<div role="grid" aria-label="Couleurs du thème">
+	<div class="sec">{t('grid.color.palette.theme')}</div>
+	<div role="grid" aria-label={t('grid.color.palette.theme')}>
 		{#each theme as row, r (r)}{@render line(row, r, r === 0 ? 'first' : r === 1 ? 'top' : '')}{/each}
 	</div>
-	<div class="sec">Couleurs standard</div>
-	<div role="grid" aria-label="Couleurs standard">{@render line(standard, theme.length, '')}</div>
+	<div class="sec">{t('grid.color.palette.standard')}</div>
+	<div role="grid" aria-label={t('grid.color.palette.standard')}>{@render line(standard, theme.length, '')}</div>
 	{#if recentRow.length}
-		<div class="sec">Couleurs récentes</div>
-		<div role="grid" aria-label="Couleurs récentes">{@render line(recentRow, theme.length + 1, '')}</div>
+		<div class="sec">{t('grid.color.palette.recent')}</div>
+		<div role="grid" aria-label={t('grid.color.palette.recent')}>{@render line(recentRow, theme.length + 1, '')}</div>
 	{/if}
 	{#if none}<button class="row" class:on={!value} onclick={() => choose(null)}><span class="nil" aria-hidden="true"></span>{none}</button>{/if}
 	<label class="row">
-		<span class="rainbow" aria-hidden="true"></span>Autres couleurs…
+		<span class="rainbow" aria-hidden="true"></span>{t('grid.color.palette.more')}
 		<input type="color" value={value ? String(resolveColor(value, colors)) : '#000000'} onchange={(e) => other((e.currentTarget as HTMLInputElement).value)} />
 	</label>
 </div>

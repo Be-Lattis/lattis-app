@@ -294,9 +294,9 @@ export function setFilter(cfg: PivotConfig, field: string, values: string[]): Pi
 
 /** Résumé d'un filtre sur sa puce : « (Tous) », la valeur, ou « (Plusieurs) ». */
 export function filterSummary(values: string[]): string {
-	if (values.length === 0) return '(Tous)';
-	if (values.length === 1) return values[0] === '' ? '(Vides)' : values[0];
-	return `(${values.length} valeurs)`;
+	if (values.length === 0) return t('grid.pivot.filter.all');
+	if (values.length === 1) return values[0] === '' ? t('grid.filter.blanks') : values[0];
+	return t('grid.pivot.filter.count', { n: values.length });
 }
 
 /** Recherche dans la liste des champs : sans casse ni accents. */

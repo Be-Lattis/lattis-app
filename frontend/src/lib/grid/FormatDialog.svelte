@@ -6,6 +6,7 @@
 	// Format de cellule (Ctrl+1), comme Excel : onglets Nombre, Alignement,
 	// Police, Bordure et Remplissage. Seules les propriétés modifiées sont
 	// envoyées : une sélection aux styles différents garde le reste.
+	import { t } from '#lib/i18n/index.js';
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import Select from '#lib/ui/Select.svelte';
@@ -31,22 +32,22 @@
 
 	let { style, sample, tab = 'number', canMerge = false, merged = false, onapply, onclose }: Props = $props();
 
-	const TABS: { id: FormatTab; label: string }[] = [
-		{ id: 'number', label: 'Nombre' },
-		{ id: 'align', label: 'Alignement' },
-		{ id: 'font', label: 'Police' },
-		{ id: 'border', label: 'Bordure' },
-		{ id: 'fill', label: 'Remplissage' }
-	];
-	const CATEGORIES: { id: Category; label: string; note: string }[] = [
-		{ id: 'standard', label: 'Standard', note: 'Pas de format particulier : la valeur telle qu’elle est saisie ou calculée.' },
-		{ id: 'number', label: 'Nombre', note: 'Nombre de décimales et séparateur de milliers.' },
-		{ id: 'currency', label: 'Monétaire', note: 'Montant en euros.' },
-		{ id: 'percent', label: 'Pourcentage', note: 'La valeur multipliée par 100, suivie de %.' },
-		{ id: 'date', label: 'Date', note: 'Une date (ou un numéro de série d’Excel) affichée selon le modèle choisi.' },
-		{ id: 'time', label: 'Heure', note: 'Une heure (ou une date et une heure) affichée selon le modèle choisi.' },
-		{ id: 'text', label: 'Texte', note: 'Le contenu est affiché tel qu’il est saisi.' }
-	];
+	const TABS: { id: FormatTab; label: string }[] = $derived([
+		{ id: 'number', label: t('grid.format.tab.number') },
+		{ id: 'align', label: t('grid.format.tab.align') },
+		{ id: 'font', label: t('grid.format.tab.font') },
+		{ id: 'border', label: t('grid.format.tab.border') },
+		{ id: 'fill', label: t('grid.format.tab.fill') }
+	]);
+	const CATEGORIES: { id: Category; label: string; note: string }[] = $derived([
+		{ id: 'standard', label: t('grid.format.category.standard'), note: t('grid.format.category.standard.help') },
+		{ id: 'number', label: t('grid.format.category.number'), note: t('grid.format.category.number.help') },
+		{ id: 'currency', label: t('grid.format.category.currency'), note: t('grid.format.category.currency.help') },
+		{ id: 'percent', label: t('grid.format.category.percent'), note: t('grid.format.category.percent.help') },
+		{ id: 'date', label: t('grid.format.category.date'), note: t('grid.format.category.date.help') },
+		{ id: 'time', label: t('grid.format.category.time'), note: t('grid.format.category.time.help') },
+		{ id: 'text', label: t('grid.format.category.text'), note: t('grid.format.category.text.help') }
+	]);
 	/** Couleur affichée (référence au thème résolue). */
 	const shown = (c: string) => String(resolveColor(c, tableTheme.current.colors));
 	const SAMPLE_DATE = '2026-10-16T08:30:00';
@@ -95,7 +96,7 @@
 		if (cat === 'standard') return sample.text;
 		const n = typeof sample.value === 'number' ? sample.value : 1234.5;
 		const text = typeof sample.value === 'number' ? sample.text : '1234,5';
-		return cat === 'text' ? sample.text || 'Texte' : formatCell(text, n, clean);
+		return cat === 'text' ? sample.text || t('grid.format.sampleText') : formatCell(text, n, clean);
 	});
 
 	function apply() {
@@ -147,18 +148,18 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="back" use:backdrop={() => onclose()}>
-	<div class="dlg" role="dialog" aria-label="Format de cellule" tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
-		<div class="head">Format de cellule</div>
+	<div class="dlg" role="dialog" aria-label={t('grid.format.title')} tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
+		<div class="head">{t('grid.format.title')}</div>
 		<div class="tabs">
-			{#each TABS as t (t.id)}
-				<button class="tab" class:on={current === t.id} onclick={() => (current = t.id)}>{t.label}</button>
+			{#each TABS as tb (tb.id)}
+				<button class="tab" class:on={current === tb.id} onclick={() => (current = tb.id)}>{tb.label}</button>
 			{/each}
 		</div>
 		<div class="body">
 			{#if current === 'number'}
 				<div class="split">
 					<div class="cats">
-						<div class="lbl">Catégorie</div>
+						<div class="lbl">{t('grid.format.category')}</div>
 						{#each CATEGORIES as c (c.id)}
 							<button
 								class="cat"
@@ -173,11 +174,11 @@
 						{/each}
 					</div>
 					<div class="opts">
-						<div class="lbl">Exemple</div>
+						<div class="lbl">{t('grid.format.sample')}</div>
 						<div class="sample">{preview || ' '}</div>
 						{#if cat === 'number' || cat === 'currency' || cat === 'percent'}
 							<label class="row"
-								>Nombre de décimales
+								>{t('grid.format.decimals')}
 								<input
 									type="number"
 									min="0"
@@ -191,10 +192,10 @@
 							>
 						{/if}
 						{#if cat === 'number'}
-							<label class="row"><input type="checkbox" bind:checked={sep} onchange={() => touch('number')} /> Utiliser le séparateur de milliers ( )</label>
+							<label class="row"><input type="checkbox" bind:checked={sep} onchange={() => touch('number')} /> {t('grid.format.thousands')}</label>
 						{/if}
 						{#if cat === 'date' || cat === 'time'}
-							<div class="lbl">Type</div>
+							<div class="lbl">{t('grid.format.dateType')}</div>
 							<div class="list">
 								{#each cat === 'date' ? DATE_FORMATS : TIME_FORMATS as f (f)}
 									<button
@@ -214,17 +215,17 @@
 				</div>
 			{:else if current === 'align'}
 				<fieldset>
-					<legend>Alignement du texte</legend>
+					<legend>{t('grid.format.align.legend')}</legend>
 					<label class="row"
-						>Horizontal
+						>{t('grid.format.align.horizontal')}
 						<Select
 							value={al}
 							width="160px"
 							options={[
-								{ value: '', label: 'Standard' },
-								{ value: 'left', label: 'Gauche' },
-								{ value: 'center', label: 'Centré' },
-								{ value: 'right', label: 'Droite' }
+								{ value: '', label: t('grid.format.align.general') },
+								{ value: 'left', label: t('grid.format.align.left') },
+								{ value: 'center', label: t('grid.format.align.center') },
+								{ value: 'right', label: t('grid.format.align.right') }
 							]}
 							onchange={(v) => {
 								al = v;
@@ -233,14 +234,14 @@
 						/></label
 					>
 					<label class="row"
-						>Vertical
+						>{t('grid.format.align.vertical')}
 						<Select
 							value={va}
 							width="160px"
 							options={[
-								{ value: 'top', label: 'Haut' },
-								{ value: 'middle', label: 'Centré' },
-								{ value: 'bottom', label: 'Bas' }
+								{ value: 'top', label: t('grid.format.align.top') },
+								{ value: 'middle', label: t('grid.format.align.center') },
+								{ value: 'bottom', label: t('grid.format.align.bottom') }
 							]}
 							onchange={(v) => {
 								va = v;
@@ -250,17 +251,17 @@
 					>
 				</fieldset>
 				<fieldset>
-					<legend>Contrôle du texte</legend>
-					<label class="row"><input type="checkbox" bind:checked={wr} onchange={() => touch('wr')} /> Renvoyer à la ligne automatiquement</label>
-					<label class="row" title={canMerge || merged ? '' : 'Sélectionnez plusieurs cellules libres (hors tableau) pour les fusionner'}
-						><input type="checkbox" bind:checked={merge} disabled={!canMerge && !merged} onchange={() => touch('merge')} /> Fusionner les cellules</label
+					<legend>{t('grid.format.textControl')}</legend>
+					<label class="row"><input type="checkbox" bind:checked={wr} onchange={() => touch('wr')} /> {t('grid.format.wrap')}</label>
+					<label class="row" title={canMerge || merged ? '' : t('grid.format.merge.tooltip')}
+						><input type="checkbox" bind:checked={merge} disabled={!canMerge && !merged} onchange={() => touch('merge')} /> {t('grid.format.merge')}</label
 					>
 				</fieldset>
 			{:else if current === 'font'}
 				<div class="split">
 					<div class="opts">
 						<label class="col"
-							>Police
+							>{t('grid.format.font')}
 							<Select
 								value={ff}
 								width="200px"
@@ -272,15 +273,15 @@
 							/></label
 						>
 						<label class="col"
-							>Style
+							>{t('grid.format.font.style')}
 							<Select
 								value={weight}
 								width="200px"
 								options={[
-									{ value: 'n', label: 'Normal' },
-									{ value: 'i', label: 'Italique' },
-									{ value: 'b', label: 'Gras' },
-									{ value: 'bi', label: 'Gras italique' }
+									{ value: 'n', label: t('grid.format.font.regular') },
+									{ value: 'i', label: t('grid.format.font.italic') },
+									{ value: 'b', label: t('grid.format.font.bold') },
+									{ value: 'bi', label: t('grid.format.font.boldItalic') }
 								]}
 								onchange={(v) => {
 									weight = v;
@@ -289,7 +290,7 @@
 							/></label
 						>
 						<label class="col"
-							>Taille
+							>{t('grid.format.font.size')}
 							<Select
 								value={fs}
 								width="200px"
@@ -300,20 +301,20 @@
 								}}
 							/></label
 						>
-						<label class="row"><input type="checkbox" bind:checked={u} onchange={() => touch('u')} /> Souligné</label>
-						<label class="row"><input type="checkbox" bind:checked={x} onchange={() => touch('x')} /> Barré</label>
+						<label class="row"><input type="checkbox" bind:checked={u} onchange={() => touch('u')} /> {t('grid.format.font.underline')}</label>
+						<label class="row"><input type="checkbox" bind:checked={x} onchange={() => touch('x')} /> {t('grid.format.font.strike')}</label>
 					</div>
 					<div class="opts">
-						<div class="lbl">Couleur</div>
+						<div class="lbl">{t('grid.format.color')}</div>
 						{@render palette(
 							fg,
 							(c) => {
 								fg = c;
 								touch('fg');
 							},
-							'Automatique'
+							t('grid.format.color.auto')
 						)}
-						<div class="lbl">Aperçu</div>
+						<div class="lbl">{t('grid.format.preview')}</div>
 						<div
 							class="sample font"
 							style:font={cellFont({ b: weight === 'b' || weight === 'bi', i: weight === 'i' || weight === 'bi', ff: ff === FONTS[0] ? undefined : ff, fs })}
@@ -327,15 +328,15 @@
 			{:else if current === 'border'}
 				<div class="split">
 					<div class="opts">
-						<div class="lbl">Présélections</div>
+						<div class="lbl">{t('grid.format.border.presets')}</div>
 						<div class="row">
-							<button class="plain" class:on={preset === 'none'} onclick={() => choosePreset('none')}>Aucune</button>
-							<button class="plain" class:on={preset === 'outline'} onclick={() => choosePreset('outline')}>Contour</button>
-							<button class="plain" class:on={preset === 'all'} onclick={() => choosePreset('all')}>Toutes</button>
+							<button class="plain" class:on={preset === 'none'} onclick={() => choosePreset('none')}>{t('grid.format.border.none')}</button>
+							<button class="plain" class:on={preset === 'outline'} onclick={() => choosePreset('outline')}>{t('grid.format.border.outline')}</button>
+							<button class="plain" class:on={preset === 'all'} onclick={() => choosePreset('all')}>{t('grid.format.border.all')}</button>
 						</div>
-						<div class="lbl">Bordure (cliquez un bord)</div>
+						<div class="lbl">{t('grid.format.border.edges')}</div>
 						<div class="edges">
-							{#each [['bt', 'Haut'], ['bb', 'Bas'], ['bl', 'Gauche'], ['br', 'Droite']] as [k, label] (k)}
+							{#each [['bt', t('grid.format.border.top')], ['bb', t('grid.format.border.bottom')], ['bl', t('grid.format.border.left')], ['br', t('grid.format.border.right')]] as [k, label] (k)}
 								<button
 									class="edge {k}"
 									class:on={k === 'bt' ? bt : k === 'bb' ? bb : k === 'bl' ? bl : br}
@@ -351,40 +352,40 @@
 									}}
 								></button>
 							{/each}
-							<span class="txt">Texte</span>
+							<span class="txt">{t('grid.format.sampleText')}</span>
 						</div>
-						<p class="note">Les bords choisis valent pour chaque cellule de la sélection ; « Contour » trace le tour de la sélection.</p>
+						<p class="note">{t('grid.format.border.help')}</p>
 					</div>
 					<div class="opts">
-						<div class="lbl">Couleur</div>
+						<div class="lbl">{t('grid.format.color')}</div>
 						{@render palette(
 							bc,
 							(c) => {
 								bc = c;
 								touch('bc');
 							},
-							'Automatique'
+							t('grid.format.color.auto')
 						)}
 					</div>
 				</div>
 			{:else}
-				<div class="lbl">Couleur de fond</div>
+				<div class="lbl">{t('grid.format.fill')}</div>
 				{@render palette(
 					bg,
 					(c) => {
 						bg = c;
 						touch('bg');
 					},
-					'Aucun remplissage'
+					t('grid.format.fill.none')
 				)}
-				<div class="lbl">Aperçu</div>
+				<div class="lbl">{t('grid.format.preview')}</div>
 				<div class="sample" style:background={bg ? shown(bg) : '#fff'}>&nbsp;</div>
 			{/if}
 		</div>
 		<div class="foot">
 			<span class="sp"></span>
-			<button class="primary" onclick={apply}>OK</button>
-			<button onclick={onclose}>Annuler</button>
+			<button class="primary" onclick={apply}>{t('common.ok')}</button>
+			<button onclick={onclose}>{t('common.cancel')}</button>
 		</div>
 	</div>
 </div>

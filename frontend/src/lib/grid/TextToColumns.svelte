@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { errorText, t } from '#lib/i18n/index.js';
 	// Assistant « Convertir le texte en colonnes » (Données › Convertir), en
 	// trois étapes comme Excel : type des données, séparateurs ou coupures,
 	// format et destination de chaque colonne. L'aperçu vient du backend, qui
@@ -21,6 +22,7 @@
 		type TextColumnsOptions,
 		type TextColumnsPreview
 	} from './textcols';
+	import { bold, rich } from './rich';
 
 	interface Props {
 		preview: (o: TextColumnsOptions) => Promise<TextColumnsPreview>;
@@ -91,7 +93,7 @@
 				if (selCol >= p.count) selCol = 0;
 			})
 			.catch((e) => {
-				if (n === seq) error = String(e instanceof Error ? e.message : e);
+				if (n === seq) error = errorText(e);
 			});
 	});
 
@@ -180,7 +182,7 @@
 			const n = await apply(opts);
 			ondone(n, p.table);
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		} finally {
 			busy = false;
 		}
@@ -204,29 +206,29 @@
 		}
 	}
 
-	const FORMATS: { value: ColFormat; label: string }[] = [
-		{ value: '', label: 'Standard' },
-		{ value: 'text', label: 'Texte' },
-		{ value: 'date', label: 'Date' },
-		{ value: 'skip', label: 'Colonne non distribuée' }
-	];
-	const QUOTES = [
+	const FORMATS: { value: ColFormat; label: string }[] = $derived([
+		{ value: '', label: t('grid.textCols.format.general') },
+		{ value: 'text', label: t('grid.textCols.format.text') },
+		{ value: 'date', label: t('grid.textCols.format.date') },
+		{ value: 'skip', label: t('grid.textCols.format.notImported') }
+	]);
+	const QUOTES = $derived([
 		{ value: '"', label: '"' },
 		{ value: "'", label: "'" },
-		{ value: '', label: '{aucun}' }
-	];
-	const DECIMALS = [
-		{ value: ',', label: ', (virgule)' },
-		{ value: '.', label: '. (point)' }
-	];
-	const THOUSANDS = [
-		{ value: ' ', label: 'espace' },
-		{ value: '.', label: '. (point)' },
-		{ value: ',', label: ', (virgule)' },
-		{ value: "'", label: "' (apostrophe)" },
-		{ value: '', label: 'aucun' }
-	];
-	const STEPS = ['Type des données', 'Séparateurs', 'Format des colonnes'];
+		{ value: '', label: `{${t('grid.textCols.quote.none')}}` }
+	]);
+	const DECIMALS = $derived([
+		{ value: ',', label: t('grid.textCols.sep.comma') },
+		{ value: '.', label: t('grid.textCols.sep.period') }
+	]);
+	const THOUSANDS = $derived([
+		{ value: ' ', label: t('grid.textCols.sep.space') },
+		{ value: '.', label: t('grid.textCols.sep.period') },
+		{ value: ',', label: t('grid.textCols.sep.comma') },
+		{ value: "'", label: t('grid.textCols.sep.apostrophe') },
+		{ value: '', label: t('grid.textCols.sep.none') }
+	]);
+	const STEPS = $derived([t('grid.textCols.step.kind'), t('grid.textCols.step.separators'), t('grid.textCols.step.formats')]);
 	const shown = (s: string) => s.replaceAll('\t', '→');
 </script>
 
@@ -257,28 +259,28 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="back" use:backdrop={() => onclose()}>
-	<div class="dlg" role="dialog" aria-label="Convertir le texte en colonnes" tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
-		<div class="head">Assistant Conversion – Étape {step} sur 3 : {STEPS[step - 1]}</div>
+	<div class="dlg" role="dialog" aria-label={t('grid.textCols.title')} tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
+		<div class="head">{t('grid.textCols.heading', { step, name: STEPS[step - 1] })}</div>
 		<div class="body">
 			{#if pv}
 				<p class="note">
 					{#if inTable}
-						Tableau <b>{pv.table}</b>, colonne <b>{pv.column}</b>{pv.header ? ' (en-tête compris)' : ''} : la première partie reste dans la colonne, les suivantes deviennent de nouvelles colonnes insérées à droite.
+						{#each rich(t(pv.header ? 'grid.textCols.note.tableWithHeader' : 'grid.textCols.note.table', { table: bold(pv.table), column: bold(pv.column) })) as p, k (k)}{#if p.b}<b>{p.text}</b>{:else}{p.text}{/if}{/each}
 					{:else}
-						{pv.total} cellule{pv.total > 1 ? 's' : ''} de texte à convertir.
+						{t('grid.textCols.note.cells', { n: pv.total })}
 					{/if}
 				</p>
 			{/if}
 			{#if step === 1}
 				<fieldset>
-					<legend>Choisissez le type de fichier qui décrit le mieux vos données</legend>
-					<label class="row"><input type="radio" name="ttc-kind" checked={!fixed} onchange={() => (fixed = false)} /><b>Délimité</b><span class="muted">– Des caractères tels que des virgules ou des tabulations séparent chaque champ.</span></label>
+					<legend>{t('grid.textCols.kind.legend')}</legend>
+					<label class="row"><input type="radio" name="ttc-kind" checked={!fixed} onchange={() => (fixed = false)} /><b>{t('grid.textCols.kind.delimited')}</b><span class="muted">{t('grid.textCols.kind.delimited.help')}</span></label>
 					<label class="row"><input type="radio" name="ttc-kind" checked={fixed} onchange={() => {
 						fixed = true;
 						if (!breaks.length) breaks = suggestBreaks(lines);
-					}} /><b>Largeur fixe</b><span class="muted">– Les champs sont alignés en colonnes, séparés par des espaces.</span></label>
+					}} /><b>{t('grid.textCols.kind.fixed')}</b><span class="muted">{t('grid.textCols.kind.fixed.help')}</span></label>
 				</fieldset>
-				<div class="lbl">Aperçu des données sélectionnées</div>
+				<div class="lbl">{t('grid.textCols.preview.selection')}</div>
 				<div class="pv mono">
 					{#each lines as l, i (i)}
 						<div class="line" class:head={pv?.header && i === 0}><span class="num">{i + 1}</span>{shown(l)}</div>
@@ -287,27 +289,26 @@
 			{:else if step === 2 && !fixed}
 				<div class="split">
 					<fieldset>
-						<legend>Séparateurs</legend>
-						<label class="row"><input type="checkbox" bind:checked={delims.tab} />Tabulation</label>
-						<label class="row"><input type="checkbox" bind:checked={delims.semi} />Point-virgule</label>
-						<label class="row"><input type="checkbox" bind:checked={delims.comma} />Virgule</label>
-						<label class="row"><input type="checkbox" bind:checked={delims.space} />Espace</label>
-						<label class="row"><input type="checkbox" bind:checked={delims.other} />Autre :
-							<input class="other" type="text" maxlength="1" bind:value={delims.otherChar} oninput={() => (delims.other = delims.otherChar !== '')} aria-label="Autre séparateur" /></label>
+						<legend>{t('grid.textCols.step.separators')}</legend>
+						<label class="row"><input type="checkbox" bind:checked={delims.tab} />{t('grid.textCols.delim.tab')}</label>
+						<label class="row"><input type="checkbox" bind:checked={delims.semi} />{t('grid.textCols.delim.semicolon')}</label>
+						<label class="row"><input type="checkbox" bind:checked={delims.comma} />{t('grid.textCols.delim.comma')}</label>
+						<label class="row"><input type="checkbox" bind:checked={delims.space} />{t('grid.textCols.delim.space')}</label>
+						<label class="row"><input type="checkbox" bind:checked={delims.other} />{t('grid.textCols.delim.other')}
+							<input class="other" type="text" maxlength="1" bind:value={delims.otherChar} oninput={() => (delims.other = delims.otherChar !== '')} aria-label={t('grid.textCols.delim.other.aria')} /></label>
 					</fieldset>
 					<div class="col">
-						<label class="row"><input type="checkbox" bind:checked={merge} />Interpréter des séparateurs identiques consécutifs comme uniques</label>
-						<div class="row">Identificateur de texte : <Select bind:value={quote} options={QUOTES} width="90px" /></div>
+						<label class="row"><input type="checkbox" bind:checked={merge} />{t('grid.textCols.merge')}</label>
+						<div class="row">{t('grid.textCols.quote')} <Select bind:value={quote} options={QUOTES} width="90px" /></div>
 					</div>
 				</div>
-				<div class="lbl">Aperçu de données</div>
+				<div class="lbl">{t('grid.textCols.preview')}</div>
 				{@render table(false)}
 			{:else if step === 2}
 				<p class="hint">
-					Les lignes avec flèche signalent un saut de colonne. Pour créer un saut de colonne, cliquez à la position désirée.
-					Pour effacer un saut de colonne, double-cliquez sur la ligne. Pour déplacer un saut de colonne, faites-le glisser.
+					{t('grid.textCols.fixed.hint')}
 				</p>
-				<div class="lbl">Aperçu de données</div>
+				<div class="lbl">{t('grid.textCols.preview')}</div>
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div class="pv mono ruler" bind:this={ruler} onclick={addAt} style:--ch="{chPx}px">
 					<span class="meter" use:measure>0000000000</span>
@@ -323,7 +324,7 @@
 						{#each breaks as b, i (i)}
 							{#if b > 0}
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
-								<div class="brk" style:left="{PAD + b * chPx}px" onmousedown={(e) => startDrag(e, i)} ondblclick={(e) => removeBreak(e, i)} onclick={(e) => e.stopPropagation()} title="Glisser pour déplacer, double-clic pour supprimer"></div>
+								<div class="brk" style:left="{PAD + b * chPx}px" onmousedown={(e) => startDrag(e, i)} ondblclick={(e) => removeBreak(e, i)} onclick={(e) => e.stopPropagation()} title={t('grid.textCols.break.tooltip')}></div>
 							{/if}
 						{/each}
 					</div>
@@ -331,7 +332,7 @@
 			{:else}
 				<div class="split">
 					<fieldset>
-						<legend>Format des données en colonne {selCol + 1}</legend>
+						<legend>{t('grid.textCols.format.legend', { n: selCol + 1 })}</legend>
 						{#each FORMATS as f (f.value)}
 							<label class="row">
 								<input type="radio" name="ttc-fmt" checked={fmt(selCol).format === f.value} onchange={() => setFormat(selCol, { format: f.value })} />{f.label}
@@ -342,42 +343,42 @@
 						{/each}
 					</fieldset>
 					<div class="col">
-						<p class="hint">« Standard » convertit les nombres et les dates, le reste devient du texte. Cliquez sur une colonne de l'aperçu pour choisir son format.</p>
-						<label class="row dest">Destination :
-							<input type="text" bind:value={dest} disabled={inTable} title={inTable ? 'Dans un tableau, la première partie reste dans la colonne et les suivantes sont insérées à droite' : 'Première cellule où écrire les colonnes, par exemple $B$2'} />
+						<p class="hint">{t('grid.textCols.format.hint')}</p>
+						<label class="row dest">{t('grid.textCols.dest')}
+							<input type="text" bind:value={dest} disabled={inTable} title={inTable ? t('grid.textCols.dest.table.tooltip') : t('grid.textCols.dest.tooltip')} />
 						</label>
-						<button class="plain" onclick={() => (advanced = !advanced)}>{advanced ? 'Avancé ▴' : 'Avancé…'}</button>
+						<button class="plain" onclick={() => (advanced = !advanced)}>{advanced ? t('grid.textCols.advanced.open') : t('grid.textCols.advanced')}</button>
 						{#if advanced}
 							<div class="adv">
-								<div class="row">Séparateur décimal : <Select bind:value={decimal} options={DECIMALS} width="120px" /></div>
-								<div class="row">Séparateur des milliers : <Select bind:value={thousands} options={THOUSANDS} width="120px" /></div>
+								<div class="row">{t('grid.textCols.decimal')} <Select bind:value={decimal} options={DECIMALS} width="120px" /></div>
+								<div class="row">{t('grid.textCols.thousands')} <Select bind:value={thousands} options={THOUSANDS} width="120px" /></div>
 							</div>
 						{/if}
 					</div>
 				</div>
-				<div class="lbl">Aperçu de données</div>
+				<div class="lbl">{t('grid.textCols.preview')}</div>
 				{@render table(true)}
 			{/if}
 			{#if error}<p class="error">{error}</p>{/if}
 		</div>
 		<div class="foot">
 			<span class="sp"></span>
-			<button onclick={onclose}>Annuler</button>
-			<button disabled={step === 1} onclick={() => step--}>&lt; Précédent</button>
-			<button disabled={step === 3} onclick={() => step++}>Suivant &gt;</button>
-			<button class="primary" disabled={busy || !pv} onclick={() => finish()}>Terminer</button>
+			<button onclick={onclose}>{t('common.cancel')}</button>
+			<button disabled={step === 1} onclick={() => step--}>{t('grid.textCols.back')}</button>
+			<button disabled={step === 3} onclick={() => step++}>{t('grid.textCols.next')}</button>
+			<button class="primary" disabled={busy || !pv} onclick={() => finish()}>{t('grid.textCols.finish')}</button>
 		</div>
 		{#if confirm}
-			<div class="confirm" role="alertdialog" aria-label="Remplacer le contenu">
+			<div class="confirm" role="alertdialog" aria-label={t('grid.textCols.confirm.title')}>
 				<div class="box">
-					<p>Voulez-vous remplacer le contenu des cellules de destination ?</p>
+					<p>{t('grid.textCols.confirm')}</p>
 					<div class="foot">
 						<span class="sp"></span>
 						<button class="primary" onclick={() => {
 							confirm = false;
 							finish(true);
-						}}>OK</button>
-						<button onclick={() => (confirm = false)}>Annuler</button>
+						}}>{t('common.ok')}</button>
+						<button onclick={() => (confirm = false)}>{t('common.cancel')}</button>
 					</div>
 				</div>
 			</div>

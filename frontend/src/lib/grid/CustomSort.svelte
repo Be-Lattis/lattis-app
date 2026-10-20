@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { errorText, t } from '#lib/i18n/index.js';
 	// Tri personnalisé… (menus ▾ d'une colonne de tableau ou d'un champ de
 	// TCD, Données › Trier et filtrer) : les valeurs de la colonne à ranger
 	// dans l'ordre voulu, par glisser-déposer, boutons ou clavier, ou d'après
@@ -61,7 +62,7 @@
 				loading = false;
 			},
 			(err) => {
-				error = String(err instanceof Error ? err.message : err);
+				error = errorText(err);
 				loading = false;
 			}
 		);
@@ -109,18 +110,18 @@
 	async function ok() {
 		error = '';
 		if (!items.length) {
-			error = 'Aucune valeur à ranger';
+			error = t('grid.customSort.error.noValues');
 			return;
 		}
 		let order = orderOf(items, chosen, desc);
 		if (saveAs && saveLists) {
 			const name = newName.trim();
 			if (!name) {
-				error = 'Nommez la liste à enregistrer';
+				error = t('grid.customSort.error.noName');
 				return;
 			}
 			if (lists.some((l) => fold(l.name) === fold(name))) {
-				error = `La liste « ${name} » existe déjà`;
+				error = t('grid.customSort.error.exists', { name });
 				return;
 			}
 			const vals = cleanValues(items.map((i) => i.text));
@@ -128,7 +129,7 @@
 			try {
 				await saveLists([...lists.filter((l) => !l.builtin), { name, values: vals }]);
 			} catch (err) {
-				error = String(err instanceof Error ? err.message : err);
+				error = errorText(err);
 				busy = false;
 				return;
 			}
@@ -144,7 +145,7 @@
 	<div
 		class="dlg"
 		role="dialog"
-		aria-label="Tri personnalisé"
+		aria-label={t('grid.customSort.title')}
 		tabindex="-1"
 		aria-modal="true"
 		use:modal={onclose}
@@ -155,28 +156,28 @@
 			}
 		}}
 	>
-		<div class="head">Tri personnalisé – « {field} »</div>
+		<div class="head">{t('grid.customSort.heading', { field })}</div>
 		<div class="body">
 			{#if loading}
-				<p class="note"><span class="spinner" aria-hidden="true"></span> Chargement des valeurs…</p>
+				<p class="note"><span class="spinner" aria-hidden="true"></span> {t('grid.customSort.loading')}</p>
 			{:else}
 				<label class="row">
-					Ordre d'après :
+					{t('grid.customSort.orderFrom')}
 					<select value={listName} onchange={(e) => chooseList((e.currentTarget as HTMLSelectElement).value)}>
-						<option value="">les valeurs de la colonne (ordre libre)</option>
+						<option value="">{t('grid.customSort.orderFrom.values')}</option>
 						{#each lists as l (l.name)}
-							<option value={l.name}>Liste « {l.name} »{l.builtin ? '' : ' (classeur)'} : {l.values.slice(0, 3).join(', ')}…</option>
+							<option value={l.name}>{t(l.builtin ? 'grid.customSort.orderFrom.list' : 'grid.customSort.orderFrom.workbookList', { name: l.name, values: l.values.slice(0, 3).join(', ') })}</option>
 						{/each}
 					</select>
 				</label>
-				<p class="hint">Glissez les valeurs pour les ranger, ou sélectionnez-en une et utilisez les boutons (au clavier : Alt+↑ / Alt+↓, Alt+Début / Alt+Fin). Les valeurs absentes de l'ordre suivent dans l'ordre croissant, les cellules vides restent à la fin.</p>
+				<p class="hint">{t('grid.customSort.hint')}</p>
 				<div class="split">
 					<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 					<ul
 						class="items"
 						role="listbox"
 						tabindex="0"
-						aria-label="Ordre des valeurs"
+						aria-label={t('grid.customSort.items.aria')}
 						aria-activedescendant={items.length ? `cs-item-${sel}` : undefined}
 						bind:this={box}
 						onkeydown={onKey}
@@ -215,27 +216,27 @@
 								<span class="grip" aria-hidden="true">⠿</span>
 								<span class="num">{i + 1}</span>
 								<span class="what">{it.text}</span>
-								{#if it.absent}<span class="tag" title="Valeur de l'ordre absente des données : gardée pour quand elle apparaîtra">absente</span>{/if}
+								{#if it.absent}<span class="tag" title={t('grid.customSort.absent.tooltip')}>{t('grid.customSort.absent')}</span>{/if}
 							</li>
 						{/each}
-						{#if !items.length}<li class="empty">Aucune valeur (la colonne est vide).</li>{/if}
+						{#if !items.length}<li class="empty">{t('grid.customSort.empty')}</li>{/if}
 					</ul>
 					<div class="moves">
-						<button disabled={sel <= 0} onclick={() => move(sel, 0)} title="Placer en premier (Alt+Début)">En premier</button>
-						<button disabled={sel <= 0} onclick={() => move(sel, sel - 1)} title="Monter (Alt+↑)">Monter</button>
-						<button disabled={sel >= items.length - 1} onclick={() => move(sel, sel + 1)} title="Descendre (Alt+↓)">Descendre</button>
-						<button disabled={sel >= items.length - 1} onclick={() => move(sel, items.length - 1)} title="Placer en dernier (Alt+Fin)">En dernier</button>
+						<button disabled={sel <= 0} onclick={() => move(sel, 0)} title={t('grid.customSort.move.first.tooltip')}>{t('grid.customSort.move.first')}</button>
+						<button disabled={sel <= 0} onclick={() => move(sel, sel - 1)} title={t('grid.customSort.move.up.tooltip')}>{t('grid.customSort.move.up')}</button>
+						<button disabled={sel >= items.length - 1} onclick={() => move(sel, sel + 1)} title={t('grid.customSort.move.down.tooltip')}>{t('grid.customSort.move.down')}</button>
+						<button disabled={sel >= items.length - 1} onclick={() => move(sel, items.length - 1)} title={t('grid.customSort.move.last.tooltip')}>{t('grid.customSort.move.last')}</button>
 					</div>
 				</div>
 				<fieldset>
-					<legend>Sens</legend>
-					<label class="row"><input type="radio" name="cs-dir" checked={!desc} onchange={() => (desc = false)} />Dans cet ordre (du premier au dernier)</label>
-					<label class="row"><input type="radio" name="cs-dir" checked={desc} onchange={() => (desc = true)} />À rebours (du dernier au premier)</label>
+					<legend>{t('grid.customSort.direction')}</legend>
+					<label class="row"><input type="radio" name="cs-dir" checked={!desc} onchange={() => (desc = false)} />{t('grid.customSort.direction.forward')}</label>
+					<label class="row"><input type="radio" name="cs-dir" checked={desc} onchange={() => (desc = true)} />{t('grid.customSort.direction.reverse')}</label>
 				</fieldset>
 				{#if saveLists}
-					<label class="row"><input type="checkbox" bind:checked={saveAs} />Enregistrer cet ordre comme liste personnalisée du classeur, pour d'autres colonnes</label>
+					<label class="row"><input type="checkbox" bind:checked={saveAs} />{t('grid.customSort.save')}</label>
 					{#if saveAs}
-						<label class="row indent">Nom : <input type="text" bind:value={newName} placeholder="Tailles, Priorités…" /></label>
+						<label class="row indent">{t('grid.customSort.save.name')} <input type="text" bind:value={newName} placeholder={t('grid.customSort.save.name.placeholder')} /></label>
 					{/if}
 				{/if}
 			{/if}
@@ -243,8 +244,8 @@
 		</div>
 		<div class="foot">
 			<span class="sp"></span>
-			<button class="primary" disabled={loading || busy || !items.length} onclick={ok}>OK</button>
-			<button onclick={onclose}>Annuler</button>
+			<button class="primary" disabled={loading || busy || !items.length} onclick={ok}>{t('common.ok')}</button>
+			<button onclick={onclose}>{t('common.cancel')}</button>
 		</div>
 	</div>
 </div>

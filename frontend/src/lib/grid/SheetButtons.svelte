@@ -10,6 +10,7 @@
 	// le contrôle ; clic droit : exécuter, modifier, couper, copier,
 	// supprimer ; Ctrl+clic le sélectionne pour le redimensionner. Un clic
 	// ailleurs (cellule, onglet) le désélectionne.
+	import { errorText, lower, t } from '#lib/i18n/index.js';
 	import { dismiss } from './dismiss.js';
 	import { resizePanel } from '#lib/ui/resize.js';
 	import { clip as clipName } from '#lib/ui/menu.js';
@@ -113,7 +114,7 @@
 		const kind = b.config.kind ?? '';
 		if (kind === '') {
 			if (!handlers(b.config).length) {
-				say('Aucune action liée à ce bouton : clic droit › Modifier le bouton… pour en choisir une');
+				say(t('grid.controls.noAction'));
 				return;
 			}
 			fire(b, 'click', '', '');
@@ -127,7 +128,7 @@
 		if (kind === 'file') {
 			if (!pickFile) return;
 			try {
-				v = await pickFile(b.config.label || 'Choisir un fichier');
+				v = await pickFile(b.config.label || t('grid.controls.file.pick'));
 			} catch (err) {
 				fail(err);
 				return;
@@ -184,7 +185,7 @@
 		};
 	}
 
-	const fail = (err: unknown) => say(String((err as Error)?.message ?? err));
+	const fail = (err: unknown) => say(errorText(err));
 
 	/** Glisser : déplace (dir vide) ou redimensionne ; sans mouvement, un clic exécute. */
 	function start(ev: MouseEvent, b: SheetButton, dir = '') {
@@ -262,7 +263,7 @@
 		menu = null;
 		clip = { ...b.config };
 		if (cut) await remove(b);
-		else say('Bouton copié : clic droit sur une cellule › Coller le bouton');
+		else say(t('grid.controls.copied'));
 	}
 
 	async function remove(b: SheetButton) {
@@ -281,7 +282,7 @@
 	export function pasteAt(row: number, col: number) {
 		if (!clip || !oncreate) return;
 		const { offX: _x, offY: _y, name: _n, ...cfg } = clip;
-		oncreate(row, col, cfg).then(() => say('Bouton collé'), fail);
+		oncreate(row, col, cfg).then(() => say(t('grid.controls.pasted')), fail);
 	}
 
 	// --- Création et modification ----------------------------------------------
@@ -326,16 +327,16 @@
 	}
 	const KINDS = CONTROL_KINDS;
 	/** Libellé par défaut d'un nouveau contrôle (vide : sans libellé, ou texte indicatif). */
-	const DEFAULT_LABEL: Record<ControlKind, string> = { '': 'Bouton', checkbox: 'Case à cocher', select: '', input: '', textarea: '', file: 'Choisir un fichier…' };
+	const DEFAULT_LABEL: Record<ControlKind, string> = $derived({ '': t('grid.controls.kind.button'), checkbox: t('grid.controls.kind.checkbox'), select: '', input: '', textarea: '', file: t('grid.controls.file.choose') });
 	/** Légende du champ Libellé selon le genre. */
-	const LABEL_CAPTION: Record<ControlKind, string> = {
-		'': 'Libellé',
-		checkbox: 'Libellé',
-		select: 'Libellé',
-		input: 'Texte indicatif (facultatif)',
-		textarea: 'Texte indicatif (facultatif)',
-		file: 'Texte du bouton'
-	};
+	const LABEL_CAPTION: Record<ControlKind, string> = $derived({
+		'': t('grid.controls.editor.label'),
+		checkbox: t('grid.controls.editor.label'),
+		select: t('grid.controls.editor.label'),
+		input: t('grid.controls.editor.placeholder'),
+		textarea: t('grid.controls.editor.placeholder'),
+		file: t('grid.controls.editor.buttonText')
+	});
 	let library = $state<{ name: string; source: string }[]>([]);
 	const functions = $derived(editor ? scriptFunctions(library.find((s) => s.name === editor!.script)?.source ?? '') : []);
 
@@ -438,15 +439,15 @@
 		if (!e) return;
 		e.error = '';
 		if ((e.kind === '' || e.kind === 'checkbox') && !e.label.trim()) {
-			e.error = 'Donnez un libellé au contrôle';
+			e.error = t('grid.controls.error.noLabel');
 			return;
 		}
 		if (e.kind && e.link.trim() && !a1Address(e.link.trim().toUpperCase())) {
-			e.error = 'Cellule liée invalide (« B3 » par exemple) ; laissez vide pour garder la valeur dans le contrôle';
+			e.error = t('grid.controls.error.badLink');
 			return;
 		}
 		if (e.kind === 'select' && e.src === 'column' && !e.optionsFrom) {
-			e.error = 'Choisissez la colonne qui donne les choix';
+			e.error = t('grid.controls.error.noColumn');
 			return;
 		}
 		const old = e.id === null ? undefined : buttons.find((x) => x.id === e.id)?.config;
@@ -471,7 +472,7 @@
 				done();
 			}
 		} catch (err) {
-			e.error = String((err as Error)?.message ?? err);
+			e.error = errorText(err);
 		}
 	}
 </script>
@@ -512,7 +513,7 @@
 				value={value}
 				disabled={selected === b.id}
 				onchange={(ev) => activate(b, (ev.currentTarget as HTMLSelectElement).value)}
-				aria-label={b.config.label || 'Liste déroulante'}
+				aria-label={b.config.label || t('grid.controls.kind.select')}
 			>
 				{#if !choicesOf(b).includes(value)}<option value={value}>{value}</option>{/if}
 				{#each choicesOf(b) as o (o)}<option value={o}>{o}</option>{/each}
@@ -523,7 +524,7 @@
 				{value}
 				placeholder={b.config.label}
 				readonly={selected === b.id}
-				aria-label={b.config.label || b.config.name || 'Zone de saisie'}
+				aria-label={b.config.label || b.config.name || t('grid.controls.input.aria')}
 				onkeydown={(ev) => textKey(ev, b)}
 				onblur={(ev) => commitText(b, ev.currentTarget)}
 			/>
@@ -532,13 +533,13 @@
 				{value}
 				placeholder={b.config.label}
 				readonly={selected === b.id}
-				aria-label={b.config.label || b.config.name || 'Zone de texte'}
+				aria-label={b.config.label || b.config.name || t('grid.controls.kind.textarea')}
 				onkeydown={(ev) => textKey(ev, b)}
 				onblur={(ev) => commitText(b, ev.currentTarget)}
 			></textarea>
 		{:else if kind === 'file'}
-			<span class="pick">{b.config.label || 'Choisir un fichier…'}</span>
-			<span class="path" class:empty={!value}>{baseName(value) || 'Aucun fichier'}</span>
+			<span class="pick">{b.config.label || t('grid.controls.file.choose')}</span>
+			<span class="path" class:empty={!value}>{baseName(value) || t('grid.controls.file.none')}</span>
 		{:else}
 			<span>{b.config.label}</span>
 		{/if}
@@ -555,28 +556,28 @@
 	{@const m = menu}
 	<div class="menu" style:zoom={unzoom} style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
 		<!-- Nom abrégé en tête (le nom entier dans l'infobulle) ; presse-papiers, le bouton, sa suppression. -->
-		<div class="menu-title" title={controlTitle(m.b.config)}>{KINDS[m.b.config.kind ?? '']} « {clipName(m.b.config.name || m.b.config.label || m.b.config.link)} »</div>
-		<button onclick={() => copy(m.b, true)}>Couper</button>
-		<button onclick={() => copy(m.b, false)}>Copier</button>
+		<div class="menu-title" title={controlTitle(m.b.config)}>{t('grid.controls.menu.title', { kind: KINDS[m.b.config.kind ?? ''], name: clipName(m.b.config.name || m.b.config.label || m.b.config.link) })}</div>
+		<button onclick={() => copy(m.b, true)}>{t('common.cut')}</button>
+		<button onclick={() => copy(m.b, false)}>{t('common.copy')}</button>
 		<hr />
 		{#if handlers(m.b.config).length}
 			<button
 				onclick={() => {
 					menu = null;
 					onrun(m.b);
-				}}>Exécuter l’action</button
+				}}>{t('grid.controls.menu.run')}</button
 			>
 		{/if}
-		<button onclick={() => openEditor(m.b)}>Modifier…</button>
+		<button onclick={() => openEditor(m.b)}>{t('grid.controls.menu.edit')}</button>
 		<button
 			onclick={() => {
 				menu = null;
 				selected = m.b.id;
-				say('Glissez une poignée pour redimensionner le bouton');
-			}}>Redimensionner</button
+				say(t('grid.controls.menu.resize.hint'));
+			}}>{t('grid.controls.menu.resize')}</button
 		>
 		<hr />
-		<button onclick={() => remove(m.b)}>Supprimer</button>
+		<button onclick={() => remove(m.b)}>{t('common.delete')}</button>
 	</div>
 {/if}
 
@@ -591,7 +592,7 @@
 		style:zoom={unzoom}
 		style:top="{at.top}px"
 		style:bottom="{at.bottom}px"
-		aria-label="Contrôle"
+		aria-label={t('grid.controls.editor.aria')}
 		onkeydown={(ev) => {
 				ev.stopPropagation();
 				if (ev.key === 'Escape') closeVolet();
@@ -602,68 +603,68 @@
 			}}
 		>
 			<header>
-				<span>{e.id === null ? `Insérer : ${KINDS[e.kind].toLowerCase()}` : `Modifier : ${KINDS[e.kind].toLowerCase()}`}</span>
-				<HelpLink target="controles" label="Aide sur les boutons et contrôles" />
-				<button class="x" title="Fermer" onclick={closeVolet}>✕</button>
+				<span>{e.id === null ? t('grid.controls.editor.insert', { kind: lower(KINDS[e.kind]) }) : t('grid.controls.editor.edit', { kind: lower(KINDS[e.kind]) })}</span>
+				<HelpLink target="controles" label={t('grid.controls.editor.help')} />
+				<button class="x" title={t('common.close')} onclick={closeVolet}>✕</button>
 			</header>
 			<!-- Bouton d'un côté (Insertion › Bouton), contrôles liés à une cellule de l'autre (Insertion › Champ). -->
 			{#if e.kind !== ''}
 				<label
-					>Type
+					>{t('grid.controls.editor.kind')}
 					<select bind:value={e.kind}>
 						{#each VALUE_KINDS as k (k)}<option value={k}>{KINDS[k]}</option>{/each}
 					</select>
 				</label>
 			{/if}
-			<label>Nom (pour les scripts)<input type="text" bind:value={e.name} placeholder="automatique" /></label>
+			<label>{t('grid.controls.editor.name')}<input type="text" bind:value={e.name} placeholder={t('grid.controls.editor.name.placeholder')} /></label>
 			{#if e.kind !== 'select'}<label>{LABEL_CAPTION[e.kind]}<input type="text" bind:value={e.label} use:focusSelect onfocus={pickable('label')} /></label>{/if}
 			{#if e.kind}
-				<label>Cellule liée (facultative)<input type="text" bind:value={e.link} placeholder="aucune : valeur gardée dans le contrôle" onfocus={pickable('link')} /></label>
+				<label>{t('grid.controls.editor.link')}<input type="text" bind:value={e.link} placeholder={t('grid.controls.editor.link.placeholder')} onfocus={pickable('link')} /></label>
 			{/if}
 			{#if e.kind === 'select'}
 				<div class="field">
-					<span>Source des choix</span>
-					<div class="seg" role="radiogroup" aria-label="Source des choix">
-						<button type="button" role="radio" aria-checked={e.src === 'list'} class:on={e.src === 'list'} onclick={() => (e.src = 'list')}>Saisis</button>
+					<span>{t('grid.controls.editor.source')}</span>
+					<div class="seg" role="radiogroup" aria-label={t('grid.controls.editor.source')}>
+						<button type="button" role="radio" aria-checked={e.src === 'list'} class:on={e.src === 'list'} onclick={() => (e.src = 'list')}>{t('grid.controls.editor.source.list')}</button>
 						<button
 							type="button"
 							role="radio"
 							aria-checked={e.src === 'column'}
 							class:on={e.src === 'column'}
 							disabled={!columnRefs.length}
-							title={columnRefs.length ? 'Valeurs distinctes d’une colonne de tableau, à jour avec lui' : 'Aucun tableau dans le classeur'}
-							onclick={() => (e.src = 'column')}>Colonne d’un tableau</button
+							title={columnRefs.length ? t('grid.controls.editor.source.column.tooltip') : t('grid.controls.editor.source.column.none')}
+							onclick={() => (e.src = 'column')}>{t('grid.controls.editor.source.column')}</button
 						>
 					</div>
 				</div>
 				{#if e.src === 'column'}
 					<label
-						>Colonne (valeurs distinctes)
+						>{t('grid.controls.editor.column')}
 						<select bind:value={e.optionsFrom}>
 							{#each columnRefs as r (r)}<option value={r}>{r}</option>{/each}
-							{#if e.optionsFrom && !columnRefs.includes(e.optionsFrom)}<option value={e.optionsFrom}>{e.optionsFrom} (introuvable)</option>{/if}
+							{#if e.optionsFrom && !columnRefs.includes(e.optionsFrom)}<option value={e.optionsFrom}>{t('grid.controls.editor.notFound', { name: e.optionsFrom })}</option>{/if}
 						</select>
 					</label>
 				{:else}
-					<label>Choix (un par ligne)<textarea rows="5" bind:value={e.options} onfocus={pickable('options')}></textarea></label>
+					<label>{t('grid.controls.editor.options')}<textarea rows="5" bind:value={e.options} onfocus={pickable('options')}></textarea></label>
 				{/if}
 			{/if}
-			<p class="hint">Champ actif : un clic dans le classeur y met {pick?.field === 'link' ? 'l’adresse de la cellule' : 'la valeur de la cellule'}.</p>
+			<p class="hint">{pick?.field === 'link' ? t('grid.controls.editor.pick.address') : t('grid.controls.editor.pick.value')}</p>
 			<label
-				>Script
+				>{t('grid.controls.editor.script')}
 				<select bind:value={e.script} onchange={() => (e.fn = '')}>
-					<option value="">(aucune action)</option>
+					<option value="">{t('grid.controls.editor.script.none')}</option>
 					{#each library as s (s.name)}<option value={s.name}>{s.name}</option>{/each}
-					{#if e.script && !library.some((s) => s.name === e.script)}<option value={e.script}>{e.script} (introuvable)</option>{/if}
+					{#if e.script && !library.some((s) => s.name === e.script)}<option value={e.script}>{t('grid.controls.editor.notFound', { name: e.script })}</option>{/if}
 				</select>
 			</label>
 			{#if e.script}
 				<label
-					>Action
+					>{t('grid.controls.editor.action')}
 					<select bind:value={e.fn}>
-						<option value="">Exécuter tout le script</option>
-						{#each functions as f (f)}<option value={f}>Appeler {f}()</option>{/each}
-						{#if e.fn && !functions.includes(e.fn)}<option value={e.fn}>Appeler {e.fn}() (introuvable)</option>{/if}
+						<option value="">{t('grid.controls.editor.action.all')}</option>
+						{#each functions as f (f)}<option value={f}>{t('grid.controls.editor.action.call', { fn: f })}</option>{/each}
+						{#if e.fn && !functions.includes(e.fn)}<option value={e.fn}>{t('grid.controls.editor.notFound', { name: t('grid.controls.editor.action.call', { fn: e.fn }) })}</option>{/if}
 					</select>
 				</label>
 			{/if}
@@ -671,7 +672,7 @@
 				{@const ls = buttons.find((x) => x.id === e.id)?.config.listeners ?? []}
 				{#if ls.length}
 					<div class="listeners">
-						<span>Écouteurs des scripts (controls.on)</span>
+						<span>{t('grid.controls.editor.listeners')}</span>
 						<ul>
 							{#each ls as l, i (i)}<li><code>{l.event}</code> → {handlerLabel(l)}</li>{/each}
 						</ul>
@@ -679,22 +680,22 @@
 				{/if}
 			{/if}
 			{#if e.kind === ''}
-				<label class="check"><input type="checkbox" bind:checked={e.custom} /> Couleurs personnalisées</label>
+				<label class="check"><input type="checkbox" bind:checked={e.custom} /> {t('grid.controls.editor.colors')}</label>
 				{#if e.custom}
 					<div class="colors">
-						<label>Normal<input type="color" bind:value={e.color} /></label>
-						<label>Survol<input type="color" bind:value={e.hoverColor} /></label>
-						<label>Clic<input type="color" bind:value={e.activeColor} /></label>
-						<label>Texte<input type="color" bind:value={e.textColor} /></label>
+						<label>{t('grid.controls.editor.colors.normal')}<input type="color" bind:value={e.color} /></label>
+						<label>{t('grid.controls.editor.colors.hover')}<input type="color" bind:value={e.hoverColor} /></label>
+						<label>{t('grid.controls.editor.colors.active')}<input type="color" bind:value={e.activeColor} /></label>
+						<label>{t('grid.controls.editor.colors.text')}<input type="color" bind:value={e.textColor} /></label>
 					</div>
 				{/if}
 			{/if}
 			<p class="note">
-				{#if !library.length}Aucun script dans la bibliothèque (onglet Script) : le contrôle est créé sans action, à lier plus tard.{:else if e.kind === 'input' || e.kind === 'textarea'}Le texte est écrit dans la cellule liée en quittant la zone{e.kind === 'input' ? ' ou avec Entrée' : ' ou avec Ctrl+Entrée'}, puis l’action s’exécute.{:else if e.kind === 'file'}Le chemin du fichier choisi est écrit dans la cellule liée, puis l’action s’exécute.{:else if e.kind}La valeur est écrite dans la cellule liée, puis l’action s’exécute ; tout s’annule d’un coup (Ctrl+Z).{:else}Un clic sur le bouton exécute l’action ; tout ce qu’elle modifie s’annule d’un coup (Ctrl+Z).{/if}
+				{#if !library.length}{t('grid.controls.note.noScript')}{:else if e.kind === 'input'}{t('grid.controls.note.input')}{:else if e.kind === 'textarea'}{t('grid.controls.note.textarea')}{:else if e.kind === 'file'}{t('grid.controls.note.file')}{:else if e.kind}{t('grid.controls.note.value')}{:else}{t('grid.controls.note.button')}{/if}
 			</p>
 			{#if e.error}<p class="error">{e.error}</p>{/if}
 			<div class="actions">
-				<button class="primary" onclick={closeVolet}>OK</button>
+				<button class="primary" onclick={closeVolet}>{t('common.ok')}</button>
 				{#if e.id !== null}
 					{@const id = e.id}
 					<button
@@ -704,11 +705,11 @@
 							editor = null;
 							applied = '';
 							if (b) remove(b);
-						}}>Supprimer</button
+						}}>{t('common.delete')}</button
 					>
 				{/if}
 			</div>
-			<p class="hint">Les réglages s’appliquent aussitôt au contrôle.</p>
+			<p class="hint">{t('grid.controls.editor.live')}</p>
 	</aside>
 {/if}
 
