@@ -142,7 +142,7 @@ func main() {
 		// le point) et prend 5 px sinon, une bande trop fine à attraper ;
 		// les coins sont plus larges encore.
 		Flags: map[string]any{
-			"system.resizeHandleWidth":  8,
+			"system.resizeHandleWidth":  5.6, // bords gauche et droit : 8 px, réduit de 30 % (Louis : la barre de défilement voisine)
 			"system.resizeHandleHeight": 8,
 			"resizeCornerExtra":         16,
 		},

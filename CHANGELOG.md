@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Changements
+
+- Fenêtre : la zone qui fait redimensionner par les bords gauche et droit est 30 % plus étroite (moins de redimensionnements involontaires près de la barre de défilement).
+
 ### Nouveautés
 
 - Couleur de police et couleur de remplissage (surlignage) : nouvelle palette comme celle d'Excel. Les dix couleurs du thème du classeur (blanc, noir, Texte 2, Arrière-plan 2 et six accents) avec chacune cinq variantes plus claires ou plus foncées, puis les couleurs standard (rouge foncé, rouge, orange, jaune, vert clair, vert, bleu clair, bleu, bleu foncé, violet), les couleurs récentes, Aucun remplissage ou Automatique, et Autres couleurs…. Une couleur du thème suit le thème : changer de thème recolore ces cellules, et l'export Excel l'écrit telle qu'elle s'affiche. Nom de chaque pastille en infobulle (« Vert, Accent 1, plus clair 40 % »), parcours aux flèches. La même palette sert dans Format de cellule et dans la mise en forme conditionnelle. Chaque thème prédéfini a ses quatre accents en plus de ses deux couleurs ; Personnaliser… permet de les choisir, et les thèmes de l'organisation peuvent les donner.
