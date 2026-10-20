@@ -681,7 +681,7 @@
 		"old": {
 			"deleted": "Deleted anyway: {n, plural, =1 {a formula or object still refers to them and will no longer find its table} other {# formulas or objects still refer to them and will no longer find their table}}",
 			"hidden": "Kept hidden: {n, plural, =1 {a formula or object still refers to them} other {# formulas or objects still refer to them}}",
-			"hide": "Keep a hidden copy (tables renamed …_old)",
+			"hide": "Keep a hidden copy (tables renamed …_ancien)",
 			"delete": "Delete the tabs (Ctrl+Z brings them back)"
 		},
 		"panel": {
