@@ -13,6 +13,7 @@
 	import { CONN_LABELS, FILE_DB_KINDS, FILE_KINDS, describe, headersText, isDbKind, parseHeaders, sourceKinds, type ConnKind } from './sources';
 	import { sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
 	import { count } from '#lib/sql/result.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		source: Source;
@@ -30,7 +31,7 @@
 	const initial = () => clone(source);
 	let s = $state<Source>(initial());
 	let error = $state('');
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 
 	const isFile = $derived(FILE_KINDS.includes(s.kind));
 	const isFileDB = $derived(FILE_DB_KINDS.includes(s.kind));
@@ -73,7 +74,7 @@
 			let r = await DocumentService.ConnectionTables(s.connection);
 			if (r.needPassword && (await askPassword(r.needPassword))) r = await DocumentService.ConnectionTables(s.connection);
 			if (r.needPassword) {
-				error = 'Mot de passe requis pour lister les tables.';
+				error = t('query.source.passwordRequired');
 				return;
 			}
 			dbTables = r.tables ?? [];
@@ -127,20 +128,20 @@
 
 	function ok() {
 		error = '';
-		if (isFile && !s.path) return void (error = 'Choisissez un fichier.');
-		if (s.kind === 'xlsx' && !s.sheet) return void (error = 'Choisissez un tableau du classeur.');
-		if (s.kind === 'table' && !s.table) return void (error = 'Choisissez un tableau.');
-		if (s.kind === 'query' && !s.query) return void (error = 'Choisissez une requête.');
-		if (isDB && (!s.connection || !s.sql?.trim())) return void (error = 'Choisissez une connexion et une table (ou écrivez une requête SQL).');
-		if (isFileDB && !s.sql?.trim()) return void (error = 'Choisissez une table (ou écrivez une requête SQL).');
-		if (s.kind === 'sql' && !s.sql?.trim()) return void (error = 'Écrivez une requête SQL.');
+		if (isFile && !s.path) return void (error = t('query.source.need.file'));
+		if (s.kind === 'xlsx' && !s.sheet) return void (error = t('query.source.need.xlsxTable'));
+		if (s.kind === 'table' && !s.table) return void (error = t('query.source.need.table'));
+		if (s.kind === 'query' && !s.query) return void (error = t('query.source.need.query'));
+		if (isDB && (!s.connection || !s.sql?.trim())) return void (error = t('query.source.need.connection'));
+		if (isFileDB && !s.sql?.trim()) return void (error = t('query.source.need.fileTable'));
+		if (s.kind === 'sql' && !s.sql?.trim()) return void (error = t('query.source.need.sql'));
 		if (s.kind === 'formula') {
 			const f = s.formula?.trim() ?? '';
-			if (!f.startsWith('=')) return void (error = 'Écrivez une formule qui commence par =.');
+			if (!f.startsWith('=')) return void (error = t('query.source.need.formula'));
 			s.formula = f;
 		}
 		if (s.kind === 'web') {
-			if (!/^https?:\/\/[^/]+/i.test(s.url?.trim() ?? '')) return void (error = 'L’adresse doit commencer par http:// ou https://.');
+			if (!/^https?:\/\/[^/]+/i.test(s.url?.trim() ?? '')) return void (error = t('query.source.need.url'));
 			s.url = s.url!.trim();
 			s.headers = parseHeaders(headers);
 			if (!s.headers.length) delete s.headers;
@@ -157,7 +158,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Source"
+		aria-label={t('query.source.title')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -165,27 +166,27 @@
 			if (e.key === 'Escape') oncancel();
 		}}
 	>
-		<header>Source</header>
+		<header>{t('query.source.title')}</header>
 		<div class="body">
-			<label class="field">Type de source <Select value={s.kind} options={sourceKinds(sharedWorkbooksEnabled(), source.kind)} width="100%" onchange={changeKind} /></label>
+			<label class="field">{t('query.source.kind')} <Select value={s.kind} options={sourceKinds(sharedWorkbooksEnabled(), source.kind)} width="100%" onchange={changeKind} /></label>
 			{#if isFile}
 				<div class="field">
-					Fichier
+					{t('query.source.file.label')}
 					<div class="row">
-						<input class="grow" bind:value={s.path} onchange={() => (s.kind === 'xlsx' ? loadXlsx() : isFileDB ? loadTables() : undefined)} placeholder="Chemin du fichier" />
-						<button class="ico" onclick={browse}><Icon name="open" size={14} />Parcourir…</button>
+						<input class="grow" bind:value={s.path} onchange={() => (s.kind === 'xlsx' ? loadXlsx() : isFileDB ? loadTables() : undefined)} placeholder={t('query.source.file.placeholder')} />
+						<button class="ico" onclick={browse}><Icon name="open" size={14} />{t('query.source.file.browse')}</button>
 					</div>
 				</div>
 				{#if s.kind === 'csv'}
 					<label class="field"
-						>Séparateur <Select
+						>{t('query.source.csv.delimiter')} <Select
 							value={s.delimiter ?? ''}
 							options={[
-								{ value: '', label: 'Détecté automatiquement' },
-								{ value: ';', label: 'Point-virgule (;)' },
-								{ value: ',', label: 'Virgule (,)' },
-								{ value: '\\t', label: 'Tabulation' },
-								{ value: '|', label: 'Barre verticale (|)' }
+								{ value: '', label: t('query.source.csv.auto') },
+								{ value: ';', label: t('query.source.csv.semicolon') },
+								{ value: ',', label: t('query.source.csv.comma') },
+								{ value: '\\t', label: t('query.source.csv.tab') },
+								{ value: '|', label: t('query.source.csv.pipe') }
 							]}
 							width="100%"
 							onchange={(v) => (s.delimiter = v || undefined)}
@@ -193,83 +194,83 @@
 					>
 				{:else if s.kind === 'xlsx'}
 					<div class="field">
-						Tableau du classeur
+						{t('query.sourceKind.table')}
 						<div class="list">
-							{#each xlsx as t (t.sheet + t.index)}
-								<button class="item" class:on={t.sheet === s.sheet && t.index === (s.index ?? 0)} onclick={() => ((s.sheet = t.sheet), (s.index = t.index))}>
-									<strong>{t.sheet}</strong> › tableau {t.index + 1} <span class="muted">({count(t.rows)} : {(t.headers ?? []).slice(0, 6).join(', ')}{(t.headers ?? []).length > 6 ? '…' : ''})</span>
+							{#each xlsx as tb (tb.sheet + tb.index)}
+								<button class="item" class:on={tb.sheet === s.sheet && tb.index === (s.index ?? 0)} onclick={() => ((s.sheet = tb.sheet), (s.index = tb.index))}>
+									<strong>{tb.sheet}</strong> › {t('query.source.xlsx.table', { n: String(tb.index + 1) })} <span class="muted">({count(tb.rows)} : {(tb.headers ?? []).slice(0, 6).join(', ')}{(tb.headers ?? []).length > 6 ? '…' : ''})</span>
 								</button>
 							{:else}
-								<p class="muted">{s.path ? 'Aucun tableau de deux lignes ou plus dans ce classeur.' : 'Choisissez un fichier.'}</p>
+								<p class="muted">{s.path ? t('query.host.noExcelTable') : t('query.source.need.file')}</p>
 							{/each}
 						</div>
 					</div>
 				{:else if s.kind === 'json'}
-					<label class="field">Chemin des enregistrements <input bind:value={s.recordPath} placeholder="vide : la racine ou son seul tableau ; ex. data.items" /></label>
-					<p class="muted">Tableau d’objets, ou un objet JSON par ligne (NDJSON). Les objets imbriqués deviennent des colonnes « parent.enfant ».</p>
+					<label class="field">{t('query.source.recordPath.label')} <input bind:value={s.recordPath} placeholder={t('query.source.recordPath.placeholder')} /></label>
+					<p class="muted">{t('query.source.json.help')}</p>
 				{:else if s.kind === 'parquet'}
-					<p class="muted">Chaque colonne du fichier donne une colonne (« parent.enfant » pour une structure ; une liste devient du texte).</p>
+					<p class="muted">{t('query.source.parquet.help')}</p>
 				{/if}
 			{:else if s.kind === 'table'}
-				<label class="field">Tableau <Select value={s.table ?? ''} options={tables.map((t) => ({ value: t, label: t }))} width="100%" onchange={(v) => (s.table = v)} /></label>
+				<label class="field">{t('query.source.table')} <Select value={s.table ?? ''} options={tables.map((tb) => ({ value: tb, label: tb }))} width="100%" onchange={(v) => (s.table = v)} /></label>
 			{:else if s.kind === 'query'}
-				<label class="field">Requête <Select value={s.query ?? ''} options={queries.map((t) => ({ value: t, label: t }))} width="100%" onchange={(v) => (s.query = v)} /></label>
-				<p class="muted">La requête part du résultat de l'autre requête (référence) : modifier l'autre requête change aussi celle-ci.</p>
+				<label class="field">{t('query.source.query')} <Select value={s.query ?? ''} options={queries.map((tb) => ({ value: tb, label: tb }))} width="100%" onchange={(v) => (s.query = v)} /></label>
+				<p class="muted">{t('query.source.queryHelp')}</p>
 			{:else if isDB}
 				<div class="field">
-					Connexion {CONN_LABELS[s.kind as ConnKind]}
+					{t('query.conn.dialog.aria', { kind: CONN_LABELS[s.kind as ConnKind] })}
 					<div class="row">
 						<Select value={s.connection ?? ''} options={kindConns.map((c) => ({ value: c.name, label: `${c.name} (${describe(c)})` }))} width="100%" onchange={(v) => ((s.connection = v), loadTables())} />
-						<button class="ico" onclick={addConnection}><Icon name="plus" size={14} />Nouvelle…</button>
+						<button class="ico" onclick={addConnection}><Icon name="plus" size={14} />{t('query.source.newConn')}</button>
 					</div>
 				</div>
 			{:else if s.kind === 'web'}
-				<label class="field">Adresse (GET) <input bind:value={s.url} placeholder="https://api.exemple.fr/v1/clients?page=1" /></label>
-				<label class="field">Chemin des enregistrements <input bind:value={s.recordPath} placeholder="vide : la racine ou son seul tableau ; ex. data.items" /></label>
+				<label class="field">{t('query.source.web.url')} <input bind:value={s.url} placeholder={t('query.source.web.urlPlaceholder')} /></label>
+				<label class="field">{t('query.source.recordPath.label')} <input bind:value={s.recordPath} placeholder={t('query.source.recordPath.placeholder')} /></label>
 				<label class="field"
-					>En-têtes (un par ligne, « Nom: valeur ») <textarea rows="2" bind:value={headers} placeholder="Accept-Language: fr"></textarea></label
+					>{t('query.source.web.headers')} <textarea rows="2" bind:value={headers} placeholder="Accept-Language: fr"></textarea></label
 				>
 				<div class="field">
-					Authentification
+					{t('query.source.web.auth')}
 					<div class="row">
 						<Select
 							value={s.connection ?? ''}
-							options={[{ value: '', label: 'Aucune (API publique)' }, ...kindConns.map((c) => ({ value: c.name, label: `${c.name} (${c.config.url})` }))]}
+							options={[{ value: '', label: t('query.source.web.public') }, ...kindConns.map((c) => ({ value: c.name, label: `${c.name} (${c.config.url})` }))]}
 							width="100%"
 							onchange={(v) => (s.connection = v || undefined)}
 						/>
-						<button class="ico" onclick={addConnection}><Icon name="plus" size={14} />Nouvelle…</button>
+						<button class="ico" onclick={addConnection}><Icon name="plus" size={14} />{t('query.source.newConn')}</button>
 					</div>
 				</div>
-				<p class="muted">Les en-têtes sont enregistrés dans le classeur : un jeton ou une clé d’API passe par une connexion Web (gardée dans le trousseau du système).</p>
+				<p class="muted">{t('query.source.web.help')}</p>
 			{/if}
 			{#if isDB || isFileDB}
 				{#if dbTables.length}
 					<div class="field">
-						Tables et vues <input placeholder="Rechercher" bind:value={tableFilter} />
+						{t('query.source.tables')} <input placeholder={t('query.source.search')} bind:value={tableFilter} />
 						<div class="list">
-							{#each shownTables as t (t.schema + '.' + t.name)}
-								<button class="item" onclick={() => pickTable(t)}>{t.schema ? t.schema + '.' : ''}<strong>{t.name}</strong>{t.view ? ' (vue)' : ''}</button>
+							{#each shownTables as tb (tb.schema + '.' + tb.name)}
+								<button class="item" onclick={() => pickTable(tb)}>{tb.schema ? tb.schema + '.' : ''}<strong>{tb.name}</strong>{tb.view ? ` ${t('query.source.view')}` : ''}</button>
 							{/each}
 						</div>
 					</div>
 				{/if}
-				<label class="field">Requête SQL (lecture seule) <textarea rows="5" bind:value={s.sql} placeholder="SELECT * FROM ventes WHERE annee = 2026"></textarea></label>
+				<label class="field">{t('query.source.sql.label')} <textarea rows="5" bind:value={s.sql} placeholder="SELECT * FROM ventes WHERE annee = 2026"></textarea></label>
 				<p class="muted">
-					{isDB ? 'Filtrez de préférence ici : la requête est exécutée par le serveur, les étapes ensuite par Lattis.' : 'Le fichier est ouvert en lecture seule ; les étapes s’appliquent ensuite.'}
+					{isDB ? t('query.source.sql.dbHelp') : t('query.source.sql.fileHelp')}
 				</p>
 			{:else if s.kind === 'sql'}
-				<label class="field">Requête SQL sur le classeur (lecture seule) <textarea rows="6" bind:value={s.sql} placeholder="SELECT * FROM Ventes WHERE annee = 2026"></textarea></label>
-				<p class="muted">Comme dans l'onglet SQL : la requête est relue à chaque actualisation.{s.sheet ? ` Les adresses Cell[A1] sans feuille se lisent sur « ${s.sheet} ».` : ''}</p>
+				<label class="field">{t('query.source.sql.workbook')} <textarea rows="6" bind:value={s.sql} placeholder="SELECT * FROM Ventes WHERE annee = 2026"></textarea></label>
+				<p class="muted">{t('query.source.sql.workbookHelp')}{s.sheet ? ` ${t('query.source.sql.sheet', { sheet: s.sheet })}` : ''}</p>
 			{:else if s.kind === 'formula'}
-				<label class="field">Formule (tableau dynamique) <input bind:value={s.formula} placeholder="=UNIQUE(Ventes[Client])" /></label>
-				<p class="muted">Le tableau se recalcule quand ses sources changent (sans étapes ; avec des étapes, à l'actualisation, F5).</p>
+				<label class="field">{t('query.source.formula.label')} <input bind:value={s.formula} placeholder="=UNIQUE(Ventes[Client])" /></label>
+				<p class="muted">{t('query.source.formula.help')}</p>
 			{/if}
 		</div>
 		{#if error}<p class="error">{error}</p>{/if}
 		<footer>
-			<button class="primary" onclick={ok}>OK</button>
-			<button onclick={oncancel}>Annuler</button>
+			<button class="primary" onclick={ok}>{t('common.ok')}</button>
+			<button onclick={oncancel}>{t('common.cancel')}</button>
 		</footer>
 	</div>
 </div>

@@ -21,7 +21,7 @@
 	import { CONN_LABELS, describe, isDbKind, type ConnKind } from './sources';
 	import { requestLogin } from '#lib/remote/lattis.svelte.js';
 	import { sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Le classeur a changé ; sheet : feuille à afficher (tableau chargé). */
@@ -30,7 +30,7 @@
 	}
 	let { onchanged, onnotice }: Props = $props();
 
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 
 	let panel = $state(false);
 	let queries = $state<Query[]>([]);
@@ -82,29 +82,29 @@
 	// ouvrent l'éditeur de requête sur la source choisie.
 	const SOURCES: { group: string; items: { what: DataAction; label: string; icon: IconName }[] }[] = $derived([
 		{
-			group: 'Fichier',
+			group: t('query.host.group.file'),
 			items: [
-				{ what: 'csv', label: 'Texte/CSV', icon: 'file' },
-				{ what: 'xlsx', label: 'Classeur Excel', icon: 'table' },
+				{ what: 'csv', label: t('query.host.source.csv'), icon: 'file' },
+				{ what: 'xlsx', label: t('query.sourceKind.xlsx'), icon: 'table' },
 				{ what: 'json', label: 'JSON', icon: 'file' },
 				{ what: 'parquet', label: 'Parquet', icon: 'file' },
-				{ what: 'sqlite', label: 'Base SQLite', icon: 'database' }
+				{ what: 'sqlite', label: t('query.host.source.sqlite'), icon: 'database' }
 			]
 		},
 		{
-			group: 'Base de données',
+			group: t('query.host.group.database'),
 			items: [
 				{ what: 'postgres', label: 'PostgreSQL', icon: 'database' },
 				{ what: 'mysql', label: 'MySQL / MariaDB', icon: 'database' },
 				{ what: 'sqlserver', label: 'SQL Server', icon: 'database' },
-				...(sharedWorkbooksEnabled() ? [{ what: 'lattis' as DataAction, label: 'Serveur Lattis', icon: 'database' as IconName }] : [])
+				...(sharedWorkbooksEnabled() ? [{ what: 'lattis' as DataAction, label: t('query.conn.lattis'), icon: 'database' as IconName }] : [])
 			]
 		},
 		{
-			group: 'Autres sources',
+			group: t('query.host.group.other'),
 			items: [
-				{ what: 'web', label: 'Web (API)', icon: 'web' },
-				{ what: 'table', label: 'Tableau du classeur', icon: 'sheet' }
+				{ what: 'web', label: t('query.conn.web'), icon: 'web' },
+				{ what: 'table', label: t('query.sourceKind.table'), icon: 'sheet' }
 			]
 		}
 	]);
@@ -146,7 +146,7 @@
 					const source = { kind: what, path } as Query['source'];
 					if (what === 'xlsx') {
 						const ts = (await DocumentService.ExcelTables(path)) ?? [];
-						if (!ts.length) throw new Error('Aucun tableau de deux lignes ou plus dans ce classeur.');
+						if (!ts.length) throw new Error(t('query.host.noExcelTable'));
 						source.sheet = ts[0].sheet;
 						source.index = ts[0].index;
 						editSource = ts.length > 1;
@@ -155,7 +155,7 @@
 					return;
 				}
 				case 'table': {
-					if (!tables.length) throw new Error('Le classeur n’a aucun tableau.');
+					if (!tables.length) throw new Error(t('query.host.noTable'));
 					const name = await DocumentService.NewQueryName(tables[0]);
 					editing = { query: newQuery(name, { kind: 'table', table: tables[0] }), editSource: tables.length > 1 };
 					return;
@@ -212,12 +212,12 @@
 	/** Actualise une requête (id) ou toutes (null), mot de passe demandé au besoin. */
 	async function refresh(id: number | null): Promise<string> {
 		lastCount = 0;
-		busy = id === null ? 'Actualisation de toutes les requêtes…' : 'Actualisation…';
+		busy = id === null ? t('query.host.refreshingAll') : t('query.host.refreshing');
 		try {
 			const run = () => (id === null ? DocumentService.RefreshAllQueries() : DocumentService.RefreshQuery(id));
 			let r: QueryRefresh = await run();
 			while (r.needPassword) {
-				if (!(await askPassword(r.needPassword))) return 'Actualisation abandonnée : mot de passe non saisi.';
+				if (!(await askPassword(r.needPassword))) return t('query.host.passwordAbandoned');
 				r = await run();
 			}
 			const loads = r.loads ?? [];
@@ -230,8 +230,8 @@
 				return errors.join('\n');
 			}
 			const warn = loads.flatMap((l) => l.warnings ?? []);
-			if (id === null) onnotice(loads.length ? `${loads.length} requête(s) actualisée(s)` : 'Aucune requête chargée à actualiser');
-			else if (loads.length) onnotice(`Tableau « ${loads[0].table} » : ${fmtNumber(loads[0].rows)} ligne(s) chargée(s)${warn.length ? ' ; ' + warn.join(' · ') : ''}`);
+			if (id === null) onnotice(loads.length ? t('query.host.refreshedAll', { n: loads.length }) : t('query.host.nothingToRefresh'));
+			else if (loads.length) onnotice(t('query.host.loaded', { table: loads[0].table, n: loads[0].rows }) + (warn.length ? ' ; ' + warn.join(' · ') : ''));
 			return '';
 		} catch (e) {
 			onnotice(err(e));
@@ -250,7 +250,7 @@
 			} else {
 				await load();
 				onchanged();
-				onnotice(`Requête « ${q.name} » enregistrée`);
+				onnotice(t('query.host.saved', { name: q.name }));
 			}
 			editing = null;
 			return '';
@@ -264,7 +264,7 @@
 			await DocumentService.DeleteQuery(q.id);
 			await load();
 			onchanged();
-			onnotice(`Requête « ${q.name} » supprimée${q.table ? ` ; le tableau ${q.table} reste sur sa feuille` : ''} (Ctrl+Z pour annuler)`);
+			onnotice(q.table ? t('query.host.deletedTable', { name: q.name, table: q.table }) : t('query.host.deleted', { name: q.name }));
 		} catch (e) {
 			onnotice(err(e));
 		}
@@ -275,7 +275,7 @@
 			await DocumentService.DeleteConnection(c.id);
 			await load();
 			onchanged();
-			onnotice(`Connexion « ${c.name} » supprimée (Ctrl+Z pour annuler)`);
+			onnotice(t('query.host.connDeleted', { name: c.name }));
 		} catch (e) {
 			onnotice(err(e));
 		}
@@ -289,7 +289,7 @@
 		try {
 			await DocumentService.ForgetConnectionPassword(c.name);
 			await load();
-			onnotice(`Mot de passe de « ${c.name} » oublié`);
+			onnotice(t('query.host.forgotten', { name: c.name }));
 		} catch (e) {
 			onnotice(err(e));
 		}
@@ -297,66 +297,66 @@
 </script>
 
 {#if panel}
-	<aside class="panel" use:resizePanel={{ key: 'queries' }} use:panelKeys={() => (panel = false)} aria-label="Requêtes et connexions">
-		<PanelHeader title="Requêtes et connexions" help="connexions" helpLabel="Aide sur les requêtes et connexions" onclose={() => (panel = false)} />
+	<aside class="panel" use:resizePanel={{ key: 'queries' }} use:panelKeys={() => (panel = false)} aria-label={t('query.host.panel.title')}>
+		<PanelHeader title={t('query.host.panel.title')} help="connexions" helpLabel={t('query.host.panel.help')} onclose={() => (panel = false)} />
 		{#if busy}<p class="busy">{busy}</p>{/if}
 		<div class="sec">
-			<h3>Requêtes</h3>
+			<h3>{t('query.host.queries')}</h3>
 			<span class="count">{queries.length}</span>
 		</div>
 		{#each queries as q (q.id)}
 			<div class="row" class:open={menuFor === `q${q.id}`}>
-				<button class="main" title="Modifier la requête « {q.name} »" onclick={() => (editing = { query: q, editSource: false })}>
+				<button class="main" title={t('query.host.editQuery', { name: q.name })} onclick={() => (editing = { query: q, editSource: false })}>
 					<Icon name={kindIcon(q.source?.kind ?? '')} size={16} />
 					<span class="txt">
 						<span class="name">{q.name}</span>
-						<span class="sub" title={q.refreshed ? `Actualisée le ${q.refreshed}` : ''}>{q.table ? `→ ${q.table}` : 'Connexion seulement'}{q.refreshed ? ` · ${refreshedLabel(q.refreshed)}` : ''}</span>
+						<span class="sub" title={q.refreshed ? t('query.host.refreshedOn', { date: q.refreshed }) : ''}>{q.table ? `→ ${q.table}` : t('query.host.connectionOnly')}{q.refreshed ? ` · ${refreshedLabel(q.refreshed)}` : ''}</span>
 					</span>
 				</button>
 				<div class="acts">
-					<button class="ic" title={q.table ? 'Actualiser' : 'Charger'} aria-label={q.table ? 'Actualiser' : 'Charger'} onclick={() => refresh(q.id)} disabled={!!busy}><Icon name="refresh" size={14} /></button>
-					<button class="ic more" title="Plus d'actions" aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={menuFor === `q${q.id}`} onclick={() => (menuFor = menuFor === `q${q.id}` ? null : `q${q.id}`)}>⋯</button>
+					<button class="ic" title={q.table ? t('query.host.refresh') : t('query.host.load')} aria-label={q.table ? t('query.host.refresh') : t('query.host.load')} onclick={() => refresh(q.id)} disabled={!!busy}><Icon name="refresh" size={14} /></button>
+					<button class="ic more" title={t('query.host.more')} aria-label={t('query.host.more')} aria-haspopup="menu" aria-expanded={menuFor === `q${q.id}`} onclick={() => (menuFor = menuFor === `q${q.id}` ? null : `q${q.id}`)}>⋯</button>
 					{#if menuFor === `q${q.id}`}
 						<div class="row-menu" role="menu" use:dismiss={() => (menuFor = null)}>
-							<button role="menuitem" onclick={() => ((menuFor = null), (editing = { query: q, editSource: false }))}><Icon name="edit" size={14} />Modifier</button>
-							<button role="menuitem" onclick={() => ((menuFor = null), refresh(q.id))} disabled={!!busy}><Icon name="refresh" size={14} />{q.table ? 'Actualiser' : 'Charger'}</button>
-							<button role="menuitem" class="delete" onclick={() => ((menuFor = null), remove(q))}><Icon name="trash" size={14} />Supprimer</button>
+							<button role="menuitem" onclick={() => ((menuFor = null), (editing = { query: q, editSource: false }))}><Icon name="edit" size={14} />{t('query.host.edit')}</button>
+							<button role="menuitem" onclick={() => ((menuFor = null), refresh(q.id))} disabled={!!busy}><Icon name="refresh" size={14} />{q.table ? t('query.host.refresh') : t('query.host.load')}</button>
+							<button role="menuitem" class="delete" onclick={() => ((menuFor = null), remove(q))}><Icon name="trash" size={14} />{t('query.host.delete')}</button>
 						</div>
 					{/if}
 				</div>
 			</div>
 		{:else}
-			<p class="empty">Aucune requête : Données › Obtenir des données.</p>
+			<p class="empty">{t('query.host.noQuery')}</p>
 		{/each}
 		<div class="sec">
-			<h3>Connexions</h3>
+			<h3>{t('query.host.connections')}</h3>
 			<span class="count">{conns.length}</span>
 		</div>
 		{#each conns as c (c.id)}
 			<div class="row" class:open={menuFor === `c${c.id}`}>
-				<button class="main" title="Modifier la connexion « {c.name} »" onclick={() => editConn(c)}>
+				<button class="main" title={t('query.host.editConn', { name: c.name })} onclick={() => editConn(c)}>
 					<Icon name={kindIcon(c.kind)} size={16} />
 					<span class="txt">
 						<span class="name">{c.name}</span>
-						<span class="sub">{describe(c)}{c.remembered ? (c.kind === 'web' ? ' · jeton mémorisé' : ' · mot de passe mémorisé') : ''}</span>
+						<span class="sub">{describe(c)}{c.remembered ? ` · ${c.kind === 'web' ? t('query.host.tokenRemembered') : t('query.host.passwordRemembered')}` : ''}</span>
 					</span>
 				</button>
 				<div class="acts">
-					<button class="ic more" title="Plus d'actions" aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={menuFor === `c${c.id}`} onclick={() => (menuFor = menuFor === `c${c.id}` ? null : `c${c.id}`)}>⋯</button>
+					<button class="ic more" title={t('query.host.more')} aria-label={t('query.host.more')} aria-haspopup="menu" aria-expanded={menuFor === `c${c.id}`} onclick={() => (menuFor = menuFor === `c${c.id}` ? null : `c${c.id}`)}>⋯</button>
 					{#if menuFor === `c${c.id}`}
 						<div class="row-menu" role="menu" use:dismiss={() => (menuFor = null)}>
-							<button role="menuitem" onclick={() => ((menuFor = null), editConn(c))}><Icon name="edit" size={14} />Modifier</button>
+							<button role="menuitem" onclick={() => ((menuFor = null), editConn(c))}><Icon name="edit" size={14} />{t('query.host.edit')}</button>
 							{#if c.kind !== 'lattis'}
-								<button role="menuitem" onclick={() => ((menuFor = null), forget(c))}><Icon name="key" size={14} />{c.kind === 'web' ? 'Oublier le jeton' : 'Oublier le mot de passe'}</button>
+								<button role="menuitem" onclick={() => ((menuFor = null), forget(c))}><Icon name="key" size={14} />{c.kind === 'web' ? t('query.host.forgetToken') : t('query.host.forgetPassword')}</button>
 							{/if}
-							<button role="menuitem" class="delete" onclick={() => ((menuFor = null), removeConn(c))}><Icon name="trash" size={14} />Supprimer</button>
+							<button role="menuitem" class="delete" onclick={() => ((menuFor = null), removeConn(c))}><Icon name="trash" size={14} />{t('query.host.delete')}</button>
 						</div>
 					{/if}
 				</div>
 			</div>
 		{/each}
 		<div class="new-wrap">
-			<button class="add" aria-haspopup="menu" aria-expanded={picking} onclick={() => (picking = !picking)}><Icon name="plus" size={14} />Nouvelle connexion…</button>
+			<button class="add" aria-haspopup="menu" aria-expanded={picking} onclick={() => (picking = !picking)}><Icon name="plus" size={14} />{t('query.host.newConn')}</button>
 			{#if picking}
 				<div class="src-menu" role="menu" use:dismiss={() => (picking = false)}>
 					{#each SOURCES as g (g.group)}

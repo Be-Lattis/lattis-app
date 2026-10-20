@@ -7,6 +7,7 @@
 	import { untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { PasswordNeed } from '#bindings/internal/query/models.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		need: PasswordNeed;
@@ -29,7 +30,7 @@
 			await DocumentService.AllowConnectionPassword(need.connection);
 			ondone(true);
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		} finally {
 			busy = false;
 		}
@@ -43,7 +44,7 @@
 			if (msg) error = msg;
 			else ondone(true);
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		} finally {
 			busy = false;
 		}
@@ -60,7 +61,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Mot de passe"
+		aria-label={t('query.password.title')}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -69,29 +70,29 @@
 			if (e.key === 'Enter') (typing ? ok() : allow());
 		}}
 	>
-		<header>Connexion « {need.connection} »</header>
+		<header>{t('query.password.header', { name: need.connection })}</header>
 		{#if !typing}
 			<div class="body">
-				<p>Ce classeur veut se connecter avec votre mot de passe enregistré sur cet ordinateur. <span class="muted">{need.account}</span></p>
-				<p class="muted">Autorisez-le si vous connaissez ce classeur : l'accord est retenu pour lui sur ce poste. Un classeur reçu d'une source inconnue ne devrait pas l'avoir.</p>
+				<p>{t('query.password.stored')} <span class="muted">{need.account}</span></p>
+				<p class="muted">{t('query.password.storedHelp')}</p>
 			</div>
 			{#if error}<p class="error">{error}</p>{/if}
 			<footer>
-				<button class="primary" onclick={allow} disabled={busy}>Autoriser</button>
-				<button onclick={() => (typing = true)}>Saisir un autre mot de passe</button>
-				<button onclick={() => ondone(false)}>Refuser</button>
+				<button class="primary" onclick={allow} disabled={busy}>{t('query.password.allow')}</button>
+				<button onclick={() => (typing = true)}>{t('query.password.other')}</button>
+				<button onclick={() => ondone(false)}>{t('query.password.refuse')}</button>
 			</footer>
 		{:else}
 			<div class="body">
-				<p>{need.message === 'mot de passe refusé' ? 'Le serveur a refusé le mot de passe.' : 'Le serveur demande un mot de passe.'} <span class="muted">{need.account}</span></p>
-				<label>Mot de passe <input type="password" bind:value={password} autocomplete="off" use:focus /></label>
-				<label class="check"><input type="checkbox" bind:checked={remember} /> Mémoriser sur cet ordinateur (trousseau du système)</label>
-				<p class="muted">Il n'est jamais enregistré dans le classeur.</p>
+				<p>{need.message === 'mot de passe refusé' ? t('query.password.refused') : t('query.password.asked')} <span class="muted">{need.account}</span></p>
+				<label>{t('query.password.title')} <input type="password" bind:value={password} autocomplete="off" use:focus /></label>
+				<label class="check"><input type="checkbox" bind:checked={remember} /> {t('query.password.remember')}</label>
+				<p class="muted">{t('query.password.never')}</p>
 			</div>
 			{#if error}<p class="error">{error}</p>{/if}
 			<footer>
-				<button class="primary" onclick={ok} disabled={busy}>OK</button>
-				<button onclick={() => ondone(false)}>Annuler</button>
+				<button class="primary" onclick={ok} disabled={busy}>{t('common.ok')}</button>
+				<button onclick={() => ondone(false)}>{t('common.cancel')}</button>
 			</footer>
 		{/if}
 	</div>

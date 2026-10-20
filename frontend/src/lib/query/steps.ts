@@ -3,81 +3,83 @@
 // foi côté Go (internal/query/model.go).
 
 import type { Column, Query, Source, Step } from '#bindings/internal/query/models.js';
+import { t, tAny } from '#lib/i18n/index.js';
 
 export type Op = 'filter' | 'rename' | 'type' | 'remove' | 'select' | 'split' | 'replace' | 'transform' | 'addcolumn' | 'index' | 'merge' | 'append' | 'group' | 'sort' | 'distinct' | 'top' | 'unpivot' | 'pivot';
 
 export interface OpInfo {
 	op: Op;
-	label: string; // bouton du ruban de l'éditeur
+	readonly label: string; // bouton du ruban de l'éditeur
 	group: 'Colonnes' | 'Lignes' | 'Transformer' | 'Combiner';
-	hint: string;
+	readonly hint: string;
+}
+
+/** Opération du catalogue : libellé et aide relus dans la langue de l'interface. */
+const opInfo = (op: Op, group: OpInfo['group']): OpInfo => ({
+op,
+group,
+get label() {
+return tAny(`query.op.${op}.label`);
+},
+get hint() {
+return tAny(`query.op.${op}.hint`);
+}
+});
+
+/** Couple [valeur, libellé] dont le libellé suit la langue de l'interface. */
+function pair(value: string, key: string): [string, string] {
+const a = [value] as unknown as [string, string];
+Object.defineProperty(a, 1, { get: () => tAny(key), enumerable: true });
+return a;
 }
 
 export const OPS: OpInfo[] = [
-	{ op: 'select', label: 'Choisir les colonnes', group: 'Colonnes', hint: "Garder certaines colonnes, dans l'ordre voulu" },
-	{ op: 'remove', label: 'Supprimer les colonnes', group: 'Colonnes', hint: 'Retirer des colonnes' },
-	{ op: 'rename', label: 'Renommer', group: 'Colonnes', hint: 'Renommer une colonne' },
-	{ op: 'type', label: 'Type de données', group: 'Colonnes', hint: "Changer le type d'une colonne (une valeur non convertible devient vide)" },
-	{ op: 'filter', label: 'Filtrer les lignes', group: 'Lignes', hint: 'Garder les lignes qui vérifient des conditions' },
-	{ op: 'sort', label: 'Trier', group: 'Lignes', hint: 'Trier les lignes' },
-	{ op: 'distinct', label: 'Supprimer les doublons', group: 'Lignes', hint: 'Garder une ligne par valeur (de toutes les colonnes ou de certaines)' },
-	{ op: 'top', label: 'Premières lignes', group: 'Lignes', hint: 'Conserver les N premières lignes' },
-	{ op: 'split', label: 'Fractionner la colonne', group: 'Transformer', hint: 'Découper une colonne de texte par délimiteur' },
-	{ op: 'replace', label: 'Remplacer les valeurs', group: 'Transformer', hint: 'Remplacer une valeur par une autre' },
-	{ op: 'transform', label: 'Format', group: 'Transformer', hint: 'SUPPRESPACE, MAJUSCULE, minuscule' },
-	{ op: 'addcolumn', label: 'Colonne personnalisée', group: 'Transformer', hint: 'Nouvelle colonne calculée par une expression SQLite ([Colonne] désigne une colonne)' },
-	{ op: 'index', label: "Colonne d'index", group: 'Transformer', hint: 'Numéroter les lignes' },
-	{ op: 'group', label: 'Regrouper par', group: 'Transformer', hint: 'Regrouper les lignes et calculer des agrégats' },
-	{ op: 'unpivot', label: 'Dépivoter', group: 'Transformer', hint: 'Transformer des colonnes en lignes (attribut, valeur)' },
-	{ op: 'pivot', label: 'Pivoter', group: 'Transformer', hint: "Transformer les valeurs d'une colonne en colonnes" },
-	{ op: 'merge', label: 'Fusionner', group: 'Combiner', hint: 'Joindre une autre requête ou un tableau par des colonnes communes' },
-	{ op: 'append', label: 'Ajouter', group: 'Combiner', hint: "Mettre à la suite les lignes d'une autre requête ou d'un tableau" }
+	opInfo('select', 'Colonnes'),
+	opInfo('remove', 'Colonnes'),
+	opInfo('rename', 'Colonnes'),
+	opInfo('type', 'Colonnes'),
+	opInfo('filter', 'Lignes'),
+	opInfo('sort', 'Lignes'),
+	opInfo('distinct', 'Lignes'),
+	opInfo('top', 'Lignes'),
+	opInfo('split', 'Transformer'),
+	opInfo('replace', 'Transformer'),
+	opInfo('transform', 'Transformer'),
+	opInfo('addcolumn', 'Transformer'),
+	opInfo('index', 'Transformer'),
+	opInfo('group', 'Transformer'),
+	opInfo('unpivot', 'Transformer'),
+	opInfo('pivot', 'Transformer'),
+	opInfo('merge', 'Combiner'),
+	opInfo('append', 'Combiner')
 ];
 
-export const TYPES: [string, string][] = [
-	['text', 'Texte'],
-	['integer', 'Entier'],
-	['decimal', 'Décimal'],
-	['date', 'Date'],
-	['boolean', 'Booléen']
-];
-
-export const CMPS: [string, string][] = [
-	['=', 'est égal à'],
-	['<>', 'est différent de'],
-	['>', 'est supérieur à'],
-	['>=', 'est supérieur ou égal à'],
-	['<', 'est inférieur à'],
-	['<=', 'est inférieur ou égal à'],
-	['contains', 'contient'],
-	['notcontains', 'ne contient pas'],
-	['begins', 'commence par'],
-	['ends', 'se termine par'],
-	['empty', 'est vide'],
-	['notempty', "n'est pas vide"]
-];
-
-export const AGGS: [string, string][] = [
-	['sum', 'Somme'],
-	['avg', 'Moyenne'],
-	['count', 'Nombre de lignes'],
-	['countdistinct', 'Nombre distinct'],
-	['min', 'Min'],
-	['max', 'Max']
-];
-
-export const JOINS: [string, string][] = [
-	['left', 'Externe gauche (toutes les lignes de la première, celles qui correspondent de la seconde)'],
-	['inner', 'Interne (seulement les lignes qui correspondent)'],
-	['full', 'Externe entière (toutes les lignes des deux)'],
-	['right', 'Externe droite (toutes les lignes de la seconde)'],
-	['anti', 'Anti gauche (lignes de la première sans correspondance)']
-];
+export const TYPES: [string, string][] = ['text', 'integer', 'decimal', 'date', 'boolean'].map((v) => pair(v, `query.type.${v}`));
+	
+	const CMP_KEYS: [string, string][] = [
+	['=', 'eq'],
+	['<>', 'ne'],
+	['>', 'gt'],
+['>=', 'ge'],
+['<', 'lt'],
+['<=', 'le'],
+	['contains', 'contains'],
+	['notcontains', 'notcontains'],
+	['begins', 'begins'],
+	['ends', 'ends'],
+	['empty', 'empty'],
+	['notempty', 'notempty']
+	];
+	export const CMPS: [string, string][] = CMP_KEYS.map(([v, k]) => pair(v, `query.cmp.${k}`));
+	
+	export const AGGS: [string, string][] = ['sum', 'avg', 'count', 'countdistinct', 'min', 'max'].map((v) => pair(v, `query.agg.${v}`));
+	
+	export const JOINS: [string, string][] = ['left', 'inner', 'full', 'right', 'anti'].map((v) => pair(v, `query.join.${v}`));
 
 /** Libellé d'un type (type vide : à inférer). */
-export function typeName(t: string): string {
-	return TYPES.find(([k]) => k === t)?.[1] ?? 'Auto';
-}
+export function typeName(type: string): string {
+	return TYPES.find(([k]) => k === type)?.[1] ?? t('query.type.auto');
+	}
 
 /** Étape par défaut d'une opération, sur la colonne choisie si besoin. */
 export function defaultStep(op: Op, cols: Column[], col?: string): Step {
@@ -88,8 +90,8 @@ export function defaultStep(op: Op, cols: Column[], col?: string): Step {
 		case 'rename':
 			return { op, column: c, name: c };
 		case 'type': {
-			const t = cols.find((k) => k.name === c)?.type;
-			return { op, column: c, type: (t && t !== 'text' ? 'text' : 'integer') as Step['type'] };
+			const ty = cols.find((k) => k.name === c)?.type;
+			return { op, column: c, type: (ty && ty !== 'text' ? 'text' : 'integer') as Step['type'] };
 		}
 		case 'remove':
 			return { op, columns: col ? [col] : [] };
@@ -102,15 +104,15 @@ export function defaultStep(op: Op, cols: Column[], col?: string): Step {
 		case 'transform':
 			return { op, column: c, fn: 'trim' };
 		case 'addcolumn':
-			return { op, name: 'Personnalisé', expr: '' };
+			return { op, name: t('query.default.custom'), expr: '' };
 		case 'index':
-			return { op, name: 'Index', start: 1 };
+			return { op, name: t('query.default.index'), start: 1 };
 		case 'merge':
 			return { op, other: { kind: 'table' }, keys: [c], otherKeys: [''], join: 'left' };
 		case 'append':
 			return { op, other: { kind: 'table' } };
 		case 'group':
-			return { op, columns: col ? [col] : [], aggs: [{ name: 'Nombre', op: 'count' }] };
+			return { op, columns: col ? [col] : [], aggs: [{ name: t('query.default.count'), op: 'count' }] };
 		case 'sort':
 			return { op, sort: [{ column: c }] };
 		case 'distinct':
@@ -118,7 +120,7 @@ export function defaultStep(op: Op, cols: Column[], col?: string): Step {
 		case 'top':
 			return { op, count: 100 };
 		case 'unpivot':
-			return { op, columns: col ? [col] : [], name: 'Attribut', valueName: 'Valeur' };
+			return { op, columns: col ? [col] : [], name: t('query.default.attribute'), valueName: t('query.default.value') };
 		case 'pivot':
 			return { op, column: c, valueColumn: cols.find((k) => k.name !== c)?.name ?? '', agg: 'sum' };
 	}
@@ -216,10 +218,10 @@ export function quickSteps(a: QuickAction, cols: Column[], selected: string[], a
 		case 'distinct':
 			return [{ op: 'distinct', columns: sel }];
 		case 'unpivot':
-			return [{ op: 'unpivot', columns: sel, name: 'Attribut', valueName: 'Valeur' }];
+			return [{ op: 'unpivot', columns: sel, name: t('query.default.attribute'), valueName: t('query.default.value') }];
 		case 'unpivotOthers': {
 			const rest = names.filter((n) => !sel.includes(n));
-			return rest.length ? [{ op: 'unpivot', columns: rest, name: 'Attribut', valueName: 'Valeur' }] : [];
+			return rest.length ? [{ op: 'unpivot', columns: rest, name: t('query.default.attribute'), valueName: t('query.default.value') }] : [];
 		}
 		case 'sortAsc':
 		case 'sortDesc':

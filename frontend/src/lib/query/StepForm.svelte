@@ -7,6 +7,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { Column, Step } from '#bindings/internal/query/models.js';
 	import { AGGS, CMPS, JOINS, OPS, TYPES, clone, otherKey, otherSource, type Op } from './steps';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		step: Step;
@@ -63,10 +64,10 @@
 			case 'remove':
 			case 'unpivot':
 				st.columns = ordered(st.columns);
-				if (!st.columns.length) return void (error = 'Cochez au moins une colonne.');
+				if (!st.columns.length) return void (error = t('query.step.need.columns'));
 				break;
 			case 'select':
-				if (!st.columns?.length) return void (error = 'Cochez au moins une colonne.');
+				if (!st.columns?.length) return void (error = t('query.step.need.columns'));
 				break;
 			case 'group':
 				st.columns = ordered(st.columns);
@@ -75,17 +76,17 @@
 				st.columns = ordered(st.columns);
 				break;
 			case 'rename':
-				if (!st.name?.trim()) return void (error = 'Donnez un nom.');
+				if (!st.name?.trim()) return void (error = t('query.step.need.name'));
 				break;
 			case 'addcolumn':
-				if (!st.name?.trim() || !st.expr?.trim()) return void (error = 'Donnez un nom et une expression.');
+				if (!st.name?.trim() || !st.expr?.trim()) return void (error = t('query.step.need.nameExpr'));
 				break;
 			case 'merge':
-				if (!st.other) return void (error = 'Choisissez la requête ou le tableau à fusionner.');
-				if ((st.keys ?? []).some((k) => !k) || (st.otherKeys ?? []).some((k) => !k)) return void (error = 'Choisissez les colonnes de correspondance des deux côtés.');
+				if (!st.other) return void (error = t('query.step.need.mergeOther'));
+				if ((st.keys ?? []).some((k) => !k) || (st.otherKeys ?? []).some((k) => !k)) return void (error = t('query.step.need.keys'));
 				break;
 			case 'append':
-				if (!st.other) return void (error = 'Choisissez la requête ou le tableau à ajouter.');
+				if (!st.other) return void (error = t('query.step.need.appendOther'));
 				break;
 		}
 		onok(st);
@@ -113,96 +114,96 @@
 			{#if s.op === 'filter'}
 				{#each s.conditions ?? [] as c, i (i)}
 					<div class="row">
-						{#if i > 0}<span class="conj">{s.any ? 'Ou' : 'Et'}</span>{/if}
+						{#if i > 0}<span class="conj">{s.any ? t('query.step.or') : t('query.step.and')}</span>{/if}
 						<Select bind:value={c.column} options={names} width="150px" />
 						<Select bind:value={c.cmp} options={CMPS.map(([v, label]) => ({ value: v, label }))} width="170px" />
-						{#if c.cmp !== 'empty' && c.cmp !== 'notempty'}<input bind:value={c.value} placeholder="Valeur" />{/if}
-						{#if (s.conditions ?? []).length > 1}<button class="x" title="Retirer" onclick={() => (s.conditions = (s.conditions ?? []).filter((_, k) => k !== i))}>✕</button>{/if}
+						{#if c.cmp !== 'empty' && c.cmp !== 'notempty'}<input bind:value={c.value} placeholder={t('query.default.value')} />{/if}
+						{#if (s.conditions ?? []).length > 1}<button class="x" title={t('query.step.remove')} onclick={() => (s.conditions = (s.conditions ?? []).filter((_, k) => k !== i))}>✕</button>{/if}
 					</div>
 				{/each}
 				<div class="row">
-					<button class="ico" onclick={() => (s.conditions = [...(s.conditions ?? []), { column: cols[0]?.name ?? '', cmp: '=', value: '' }])}><Icon name="plus" size={14} />Ajouter une condition</button>
-					<label><input type="radio" checked={!s.any} onchange={() => (s.any = false)} /> Et</label>
-					<label><input type="radio" checked={!!s.any} onchange={() => (s.any = true)} /> Ou</label>
+					<button class="ico" onclick={() => (s.conditions = [...(s.conditions ?? []), { column: cols[0]?.name ?? '', cmp: '=', value: '' }])}><Icon name="plus" size={14} />{t('query.step.filter.add')}</button>
+					<label><input type="radio" checked={!s.any} onchange={() => (s.any = false)} /> {t('query.step.and')}</label>
+					<label><input type="radio" checked={!!s.any} onchange={() => (s.any = true)} /> {t('query.step.or')}</label>
 				</div>
-				<p class="hint">Les nombres et les dates s'écrivent comme dans la grille (3,5 ; 31/12/2026). Contient, commence par et se termine par ne tiennent pas compte de la casse.</p>
+				<p class="hint">{t('query.step.filter.help')}</p>
 			{:else if s.op === 'rename'}
-				<label class="field">Colonne <Select bind:value={s.column!} options={names} width="100%" /></label>
-				<label class="field">Nouveau nom <input bind:value={s.name} /></label>
+				<label class="field">{t('query.step.column')} <Select bind:value={s.column!} options={names} width="100%" /></label>
+				<label class="field">{t('query.step.newName')} <input bind:value={s.name} /></label>
 			{:else if s.op === 'type'}
-				<label class="field">Colonne <Select bind:value={s.column!} options={names} width="100%" /></label>
-				<label class="field">Type <Select value={s.type ?? 'text'} options={TYPES.map(([v, label]) => ({ value: v, label }))} width="100%" onchange={(v) => (s.type = v as Step['type'])} /></label>
+				<label class="field">{t('query.step.column')} <Select bind:value={s.column!} options={names} width="100%" /></label>
+				<label class="field">{t('query.step.type')} <Select value={s.type ?? 'text'} options={TYPES.map(([v, label]) => ({ value: v, label }))} width="100%" onchange={(v) => (s.type = v as Step['type'])} /></label>
 			{:else if s.op === 'remove' || s.op === 'unpivot' || s.op === 'distinct'}
 				<div class="checks">
 					{#each cols as c (c.name)}
 						<label><input type="checkbox" checked={(s.columns ?? []).includes(c.name)} onchange={(e) => (s.columns = toggle(s.columns, c.name, (e.currentTarget as HTMLInputElement).checked))} /> {c.name}</label>
 					{/each}
 				</div>
-				{#if s.op === 'distinct'}<p class="hint">Aucune colonne cochée : une ligne est un doublon si toutes ses valeurs sont identiques.</p>{/if}
+				{#if s.op === 'distinct'}<p class="hint">{t('query.step.distinct.help')}</p>{/if}
 				{#if s.op === 'unpivot'}
-					<label class="field">Colonne des attributs <input bind:value={s.name} /></label>
-					<label class="field">Colonne des valeurs <input bind:value={s.valueName} /></label>
+					<label class="field">{t('query.step.unpivot.attribute')} <input bind:value={s.name} /></label>
+					<label class="field">{t('query.step.valueColumn')} <input bind:value={s.valueName} /></label>
 				{/if}
 			{:else if s.op === 'select'}
-				<p class="hint">Cochez les colonnes à garder ; ↑ ↓ changent leur ordre.</p>
+				<p class="hint">{t('query.step.select.help')}</p>
 				<div class="checks">
 					{#each [...(s.columns ?? []), ...cols.map((c) => c.name).filter((n) => !(s.columns ?? []).includes(n))] as n (n)}
 						{@const i = (s.columns ?? []).indexOf(n)}
 						<div class="sel">
 							<label><input type="checkbox" checked={i >= 0} onchange={(e) => (s.columns = toggle(s.columns, n, (e.currentTarget as HTMLInputElement).checked))} /> {n}</label>
 							{#if i >= 0}
-								<button class="x" disabled={i === 0} title="Monter" onclick={() => { const l = [...(s.columns ?? [])]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; s.columns = l; }}>↑</button>
-								<button class="x" disabled={i === (s.columns ?? []).length - 1} title="Descendre" onclick={() => { const l = [...(s.columns ?? [])]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; s.columns = l; }}>↓</button>
+								<button class="x" disabled={i === 0} title={t('query.step.up')} onclick={() => { const l = [...(s.columns ?? [])]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; s.columns = l; }}>↑</button>
+								<button class="x" disabled={i === (s.columns ?? []).length - 1} title={t('query.step.down')} onclick={() => { const l = [...(s.columns ?? [])]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; s.columns = l; }}>↓</button>
 							{/if}
 						</div>
 					{/each}
 				</div>
 			{:else if s.op === 'split'}
-				<label class="field">Colonne <Select bind:value={s.column!} options={names} width="100%" /></label>
-				<label class="field">Délimiteur <input bind:value={s.delimiter} /></label>
-				<label class="field">Nombre de colonnes <input type="number" min="2" max="100" bind:value={s.parts} /></label>
+				<label class="field">{t('query.step.column')} <Select bind:value={s.column!} options={names} width="100%" /></label>
+				<label class="field">{t('query.step.split.delimiter')} <input bind:value={s.delimiter} /></label>
+				<label class="field">{t('query.step.split.parts')} <input type="number" min="2" max="100" bind:value={s.parts} /></label>
 			{:else if s.op === 'replace'}
-				<label class="field">Colonne <Select bind:value={s.column!} options={names} width="100%" /></label>
-				<label class="field">Valeur à rechercher <input bind:value={s.value} /></label>
-				<label class="field">Remplacer par <input bind:value={s.with} /></label>
-				<p class="hint">Dans une colonne de texte, chaque occurrence est remplacée ; ailleurs, la valeur entière.</p>
+				<label class="field">{t('query.step.column')} <Select bind:value={s.column!} options={names} width="100%" /></label>
+				<label class="field">{t('query.step.replace.value')} <input bind:value={s.value} /></label>
+				<label class="field">{t('query.step.replace.with')} <input bind:value={s.with} /></label>
+				<p class="hint">{t('query.step.replace.help')}</p>
 			{:else if s.op === 'transform'}
-				<label class="field">Colonne <Select bind:value={s.column!} options={names} width="100%" /></label>
+				<label class="field">{t('query.step.column')} <Select bind:value={s.column!} options={names} width="100%" /></label>
 				<label class="field"
-					>Format <Select
+					>{t('query.op.transform.label')} <Select
 						bind:value={s.fn!}
 						options={[
-							{ value: 'trim', label: 'Supprimer les espaces (SUPPRESPACE)' },
-							{ value: 'upper', label: 'MAJUSCULE' },
-							{ value: 'lower', label: 'minuscule' }
+							{ value: 'trim', label: t('query.step.transform.trim') },
+							{ value: 'upper', label: t('query.step.transform.upper') },
+							{ value: 'lower', label: t('query.step.transform.lower') }
 						]}
 						width="100%"
 					/></label
 				>
 			{:else if s.op === 'addcolumn'}
-				<label class="field">Nom de la nouvelle colonne <input bind:value={s.name} /></label>
-				<label class="field">Formule (SQLite) <textarea rows="3" bind:value={s.expr} placeholder="[Quantité] * [Prix]"></textarea></label>
-				<p class="hint">Colonnes disponibles : {cols.map((c) => `[${c.name}]`).join(', ')}. Exemples : [Prix] * 1.2, upper([Ville]), [Nom] || ' ' || [Prénom], CASE WHEN [Montant] > 100 THEN 'gros' ELSE 'petit' END.</p>
-				<label class="field">Type <Select value={s.type ?? ''} options={[{ value: '', label: 'Auto (déduit des valeurs)' }, ...TYPES.map(([v, label]) => ({ value: v, label }))]} width="100%" onchange={(v) => (s.type = (v || undefined) as Step['type'])} /></label>
+				<label class="field">{t('query.step.addcolumn.name')} <input bind:value={s.name} /></label>
+				<label class="field">{t('query.step.addcolumn.expr')} <textarea rows="3" bind:value={s.expr} placeholder={t('query.step.addcolumn.placeholder')}></textarea></label>
+				<p class="hint">{t('query.step.addcolumn.help', { columns: cols.map((c) => `[${c.name}]`).join(', ') })}</p>
+				<label class="field">{t('query.step.type')} <Select value={s.type ?? ''} options={[{ value: '', label: t('query.step.autoType') }, ...TYPES.map(([v, label]) => ({ value: v, label }))]} width="100%" onchange={(v) => (s.type = (v || undefined) as Step['type'])} /></label>
 			{:else if s.op === 'index'}
-				<label class="field">Nom <input bind:value={s.name} /></label>
-				<label class="field">Commencer à <input type="number" bind:value={s.start} /></label>
+				<label class="field">{t('query.step.name')} <input bind:value={s.name} /></label>
+				<label class="field">{t('query.step.index.start')} <input type="number" bind:value={s.start} /></label>
 			{:else if s.op === 'merge' || s.op === 'append'}
-				<label class="field">{s.op === 'merge' ? 'Fusionner avec' : 'Ajouter les lignes de'} <Select bind:value={other} options={others.map((o) => ({ value: o.key, label: o.label }))} width="100%" /></label>
+				<label class="field">{s.op === 'merge' ? t('query.step.merge.with') : t('query.step.append.from')} <Select bind:value={other} options={others.map((o) => ({ value: o.key, label: o.label }))} width="100%" /></label>
 				{#if s.op === 'merge'}
-					<p class="hint">Colonnes de correspondance (première requête ↔ seconde) :</p>
+					<p class="hint">{t('query.step.merge.keys')}</p>
 					{#each s.keys ?? [] as _, i (i)}
 						<div class="row">
 							<Select bind:value={s.keys![i]} options={names} width="170px" />
 							<span>↔</span>
 							<Select bind:value={s.otherKeys![i]} options={theirNames} width="170px" />
-							{#if (s.keys ?? []).length > 1}<button class="x" title="Retirer" onclick={() => { s.keys = s.keys!.filter((_, k) => k !== i); s.otherKeys = s.otherKeys!.filter((_, k) => k !== i); }}>✕</button>{/if}
+							{#if (s.keys ?? []).length > 1}<button class="x" title={t('query.step.remove')} onclick={() => { s.keys = s.keys!.filter((_, k) => k !== i); s.otherKeys = s.otherKeys!.filter((_, k) => k !== i); }}>✕</button>{/if}
 						</div>
 					{/each}
-					<button class="ico" onclick={() => { s.keys = [...(s.keys ?? []), cols[0]?.name ?? '']; s.otherKeys = [...(s.otherKeys ?? []), theirs[0]?.name ?? '']; }}><Icon name="plus" size={14} />Ajouter une colonne de correspondance</button>
-					<label class="field">Type de jointure <Select bind:value={s.join!} options={JOINS.map(([v, label]) => ({ value: v, label }))} width="100%" /></label>
+					<button class="ico" onclick={() => { s.keys = [...(s.keys ?? []), cols[0]?.name ?? '']; s.otherKeys = [...(s.otherKeys ?? []), theirs[0]?.name ?? '']; }}><Icon name="plus" size={14} />{t('query.step.merge.addKey')}</button>
+					<label class="field">{t('query.step.merge.join')} <Select bind:value={s.join!} options={JOINS.map(([v, label]) => ({ value: v, label }))} width="100%" /></label>
 					{#if s.join !== 'anti'}
-						<p class="hint">Colonnes à reprendre de la seconde (aucune cochée : toutes sauf les colonnes de correspondance) :</p>
+						<p class="hint">{t('query.step.merge.columns')}</p>
 						<div class="checks">
 							{#each theirs as c (c.name)}
 								<label><input type="checkbox" checked={(s.columns ?? []).includes(c.name)} onchange={(e) => (s.columns = toggle(s.columns, c.name, (e.currentTarget as HTMLInputElement).checked))} /> {c.name}</label>
@@ -210,39 +211,39 @@
 						</div>
 					{/if}
 				{:else}
-					<p class="hint">Les colonnes sont rapprochées par leur nom ; une colonne absente d'un côté reste vide.</p>
+					<p class="hint">{t('query.step.append.help')}</p>
 				{/if}
 			{:else if s.op === 'group'}
-				<p class="hint">Regrouper par :</p>
+				<p class="hint">{t('query.step.group.by')}</p>
 				<div class="checks">
 					{#each cols as c (c.name)}
 						<label><input type="checkbox" checked={(s.columns ?? []).includes(c.name)} onchange={(e) => (s.columns = toggle(s.columns, c.name, (e.currentTarget as HTMLInputElement).checked))} /> {c.name}</label>
 					{/each}
 				</div>
-				<p class="hint">Agrégats :</p>
+				<p class="hint">{t('query.step.group.aggs')}</p>
 				{#each s.aggs ?? [] as a, i (i)}
 					<div class="row">
-						<input bind:value={a.name} placeholder="Nom" />
+						<input bind:value={a.name} placeholder={t('query.step.name')} />
 						<Select bind:value={a.op} options={AGGS.map(([v, label]) => ({ value: v, label }))} width="140px" />
 						{#if a.op !== 'count'}<Select value={a.column ?? ''} options={names} width="140px" onchange={(v) => (a.column = v)} />{/if}
-						<button class="x" title="Retirer" onclick={() => (s.aggs = (s.aggs ?? []).filter((_, k) => k !== i))}>✕</button>
+						<button class="x" title={t('query.step.remove')} onclick={() => (s.aggs = (s.aggs ?? []).filter((_, k) => k !== i))}>✕</button>
 					</div>
 				{/each}
-				<button class="ico" onclick={() => (s.aggs = [...(s.aggs ?? []), { name: '', op: 'sum', column: cols.find((c) => c.type === 'integer' || c.type === 'decimal')?.name ?? cols[0]?.name }])}><Icon name="plus" size={14} />Ajouter un agrégat</button>
+				<button class="ico" onclick={() => (s.aggs = [...(s.aggs ?? []), { name: '', op: 'sum', column: cols.find((c) => c.type === 'integer' || c.type === 'decimal')?.name ?? cols[0]?.name }])}><Icon name="plus" size={14} />{t('query.step.group.add')}</button>
 			{:else if s.op === 'sort'}
 				{#each s.sort ?? [] as k, i (i)}
 					<div class="row">
-						<span class="conj">{i === 0 ? 'Trier par' : 'Puis par'}</span>
+						<span class="conj">{i === 0 ? t('query.step.sort.by') : t('query.step.sort.then')}</span>
 						<Select bind:value={k.column} options={names} width="170px" />
-						<Select value={k.desc ? 1 : 0} options={[{ value: 0, label: k.order?.length ? 'Dans l’ordre' : 'Croissant' }, { value: 1, label: k.order?.length ? 'À rebours' : 'Décroissant' }]} width="120px" onchange={(v) => (k.desc = v === 1 || undefined)} />
-						{#if (s.sort ?? []).length > 1}<button class="x" title="Retirer" onclick={() => (s.sort = (s.sort ?? []).filter((_, j) => j !== i))}>✕</button>{/if}
+						<Select value={k.desc ? 1 : 0} options={[{ value: 0, label: k.order?.length ? t('query.step.sort.inOrder') : t('query.step.sort.asc') }, { value: 1, label: k.order?.length ? t('query.step.sort.reverse') : t('query.step.sort.desc') }]} width="120px" onchange={(v) => (k.desc = v === 1 || undefined)} />
+						{#if (s.sort ?? []).length > 1}<button class="x" title={t('query.step.remove')} onclick={() => (s.sort = (s.sort ?? []).filter((_, j) => j !== i))}>✕</button>{/if}
 					</div>
 					<!-- Tri personnalisé : ces valeurs d'abord, dans cet ordre (sans casse), puis les autres. -->
 					<label class="field order"
-						>Ordre personnalisé (facultatif, valeurs séparées par « ; »)
+						>{t('query.step.sort.custom')}
 						<input
 							value={(k.order ?? []).join('; ')}
-							placeholder="Haute; Moyenne; Basse"
+							placeholder={t('query.step.sort.customPlaceholder')}
 							onchange={(e) => {
 								const vals = (e.currentTarget as HTMLInputElement).value.split(';').map((x) => x.trim()).filter((x) => x !== '');
 								k.order = vals.length ? vals : undefined;
@@ -250,20 +251,20 @@
 						/></label
 					>
 				{/each}
-				<button class="ico" onclick={() => (s.sort = [...(s.sort ?? []), { column: cols[0]?.name ?? '' }])}><Icon name="plus" size={14} />Ajouter un niveau</button>
+				<button class="ico" onclick={() => (s.sort = [...(s.sort ?? []), { column: cols[0]?.name ?? '' }])}><Icon name="plus" size={14} />{t('query.step.sort.add')}</button>
 			{:else if s.op === 'top'}
-				<label class="field">Nombre de lignes <input type="number" min="0" bind:value={s.count} /></label>
+				<label class="field">{t('query.step.top.count')} <input type="number" min="0" bind:value={s.count} /></label>
 			{:else if s.op === 'pivot'}
-				<label class="field">Colonne dont les valeurs deviennent des colonnes <Select bind:value={s.column!} options={names} width="100%" /></label>
-				<label class="field">Colonne des valeurs <Select bind:value={s.valueColumn!} options={names} width="100%" /></label>
-				<label class="field">Agrégat <Select bind:value={s.agg!} options={AGGS.filter(([v]) => v !== 'countdistinct').map(([v, label]) => ({ value: v, label: v === 'count' ? 'Nombre' : label }))} width="100%" /></label>
-				<p class="hint">50 valeurs distinctes au plus ; les autres colonnes regroupent les lignes.</p>
+				<label class="field">{t('query.step.pivot.column')} <Select bind:value={s.column!} options={names} width="100%" /></label>
+				<label class="field">{t('query.step.valueColumn')} <Select bind:value={s.valueColumn!} options={names} width="100%" /></label>
+				<label class="field">{t('query.step.pivot.agg')} <Select bind:value={s.agg!} options={AGGS.filter(([v]) => v !== 'countdistinct').map(([v, label]) => ({ value: v, label: v === 'count' ? t('query.default.count') : label }))} width="100%" /></label>
+				<p class="hint">{t('query.step.pivot.help')}</p>
 			{/if}
 		</div>
 		{#if error}<p class="error">{error}</p>{/if}
 		<footer>
-			<button class="primary" onclick={ok}>OK</button>
-			<button onclick={oncancel}>Annuler</button>
+			<button class="primary" onclick={ok}>{t('common.ok')}</button>
+			<button onclick={oncancel}>{t('common.cancel')}</button>
 		</footer>
 	</div>
 </div>

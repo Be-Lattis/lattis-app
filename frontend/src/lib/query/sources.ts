@@ -2,6 +2,7 @@
 // internal/query et docs/decisions/0003) : libellés, ports par défaut,
 // description d'une connexion, en-têtes HTTP saisis en texte.
 import type { Connection, Header } from '#bindings/internal/query/models.js';
+import { t, tAny } from '#lib/i18n/index.js';
 
 /** Genres de connexion (Connection.kind). */
 export type ConnKind = 'postgres' | 'mysql' | 'sqlserver' | 'web' | 'lattis';
@@ -23,29 +24,24 @@ export const CONN_LABELS: Record<ConnKind, string> = {
 	postgres: 'PostgreSQL',
 	mysql: 'MySQL / MariaDB',
 	sqlserver: 'SQL Server',
-	web: 'Web (API)',
-	lattis: 'Serveur Lattis'
+	get web() {
+	return t('query.conn.web');
+},
+get lattis() {
+return t('query.conn.lattis');
+}
 };
 
 export const DEFAULT_PORT: Partial<Record<ConnKind, number>> = { postgres: 5432, mysql: 3306, sqlserver: 1433 };
 
 /** Types de source, dans l'ordre du choix de la source. */
-export const SOURCE_KINDS = [
-	{ value: 'csv', label: 'Fichier texte ou CSV' },
-	{ value: 'xlsx', label: 'Classeur Excel' },
-	{ value: 'json', label: 'Fichier JSON' },
-	{ value: 'parquet', label: 'Fichier Parquet' },
-	{ value: 'sqlite', label: 'Base SQLite (fichier)' },
-	{ value: 'table', label: 'Tableau du classeur' },
-	{ value: 'query', label: 'Autre requête' },
-	{ value: 'sql', label: 'Requête SQL du classeur' },
-	{ value: 'postgres', label: 'PostgreSQL' },
-	{ value: 'mysql', label: 'MySQL / MariaDB' },
-	{ value: 'sqlserver', label: 'SQL Server' },
-	{ value: 'web', label: 'Web (API JSON)' },
-	{ value: 'lattis', label: 'Serveur Lattis' },
-	{ value: 'formula', label: 'Formule (tableau lié)' }
-];
+const sourceKind = (value: string) => ({
+	value,
+	get label() {
+	return tAny(`query.sourceKind.${value}`);
+	}
+	});
+	export const SOURCE_KINDS: { value: string; readonly label: string }[] = ['csv', 'xlsx', 'json', 'parquet', 'sqlite', 'table', 'query', 'sql', 'postgres', 'mysql', 'sqlserver', 'web', 'lattis', 'formula'].map(sourceKind);
 
 /**
  * Types de source proposés : sans Serveur Lattis quand les classeurs

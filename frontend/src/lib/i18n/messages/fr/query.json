@@ -1,1 +1,525 @@
-{}
+{
+	"conn": {
+		"web": "Web (API)",
+		"lattis": "Serveur Lattis",
+		"dialog": {
+			"webOk": "Le serveur répond.",
+			"ok": "Connexion réussie.",
+			"nameInvalid": {
+				"title": "Nom de connexion invalide",
+				"message": "Le nom de la connexion ne peut pas être vide : il la désigne dans les requêtes du classeur.\n\nDonnez-lui un nom."
+			},
+			"nameTaken": "Nom de connexion déjà pris",
+			"aria": "Connexion {kind}",
+			"webTitle": "Connexion à une API web",
+			"dbTitle": "Base de données {kind}",
+			"host": "Serveur",
+			"port": "Port",
+			"instance": {
+				"label": "Instance",
+				"placeholder": "(par défaut) ou SQLEXPRESS"
+			},
+			"database": {
+				"label": "Base de données",
+				"optional": "(facultative)"
+			},
+			"user": {
+				"label": "Utilisateur",
+				"windows": "vide : authentification Windows"
+			},
+			"ssl": {
+				"label": "Chiffrement (SSL/TLS)",
+				"driver": "Réglage du pilote",
+				"prefer": "Si le serveur le propose",
+				"disable": "Désactivé",
+				"require": "Obligatoire",
+				"verify": "Obligatoire, certificat vérifié"
+			},
+			"web": {
+				"url": "Adresse de l’API",
+				"urlPlaceholder": "https://api.exemple.fr/v1",
+				"header": "En-tête du jeton",
+				"user": "Utilisateur (Basic)",
+				"userPlaceholder": "vide : jeton seul"
+			},
+			"orgServer": "Serveur de votre organisation",
+			"noServer": "Aucun serveur : ajoutez-en un avec « Gérer les serveurs… »",
+			"version": "version {version}",
+			"invitation": "sur invitation",
+			"connected": "Connecté : {user}",
+			"notConnected": "Non connecté",
+			"signIn": "Se connecter…",
+			"name": "Nom de la connexion",
+			"token": "Jeton",
+			"remembered": "(mémorisé)",
+			"remember": "Mémoriser dans le trousseau du système",
+			"help": {
+				"lattis": "Aucun mot de passe n’est enregistré : la connexion utilise votre session sur le serveur (menu Compte de la barre de titre), et ce que vos droits vous permettent d’y lire. Comme source de requête, elle ne sert qu’à lire (sur un réplica quand le serveur en annonce).",
+				"web": "Le jeton n’est jamais enregistré dans le classeur ; il n’est envoyé qu’aux adresses qui commencent par celle de la connexion",
+				"bearer": " : Bearer ajouté à un jeton seul",
+				"db": "Le mot de passe n’est jamais enregistré dans le classeur. La connexion ne sert qu’à lire",
+				"readOnly": "transaction en lecture seule",
+				"selectOnly": "requêtes SELECT seulement, transaction toujours annulée"
+			},
+			"test": "Tester"
+		}
+	},
+	"sourceKind": {
+		"csv": "Fichier texte ou CSV",
+		"xlsx": "Classeur Excel",
+		"json": "Fichier JSON",
+		"parquet": "Fichier Parquet",
+		"sqlite": "Base SQLite (fichier)",
+		"table": "Tableau du classeur",
+		"query": "Autre requête",
+		"sql": "Requête SQL du classeur",
+		"postgres": "PostgreSQL",
+		"mysql": "MySQL / MariaDB",
+		"sqlserver": "SQL Server",
+		"web": "Web (API JSON)",
+		"lattis": "Serveur Lattis",
+		"formula": "Formule (tableau lié)"
+	},
+	"op": {
+		"select": {
+			"label": "Choisir les colonnes",
+			"hint": "Garder certaines colonnes, dans l'ordre voulu"
+		},
+		"remove": {
+			"label": "Supprimer les colonnes",
+			"hint": "Retirer des colonnes"
+		},
+		"rename": {
+			"label": "Renommer",
+			"hint": "Renommer une colonne"
+		},
+		"type": {
+			"label": "Type de données",
+			"hint": "Changer le type d'une colonne (une valeur non convertible devient vide)"
+		},
+		"filter": {
+			"label": "Filtrer les lignes",
+			"hint": "Garder les lignes qui vérifient des conditions"
+		},
+		"sort": {
+			"label": "Trier",
+			"hint": "Trier les lignes"
+		},
+		"distinct": {
+			"label": "Supprimer les doublons",
+			"hint": "Garder une ligne par valeur (de toutes les colonnes ou de certaines)"
+		},
+		"top": {
+			"label": "Premières lignes",
+			"hint": "Conserver les N premières lignes"
+		},
+		"split": {
+			"label": "Fractionner la colonne",
+			"hint": "Découper une colonne de texte par délimiteur"
+		},
+		"replace": {
+			"label": "Remplacer les valeurs",
+			"hint": "Remplacer une valeur par une autre"
+		},
+		"transform": {
+			"label": "Format",
+			"hint": "SUPPRESPACE, MAJUSCULE, minuscule"
+		},
+		"addcolumn": {
+			"label": "Colonne personnalisée",
+			"hint": "Nouvelle colonne calculée par une expression SQLite ([Colonne] désigne une colonne)"
+		},
+		"index": {
+			"label": "Colonne d'index",
+			"hint": "Numéroter les lignes"
+		},
+		"group": {
+			"label": "Regrouper par",
+			"hint": "Regrouper les lignes et calculer des agrégats"
+		},
+		"unpivot": {
+			"label": "Dépivoter",
+			"hint": "Transformer des colonnes en lignes (attribut, valeur)"
+		},
+		"pivot": {
+			"label": "Pivoter",
+			"hint": "Transformer les valeurs d'une colonne en colonnes"
+		},
+		"merge": {
+			"label": "Fusionner",
+			"hint": "Joindre une autre requête ou un tableau par des colonnes communes"
+		},
+		"append": {
+			"label": "Ajouter",
+			"hint": "Mettre à la suite les lignes d'une autre requête ou d'un tableau"
+		}
+	},
+	"type": {
+		"text": "Texte",
+		"integer": "Entier",
+		"decimal": "Décimal",
+		"date": "Date",
+		"boolean": "Booléen",
+		"auto": "Auto"
+	},
+	"cmp": {
+		"eq": "est égal à",
+		"ne": "est différent de",
+		"gt": "est supérieur à",
+		"ge": "est supérieur ou égal à",
+		"lt": "est inférieur à",
+		"le": "est inférieur ou égal à",
+		"contains": "contient",
+		"notcontains": "ne contient pas",
+		"begins": "commence par",
+		"ends": "se termine par",
+		"empty": "est vide",
+		"notempty": "n'est pas vide"
+	},
+	"agg": {
+		"sum": "Somme",
+		"avg": "Moyenne",
+		"count": "Nombre de lignes",
+		"countdistinct": "Nombre distinct",
+		"min": "Min",
+		"max": "Max"
+	},
+	"join": {
+		"left": "Externe gauche (toutes les lignes de la première, celles qui correspondent de la seconde)",
+		"inner": "Interne (seulement les lignes qui correspondent)",
+		"full": "Externe entière (toutes les lignes des deux)",
+		"right": "Externe droite (toutes les lignes de la seconde)",
+		"anti": "Anti gauche (lignes de la première sans correspondance)"
+	},
+	"default": {
+		"custom": "Personnalisé",
+		"index": "Index",
+		"count": "Nombre",
+		"attribute": "Attribut",
+		"value": "Valeur"
+	},
+	"password": {
+		"title": "Mot de passe",
+		"header": "Connexion « {name} »",
+		"stored": "Ce classeur veut se connecter avec votre mot de passe enregistré sur cet ordinateur.",
+		"storedHelp": "Autorisez-le si vous connaissez ce classeur : l'accord est retenu pour lui sur ce poste. Un classeur reçu d'une source inconnue ne devrait pas l'avoir.",
+		"allow": "Autoriser",
+		"other": "Saisir un autre mot de passe",
+		"refuse": "Refuser",
+		"refused": "Le serveur a refusé le mot de passe.",
+		"asked": "Le serveur demande un mot de passe.",
+		"remember": "Mémoriser sur cet ordinateur (trousseau du système)",
+		"never": "Il n'est jamais enregistré dans le classeur."
+	},
+	"host": {
+		"group": {
+			"file": "Fichier",
+			"database": "Base de données",
+			"other": "Autres sources"
+		},
+		"source": {
+			"csv": "Texte/CSV",
+			"sqlite": "Base SQLite"
+		},
+		"noExcelTable": "Aucun tableau de deux lignes ou plus dans ce classeur.",
+		"noTable": "Le classeur n’a aucun tableau.",
+		"refreshingAll": "Actualisation de toutes les requêtes…",
+		"refreshing": "Actualisation…",
+		"passwordAbandoned": "Actualisation abandonnée : mot de passe non saisi.",
+		"refreshedAll": "{n, plural, one {# requête actualisée} other {# requêtes actualisées}}",
+		"nothingToRefresh": "Aucune requête chargée à actualiser",
+		"loaded": "Tableau « {table} » : {n, plural, one {# ligne chargée} other {# lignes chargées}}",
+		"saved": "Requête « {name} » enregistrée",
+		"deleted": "Requête « {name} » supprimée (Ctrl+Z pour annuler)",
+		"deletedTable": "Requête « {name} » supprimée ; le tableau {table} reste sur sa feuille (Ctrl+Z pour annuler)",
+		"connDeleted": "Connexion « {name} » supprimée (Ctrl+Z pour annuler)",
+		"forgotten": "Mot de passe de « {name} » oublié",
+		"panel": {
+			"title": "Requêtes et connexions",
+			"help": "Aide sur les requêtes et connexions"
+		},
+		"queries": "Requêtes",
+		"editQuery": "Modifier la requête « {name} »",
+		"refreshedOn": "Actualisée le {date}",
+		"connectionOnly": "Connexion seulement",
+		"refresh": "Actualiser",
+		"load": "Charger",
+		"more": "Plus d'actions",
+		"edit": "Modifier",
+		"delete": "Supprimer",
+		"noQuery": "Aucune requête : Données › Obtenir des données.",
+		"connections": "Connexions",
+		"editConn": "Modifier la connexion « {name} »",
+		"tokenRemembered": "jeton mémorisé",
+		"passwordRemembered": "mot de passe mémorisé",
+		"forgetToken": "Oublier le jeton",
+		"forgetPassword": "Oublier le mot de passe",
+		"newConn": "Nouvelle connexion…"
+	},
+	"source": {
+		"passwordRequired": "Mot de passe requis pour lister les tables.",
+		"need": {
+			"file": "Choisissez un fichier.",
+			"xlsxTable": "Choisissez un tableau du classeur.",
+			"table": "Choisissez un tableau.",
+			"query": "Choisissez une requête.",
+			"connection": "Choisissez une connexion et une table (ou écrivez une requête SQL).",
+			"fileTable": "Choisissez une table (ou écrivez une requête SQL).",
+			"sql": "Écrivez une requête SQL.",
+			"formula": "Écrivez une formule qui commence par =.",
+			"url": "L’adresse doit commencer par http:// ou https://."
+		},
+		"title": "Source",
+		"kind": "Type de source",
+		"file": {
+			"label": "Fichier",
+			"placeholder": "Chemin du fichier",
+			"browse": "Parcourir…"
+		},
+		"csv": {
+			"delimiter": "Séparateur",
+			"auto": "Détecté automatiquement",
+			"semicolon": "Point-virgule (;)",
+			"comma": "Virgule (,)",
+			"tab": "Tabulation",
+			"pipe": "Barre verticale (|)"
+		},
+		"xlsx": {
+			"table": "tableau {n}"
+		},
+		"recordPath": {
+			"label": "Chemin des enregistrements",
+			"placeholder": "vide : la racine ou son seul tableau ; ex. data.items"
+		},
+		"json": {
+			"help": "Tableau d’objets, ou un objet JSON par ligne (NDJSON). Les objets imbriqués deviennent des colonnes « parent.enfant »."
+		},
+		"parquet": {
+			"help": "Chaque colonne du fichier donne une colonne (« parent.enfant » pour une structure ; une liste devient du texte)."
+		},
+		"table": "Tableau",
+		"query": "Requête",
+		"queryHelp": "La requête part du résultat de l'autre requête (référence) : modifier l'autre requête change aussi celle-ci.",
+		"newConn": "Nouvelle…",
+		"web": {
+			"url": "Adresse (GET)",
+			"urlPlaceholder": "https://api.exemple.fr/v1/clients?page=1",
+			"headers": "En-têtes (un par ligne, « Nom: valeur »)",
+			"auth": "Authentification",
+			"public": "Aucune (API publique)",
+			"help": "Les en-têtes sont enregistrés dans le classeur : un jeton ou une clé d’API passe par une connexion Web (gardée dans le trousseau du système)."
+		},
+		"tables": "Tables et vues",
+		"search": "Rechercher",
+		"view": "(vue)",
+		"sql": {
+			"label": "Requête SQL (lecture seule)",
+			"dbHelp": "Filtrez de préférence ici : la requête est exécutée par le serveur, les étapes ensuite par Lattis.",
+			"fileHelp": "Le fichier est ouvert en lecture seule ; les étapes s’appliquent ensuite.",
+			"workbook": "Requête SQL sur le classeur (lecture seule)",
+			"workbookHelp": "Comme dans l'onglet SQL : la requête est relue à chaque actualisation.",
+			"sheet": "Les adresses Cell[A1] sans feuille se lisent sur « {sheet} »."
+		},
+		"formula": {
+			"label": "Formule (tableau dynamique)",
+			"help": "Le tableau se recalcule quand ses sources changent (sans étapes ; avec des étapes, à l'actualisation, F5)."
+		}
+	},
+	"step": {
+		"need": {
+			"columns": "Cochez au moins une colonne.",
+			"name": "Donnez un nom.",
+			"nameExpr": "Donnez un nom et une expression.",
+			"mergeOther": "Choisissez la requête ou le tableau à fusionner.",
+			"keys": "Choisissez les colonnes de correspondance des deux côtés.",
+			"appendOther": "Choisissez la requête ou le tableau à ajouter."
+		},
+		"or": "Ou",
+		"and": "Et",
+		"remove": "Retirer",
+		"filter": {
+			"add": "Ajouter une condition",
+			"help": "Les nombres et les dates s'écrivent comme dans la grille (3,5 ; 31/12/2026). Contient, commence par et se termine par ne tiennent pas compte de la casse."
+		},
+		"column": "Colonne",
+		"newName": "Nouveau nom",
+		"type": "Type",
+		"distinct": {
+			"help": "Aucune colonne cochée : une ligne est un doublon si toutes ses valeurs sont identiques."
+		},
+		"unpivot": {
+			"attribute": "Colonne des attributs"
+		},
+		"valueColumn": "Colonne des valeurs",
+		"select": {
+			"help": "Cochez les colonnes à garder ; ↑ ↓ changent leur ordre."
+		},
+		"up": "Monter",
+		"down": "Descendre",
+		"split": {
+			"delimiter": "Délimiteur",
+			"parts": "Nombre de colonnes"
+		},
+		"replace": {
+			"value": "Valeur à rechercher",
+			"with": "Remplacer par",
+			"help": "Dans une colonne de texte, chaque occurrence est remplacée ; ailleurs, la valeur entière."
+		},
+		"transform": {
+			"trim": "Supprimer les espaces (SUPPRESPACE)",
+			"upper": "MAJUSCULE",
+			"lower": "minuscule"
+		},
+		"addcolumn": {
+			"name": "Nom de la nouvelle colonne",
+			"expr": "Formule (SQLite)",
+			"placeholder": "[Quantité] * [Prix]",
+			"help": "Colonnes disponibles : {columns}. Exemples : [Prix] * 1.2, upper([Ville]), [Nom] || ' ' || [Prénom], CASE WHEN [Montant] > 100 THEN 'gros' ELSE 'petit' END."
+		},
+		"autoType": "Auto (déduit des valeurs)",
+		"name": "Nom",
+		"index": {
+			"start": "Commencer à"
+		},
+		"merge": {
+			"with": "Fusionner avec",
+			"keys": "Colonnes de correspondance (première requête ↔ seconde) :",
+			"addKey": "Ajouter une colonne de correspondance",
+			"join": "Type de jointure",
+			"columns": "Colonnes à reprendre de la seconde (aucune cochée : toutes sauf les colonnes de correspondance) :"
+		},
+		"append": {
+			"from": "Ajouter les lignes de",
+			"help": "Les colonnes sont rapprochées par leur nom ; une colonne absente d'un côté reste vide."
+		},
+		"group": {
+			"by": "Regrouper par :",
+			"aggs": "Agrégats :",
+			"add": "Ajouter un agrégat"
+		},
+		"sort": {
+			"by": "Trier par",
+			"then": "Puis par",
+			"inOrder": "Dans l’ordre",
+			"asc": "Croissant",
+			"reverse": "À rebours",
+			"desc": "Décroissant",
+			"custom": "Ordre personnalisé (facultatif, valeurs séparées par « ; »)",
+			"customPlaceholder": "Haute; Moyenne; Basse",
+			"add": "Ajouter un niveau"
+		},
+		"top": {
+			"count": "Nombre de lignes"
+		},
+		"pivot": {
+			"column": "Colonne dont les valeurs deviennent des colonnes",
+			"agg": "Agrégat",
+			"help": "50 valeurs distinctes au plus ; les autres colonnes regroupent les lignes."
+		}
+	},
+	"editor": {
+		"otherQuery": "Requête {name}",
+		"otherTable": "Tableau {name}",
+		"needName": "Donnez un nom à la requête.",
+		"tab": {
+			"home": "Accueil",
+			"transform": "Transformer",
+			"addColumn": "Ajouter une colonne"
+		},
+		"group": {
+			"close": "Fermer",
+			"columns": "Gérer les colonnes",
+			"rows": "Réduire les lignes",
+			"combine": "Combiner",
+			"table": "Tableau",
+			"anyColumn": "Toute colonne",
+			"textColumn": "Colonne de texte",
+			"general": "Général"
+		},
+		"cmd": {
+			"closeLoad": {
+				"label": "Fermer et charger",
+				"hint": "Enregistrer la requête et charger son résultat dans un tableau"
+			},
+			"save": {
+				"hint": "Enregistrer la requête sans la charger (connexion seulement)"
+			},
+			"cancel": {
+				"hint": "Fermer l’éditeur de requête sans enregistrer les changements (le classeur reste ouvert)"
+			},
+			"refresh": {
+				"label": "Actualiser l’aperçu",
+				"hint": "Relire les sources"
+			},
+			"source": {
+				"label": "Source…",
+				"hint": "Modifier la source de la requête"
+			},
+			"sql": {
+				"label": "Voir le SQL",
+				"hint": "Afficher le SQL de l’aperçu"
+			},
+			"undo": {
+				"label": "Défaire",
+				"hint": "Retirer la dernière action sur les étapes (Ctrl+Z)"
+			},
+			"redo": {
+				"label": "Rétablir",
+				"hint": "Remettre l’action défaite (Ctrl+Y)"
+			},
+			"sortDialog": "Trier…",
+			"asc": {
+				"hint": "Trier par les colonnes choisies, croissant"
+			},
+			"desc": {
+				"hint": "Trier par les colonnes choisies, décroissant"
+			},
+			"mergeQueries": "Fusionner des requêtes",
+			"appendQueries": "Ajouter des requêtes",
+			"unpivot": "Dépivoter les colonnes",
+			"pivot": "Pivoter la colonne"
+		},
+		"title": "Éditeur de requête",
+		"tabs": "Onglets du ruban",
+		"close": {
+			"tooltip": "Annuler : fermer l’éditeur de requête sans enregistrer (le classeur reste ouvert)",
+			"aria": "Annuler et fermer l’éditeur de requête"
+		},
+		"errorStep": "Étape {n} ({label})",
+		"previousStep": "aperçu de l'étape précédente",
+		"header": {
+			"tooltip": "{name} : {type} — clic droit ou ▾ : menu de la colonne ; Ctrl ou Maj : plusieurs colonnes",
+			"menu": "Menu de la colonne {name}"
+		},
+		"computing": "Calcul de l'aperçu…",
+		"noData": "Aucune donnée.",
+		"status": {
+			"size": "{columns, plural, one {# colonne} other {# colonnes}}, {rows, plural, one {# ligne} other {# lignes}}",
+			"sample": "aperçu calculé sur les 1 000 premières lignes de chaque source",
+			"shown": "({n} affichées)"
+		},
+		"hideSql": "Masquer le SQL",
+		"properties": "Propriétés",
+		"applied": "Étapes appliquées",
+		"step": {
+			"edit": "Modifier l'étape",
+			"delete": "Supprimer l'étape"
+		},
+		"help": "Une nouvelle étape s'insère après l'étape choisie. Cliquez un en-tête de colonne pour la choisir (Ctrl ou Maj : plusieurs) ; son ▾ ou un clic droit ouvre le menu de la colonne.",
+		"menu": {
+			"count": "({n} colonnes)",
+			"chosen": "{n} colonnes choisies",
+			"keep": "Supprimer les autres colonnes",
+			"rename": "Renommer…",
+			"type": "Modifier le type",
+			"replace": "Remplacer les valeurs…",
+			"split": "Fractionner la colonne…",
+			"asc": "Trier par ordre croissant",
+			"desc": "Trier par ordre décroissant",
+			"filter": "Filtrer les lignes…",
+			"group": "Regrouper par…",
+			"unpivotOthers": "Dépivoter les autres colonnes",
+			"pivot": "Pivoter la colonne…"
+		}
+	}
+}

@@ -19,7 +19,7 @@
 	import SourceForm from './SourceForm.svelte';
 	import type { ConnKind } from './sources';
 	import { OPS, TYPES, clickColumns, clone, defaultStep, insertStep, moveStep, newQuery, otherSource, quickSteps, sourceCancel, typeName, withColumns, type Op, type QuickAction } from './steps';
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		query: Query;
@@ -58,10 +58,10 @@
 	let error = $state('');
 	let busy = $state(false);
 	let showSQL = $state(false);
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 
 	const otherQueries = $derived(queries.filter((n) => n.toLowerCase() !== q.name.toLowerCase()));
-	const others = $derived([...otherQueries.map((n) => ({ key: 'query:' + n, label: 'Requête ' + n })), ...tables.map((n) => ({ key: 'table:' + n, label: 'Tableau ' + n }))]);
+	const others = $derived([...otherQueries.map((n) => ({ key: 'query:' + n, label: t('query.editor.otherQuery', { name: n }) })), ...tables.map((n) => ({ key: 'table:' + n, label: t('query.editor.otherTable', { name: n }) }))]);
 
 	let seq = 0;
 	async function refresh(fresh = false) {
@@ -262,7 +262,7 @@
 
 	async function finish(load: boolean) {
 		error = '';
-		if (!q.name.trim()) return void (error = 'Donnez un nom à la requête.');
+		if (!q.name.trim()) return void (error = t('query.editor.needName'));
 		busy = true;
 		try {
 			const msg = await onfinish(clone(q), load);
@@ -272,7 +272,7 @@
 		}
 	}
 
-	const labels = $derived(preview?.labels ?? ['Source', ...(q.steps ?? []).map((s) => s.op)]);
+	const labels = $derived(preview?.labels ?? [t('query.source.title'), ...(q.steps ?? []).map((s) => s.op)]);
 
 	// Ruban, comme celui de Power Query : onglets Accueil, Transformer et
 	// Ajouter une colonne ; dans chaque groupe, de grands boutons puis une
@@ -290,70 +290,71 @@
 		big: Cmd[];
 		small?: Cmd[];
 	}
-	const TABS = ['Accueil', 'Transformer', 'Ajouter une colonne'] as const;
-	let tab = $state<(typeof TABS)[number]>('Accueil');
+	const TABS = ['home', 'transform', 'addColumn'] as const;
+	let tab = $state<(typeof TABS)[number]>('home');
+	const tabLabel = (id: (typeof TABS)[number]) => t(`query.editor.tab.${id}`);
 	const op = (o: Op, icon: IconName, label?: string): Cmd => {
 		const info = OPS.find((x) => x.op === o)!;
 		return { label: label ?? info.label, icon, hint: info.hint, run: () => addStep(o) };
 	};
 	const none = $derived(!chosen.length);
 	const ribbon = $derived<Record<(typeof TABS)[number], Group[]>>({
-		Accueil: [
+		home: [
 			{
-				title: 'Fermer',
-				big: [{ label: 'Fermer et charger', icon: 'close-load', hint: 'Enregistrer la requête et charger son résultat dans un tableau', off: busy, run: () => finish(true) }],
+				title: t('query.editor.group.close'),
+				big: [{ label: t('query.editor.cmd.closeLoad.label'), icon: 'close-load', hint: t('query.editor.cmd.closeLoad.hint'), off: busy, run: () => finish(true) }],
 				small: [
-					{ label: 'Enregistrer', icon: 'save', hint: 'Enregistrer la requête sans la charger (connexion seulement)', off: busy, run: () => finish(false) },
-					{ label: 'Annuler', icon: 'win-close', hint: 'Fermer l’éditeur de requête sans enregistrer les changements (le classeur reste ouvert)', run: onclose }
+					{ label: t('remote.formDialog.save'), icon: 'save', hint: t('query.editor.cmd.save.hint'), off: busy, run: () => finish(false) },
+					{ label: t('common.cancel'), icon: 'win-close', hint: t('query.editor.cmd.cancel.hint'), run: onclose }
 				]
 			},
 			{
-				title: 'Requête',
-				big: [{ label: 'Actualiser l’aperçu', icon: 'refresh', hint: 'Relire les sources', run: () => refresh(true) }],
+				title: t('query.source.query'),
+				big: [{ label: t('query.editor.cmd.refresh.label'), icon: 'refresh', hint: t('query.editor.cmd.refresh.hint'), run: () => refresh(true) }],
 				small: [
-					{ label: 'Source…', icon: 'database', hint: 'Modifier la source de la requête', run: () => (sourceOpen = true) },
-					{ label: 'Voir le SQL', icon: 'script', hint: 'Afficher le SQL de l’aperçu', on: showSQL, run: () => (showSQL = !showSQL) },
-					{ label: 'Défaire', icon: 'undo', hint: 'Retirer la dernière action sur les étapes (Ctrl+Z)', off: !canUndo, run: undoStep },
-					{ label: 'Rétablir', icon: 'redo', hint: 'Remettre l’action défaite (Ctrl+Y)', off: !canRedo, run: redoStep }
+					{ label: t('query.editor.cmd.source.label'), icon: 'database', hint: t('query.editor.cmd.source.hint'), run: () => (sourceOpen = true) },
+					{ label: t('query.editor.cmd.sql.label'), icon: 'script', hint: t('query.editor.cmd.sql.hint'), on: showSQL, run: () => (showSQL = !showSQL) },
+					{ label: t('query.editor.cmd.undo.label'), icon: 'undo', hint: t('query.editor.cmd.undo.hint'), off: !canUndo, run: undoStep },
+					{ label: t('query.editor.cmd.redo.label'), icon: 'redo', hint: t('query.editor.cmd.redo.hint'), off: !canRedo, run: redoStep }
 				]
 			},
-			{ title: 'Gérer les colonnes', big: [op('select', 'choose-columns'), op('remove', 'delete-column')] },
-			{ title: 'Réduire les lignes', big: [op('top', 'keep-rows'), op('distinct', 'remove-duplicates'), op('filter', 'filter')] },
+			{ title: t('query.editor.group.columns'), big: [op('select', 'choose-columns'), op('remove', 'delete-column')] },
+			{ title: t('query.editor.group.rows'), big: [op('top', 'keep-rows'), op('distinct', 'remove-duplicates'), op('filter', 'filter')] },
 			{
-				title: 'Trier',
-				big: [op('sort', 'sort', 'Trier…')],
+				title: t('query.op.sort.label'),
+				big: [op('sort', 'sort', t('query.editor.cmd.sortDialog'))],
 				small: [
-					{ label: 'Croissant', icon: 'sort-asc', hint: 'Trier par les colonnes choisies, croissant', off: none, run: () => quick('sortAsc') },
-					{ label: 'Décroissant', icon: 'sort-desc', hint: 'Trier par les colonnes choisies, décroissant', off: none, run: () => quick('sortDesc') }
+					{ label: t('query.step.sort.asc'), icon: 'sort-asc', hint: t('query.editor.cmd.asc.hint'), off: none, run: () => quick('sortAsc') },
+					{ label: t('query.step.sort.desc'), icon: 'sort-desc', hint: t('query.editor.cmd.desc.hint'), off: none, run: () => quick('sortDesc') }
 				]
 			},
-			{ title: 'Combiner', big: [op('merge', 'merge-queries', 'Fusionner des requêtes'), op('append', 'append-queries', 'Ajouter des requêtes')] }
+			{ title: t('query.editor.group.combine'), big: [op('merge', 'merge-queries', t('query.editor.cmd.mergeQueries')), op('append', 'append-queries', t('query.editor.cmd.appendQueries'))] }
 		],
-		Transformer: [
-			{ title: 'Tableau', big: [op('group', 'group-by')] },
+		transform: [
+			{ title: t('query.editor.group.table'), big: [op('group', 'group-by')] },
 			{
-				title: 'Toute colonne',
+				title: t('query.editor.group.anyColumn'),
 				big: [op('type', 'convert-type')],
-				small: [op('rename', 'rename'), op('replace', 'replace'), op('unpivot', 'unpivot', 'Dépivoter les colonnes'), op('pivot', 'pivot-column', 'Pivoter la colonne')]
+				small: [op('rename', 'rename'), op('replace', 'replace'), op('unpivot', 'unpivot', t('query.editor.cmd.unpivot')), op('pivot', 'pivot-column', t('query.editor.cmd.pivot'))]
 			},
-			{ title: 'Colonne de texte', big: [op('split', 'split-column')], small: [op('transform', 'text-format')] }
+			{ title: t('query.editor.group.textColumn'), big: [op('split', 'split-column')], small: [op('transform', 'text-format')] }
 		],
-		'Ajouter une colonne': [{ title: 'Général', big: [op('addcolumn', 'custom-column'), op('index', 'index-column')] }]
+		addColumn: [{ title: t('query.editor.group.general'), big: [op('addcolumn', 'custom-column'), op('index', 'index-column')] }]
 	});
 </script>
 
 <svelte:window onkeydown={onKey} />
-<div class="editor" role="dialog" aria-modal="true" aria-label="Éditeur de requête" use:modal>
+<div class="editor" role="dialog" aria-modal="true" aria-label={t('query.editor.title')} use:modal>
 	<header class="title">
-		<span class="app">Éditeur de requête</span>
+		<span class="app">{t('query.editor.title')}</span>
 		<span class="name">{q.name}</span>
-		<nav class="tabs" aria-label="Onglets du ruban">
-			{#each TABS as t (t)}
-				<button class="tab" data-label={t} class:on={tab === t} onclick={() => (tab = t)}>{t}</button>
+		<nav class="tabs" aria-label={t('query.editor.tabs')}>
+			{#each TABS as id (id)}
+				<button class="tab" data-label={tabLabel(id)} class:on={tab === id} onclick={() => (tab = id)}>{tabLabel(id)}</button>
 			{/each}
 		</nav>
 		<span class="grow"></span>
-		<button class="close" title="Annuler : fermer l’éditeur de requête sans enregistrer (le classeur reste ouvert)" aria-label="Annuler et fermer l’éditeur de requête" onclick={onclose}><Icon name="win-close" size={16} /></button>
+		<button class="close" title={t('query.editor.close.tooltip')} aria-label={t('query.editor.close.aria')} onclick={onclose}><Icon name="win-close" size={16} /></button>
 	</header>
 	<nav class="ribbon">
 		{#each ribbon[tab] as g (g.title)}
@@ -384,8 +385,8 @@
 		<section class="preview">
 			{#if preview?.error}
 				<div class="err">
-					<strong>{preview.errorStep === -1 ? 'Source' : `Étape ${preview.errorStep + 1} (${labels[preview.errorStep + 1] ?? ''})`}</strong> : {preview.error}
-					{#if preview.errorStep >= 0 && preview.step < (q.steps ?? []).length}<span class="muted"> — aperçu de l'étape précédente</span>{/if}
+					<strong>{preview.errorStep === -1 ? t('query.source.title') : t('query.editor.errorStep', { n: String(preview.errorStep + 1), label: labels[preview.errorStep + 1] ?? '' })}</strong> : {preview.error}
+					{#if preview.errorStep >= 0 && preview.step < (q.steps ?? []).length}<span class="muted"> — {t('query.editor.previousStep')}</span>{/if}
 				</div>
 			{/if}
 			<div class="table-wrap" class:dim={loading}>
@@ -401,12 +402,12 @@
 										class:open={menu?.col === c.name}
 										onclick={(ev) => clickHeader(ev, c.name)}
 										oncontextmenu={(ev) => onHeaderMenu(ev, c.name)}
-										title="{c.name} : {typeName(c.type)} — clic droit ou ▾ : menu de la colonne ; Ctrl ou Maj : plusieurs colonnes"
+										title={t('query.editor.header.tooltip', { name: c.name, type: typeName(c.type) })}
 									>
 										<span class="head">
 											<span class="type-icon" aria-label={typeName(c.type)}>{#if ic}<Icon name={ic} size={14} />{:else}{typeIcon(typeOf(c.type))}{/if}</span>
 											<span class="cname">{c.name}</span>
-											<button class="drop" aria-label="Menu de la colonne {c.name}" aria-haspopup="menu" aria-expanded={menu?.col === c.name} onclick={(ev) => onDrop(ev, c.name)}>▾</button>
+											<button class="drop" aria-label={t('query.editor.header.menu', { name: c.name })} aria-haspopup="menu" aria-expanded={menu?.col === c.name} onclick={(ev) => onDrop(ev, c.name)}>▾</button>
 										</span>
 									</th>
 								{/each}
@@ -430,39 +431,39 @@
 						</tbody>
 					</table>
 				{:else if loading}
-					<p class="muted pad">Calcul de l'aperçu…</p>
+					<p class="muted pad">{t('query.editor.computing')}</p>
 				{:else if !preview?.error}
-					<p class="muted pad">Aucune donnée.</p>
+					<p class="muted pad">{t('query.editor.noData')}</p>
 				{/if}
 			</div>
 			<footer class="status">
 				{#if preview}
-					{(preview.columns ?? []).length} colonne(s), {fmtNumber(preview.count)} ligne(s){preview.sample ? ' — aperçu calculé sur les 1 000 premières lignes de chaque source' : ''}{preview.count > (preview.rows ?? []).length ? ` (${(preview.rows ?? []).length} affichées)` : ''}
-					<button class="link" onclick={() => (showSQL = !showSQL)}>{showSQL ? 'Masquer' : 'Voir'} le SQL</button>
+					{t('query.editor.status.size', { columns: (preview.columns ?? []).length, rows: preview.count })}{preview.sample ? ` — ${t('query.editor.status.sample')}` : ''}{preview.count > (preview.rows ?? []).length ? ` ${t('query.editor.status.shown', { n: (preview.rows ?? []).length })}` : ''}
+					<button class="link" onclick={() => (showSQL = !showSQL)}>{showSQL ? t('query.editor.hideSql') : t('query.editor.cmd.sql.label')}</button>
 				{/if}
 			</footer>
 			{#if showSQL && preview?.sql}<pre class="sql">{preview.sql}</pre>{/if}
 		</section>
 		<aside class="side">
-			<h3>Propriétés</h3>
-			<label class="field">Nom <input bind:value={q.name} /></label>
-			<h3>Étapes appliquées</h3>
+			<h3>{t('query.editor.properties')}</h3>
+			<label class="field">{t('query.step.name')} <input bind:value={q.name} /></label>
+			<h3>{t('query.editor.applied')}</h3>
 			<ol class="steps">
 				<li class:on={sel === -1} class:bad={preview?.errorStep === -1}>
 					<button class="step" onclick={() => select(-1)}>{labels[0]}</button>
-					<button class="x" title="Modifier la source" onclick={() => (sourceOpen = true)}>⚙</button>
+					<button class="x" title={t('query.editor.cmd.source.hint')} onclick={() => (sourceOpen = true)}>⚙</button>
 				</li>
 				{#each q.steps ?? [] as s, i (i)}
 					<li class:on={sel === i} class:bad={preview?.errorStep === i}>
 						<button class="step" onclick={() => select(i)}>{labels[i + 1] ?? s.op}</button>
-						<button class="x" title="Modifier l'étape" onclick={() => editStep(i)}>⚙</button>
-						<button class="x" title="Monter" disabled={i === 0} onclick={() => move(i, -1)}>↑</button>
-						<button class="x" title="Descendre" disabled={i === (q.steps ?? []).length - 1} onclick={() => move(i, 1)}>↓</button>
-						<button class="x" title="Supprimer l'étape" onclick={() => removeStep(i)}>✕</button>
+						<button class="x" title={t('query.editor.step.edit')} onclick={() => editStep(i)}>⚙</button>
+						<button class="x" title={t('query.step.up')} disabled={i === 0} onclick={() => move(i, -1)}>↑</button>
+						<button class="x" title={t('query.step.down')} disabled={i === (q.steps ?? []).length - 1} onclick={() => move(i, 1)}>↓</button>
+						<button class="x" title={t('query.editor.step.delete')} onclick={() => removeStep(i)}>✕</button>
 					</li>
 				{/each}
 			</ol>
-			<p class="muted">Une nouvelle étape s'insère après l'étape choisie. Cliquez un en-tête de colonne pour la choisir (Ctrl ou Maj : plusieurs) ; son ▾ ou un clic droit ouvre le menu de la colonne.</p>
+			<p class="muted">{t('query.editor.help')}</p>
 			{#if error}<p class="error">{error}</p>{/if}
 		</aside>
 	</div>
@@ -471,42 +472,42 @@
 {#if menu}
 	{@const m = menu}
 	{@const one = chosen.length === 1}
-	{@const many = chosen.length > 1 ? ` (${chosen.length} colonnes)` : ''}
+	{@const many = chosen.length > 1 ? ` ${t('query.editor.menu.count', { n: chosen.length })}` : ''}
 	<!-- Menu de la colonne, comme celui de Power Query : il agit sur les colonnes choisies. -->
 	<div class="menu" role="menu" tabindex="-1" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={closeMenu} use:inView>
-		<div class="menu-title" title={one && clipped(chosen[0]) ? chosen[0] : undefined}>{one ? `« ${clip(chosen[0])} »` : `${chosen.length} colonnes choisies`}</div>
-		<button role="menuitem" onclick={() => quick('remove')}><Icon name="delete-column" size={16} />Supprimer{many}</button>
-		<button role="menuitem" onclick={() => quick('keep')}><Icon name="choose-columns" size={16} />Supprimer les autres colonnes</button>
-		<button role="menuitem" onclick={() => quick('distinct')}><Icon name="remove-duplicates" size={16} />Supprimer les doublons</button>
+		<div class="menu-title" title={one && clipped(chosen[0]) ? chosen[0] : undefined}>{one ? `« ${clip(chosen[0])} »` : t('query.editor.menu.chosen', { n: chosen.length })}</div>
+		<button role="menuitem" onclick={() => quick('remove')}><Icon name="delete-column" size={16} />{t('query.host.delete')}{many}</button>
+		<button role="menuitem" onclick={() => quick('keep')}><Icon name="choose-columns" size={16} />{t('query.editor.menu.keep')}</button>
+		<button role="menuitem" onclick={() => quick('distinct')}><Icon name="remove-duplicates" size={16} />{t('query.op.distinct.label')}</button>
 		<hr />
-		<button role="menuitem" disabled={!one} onclick={() => addStep('rename')}><Icon name="rename" size={16} />Renommer…</button>
-		<Submenu label="Modifier le type">
+		<button role="menuitem" disabled={!one} onclick={() => addStep('rename')}><Icon name="rename" size={16} />{t('query.editor.menu.rename')}</button>
+		<Submenu label={t('query.editor.menu.type')}>
 			{#snippet icon()}<Icon name="convert-type" size={16} />{/snippet}
 			{@const cur = one ? shown.find((c) => c.name === chosen[0])?.type : undefined}
-			{#each TYPES as [t, label] (t)}
-				{@const ic = typeIconName(t as ColumnType)}
-				<button role="menuitemradio" aria-checked={cur === t} onclick={() => quick('type', t)}>
-					<span class="check">{cur === t ? '✓' : ''}</span><span class="type-icon">{#if ic}<Icon name={ic} size={14} />{:else}{typeIcon(t as ColumnType)}{/if}</span>{label}
+			{#each TYPES as [ty, label] (ty)}
+				{@const ic = typeIconName(ty as ColumnType)}
+				<button role="menuitemradio" aria-checked={cur === ty} onclick={() => quick('type', ty)}>
+					<span class="check">{cur === ty ? '✓' : ''}</span><span class="type-icon">{#if ic}<Icon name={ic} size={14} />{:else}{typeIcon(ty as ColumnType)}{/if}</span>{label}
 				</button>
 			{/each}
 		</Submenu>
-		<Submenu label="Format">
+		<Submenu label={t('query.op.transform.label')}>
 			{#snippet icon()}<Icon name="text-format" size={16} />{/snippet}
-			<button role="menuitem" onclick={() => quick('transform', 'trim')}>Supprimer les espaces (SUPPRESPACE)</button>
-			<button role="menuitem" onclick={() => quick('transform', 'upper')}>MAJUSCULE</button>
-			<button role="menuitem" onclick={() => quick('transform', 'lower')}>minuscule</button>
+			<button role="menuitem" onclick={() => quick('transform', 'trim')}>{t('query.step.transform.trim')}</button>
+			<button role="menuitem" onclick={() => quick('transform', 'upper')}>{t('query.step.transform.upper')}</button>
+			<button role="menuitem" onclick={() => quick('transform', 'lower')}>{t('query.step.transform.lower')}</button>
 		</Submenu>
-		<button role="menuitem" disabled={!one} onclick={() => addStep('replace')}><Icon name="replace" size={16} />Remplacer les valeurs…</button>
-		<button role="menuitem" disabled={!one} onclick={() => addStep('split')}><Icon name="split-column" size={16} />Fractionner la colonne…</button>
+		<button role="menuitem" disabled={!one} onclick={() => addStep('replace')}><Icon name="replace" size={16} />{t('query.editor.menu.replace')}</button>
+		<button role="menuitem" disabled={!one} onclick={() => addStep('split')}><Icon name="split-column" size={16} />{t('query.editor.menu.split')}</button>
 		<hr />
-		<button role="menuitem" onclick={() => quick('sortAsc')}><Icon name="sort-asc" size={16} />Trier par ordre croissant</button>
-		<button role="menuitem" onclick={() => quick('sortDesc')}><Icon name="sort-desc" size={16} />Trier par ordre décroissant</button>
-		<button role="menuitem" disabled={!one} onclick={() => addStep('filter')}><Icon name="filter" size={16} />Filtrer les lignes…</button>
+		<button role="menuitem" onclick={() => quick('sortAsc')}><Icon name="sort-asc" size={16} />{t('query.editor.menu.asc')}</button>
+		<button role="menuitem" onclick={() => quick('sortDesc')}><Icon name="sort-desc" size={16} />{t('query.editor.menu.desc')}</button>
+		<button role="menuitem" disabled={!one} onclick={() => addStep('filter')}><Icon name="filter" size={16} />{t('query.editor.menu.filter')}</button>
 		<hr />
-		<button role="menuitem" onclick={() => addStep('group')}><Icon name="group-by" size={16} />Regrouper par…</button>
-		<button role="menuitem" onclick={() => quick('unpivot')}><Icon name="unpivot" size={16} />Dépivoter les colonnes</button>
-		<button role="menuitem" disabled={chosen.length >= shown.length} onclick={() => quick('unpivotOthers')}><Icon name="unpivot" size={16} />Dépivoter les autres colonnes</button>
-		<button role="menuitem" disabled={!one} onclick={() => addStep('pivot')}><Icon name="pivot-column" size={16} />Pivoter la colonne…</button>
+		<button role="menuitem" onclick={() => addStep('group')}><Icon name="group-by" size={16} />{t('query.editor.menu.group')}</button>
+		<button role="menuitem" onclick={() => quick('unpivot')}><Icon name="unpivot" size={16} />{t('query.editor.cmd.unpivot')}</button>
+		<button role="menuitem" disabled={chosen.length >= shown.length} onclick={() => quick('unpivotOthers')}><Icon name="unpivot" size={16} />{t('query.editor.menu.unpivotOthers')}</button>
+		<button role="menuitem" disabled={!one} onclick={() => addStep('pivot')}><Icon name="pivot-column" size={16} />{t('query.editor.menu.pivot')}</button>
 	</div>
 {/if}
 {#if form}

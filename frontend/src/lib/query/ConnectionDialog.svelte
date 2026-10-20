@@ -17,6 +17,7 @@
 	import { connected, hostOf, userName } from '#lib/remote/lattis.js';
 	import ServerPicker from '#lib/remote/ServerPicker.svelte';
 	import { onMount } from 'svelte';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		connection?: Connection | null;
@@ -37,7 +38,7 @@
 	let tested = $state('');
 	let busy = $state(false);
 	let autoName = $state(!initial().id && !initial().name);
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 	const k = $derived(c.kind as ConnKind);
 	const server = $derived(k === 'postgres' || k === 'mysql' || k === 'sqlserver');
 
@@ -91,7 +92,7 @@
 		try {
 			const msg = await DocumentService.TestConnection(c, password, remember);
 			if (msg) error = msg;
-			else tested = k === 'web' ? 'Le serveur répond.' : 'Connexion réussie.';
+			else tested = k === 'web' ? t('query.conn.dialog.webOk') : t('query.conn.dialog.ok');
 		} catch (e) {
 			error = err(e);
 		} finally {
@@ -112,7 +113,7 @@
 		error = '';
 		if (k === 'lattis' && (!info || info.url !== c.config.url) && !(await discover())) return;
 		// Nom vide ou déjà pris : la boîte l'explique, la saisie reprend dans le champ du nom.
-		if (!c.name.trim()) return void (await refuseName(nameField, { title: 'Nom de connexion invalide', message: 'Le nom de la connexion ne peut pas être vide : il la désigne dans les requêtes du classeur.\n\nDonnez-lui un nom.' }));
+		if (!c.name.trim()) return void (await refuseName(nameField, { title: t('query.conn.dialog.nameInvalid.title'), message: t('query.conn.dialog.nameInvalid.message') }));
 		busy = true;
 		let refused: unknown = null;
 		try {
@@ -124,7 +125,7 @@
 		} finally {
 			busy = false;
 		}
-		if (refused) await refuseName(nameField, refusedName('Nom de connexion déjà pris', refused));
+		if (refused) await refuseName(nameField, refusedName(t('query.conn.dialog.nameTaken'), refused));
 	}
 </script>
 
@@ -134,7 +135,7 @@
 		class="dialog"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Connexion {CONN_LABELS[k] ?? ''}"
+		aria-label={t('query.conn.dialog.aria', { kind: CONN_LABELS[k] ?? '' })}
 		tabindex="-1"
 		use:modal
 		onkeydown={(e) => {
@@ -142,43 +143,43 @@
 			if (e.key === 'Escape') oncancel();
 		}}
 	>
-		<header>{k === 'web' ? 'Connexion à une API web' : k === 'lattis' ? 'Serveur Lattis' : `Base de données ${CONN_LABELS[k] ?? ''}`}</header>
+		<header>{k === 'web' ? t('query.conn.dialog.webTitle') : k === 'lattis' ? t('query.conn.lattis') : t('query.conn.dialog.dbTitle', { kind: CONN_LABELS[k] ?? '' })}</header>
 		<div class="body">
 			<div class="grid">
 				{#if server}
-					<label>Serveur <input bind:value={c.config.host} placeholder="localhost" /></label>
-					<label>Port <input type="number" bind:value={c.config.port} placeholder={String(DEFAULT_PORT[k] ?? '')} /></label>
+					<label>{t('query.conn.dialog.host')} <input bind:value={c.config.host} placeholder="localhost" /></label>
+					<label>{t('query.conn.dialog.port')} <input type="number" bind:value={c.config.port} placeholder={String(DEFAULT_PORT[k] ?? '')} /></label>
 					{#if k === 'sqlserver'}
-						<label>Instance <input bind:value={c.config.instance} placeholder="(par défaut) ou SQLEXPRESS" /></label>
+						<label>{t('query.conn.dialog.instance.label')} <input bind:value={c.config.instance} placeholder={t('query.conn.dialog.instance.placeholder')} /></label>
 					{/if}
-					<label>Base de données <input bind:value={c.config.database} placeholder={k === 'postgres' ? '' : '(facultative)'} /></label>
-					<label>Utilisateur <input bind:value={c.config.user} placeholder={k === 'sqlserver' ? 'vide : authentification Windows' : ''} /></label>
+					<label>{t('query.conn.dialog.database.label')} <input bind:value={c.config.database} placeholder={k === 'postgres' ? '' : t('query.conn.dialog.database.optional')} /></label>
+					<label>{t('query.conn.dialog.user.label')} <input bind:value={c.config.user} placeholder={k === 'sqlserver' ? t('query.conn.dialog.user.windows') : ''} /></label>
 					<label
-						>Chiffrement (SSL/TLS) <Select
+						>{t('query.conn.dialog.ssl.label')} <Select
 							value={c.config.sslmode ?? ''}
 							options={[
-								{ value: '', label: k === 'sqlserver' ? 'Réglage du pilote' : 'Si le serveur le propose' },
-								{ value: 'disable', label: 'Désactivé' },
-								{ value: 'require', label: 'Obligatoire' },
-								{ value: 'verify-full', label: 'Obligatoire, certificat vérifié' }
+								{ value: '', label: k === 'sqlserver' ? t('query.conn.dialog.ssl.driver') : t('query.conn.dialog.ssl.prefer') },
+								{ value: 'disable', label: t('query.conn.dialog.ssl.disable') },
+								{ value: 'require', label: t('query.conn.dialog.ssl.require') },
+								{ value: 'verify-full', label: t('query.conn.dialog.ssl.verify') }
 							]}
 							width="100%"
 							onchange={(v) => (c.config.sslmode = v || undefined)}
 						/></label
 					>
 				{:else if k === 'web'}
-					<label class="wide">Adresse de l’API <input bind:value={c.config.url} placeholder="https://api.exemple.fr/v1" /></label>
-					<label>En-tête du jeton <input bind:value={c.config.header} placeholder="Authorization" /></label>
-					<label>Utilisateur (Basic) <input bind:value={c.config.user} placeholder="vide : jeton seul" /></label>
+					<label class="wide">{t('query.conn.dialog.web.url')} <input bind:value={c.config.url} placeholder={t('query.conn.dialog.web.urlPlaceholder')} /></label>
+					<label>{t('query.conn.dialog.web.header')} <input bind:value={c.config.header} placeholder="Authorization" /></label>
+					<label>{t('query.conn.dialog.web.user')} <input bind:value={c.config.user} placeholder={t('query.conn.dialog.web.userPlaceholder')} /></label>
 				{:else if k === 'lattis'}
 					<div class="wide field">
-						<label for="conn-lattis">{lattis.state.allowUserServers ? 'Serveur' : 'Serveur de votre organisation'}</label>
+						<label for="conn-lattis">{lattis.state.allowUserServers ? t('query.conn.dialog.host') : t('query.conn.dialog.orgServer')}</label>
 						<ServerPicker
 							id="conn-lattis"
 							value={c.config.url ?? ''}
 							servers={lattisServers}
 							disabled={busy}
-							empty="Aucun serveur : ajoutez-en un avec « Gérer les serveurs… »"
+							empty={t('query.conn.dialog.noServer')}
 							onchange={pickLattis}
 						/>
 					</div>
@@ -187,43 +188,42 @@
 							{#if info.logo}<img src={info.logo} alt="" />{:else}<Icon name="database" size={20} />{/if}
 							<div class="grow">
 								<strong>{info.name}</strong>
-								<span class="muted">{info.version ? `version ${info.version}` : ''}{info.accessMode === 'invitation' ? ' · sur invitation' : ''}</span>
-								<span class="muted">{info.user ? `Connecté : ${userName(info.user)}` : 'Non connecté'}</span>
+								<span class="muted">{info.version ? t('query.conn.dialog.version', { version: info.version }) : ''}{info.accessMode === 'invitation' ? ` · ${t('query.conn.dialog.invitation')}` : ''}</span>
+								<span class="muted">{info.user ? t('query.conn.dialog.connected', { user: userName(info.user) }) : t('query.conn.dialog.notConnected')}</span>
 							</div>
-							{#if !info.user}<button class="ico" onclick={signIn}><Icon name="user" size={14} />Se connecter…</button>{/if}
+							{#if !info.user}<button class="ico" onclick={signIn}><Icon name="user" size={14} />{t('query.conn.dialog.signIn')}</button>{/if}
 						</div>
 					{/if}
 				{/if}
-				<label>Nom de la connexion <input bind:this={nameField} bind:value={c.name} oninput={() => (autoName = false)} /></label>
+				<label>{t('query.conn.dialog.name')} <input bind:this={nameField} bind:value={c.name} oninput={() => (autoName = false)} /></label>
 				{#if k !== 'lattis'}
 					<label
-						>{k === 'web' ? (c.config.user ? 'Mot de passe' : 'Jeton') : 'Mot de passe'}
-						<input type="password" bind:value={password} autocomplete="off" placeholder={c.remembered ? '(mémorisé)' : ''} /></label
+						>{k === 'web' && !c.config.user ? t('query.conn.dialog.token') : t('query.password.title')}
+						<input type="password" bind:value={password} autocomplete="off" placeholder={c.remembered ? t('query.conn.dialog.remembered') : ''} /></label
 					>
-					<label class="check"><input type="checkbox" bind:checked={remember} /> Mémoriser dans le trousseau du système</label>
+					<label class="check"><input type="checkbox" bind:checked={remember} /> {t('query.conn.dialog.remember')}</label>
 				{/if}
 			</div>
 			<p class="muted">
 				{#if k === 'lattis'}
-					Aucun mot de passe n’est enregistré : la connexion utilise votre session sur le serveur (menu Compte de la barre de titre), et ce que vos droits
-					vous permettent d’y lire. Comme source de requête, elle ne sert qu’à lire (sur un réplica quand le serveur en annonce).
+					{t('query.conn.dialog.help.lattis')}
 				{:else if k === 'web'}
-					Le jeton n’est jamais enregistré dans le classeur ; il n’est envoyé qu’aux adresses qui commencent par celle de la connexion
-					({c.config.header || 'Authorization'}{!c.config.user && (c.config.header || 'Authorization').toLowerCase() === 'authorization' ? ' : Bearer ajouté à un jeton seul' : ''}).
+					{t('query.conn.dialog.help.web')}
+					({c.config.header || 'Authorization'}{!c.config.user && (c.config.header || 'Authorization').toLowerCase() === 'authorization' ? t('query.conn.dialog.help.bearer') : ''}).
 				{:else}
-					Le mot de passe n’est jamais enregistré dans le classeur. La connexion ne sert qu’à lire ({k === 'postgres' || k === 'mysql'
-						? 'transaction en lecture seule'
-						: 'requêtes SELECT seulement, transaction toujours annulée'}).
+					{t('query.conn.dialog.help.db')} ({k === 'postgres' || k === 'mysql'
+						? t('query.conn.dialog.help.readOnly')
+						: t('query.conn.dialog.help.selectOnly')}).
 				{/if}
 			</p>
 		</div>
 		{#if error}<p class="error">{error}</p>{/if}
 		{#if tested}<p class="ok">{tested}</p>{/if}
 		<footer>
-			<button class="ico" onclick={test} disabled={busy || !connectionReady(c)}><Icon name="plug" size={14} />Tester</button>
+			<button class="ico" onclick={test} disabled={busy || !connectionReady(c)}><Icon name="plug" size={14} />{t('query.conn.dialog.test')}</button>
 			<span class="grow"></span>
-			<button class="primary" onclick={save} disabled={busy || !connectionReady(c)}>OK</button>
-			<button onclick={oncancel}>Annuler</button>
+			<button class="primary" onclick={save} disabled={busy || !connectionReady(c)}>{t('common.ok')}</button>
+			<button onclick={oncancel}>{t('common.cancel')}</button>
 		</footer>
 	</div>
 </div>
