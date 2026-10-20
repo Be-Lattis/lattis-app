@@ -18,6 +18,7 @@
 	import Markdown from './Markdown.svelte';
 	import { closeHelp, helpState } from './state.svelte';
 	import { reportIssue } from '#lib/shell/report.js';
+	import { t } from '#lib/i18n/index.js';
 
 	// over : posée au-dessus d'une boîte modale, hors de la zone des volets.
 	let { over = false }: { over?: boolean } = $props();
@@ -111,13 +112,13 @@
 {/snippet}
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<aside class="help" class:over data-modal-exempt={over ? '' : undefined} use:resizePanel={{ key: 'help', min: 420 }} aria-label="Aide" onkeydown={onKey}>
+<aside class="help" class:over data-modal-exempt={over ? '' : undefined} use:resizePanel={{ key: 'help', min: 420 }} aria-label={t('help.title')} onkeydown={onKey}>
 	<header>
-		<button class="icon" title="Page précédente" aria-label="Page précédente" disabled={!history.length} onclick={back}>←</button>
+		<button class="icon" title={t('help.back')} aria-label={t('help.back')} disabled={!history.length} onclick={back}>←</button>
 		<Icon name="book" size={16} />
-		<strong>Aide</strong>
-		<button class="link report" title="Ouvre la page de création d'un ticket sur GitHub (version préremplie)" onclick={reportIssue}>Signaler un problème</button>
-		<button class="icon close" title="Fermer l’aide (Échap)" aria-label="Fermer l’aide" onclick={close}>✕</button>
+		<strong>{t('help.title')}</strong>
+		<button class="link report" title={t('help.report.tooltip')} onclick={reportIssue}>{t('help.report.label')}</button>
+		<button class="icon close" title={t('help.close.tooltip')} aria-label={t('help.close.aria')} onclick={close}>✕</button>
 	</header>
 	<div class="search">
 		<Icon name="search" size={14} />
@@ -125,8 +126,8 @@
 			bind:this={searchEl}
 			bind:value={query}
 			type="search"
-			placeholder="Rechercher : SOMME.SI, clé, graphique, db.query…"
-			aria-label="Rechercher dans l’aide"
+			placeholder={t('help.search.placeholder')}
+			aria-label={t('help.search.aria')}
 			spellcheck="false"
 			onkeydown={(e) => {
 				if (e.key === 'Enter' && hits[0]) go(hits[0].target);
@@ -134,14 +135,14 @@
 		/>
 	</div>
 	<div class="body">
-		<nav class="toc" aria-label="Sommaire">
+		<nav class="toc" aria-label={t('help.toc')}>
 			{#each pages as p (p.id)}
 				<button class:on={!query.trim() && tocPage === p.id} aria-current={tocPage === p.id ? 'page' : undefined} onclick={() => go(p.id)}>{p.title}</button>
 			{/each}
 		</nav>
 		<div class="content" bind:this={contentEl}>
 			{#if query.trim()}
-				<p class="muted">{hits.length ? `${hits.length}${hits.length >= 50 ? ' premiers' : ''} résultat(s)` : 'Rien ne correspond.'}</p>
+				<p class="muted">{hits.length ? (hits.length >= 50 ? t('help.results.first', { n: hits.length }) : t('help.results.count', { n: hits.length })) : t('help.results.none')}</p>
 				{#each hits as h (h.target + h.title + h.where)}
 					<button class="hit" onclick={() => go(h.target)}>
 						<span class="hit-title">{h.title}</span>
@@ -153,17 +154,17 @@
 				{@const same = groups.find((g) => g.name === fn.category)?.functions.filter((f) => f !== fn) ?? []}
 				<h1>{fn.name}</h1>
 				<p class="sub">
-					{#if fn.other !== fn.name}Nom anglais : <code>{fn.other}</code>{' · '}{/if}Catégorie :{' '}<button class="link" onclick={() => go(`formules#${slug(fn.category ?? '')}`)}>{fn.category}</button>
+					{#if fn.other !== fn.name}{t('help.fn.english')} <code>{fn.other}</code>{' · '}{/if}{t('help.fn.category')}{' '}<button class="link" onclick={() => go(`formules#${slug(fn.category ?? '')}`)}>{fn.category}</button>
 				</p>
 				{#if fn.description}<p>{fn.description}</p>{/if}
 				<pre>{fn.signature ?? fn.name}</pre>
 				{#if fn.args?.length}
-					<h2>Arguments</h2>
+					<h2>{t('help.fn.arguments')}</h2>
 					<table>
 						<tbody>
 							{#each fn.args as a, i (i)}
 								<tr>
-									<td><code>{a.name}</code>{#if a.optional}<span class="muted">{' facultatif'}</span>{/if}{#if fn.repeat && i >= fn.args.length - fn.repeat}<span class="muted">{' répétable'}</span>{/if}</td>
+									<td><code>{a.name}</code>{#if a.optional}<span class="muted">{` ${t('help.fn.optional')}`}</span>{/if}{#if fn.repeat && i >= fn.args.length - fn.repeat}<span class="muted">{` ${t('help.fn.repeatable')}`}</span>{/if}</td>
 									<td>{a.desc}</td>
 								</tr>
 							{/each}
@@ -171,17 +172,17 @@
 					</table>
 				{/if}
 				{#if fn.example}
-					<h2>Exemple</h2>
+					<h2>{t('help.fn.example')}</h2>
 					<pre>{fn.example}</pre>
 				{/if}
 				{#if same.length}
-					<h2>Voir aussi</h2>
+					<h2>{t('help.fn.seeAlso')}</h2>
 					<p class="see">{#each same as f, i (f.name)}{#if i}{', '}{/if}{@render fnLink(f)}{/each}</p>
 				{/if}
 			{:else if 'fn' in target && !loaded}
-				<p class="muted">Chargement du catalogue des fonctions…</p>
+				<p class="muted">{t('help.fn.loading')}</p>
 			{:else if shownPage}
-				{#if 'fn' in target}<p class="note">Fonction inconnue : {target.fn}.</p>{/if}
+				{#if 'fn' in target}<p class="note">{t('help.fn.unknown', { name: target.fn })}</p>{/if}
 				<Markdown blocks={shownPage.blocks} {go} />
 				{#if shownPage.id === 'formules'}
 					{#each groups as g (g.name)}
@@ -192,7 +193,7 @@
 							{/each}
 						</ul>
 					{:else}
-						<p class="muted">{loaded ? 'Catalogue indisponible.' : 'Chargement…'}</p>
+						<p class="muted">{loaded ? t('help.fn.unavailable') : t('ai.panel.loading')}</p>
 					{/each}
 				{:else if shownPage.id === 'lua'}
 					{#each luaCategories as c (c.id)}
@@ -205,7 +206,7 @@
 								</button>
 								{#if luaOpen === e.name}
 									<pre>{e.signature}</pre>
-									{#if e.deprecated}<p class="note">Ancien nom : préférez <code>{e.deprecated}</code>.</p>{/if}
+									{#if e.deprecated}<p class="note">{t('script.ref.deprecated')} <code>{e.deprecated}</code>.</p>{/if}
 									{#if e.details}<p>{e.details}</p>{/if}
 									{#if e.example}<pre>{e.example}</pre>{/if}
 								{/if}

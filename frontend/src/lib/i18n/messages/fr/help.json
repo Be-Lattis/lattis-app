@@ -1,1 +1,39 @@
-{}
+{
+	"title": "Aide",
+	"where": {
+		"function": "Fonction",
+		"shortcut": "Raccourci",
+		"settings": "Paramètres"
+	},
+	"back": "Page précédente",
+	"report": {
+		"label": "Signaler un problème",
+		"tooltip": "Ouvre la page de création d'un ticket sur GitHub (version préremplie)"
+	},
+	"close": {
+		"tooltip": "Fermer l’aide (Échap)",
+		"aria": "Fermer l’aide"
+	},
+	"search": {
+		"placeholder": "Rechercher : SOMME.SI, clé, graphique, db.query…",
+		"aria": "Rechercher dans l’aide"
+	},
+	"toc": "Sommaire",
+	"results": {
+		"count": "{n, plural, one {# résultat} other {# résultats}}",
+		"first": "{n} premiers résultats",
+		"none": "Rien ne correspond."
+	},
+	"fn": {
+		"english": "Nom anglais :",
+		"category": "Catégorie :",
+		"arguments": "Arguments",
+		"optional": "facultatif",
+		"repeatable": "répétable",
+		"example": "Exemple",
+		"seeAlso": "Voir aussi",
+		"loading": "Chargement du catalogue des fonctions…",
+		"unknown": "Fonction inconnue : {name}.",
+		"unavailable": "Catalogue indisponible."
+	}
+}

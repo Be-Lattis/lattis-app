@@ -1,11 +1,12 @@
 <script lang="ts">
 	// Lien « ? » d'un en-tête de volet : ouvre la page d'aide du volet.
 	import { openHelp } from './state.svelte';
+	import { t } from '#lib/i18n/index.js';
 
-	let { target, label = 'Aide' }: { target: string; label?: string } = $props();
+	let { target, label }: { target: string; label?: string } = $props();
 </script>
 
-<button class="help-link" title={label} aria-label={label} onclick={() => openHelp(target)}>?</button>
+<button class="help-link" title={label ?? t('help.title')} aria-label={label ?? t('help.title')} onclick={() => openHelp(target)}>?</button>
 
 <style>
 	.help-link {

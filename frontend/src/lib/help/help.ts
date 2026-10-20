@@ -24,7 +24,7 @@ import connexions from './pages/connexions.md?raw';
 import assistant from './pages/assistant.md?raw';
 import raccourcis from './pages/raccourcis.md?raw';
 import parametres from './pages/parametres.md?raw';
-import { compareText } from '#lib/i18n/index.js';
+import { compareText, t } from '#lib/i18n/index.js';
 
 export interface HelpPage {
 	id: string;
@@ -162,7 +162,7 @@ export function buildIndex(functions: readonly FunctionDoc[]): HelpEntry[] {
 		out.push({
 			target: `fonction:${f.name}`,
 			title: f.name,
-			where: `Fonction · ${f.category ?? ''}`,
+			where: `${t('help.where.function')} · ${f.category ?? ''}`,
 			keys: `${f.other} ${f.category ?? ''}`,
 			text: [f.description, f.example, ...(f.args ?? []).map((a) => `${a.name} ${a.desc}`)].filter(Boolean).join(' ')
 		});
@@ -175,9 +175,9 @@ export function buildIndex(functions: readonly FunctionDoc[]): HelpEntry[] {
 			text: [e.summary, e.details].filter(Boolean).join(' ')
 		});
 	for (const g of shortcutGroups)
-		for (const s of g.items) out.push({ target: `raccourcis#${slug(g.title)}`, title: s.keys, where: `Raccourci · ${g.title}`, keys: s.keys, text: s.label });
+		for (const s of g.items) out.push({ target: `raccourcis#${slug(g.title)}`, title: s.keys, where: `${t('help.where.shortcut')} · ${g.title}`, keys: s.keys, text: s.label });
 	for (const sec of settingSections)
-		for (const s of sec.settings) out.push({ target: 'parametres#reglages-disponibles', title: s.label, where: `Paramètres · ${sec.title}`, keys: s.path, text: s.help ?? '' });
+		for (const s of sec.settings) out.push({ target: 'parametres#reglages-disponibles', title: s.label, where: `${t('help.where.settings')} · ${sec.title}`, keys: s.path, text: s.help ?? '' });
 	return out;
 }
 
