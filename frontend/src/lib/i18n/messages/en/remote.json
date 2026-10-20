@@ -36,7 +36,7 @@
 		"blocking": {
 			"none": "Check at least one table to publish.",
 			"problem": "“{table}”: {problem}",
-			"invalid": "“{table}”: {n} invalid entry(ies) to fix, or a column to accept as text",
+			"invalid": "“{table}”: {n, plural, one {# invalid entry} other {# invalid entries}} to fix, or a column to accept as text",
 			"sameName": "“{first}” and “{second}”: same name on the server (case does not matter there)"
 		},
 		"offline": {

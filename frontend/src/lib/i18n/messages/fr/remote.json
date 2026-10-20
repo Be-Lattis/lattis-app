@@ -36,7 +36,7 @@
 		"blocking": {
 			"none": "Cochez au moins un tableau à publier.",
 			"problem": "« {table} » : {problem}",
-			"invalid": "« {table} » : {n} saisie(s) invalide(s) à corriger, ou colonne à accepter comme texte",
+			"invalid": "« {table} » : {n, plural, one {# saisie invalide} other {# saisies invalides}} à corriger, ou colonne à accepter comme texte",
 			"sameName": "« {first} » et « {second} » : même nom sur le serveur (la casse n'y compte pas)"
 		},
 		"offline": {

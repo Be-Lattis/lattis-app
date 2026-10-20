@@ -25,7 +25,7 @@ describe('partage', () => {
 	it('dit ce qui bloque la publication', () => {
 		expect(blocking(check, [])).toEqual(['Cochez au moins un tableau à publier.']);
 		expect(blocking(check, [1])).toEqual([]);
-		expect(blocking(check, [2, 3])).toEqual(['« lattis_x » : le préfixe lattis_ est réservé', '« Stock » : 2 saisie(s) invalide(s) à corriger, ou colonne à accepter comme texte']);
+		expect(blocking(check, [2, 3])).toEqual(['« lattis_x » : le préfixe lattis_ est réservé', '« Stock » : 2 saisies invalides à corriger, ou colonne à accepter comme texte']);
 		expect(blocking(check, [1, 4])).toEqual(["« Ventes » et « VENTES » : même nom sur le serveur (la casse n'y compte pas)"]);
 	});
 
