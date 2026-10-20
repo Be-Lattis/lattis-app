@@ -16,6 +16,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Classeur partagé : votre rôle (Propriétaire, Concepteur, Éditeur, Participant, Lecteur) s'affiche à côté de « en ligne sur … » dans la barre de titre ; son infobulle dit ce qu'il permet, et un clic ouvre Gérer l'accès (propriétaires et concepteurs) ou l'explique en barre d'état, au doigt compris.
 - Classeur collaboratif : un script enregistré ou corrigé par un propriétaire ou un concepteur après la publication part chez tous les membres ; chacun donne son accord avant d'exécuter la nouvelle version. Les autres membres lisent et exécutent les scripts sans pouvoir les modifier.
 - Classeur collaboratif, tableau chargé par une requête : à la publication, l'auteur choisit comment il s'actualise. « Depuis ce poste » : Actualiser remplace les lignes du tableau partagé pour tous les membres (le tableau reste publié ; Ctrl+Z rend les anciennes lignes), au lieu d'être refusé. « Source du Data Lake » : la boîte de la source du Data Lake s'ouvre juste après la publication.
+- Édition web : Fichier › Télécharger une copie enregistre le classeur et en télécharge le fichier à tout moment ; après Ctrl+S, le message dit que le classeur est dans votre session en ligne et comment le garder (télécharger) ou le partager (publier sur un serveur).
 
 ### Changements
 

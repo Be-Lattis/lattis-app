@@ -646,6 +646,14 @@ export function DocControl(id: number): $CancellablePromise<api$0.ControlState> 
 }
 
 /**
+ * Download enregistre le classeur (dans la session) puis en fait télécharger
+ * le fichier par le navigateur.
+ */
+export function Download(): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1698309830);
+}
+
+/**
  * DropDataset retire le partage d'une donnée (la vue disparaît ; les
  * classeurs qui l'utilisent gardent leur dernière copie).
  */

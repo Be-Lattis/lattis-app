@@ -58,10 +58,15 @@ export function docFileName(st: DocState): string {
 	return st.remote ? st.title : st.path ? baseName(st.path) : st.title;
 }
 
-/** Message après Ctrl+S : celui du moteur (classeur du serveur : ce qui est arrivé au serveur), sinon le fichier écrit. */
-export function savedNotice(st: DocState): string {
+/**
+ * Message après Ctrl+S : celui du moteur (classeur du serveur : ce qui est
+ * arrivé au serveur), sinon le fichier écrit. web : édition web, le fichier
+ * est dans la session sur le serveur, pas sur l'appareil.
+ */
+export function savedNotice(st: DocState, web = false): string {
 	if (st.notice) return st.notice;
 	if (st.remote) return `Enregistré sur ${serverLabel(st.remote)} : ${st.title}`;
+	if (web) return `Enregistré dans votre session en ligne : ${st.path}. Fichier › Télécharger une copie pour le garder sur votre appareil, ou Publier sur un serveur pour le partager et le retrouver`;
 	return `Enregistré : ${st.path}`;
 }
 

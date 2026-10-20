@@ -1455,8 +1455,13 @@
 					if (mode !== 'doc') return;
 					docState = await saving(() => DocumentService.Save(a === 'saveAs'));
 					if (docState.conflict) conflict = { ...docState.conflict, close: false };
-					else if (docState.notice || !docState.dirty) notice = savedNotice(docState);
+					else if (docState.notice || !docState.dirty) notice = savedNotice(docState, isWeb);
 					await loadRecent();
+					break;
+				case 'download':
+					if (mode !== 'doc') return;
+					docState = await saving(() => DocumentService.Download());
+					if (docState.notice) notice = docState.notice;
 					break;
 				case 'import': {
 					// L'import crée une feuille : refusé d'emblée là où le moteur le refuserait.

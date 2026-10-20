@@ -16,7 +16,7 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode, type Size } from './fit';
-	import { scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
+	import { platform, scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
 	import { keyLabel, pdfPrinterHint } from '#lib/web/platform.js';
 	import { isNarrow, revealX } from '#lib/ui/mobile.js';
 	import type { IconName } from '#lib/icons/icons.js';
@@ -99,7 +99,7 @@
 	/** Nom du format de nombre de la cellule active (liste Format de nombre). */
 	const NF_NAMES: Record<string, string> = { '0': 'Nombre', '0,00': 'Nombre', '%': 'Pourcentage', '€': 'Monétaire', date: 'Date', time: 'Heure', text: 'Texte' };
 
-	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'reconnect' | 'detach' | 'save' | 'saveAs' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
+	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'reconnect' | 'detach' | 'save' | 'saveAs' | 'download' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
 	/** Accueil › Édition (Remplissage, Effacer, Trier et filtrer), Mettre sous forme de tableau. */
 	export type EditAction = 'fillDown' | 'fillRight' | 'clearContents' | 'clearFilters' | 'formatAsTable';
 
@@ -1411,7 +1411,7 @@
 						<button role="menuitem" disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
-					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Publier sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Gérer l’accès…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier…', '']] : []), ...(sharedWorkbooksEnabled() && reconnect ? [['reconnect', 'Réessayer la connexion', '']] : []), ...(sharedWorkbooksEnabled() && detach ? [['detach', 'Détacher du serveur…', '']] : []), ['import', 'Importer (CSV, Excel)…', '']] as [a, label, keys] (a)}
+					{#each [['save', 'Enregistrer', 'Ctrl+S'], ['saveAs', 'Enregistrer sous…', 'F12'], ...(platform.web && !shared ? [['download', 'Télécharger une copie', '']] : []), ...(sharedWorkbooksEnabled() && !shared ? [['share', 'Publier sur un serveur…', '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', 'Gérer l’accès…', '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', 'Republier…', '']] : []), ...(sharedWorkbooksEnabled() && reconnect ? [['reconnect', 'Réessayer la connexion', '']] : []), ...(sharedWorkbooksEnabled() && detach ? [['detach', 'Détacher du serveur…', '']] : []), ['import', 'Importer (CSV, Excel)…', '']] as [a, label, keys] (a)}
 						<button role="menuitem" disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />

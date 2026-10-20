@@ -88,3 +88,11 @@ describe('shareBadge', () => {
 		expect(shareBadge({ shared: true, gone: 'deleted', server: 'x' })).toBe('');
 	});
 });
+
+describe('savedNotice (édition web)', () => {
+	it('dit que le classeur est dans la session et comment le garder', () => {
+		const st = { open: true, path: 'Ventes.lattis', title: 'Ventes', dirty: false, undo: '', redo: '' } as DocState;
+		expect(savedNotice(st)).toBe('Enregistré : Ventes.lattis');
+		expect(savedNotice(st, true)).toContain('Enregistré dans votre session en ligne : Ventes.lattis. Fichier › Télécharger une copie');
+	});
+});
