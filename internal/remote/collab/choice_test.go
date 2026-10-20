@@ -280,11 +280,12 @@ func TestChoiceTabFollowed(t *testing.T) {
 	waitOnline(t, bob, alice)
 	must(t, alice.d.Model.SetSheetChoice(ctx, 1, "Suivi", "Site", "Étang"))
 	alice.e.Kick()
+	// La catégorie et la valeur choisie sont réglées l'une après l'autre :
+	// attendre les deux (sinon l'essai lit parfois entre les deux).
 	waitFor(t, "catégorie d'Alice chez Bob", func() bool {
-		n, _ := tab(t, bob)
-		return n == "Site"
+		n, v := tab(t, bob)
+		return n == "Site" && v == "Bois"
 	})
-	wantTab(t, "Bob", bob, "Site", "Bois")
 }
 
 // Catégorie calculée par une formule : publiée avec sa formule ; Bob la
