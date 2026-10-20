@@ -40,7 +40,7 @@ describe('thème par défaut (décision 0017)', () => {
 			{ path: 'ui.builtinThemes', value: false, readOnly: true },
 			{ path: 'ui.themes', value: { acme: { name: 'ACME', table: '#0b5394', source: '#e69138' } }, managed: ['acme'] }
 		];
-		expect(choices(org)).toEqual([{ value: 'acme', label: 'ACME' }]);
+		expect(choices(org)).toEqual([{ value: 'acme', label: 'ACME', swatch: ['#0b5394', '#e69138'] }]);
 	});
 });
 

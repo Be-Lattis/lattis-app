@@ -96,6 +96,7 @@
 										disabled={!st || st.locked || busy === d.path}
 										onchange={() => change(d.path, c.value)}
 									/>
+									{#if c.swatch}<span class="swatch" aria-hidden="true">{#each c.swatch as col, i (i)}<span style:background={col}></span>{/each}</span>{/if}
 									<span>{c.label}</span>
 								</label>
 							{/each}
@@ -235,6 +236,17 @@
 	label.choice {
 		font-weight: normal;
 		margin: 2px 0 2px 8px;
+	}
+	/* Aperçu d'un thème : ses deux couleurs, comme dans Affichage › Thème. */
+	.swatch {
+		display: inline-flex;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+		overflow: hidden;
+	}
+	.swatch span {
+		width: 12px;
+		height: 14px;
 	}
 	/* Réglage texte (adresse…) : libellé au-dessus, champ sur toute la largeur. */
 	label.text {

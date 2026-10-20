@@ -25,9 +25,9 @@ export interface SettingDef {
 	/** Exemple affiché dans un réglage 'text' vide. */
 	placeholder?: string;
 	/** Choix d'un réglage 'choice' (valeur, libellé). */
-	choices?: { value: string; label: string }[];
+	choices?: { value: string; label: string; swatch?: string[] }[];
 	/** Choix tirés des réglages (thèmes proposés), à la place de choices. */
-	choicesOf?: (list: readonly SettingState[]) => { value: string; label: string }[];
+	choicesOf?: (list: readonly SettingState[]) => { value: string; label: string; swatch?: string[] }[];
 	/** Réglage d'une fonctionnalité à activer : masqué tant qu'elle ne l'est pas. */
 	requires?: string;
 	/** Bornes et unité d'un réglage 'number' (entier). */
@@ -114,7 +114,7 @@ export const settingSections: SettingSection[] = [
 				path: 'ui.theme',
 				kind: 'choice',
 				label: 'Thème de couleur par défaut',
-				choicesOf: (list) => themeCatalog(list).map((t) => ({ value: t.id, label: t.name })),
+				choicesOf: (list) => themeCatalog(list).map((t) => ({ value: t.id, label: t.name, swatch: [t.table, t.source] })),
 				help: "Couleurs des tableaux ordinaires et des tableaux d'une source externe dans un classeur qui n'a pas choisi son thème : les classeurs neufs et ceux d'avant les thèmes. Le thème choisi dans un classeur (Affichage › Thème) est enregistré avec lui et s'affiche pareil sur les autres postes."
 			}
 		]
