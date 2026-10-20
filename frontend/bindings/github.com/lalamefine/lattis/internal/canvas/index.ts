@@ -79,5 +79,6 @@ export type {
     TextColumnFormat,
     TextColumnsOptions,
     TextColumnsPreview,
+    Theme,
     ValidationList
 } from "./models.js";

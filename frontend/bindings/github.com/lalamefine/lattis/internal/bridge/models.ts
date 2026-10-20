@@ -470,6 +470,12 @@ export interface DocState {
      * adresse <serveur>/w/<id>, en ligne ou non ; nil pour un fichier local.
      */
     "remote"?: workbook$0.State | null;
+
+    /**
+     * Theme : thème de couleur du classeur (Affichage › Thème) ; nil : thème
+     * par défaut des réglages (ui.theme).
+     */
+    "theme"?: canvas$0.Theme | null;
 }
 
 /**

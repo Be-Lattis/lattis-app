@@ -225,6 +225,9 @@ func (l *loader) run(tx *sql.Tx) error {
 	if err := l.restoreLocal(); err != nil {
 		return err
 	}
+	if err := applyTheme(l.ctx, tx, l.layout); err != nil {
+		return err
+	}
 	if err := l.mergeChoices(choices); err != nil {
 		return err
 	}

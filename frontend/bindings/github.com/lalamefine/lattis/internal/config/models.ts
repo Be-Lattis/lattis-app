@@ -23,4 +23,15 @@ export interface UserSetting {
      * Source : couche qui donne la valeur.
      */
     "source"?: string;
+
+    /**
+     * Managed (ui.themes) : identifiants venus d'ailleurs que du fichier de
+     * l'utilisateur (organisation…), qu'il ne peut pas retirer.
+     */
+    "managed"?: string[] | null;
+
+    /**
+     * ReadOnly : réglage lu par l'interface, qu'elle n'écrit pas.
+     */
+    "readOnly"?: boolean;
 }

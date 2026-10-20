@@ -59,7 +59,7 @@ var Structure = []string{
 	// libres) ; hors partage complet, sans les valeurs (Filter).
 	"sheets.get",
 	// Construction de l'analyse.
-	"sheets.add", "sheets.rename", "sheets.color", "tables.rename", "tables.sort", "tables.sort_custom", "tables.set_sort_lists",
+	"sheets.add", "sheets.rename", "sheets.color", "tables.rename", "tables.sort", "tables.sort_custom", "tables.set_sort_lists", "doc.theme", "doc.set_theme",
 	"columns.insert", "columns.rename", "columns.set_type", "columns.fix_type", "columns.set_rules",
 	"tables.set_key", "tables.keep_row_numbers", "cells.set", "cells.style", "cells.name",
 	// Mise en forme : styles de lignes et colonnes entières, fusion, largeurs

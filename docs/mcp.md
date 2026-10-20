@@ -56,7 +56,7 @@ schéma de chaque outil (`tools/list`).
 
 | Famille | Outils |
 |---|---|
-| Classeur | `doc_state`, `doc_undo`, `doc_redo`, `doc_new`, `doc_open`, `doc_save`, `doc_import`, `doc_export_csv`, `doc_export_xlsx`, `doc_export_ods`, `doc_recalc` |
+| Classeur | `doc_state`, `doc_undo`, `doc_redo`, `doc_new`, `doc_open`, `doc_save`, `doc_import`, `doc_export_csv`, `doc_export_xlsx`, `doc_export_ods`, `doc_recalc`, `doc_theme`, `doc_set_theme` (thème de couleur du classeur : deux couleurs de base) |
 | SQL | `db_query` (lecture, noms affichés, 10 000 lignes au plus), `db_execute` (INSERT, UPDATE, DELETE annulables) |
 | Feuilles | `sheets_list`, `sheets_get`, `sheets_add`, `sheets_rename`, `sheets_move`, `sheets_copy`, `sheets_hide`, `sheets_color`, `sheets_delete`, `sheets_set_column_width`, `sheets_set_row_height`, `sheets_hide_lines`, `sheets_freeze`, `sheets_page_setup`, `sheets_set_page_setup`, `sheets_find`, `sheets_replace`, `sheets_protect`, `sheets_unprotect`, `sheets_protect_structure`, `sheets_unprotect_structure`, `sheets_protect_workbook`, `sheets_unprotect_workbook` ; onglet à choix : `sheets_choose_by`, `sheets_set_choice`, `sheets_new_choice`, `sheets_clear_choice`, `sheets_choice` |
 | Cellules | `cells_get`, `cells_read`, `cells_set`, `cells_paste` (`range` : en plage), `cells_clear`, `cells_style`, `cells_style_lines`, `cells_merge`, `cells_unmerge`, `cells_note`, `cells_name`, `cells_dependencies`, `cells_text_to_columns` |

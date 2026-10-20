@@ -2006,6 +2006,14 @@ export function SetTableSourceOnSave(table: string, on: boolean): $CancellablePr
 }
 
 /**
+ * SetTheme change le thème de couleur du classeur (nil : thème par défaut
+ * des réglages), annulable.
+ */
+export function SetTheme(th: canvas$0.Theme | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(526170815, th);
+}
+
+/**
  * SetTwoLevel affiche (ou non) les en-têtes d'un tableau sur deux lignes
  * (groupe « Groupe.Sous » dans une bande au-dessus de l'en-tête).
  */

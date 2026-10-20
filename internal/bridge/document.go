@@ -49,6 +49,9 @@ type DocState struct {
 	// qu'un cache local, jamais montré) : titre sur le serveur, serveur,
 	// adresse <serveur>/w/<id>, en ligne ou non ; nil pour un fichier local.
 	Remote *workbook.State `json:"remote,omitempty"`
+	// Theme : thème de couleur du classeur (Affichage › Thème) ; nil : thème
+	// par défaut des réglages (ui.theme).
+	Theme *canvas.Theme `json:"theme,omitempty"`
 }
 
 // OpenResult est le résultat d'une ouverture : soit le classeur est ouvert,
@@ -463,6 +466,9 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 		st.Title += " (lecture seule)"
 	}
 	if st.Dirty, err = d.Dirty(ctx); err != nil {
+		return st, err
+	}
+	if st.Theme, err = d.Theme(ctx); err != nil {
 		return st, err
 	}
 	h, err := d.Bus.State(ctx)
@@ -1053,6 +1059,12 @@ func (s *DocumentService) CustomLists(ctx context.Context) ([]canvas.CustomList,
 		return nil, err
 	}
 	return d.CustomLists(ctx)
+}
+
+// SetTheme change le thème de couleur du classeur (nil : thème par défaut
+// des réglages), annulable.
+func (s *DocumentService) SetTheme(ctx context.Context, th *canvas.Theme) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetTheme(ctx, th) })
 }
 
 // SetCustomLists remplace les listes personnalisées du classeur.

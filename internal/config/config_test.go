@@ -468,7 +468,7 @@ func TestSetUser(t *testing.T) {
 		t.Fatal("réglage non pris en compte")
 	}
 	st := UserSettings(c)
-	if len(st) != len(UserEditable) || st[0].Value != true || st[0].Locked || st[0].Fixed || st[0].Source != file {
+	if len(st) != len(UserEditable)+len(UserVisible) || st[0].Value != true || st[0].Locked || st[0].Fixed || st[0].Source != file {
 		t.Fatalf("UserSettings = %+v", st)
 	}
 	// Les autres clés du fichier sont gardées.

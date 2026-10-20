@@ -25,6 +25,7 @@ type Settings struct {
 	MCP                 MCP                          `json:"mcp,omitempty"`
 	Features            Features                     `json:"features,omitempty"`
 	Limits              Limits                       `json:"limits,omitempty"`
+	UI                  UI                           `json:"ui,omitempty"`
 }
 
 // Limits borne ce qui peut tenir l'application ou la mémoire (audit 6,
@@ -202,6 +203,8 @@ func Defaults() Tree {
 		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only",
 			"localUrl": "http://localhost:11434/v1"}, // Ollama
 		"mcp": Tree{"confirmWrites": false},
+		// Thème de couleur par défaut des classeurs (décision 0017).
+		"ui": Tree{"theme": DefaultTheme, "builtinThemes": true},
 		"limits": Tree{
 			"undoDepth":       float64(LimitRanges["limits.undoDepth"].Default),
 			"scriptSeconds":   float64(LimitRanges["limits.scriptSeconds"].Default),
@@ -212,7 +215,7 @@ func Defaults() Tree {
 }
 
 var topLevel = []string{"version", "organization", "configUrl", "remote", "allowPolicyOverride",
-	"identity", "connections", "ai", "mcp", "features", "limits"}
+	"identity", "connections", "ai", "mcp", "features", "limits", "ui"}
 
 func knownTopLevel(k string) bool {
 	for _, t := range topLevel {
@@ -306,7 +309,7 @@ func coerce(path string, v any) (any, bool) {
 
 var boolPaths = []string{"allowPolicyOverride", "features.mcp.enabled", "features.allowUserConnections",
 	"features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.coEditing", "features.luaHttp.restrict", "ai.enabled",
-	"ai.keepConversation", "mcp.confirmWrites"}
+	"ai.keepConversation", "mcp.confirmWrites", "ui.builtinThemes"}
 
 func boolPath(path string) bool {
 	for _, p := range boolPaths {
@@ -342,6 +345,10 @@ var validators = []struct {
 	{"ai.dataSharing", oneOf("schema-only", "sample", "full")},
 	{"ai.keepConversation", isBool},
 	{"mcp.confirmWrites", isBool},
+	{"ui.theme", isIdent},
+	{"ui.builtinThemes", isBool},
+	{"ui.themes", isThemes},
+	{"ui.themes.*", isTheme},
 	{"limits.*", inLimitRange},
 	{"connections.*.kind", oneOf("postgres", "mysql", "sqlserver", "web", "lattis")},
 	{"connections.*.auth.mode", oneOf("none", "password", "token", "integrated", "oidc")},

@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/lalamefine/lattis/internal/canvas"
 )
 
 // Mise en page publiée (§5.2 du serveur : lattis_meta_*, miroir des tables
@@ -48,6 +51,9 @@ type Layout struct {
 	// Format : version du format local (meta.Version) de l'auteur.
 	Format int                    `json:"format"`
 	Tables map[string]*LayoutRows `json:"tables"`
+	// Theme : thème de couleur du classeur (_lattis_info, clé theme, seule
+	// clé de cette table publiée ; nil : thème par défaut de chaque poste).
+	Theme *canvas.Theme `json:"theme,omitempty"`
 }
 
 // LayoutRows sont les lignes d'une table de métadonnées.
@@ -138,7 +144,30 @@ func dumpLayout(ctx context.Context, q txOrDB, format int, published map[int64]b
 		}
 		l.Tables[name] = lr
 	}
+	var raw string
+	switch err := q.QueryRowContext(ctx, `SELECT value FROM _lattis_info WHERE key = ?`, canvas.ThemeKey).Scan(&raw); {
+	case errors.Is(err, sql.ErrNoRows):
+	case err != nil:
+		return nil, err
+	default:
+		l.Theme = canvas.ParseTheme(raw)
+	}
 	return l, nil
+}
+
+// applyTheme remplace le thème local par celui de la mise en page reçue
+// (le serveur l'emporte, comme pour le reste de la mise en page).
+func applyTheme(ctx context.Context, tx *sql.Tx, l *Layout) error {
+	if l.Theme == nil {
+		_, err := tx.ExecContext(ctx, `DELETE FROM _lattis_info WHERE key = ?`, canvas.ThemeKey)
+		return err
+	}
+	b, err := json.Marshal(l.Theme)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO _lattis_info (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`, canvas.ThemeKey, string(b))
+	return err
 }
 
 // tableColumns donne les colonnes d'une table (aucune si elle n'existe pas).

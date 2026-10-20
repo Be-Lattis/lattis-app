@@ -380,10 +380,26 @@ export const apiReference: RefEntry[] = [
 		args: [0, 0]
 	},
 	{
+		name: "doc.set_theme",
+		category: "workbook",
+		signature: "doc.set_theme([table], [source], [name])",
+		summary: "Change le thème de couleur du classeur : deux couleurs de base #rrggbb, les nuances (en-tête, texte, bordure) s'en déduisent. Sans couleurs : le thème par défaut des réglages.",
+		details: "Paramètres — table : couleur des tableaux ordinaires, #rrggbb ; source : couleur des tableaux d'une source externe (requête), #rrggbb ; name : nom du thème. Arguments dans l'ordre, ou une table d'arguments nommés : doc.set_theme{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "doc.set_theme(\"#2563eb\", \"#ea580c\", \"Bleu et orange\")",
+		args: [0, 3]
+	},
+	{
 		name: "doc.state",
 		category: "workbook",
 		signature: "doc.state() → {open, path, title, dirty, undo, redo}",
 		summary: "Décrit le classeur ouvert : fichier, modifications non enregistrées, actions à annuler et à rétablir.",
+		args: [0, 0]
+	},
+	{
+		name: "doc.theme",
+		category: "workbook",
+		signature: "doc.theme() → {id, name, table, source} ou nil",
+		summary: "Thème de couleur du classeur (Affichage › Thème) : couleur des tableaux ordinaires (table) et des tableaux d'une source externe (source). nil : thème par défaut des réglages.",
 		args: [0, 0]
 	},
 	{

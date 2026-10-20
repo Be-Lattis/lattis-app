@@ -2099,6 +2099,18 @@ export interface TextColumnsPreview {
 }
 
 /**
+ * Theme est le thème du classeur. ID : identifiant du thème choisi
+ * (prédéfini, de l'organisation ou de l'utilisateur), vide pour des
+ * couleurs personnalisées ; Table et Source : couleurs de base #rrggbb.
+ */
+export interface Theme {
+    "id"?: string;
+    "name": string;
+    "table": string;
+    "source": string;
+}
+
+/**
  * ValidationList est la liste d'une validation tirée d'une plage : les
  * valeurs, ou pourquoi la source ne se lit pas.
  */

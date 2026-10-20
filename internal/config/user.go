@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -20,10 +21,23 @@ import (
 
 // UserEditable liste les clés que l'interface peut écrire.
 var UserEditable = []string{"features.htmlTabs", "features.sharedWorkbooks", "features.coEditing", "ai.enabled", "ai.dataSharing", "ai.provider", "ai.model", "ai.keepConversation", "ai.localUrl", "mcp.confirmWrites",
-	"limits.undoDepth", "limits.scriptSeconds", "limits.sqlReadSeconds", "limits.sqlWriteSeconds"}
+	"limits.undoDepth", "limits.scriptSeconds", "limits.sqlReadSeconds", "limits.sqlWriteSeconds",
+	"ui.theme", "ui.themes"}
 
-// Editable dit si l'interface peut écrire cette clé.
+// UserVisible liste les clés que l'interface lit sans les écrire.
+var UserVisible = []string{"ui.builtinThemes"}
+
+// Editable dit si l'interface peut écrire cette clé. ui.themes s'écrit
+// thème par thème (ui.themes.<id>, null pour le retirer) : l'interface ne
+// recopie jamais les thèmes de l'organisation dans le fichier de
+// l'utilisateur.
 func Editable(path string) bool {
+	if themePath(path) {
+		return true
+	}
+	if strings.EqualFold(path, "ui.themes") {
+		return false
+	}
 	for _, p := range UserEditable {
 		if strings.EqualFold(p, path) {
 			return true
@@ -43,17 +57,26 @@ type UserSetting struct {
 	Fixed bool `json:"fixed,omitempty"`
 	// Source : couche qui donne la valeur.
 	Source string `json:"source,omitempty"`
+	// Managed (ui.themes) : identifiants venus d'ailleurs que du fichier de
+	// l'utilisateur (organisation…), qu'il ne peut pas retirer.
+	Managed []string `json:"managed,omitempty"`
+	// ReadOnly : réglage lu par l'interface, qu'elle n'écrit pas.
+	ReadOnly bool `json:"readOnly,omitempty"`
 }
 
 // UserSettings donne l'état des réglages de l'interface dans c.
 func UserSettings(c *Config) []UserSetting {
-	out := make([]UserSetting, 0, len(UserEditable))
-	for _, p := range UserEditable {
+	out := make([]UserSetting, 0, len(UserEditable)+len(UserVisible))
+	for _, p := range append(slices.Clone(UserEditable), UserVisible...) {
 		v, _ := c.Lookup(p)
-		s := UserSetting{Path: p, Value: v, Locked: c.Locked(p)}
+		s := UserSetting{Path: p, Value: v, Locked: c.Locked(p), ReadOnly: slices.Contains(UserVisible, p)}
 		if o, ok := c.Origin(p); ok {
 			s.Source = o.Source
 			s.Fixed = !s.Locked && o.Rank > RankUser
+		}
+		if p == "ui.themes" {
+			s.Managed = themeOrigins(c)
+			s.Locked = false // un thème imposé n'empêche pas d'ajouter les siens
 		}
 		out = append(out, s)
 	}
@@ -83,7 +106,11 @@ func (l *Loader) SetUser(ctx context.Context, path string, v any) (*Config, erro
 	if cv, ok := coerce(path, v); ok {
 		v = cv
 	}
-	if check := validatorFor(path); check != nil {
+	if m, ok := v.(map[string]any); ok {
+		v = Tree(m) // objet venu du pont (thème)
+	}
+	remove := v == nil && themePath(path)
+	if check := validatorFor(path); check != nil && !remove {
 		if err := check(v); err != nil {
 			return nil, fmt.Errorf("%s : %w", path, err)
 		}
@@ -109,7 +136,18 @@ func (l *Loader) SetUser(ctx context.Context, path string, v any) (*Config, erro
 			return nil, fmt.Errorf("%s : %w", file, err)
 		}
 	}
-	setPath(t, path, v)
+	if remove {
+		// Retiré du fichier (null y masquerait un thème de l'organisation).
+		if th, ok := lookup(t, "ui.themes"); ok {
+			if m, ok := th.(Tree); ok {
+				if k, ok := findKey(m, path[len(themesPrefix):]); ok {
+					delete(m, k)
+				}
+			}
+		}
+	} else {
+		setPath(t, path, v)
+	}
 	out, err := json.MarshalIndent(t, "", "  ")
 	if err != nil {
 		return nil, err

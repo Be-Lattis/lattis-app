@@ -122,6 +122,41 @@ func init() {
 			},
 		},
 		&Command{
+			Name:    "doc.theme",
+			Summary: "Thème de couleur du classeur (Affichage › Thème) : couleur des tableaux ordinaires (table) et des tableaux d'une source externe (source). nil : thème par défaut des réglages.",
+			Returns: "{id, name, table, source} ou nil",
+			Run: func(c *Call) (any, error) {
+				d, err := c.Doc()
+				if err != nil {
+					return nil, err
+				}
+				return d.Theme(c)
+			},
+		},
+		&Command{
+			Name: "doc.set_theme", Label: "Thème", Write: true,
+			Summary: "Change le thème de couleur du classeur : deux couleurs de base #rrggbb, les nuances (en-tête, texte, bordure) s'en déduisent. Sans couleurs : le thème par défaut des réglages.",
+			Params: []Param{
+				{Name: "table", Type: String, Desc: "couleur des tableaux ordinaires, #rrggbb", Optional: true},
+				{Name: "source", Type: String, Desc: "couleur des tableaux d'une source externe (requête), #rrggbb", Optional: true},
+				{Name: "name", Type: String, Desc: "nom du thème", Optional: true},
+			},
+			Example: `doc.set_theme("#2563eb", "#ea580c", "Bleu et orange")`,
+			Run: func(c *Call) (any, error) {
+				d, err := c.Doc()
+				if err != nil {
+					return nil, err
+				}
+				if !c.Has("table") && !c.Has("source") {
+					return nil, d.SetTheme(c, nil)
+				}
+				table, _ := c.Str("table")
+				source, _ := c.Str("source")
+				name, _ := c.Str("name")
+				return nil, d.SetTheme(c, &canvas.Theme{Name: name, Table: table, Source: source})
+			},
+		},
+		&Command{
 			Name: "doc.import", Label: "Importer", Summary: "Importe un fichier CSV ou un classeur Excel (.xlsx) dans de nouvelles feuilles.", NoLua: true, Write: true,
 			Returns: "{sheets, tables, warnings}",
 			Params:  []Param{{Name: "path", Type: String, Desc: "chemin du fichier .csv, .tsv, .txt ou .xlsx"}},
