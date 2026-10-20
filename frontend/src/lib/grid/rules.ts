@@ -9,7 +9,8 @@
 
 import type { CellStyle } from './style';
 import { ICON_SETS, type IconSetId } from './cficons';
-import { compareText, lower, t } from '#lib/i18n/index.js';
+import { compareText, lower, parseNumberText, parseShortDate, t } from '#lib/i18n/index.js';
+import { isNumericText } from './style';
 
 export type RuleOp =
 	| '>'
@@ -240,13 +241,12 @@ export function serial(y: number, m: number, d: number): number {
 	return Date.UTC(y, m - 1, d) / 86400000 + 25569;
 }
 
-/** Date ISO (aaaa-mm-jj) ou française (jj/mm/aaaa) en numéro de série, ou null. */
+/** Date ISO (aaaa-mm-jj) ou courte de la langue (jj/mm/aaaa, mm/dd/yyyy…) en numéro de série, ou null. */
 export function dateSerial(s: string): number | null {
-	let m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(s);
+	const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(s);
 	if (m) return serial(+m[1], +m[2], +m[3]) + (m[4] ? (+m[4] * 3600 + +m[5] * 60 + +(m[6] ?? 0)) / 86400 : 0);
-	m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s.trim());
-	if (m && +m[2] >= 1 && +m[2] <= 12 && +m[1] >= 1 && +m[1] <= 31) return serial(+m[3], +m[2], +m[1]);
-	return null;
+	const d = /^\d{1,4}[/.]\d{1,2}[/.]\d{2,4}$/.test(s.trim()) ? parseShortDate(s) : null;
+	return d ? serial(d.y, d.m, d.d) : null;
 }
 
 /** Nombre saisi à la française (virgule décimale, espaces, %) ou null. */
@@ -262,7 +262,7 @@ function frNumber(t: string): number | null {
 export function numOf(v: unknown): number | null {
 	if (typeof v === 'number') return Number.isFinite(v) ? v : null;
 	if (typeof v !== 'string') return null;
-	return frNumber(v) ?? dateSerial(v);
+	return frNumber(v) ?? (isNumericText(v) ? parseNumberText(v) : null) ?? dateSerial(v);
 }
 
 /** Compare v à w : nombres ou dates si possible, sinon texte sans casse. */

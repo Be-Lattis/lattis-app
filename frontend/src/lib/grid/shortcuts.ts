@@ -1,6 +1,7 @@
 // Raccourcis clavier d'Excel (grille et éditeur de cellule), indépendants du
 // clavier (AZERTY ou QWERTY) quand c'est possible.
 
+import { shortDate } from '#lib/i18n/index.js';
 import { trimTrailingBreaks } from './textwrap';
 
 export type Shortcut =
@@ -103,9 +104,9 @@ export function isReloadKey(e: Keys): boolean {
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** Date du jour comme on la saisit (jj/mm/aaaa). */
+/** Date du jour comme on la saisit, dans la langue de la session (19/10/2026, 10/19/2026…). */
 export function todayText(d = new Date()): string {
-	return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+	return shortDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
 
 /** Heure du jour (hh:mm), comme Ctrl+Maj+: d'Excel. */

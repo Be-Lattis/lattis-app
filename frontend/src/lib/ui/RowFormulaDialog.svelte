@@ -9,7 +9,7 @@
 	import { modal } from './focus.js';
 	import { apply as applySuggestion, type Completion } from '#lib/grid/autocomplete.js';
 	import { guessCategoryName, previewText, rowSuggest, type RowFormulaHelp } from './rowformula.js';
-	import { errorText, t } from '#lib/i18n/index.js';
+	import { errorText, fnName, t } from '#lib/i18n/index.js';
 
 	interface Preview {
 		values: { text: string; count: number }[];
@@ -138,7 +138,7 @@
 				spellcheck="false"
 				autocomplete="off"
 				data-autofocus
-				placeholder="=ANNEE([Date])"
+				placeholder={`=${fnName('YEAR', 'ANNEE')}([Date])`}
 				aria-invalid={!!(shown?.error || failed)}
 				oninput={refresh}
 				onclick={refresh}

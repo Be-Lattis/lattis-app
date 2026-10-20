@@ -5,7 +5,7 @@
 // (docs/collaboration/droits.md).
 import type { ACL, Grant, Member, Role, Team, WorkbookMember } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
-import { compareText, t, tAny } from '#lib/i18n/index.js';
+import { boolText, compareText, formulaDecimal, isoToShort, parseBool, parseNumberText, parseShortDate, t, tAny } from '#lib/i18n/index.js';
 
 export const LEVELS = ['none', 'reader', 'participant', 'editor'] as const;
 export type Level = (typeof LEVELS)[number];
@@ -332,21 +332,22 @@ export function literal(value: string, type: string): string {
 	switch (type) {
 		case 'integer':
 		case 'decimal': {
-			const n = v.replace(/\s/g, '').replace(',', '.');
-			if (!/^-?\d+(\.\d+)?$/.test(n) || (type === 'integer' && n.includes('.'))) throw new Error(type === 'integer' ? t('remote.rights.literal.notInteger', { value }) : t('remote.rights.literal.notNumber', { value }));
-			return n;
+			// Nombre écrit dans la langue de la session (1 234,5 ; 1,234.5).
+			const n = /^-?[\d\s  .,]+$/.test(v) ? parseNumberText(v) : null;
+			if (n === null || (type === 'integer' && !Number.isInteger(n))) throw new Error(type === 'integer' ? t('remote.rights.literal.notInteger', { value }) : t('remote.rights.literal.notNumber', { value }));
+			return String(n);
 		}
 		case 'boolean': {
-			const b = v.toLowerCase();
-			if (['vrai', 'true', 'oui', '1'].includes(b)) return 'true';
-			if (['faux', 'false', 'non', '0'].includes(b)) return 'false';
-			throw new Error(t('remote.rights.literal.notBoolean', { value }));
+			// Mots de la langue (wahr, verdadero, 是…), true/false et les mots français partout.
+			const b = parseBool(v);
+			if (b === null) throw new Error(t('remote.rights.literal.notBoolean', { value }));
+			return b ? 'true' : 'false';
 		}
 		case 'date': {
-			const fr = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(v);
-			const iso = fr ? `${fr[3]}-${fr[2].padStart(2, '0')}-${fr[1].padStart(2, '0')}` : v;
-			if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error(t('remote.rights.literal.notDate', { value }));
-			return quoteText(iso);
+			// Date courte de la langue (19/10/2026, 10/19/2026, 19.10.2026, 2026/10/19) ou ISO.
+			const d = parseShortDate(v);
+			if (!d) throw new Error(t('remote.rights.literal.notDate', { value }));
+			return quoteText(`${String(d.y).padStart(4, '0')}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`);
 		}
 	}
 	return quoteText(value);
@@ -392,17 +393,16 @@ const TEXT = String.raw`'((?:[^']|'')*)'`;
 const unIdent = (s: string) => s.replaceAll('""', '"');
 const unText = (s: string) => s.replaceAll("''", "'");
 
-/** Valeur saisie à partir d'un littéral SQL (date ISO → jj/mm/aaaa). */
+/** Valeur saisie à partir d'un littéral SQL, écrite dans la langue de la session (date ISO → 19/10/2026, 10/19/2026…). */
 function fromLiteral(lit: string, type: string): string | null {
 	const t = new RegExp(`^${TEXT}$`).exec(lit);
 	if (t) {
 		const s = unText(t[1]);
-		const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-		return type === 'date' && iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : s;
+		return type === 'date' ? isoToShort(s) : s;
 	}
-	if (/^-?\d+(\.\d+)?$/.test(lit)) return type === 'decimal' ? lit.replace('.', ',') : lit;
-	if (lit === 'true') return 'vrai';
-	if (lit === 'false') return 'faux';
+	if (/^-?\d+(\.\d+)?$/.test(lit)) return type === 'decimal' ? lit.replace('.', formulaDecimal()) : lit;
+	if (lit === 'true') return boolText(true).toLowerCase();
+	if (lit === 'false') return boolText(false).toLowerCase();
 	return null;
 }
 

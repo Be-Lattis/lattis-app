@@ -423,6 +423,55 @@ func styleRules(v any) ([]Rule, bool) {
 	return rules, true
 }
 
+// filterOrderOps : conditions de filtre qui comparent à une valeur (nombre,
+// date) tapée comme dans une cellule.
+var filterOrderOps = map[string]bool{"gt": true, "ge": true, "lt": true, "le": true, "between": true}
+
+// filterIn : un filtre de colonne reçu de l'interface, valeurs des
+// conditions d'ordre dans la forme gardée (copié).
+func (u ui) filterIn(f *ColumnFilter) *ColumnFilter {
+	if u.plain() || f == nil || len(f.Conds) == 0 {
+		return f
+	}
+	out := *f
+	out.Conds = u.condsMap(f.Conds, u.valueIn)
+	return &out
+}
+
+func (u ui) condsMap(cs []FilterCond, fn func(string) string) []FilterCond {
+	out := append([]FilterCond{}, cs...)
+	for i, c := range out {
+		if filterOrderOps[c.Op] {
+			out[i].Value, out[i].To = fn(c.Value), fn(c.To)
+		}
+	}
+	return out
+}
+
+// filterJSONOut : les filtres d'un tableau (JSON, par colonne) dans
+// l'écriture de la session.
+func (u ui) filterJSONOut(s string) string {
+	if u.plain() || !strings.Contains(s, `"conds"`) {
+		return s
+	}
+	var fs map[string]*ColumnFilter
+	if json.Unmarshal([]byte(s), &fs) != nil {
+		return s
+	}
+	for k, f := range fs {
+		if f != nil && len(f.Conds) > 0 {
+			c := *f
+			c.Conds = u.condsMap(f.Conds, u.valueOut)
+			fs[k] = &c
+		}
+	}
+	b, err := json.Marshal(fs)
+	if err != nil {
+		return s
+	}
+	return string(b)
+}
+
 // layoutOut met une mise en page dans l'écriture de la session : texte
 // brut et valeurs des cellules libres, règles des colonnes, des lignes et
 // des cellules (les formules des colonnes calculées, des onglets à choix et
@@ -459,6 +508,7 @@ func (u ui) layoutOut(l *Layout) {
 			cols[k] = c
 		}
 		tb.Columns = cols
+		tb.Filter = u.filterJSONOut(tb.Filter)
 		tables[i] = tb
 	}
 	l.Tables = tables

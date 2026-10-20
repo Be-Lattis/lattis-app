@@ -1,6 +1,6 @@
 // Résultat d'une requête de l'onglet SQL : nombres de lignes accordés, copie
 // pour Excel (texte séparé par des tabulations).
-import { fmtNumber, t } from '#lib/i18n/index.js';
+import { boolText, fmtNumber, t } from '#lib/i18n/index.js';
 
 /**
  * « 1 ligne », « 0 ligne », « 12 lignes » : en français, le pluriel commence
@@ -16,7 +16,7 @@ import { fmtNumber, t } from '#lib/i18n/index.js';
 function tsvValue(v: unknown): string {
 	if (v === null || v === undefined) return '';
 	if (typeof v === 'number') return String(v).replace('.', ',');
-	if (typeof v === 'boolean') return v ? 'VRAI' : 'FAUX';
+	if (typeof v === 'boolean') return boolText(v);
 	const s = String(v);
 	// Tabulation, retour à la ligne ou guillemet : entre guillemets, guillemets doublés.
 	return /[\t\n\r"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;

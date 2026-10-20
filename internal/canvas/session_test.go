@@ -191,6 +191,27 @@ func TestSessionTableFormulas(t *testing.T) {
 	if _, r := column(stored); !strings.Contains(r, `"value":"=ET([Montant]>1,5; VRAI)"`) || !strings.Contains(r, `"value":"1,5","to":"1234,5"`) {
 		t.Errorf("règles gardées : %s", r)
 	}
+	// Filtre personnalisé : valeurs tapées comme dans une cellule.
+	speak(d, "en")
+	if err := d.SetFilter(ctx, "Feuille1", 2, &ColumnFilter{Conds: []FilterCond{{Op: "between", Value: "1", To: "1,234"}}}); err != nil {
+		t.Fatal(err)
+	}
+	filter := func(c context.Context) string {
+		l, err := d.Layout(c, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return l.Tables[0].Filter
+	}
+	if f := filter(stored); !strings.Contains(f, `"value":"1","to":"1234"`) {
+		t.Errorf("filtre gardé : %s", f)
+	}
+	if f := filter(ctx); !strings.Contains(f, `"value":"1","to":"1234"`) {
+		t.Errorf("filtre en anglais : %s", f)
+	}
+	if err := d.SetFilter(ctx, "Feuille1", 2, nil); err != nil {
+		t.Fatal(err)
+	}
 	// Champ calculé d'un tableau croisé.
 	speak(d, "en")
 	cfg := PivotConfig{Source: "Feuille1", Calc: []PivotCalcField{{Name: "Year", Text: "=YEAR([Date])"}}, RowFields: []string{"Year"}, Values: []PivotValue{{Field: "Montant", Agg: "sum"}}}

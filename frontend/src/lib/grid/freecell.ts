@@ -9,7 +9,9 @@ export type FreeKind = 'number' | 'date' | 'bool' | 'text';
 
 const amount = /^\(?[-+]?[\d\s  ]*[,.]?\d+\)?\s*€?$|^€\s*[-+]?[\d\s  ]*[,.]?\d+$/;
 const exponent = /^[-+]?\d+([,.]\d+)?[eE][-+]?\d+$/;
-const date = /^(\d{1,2}\/\d{1,2}(\/\d{4})?|\d{4}-\d{2}-\d{2})( \d{1,2}:\d{2}(:\d{2})?)?$/;
+// Dates courtes de toutes les langues (19/10/2026, 10/19/2026, 19.10.2026,
+// 2026/10/19) et ISO.
+const date = /^(\d{1,2}[/.]\d{1,2}([/.]\d{4})?|\d{4}[-/]\d{2}[-/]\d{2})( \d{1,2}:\d{2}(:\d{2})?)?$/;
 const time = /^\d{1,2}:\d{2}(:\d{2})?$/;
 
 /** Nature d'un texte affiché (saisie ou résultat de formule). */
@@ -18,7 +20,7 @@ export function freeKind(text: string): FreeKind {
 	if (!s) return 'text';
 	if (isNumericText(s) || exponent.test(s) || (/\d/.test(s) && amount.test(s) && (s.includes('€') || s.startsWith('(')))) return 'number';
 	if (date.test(s) || time.test(s)) return 'date';
-	if (/^(vrai|faux)$/i.test(s)) return 'bool';
+	if (/^(vrai|faux|true|false)$/i.test(s)) return 'bool';
 	return 'text';
 }
 

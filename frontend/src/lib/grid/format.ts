@@ -1,6 +1,6 @@
 // Affichage des valeurs selon le type logique de la colonne, dans la langue de
 // l'interface (#lib/i18n) ; la valeur stockée ne change pas.
-import { decimalSep, numberFormat, t, tAny } from '#lib/i18n/index.js';
+import { boolText, decimalSep, errorCode, isoToShort, numberFormat, t, tAny } from '#lib/i18n/index.js';
 
 export type ColumnType = 'integer' | 'decimal' | 'text' | 'boolean' | 'date' | 'formula';
 
@@ -9,13 +9,14 @@ const general = () => numberFormat({ maximumFractionDigits: 10, useGrouping: fal
 /** Affichage « Standard » d'Excel pour une valeur calculée. */
 function generalValue(v: unknown): string {
 	if (typeof v === 'number') return general().format(v);
-	if (typeof v === 'boolean') return v ? 'VRAI' : 'FAUX';
+	if (typeof v === 'boolean') return boolText(v);
+	if (isErrorValue(v)) return errorCode(String(v));
 	return String(v);
 }
 
-/** Vrai pour le libellé d'une erreur de formule (« #DIV/0! »…). */
+/** Vrai pour le libellé d'une erreur de formule (« #DIV/0! »…), en français ou en anglais. */
 export function isErrorValue(v: unknown): boolean {
-	return typeof v === 'string' && /^#(DIV\/0!|VALEUR!|N\/A|REF!|NOM\?|NOMBRE!|CIRC!)$/.test(v);
+	return typeof v === 'string' && /^#(DIV\/0!|VALEUR!|VALUE!|N\/A|REF!|NOM\?|NAME\?|NOMBRE!|NUM!|CIRC!)$/.test(v);
 }
 
 /** Alignement d'une valeur calculée : nombres à droite, booléens et erreurs centrés. */
@@ -41,11 +42,11 @@ export function formatValue(type: ColumnType, v: unknown): string {
 		case 'decimal':
 			return typeof v === 'number' ? decimal().format(v) : String(v);
 		case 'boolean':
-			return v ? 'VRAI' : 'FAUX';
-		case 'date': {
-			const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v));
-			return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v);
-		}
+			return boolText(!!v);
+		case 'date':
+			// Date courte de la langue (19/10/2026, 10/19/2026, 19.10.2026…),
+			// celle qui se tape aussi dans la cellule.
+			return isoToShort(String(v));
 		default:
 			return String(v);
 	}

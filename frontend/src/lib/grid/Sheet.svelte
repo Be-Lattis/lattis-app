@@ -120,7 +120,7 @@
 		sortLabels,
 		type ColumnType
 	} from './format';
-	import { errorText, fmtNumber, lower, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
+	import { errorText, fmtNumber, fnName, lower, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
 
 	export interface Column {
 		name: string;
@@ -6475,10 +6475,10 @@
 		const inTbl = tableAt(row, col);
 		const above = entries.filter((e) => col >= e.t.col && col <= e.lastCol && e.last < row).sort((a, b) => b.last - a.last)[0];
 		if (!inTbl && above) {
-			startFormula(`=SOMME(${above.t.name}[${above.t.columns[col - above.t.col].name}])`);
+			startFormula(`=${fnName('SUM', 'SOMME')}(${above.t.name}[${above.t.columns[col - above.t.col].name}])`);
 			return;
 		}
-		startFormula('=SOMME(');
+		startFormula(`=${fnName('SUM', 'SOMME')}(`);
 	}
 
 	export function openFunctions() {

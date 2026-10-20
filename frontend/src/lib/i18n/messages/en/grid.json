@@ -627,7 +627,7 @@
 		"custom.cond": "Condition {n}",
 		"custom.none": "(none)",
 		"custom.number": "number",
-		"custom.date": "dd/mm/yyyy",
+		"custom.date": "mm/dd/yyyy",
 		"custom.wildcards": "* stands for any series of characters, ? for a single one.",
 		"firstValues": "Only the first 1,000 values are listed.",
 		"errorsOnly": "Entries not matching the type only ({n})",

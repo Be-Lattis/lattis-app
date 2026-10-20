@@ -213,6 +213,7 @@ func (t Table) userVisibleSQL() string {
 // SetFilter remplace le filtre de la colonne i (nil : retire le filtre de la
 // colonne).
 func (m *Model) SetFilter(ctx context.Context, table string, i int, f *ColumnFilter) error {
+	f = m.ui(ctx).filterIn(f)
 	return m.Do(ctx, "Filtrer", func(t *tx) error {
 		tb, err := t.tableByName(table)
 		if err != nil {

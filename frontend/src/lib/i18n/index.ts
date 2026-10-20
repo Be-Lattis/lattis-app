@@ -26,4 +26,21 @@ export {
 	tAny,
 	upper
 } from './i18n.svelte.js';
+export {
+	boolText,
+	boolWords,
+	datePattern,
+	dateStyle,
+	errorCode,
+	fnName,
+	formulaDecimal,
+	formulaSep,
+	frenchErrorCode,
+	isoToShort,
+	parseBool,
+	parseNumberText,
+	parseShortDate,
+	shortDate,
+	type DateOrder
+} from './values.js';
 export type { MessageKey, MessageParams } from './keys.js';

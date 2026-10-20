@@ -1,7 +1,7 @@
 // Aide à la saisie des formules : suggestions de fonctions, de tableaux et
 // de colonnes selon ce qui précède le curseur, et signature de la fonction
 // en cours.
-import { t } from '#lib/i18n/index.js';
+import { formulaSep, t } from '#lib/i18n/index.js';
 
 /** Argument d'une fonction (nom français, description, facultatif). */
 export interface ArgInfo {
@@ -115,7 +115,7 @@ export interface CallAt {
  * matricielles ({",";";"} : un seul argument). La ligne ou la clé
  * de Tableau[Colonne][clé] est une expression, qui peut contenir un appel.
  */
-export function callAt(text: string, caret: number, sep = ';'): CallAt | null {
+export function callAt(text: string, caret: number, sep: string = formulaSep()): CallAt | null {
 	if (!text.trimStart().startsWith('=')) return null;
 	const before = text.slice(0, caret);
 	// Pile des parenthèses (avec le nom de la fonction, vide pour un simple
@@ -190,7 +190,7 @@ export function signatureParts(fn: FunctionDoc, index: number): { parts: SigPart
 	const parts: SigPart[] = [{ text: fn.name + '(' }];
 	let arg: ArgInfo | null = null;
 	const push = (text: string, on: boolean) => {
-		if (parts.length > 1) parts.push({ text: '; ' });
+		if (parts.length > 1) parts.push({ text: formulaSep() + ' ' });
 		parts.push(on ? { text, on } : { text });
 	};
 	args.forEach((a, i) => {
@@ -205,7 +205,7 @@ export function signatureParts(fn: FunctionDoc, index: number): { parts: SigPart
 			const a = args[off + j];
 			const name = numbered(a.name, n);
 			if (j === inGroup) arg = { ...a, name };
-			if (j > 0) parts.push({ text: '; ' });
+			if (j > 0) parts.push({ text: formulaSep() + ' ' });
 			parts.push(j === inGroup ? { text: name, on: true } : { text: name });
 		}
 		parts.push({ text: ']' });
@@ -231,7 +231,7 @@ function pairsParts(fn: FunctionDoc, args: ArgInfo[], index: number): { parts: S
 	const nk = numbered(nom.name, k);
 	const parts: SigPart[] = [{ text: fn.name + '(' }];
 	const push = (text: string, on: boolean) => {
-		if (parts.length > 1) parts.push({ text: '; ' });
+		if (parts.length > 1) parts.push({ text: formulaSep() + ' ' });
 		parts.push(on ? { text, on } : { text });
 	};
 	push(nom.name, index === 0);
@@ -239,7 +239,7 @@ function pairsParts(fn: FunctionDoc, args: ArgInfo[], index: number): { parts: S
 	if (k > 2) push('…', false);
 	push('[', false);
 	parts.push(nameOrCalc ? { text: nk, on: true } : { text: nk });
-	parts.push({ text: '; ' });
+	parts.push({ text: formulaSep() + ' ' });
 	const vk = numbered(valeur.name, k);
 	parts.push(value ? { text: vk, on: true } : { text: vk });
 	parts.push({ text: ']' });
@@ -293,12 +293,13 @@ export function needsNextArg(text: string, caret: number, cat: Catalog): boolean
 }
 
 /**
- * Passe à l'argument suivant : le curseur saute un « ; » déjà là, sinon
- * « ; » est inséré. Rend le nouveau texte et la position du curseur.
+ * Passe à l'argument suivant : le curseur saute un séparateur (« ; », « , » en
+ * anglais) déjà là, sinon il est inséré. Rend le nouveau texte et la position du curseur.
  */
 export function toNextArg(text: string, caret: number): { text: string; caret: number } {
 	const rest = text.slice(caret);
-	const m = /^\s*;\s?/.exec(rest);
+	const sep = formulaSep();
+	const m = (sep === ',' ? /^\s*,\s?/ : /^\s*;\s?/).exec(rest);
 	if (m) return { text, caret: caret + m[0].length };
-	return { text: text.slice(0, caret) + '; ' + rest, caret: caret + 2 };
+	return { text: text.slice(0, caret) + sep + ' ' + rest, caret: caret + 2 };
 }

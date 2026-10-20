@@ -3,7 +3,7 @@
 // texte. Le texte affiché d'une cellule passe par formatCell : la valeur
 // stockée ne change pas, seul son affichage.
 
-import { dateTimeFormat, lang } from '#lib/i18n/index.js';
+import { dateStyle, dateTimeFormat, lang, shortDate } from '#lib/i18n/index.js';
 import { formatNumber, isNumericText, styledNumber, type CellStyle } from './style';
 
 /** Formats de date proposés (motifs d'Excel en français). */
@@ -54,12 +54,15 @@ function valid(p: DateTime): DateTime | null {
  */
 export function parseDateTime(text: string): DateTime | null {
 	const t = text.trim();
-	let m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(t);
+	let m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(t) ?? /^(\d{4})\/(\d{1,2})\/(\d{1,2})(?: (\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(t);
 	if (m) return valid({ y: +m[1], m: +m[2], d: +m[3], h: +(m[4] ?? 0), mi: +(m[5] ?? 0), s: +(m[6] ?? 0) });
-	m = /^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?: (\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(t);
+	// Date courte de la langue de la session (le moteur l'écrit ainsi) :
+	// 16/10/2026, 10/16/2026 (anglais), 16.10.2026 (allemand).
+	m = /^(\d{1,2})[/.](\d{1,2})[/.](\d{4}|\d{2})(?: (\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(t);
 	if (m) {
 		const y = m[3].length === 2 ? 2000 + +m[3] : +m[3];
-		return valid({ y, m: +m[2], d: +m[1], h: +(m[4] ?? 0), mi: +(m[5] ?? 0), s: +(m[6] ?? 0) });
+		const [d, mo] = dateStyle().order === 'dmy' ? [+m[1], +m[2]] : [+m[2], +m[1]];
+		return valid({ y, m: mo, d, h: +(m[4] ?? 0), mi: +(m[5] ?? 0), s: +(m[6] ?? 0) });
 	}
 	m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(t);
 	if (m) return valid({ y: 1899, m: 12, d: 30, h: +m[1], mi: +m[2], s: +(m[3] ?? 0) });
@@ -82,6 +85,10 @@ const pad = (n: number, w = 2) => String(n).padStart(w, '0');
  * désigne les minutes juste après « hh » ou juste avant « ss ».
  */
 export function formatDateTime(p: DateTime, pattern: string): string {
+	// Date courte (le format par défaut, ruban › Date courte) : celle de la
+	// langue, comme la date courte d'Excel suit le système.
+	if (pattern === DEFAULT_DATE) return shortDate(p.y, p.m, p.d);
+	if (pattern === 'jj/mm/aaaa hh:mm') return `${shortDate(p.y, p.m, p.d)} ${pad(p.h)}:${pad(p.mi)}`;
 	const tokens = /aaaa|aa|mmmm|mmm|mm|jjjj|jjj|jj|hh|ss|[^amjhs]+|./g;
 	const parts = pattern.match(tokens) ?? [];
 	const isField = (t: string) => /^(aaaa|aa|mmmm|mmm|mm|jjjj|jjj|jj|hh|ss)$/.test(t);

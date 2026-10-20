@@ -4,7 +4,7 @@
 // repérées pour être colorées dans l'éditeur et encadrées sur la grille, et
 // références de plage insérées au glissé.
 // (t est ici un jeton : la traduction s'appelle tr.)
-import { t as tr } from '#lib/i18n/index.js';
+import { formulaSep, t as tr } from '#lib/i18n/index.js';
 
 /** La saisie est-elle une formule ? */
 export const isFormula = (text: string) => /^\s*=/.test(text) && text.trim().length > 1;
@@ -329,7 +329,7 @@ class Checker {
  * Vérifie la syntaxe d'une formule (texte complet, « = » compris) ; null si
  * elle est correcte. pos et end situent la faute dans le texte.
  */
-export function checkFormula(text: string, sep = ';'): FormulaError | null {
+export function checkFormula(text: string, sep: string = formulaSep()): FormulaError | null {
 	const eq = text.indexOf('=');
 	if (eq < 0) return null;
 	try {
@@ -392,7 +392,7 @@ export interface FormulaRef {
 export const REF_COLORS = ['#1f5fbf', '#c8302c', '#7a3fb8', '#1f8a3e', '#b8650a', '#0f8686', '#b0337f'];
 
 /** Repère les références d'une formule (vide si le texte n'en est pas une ou ne se découpe pas). */
-export function formulaRefs(text: string, sep = ';'): FormulaRef[] {
+export function formulaRefs(text: string, sep: string = formulaSep()): FormulaRef[] {
 	if (!isFormula(text)) return [];
 	const eq = text.indexOf('=');
 	let toks: Tok[];

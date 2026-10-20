@@ -2,7 +2,7 @@
 // cellule active est en erreur (Excel le fait par une infobulle).
 
 import { freeKind } from './freecell';
-import { t } from '#lib/i18n/index.js';
+import { frenchErrorCode, t } from '#lib/i18n/index.js';
 
 const A1 = /(?:^|[^\p{L}\p{N}_@[\]."])(\$?[A-Za-z]{1,3}\$?\d{1,7})(?![\p{L}\p{N}_(])/u;
 
@@ -22,7 +22,8 @@ function cellPos(letters: string, digits: string): [number, number] {
  * de sa formule), pour nommer celle qui contient du texte.
  */
 export function explainError(code: string, formula = '', cellText?: (row: number, col: number) => string | undefined): string {
-	switch (code) {
+	// Le code s'affiche dans la langue de la session (#VALUE! hors français).
+	switch (frenchErrorCode(code)) {
 		case '#NOM?': {
 			const ref = A1.exec(formula)?.[1];
 			if (ref)

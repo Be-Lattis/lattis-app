@@ -6,7 +6,7 @@
 // colonne d'un tableau, cellule (de tableau, libre ou de tableau croisé),
 // puis mise en forme conditionnelle. Une propriété à null dans une couche
 // la retire explicitement (elle masque les couches au-dessous).
-import { numberFormat } from '#lib/i18n/index.js';
+import { numberFormat, parseNumberText } from '#lib/i18n/index.js';
 
 export interface CellStyle {
 	b?: boolean; // gras
@@ -120,9 +120,12 @@ export function mergeStyles(a?: CellStyle, b?: CellStyle): CellStyle | undefined
 	return { ...a, ...b };
 }
 
-/** Le texte affiché est-il un nombre (« 1 234,5 », « -3 », « 12 % ») ? */
+/**
+ * Le texte affiché est-il un nombre (« 1 234,5 », « -3 », « 12 % », et les
+ * milliers des autres langues : « 1,234.5 », « 1.234,5 ») ?
+ */
 export function isNumericText(s: string): boolean {
-	return /^[-+]?[\d\s  ]+([,.]\d+)?[\s  ]*%?$/.test(s.trim());
+	return /^[-+]?[\d\s  ]+([,.]\d+)?[\s  ]*%?$/.test(s.trim()) || /^[-+]?(\d{1,3}(,\d{3})+(\.\d+)?|\d{1,3}(\.\d{3})+(,\d+)?)\s*%?$/.test(s.trim());
 }
 
 /**
@@ -131,12 +134,10 @@ export function isNumericText(s: string): boolean {
  */
 export function styledNumber(text: string, st: CellStyle | undefined): string {
 	if (!st || (st.nf === undefined && st.dp === undefined) || !isNumericText(text)) return text;
-	let t = text.replace(/[\s  ]/g, '');
-	const pct = t.endsWith('%');
-	t = t.replace('%', '').replace(',', '.');
-	let n = Number(t);
-	if (!Number.isFinite(n)) return text;
-	if (pct) n /= 100;
+	const t = text.replace(/[\s  ]/g, '');
+	// Écrit dans la langue de la session (le moteur l'y écrit), « % » compris.
+	const n = parseNumberText(t);
+	if (n === null) return text;
 	return formatNumber(st.nf, n, st.dp, st.ng) ?? text;
 }
 

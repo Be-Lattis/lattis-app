@@ -700,8 +700,8 @@
 		"literal": {
 			"notNumber": "“{value}” is not a number",
 			"notInteger": "“{value}” is not a whole number",
-			"notBoolean": "“{value}” is not true or false",
-			"notDate": "“{value}” is not a date (dd/mm/yyyy)"
+			"notBoolean": "“{value}” is not true or false (yes, no)",
+			"notDate": "“{value}” is not a date (mm/dd/yyyy)"
 		},
 		"condition": {
 			"unknownColumn": "unknown column: {column}",
@@ -781,7 +781,7 @@
 		},
 		"noTeams": "“one of their teams”: this server does not know about teams",
 		"placeholder": {
-			"date": "dd/mm/yyyy",
+			"date": "mm/dd/yyyy",
 			"boolean": "true or false",
 			"number": "number"
 		},

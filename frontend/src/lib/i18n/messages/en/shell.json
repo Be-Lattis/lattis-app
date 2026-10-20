@@ -788,7 +788,7 @@
 			"readingColumns": "Reading the columns…",
 			"noColumns": "No table column on this sheet has few distinct values",
 			"columnTooltip": "“{column}” in table {table} — {n, plural, one {# distinct value} other {# distinct values}}",
-			"formulaTooltip": "A formula on each row's columns gives the value to choose: =ANNEE([Date]), =TEXTE([Date];\"mmmm\"), =SI([Montant]>1000;\"Gros\";\"Petit\")",
+			"formulaTooltip": "A formula on each row's columns gives the value to choose: =YEAR([Date]), =TEXT([Date],\"mmmm\"), =IF([Amount]>1000,\"Large\",\"Small\")",
 			"formula": "A formula…",
 			"stopChoosing": "Stop choosing by “{name}”",
 			"unprotect": "Unprotect sheet…",
