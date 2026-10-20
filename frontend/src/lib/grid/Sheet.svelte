@@ -13,7 +13,7 @@
 	import { RowCache, percentile, syncAt, type Fetched, type SyncKind } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
-	import { allGenerated, DEFAULT_NAME_HINT, isDefaultTableName, isGeneratedColumnName } from './defaultname';
+	import { allGenerated, defaultNameHint, isDefaultTableName, isGeneratedColumnName } from './defaultname';
 	import { ease, flashAlpha, lerpBar, motionAt, progress, reducedMotion, sameBar, shiftAxis, tableMotions, zeroBar, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
 	import { followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
 	import { boxStyle, formatStat, isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
@@ -120,7 +120,7 @@
 		sortLabels,
 		type ColumnType
 	} from './format';
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { errorText, fmtNumber, lower, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
 
 	export interface Column {
 		name: string;
@@ -1799,7 +1799,7 @@
 		if (!e || e.t.access !== 'participant' || r <= e.t.row) return false;
 		return !!e.cache.row(r - e.t.row - 1)?.locked;
 	}
-	const NOT_YOURS = "Ligne d'un autre membre : en tant que participant, vous ne modifiez que vos propres lignes";
+	const NOT_YOURS = $derived(tr('grid.readOnly.notYours'));
 	/** Ligne survolée en lecture seule (participant) : légèrement grisée ; -1 sinon. */
 	let hoverLocked = -1;
 
@@ -2107,7 +2107,7 @@
 			fxInput?.focus();
 			fxInput?.setSelectionRange(h.start, h.end);
 			if (fxInput) onFormulaInput(fxInput, 'fx');
-			say('Formule en cours : cliquez une cellule ou une colonne pour insérer sa référence ; Entrée valide, Échap annule');
+			say(tr('grid.formula.pickHint'));
 			return;
 		}
 		// Retour à la feuille de la formule.
@@ -2728,7 +2728,7 @@
 		// Tableaux croisés : en-tête et total en gras, dans un cadre.
 		for (const p of pivots) {
 			if (p.error) {
-				drawText('Tableau croisé : ' + p.error, cx(p.col), ry(p.row), cax().size(p.col), 'left', undefined, C.error, w);
+				drawText(tr('grid.pivot.error', { error: p.error }), cx(p.col), ry(p.row), cax().size(p.col), 'left', undefined, C.error, w);
 				continue;
 			}
 			const pr1 = p.row + p.cells.length - 1;
@@ -2984,7 +2984,7 @@
 				ctx.fillStyle = C.icon;
 				ctx.textAlign = 'right';
 				ctx.textBaseline = 'top';
-				ctx.fillText('Vue filtrée par vos droits', x + fw, y + fh + 2);
+				ctx.fillText(tr('grid.rights.filtered'), x + fw, y + fh + 2);
 			}
 			ctx.restore();
 		}
@@ -3817,9 +3817,9 @@
 
 	/** Valeur affichée d'un filtre de rapport : « (Tous) », la valeur, ou « (Plusieurs éléments) ». */
 	function pivotFilterText(values: string[]): string {
-		if (!values.length) return '(Tous)';
-		if (values.length === 1) return values[0] === '' ? '(Vides)' : values[0];
-		return '(Plusieurs éléments)';
+		if (!values.length) return tr('grid.pivot.filter.all');
+		if (values.length === 1) return values[0] === '' ? tr('grid.filter.blanks') : values[0];
+		return tr('grid.pivot.filter.several');
 	}
 
 	/** Le champ f du TCD est-il filtré ou trié par le ▾ de son étiquette ? */
@@ -3835,9 +3835,9 @@
 	// ID ou 1, 2, 3… (canvas/autokey.go, décision 0010).
 
 	/** Infobulle d'une colonne numérotée d'office. */
-	const AUTO_NUMBER_TIP = 'numérotée automatiquement : une ligne ajoutée reçoit le numéro suivant';
+	const AUTO_NUMBER_TIP = $derived(tr('grid.key.autoNumber'));
 
-	const KEY_HINT_TIP = 'Cette colonne semble identifier chaque ligne : cliquer pour en faire la clé du tableau';
+	const KEY_HINT_TIP = $derived(tr('grid.key.hint'));
 	/** Zones (écran) des clés proposées dessinées à cette image. */
 	let keyHintBoxes: { e: Entry; x0: number; x1: number; y0: number; y1: number }[] = [];
 	let hintMenu = $state<{ x: number; y: number; e: Entry } | null>(null);
@@ -3915,7 +3915,7 @@
 			try {
 				await set(t, on);
 			} catch (err) {
-				say(String(err instanceof Error ? err.message : err));
+				say(errorText(err));
 			}
 		});
 	}
@@ -3940,9 +3940,9 @@
 			.then(async () => {
 				try {
 					await setKey(t, 0);
-					say(`« ${name} » est maintenant la clé du tableau ${t.name} (Ctrl+Z pour annuler)`);
+					say(tr('grid.key.set', { name, table: t.name }));
 				} catch (err) {
-					say(String(err instanceof Error ? err.message : err));
+					say(errorText(err));
 				}
 			});
 	}
@@ -4263,7 +4263,7 @@
 	let painter = $state<Record<string, unknown> | null>(null);
 	export function formatPainter() {
 		painter = painterPatch(activeStyle());
-		say('Reproduire la mise en forme : sélectionnez les cellules à mettre en forme (Échap pour annuler)');
+		say(tr('grid.painter.hint'));
 	}
 	function applyPainter() {
 		if (!painter) return;
@@ -4332,12 +4332,12 @@
 		const mergeCells = source.mergeCells;
 		if (!mergeCells) return;
 		if (r0 === r1 && c0 === c1) {
-			say('Sélectionnez plusieurs cellules libres pour les fusionner');
+			say(tr('grid.merge.selectSeveral'));
 			return;
 		}
 		const band = bandSelection();
 		if (!freeSelection() && !band) {
-			say('Fusionner et centrer ne s’applique pas dans un tableau : un tableau garde une cellule par valeur. Fusionnez des cellules libres, hors des tableaux.');
+			say(tr('grid.merge.inTable'));
 			return;
 		}
 		writing = writing.catch(() => undefined).then(async () => {
@@ -4345,10 +4345,10 @@
 				const n = await mergeCells(r0, c0, r1, c1);
 				moveTo(r0, c0);
 				// Bande des groupes : le moteur dit ce qui a été renommé.
-				message = band ? '' : n ?`Cellules fusionnées : seule la valeur en haut à gauche est gardée (${n} effacée${n > 1 ? 's' : ''}, Ctrl+Z pour annuler)` : 'Cellules fusionnées et centrées';
+				message = band ? '' : n ? tr('grid.merge.done.cleared', { n }) : tr('grid.merge.done');
 			} catch (err) {
 				linesHint = null; // refusée : rien ne glisse
-				message = String(err instanceof Error ? err.message : err);
+				message = errorText(err);
 			}
 			refreshStatus();
 			schedule();
@@ -4378,8 +4378,8 @@
 			rebuildBoxes();
 			const first = ones[0];
 			if (!groups) moveTo(first.e.t.row - 1, first.c);
-			const names = ones.map((o) => `« ${o.e.t.columns[o.c - o.e.t.col].name} »`).join(', ');
-			message = `${names} sur deux lignes : tapez le groupe dans la bande au-dessus (sans groupe, la colonne reste sur un niveau)`;
+			const names = ones.map((o) => tr('grid.quoted', { text: o.e.t.columns[o.c - o.e.t.col].name })).join(', ');
+			message = tr('grid.twoLevel.split', { names });
 			refreshStatus();
 			schedule();
 			if (!groups) return;
@@ -4496,7 +4496,7 @@
 		if (!d) return;
 		const v = Math.round(Number(d.value));
 		if (!Number.isFinite(v) || v < 4 || v > 1000) {
-			say('Taille entre 4 et 1 000 pixels');
+			say(tr('grid.size.range'));
 			return;
 		}
 		const { r0, r1, c0, c1 } = selection();
@@ -4549,13 +4549,13 @@
 			rows = active.row;
 			cols = active.col;
 			if (!rows && !cols) {
-				say('Placez la cellule active sous les lignes et à droite des colonnes à figer');
+				say(tr('grid.freeze.place'));
 				return;
 			}
 		}
 		// La partie figée part du haut de la feuille : elle doit tenir à l'écran.
 		if (rowTop(rows) > vs.view * 0.75 || cax().offset(cols) > (viewW - MARGIN) * 0.75) {
-			say('La partie à figer dépasse l’écran : faites défiler la feuille vers le haut, ou choisissez une cellule plus haute ou plus à gauche');
+			say(tr('grid.freeze.tooBig'));
 			return;
 		}
 		if (rows || cols) {
@@ -4603,9 +4603,9 @@
 		const gen = dvGen;
 		let l: DvList;
 		try {
-			l = source.validationList ? await source.validationList(src) : { values: [], error: 'lecture impossible ici' };
+			l = source.validationList ? await source.validationList(src) : { values: [], error: tr('grid.validation.readImpossible') };
 		} catch (err) {
-			l = { values: [], error: String((err as Error)?.message ?? err) };
+			l = { values: [], error: errorText(err) };
 		}
 		if (gen === dvGen) dvLists.set(src, l);
 		return l;
@@ -4713,12 +4713,12 @@
 		try {
 			const k = await source.referenceRow!(ref.src, ref.value);
 			if (!k.found || k.id === undefined) {
-				say(`« ${ref.value} » n’existe pas dans ${k.table || ref.table}`);
+				say(tr('grid.refLink.missing', { value: ref.value, table: k.table || ref.table }));
 				return;
 			}
 			onreflink?.({ table: k.table, id: k.id, key: k.key }, { row: r, col: c, label: spotLabel(r, c) });
 		} catch (err) {
-			say(String((err as Error)?.message ?? err));
+			say(errorText(err));
 		}
 	}
 
@@ -4870,14 +4870,14 @@
 		validDlg = null;
 		wrap.focus();
 		applyStyle({ dv });
-		if (!dv) say('Validation retirée');
-		else if (Array.isArray(dv)) say(`Liste déroulante : ${dv.length} valeur${dv.length > 1 ? 's' : ''} permise${dv.length > 1 ? 's' : ''} (Alt+↓ pour l’ouvrir)`);
+		if (!dv) say(tr('grid.validation.removed'));
+		else if (Array.isArray(dv)) say(tr('grid.validation.list.set', { n: dv.length }));
 		else {
 			// Tirée de la clé d'un tableau : la colonne en devient une référence (décision 0016).
 			const t = onreflink && source.referenceRow ? refTarget(dv.src, sources) : null;
 			const e = tableAt(active.row, active.col);
 			if (t) say(refMessage(e ? e.t.columns[active.col - e.t.col].name : d.target, t.table));
-			else say(`Liste déroulante tirée de ${dv.src}, relue à chaque ouverture (Alt+↓ pour l’ouvrir)`);
+			else say(tr('grid.validation.list.source', { src: dv.src }));
 		}
 	}
 
@@ -4903,7 +4903,7 @@
 		dvPick = { active: { ...active }, anchor: { ...anchor }, whole: wholeSel, sheet: sheetId() };
 		dvPickRef = pickedRef() ?? '';
 		wrap.focus();
-		say('Sélectionnez la plage source (sur cette feuille ou une autre), puis Entrée (Échap : annuler)');
+		say(tr('grid.validation.pick'));
 	}
 
 	/**
@@ -4921,7 +4921,7 @@
 		if (!p || p.back) return;
 		const ref = keep ? pickedRef() : null;
 		if (keep && ref === null) {
-			say('Une plage source couvre une seule colonne d’un tableau, ou des cellules libres');
+			say(tr('grid.validation.pick.oneColumn'));
 			return;
 		}
 		if (p.sheet !== sheetId() && onsheet) {
@@ -5028,7 +5028,7 @@
 		const set = source.setNote;
 		if (!d || !pin || !set) return;
 		if (!d.text.trim()) {
-			say('Écrivez la note avant de l’épingler');
+			say(tr('grid.note.pinEmpty'));
 			return;
 		}
 		d.pinned = !d.pinned;
@@ -5063,14 +5063,14 @@
 			case 'clearFilters': {
 				const e = tableAt(row, col);
 				const clear = source.clearFilters;
-				if (!e || !clear || !e.t.columns.some((c) => c.filter)) say('Le tableau de la cellule active n’est pas filtré');
+				if (!e || !clear || !e.t.columns.some((c) => c.filter)) say(tr('grid.filter.notFiltered'));
 				else menuAction(() => clear(e.t));
 				return;
 			}
 			case 'formatAsTable': {
 				const fmt = source.formatAsTable;
 				if (!fmt) return;
-				if (tableAt(row, col)) say('La cellule active est déjà dans un tableau');
+				if (tableAt(row, col)) say(tr('grid.table.alreadyIn'));
 				else menuAction(() => fmt(row, col));
 				return;
 			}
@@ -5081,7 +5081,7 @@
 	export function deleteNote() {
 		const set = source.setNote;
 		if (!set || !noteOf(active.row, active.col)) {
-			say('La cellule active n’a pas de note');
+			say(tr('grid.note.none'));
 			return;
 		}
 		const { row, col } = active;
@@ -5146,15 +5146,15 @@
 		if (r < e.t.row && !one) {
 			const s = spanAt(e.t.columns.map((x) => x.name), c - e.t.col);
 			const n = s ? s.i1 - s.i0 + 1 : 1;
-			return s?.group ? `${e.t.name} · groupe d'en-têtes « ${s.group} » (${n} colonne${n > 1 ? 's' : ''})` : `${e.t.name} · groupe d'en-têtes (vide)`;
+			return s?.group ? tr('grid.status.group', { table: e.t.name, group: s.group, n }) : tr('grid.status.groupEmpty', { table: e.t.name });
 		}
 		const col = `${e.t.name}[${k.name}]`;
 		if (r === e.t.row || one) {
-			const errs = k.errors ? ` · ${k.errors} erreur${k.errors > 1 ? 's' : ''}` : '';
-			return `${col} · ${typeLabel(k.type)} (${k.fixed ? 'fixé' : 'inféré'})${errs}` + (e.t.twoLevel && singleCol(e, c - e.t.col) ? ' · sur un niveau' : '');
+			const errs = k.errors ? ' · ' + tr('grid.status.errors', { n: k.errors }) : '';
+			return `${col} · ${tr(k.fixed ? 'grid.status.type.fixed' : 'grid.status.type.inferred', { type: typeLabel(k.type) })}${errs}` + (e.t.twoLevel && singleCol(e, c - e.t.col) ? ' · ' + tr('grid.status.oneLevel') : '');
 		}
 		const bad = e.cache.row(r - e.t.row - 1)?.bad?.get(c - e.t.col);
-		return `${col} · ${r - e.t.row}` + (bad !== undefined ? ` · « ${bad} » n'est pas du type ${typeLabel(k.type)}` : '');
+		return `${col} · ${r - e.t.row}` + (bad !== undefined ? ' · ' + tr('grid.status.badType', { value: String(bad), type: typeLabel(k.type) }) : '');
 	}
 
 	function refreshStatus() {
@@ -5181,10 +5181,10 @@
 			// Une cellule libre : son adresse est déjà dans la zone de nom.
 			cell: here || names.has(key(active.row, active.col)) ? cellName(active.row, active.col) : '',
 			message,
-			fetch: `bloc p50 ${ms(percentile(stats.roundTrip, 0.5))}`,
-			draw: `rendu ${ms(percentile(drawTimes, 0.5))}`,
-			fps: `${frameStamps.length} img/s`,
-			edit: `saisie ${ms(lastEditMs)}`,
+			fetch: tr('grid.status.perf.fetch', { ms: ms(percentile(stats.roundTrip, 0.5)) }),
+			draw: tr('grid.status.perf.draw', { ms: ms(percentile(drawTimes, 0.5)) }),
+			fps: tr('grid.status.perf.fps', { n: String(frameStamps.length) }),
+			edit: tr('grid.status.perf.edit', { ms: ms(lastEditMs) }),
 			blocks: entries.reduce((n, e) => n + e.cache.size, 0),
 			stats: selectionStats(),
 			sel: selection(),
@@ -5210,9 +5210,9 @@
 		const col = e?.t.columns[active.col - e.t.col];
 		// Colonne décimale sans format : deux décimales, comme ses cellules.
 		if (col && st?.nf === undefined && st?.dp === undefined && (col.type === 'decimal' || (col.type === 'formula' && col.result === 'decimal'))) st = { ...st, dp: 2 };
-		if (nums) parts.push(`Moyenne : ${formatStat(sum / nums, st)}`);
-		parts.push(`Nb : ${fmtNumber(count)}`);
-		if (nums) parts.push(`Somme : ${formatStat(sum, st)}`);
+		if (nums) parts.push(tr('grid.status.average', { value: formatStat(sum / nums, st) }));
+		parts.push(tr('grid.status.count', { n: count }));
+		if (nums) parts.push(tr('grid.status.sum', { value: formatStat(sum, st) }));
 		return parts.join('   ');
 	}
 
@@ -5273,7 +5273,7 @@
 				refreshStatus();
 			}, 150);
 		}
-		return statsCache && statsCache.key.endsWith(`|${r0},${r1},${c0},${c1}`) ? statsCache.text : 'Calcul des totaux…';
+		return statsCache && statsCache.key.endsWith(`|${r0},${r1},${c0},${c1}`) ? statsCache.text : tr('grid.status.computing');
 	}
 
 	/** « Moyenne · Nb · Somme » de la sélection, si plusieurs cellules. */
@@ -5282,7 +5282,7 @@
 		const n = (r1 - r0 + 1) * (c1 - c0 + 1);
 		if (n < 2 || singleSelection()) return '';
 		// Grande sélection (colonne entière d'un million de lignes…) : SQL.
-		if (n > 50_000) return source.rangeStats ? remoteStats(r0, r1, c0, c1) : 'Sélection trop grande pour les totaux';
+		if (n > 50_000) return source.rangeStats ? remoteStats(r0, r1, c0, c1) : tr('grid.status.tooBig');
 		let count = 0;
 		let nums = 0;
 		let sum = 0;
@@ -5320,7 +5320,7 @@
 		}
 		// Lignes pas encore chargées : le moteur fait le compte exact.
 		if (missing && source.rangeStats) return remoteStats(r0, r1, c0, c1);
-		return statsText(count, nums, sum) + (missing ? ' (lignes en chargement)' : '');
+		return statsText(count, nums, sum) + (missing ? ' ' + tr('grid.status.loading') : '');
 	}
 
 	// --- Filtres d'un TCD (▾ dans la grille, comme Excel) ---------------------------
@@ -5391,7 +5391,7 @@
 			},
 			(err) => {
 				if (mine()) pivotDlg!.loading = false;
-				say(String(err instanceof Error ? err.message : err));
+				say(errorText(err));
 			}
 		);
 	}
@@ -5435,7 +5435,7 @@
 			loadValues: async () => ((await source.filterValues?.(t, i)) ?? []).map((v) => v.text),
 			loadOrder: source.columnOrder ? () => source.columnOrder!(t, i) : undefined,
 			apply: (o) => {
-				menuAction(() => run(t, i, o)).then((ok) => ok && say('Tri personnalisé appliqué (Ctrl+Z pour annuler)'));
+				menuAction(() => run(t, i, o)).then((ok) => ok && say(tr('grid.customSort.applied')));
 			}
 		};
 	}
@@ -5463,7 +5463,7 @@
 	export function sortCustomActive() {
 		const e = targetTable();
 		if (!e || !source.sortTableCustom) {
-			say('Placez la cellule active dans la colonne d’un tableau pour trier');
+			say(tr('grid.sort.placeActive'));
 			return;
 		}
 		openCustomSort(e, targetCol(e));
@@ -5475,7 +5475,7 @@
 		if (!d) return;
 		const on = d.values.filter((v) => v.on).map((v) => v.text);
 		if (!clear && !on.length) {
-			say('Choisissez au moins une valeur');
+			say(tr('grid.filter.chooseOne'));
 			return;
 		}
 		const values = clear || on.length === d.values.length ? [] : on;
@@ -5581,7 +5581,7 @@
 				},
 				(err) => {
 					if (mine()) filterDlg!.loading = false;
-					say(String(err instanceof Error ? err.message : err));
+					say(errorText(err));
 				}
 			);
 	}
@@ -5590,7 +5590,7 @@
 	export function filterActive(errorsOnly = false) {
 		const e = targetTable();
 		if (!e || !source.setFilter) {
-			say('Placez la cellule active dans la colonne d’un tableau pour filtrer');
+			say(tr('grid.filter.placeActive'));
 			return;
 		}
 		const i = targetCol(e);
@@ -5651,7 +5651,7 @@
 				.filter((c) => c.op && (condArgs(c.op) === 0 || c.value.trim() !== ''))
 				.map((c) => ({ op: c.op as CondOp, ...(condArgs(c.op as CondOp) ? { value: c.value } : {}), ...(condArgs(c.op as CondOp) === 2 ? { to: c.to } : {}) }));
 			if (!conds.length) {
-				d.error = 'Saisissez la valeur de la condition';
+				d.error = tr('grid.filter.cond.missingValue');
 				return;
 			}
 			f = { conds };
@@ -5674,7 +5674,7 @@
 			await source.setFilter(d.e.t, d.i, f);
 			closeFilter();
 		} catch (err) {
-			d.error = String(err instanceof Error ? err.message : err);
+			d.error = errorText(err);
 		}
 	}
 
@@ -5726,7 +5726,7 @@
 			return e ? sheetRules().tables.find((t) => t.id === e.t.id) : undefined;
 		},
 		async apply(ch: RuleChanges) {
-			if (!source.setSheetRules) throw new Error('Mise en forme conditionnelle indisponible');
+			if (!source.setSheetRules) throw new Error(tr('grid.cf.unavailable'));
 			await source.setSheetRules(ch);
 		}
 	};
@@ -5795,7 +5795,7 @@
 		writing = writing.catch(() => undefined).then(() =>
 			place(ch.id, row, col, Math.round(b.x - cax().offset(col)), Math.round(b.y - rowTop(row)), Math.round(b.w), Math.round(b.h)).then(
 				() => undefined,
-				(err) => say(String(err?.message ?? err))
+				(err) => say(errorText(err))
 			)
 		);
 	}
@@ -5888,7 +5888,7 @@
 					},
 					(err) => {
 						chartGesture = null;
-						say(String(err?.message ?? err));
+						say(errorText(err));
 					}
 				)
 			);
@@ -5916,7 +5916,7 @@
 		}
 		chartClip = ch.config;
 		if (cut) await removeChart(ch.id);
-		else say('Graphique copié : Ctrl+V pour le coller à la cellule active');
+		else say(tr('grid.chart.copied'));
 	}
 	let chartClip = $state.raw<ChartConfig | null>(null);
 
@@ -5928,9 +5928,9 @@
 		try {
 			const blob = await svgToPng(svg);
 			await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-			say('Graphique copié comme image : collez-le dans un courriel ou un document');
+			say(tr('grid.chart.copiedImage'));
 		} catch (err) {
-			say(`Copie de l’image impossible : ${err instanceof Error ? err.message : err}`);
+			say(tr('grid.chart.copyImageFailed', { error: errorText(err) }));
 		}
 	}
 
@@ -5993,7 +5993,7 @@
 		const ch = charts.find((c) => c.id === id);
 		if (!ch || !source.setChart) return;
 		const set = source.setChart;
-		writing = writing.catch(() => undefined).then(() => set(id, { ...ch.config, mapView: v ?? undefined }).then(undefined, (err) => say(String(err?.message ?? err))));
+		writing = writing.catch(() => undefined).then(() => set(id, { ...ch.config, mapView: v ?? undefined }).then(undefined, (err) => say(errorText(err))));
 	}
 
 	/** Point de carte cliqué : la carte se désélectionne (comme un clic dans la grille), puis la ligne est sélectionnée. */
@@ -6011,10 +6011,10 @@
 		writing = writing.catch(() => undefined).then(() =>
 			create(freeChartSpot(row, col, cfg.width, cfg.height).row, col, cfg).then(
 				() => {
-					say('Graphique collé');
+					say(tr('grid.chart.pasted'));
 					selectNewChart(before);
 				},
-				(err) => say(String(err?.message ?? err))
+				(err) => say(errorText(err))
 			)
 		);
 	}
@@ -6036,17 +6036,17 @@
 			writing = writing.catch(() => undefined).then(() =>
 				create(freeChartSpot(pv.row, pv.col + head.length + 1).row, pv.col + head.length + 1, { source: name, kind, x, series, title: defaultChartTitle(series) }).then(
 					() => {
-						say(`Graphique du tableau croisé « ${name} » inséré`);
+						say(tr('grid.chart.pivotInserted', { name }));
 						selectNewChart(before);
 					},
-					(err) => say(String(err?.message ?? err))
+					(err) => say(errorText(err))
 				)
 			);
 			return;
 		}
 		const e = targetTable();
 		if (!e || !source.createChart) {
-			say('Placez la cellule active dans un tableau pour insérer un graphique');
+			say(tr('grid.chart.placeActive'));
 			return;
 		}
 		const cols = e.t.columns;
@@ -6067,17 +6067,17 @@
 			writing = writing.catch(() => undefined).then(() =>
 				create(at.row, e.lastCol + 2, { source: e.t.name, kind, x: '', series: [], mapDraft: true, width: side, height: side }).then(
 					() => {
-						say('Carte insérée : choisissez ses coordonnées dans le volet');
+						say(tr('grid.chart.mapInserted'));
 						const ch = selectNewChart(before);
 						if (ch) panel = { kind: 'chart', id: ch.id };
 					},
-					(err) => say(String(err?.message ?? err))
+					(err) => say(errorText(err))
 				)
 			);
 			return;
 		}
 		if (!series.length) {
-			say('Le tableau n’a pas de colonne de nombres à représenter');
+			say(tr('grid.chart.noNumbers'));
 			return;
 		}
 		const create = source.createChart;
@@ -6085,10 +6085,10 @@
 		writing = writing.catch(() => undefined).then(() =>
 			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series, title: defaultChartTitle(series) }).then(
 				() => {
-					say('Graphique inséré : cliquez dessus pour le modifier, glissez-le pour le déplacer');
+					say(tr('grid.chart.inserted'));
 					selectNewChart(before);
 				},
-				(err) => say(String(err?.message ?? err))
+				(err) => say(errorText(err))
 			)
 		);
 	}
@@ -6137,15 +6137,15 @@
 		return pv;
 	}
 	// Un tableau croisé est calculé : ses cellules ne se saisissent pas (comme Excel).
-	const PIVOT_READONLY = 'Un tableau croisé ne se modifie pas cellule par cellule : double-cliquez dessus pour changer ses champs';
+	const PIVOT_READONLY = $derived(tr('grid.pivot.readOnly'));
 	// Suppr sur une partie d'un tableau croisé (Excel refuse aussi).
-	const PIVOT_PARTIAL = 'Une partie d’un tableau croisé ne s’efface pas : sélectionnez-le en entier pour le supprimer, ou clic droit › Supprimer le tableau croisé';
+	const PIVOT_PARTIAL = $derived(tr('grid.pivot.partial'));
 	// Tableau chargé par une requête (Power Query) : ses cellules ne se
 	// saisissent pas, l'actualisation les remplacerait. Ses bords (ligne
 	// dessous, colonnes à côté) : le moteur décide (un total, une note ou une
 	// remarque restent à part ; une nouvelle ligne ou colonne est refusée, avec
 	// le même message, ErrQueryTable).
-	const QUERY_READONLY = 'Tableau chargé par une requête : ses cellules ne se modifient pas ; changez la requête (Données › Requêtes) puis actualisez (F5)';
+	const QUERY_READONLY = $derived(tr('grid.query.readOnly'));
 	// Ses colonnes saisies (tapées à droite de l'en-tête, docs/decisions/0008)
 	// se modifient : leurs valeurs suivent les lignes du résultat.
 	/** Colonnes chargées (pas saisies) du tableau de requête e touchées par les colonnes c0…c1 de la feuille. */
@@ -6177,7 +6177,7 @@
 	function removePivot(p: SheetPivot) {
 		if (panel?.kind === 'pivot' && panel.id === p.id) panel = null;
 		const del = source.deletePivot;
-		void menuAction(del && (() => del(p.id))).then((ok) => ok && say(`Tableau croisé « ${p.config.name ?? ''} » supprimé (Ctrl+Z pour annuler)`));
+		void menuAction(del && (() => del(p.id))).then((ok) => ok && say(tr('grid.pivot.deleted', { name: p.config.name ?? '' })));
 	}
 
 	/** Tableaux qui peuvent devenir la source d'un TCD (pas un TCD). */
@@ -6211,7 +6211,7 @@
 		}
 		const e = targetTable();
 		if (!e || !source.createPivot) {
-			say('Placez la cellule active dans un tableau pour créer un tableau croisé');
+			say(tr('grid.pivot.placeActive'));
 			return;
 		}
 		const k = e.t.columns[targetCol(e)];
@@ -6232,7 +6232,7 @@
 		const create = source.createPivot;
 		if (!create) return;
 		openPivotOnLoad = true;
-		writing = writing.catch(() => undefined).then(() => create(cfg).then(() => undefined, (err) => say(String(err?.message ?? err))));
+		writing = writing.catch(() => undefined).then(() => create(cfg).then(() => undefined, (err) => say(errorText(err))));
 	}
 
 	// --- Pose d'un tableau croisé à la cellule cliquée (pivotplace.ts) -------
@@ -6252,7 +6252,7 @@
 		ev.preventDefault();
 		ev.stopPropagation();
 		cancelPlacement();
-		say('Pose du tableau croisé annulée');
+		say(tr('grid.pivot.place.cancelled'));
 	}
 
 	function startPlacement(p: Placement<PivotConfig>) {
@@ -6323,7 +6323,7 @@
 				},
 				(err) => {
 					openPivotOnLoad = false;
-					say(String(err instanceof Error ? err.message : err));
+					say(errorText(err));
 				}
 			)
 		);
@@ -6362,7 +6362,7 @@
 		}
 		const { r0, r1, c0, c1 } = selection();
 		if (c0 !== c1) {
-			say('Convertir ne peut traiter qu’une seule colonne à la fois : sélectionnez des cellules d’une seule colonne');
+			say(tr('grid.textCols.oneColumn'));
 			return;
 		}
 		closeMenus();
@@ -6415,7 +6415,7 @@
 	export function dedupActive() {
 		const e = targetTable();
 		if (!e || !source.removeDuplicates) {
-			say('Placez la cellule active dans un tableau');
+			say(tr('grid.table.placeActive'));
 			return;
 		}
 		// Comme Excel : toutes les colonnes cochées au départ.
@@ -6439,7 +6439,7 @@
 			const n = await source.duplicatesPreview(d.e.t, cols);
 			if (seq === dedupSeq && dedupDlg === d) d.count = n;
 		} catch (err) {
-			d.error = String(err instanceof Error ? err.message : err);
+			d.error = errorText(err);
 		}
 	}
 
@@ -6451,9 +6451,9 @@
 			const n = await source.removeDuplicates(d.e.t, cols);
 			dedupDlg = null;
 			wrap.focus();
-			say(n ? `${n} ligne${n > 1 ? 's' : ''} en double supprimée${n > 1 ? 's' : ''} (Ctrl+Z pour annuler)` : 'Aucun doublon');
+			say(n ? tr('grid.dedup.removed', { n }) : tr('grid.dedup.none'));
 		} catch (err) {
-			d.error = String(err instanceof Error ? err.message : err);
+			d.error = errorText(err);
 		}
 	}
 
@@ -6498,7 +6498,7 @@
 	export function sortActive(desc: boolean) {
 		const e = targetTable();
 		if (!e || !source.sortTable) {
-			say('Placez la cellule active dans la colonne d’un tableau pour trier');
+			say(tr('grid.sort.placeActive'));
 			return;
 		}
 		const sort = source.sortTable;
@@ -6551,7 +6551,7 @@
 		const d = keyDlg;
 		keyDlg = null;
 		if (!d) return;
-		if (d.keep) reopenFormula(d.row, d.col, d.raw, 'recherche annulée : la formule n’est pas enregistrée');
+		if (d.keep) reopenFormula(d.row, d.col, d.raw, tr('grid.key.lookupCancelled'));
 		else wrap.focus();
 	}
 
@@ -6619,7 +6619,7 @@
 		const n = active.row - e.t.row - 1; // -1 : ligne d'en-tête
 		const i = active.col - e.t.col;
 		if (op === 'deleteRow' && n < 0) {
-			say('La ligne d’en-tête ne se supprime pas : supprimez le tableau ou ses colonnes');
+			say(tr('grid.rows.headerNoDelete'));
 			return;
 		}
 		const fn = {
@@ -6660,7 +6660,7 @@
 					} else for (const e of cut) for (let c = Math.min(c1, e.lastCol); c >= Math.max(c0, e.t.col); c--) await tableLines(e, 'deleteColumn', c - e.t.col);
 					schedule();
 				} catch (err) {
-					say(String((err as Error)?.message ?? err));
+					say(errorText(err));
 				}
 			});
 			return true;
@@ -6682,7 +6682,7 @@
 				} else for (let c = c1; c >= c0; c--) await tableLines(e, 'deleteColumn', c - e.t.col);
 				schedule();
 			} catch (err) {
-				say(String((err as Error)?.message ?? err));
+				say(errorText(err));
 			}
 		});
 		return true;
@@ -6758,20 +6758,20 @@
 
 	function runButton(b: SheetButton) {
 		if (!source.runButton) return;
-		say(`« ${b.config.name || b.config.label} » : exécution…`);
+		say(tr('grid.controls.running', { name: b.config.name || b.config.label }));
 		source.runButton(b.id).then(
 			(msg) => say(typeof msg === 'string' ? msg : ''),
-			(err) => say(String(err?.message ?? err))
+			(err) => say(errorText(err))
 		);
 	}
 
 	/** Évènement d'un contrôle de la feuille : son action et les écouteurs des scripts. */
 	function fireControl(b: SheetButton, event: 'click' | 'change', value: string, old: string) {
 		if (!source.fireControl) return runButton(b);
-		say(`« ${b.config.name || b.config.label} » : exécution…`);
+		say(tr('grid.controls.running', { name: b.config.name || b.config.label }));
 		source.fireControl(b.id, event, value, old).then(
 			(msg) => say(typeof msg === 'string' ? msg : ''),
-			(err) => say(String(err?.message ?? err))
+			(err) => say(errorText(err))
 		);
 	}
 
@@ -6853,16 +6853,16 @@
 			const notes = arrowNotes(found.flatMap((l) => [...l.pre, ...l.dep]));
 			say(
 				found.length === 0
-					? 'Aucun lien : la sélection ne contient ni formule ni cellule lue par une formule'
-					: `Liens de ${found.length} cellule(s) : ${pre} antécédent(s), ${dep} dépendant(s)` +
-							(away ? ` (${away} sur d'autres feuilles)` : '') +
-							(cut ? ` · ${MAX_LINK_CELLS} premières cellules seulement` : '') +
+					? tr('grid.audit.none')
+					: tr('grid.audit.links', { n: found.length, pre, dep }) +
+							(away ? ' ' + tr('grid.audit.away', { n: away }) : '') +
+							(cut ? ' · ' + tr('grid.audit.cut', { n: MAX_LINK_CELLS }) : '') +
 							(notes.length ? ` · ${notes.slice(0, 2).join(' ; ')}${notes.length > 2 ? ` (+${notes.length - 2})` : ''}` : '') +
-							' · un clic dans la grille (ou Échap) les efface'
+							' · ' + tr('grid.audit.clear')
 			);
 			schedule();
 		} catch (err) {
-			say(String(err instanceof Error ? err.message : err));
+			say(errorText(err));
 		}
 	}
 
@@ -7415,7 +7415,7 @@
 		rebuildAxis();
 		updateExtent();
 		schedule();
-		writing = writing.catch(() => undefined).then(() => setWidth(c, width).then(() => undefined, (err) => say(String(err?.message ?? err))));
+		writing = writing.catch(() => undefined).then(() => setWidth(c, width).then(() => undefined, (err) => say(errorText(err))));
 	}
 
 	/** La souris est-elle sur la bordure de la sélection (poignée de déplacement) ? */
@@ -7466,12 +7466,12 @@
 					() => {
 						active = { row: dst.r0, col: dst.c0 };
 						anchor = { ...active };
-						message = m.copy ? 'Tableau croisé collé (Ctrl+Z pour annuler)' : 'Tableau croisé déplacé (Ctrl+Z pour annuler)';
+						message = m.copy ? tr('grid.pivot.pasted') : tr('grid.pivot.place.moved');
 						refreshFx();
 						refreshStatus();
 						schedule();
 					},
-					(err) => say(String(err instanceof Error ? err.message : err))
+					(err) => say(errorText(err))
 				)
 			);
 			return;
@@ -7481,7 +7481,7 @@
 		// tableau croisé.
 		const hitPivot = pivotIn(dst.r0, dst.c0, dst.r1, dst.c1) ?? (!m.copy ? pivotIn(r0, c0, r1, c1) : undefined);
 		if (hitPivot) {
-			say(`La zone recouvrirait le tableau croisé « ${hitPivot.config.name ?? ''} » : déplacez-le seul (sélectionnez-le, puis glissez sa bordure, ou clic droit › Déplacer)`);
+			say(tr('grid.pivot.overlap', { name: hitPivot.config.name ?? '' }));
 			return;
 		}
 		// Un tableau de requête déplacé en entier reste permis ; ses cellules, non.
@@ -7501,9 +7501,9 @@
 				const msg = await transfer(sheetId(), m.sel, dst, !copy, values);
 				active = snapMerge(dst.r0, dst.c0);
 				anchor = { row: dst.r1, col: dst.c1 };
-				message = msg || (copy ? 'Cellules copiées (Ctrl+Z pour annuler)' : 'Cellules déplacées (Ctrl+Z pour annuler)');
+				message = msg || (copy ? tr('grid.cells.copied') : tr('grid.cells.moved'));
 			} catch (err) {
-				message = String(err instanceof Error ? err.message : err);
+				message = errorText(err);
 			}
 			refreshFx();
 			refreshStatus();
@@ -7592,9 +7592,9 @@
 		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await paste(row, col, block);
-				message = 'Recopie incrémentée (Ctrl+Z pour annuler)';
+				message = tr('grid.fill.series');
 			} catch (err) {
-				message = String(err instanceof Error ? err.message : err);
+				message = errorText(err);
 			}
 			active = { row: to.r0, col: to.c0 };
 			anchor = { row: to.r1, col: to.c1 };
@@ -7767,7 +7767,7 @@
 			const fmt = source.formatAsTable;
 			writing = writing.catch(() => undefined).then(() => fmt(row, col).then(
 					() => undefined,
-					(err) => say(String(err?.message ?? err))
+					(err) => say(errorText(err))
 				)
 			);
 			return;
@@ -7858,7 +7858,7 @@
 				updateExtent();
 				schedule();
 				const set = source.setRowHeight;
-				writing = writing.catch(() => undefined).then(() => set(rb, 0).then(() => undefined, (err) => say(String(err?.message ?? err))));
+				writing = writing.catch(() => undefined).then(() => set(rb, 0).then(() => undefined, (err) => say(errorText(err))));
 				return;
 			}
 			rowResizing = { row: rb, startY: e.clientY, startH: rh(rb), height: rh(rb) };
@@ -7913,7 +7913,7 @@
 			refDrag = { from: cell, to: cell };
 			return;
 		}
-		say('Placez le curseur de la formule après « ( », « ; » ou un opérateur pour y insérer une référence');
+		say(tr('grid.formula.refPlace'));
 	}
 
 	// Dernière référence insérée au clic : un autre clic la remplace (comme Excel).
@@ -8057,7 +8057,7 @@
 		const moved = movedRef(m.rect, dr, dc, tables, at, m.to);
 		const text = moved !== null && hold ? qualifyRef(moved, sheetName) : moved;
 		if (text === null) {
-			say('Cette plage ne peut pas devenir une référence : une plage couvre une seule colonne d’un tableau');
+			say(tr('grid.formula.refRange'));
 			return;
 		}
 		const el = editing ? input : fxEditing ? fxInput : null;
@@ -8104,7 +8104,7 @@
 				? refFor(cell.row, cell.col)
 				: rangeRef({ r0: from.row, c0: from.col, r1: cell.row, c1: cell.col }, tables, hereT);
 		if (text === null) {
-			say('Une plage ne peut couvrir qu’une seule colonne d’un tableau : glissez dans une colonne, ou sur des cellules libres');
+			say(tr('grid.formula.refOneColumn'));
 			return;
 		}
 		insertRef(cell, text);
@@ -8403,7 +8403,7 @@
 				return true;
 			case 'repeat':
 				if (lastRepeat) lastRepeat();
-				else say('Rien à répéter');
+				else say(tr('grid.repeat.nothing'));
 				return true;
 		}
 		return false;
@@ -8416,7 +8416,7 @@
 		if (!plan) return;
 		const { dst } = plan;
 		if ((dst.r1 - dst.r0 + 1) * (dst.c1 - dst.c0 + 1) > 10000) {
-			say('Recopie limitée à 10 000 cellules');
+			say(tr('grid.fill.limit'));
 			return;
 		}
 		const block = copyFillBlock(plan, down, (r, c) => cellInfo(r, c).value);
@@ -8425,9 +8425,9 @@
 		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await paste(dst.r0, dst.c0, block);
-				message = `Recopié vers ${down ? 'le bas' : 'la droite'} (Ctrl+Z pour annuler)`;
+				message = down ? tr('grid.fill.down') : tr('grid.fill.right');
 			} catch (err) {
-				message = String(err instanceof Error ? err.message : err);
+				message = errorText(err);
 			}
 			refreshFx();
 			refreshStatus();
@@ -8496,7 +8496,7 @@
 				e.preventDefault();
 				const i = charts.indexOf(ch);
 				selectChart(charts[(i + (e.shiftKey ? charts.length - 1 : 1)) % charts.length]);
-				say(`Graphique ${charts.indexOf(charts.find((c) => c.id === selChart)!) + 1} sur ${charts.length}`);
+				say(tr('grid.chart.nth', { n: charts.indexOf(charts.find((c) => c.id === selChart)!) + 1, total: charts.length }));
 				return;
 			}
 		}
@@ -8508,7 +8508,7 @@
 		if (sc === 'refresh' || sc === 'refreshAll') return; // F5 : la page s'en charge (tableHere)
 		if (sc === 'endMode') {
 			endArmed = !ended;
-			say(endArmed ? 'Fin : une flèche va au bout de la zone' : '');
+			say(endArmed ? tr('grid.endMode') : '');
 			e.preventDefault();
 			return;
 		}
@@ -8550,7 +8550,7 @@
 		}
 		if (ctrl && (e.key === 'z' || e.key === 'Z') && source.undo) {
 			e.preventDefault();
-			source.undo().catch((err) => say(String(err?.message ?? err)));
+			source.undo().catch((err) => say(errorText(err)));
 			return;
 		}
 		if (ctrl && (e.key === 'a' || e.key === 'A' || e.key === ' ')) {
@@ -8583,7 +8583,7 @@
 		}
 		if (ctrl && (e.key === 'y' || e.key === 'Y') && source.redo) {
 			e.preventDefault();
-			source.redo().catch((err) => say(String(err?.message ?? err)));
+			source.redo().catch((err) => say(errorText(err)));
 			return;
 		}
 		switch (e.key) {
@@ -8631,7 +8631,7 @@
 				startEdit(false);
 				break;
 			case 'F9':
-				if (source.recalc) source.recalc().then(() => say('Recalculé'), (err) => say(String(err?.message ?? err)));
+				if (source.recalc) source.recalc().then(() => say(tr('grid.recalculated')), (err) => say(errorText(err)));
 				break;
 			case 'Delete':
 				// Colonnes entières d'un tableau (en-tête compris), pas tout le tableau : supprimées.
@@ -8682,7 +8682,7 @@
 	 */
 	function designWhy(t: { readOnly?: string }): string {
 		if (locked) return locked;
-		if (structure) return layoutLocked || 'Structure de la feuille protégée (Révision › Ôter la protection de la structure)';
+		if (structure) return layoutLocked || tr('grid.protect.structure');
 		return t.readOnly ?? '';
 	}
 
@@ -8896,7 +8896,7 @@
 			} else message = m ?? '';
 		} catch (e) {
 			if (optimistic) info.e!.cache.set(info.n!, info.i!, before); // saisie refusée : valeur d'avant
-			message = String(e instanceof Error ? e.message : e);
+			message = errorText(e);
 			// Formule refusée : la saisie n'est pas perdue, l'éditeur se rouvre.
 			const k = message.indexOf('formule : ');
 			const q = key ? null : keyQuestion(message);
@@ -8921,7 +8921,7 @@
 				startEdit(true, raw);
 				message = why;
 				// En-tête refusé (nom de colonne pris…) : la boîte l'explique.
-				if (info.kind === 'header') void refuseName(() => input, refusedName('Nom de colonne refusé', e));
+				if (info.kind === 'header') void refuseName(() => input, refusedName(tr('grid.names.refused.column'), e));
 			}
 		}
 		refreshFx();
@@ -9014,7 +9014,7 @@
 			return;
 		}
 		if ((sel.r1 - sel.r0 + 1) * (sel.c1 - sel.c0 + 1) > 10000) {
-			say('Ctrl+Entrée : sélection limitée à 10 000 cellules');
+			say(tr('grid.edit.multiLimit'));
 			return;
 		}
 		editing = false;
@@ -9025,7 +9025,7 @@
 				try {
 					message = (await paste(s.r0, s.c0, fillBlock(s, text))) ?? '';
 				} catch (err) {
-					message = String(err instanceof Error ? err.message : err);
+					message = errorText(err);
 				}
 				refreshFx();
 				refreshStatus();
@@ -9062,7 +9062,7 @@
 	/** Montre une faute de formule dans l'éditeur ouvert : message, caractère sélectionné. */
 	function showFormulaError(err: FormulaError) {
 		editErr = err;
-		say(`Formule : ${err.msg}`);
+		say(tr('grid.formula.error', { error: err.msg }));
 		const el = input;
 		if (!el) return;
 		requestAnimationFrame(() => {
@@ -9083,7 +9083,7 @@
 		const pos = serverErrorPos(raw, msg);
 		const text = msg.replace(/^formule : (position \d+ : )?/, '');
 		if (pos !== null) showFormulaError({ pos, end: pos + 1, msg: text });
-		else say(`Formule : ${text}`);
+		else say(tr('grid.formula.error', { error: text }));
 	}
 
 	function cancel() {
@@ -9128,7 +9128,7 @@
 			say(PIVOT_PARTIAL);
 			return;
 		}
-		const pivotGone = pv.gone.length === 1 ? `Tableau croisé « ${pv.gone[0].config.name ?? ''} » supprimé (Ctrl+Z pour annuler)` : pv.gone.length ? `${pv.gone.length} tableaux croisés supprimés (Ctrl+Z pour annuler)` : '';
+		const pivotGone = pv.gone.length === 1 ? tr('grid.pivot.deleted', { name: pv.gone[0].config.name ?? '' }) : pv.gone.length ? tr('grid.pivot.deletedMany', { n: pv.gone.length }) : '';
 		if (panel?.kind === 'pivot' && pv.gone.some((p) => p.id === panel!.id)) panel = null;
 		const wipe = all ? source.clearCells : undefined;
 		// Les tableaux entièrement compris dans la zone sont supprimés.
@@ -9140,14 +9140,14 @@
 			writing = writing.catch(() => undefined).then(() =>
 				clear(r0, c0, r1, c1, all).then(
 					() => {
-						if (tables.length > 1) say(`${tables.length} tableaux supprimés (Ctrl+Z pour annuler)`);
-						else if (tables.length) say(`Tableau « ${tables[0].name} » supprimé (Ctrl+Z pour annuler)`);
+						if (tables.length > 1) say(tr('grid.table.deletedMany', { n: tables.length }));
+						else if (tables.length) say(tr('grid.table.deleted', { name: tables[0].name }));
 						else if (pivotGone) say(pivotGone);
-						else if (all) say('Cellules supprimées (Ctrl+Z pour annuler)');
+						else if (all) say(tr('grid.cells.deleted'));
 						refreshFx();
 						schedule();
 					},
-					(err) => say(String(err?.message ?? err))
+					(err) => say(errorText(err))
 				)
 			);
 			await writing;
@@ -9167,7 +9167,7 @@
 				if (r >= r0 && r <= r1 && c >= c0 && c <= c1) n++;
 			}
 		if (n > 1000) {
-			say('Effacement limité à 1 000 cellules pour l’instant');
+			say(tr('grid.clear.limit'));
 			return;
 		}
 		if (pv.gone.length && source.deletePivot) {
@@ -9178,7 +9178,7 @@
 					for (const id of ids) await del(id);
 					say(pivotGone);
 				} catch (err) {
-					say(String((err as Error)?.message ?? err));
+					say(errorText(err));
 				}
 			});
 			await writing;
@@ -9188,8 +9188,8 @@
 			const tables = whole.map((e) => e.t);
 			writing = writing.catch(() => undefined).then(() =>
 				del(tables).then(
-					() => say(tables.length > 1 ? `${tables.length} tableaux supprimés (Ctrl+Z pour annuler)` : `Tableau « ${tables[0].name} » supprimé (Ctrl+Z pour annuler)`),
-					(err) => say(String(err?.message ?? err))
+					() => say(tables.length > 1 ? tr('grid.table.deletedMany', { n: tables.length }) : tr('grid.table.deleted', { name: tables[0].name })),
+					(err) => say(errorText(err))
 				)
 			);
 			await writing;
@@ -9205,8 +9205,8 @@
 		if (wipe) {
 			writing = writing.catch(() => undefined).then(() =>
 				wipe(r0, c0, r1, c1).then(
-					() => say('Cellules supprimées (Ctrl+Z pour annuler)'),
-					(err) => say(String(err?.message ?? err))
+					() => say(tr('grid.cells.deleted')),
+					(err) => say(errorText(err))
 				)
 			);
 			await writing;
@@ -9343,7 +9343,7 @@
 				const err = checkFormula(text);
 				if (err) {
 					editErr = err;
-					say(`Formule : ${err.msg}`);
+					say(tr('grid.formula.error', { error: err.msg }));
 					const el = fxInput;
 					if (el && document.activeElement === el) el.setSelectionRange(err.pos, Math.max(err.end, err.pos));
 					else
@@ -9462,10 +9462,10 @@
 		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await rename(t, name);
-				message = `Tableau renommé « ${name} »`;
+				message = tr('grid.table.renamed', { name });
 				if (document.activeElement === el) wrap.focus();
 			} catch (err) {
-				void refuseName(el, refusedName('Nom de tableau refusé', err), typed);
+				void refuseName(el, refusedName(tr('grid.names.refused.table'), err), typed);
 			}
 			refreshFx();
 			refreshStatus();
@@ -9489,7 +9489,7 @@
 		// Bande des groupes : renomme le groupe (toutes ses colonnes).
 		if (active.row < en.t.row && !singleCol(en, c - en.t.col)) {
 			wrap.focus();
-			if (text !== tableBox?.col) write(active.row, c, text, false, (err) => void refuseName(el, refusedName("Groupe d'en-têtes refusé", err), text));
+			if (text !== tableBox?.col) write(active.row, c, text, false, (err) => void refuseName(el, refusedName(tr('grid.names.refused.group'), err), text));
 			return;
 		}
 		// Une autre cellule (Prix[3], Ventes[Prix][2], Cell[F10], A1:C3) : y
@@ -9509,13 +9509,13 @@
 		// Nom vide ou pris : la boîte l'explique, le champ garde le texte tapé.
 		const problem = name
 			? columnNameProblem(name, en.t.columns.filter((_, i) => i !== c - en.t.col).map((x) => x.name), en.t.name)
-			: { title: 'Nom de colonne invalide', message: 'Le nom de la colonne ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l’ancien.' };
+			: { title: tr('grid.names.column.invalid'), message: tr('grid.names.column.empty') };
 		if (problem) {
 			void refuseName(el, problem, text);
 			return;
 		}
 		wrap.focus();
-		write(en.t.row, c, name, false, (err) => void refuseName(el, refusedName('Nom de colonne refusé', err), text));
+		write(en.t.row, c, name, false, (err) => void refuseName(el, refusedName(tr('grid.names.refused.column'), err), text));
 	}
 
 	function onNameKey(e: KeyboardEvent) {
@@ -9542,7 +9542,7 @@
 		if (goToName(text)) return;
 		const { row, col } = active;
 		if (tableAt(row, col)) {
-			say('Seule une cellule libre peut être nommée ; un tableau se référence par son nom : ' + tableAt(row, col)!.t.name);
+			say(tr('grid.names.cell.inTable', { table: tableAt(row, col)!.t.name }));
 			wrap.focus();
 			return;
 		}
@@ -9560,9 +9560,9 @@
 		writing = writing.catch(() => undefined).then(async () => {
 			try {
 				await setName(row, col, text);
-				message = text ? `Cellule nommée « ${text} »` : 'Nom retiré';
+				message = text ? tr('grid.names.cell.set', { name: text }) : tr('grid.names.cell.removed');
 			} catch (err) {
-				void refuseName(() => nameInput, refusedName('Nom de cellule refusé', err), text);
+				void refuseName(() => nameInput, refusedName(tr('grid.names.refused.cell'), err), text);
 			}
 			refreshFx();
 			refreshStatus();
@@ -9672,7 +9672,7 @@
 		finder.info = '';
 		if (matches.length === 0) {
 			finder.at = null;
-			finder.count = 'Aucun résultat';
+			finder.count = tr('grid.find.none');
 			schedule();
 			return;
 		}
@@ -9703,7 +9703,7 @@
 			try {
 				await source.replace(finder.text, finder.by, { r0: at.row, c0: at.col, r1: at.row, c1: at.col });
 			} catch (e) {
-				finder.info = String(e instanceof Error ? e.message : e);
+				finder.info = errorText(e);
 				return;
 			}
 			matchKey = '';
@@ -9723,7 +9723,7 @@
 			finder.at = null;
 			matchKey = '';
 		} catch (e) {
-			if (finder) finder.info = String(e instanceof Error ? e.message : e);
+			if (finder) finder.info = errorText(e);
 		}
 	}
 
@@ -9794,7 +9794,7 @@
 	function rangeValues(sel: ClipRect): string[][] | null {
 		const { r0, r1, c0, c1 } = sel;
 		if ((r1 - r0 + 1) * (c1 - c0 + 1) > 100_000) {
-			say('Copie limitée à 100 000 cellules pour l’instant');
+			say(tr('grid.copy.limit'));
 			return null;
 		}
 		const rows: string[][] = [];
@@ -9824,7 +9824,7 @@
 	async function loadRange(sel: ClipRect): Promise<boolean> {
 		const todo = unloaded(sel);
 		if (!todo.length) return true;
-		say('Lecture des lignes à copier…');
+		say(tr('grid.copy.reading'));
 		const ok = await Promise.all(todo.map(([e, a, b]) => e.cache.ensure(a, b)));
 		return ok.every(Boolean);
 	}
@@ -9832,7 +9832,7 @@
 	/** Copie ou coupe après avoir chargé les lignes manquantes (le presse-papiers est écrit ensuite). */
 	async function copyLater(cut: boolean) {
 		if (!(await loadRange(selection()))) {
-			say('Le tableau a changé pendant la copie : recommencez');
+			say(tr('grid.copy.changed'));
 			return;
 		}
 		const text = takeClip(cut);
@@ -9841,7 +9841,7 @@
 			await navigator.clipboard.writeText(text);
 		} catch {
 			clipRange = null;
-			say('Le presse-papiers est inaccessible');
+			say(tr('grid.clipboard.unavailable'));
 			return;
 		}
 		clipMessage(cut);
@@ -9863,7 +9863,7 @@
 			const whole = sel.r0 <= top && sel.c0 <= pv.col && sel.r1 >= pv.row + pv.cells.length - 1 && sel.c1 >= pv.col + pv.cells[0].length - 1;
 			if (whole) pivot = { id: pv.id, dr: top - sel.r0, dc: pv.col - sel.c0 };
 			else if (cut) {
-				say('Une partie d’un tableau croisé ne se coupe pas : sélectionnez-le en entier pour le déplacer, ou copiez ses valeurs (Ctrl+C)');
+				say(tr('grid.pivot.partialCut'));
 				return null;
 			}
 		}
@@ -9878,7 +9878,7 @@
 	function clipMessage(cut: boolean) {
 		const { r0, r1, c0, c1 } = clipRange ?? selection();
 		const n = (r1 - r0 + 1) * (c1 - c0 + 1);
-		say(cut ? 'Sélection coupée : collez-la avec Ctrl+V (Échap pour annuler)' : `${n} cellule${n > 1 ? 's' : ''} copiée${n > 1 ? 's' : ''}`);
+		say(cut ? tr('grid.clipboard.cut') : tr('grid.clipboard.copied', { n }));
 	}
 
 	/** Copier ou couper la sélection (ruban, clic droit). */
@@ -9893,7 +9893,7 @@
 			await navigator.clipboard.writeText(text);
 		} catch {
 			clipRange = null;
-			say('Le presse-papiers est inaccessible : utilisez Ctrl+C');
+			say(tr('grid.clipboard.unavailable.copy'));
 			return;
 		}
 		clipMessage(cut);
@@ -9906,7 +9906,7 @@
 		try {
 			text = await navigator.clipboard.readText();
 		} catch {
-			say('Le presse-papiers est inaccessible : utilisez Ctrl+V');
+			say(tr('grid.clipboard.unavailable.paste'));
 			return;
 		}
 		pasteText(text);
@@ -9942,7 +9942,7 @@
 			e.clipboardData?.setData('text/plain', encodeObj({ kind: 'chart', config: sc.config as never }));
 			e.preventDefault();
 			chartClip = sc.config;
-			say('Graphique copié : Ctrl+V pour le coller à la cellule active');
+			say(tr('grid.chart.copied'));
 			return;
 		}
 		if (unloaded(selection()).length) {
@@ -9984,8 +9984,8 @@
 			const place = source.placePivot;
 			writing = writing.catch(() => undefined).then(() =>
 				place(sel.r0, sel.c0, obj.config as unknown as PivotConfig).then(
-					() => say('Tableau croisé collé (Ctrl+Z pour annuler)'),
-					(err) => say(String(err instanceof Error ? err.message : err))
+					() => say(tr('grid.pivot.pasted')),
+					(err) => say(errorText(err))
 				)
 			);
 			return true;
@@ -10002,12 +10002,12 @@
 					() => {
 						// Coupé : le cadre part une fois le déplacement fait (refusé, on peut recoller ailleurs).
 						if (pc.cut && clipRange === pc) clipRange = null;
-						message = pc.cut ? 'Tableau croisé déplacé (Ctrl+Z pour annuler)' : 'Tableau croisé collé (Ctrl+Z pour annuler)';
+						message = pc.cut ? tr('grid.pivot.place.moved') : tr('grid.pivot.pasted');
 						refreshStatus();
 						schedule();
 					},
 					(err) => {
-						message = String(err instanceof Error ? err.message : err);
+						message = errorText(err);
 						refreshStatus();
 						schedule();
 					}
@@ -10037,7 +10037,7 @@
 			schedule();
 		};
 		const fail = (err: unknown) => {
-			message = String(err instanceof Error ? err.message : err);
+			message = errorText(err);
 			refreshStatus();
 			schedule();
 		};
@@ -10047,7 +10047,7 @@
 			if (rich.cut) clipRange = null;
 			writing = writing.catch(() => undefined).then(() =>
 				transfer(rich.sheet, src, area, rich.cut, rich.values).then(
-					(m) => done(m, rich.cut ? 'Cellules déplacées (Ctrl+Z pour annuler)' : 'Collé (Ctrl+Z pour annuler)'),
+					(m) => done(m, rich.cut ? tr('grid.cells.moved') : tr('grid.clipboard.pasted')),
 					fail
 				)
 			);
@@ -10057,7 +10057,7 @@
 		const tiled = tileBlock(block, sel);
 		const cut = clipRange?.cut && richClip({ ...clipRange, plain: false }, text) ? clipRange : null;
 		const paste = source.paste;
-		writing = writing.catch(() => undefined).then(() => paste(area.r0, area.c0, tiled).then((m) => done(m, `${tiled.length} ligne(s) collée(s)`), fail));
+		writing = writing.catch(() => undefined).then(() => paste(area.r0, area.c0, tiled).then((m) => done(m, tr('grid.clipboard.pastedRows', { n: tiled.length })), fail));
 		if (cut) {
 			clipRange = null;
 			// Une zone coupée de la feuille s'efface ensuite (hors cible).
@@ -10093,14 +10093,9 @@
 	}
 
 	function mixText(m: TypeMix): string {
-		const n = m.off > 1;
-		const what =
-			m.type === 'date'
-				? n ? 'qui ne sont pas des dates' : "qui n'est pas une date"
-				: m.type === 'boolean'
-					? n ? 'non booléennes' : 'non booléenne'
-					: n ? 'non numériques' : 'non numérique';
-		return `${m.off} valeur${n ? 's' : ''} ${what} sur ${m.total}`;
+		// Saisies hors type d'une colonne : « 3 valeurs non numériques sur 120 ».
+		const kind = m.type === 'date' ? 'date' : m.type === 'boolean' ? 'boolean' : 'number';
+		return tAny(`grid.typeMix.${kind}`, { n: m.off, total: m.total });
 	}
 
 	/** Résultat déversé qui couvre la cellule (menu « Convertir en tableau »). */
@@ -10115,15 +10110,15 @@
 		if (nb) {
 			if (tipCell !== 'name:' + nb.t.name)
 				scroller.title = isDefaultTableName(nb.t.name)
-					? `« ${nb.t.name} » : ${DEFAULT_NAME_HINT.toLowerCase()}. Cliquer pour lui donner un nom parlant (il sert dans les formules, le SQL et les graphiques)`
-					: `Tableau « ${nb.t.name} » : cliquer pour le renommer`;
+					? tr('grid.nameBadge.default.tooltip', { name: nb.t.name })
+					: tr('grid.nameBadge.tooltip', { name: nb.t.name });
 			tipCell = 'name:' + nb.t.name;
 			return;
 		}
 		if (followBadgeAt(ev)) {
 			const name = data?.choice?.name ?? '';
 			if (tipCell !== 'follow')
-				scroller.title = `Ce tableau suit l'onglet à choix : il ne montre que ses lignes où ${name} = ${data?.choice?.value || '(vide)'} (les autres sont masquées, pas effacées ; une ligne saisie reçoit cette valeur). La flèche ▾ de l'onglet change la valeur. Cliquer sur la pastille : menu « Suivre ${followLabel(name)} », à décocher pour que ce tableau montre toutes ses lignes`;
+				scroller.title = tr('grid.follow.tooltip', { name, value: data?.choice?.value || tr('grid.follow.empty'), follow: followLabel(name) });
 			tipCell = 'follow';
 			return;
 		}
@@ -10151,7 +10146,7 @@
 		if (id === tipCell) return;
 		tipCell = id;
 		const k = e.t.columns[i];
-		const auto = e.t.autoNumber === i ? ` · ${e.t.key === i ? 'clé, ' : ''}${AUTO_NUMBER_TIP}` : e.t.key === i ? ' · clé du tableau' : '';
+		const auto = e.t.autoNumber === i ? ' · ' + (e.t.key === i ? tr('grid.key.autoNumberKey', { tip: AUTO_NUMBER_TIP }) : AUTO_NUMBER_TIP) : e.t.key === i ? ' · ' + tr('grid.key.isKey') : '';
 		scroller.title = `${k.name} — ${typeLabel(k.type)}${auto}`;
 		mixOf(e, i).then((m) => {
 			if (m && tipCell === id) scroller.title = `${k.name} — ${typeLabel(k.type)}${auto} · ${mixText(m)}`;
@@ -10250,8 +10245,8 @@
 		wrap.focus();
 		writing = writing.catch(() => undefined).then(() =>
 			del([t]).then(
-				() => say(`Tableau « ${t.name} » supprimé (Ctrl+Z pour annuler)`),
-				(err) => say(String(err?.message ?? err))
+				() => say(tr('grid.table.deleted', { name: t.name })),
+				(err) => say(errorText(err))
 			)
 		);
 	}
@@ -10343,7 +10338,7 @@
 			} catch (err) {
 				ok = false;
 				linesHint = null; // refusée : rien ne glisse
-				message = String(err instanceof Error ? err.message : err);
+				message = errorText(err);
 			}
 			refreshStatus();
 		});
@@ -10357,7 +10352,7 @@
 	export async function runBench() {
 		const e = entries[0];
 		if (!e) return;
-		bench = 'Mesure en cours…';
+		bench = tr('grid.bench.running');
 		const frames = (n: number) =>
 			new Promise<void>((res) => {
 				let k = 0;
@@ -10448,10 +10443,7 @@
 		};
 		console.log('lattis-bench', JSON.stringify(result));
 		(window as unknown as { lattisBench: unknown }).lattisBench = result;
-		bench =
-			`Défilement : ${result.scroll.fps} img/s, image p95 ${result.scroll.frameP95} ms, ` +
-			`${janky} images > 33 ms, ${scrollMissing}/${drawn} images incomplètes · ` +
-			`Saut : p50 ${result.jumpToDataP50} ms · Saisie : p50 ${result.editP50} ms`;
+		bench = tr('grid.bench.result', { fps: String(result.scroll.fps), frame: String(result.scroll.frameP95), janky: String(janky), missing: String(scrollMissing), drawn: String(drawn), jump: String(result.jumpToDataP50), edit: String(result.editP50) });
 		refreshStatus();
 		return result;
 	}
@@ -10520,7 +10512,7 @@
 				if (height !== startH && source.setRowHeight) {
 					userHeights.set(row, height);
 					const setHeight = source.setRowHeight;
-					writing = writing.catch(() => undefined).then(() => setHeight(row, height).then(() => undefined, (err) => say(String(err?.message ?? err))));
+					writing = writing.catch(() => undefined).then(() => setHeight(row, height).then(() => undefined, (err) => say(errorText(err))));
 				}
 				return;
 			}
@@ -10530,7 +10522,7 @@
 			if (width === startW || !source.setColumnWidth) return;
 			userWidths.set(col, width);
 			const setWidth = source.setColumnWidth;
-			writing = writing.catch(() => undefined).then(() => setWidth(col, width).then(() => undefined, (err) => say(String(err?.message ?? err))));
+			writing = writing.catch(() => undefined).then(() => setWidth(col, width).then(() => undefined, (err) => say(errorText(err))));
 		};
 		window.addEventListener('mouseup', up);
 		window.addEventListener('mousemove', onDragMove);
@@ -10617,41 +10609,41 @@
 	{#if source.sheetLines}
 		{@const { r0, r1, c0, c1 } = selection()}
 		{#if kind === 'rows'}
-			<button onclick={() => sheetLines('insertRows')}>Insérer {r1 > r0 ? `${r1 - r0 + 1} lignes` : 'une ligne'}</button>
-			<button onclick={() => sheetLines('deleteRows')}>Supprimer {r1 > r0 ? 'les lignes' : 'la ligne'}</button>
+			<button onclick={() => sheetLines('insertRows')}>{tr('grid.lines.insertRows', { n: r1 - r0 + 1 })}</button>
+			<button onclick={() => sheetLines('deleteRows')}>{r1 > r0 ? tr('grid.lines.deleteRows') : tr('grid.lines.deleteRow')}</button>
 		{:else if kind === 'cols'}
-			<button onclick={() => sheetLines('insertCols')}>Insérer {c1 > c0 ? `${c1 - c0 + 1} colonnes` : 'une colonne'}</button>
-			<button onclick={() => sheetLines('deleteCols')}>Supprimer {c1 > c0 ? 'les colonnes' : 'la colonne'}</button>
+			<button onclick={() => sheetLines('insertCols')}>{tr('grid.lines.insertCols', { n: c1 - c0 + 1 })}</button>
+			<button onclick={() => sheetLines('deleteCols')}>{c1 > c0 ? tr('grid.lines.deleteCols') : tr('grid.lines.deleteCol')}</button>
 		{:else}
-			<button onclick={() => openLinesDialog(true, x, y)}>Insérer…</button>
-			<button title="Vide les cellules : valeurs, mise en forme, fusions, notes et validations" onclick={() => { menu = freeMenu = null; clearSelection(selection(), true); }}>Supprimer</button>
+			<button onclick={() => openLinesDialog(true, x, y)}>{tr('grid.lines.insert')}</button>
+			<button title={tr('grid.menu.clearAll.tooltip')} onclick={() => { menu = freeMenu = null; clearSelection(selection(), true); }}>{tr('common.delete')}</button>
 		{/if}
 	{/if}
 	<button
 		onclick={() => {
 			menu = freeMenu = null;
 			if (!deleteWholeColumns()) clearSelection();
-		}}>Effacer le contenu</button
+		}}>{tr('grid.menu.clearContents')}</button
 	>
 	{#if source.sheetLines && kind}
 		{@const rows = kind === 'rows'}
 		{#if source.applyStyle || source.setSheetRules}
 			<hr />
-			{#if source.applyStyle}<button data-shed="1" onclick={() => openFormat()}>Format de cellule…</button>{/if}
-			{#if source.setSheetRules}<button data-shed="1" onclick={rulesActive}>Mise en forme conditionnelle…</button>{/if}
+			{#if source.applyStyle}<button data-shed="1" onclick={() => openFormat()}>{tr('grid.menu.formatCells')}</button>{/if}
+			{#if source.setSheetRules}<button data-shed="1" onclick={rulesActive}>{tr('grid.menu.conditionalFormat')}</button>{/if}
 		{/if}
 		{#if (rows ? source.setRowHeight : source.setColumnWidth) || source.setLinesHidden}
 			<hr />
 			{#if rows && source.setRowHeight}
-				<button data-shed="2" onclick={() => openSize(true, x, y)}>Hauteur de ligne…</button>
-				<button data-shed="1" onclick={autoFitRows} title="Hauteur d’après le contenu (double-clic sur le bord du numéro de ligne)">Ajuster la hauteur de ligne</button>
+				<button data-shed="2" onclick={() => openSize(true, x, y)}>{tr('grid.menu.rowHeight')}</button>
+				<button data-shed="1" onclick={autoFitRows} title={tr('grid.menu.autoFitRows.tooltip')}>{tr('grid.menu.autoFitRows')}</button>
 			{:else if !rows && source.setColumnWidth}
-				<button data-shed="2" onclick={() => openSize(false, x, y)}>Largeur de colonne…</button>
-				<button data-shed="1" onclick={autoFitCols} title="Largeur d’après le contenu affiché (double-clic sur le bord de l’en-tête)">Ajuster la largeur de colonne</button>
+				<button data-shed="2" onclick={() => openSize(false, x, y)}>{tr('grid.menu.colWidth')}</button>
+				<button data-shed="1" onclick={autoFitCols} title={tr('grid.menu.autoFitCols.tooltip')}>{tr('grid.menu.autoFitCols')}</button>
 			{/if}
 			{#if source.setLinesHidden}
-				<button onclick={() => setHidden(rows, true)}>Masquer</button>
-				{#if hiddenIn(rows)}<button onclick={() => unhide(rows)}>Afficher</button>{/if}
+				<button onclick={() => setHidden(rows, true)}>{tr('grid.menu.hide')}</button>
+				{#if hiddenIn(rows)}<button onclick={() => unhide(rows)}>{tr('grid.menu.unhide')}</button>{/if}
 			{/if}
 		{/if}
 	{/if}
@@ -10659,15 +10651,15 @@
 
 {#snippet noteItems()}
 	{#if noteOf(active.row, active.col)}
-		<button data-shed="1" onclick={editNote}>Modifier la note</button>
+		<button data-shed="1" onclick={editNote}>{tr('grid.note.edit')}</button>
 		<button data-shed="1"
 			onclick={() => {
 				menu = freeMenu = null;
 				deleteNote();
-			}}>Supprimer la note</button
+			}}>{tr('grid.note.delete')}</button
 		>
 	{:else}
-		<button data-shed="1" onclick={editNote}>Insérer une note</button>
+		<button data-shed="1" onclick={editNote}>{tr('grid.note.insert')}</button>
 	{/if}
 {/snippet}
 
@@ -10678,12 +10670,12 @@
 		{@const at = { row: refItems.row, col: refItems.col }}
 		<button
 			disabled={g.found === false}
-			title={g.found === false ? `« ${g.value} » n’existe pas dans ${g.table}` : `Va à la ligne « ${g.value} » du tableau « ${g.table} » (Alt+← pour revenir)`}
+			title={g.found === false ? tr('grid.refLink.missing', { value: g.value, table: g.table }) : tr('grid.refLink.go.tooltip', { value: g.value, table: g.table })}
 			onclick={() => {
 				menu = freeMenu = null;
 				refItems = null;
 				void followRef(at.row, at.col);
-			}}>Basculer sur « {clip(g.table)} » › {clip(g.value)} <span class="keys">Ctrl+clic</span></button
+			}}>{tr('grid.refLink.go', { table: clip(g.table), value: clip(g.value) })} <span class="keys">Ctrl+clic</span></button
 		>
 		<hr />
 	{:else if refItems?.cite?.list?.length}
@@ -10693,13 +10685,13 @@
 		{#if list.length === 1}
 			<button
 				disabled={!list[0].count}
-				title={list[0].count ? `Filtre « ${list[0].table} » sur ${list[0].column} = ${ci.value} et va à la première ligne (Alt+← pour revenir)` : undefined}
+				title={list[0].count ? tr('grid.refLink.cite.tooltip', { table: list[0].table, column: list[0].column, value: ci.value }) : undefined}
 				onclick={() => openCitation(at.row, at.col, list[0], ci.value)}>{citeLabel(clip(ci.value), list)}</button
 			>
 		{:else}
 			<Submenu label={citeLabel(clip(ci.value), list)}>
 				{#each list as c (c.table + '[' + c.column + ']')}
-					<button disabled={!c.count} title="Filtre « {c.table} » sur {c.column} = {ci.value} et va à la première ligne (Alt+← pour revenir)" onclick={() => openCitation(at.row, at.col, c, ci.value)}
+					<button disabled={!c.count} title={tr('grid.refLink.cite.tooltip', { table: c.table, column: c.column, value: ci.value })} onclick={() => openCitation(at.row, at.col, c, ci.value)}
 						>{clip(c.table)} ({c.count})</button
 					>
 				{/each}
@@ -10717,8 +10709,8 @@
 		<div class="sig">
 			<div class="sig-line">{#each sp.parts as p, i (i)}{#if p.on}<b>{p.text}</b>{:else}{p.text}{/if}{/each}</div>
 			{#if sig.fn.description}<div class="sig-desc">{sig.fn.description}</div>{/if}
-			{#if sp.arg}<div class="sig-arg"><b>{sp.arg.name}</b>{sp.arg.optional ? ' (facultatif)' : ''} : {sp.arg.desc}</div>{/if}
-			{#if sig.fn.example}<div class="sig-ex">Exemple : <code>{sig.fn.example}</code></div>{/if}
+			{#if sp.arg}<div class="sig-arg"><b>{sp.arg.name}</b>{sp.arg.optional ? ' ' + tr('grid.sig.optional') : ''} : {sp.arg.desc}</div>{/if}
+			{#if sig.fn.example}<div class="sig-ex">{tr('grid.sig.example')} <code>{sig.fn.example}</code></div>{/if}
 		</div>
 	{/if}
 	{#if completion?.where === where}
@@ -10746,12 +10738,12 @@
 			<button
 				class="validate"
 				disabled={!ok}
-				title={ok ? 'Valider la formule (Entrée)' : 'La formule a une faute : corrigez-la pour la valider'}
+				title={ok ? tr('grid.formula.validate.tooltip') : tr('grid.formula.validate.error')}
 				onmousedown={(e) => {
 					// Le focus reste dans l'éditeur : la validation passe par Entrée.
 					e.preventDefault();
 					(where === 'cell' ? input : fxInput)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-				}}>Valider</button
+				}}>{tr('grid.formula.validate')}</button
 			>
 		</div>
 	{/if}
@@ -10765,7 +10757,7 @@
 					bind:this={tableNameEl}
 					class="table-name"
 					class:default-name={isDefaultTableName(tableBox.name)}
-					title={isDefaultTableName(tableBox.name) ? `${DEFAULT_NAME_HINT} (modifiez puis Entrée)` : 'Nom du tableau : modifiez puis Entrée pour le renommer'}
+					title={isDefaultTableName(tableBox.name) ? tr('grid.nameBox.table.default') : tr('grid.nameBox.table')}
 					value={tableBox.name}
 					onfocus={(e) => e.currentTarget.select()}
 					onkeydown={onTableNameKey}
@@ -10774,7 +10766,7 @@
 				<span class="slash">/</span>
 				<input
 					class="col-name"
-					title="Colonne[ligne] : modifiez le nom puis Entrée pour renommer la colonne"
+					title={tr('grid.nameBox.column')}
 					value={tableBox.col}
 					onfocus={(e) => e.currentTarget.select()}
 					onkeydown={onColumnNameKey}
@@ -10785,7 +10777,7 @@
 			<input
 				class="name-box"
 				bind:this={nameInput}
-				title="Nom de la cellule : tapez un nom puis Entrée pour la nommer, ou le nom d'une cellule pour y aller"
+				title={tr('grid.nameBox.cell')}
 				value={nameBox}
 				placeholder="—"
 				onfocus={(e) => e.currentTarget.select()}
@@ -10802,7 +10794,7 @@
 		<input
 			class="fx-input"
 			data-region-focus
-			aria-label="Barre de formule"
+			aria-label={tr('grid.formulaBar.aria')}
 			class:hl={fxHl}
 			bind:this={fxInput}
 			bind:value={fxText}
@@ -10837,8 +10829,8 @@
 			spellcheck="false"
 		/>
 		{#if calcEdit}
-			<span class="fx-scope" title="La formule est celle de toute la colonne : elle s'applique à chacune de ses lignes."
-				>Colonne calculée : s'applique {calcEdit.e.t.rows > 1 ? `aux ${fmtNumber(calcEdit.e.t.rows)} lignes` : 'à la ligne'}</span
+			<span class="fx-scope" title={tr('grid.formulaBar.computed.tooltip')}
+				>{tr('grid.formulaBar.computed', { n: calcEdit.e.t.rows })}</span
 			>
 		{/if}
 		</div>
@@ -10850,7 +10842,7 @@
 
 	<div class="body">
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" aria-label="Feuille {sheetName}" aria-rowcount={-1} aria-colcount={-1} aria-activedescendant={a11yId} aria-keyshortcuts="Shift+F10" data-region-focus onkeydown={onKeyDown}>
+	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" aria-label={tr('grid.sheet.aria', { name: sheetName })} aria-rowcount={-1} aria-colcount={-1} aria-activedescendant={a11yId} aria-keyshortcuts="Shift+F10" data-region-focus onkeydown={onKeyDown}>
 		<GridA11y cellId={a11yId} {speech} row={active.row + 1} col={active.col + 1} editing={editing || fxEditing} selection={speechSel} />
 		<!-- Calque zoomé (zoom.ts) : grille, graphiques, boutons, éditeur et notes ; menus et dialogues hors du calque. -->
 		<div class="zoom" style:zoom={zoom === 1 ? undefined : zoom}>
@@ -10881,7 +10873,7 @@
 					<div
 						class="chart"
 						role="group"
-						aria-label={ch.config.title ? `Graphique « ${ch.config.title} »` : 'Graphique'}
+						aria-label={ch.config.title ? tr('grid.chart.aria.titled', { title: ch.config.title }) : tr('grid.chart.aria')}
 						style:left="{box.x - viewPos.x}px"
 						style:top="{box.y - viewPos.y}px"
 						class:selected={selChart === ch.id}
@@ -10893,7 +10885,7 @@
 						onwheel={(ev) => onWheel(ev)}
 					>
 						{#if ch.error}
-							<p class="chart-error">Graphique : {ch.error}</p>
+							<p class="chart-error">{tr('grid.chart.error', { error: ch.error })}</p>
 						{:else}
 							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} animate={animate && chartTween} grow={grownCharts.has(ch.id)} interactive={selChart === ch.id} onview={(v) => setMapView(ch.id, v)} map={ch} info={ch} onpoint={onrowlink && ((r) => pointToRow(ch, r))} />
 						{/if}
@@ -10939,7 +10931,7 @@
 				<div class="editor-box" class:ro={!!editRO}>
 					{#if editRO}
 						<!-- Lecture seule : le texte se sélectionne et se copie, sans se modifier. -->
-						<span class="editor-ro" aria-hidden="true">lecture seule</span>
+						<span class="editor-ro" aria-hidden="true">{tr('grid.editor.readOnly')}</span>
 					{/if}
 					{#if hl}
 						<!-- Formule : texte coloré sous la zone de saisie (transparente). -->
@@ -11007,7 +10999,7 @@
 						title={editRO ||
 							(() => {
 							const e = tableAt(active.row, active.col);
-							return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : 'Cellule libre';
+							return e ? typeLabel(e.t.columns[active.col - e.t.col].type) : tr('grid.editor.freeCell');
 						})()}
 					></textarea>
 				</div>
@@ -11023,7 +11015,7 @@
 			<!-- Entrée, F3, Échap, Ctrl+F et Ctrl+H dans toute la barre (onFinderKey) ;
 			     les boutons d'icône gardent le focus dans le champ (mousedown). -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-			<div class="finder" role="search" aria-label="Rechercher et remplacer" onkeydown={onFinderKey}>
+			<div class="finder" role="search" aria-label={tr('grid.find.aria')} onkeydown={onFinderKey}>
 				<div class="fd-row">
 					{#if source.replace}
 						<button
@@ -11032,39 +11024,39 @@
 							onclick={() => toggleReplace()}
 							aria-expanded={finder.replace}
 							aria-controls="fd-replace"
-							aria-label={finder.replace ? 'Masquer le remplacement' : 'Afficher le remplacement'}
-							title={finder.replace ? 'Masquer le remplacement' : 'Remplacer (Ctrl+H)'}
+							aria-label={finder.replace ? tr('grid.find.replace.hide') : tr('grid.find.replace.show')}
+							title={finder.replace ? tr('grid.find.replace.hide') : tr('grid.find.replace.tooltip')}
 						><Icon name="chevron-down" size={14} /></button>
 					{/if}
 					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-					<div class="fd-field" class:miss={finder.count === 'Aucun résultat'} onclick={() => findInput?.focus()}>
+					<div class="fd-field" class:miss={finder.count === tr('grid.find.none')} onclick={() => findInput?.focus()}>
 						<Icon name="search" size={14} />
 						<input
 							bind:this={findInput}
 							bind:value={finder.text}
 							oninput={() => finder && ((finder.count = ''), (finder.info = ''))}
-							placeholder="Rechercher"
-							aria-label="Rechercher"
+							placeholder={tr('grid.find.placeholder')}
+							aria-label={tr('grid.find.placeholder')}
 							aria-describedby="fd-count"
 							spellcheck="false"
 							autocomplete="off"
 						/>
 						<span id="fd-count" class="fd-count" aria-live="polite">{finder.count}</span>
 					</div>
-					<button class="fd-icon fd-up" onmousedown={(e) => e.preventDefault()} onclick={() => findNext(true)} disabled={!finder.text} aria-label="Précédent" title="Précédent (Maj+Entrée ou Maj+F3)"
+					<button class="fd-icon fd-up" onmousedown={(e) => e.preventDefault()} onclick={() => findNext(true)} disabled={!finder.text} aria-label={tr('grid.find.prev')} title={tr('grid.find.prev.tooltip')}
 						><Icon name="chevron-down" size={16} /></button
 					>
-					<button class="fd-icon" onmousedown={(e) => e.preventDefault()} onclick={() => findNext()} disabled={!finder.text} aria-label="Suivant" title="Suivant (Entrée ou F3)"
+					<button class="fd-icon" onmousedown={(e) => e.preventDefault()} onclick={() => findNext()} disabled={!finder.text} aria-label={tr('grid.find.next')} title={tr('grid.find.next.tooltip')}
 						><Icon name="chevron-down" size={16} /></button
 					>
-					<button class="fd-icon fd-close" onclick={closeFinder} aria-label="Fermer la recherche" title="Fermer (Échap)"><Icon name="win-close" size={14} /></button>
+					<button class="fd-icon fd-close" onclick={closeFinder} aria-label={tr('grid.find.close')} title={tr('grid.find.close.tooltip')}><Icon name="win-close" size={14} /></button>
 				</div>
 				{#if finder.replace}
 					<div class="fd-row fd-indent" id="fd-replace">
 						<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 						<div class="fd-field" onclick={() => replaceInput?.focus()}>
 							<Icon name="replace" size={14} />
-							<input bind:this={replaceInput} bind:value={finder.by} placeholder="Remplacer par" aria-label="Remplacer par" spellcheck="false" autocomplete="off" />
+							<input bind:this={replaceInput} bind:value={finder.by} placeholder={tr('grid.find.replaceBy')} aria-label={tr('grid.find.replaceBy')} spellcheck="false" autocomplete="off" />
 						</div>
 					</div>
 				{/if}
@@ -11073,17 +11065,17 @@
 						class="fd-chip"
 						class:on={!!finder.zone}
 						title={finder.zone
-							? 'La sélection borne la recherche ; sélectionnez une seule cellule pour chercher dans toute la feuille'
-							: 'Toute la feuille ; sélectionnez plusieurs cellules pour borner la recherche'}
-						aria-label={finder.zone ? `Dans la sélection ${zoneLabel(finder.zone)}` : 'Dans toute la feuille'}
+							? tr('grid.find.zone.selection.tooltip')
+							: tr('grid.find.zone.sheet.tooltip')}
+						aria-label={finder.zone ? tr('grid.find.zone.selection.aria', { range: zoneLabel(finder.zone) }) : tr('grid.find.zone.sheet.aria')}
 					>
 						<Icon name={finder.zone ? 'print-area' : 'sheet'} size={13} />
-						<span>Dans : {finder.zone ? zoneLabel(finder.zone) : 'feuille'}</span>
+						<span>{tr('grid.find.zone', { zone: finder.zone ? zoneLabel(finder.zone) : tr('grid.find.zone.sheet') })}</span>
 					</span>
 					{#if finder.replace}
 						<span class="fd-spacer"></span>
-						<button class="fd-btn" onclick={replaceOne} disabled={!finder.text} title="Remplace la cellule trouvée, puis passe à la suivante">Remplacer</button>
-						<button class="fd-btn primary" onclick={replaceAll} disabled={!finder.text} title="Remplace toutes les occurrences (Ctrl+Z pour annuler)">Tout remplacer</button>
+						<button class="fd-btn" onclick={replaceOne} disabled={!finder.text} title={tr('grid.find.replaceOne.tooltip')}>{tr('grid.find.replaceOne')}</button>
+						<button class="fd-btn primary" onclick={replaceAll} disabled={!finder.text} title={tr('grid.find.replaceAll.tooltip')}>{tr('grid.find.replaceAll')}</button>
 					{/if}
 				</div>
 				{#if finder.info}
@@ -11120,25 +11112,25 @@
 					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>{lab[1]}</button>
 				{/if}
 				{#if cols && source.sortTableCustom}
-					<button onclick={() => openCustomSort(m.e, m.i)}>Tri personnalisé…</button>
+					<button onclick={() => openCustomSort(m.e, m.i)}>{tr('grid.pivot.menu.customSort')}</button>
 				{/if}
 				{#if cols && source.setFilter}
-					<button onclick={() => openFilter(m.e, m.i)}>Filtrer la colonne…</button>
+					<button onclick={() => openFilter(m.e, m.i)}>{tr('grid.menu.filterColumn')}</button>
 				{/if}
 				{#if filtered}
-					<button onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>Effacer le filtre du tableau</button>
+					<button onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>{tr('grid.menu.clearTableFilter')}</button>
 				{/if}
 			{/snippet}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
 				<!-- Les noms (tableau, colonne) n'apparaissent qu'en tête de leur section (titre « Colonne », sous-menu « Tableau »), abrégés ; jamais dans les libellés. -->
 				{#if m.confirmDelete}
-					<div class="menu-title" class:default-name={isDefaultTableName(m.e.t.name)} title={isDefaultTableName(m.e.t.name) ? DEFAULT_NAME_HINT : clipped(m.e.t.name) ? m.e.t.name : undefined}>Tableau « {clip(m.e.t.name)} »</div>
+					<div class="menu-title" class:default-name={isDefaultTableName(m.e.t.name)} title={isDefaultTableName(m.e.t.name) ? defaultNameHint() : clipped(m.e.t.name) ? m.e.t.name : undefined}>{tr('grid.menu.table', { name: clip(m.e.t.name) })}</div>
 					<p class="menu-note">
-						Supprimer ce tableau et ses {fmtNumber(m.e.t.rows + (m.e.t.hidden ?? 0))} lignes ? Ctrl+Z permettra de l’annuler.
+						{tr('grid.menu.deleteTable.confirm', { n: m.e.t.rows + (m.e.t.hidden ?? 0) })}
 					</p>
-					<button onclick={() => deleteTable(m.e.t)}>Supprimer le tableau</button>
-					<button onclick={() => (menu = { ...m, confirmDelete: false })}>Annuler</button>
+					<button onclick={() => deleteTable(m.e.t)}>{tr('grid.menu.deleteTable')}</button>
+					<button onclick={() => (menu = { ...m, confirmDelete: false })}>{tr('common.cancel')}</button>
 				{:else}
 					<!-- Ordre (demande de Louis) : les actions propres à la situation ; les plus
 					     courantes sur la cellule ou la ligne (tri et filtre ; insertion, suppression
@@ -11152,18 +11144,18 @@
 							<!-- Colonne calculée (ou colonnes calculées de la sélection) : ses valeurs, sans la formule. -->
 							<button
 								title={toValues.length > 1
-									? `Les ${toValues.length} colonnes calculées de la sélection deviennent des colonnes saisies : elles gardent leurs valeurs actuelles, sans formule (Ctrl+Z pour annuler)`
-									: 'La colonne calculée devient une colonne saisie : elle garde ses valeurs actuelles, sans formule (Ctrl+Z pour annuler)'}
-								onclick={() => menuAction(() => source.columnsToValues!(m.e.t, toValues))}>Convertir en valeurs</button
+									? tr('grid.menu.toValues.many.tooltip', { n: toValues.length })
+									: tr('grid.menu.toValues.tooltip')}
+								onclick={() => menuAction(() => source.columnsToValues!(m.e.t, toValues))}>{tr('grid.menu.toValues')}</button
 							>
 						{/if}
 						{#if promoteHere}
 							<!-- Tableau sans en-têtes (que des « Colonne n ») : sur sa 1re ligne. -->
-							<button title="La 1re ligne de données donne les noms des colonnes et devient l'en-tête, à sa place ; l'en-tête actuel disparaît (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la première ligne comme en-têtes</button>
+							<button title={tr('grid.menu.promote.tooltip')} onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>{tr('grid.menu.promote')}</button>
 						{/if}
 						{#if toNote}
 							<!-- Seulement sur la dernière ligne de données (le moteur refuse les autres). -->
-							<button title="La ligne reste juste sous le tableau, gardée à part comme total ou note (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir cette ligne du tableau (total ou note)</button>
+							<button title={tr('grid.menu.rowToNote.tooltip')} onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>{tr('grid.menu.rowToNote')}</button>
 						{/if}
 						<hr />
 					{/if}
@@ -11173,7 +11165,7 @@
 					{:else}
 						{#if sortCount}
 							{#if sortCount >= 3}
-								<Submenu label="Trier et filtrer">{@render sortItems()}</Submenu>
+								<Submenu label={tr('grid.menu.sortFilter')}>{@render sortItems()}</Submenu>
 							{:else}
 								{@render sortItems()}
 							{/if}
@@ -11181,25 +11173,25 @@
 						{/if}
 						{#if rowItems}
 							<!-- La ligne du tableau ; les colonnes s'insèrent et se suppriment dans leur section. -->
-							<Submenu label="Insérer">
-								<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n)))}>Ligne au-dessus</button>
-								<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n + 1)))}>Ligne en dessous</button>
+							<Submenu label={tr('grid.menu.insert')}>
+								<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n)))}>{tr('grid.menu.rowAbove')}</button>
+								<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n + 1)))}>{tr('grid.menu.rowBelow')}</button>
 							</Submenu>
-							<button onclick={() => menuAction(source.deleteRow && (() => tableLines(m.e, 'deleteRow', m.n)))}>Supprimer la ligne</button>
+							<button onclick={() => menuAction(source.deleteRow && (() => tableLines(m.e, 'deleteRow', m.n)))}>{tr('grid.lines.deleteRow')}</button>
 						{/if}
 						<button
 							onclick={() => {
 								menu = null;
 								clearSelection();
-							}}>Effacer le contenu</button
+							}}>{tr('grid.menu.clearContents')}</button
 						>
 						{#if source.applyStyle || source.setSheetRules || source.setNote}
 							<hr />
 							{#if source.applyStyle}
-								<button data-shed="1" onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
+								<button data-shed="1" onclick={() => openFormat()}>{tr('grid.menu.formatCells')} <span class="keys">Ctrl+1</span></button>
 							{/if}
 							{#if source.setSheetRules}
-								<button data-shed="1" onclick={() => openRules(m.e, m.i)}>Mise en forme conditionnelle…</button>
+								<button data-shed="1" onclick={() => openRules(m.e, m.i)}>{tr('grid.menu.conditionalFormat')}</button>
 							{/if}
 							{#if source.setNote}{@render noteItems()}{/if}
 						{/if}
@@ -11210,24 +11202,24 @@
 						onclick={() => {
 							menu = null;
 							copySelection(true);
-						}}>Couper</button
+						}}>{tr('common.cut')}</button
 					>
 					<button data-shed="3"
 						onclick={() => {
 							menu = null;
 							copySelection();
-						}}>Copier</button
+						}}>{tr('common.copy')}</button
 					>
 					<button data-shed="3"
 						onclick={() => {
 							menu = null;
 							pasteClipboard();
-						}}>Coller</button
+						}}>{tr('common.paste')}</button
 					>
 					{#if cols}
 						<hr />
 						<!-- Section de la colonne, titrée de son nom : ce qui ne touche qu'elle, sa suppression en dernier. -->
-						<div class="menu-title" title={clipped(col?.name) ? col?.name : undefined}>Colonne « {clip(col?.name)} »</div>
+						<div class="menu-title" title={clipped(col?.name) ? col?.name : undefined}>{tr('grid.menu.column', { name: clip(col?.name) })}</div>
 						<button data-shed="1"
 							onclick={() => {
 								const t = m.e.t;
@@ -11235,11 +11227,11 @@
 								menu = null;
 								moveTo(t.row, c);
 								startEdit(false);
-							}}>Renommer la colonne</button
+							}}>{tr('grid.menu.renameColumn')}</button
 						>
 						{#if source.setType && !col?.formula && !why}
 							<!-- Le menu ▾ de la colonne (tri, filtre, type, clé), sous son en-tête. -->
-							<button data-shed="1" onclick={() => openFilter(m.e, m.i)}>Type de données et clé…</button>
+							<button data-shed="1" onclick={() => openFilter(m.e, m.i)}>{tr('grid.menu.typeAndKey')}</button>
 						{/if}
 						{#if source.applyStyle && !col?.formula}
 							<!-- Validation des données de toute la colonne (ses lignes de données). -->
@@ -11250,42 +11242,42 @@
 									menu = null;
 									selectRange(e.t.row + 1, c, Math.max(e.last, e.t.row + 1), c);
 									openValidation();
-								}}>Validation des données…</button
+								}}>{tr('grid.menu.validation')}</button
 							>
 						{/if}
 						{#if source.setTabChoice && col}
 							{@const tc = tabChoiceFor(m.e.t.name, col.name, { formula: !!col.formula })}
 							<button data-shed="1" title={tc.title} disabled={tc.disabled} onclick={() => runTabChoice(m.e.t.name, col.name, tc)}>{tc.label}</button>
 						{/if}
-						<Submenu label="Insérer une colonne" disabled={!!why} title={why || undefined}>
-							<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i)))}>À gauche</button>
-							<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i + 1)))}>À droite</button>
+						<Submenu label={tr('grid.menu.insertColumn')} disabled={!!why} title={why || undefined}>
+							<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i)))}>{tr('grid.menu.left')}</button>
+							<button onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i + 1)))}>{tr('grid.menu.right')}</button>
 						</Submenu>
-						<button disabled={!!why} title={why || undefined} onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>Supprimer la colonne</button>
+						<button disabled={!!why} title={why || undefined} onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>{tr('grid.lines.deleteCol')}</button>
 					{/if}
 					{#if tableItems}
 						<hr />
 						<!-- Le tableau, titré de son nom : en-têtes, requête, partage, conversion ; sa suppression en dernier. -->
 						<Submenu
-							label="Tableau « {clip(m.e.t.name)} »"
-							title={isDefaultTableName(m.e.t.name) ? DEFAULT_NAME_HINT : clipped(m.e.t.name) ? m.e.t.name : undefined}
+							label={tr('grid.menu.table', { name: clip(m.e.t.name) })}
+							title={isDefaultTableName(m.e.t.name) ? defaultNameHint() : clipped(m.e.t.name) ? m.e.t.name : undefined}
 						>
 							{#if toTitle}
-								<button title="La 1re ligne de données devient l'en-tête ; l'en-tête actuel reste au-dessus du tableau, en titre (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>Sortir l'en-tête</button>
+								<button title={tr('grid.menu.headerToTitle.tooltip')} onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>{tr('grid.menu.headerToTitle')}</button>
 							{/if}
 							{#if promote}
-								<button title="La 1re ligne de données donne les noms des colonnes et devient l'en-tête, à sa place ; l'en-tête actuel disparaît (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la première ligne comme en-têtes</button>
+								<button title={tr('grid.menu.promote.tooltip')} onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>{tr('grid.menu.promote')}</button>
 							{/if}
 							{#if toHeader}
-								<button title="Les cellules tapées juste au-dessus du tableau deviennent les noms de ses colonnes ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.titleToHeader!(m.e.t))}>Utiliser la ligne du dessus comme en-têtes</button>
+								<button title={tr('grid.menu.titleToHeader.tooltip')} onclick={() => menuAction(() => source.titleToHeader!(m.e.t))}>{tr('grid.menu.titleToHeader')}</button>
 							{/if}
 							{#if twoLevel}
 								{@const on = !!m.e.t.twoLevel}
 									<button
 										title={on
-											? 'Les colonnes reprennent leur nom complet « Groupe.Nom » sur une seule ligne ; la bande des groupes disparaît'
-											: 'La ligne juste au-dessus du tableau devient une bande de groupes : « BOISEMENT » posé au-dessus de Nom et Statut donne les colonnes « BOISEMENT.Nom » et « BOISEMENT.Statut ». Cellules fusionnées ou non.'}
-										onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, !on))}>{on ? "Retirer les groupes d'en-têtes" : 'En-têtes sur 2 lignes (groupes au-dessus)'}</button
+											? tr('grid.menu.twoLevel.off.tooltip')
+											: tr('grid.menu.twoLevel.on.tooltip')}
+										onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, !on))}>{on ? tr('grid.menu.twoLevel.off') : tr('grid.menu.twoLevel.on')}</button
 								>
 							{/if}
 							{#if follow}
@@ -11296,35 +11288,35 @@
 									aria-checked={on}
 									title={data?.choice?.formula
 										? on
-											? `Le tableau montre toutes ses lignes, quelle que soit la valeur de l'onglet`
-											: `Le tableau ne montre plus que les lignes dont la formule ${data.choice.formula} donne la valeur affichée (il doit en avoir les colonnes)`
+											? tr('grid.menu.follow.off.tooltip')
+											: tr('grid.menu.follow.on.formula.tooltip', { formula: data.choice.formula })
 										: on
-											? `Le tableau montre toutes ses lignes, quelle que soit la valeur de l'onglet (sa colonne « ${data?.choice?.name} » est retirée si elle n'a qu'une valeur)`
-											: `Le tableau reçoit la colonne « ${data?.choice?.name} », remplie avec la valeur affichée, et ne montre plus que ses lignes`}
-									onclick={() => toggleFollow(m.e.t, !on)}><span class="check">{on ? '✓' : ''}</span>Suivre {what}</button
+											? tr('grid.menu.follow.off.column.tooltip', { name: data?.choice?.name ?? '' })
+											: tr('grid.menu.follow.on.tooltip', { name: data?.choice?.name ?? '' })}
+									onclick={() => toggleFollow(m.e.t, !on)}><span class="check">{on ? '✓' : ''}</span>{tr('grid.menu.follow', { what })}</button
 								>
 							{/if}
 							{#if refresh}
 								{@const t = m.e.t}
-								<button title="Relance la requête « {t.query?.name} » (F5 dans le tableau)" onclick={() => menuAction(() => source.refreshTable!(t))}>Actualiser la requête</button>
+								<button title={tr('grid.menu.refresh.tooltip', { name: t.query?.name ?? '' })} onclick={() => menuAction(() => source.refreshTable!(t))}>{tr('grid.menu.refresh')}</button>
 									{#if source.setHandKey && t.columns.some((k) => k.hand && !k.formula)}
-										<button title="Colonne du résultat qui relie les valeurs saisies à leurs lignes d'une actualisation à l'autre" onclick={() => openHandKey(t)}>Clé des colonnes saisies…</button>
+										<button title={tr('grid.menu.handKey.tooltip')} onclick={() => openHandKey(t)}>{tr('grid.menu.handKey')}</button>
 									{/if}
 									{#if source.forgetHandKept && t.handKept}
-										<button title="Valeurs saisies sur des lignes disparues du résultat, gardées au cas où elles reviendraient (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.forgetHandKept!(t))}>Oublier les valeurs mises de côté ({t.handKept} {t.handKept > 1 ? 'lignes' : 'ligne'})</button>
+										<button title={tr('grid.menu.handForget.tooltip')} onclick={() => menuAction(() => source.forgetHandKept!(t))}>{tr('grid.menu.handForget', { n: t.handKept })}</button>
 									{/if}
 							{/if}
 							{#if addShared}
-								<button title="Ce tableau n'est que sur votre poste : le créer dans le classeur partagé, avec ses lignes, pour tous les membres" onclick={() => { const n = m.e.t.name; menu = null; onaddshared?.(n); }}>Ajouter au classeur partagé…</button>
+								<button title={tr('grid.menu.addShared.tooltip')} onclick={() => { const n = m.e.t.name; menu = null; onaddshared?.(n); }}>{tr('grid.menu.addShared')}</button>
 							{/if}
 							{#if share}
-								<button title="Rendre ce tableau lisible depuis d'autres classeurs du serveur (catalogue du Data Lake Lattis)" onclick={() => { const n = m.e.t.name; menu = null; onsharedata?.(n); }}>Partager au Data Lake Lattis…</button>
+								<button title={tr('grid.menu.shareData.tooltip')} onclick={() => { const n = m.e.t.name; menu = null; onsharedata?.(n); }}>{tr('grid.menu.shareData')}</button>
 							{/if}
 							{#if pushSource}
-								<button title="Envoie maintenant les lignes de ce tableau à sa source du Data Lake (colonnes choisies seulement ; le classeur n'est pas publié)" onclick={() => { const n = m.e.t.name; menu = null; onpushsource?.(n); }}>Mettre à jour la source du Data Lake</button>
+								<button title={tr('grid.menu.pushSource.tooltip')} onclick={() => { const n = m.e.t.name; menu = null; onpushsource?.(n); }}>{tr('grid.menu.pushSource')}</button>
 							{/if}
 							{#if source.convertToRange}
-								<button disabled={!!why} title={why || 'Le tableau devient des cellules libres, au même endroit'} onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>Convertir en plage</button>
+								<button disabled={!!why} title={why || tr('grid.menu.toRange.tooltip')} onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>{tr('grid.menu.toRange')}</button>
 							{/if}
 							{#if source.deleteTables}
 								<hr />
@@ -11334,7 +11326,7 @@
 									onclick={() => {
 										if (m.e.t.rows + (m.e.t.hidden ?? 0) > CONFIRM_DELETE_ROWS) menu = { ...m, confirmDelete: true };
 										else deleteTable(m.e.t);
-									}}>Supprimer le tableau</button
+									}}>{tr('grid.menu.deleteTable')}</button
 								>
 							{/if}
 						</Submenu>
@@ -11345,7 +11337,7 @@
 							onclick={() => {
 								menu = null;
 								onask();
-							}}>Demander à l’assistant…</button
+							}}>{tr('grid.menu.ask')}</button
 						>
 					{/if}
 				{/if}
@@ -11355,20 +11347,20 @@
 			{@const m = followMenu}
 			{@const what = followLabel(data?.choice?.name ?? '')}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (followMenu = null)}>
-				<div class="menu-title" title={clipped(m.e.t.name) ? m.e.t.name : undefined}>Tableau « {clip(m.e.t.name)} »</div>
-				<button role="menuitemcheckbox" aria-checked="true" disabled={!source.setFollow} onclick={() => toggleFollow(m.e.t, false)}><span class="check">✓</span>Suivre {what}</button>
+				<div class="menu-title" title={clipped(m.e.t.name) ? m.e.t.name : undefined}>{tr('grid.menu.table', { name: clip(m.e.t.name) })}</div>
+				<button role="menuitemcheckbox" aria-checked="true" disabled={!source.setFollow} onclick={() => toggleFollow(m.e.t, false)}><span class="check">✓</span>{tr('grid.menu.follow', { what })}</button>
 			</div>
 		{/if}
 		{#if hintMenu}
 			{@const m = hintMenu}
 			{@const name = m.e.t.columns[0]?.name}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (hintMenu = null)}>
-				<div class="menu-title" title={clipped(name) ? name : undefined}>Colonne « {clip(name)} »</div>
+				<div class="menu-title" title={clipped(name) ? name : undefined}>{tr('grid.menu.column', { name: clip(name) })}</div>
 				<button
 					onclick={() => {
 						hintMenu = null;
 						acceptKeyHint(m.e);
-					}}>En faire la clé du tableau</button
+					}}>{tr('grid.key.accept')}</button
 				>
 				{#if source.dismissKeyHint}
 					{@const dismissHint = source.dismissKeyHint}
@@ -11376,7 +11368,7 @@
 						onclick={() => {
 							hintMenu = null;
 							menuAction(() => dismissHint(m.e.t));
-						}}>Ne plus proposer</button
+						}}>{tr('grid.key.dismiss')}</button
 					>
 				{/if}
 			</div>
@@ -11401,31 +11393,31 @@
 						{@const at = { row: active.row, col: active.col }}
 						{#if asHeader && under}
 							{@const t = under}
-							<button data-shed="1" title="Les cellules de cette ligne, au-dessus des colonnes du tableau, deviennent ses en-têtes ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.titleToHeader!(t))}>Utiliser comme en-têtes de « {t.name} »</button>
+							<button data-shed="1" title={tr('grid.menu.asHeader.tooltip')} onclick={() => menuAction(() => source.titleToHeader!(t))}>{tr('grid.menu.asHeader', { table: t.name })}</button>
 						{/if}
 						{#if join}
-							<button data-shed="1" title="Cette cellule est gardée hors du tableau voisin (note, total) ; elle le rejoint" onclick={() => menuAction(() => source.joinTable!(at.row, at.col))}>Ajouter au tableau</button>
+							<button data-shed="1" title={tr('grid.menu.join.tooltip')} onclick={() => menuAction(() => source.joinTable!(at.row, at.col))}>{tr('grid.menu.join')}</button>
 						{/if}
 						{#if asTable}
-							<button data-shed="1" title="La plage redevient un tableau (sa première ligne donne les en-têtes)" onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>Mettre sous forme de tableau</button>
+							<button data-shed="1" title={tr('grid.menu.asTable.tooltip')} onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>{tr('grid.menu.asTable')}</button>
 						{/if}
 					{/if}
 					{#if spilled}
 						{@const sp = spilled}
 						{#if sp}
 							{@const at = { row: sp.row, col: sp.col }}
-							<button data-shed="1" title="Un tableau chargé par la formule remplace le résultat déversé : il se recalcule quand ses sources changent (colonnes en lecture seule, colonnes saisies possibles à droite)" onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, true))}>Convertir en tableau lié</button>
-							<button data-shed="1" title="Un tableau ordinaire garde les valeurs actuelles du résultat déversé, sans lien avec la formule" onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, false))}>Convertir en tableau (valeurs)</button>
+							<button data-shed="1" title={tr('grid.menu.spillLinked.tooltip')} onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, true))}>{tr('grid.menu.spillLinked')}</button>
+							<button data-shed="1" title={tr('grid.menu.spillValues.tooltip')} onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, false))}>{tr('grid.menu.spillValues')}</button>
 						{/if}
 					{/if}
 					{#if toValues}
-						<button data-shed="1" title="Les formules de la sélection sont remplacées par leurs valeurs actuelles (Ctrl+Z pour annuler)" onclick={() => toValuesActive()}>Convertir en valeurs</button>
+						<button data-shed="1" title={tr('grid.menu.rangeToValues.tooltip')} onclick={() => toValuesActive()}>{tr('grid.menu.toValues')}</button>
 					{/if}
 					{#if join || asTable || asHeader || spilled || toValues}<hr />{/if}
 				{/if}
 				{#if below}
 					<!-- Ligne juste au-dessus de l'en-tête d'un tableau : ses cases peuvent devenir les groupes d'en-têtes. -->
-					<button title="Les cases de cette ligne, fusionnées ou non, deviennent les groupes d'en-têtes du tableau « {below.t.name} »" onclick={() => { freeMenu = null; menuAction(() => source.setTwoLevel!(below.t, true)); }}>Intégrer comme groupes d'en-têtes du tableau</button>
+					<button title={tr('grid.menu.asGroups.tooltip', { table: below.t.name })} onclick={() => { freeMenu = null; menuAction(() => source.setTwoLevel!(below.t, true)); }}>{tr('grid.menu.asGroups')}</button>
 					<hr />
 				{/if}
 				<!-- Ordre (demande de Louis), comme sur un tableau : la situation (ci-dessus) ;
@@ -11436,7 +11428,7 @@
 					{#if source.applyStyle || source.setNote}
 						<hr />
 						{#if source.applyStyle}
-							<button data-shed="1" onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
+							<button data-shed="1" onclick={() => openFormat()}>{tr('grid.menu.formatCells')} <span class="keys">Ctrl+1</span></button>
 						{/if}
 						{#if source.setNote}{@render noteItems()}{/if}
 					{/if}
@@ -11446,26 +11438,26 @@
 					onclick={() => {
 						freeMenu = null;
 						copySelection(true);
-					}}>Couper</button
+					}}>{tr('common.cut')}</button
 				>
 				<button data-shed="3"
 					onclick={() => {
 						freeMenu = null;
 						copySelection();
-					}}>Copier</button
+					}}>{tr('common.copy')}</button
 				>
 				<button data-shed="3"
 					onclick={() => {
 						freeMenu = null;
 						pasteClipboard();
-					}}>Coller</button
+					}}>{tr('common.paste')}</button
 				>
 				{#if chartClip}
 					<button
 						onclick={() => {
 							freeMenu = null;
 							pasteChart(chartClip!);
-						}}>Coller le graphique</button
+						}}>{tr('grid.chart.paste')}</button
 					>
 				{/if}
 				{#if buttonsLayer?.hasClip()}
@@ -11473,7 +11465,7 @@
 						onclick={() => {
 							freeMenu = null;
 							buttonsLayer?.pasteAt(active.row, active.col);
-						}}>Coller le bouton</button
+						}}>{tr('grid.controls.paste')}</button
 					>
 				{/if}
 				{#if !m.kind && (source.setPivot || source.deletePivot)}
@@ -11483,7 +11475,7 @@
 					{@const dp = source.deletePivot ? (pivotAt(active.row, active.col) ?? brokenPivotAt(pivots, active.row, active.col)) : null}
 					{@const pv = dp ?? fold}
 					{#if pv}
-						{@const pname = pv.config.name ? `Tableau croisé « ${clip(pv.config.name)} »` : `Tableau croisé de « ${clip(pv.config.source)} »`}
+						{@const pname = pv.config.name ? tr('grid.pivot.menu.title', { name: clip(pv.config.name) }) : tr('grid.pivot.menu.titleOf', { source: clip(pv.config.source) })}
 						<hr />
 						<!-- Section du tableau croisé, titrée de son nom (ou de sa source) ; sa suppression en dernier. -->
 						<div class="menu-title" title={clipped(pv.config.name || pv.config.source) ? pv.config.name || pv.config.source : undefined}>{pname}</div>
@@ -11491,22 +11483,22 @@
 							{@const info = pivotRowOf(fold, active.row)}
 							{@const rows = fold.rows}
 							<!-- Comme le sous-menu « Développer/Réduire » d'Excel. -->
-							<Submenu label="Développer / Réduire">
-								<button disabled={!foldTarget(info, true)} onclick={() => foldPivot(fold, 'expand')}>Développer</button>
-								<button disabled={!foldTarget(info, false)} onclick={() => foldPivot(fold, 'collapse')}>Réduire</button>
+							<Submenu label={tr('grid.pivot.fold')}>
+								<button disabled={!foldTarget(info, true)} onclick={() => foldPivot(fold, 'expand')}>{tr('grid.pivot.fold.expand')}</button>
+								<button disabled={!foldTarget(info, false)} onclick={() => foldPivot(fold, 'collapse')}>{tr('grid.pivot.fold.collapse')}</button>
 								<hr />
-								<button disabled={!canFoldAll(rows, true)} onclick={() => foldPivot(fold, 'expandAll')}>Développer tout</button>
-								<button disabled={!canFoldAll(rows, false)} onclick={() => foldPivot(fold, 'collapseAll')}>Réduire tout</button>
+								<button disabled={!canFoldAll(rows, true)} onclick={() => foldPivot(fold, 'expandAll')}>{tr('grid.pivot.fold.expandAll')}</button>
+								<button disabled={!canFoldAll(rows, false)} onclick={() => foldPivot(fold, 'collapseAll')}>{tr('grid.pivot.fold.collapseAll')}</button>
 							</Submenu>
 						{/if}
 						{#if dp}
 							{#if dp.error && source.setPivot && pivotSources(dp).length}
-								<button title="Rattacher le tableau croisé à un autre tableau : les champs qui y existent sont gardés" onclick={() => pickPivotSource(dp)}>Changer la source…</button>
+								<button title={tr('grid.pivot.menu.source.tooltip')} onclick={() => pickPivotSource(dp)}>{tr('grid.pivot.menu.source')}</button>
 							{/if}
 							{#if source.movePivot}
-								<button title="Le prochain clic sur une cellule (de cette feuille ou d'une autre) y pose le coin haut gauche du tableau croisé ; Échap annule" onclick={() => startPivotMove(dp)}>Déplacer</button>
+								<button title={tr('grid.pivot.menu.move.tooltip')} onclick={() => startPivotMove(dp)}>{tr('grid.pivot.menu.move')}</button>
 							{/if}
-							<button onclick={() => removePivot(dp)}>Supprimer le tableau croisé</button>
+							<button onclick={() => removePivot(dp)}>{tr('grid.pivot.delete')}</button>
 						{/if}
 					{/if}
 				{/if}
@@ -11516,7 +11508,7 @@
 						onclick={() => {
 							freeMenu = null;
 							onask();
-						}}>Demander à l’assistant…</button
+						}}>{tr('grid.menu.ask')}</button
 					>
 				{/if}
 			</div>
@@ -11525,13 +11517,13 @@
 			{@const d = linesDlg}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="rules lines-dlg" use:dismissPanel={() => (linesDlg = null)} onkeydown={(e) => e.key === 'Enter' && applyLinesDialog()}>
-				<div class="menu-title">{d.insert ? 'Insérer' : 'Supprimer'}</div>
-				<label><input type="radio" bind:group={d.choice} value="rows" /> {d.insert ? 'Ligne entière (au-dessus)' : 'Ligne entière'}</label>
-				<label><input type="radio" bind:group={d.choice} value="cols" /> {d.insert ? 'Colonne entière (à gauche)' : 'Colonne entière'}</label>
+				<div class="menu-title">{d.insert ? tr('grid.menu.insert') : tr('common.delete')}</div>
+				<label><input type="radio" bind:group={d.choice} value="rows" /> {d.insert ? tr('grid.lines.dialog.rowAbove') : tr('grid.lines.dialog.row')}</label>
+				<label><input type="radio" bind:group={d.choice} value="cols" /> {d.insert ? tr('grid.lines.dialog.colLeft') : tr('grid.lines.dialog.col')}</label>
 				<div class="foot">
 					<span class="sp"></span>
-					<button class="primary" onclick={applyLinesDialog}>OK</button>
-					<button onclick={() => (linesDlg = null)}>Annuler</button>
+					<button class="primary" onclick={applyLinesDialog}>{tr('common.ok')}</button>
+					<button onclick={() => (linesDlg = null)}>{tr('common.cancel')}</button>
 				</div>
 			</div>
 		{/if}
@@ -11542,7 +11534,7 @@
 				class="rules lines-dlg key-dlg"
 				role="dialog"
 				tabindex="-1"
-				aria-label="Clé de la recherche"
+				aria-label={tr('grid.keyDialog.title')}
 				use:focusFirst
 				use:dismissPanel={cancelKeyDialog}
 				onkeydown={(ev) => {
@@ -11551,20 +11543,20 @@
 					if (ev.key === 'Escape') cancelKeyDialog();
 				}}
 			>
-				<div class="menu-title">La recherche dans « {d.table} » utilise :</div>
-				<label><input type="radio" bind:group={d.choice} value="index" /> le numéro de ligne actuel du tableau (index)</label>
-				<label title={d.why ? `« ${d.column} » ne peut pas servir de clé : ${d.why}` : undefined}>
-					<input type="radio" bind:group={d.choice} value="column" disabled={!!d.why} /> la colonne « {d.column} », qui devient la clé du tableau (les doublons y seront refusés)
+				<div class="menu-title">{tr('grid.keyDialog.heading', { table: d.table })}</div>
+				<label><input type="radio" bind:group={d.choice} value="index" /> {tr('grid.keyDialog.index')}</label>
+				<label title={d.why ? tr('grid.keyDialog.notKey', { column: d.column, why: d.why }) : undefined}>
+					<input type="radio" bind:group={d.choice} value="column" disabled={!!d.why} /> {tr('grid.keyDialog.column', { column: d.column })}
 				</label>
 				{#if d.why}
-					<p class="menu-note">« {d.column} » ne peut pas servir de clé : {d.why}.</p>
+					<p class="menu-note">{tr('grid.keyDialog.notKey.note', { column: d.column, why: d.why })}</p>
 				{:else if d.choice === 'index'}
-					<p class="menu-note">Le numéro change si vous triez ou insérez des lignes. Lattis ne proposera plus de clé pour ce tableau.</p>
+					<p class="menu-note">{tr('grid.keyDialog.index.note')}</p>
 				{/if}
 				<div class="foot">
 					<span class="sp"></span>
-					<button class="primary" onclick={applyKeyDialog}>Valider</button>
-					<button onclick={cancelKeyDialog}>Annuler</button>
+					<button class="primary" onclick={applyKeyDialog}>{tr('grid.formula.validate')}</button>
+					<button onclick={cancelKeyDialog}>{tr('common.cancel')}</button>
 				</div>
 			</div>
 		{/if}
@@ -11575,7 +11567,7 @@
 				class="rules lines-dlg key-dlg"
 				role="dialog"
 				tabindex="-1"
-				aria-label="Clé des colonnes saisies"
+				aria-label={tr('grid.handDialog.title')}
 				use:focusFirst
 				use:dismissPanel={cancelHandDialog}
 				onkeydown={(ev) => {
@@ -11584,25 +11576,25 @@
 					if (ev.key === 'Escape') cancelHandDialog();
 				}}
 			>
-				<div class="menu-title">Les valeurs saisies à côté de « {d.table} » suivent ses lignes par :</div>
+				<div class="menu-title">{tr('grid.handDialog.heading', { table: d.table })}</div>
 				{#each d.columns as c (c)}
-					<label><input type="radio" bind:group={d.choice} value={c} /> {c.includes(' + ') ? 'les colonnes' : 'la colonne'} « {c} »</label>
+					<label><input type="radio" bind:group={d.choice} value={c} /> {c.includes(' + ') ? tr('grid.handDialog.columns', { name: c }) : tr('grid.handDialog.column', { name: c })}</label>
 				{/each}
-				<label><input type="radio" bind:group={d.choice} value="#" /> le rang des lignes (déconseillé)</label>
+				<label><input type="radio" bind:group={d.choice} value="#" /> {tr('grid.handDialog.rank')}</label>
 				{#if d.choice === '#'}
-					<p class="menu-note">Si la requête rend ses lignes dans un autre ordre, ou en ajoute ou en retire, les valeurs saisies se retrouveront en face d’autres lignes.</p>
+					<p class="menu-note">{tr('grid.handDialog.rank.note')}</p>
 				{:else if d.t}
-					<p class="menu-note">Les valeurs déjà saisies restent sur leurs lignes ; celles mises de côté (lignes disparues) sont oubliées. Les doublons et cases vides de la colonne sont refusés.</p>
+					<p class="menu-note">{tr('grid.handDialog.change.note')}</p>
 				{:else}
-					<p class="menu-note">À chaque actualisation, une valeur revient sur la ligne qui a la même « {d.choice} » ; si cette ligne disparaît, la valeur est mise de côté et revient avec elle.</p>
+					<p class="menu-note">{tr('grid.handDialog.key.note', { key: d.choice })}</p>
 				{/if}
 				{#if !d.columns.length && !d.t}
-					<p class="menu-note">Aucune colonne du résultat n’identifie ses lignes (valeurs en double ou cases vides) : ajoutez-en une à la requête (un identifiant) pour une jointure fiable.</p>
+					<p class="menu-note">{tr('grid.handDialog.none.note')}</p>
 				{/if}
 				<div class="foot">
 					<span class="sp"></span>
-					<button class="primary" onclick={applyHandDialog}>Valider</button>
-					<button onclick={cancelHandDialog}>Annuler</button>
+					<button class="primary" onclick={applyHandDialog}>{tr('grid.formula.validate')}</button>
+					<button onclick={cancelHandDialog}>{tr('common.cancel')}</button>
 				</div>
 			</div>
 		{/if}
@@ -11610,19 +11602,19 @@
 			{@const m = chartMenu}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (chartMenu = null)}>
 				<!-- Titré du nom du graphique (son titre) quand il en a un ; presse-papiers, puis sa suppression. -->
-				<div class="menu-title" title={clipped(m.ch.config.title) ? m.ch.config.title : undefined}>{m.ch.config.title?.trim() ? `Graphique « ${clip(m.ch.config.title)} »` : 'Graphique'}</div>
-				<button onclick={() => copyChart(m.ch, true)}>Couper</button>
-				<button onclick={() => copyChart(m.ch, false)}>Copier</button>
-				{#if m.ch.config.kind !== 'map' && !m.ch.error}<button onclick={() => copyChartImage(m.ch)}>Copier comme image</button>{/if}
+				<div class="menu-title" title={clipped(m.ch.config.title) ? m.ch.config.title : undefined}>{m.ch.config.title?.trim() ? tr('grid.chart.aria.titled', { title: clip(m.ch.config.title) }) : tr('grid.chart.aria')}</div>
+				<button onclick={() => copyChart(m.ch, true)}>{tr('common.cut')}</button>
+				<button onclick={() => copyChart(m.ch, false)}>{tr('common.copy')}</button>
+				{#if m.ch.config.kind !== 'map' && !m.ch.error}<button onclick={() => copyChartImage(m.ch)}>{tr('grid.chart.copyImage')}</button>{/if}
 				<button
 					disabled={!chartClip}
 					onclick={() => {
 						chartMenu = null;
 						if (chartClip) pasteChart(chartClip);
-					}}>Coller un graphique à la cellule active</button
+					}}>{tr('grid.chart.pasteHere')}</button
 				>
 				<hr />
-				<button onclick={() => removeChart(m.ch.id)}>Supprimer le graphique</button>
+				<button onclick={() => removeChart(m.ch.id)}>{tr('grid.chart.delete')}</button>
 			</div>
 		{/if}
 		{#if customDlg}
@@ -11653,7 +11645,7 @@
 				ondone={(n, table) => {
 					ttcDlg = null;
 					wrap.focus();
-					say(`Texte converti en ${n} colonne${n > 1 ? 's' : ''}${table ? ` (tableau ${table})` : ''} (Ctrl+Z pour annuler)`);
+					say(table ? tr('grid.textCols.done.table', { n, table }) : tr('grid.textCols.done', { n }));
 				}}
 				onclose={() => {
 					ttcDlg = null;
@@ -11675,8 +11667,8 @@
 					}
 				}}
 			>
-				<div class="menu-title">Supprimer les doublons de « {d.e.t.name} »</div>
-				<p class="menu-note">Deux lignes sont en double quand les colonnes cochées ont les mêmes valeurs. La première est gardée.</p>
+				<div class="menu-title">{tr('grid.dedup.title', { table: d.e.t.name })}</div>
+				<p class="menu-note">{tr('grid.dedup.help')}</p>
 				<div class="values">
 					<label class="all">
 						<input
@@ -11688,7 +11680,7 @@
 								previewDedup();
 							}}
 						/>
-						(Toutes les colonnes)
+						{tr('grid.dedup.allColumns')}
 					</label>
 					{#each d.e.t.columns as c, i (i)}
 						<label>
@@ -11706,17 +11698,17 @@
 					{/each}
 				</div>
 				<p class="menu-note">
-					{d.count === null ? 'Calcul…' : d.count === 0 ? 'Aucune ligne en double avec ces colonnes.' : `${d.count} ligne${d.count > 1 ? 's' : ''} en double ser${d.count > 1 ? 'ont' : 'a'} supprimée${d.count > 1 ? 's' : ''}.`}
+					{d.count === null ? tr('grid.dedup.computing') : d.count === 0 ? tr('grid.dedup.noneWith') : tr('grid.dedup.willRemove', { n: d.count })}
 				</p>
 				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
 				<div class="foot">
 					<span class="sp"></span>
-					<button class="primary" disabled={!d.count} onclick={applyDedup}>Supprimer</button>
+					<button class="primary" disabled={!d.count} onclick={applyDedup}>{tr('common.delete')}</button>
 					<button
 						onclick={() => {
 							dedupDlg = null;
 							wrap.focus();
-						}}>Annuler</button
+						}}>{tr('common.cancel')}</button
 					>
 				</div>
 			</div>
@@ -11737,9 +11729,9 @@
 					}
 				}}
 			>
-				<div class="menu-title">Insérer une fonction ({catalog?.functions.length ?? 0} disponibles)</div>
+				<div class="menu-title">{tr('grid.functions.title', { n: catalog?.functions.length ?? 0 })}</div>
 				<!-- svelte-ignore a11y_autofocus -->
-				<div class="add"><input class="search" bind:value={d.search} placeholder="Rechercher (SOMME, RECHERCHEV, date, texte…)" autofocus /></div>
+				<div class="add"><input class="search" bind:value={d.search} placeholder={tr('grid.functions.search')} autofocus /></div>
 				<div class="values">
 					{#each shownFns as f (f.name)}
 						<button
@@ -11761,14 +11753,14 @@
 						{#if cur.args?.length}
 							<dl>
 								{#each cur.args as arg (arg.name)}
-									<dt>{arg.name}{arg.optional ? ' (facultatif)' : ''}</dt>
+									<dt>{arg.name}{arg.optional ? ' ' + tr('grid.sig.optional') : ''}</dt>
 									<dd>{arg.desc}</dd>
 								{/each}
 							</dl>
-							{#if cur.repeat}<div class="count">Les {cur.repeat > 1 ? `${cur.repeat} derniers arguments peuvent` : 'dernier argument peut'} se répéter.</div>{/if}
+							{#if cur.repeat}<div class="count">{tr('grid.functions.repeat', { n: cur.repeat })}</div>{/if}
 						{/if}
-						{#if cur.example}<div>Exemple : <code>{cur.example}</code></div>{/if}
-						<div class="count">{cur.category}{cur.other && cur.other !== cur.name ? ` · en anglais : ${cur.other}` : ''}</div>
+						{#if cur.example}<div>{tr('grid.sig.example')} <code>{cur.example}</code></div>{/if}
+						<div class="count">{cur.category}{cur.other && cur.other !== cur.name ? ' · ' + tr('grid.functions.english', { name: cur.other }) : ''}</div>
 					</div>
 				{/if}
 				<div class="foot">
@@ -11777,7 +11769,7 @@
 						onclick={() => {
 							fnDlg = null;
 							wrap.focus();
-						}}>Fermer</button
+						}}>{tr('common.close')}</button
 					>
 				</div>
 			</div>
@@ -11802,7 +11794,7 @@
 			>
 				{#if d.fields && d.fields.length > 1}
 					<label class="pick-field"
-						>Champ :
+						>{tr('grid.pivot.filter.field')}
 						<select
 							value={d.field}
 							onchange={(ev) => {
@@ -11815,18 +11807,18 @@
 						</select>
 					</label>
 				{:else}
-					<div class="menu-title" title={clipped(d.field) ? d.field : undefined}>« {clip(d.field)} »{d.kind === 'filter' ? ' · filtre du rapport' : ''}</div>
+					<div class="menu-title" title={clipped(d.field) ? d.field : undefined}>{d.kind === 'filter' ? tr('grid.pivot.filter.reportField', { field: clip(d.field) }) : tr('grid.quoted', { text: clip(d.field) })}</div>
 				{/if}
 				{#if d.kind === 'rows'}
-					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'asc'} onclick={() => sortPivot('asc')}>Trier de A à Z</button>
-					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'desc'} onclick={() => sortPivot('desc')}>Trier de Z à A</button>
+					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'asc'} onclick={() => sortPivot('asc')}>{tr('grid.sort.text.asc')}</button>
+					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'desc'} onclick={() => sortPivot('desc')}>{tr('grid.sort.text.desc')}</button>
 					{#if source.pivotFieldValues}
-						<button class="sort" class:on={!!d.p.config.orders?.[d.field]} onclick={openPivotCustomSort}>Tri personnalisé…</button>
+						<button class="sort" class:on={!!d.p.config.orders?.[d.field]} onclick={openPivotCustomSort}>{tr('grid.pivot.menu.customSort')}</button>
 					{/if}
 					<hr />
 				{/if}
 				{#if d.kind === 'filter' ? d.p.config.filters?.some((f) => f.field === d.field && f.values.length) : pivotFiltered(d.p, d.field)}
-					<button class="sort" onclick={() => applyPivotFilter(true)}>Effacer le filtre de « {d.field} »</button>
+					<button class="sort" onclick={() => applyPivotFilter(true)}>{tr('grid.filter.clearOf', { field: d.field })}</button>
 				{/if}
 				{#if source.setTabChoice}
 					{@const tc = tabChoiceFor(d.p.config.source, d.field, { field: true })}
@@ -11834,11 +11826,11 @@
 					<hr />
 				{/if}
 				<div class="add">
-					<input class="search" bind:value={d.search} placeholder="Rechercher" />
+					<input class="search" bind:value={d.search} placeholder={tr('grid.filter.search.placeholder')} />
 				</div>
 				<div class="values">
 					{#if d.loading}
-						<p class="loading"><span class="spinner" aria-hidden="true"></span> Chargement des valeurs…</p>
+						<p class="loading"><span class="spinner" aria-hidden="true"></span> {tr('grid.filter.loading')}</p>
 					{:else}
 						<label class="all">
 							<input
@@ -11849,12 +11841,12 @@
 									for (const v of shown) v.on = on;
 								}}
 							/>
-							{d.search.trim() ? '(Sélectionner tous les résultats)' : d.kind === 'filter' ? '(Tous)' : '(Sélectionner tout)'}
+							{d.search.trim() ? tr('grid.filter.selectAllResults') : d.kind === 'filter' ? tr('grid.pivot.filter.all') : tr('grid.filter.selectAll')}
 						</label>
 						{#each shown as v (v.text)}
 							<label>
 								<input type="checkbox" bind:checked={v.on} />
-								<span class="what">{v.text === '' ? '(Vides)' : v.text}</span>
+								<span class="what">{v.text === '' ? tr('grid.filter.blanks') : v.text}</span>
 								<span class="count">{v.count}</span>
 							</label>
 						{/each}
@@ -11862,8 +11854,8 @@
 				</div>
 				<div class="foot">
 					<span class="sp"></span>
-					<button class="primary" disabled={d.loading} onclick={() => applyPivotFilter()}>OK</button>
-					<button onclick={() => (pivotDlg = null)}>Annuler</button>
+					<button class="primary" disabled={d.loading} onclick={() => applyPivotFilter()}>{tr('common.ok')}</button>
+					<button onclick={() => (pivotDlg = null)}>{tr('common.cancel')}</button>
 				</div>
 			</div>
 		{/if}
@@ -11889,7 +11881,7 @@
 					if (ev.key === 'Enter' && !(ev.target instanceof HTMLButtonElement)) applyFilter();
 				}}
 			>
-				<div class="menu-title" title={clipped(fcol?.name) ? fcol?.name : undefined}>« {clip(fcol?.name)} »</div>
+				<div class="menu-title" title={clipped(fcol?.name) ? fcol?.name : undefined}>{tr('grid.quoted', { text: clip(fcol?.name) })}</div>
 				{#if source.sortTable}
 					<!-- Tri en haut du panneau, comme Excel. -->
 					<button
@@ -11907,12 +11899,12 @@
 						}}>{sortLabels(fcol?.type ?? 'text', fcol?.result)[1]}</button
 					>
 					{#if source.sortTableCustom}
-						<button class="sort" onclick={() => openCustomSort(d.e, d.i)}>Tri personnalisé…</button>
+						<button class="sort" onclick={() => openCustomSort(d.e, d.i)}>{tr('grid.pivot.menu.customSort')}</button>
 					{/if}
 					<hr />
 				{/if}
 				{#if fcol?.filter}
-					<button class="sort" onclick={() => applyFilter(true)}>Effacer le filtre de « {fcol.name} »</button>
+					<button class="sort" onclick={() => applyFilter(true)}>{tr('grid.filter.clearOf', { field: fcol.name })}</button>
 				{/if}
 				{#if source.setTabChoice && fcol}
 					{@const tc = tabChoiceFor(d.e.t.name, fcol.name, { formula: !!fcol.formula })}
@@ -11920,7 +11912,7 @@
 					<hr />
 				{/if}
 				{#if fcol?.formula}
-					<p class="menu-note">Colonne calculée : triée et filtrée sur ses valeurs ; son type suit sa formule.</p>
+					<p class="menu-note">{tr('grid.filter.computed')}</p>
 				{/if}
 				{#if filterable}
 					<!-- Filtres par condition, comme le sous-menu d'Excel. -->
@@ -11932,49 +11924,49 @@
 							{#each condOps(kind) as op (op)}
 								<button class="sort" onclick={() => startCustom(op)}>{condLabel(op, kind)}{condArgs(op) ? '…' : ''}</button>
 							{/each}
-							<button class="sort" onclick={() => startCustom('eq')}>Filtre personnalisé…</button>
+							<button class="sort" onclick={() => startCustom('eq')}>{tr('grid.filter.custom')}</button>
 						</div>
 					{/if}
 					{#if fcol?.filter?.conds?.length && !d.custom}
 						<p class="menu-note">
-							Filtre actif : {describeConds(fcol.filter, kind)}
-							<button class="link" onclick={() => startCustom()}>Modifier…</button>
+							{tr('grid.filter.active', { conds: describeConds(fcol.filter, kind) })}
+							<button class="link" onclick={() => startCustom()}>{tr('grid.controls.menu.edit')}</button>
 						</p>
 					{/if}
 					<hr />
 					{#if d.custom}
 						{@const cu = d.custom}
 						<div class="custom">
-							<p class="menu-note">Afficher les lignes dont « {fcol?.name} » :</p>
+							<p class="menu-note">{tr('grid.filter.custom.heading', { column: fcol?.name ?? '' })}</p>
 							{#each cu.conds as c, k (k)}
 								{#if k === 1}
 									<div class="andor">
-										<label><input type="radio" bind:group={cu.or} value={false} /> Et</label>
-										<label><input type="radio" bind:group={cu.or} value={true} /> Ou</label>
+										<label><input type="radio" bind:group={cu.or} value={false} /> {tr('grid.filter.custom.and')}</label>
+										<label><input type="radio" bind:group={cu.or} value={true} /> {tr('grid.filter.custom.or')}</label>
 									</div>
 								{/if}
 								<div class="add">
-									<select bind:value={c.op} aria-label="Condition {k + 1}">
-										{#if k > 0}<option value="">(aucune)</option>{/if}
+									<select bind:value={c.op} aria-label={tr('grid.filter.custom.cond', { n: k + 1 })}>
+										{#if k > 0}<option value="">{tr('grid.filter.custom.none')}</option>{/if}
 										{#each condOps(kind) as op (op)}<option value={op}>{condLabel(op, kind)}</option>{/each}
 									</select>
 								</div>
 								{#if c.op && condArgs(c.op) > 0}
 									<div class="add">
-										<input bind:value={c.value} placeholder={c.op === 'top' || c.op === 'bottom' ? 'nombre' : kind === 'date' ? 'jj/mm/aaaa' : 'valeur'} />
-										{#if condArgs(c.op) === 2}<span>et</span><input bind:value={c.to} placeholder={kind === 'date' ? 'jj/mm/aaaa' : 'valeur'} />{/if}
+										<input bind:value={c.value} placeholder={c.op === 'top' || c.op === 'bottom' ? tr('grid.filter.custom.number') : kind === 'date' ? tr('grid.filter.custom.date') : tr('grid.cf.placeholder.value')} />
+										{#if condArgs(c.op) === 2}<span>{tr('grid.cf.and')}</span><input bind:value={c.to} placeholder={kind === 'date' ? tr('grid.filter.custom.date') : tr('grid.cf.placeholder.value')} />{/if}
 									</div>
 								{/if}
 							{/each}
-							{#if kind === 'text'}<p class="menu-note">* remplace plusieurs caractères, ? un seul.</p>{/if}
+							{#if kind === 'text'}<p class="menu-note">{tr('grid.filter.custom.wildcards')}</p>{/if}
 						</div>
 					{:else}
 						<div class="add">
-							<input class="search" bind:value={d.search} oninput={() => (d.touched = true)} placeholder="Rechercher" />
+							<input class="search" bind:value={d.search} oninput={() => (d.touched = true)} placeholder={tr('grid.filter.search.placeholder')} />
 						</div>
 						<div class="values">
 							{#if d.loading}
-								<p class="loading"><span class="spinner" aria-hidden="true"></span> Chargement des valeurs…</p>
+								<p class="loading"><span class="spinner" aria-hidden="true"></span> {tr('grid.filter.loading')}</p>
 							{:else}
 							<label class="all">
 								<input
@@ -11986,57 +11978,57 @@
 										d.touched = true;
 									}}
 								/>
-								{d.search.trim() ? '(Sélectionner tous les résultats)' : '(Sélectionner tout)'}
+								{d.search.trim() ? tr('grid.filter.selectAllResults') : tr('grid.filter.selectAll')}
 							</label>
 							{#each shown as v (v.text)}
 								<label>
 									<input type="checkbox" bind:checked={v.on} onchange={() => (d.touched = true)} />
-									<span class="what">{v.text === '' ? '(Vides)' : v.text}</span>
+									<span class="what">{v.text === '' ? tr('grid.filter.blanks') : v.text}</span>
 									<span class="count">{v.count}</span>
 								</label>
 							{/each}
-							{#if d.values.length >= 1000}<p class="menu-note">Seules les 1 000 premières valeurs sont listées.</p>{/if}
+							{#if d.values.length >= 1000}<p class="menu-note">{tr('grid.filter.firstValues')}</p>{/if}
 							{/if}
 						</div>
 					{/if}
 				{/if}
 				{#if d.e.t.columns[d.i]?.errors}
 					<div class="add">
-						<label><input type="checkbox" bind:checked={d.errors} /> Saisies hors type seulement ({d.e.t.columns[d.i]?.errors})</label>
+						<label><input type="checkbox" bind:checked={d.errors} /> {tr('grid.filter.errorsOnly', { n: d.e.t.columns[d.i]?.errors ?? 0 })}</label>
 					</div>
 				{/if}
 				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
 				{#if filterable}
 					<div class="foot">
-						{#if d.custom}<button onclick={() => (d.custom = null)}>‹ Liste des valeurs</button>{/if}
+						{#if d.custom}<button onclick={() => (d.custom = null)}>{tr('grid.filter.custom.back')}</button>{/if}
 						<span class="sp"></span>
-						<button class="primary" disabled={d.loading && !d.custom} onclick={() => applyFilter()}>OK</button>
-						<button onclick={closeFilter}>Annuler</button>
+						<button class="primary" disabled={d.loading && !d.custom} onclick={() => applyFilter()}>{tr('common.ok')}</button>
+						<button onclick={closeFilter}>{tr('common.cancel')}</button>
 					</div>
 				{/if}
 				{#if typed}
 					<!-- Type de données de la colonne (inféré ou fixé), puis la clé du tableau. -->
 					<hr />
-					<div class="menu-title">Type de données · {fcol.fixed ? 'fixé' : 'inféré'}</div>
+					<div class="menu-title">{fcol.fixed ? tr('grid.type.title.fixed') : tr('grid.type.title.inferred')}</div>
 					{#if d.pending}
 						{@const p = d.pending}
 						<p class="menu-note">
-							{p.n > 1 ? `${p.n} valeurs ne peuvent` : '1 valeur ne peut'} pas devenir « {typeLabel(p.to)} » : {p.n > 1 ? 'elles seront gardées et marquées' : 'elle sera gardée et marquée'} en erreur.
+							{tr('grid.type.pending', { n: p.n, type: typeLabel(p.to) })}
 						</p>
 						<div class="foot">
 							<span class="sp"></span>
-							<button class="primary" onclick={() => chooseType(p.to, true)}>Convertir quand même</button>
-							<button onclick={() => (d.pending = undefined)}>Annuler</button>
+							<button class="primary" onclick={() => chooseType(p.to, true)}>{tr('grid.type.convertAnyway')}</button>
+							<button onclick={() => (d.pending = undefined)}>{tr('common.cancel')}</button>
 						</div>
 					{:else}
-						<div class="types" role="radiogroup" aria-label="Type de données">
+						<div class="types" role="radiogroup" aria-label={tr('grid.type.aria')}>
 							{#each TYPES as t (t)}
 								<button
 									class="sort type"
 									class:on={t === fcol.type}
 									role="radio"
 									aria-checked={t === fcol.type}
-									title={t === fcol.type ? (fcol.fixed ? 'Type fixé' : 'Type inféré : le choisir le fixe') : `Convertir en ${typeLabel(t)}`}
+									title={t === fcol.type ? (fcol.fixed ? tr('grid.type.fixed.tooltip') : tr('grid.type.inferred.tooltip')) : tr('grid.type.convert.tooltip', { type: typeLabel(t) })}
 									onclick={() => chooseType(t)}
 								>
 									<span class="check">{t === fcol.type ? '✓' : ''}</span>{#if typeIconName(t)}<span class="type-icon"><Icon name={typeIconName(t)!} size={14} /></span>{:else}<span class="type-icon">{typeIcon(t)}</span>{/if}{typeLabel(t)}
@@ -12047,38 +12039,38 @@
 							{@const to = d.mix.type}
 							<p class="menu-note">{mixText(d.mix)}</p>
 							<button class="sort" onclick={() => chooseType(to, true)}
-								>Repasser en {typeLabel(to)} ({d.mix.off} valeur{d.mix.off > 1 ? 's' : ''} marquée{d.mix.off > 1 ? 's' : ''} en erreur)</button
+								>{tr('grid.type.revert', { type: typeLabel(to), n: d.mix.off })}</button
 							>
 						{/if}
-						{#if fcol.errors}<p class="menu-note error">{fcol.errors} valeur{fcol.errors > 1 ? 's' : ''} hors type dans la colonne</p>{/if}
+						{#if fcol.errors}<p class="menu-note error">{tr('grid.type.errors', { n: fcol.errors })}</p>{/if}
 					{/if}
 				{:else if fcol?.formula && source.columnsToValues}
 					<!-- Colonne calculée : pas de type à choisir ; elle peut devenir une colonne de valeurs. -->
 					<hr />
-					<div class="menu-title">Colonne calculée</div>
+					<div class="menu-title">{tr('grid.type.computed')}</div>
 					<button
 						class="sort"
-						title="La formule est retirée : la colonne garde ses valeurs actuelles, au type de ces valeurs (Ctrl+Z pour annuler)"
+						title={tr('grid.type.toValues.tooltip')}
 						onclick={() => {
 							filterDlg = null;
 							menuAction(() => source.columnsToValues!(d.e.t, [d.i]));
-						}}>Convertir en valeurs</button
+						}}>{tr('grid.menu.toValues')}</button
 					>
 				{/if}
 				{#if source.setKey && !fcol?.formula}
 					<hr />
 					{#if d.e.t.key === d.i}
-						<p class="menu-note">🔑 Clé du tableau : ses valeurs identifient les lignes.{d.e.t.autoNumber === d.i ? ' Une ligne ajoutée reçoit le numéro suivant.' : ''}</p>
-						<button class="sort" onclick={() => chooseKey(false)}>Retirer la clé</button>
+						<p class="menu-note">🔑 {d.e.t.autoNumber === d.i ? tr('grid.key.note.auto') : tr('grid.key.note')}</p>
+						<button class="sort" onclick={() => chooseKey(false)}>{tr('grid.key.remove')}</button>
 					{:else if d.keyWhy === undefined}
-						<p class="menu-note loading"><span class="spinner" aria-hidden="true"></span> Vérification de la clé…</p>
+						<p class="menu-note loading"><span class="spinner" aria-hidden="true"></span> {tr('grid.key.checking')}</p>
 					{:else if d.keyWhy === ''}
-						<button class="sort" onclick={() => chooseKey(true)}>🔑 Utiliser comme clé{d.e.t.key !== undefined ? ' (à la place de l’actuelle)' : ''}</button>
+						<button class="sort" onclick={() => chooseKey(true)}>🔑 {d.e.t.key !== undefined ? tr('grid.key.use.replace') : tr('grid.key.use')}</button>
 					{:else if d.keyWhy}
-						<p class="menu-note">Clé impossible : {d.keyWhy}</p>
+						<p class="menu-note">{tr('grid.key.impossible', { why: d.keyWhy })}</p>
 					{/if}
 					{#if d.e.t.autoNumber === d.i && d.e.t.key !== d.i}
-						<p class="menu-note">Suite de numéros : une ligne ajoutée à la fin reçoit le numéro suivant.</p>
+						<p class="menu-note">{tr('grid.key.sequence')}</p>
 					{/if}
 				{/if}
 			</div>
@@ -12106,10 +12098,10 @@
 		{#if validDlg && dvPick}
 			<!-- Plage source pointée dans la grille : le dialogue est retiré, comme le bouton « réduire » d'Excel. -->
 			<div class="pick-bar" role="status">
-				<span>Plage source : <b>{dvPickRef || '…'}</b></span>
+				<span>{tr('grid.validation.pick.source')} <b>{dvPickRef || '…'}</b></span>
 				<span class="sp"></span>
-				<button class="primary" onclick={() => endPick(true)}>OK <span class="keys">Entrée</span></button>
-				<button onclick={() => endPick(false)}>Annuler <span class="keys">Échap</span></button>
+				<button class="primary" onclick={() => endPick(true)}>{tr('common.ok')} <span class="keys">{tr('grid.keys.enter')}</span></button>
+				<button onclick={() => endPick(false)}>{tr('common.cancel')} <span class="keys">{tr('grid.keys.escape')}</span></button>
 			</div>
 		{:else if validDlg}
 			{@const d = validDlg}
@@ -12120,7 +12112,7 @@
 				class="rules valid-dlg"
 				role="dialog"
 				aria-modal="true"
-				aria-label="Validation des données — {d.target}"
+				aria-label={tr('grid.validation.title', { target: d.target })}
 				tabindex="-1"
 				use:focusFirst
 				use:modal
@@ -12133,27 +12125,25 @@
 					}
 				}}
 			>
-				<div class="menu-title" title={`Validation des données — ${d.target}`}>Validation des données — {d.target}</div>
-				<div class="dv-mode" role="radiogroup" aria-label="Source de la liste">
-					<label><input type="radio" name="dv-mode" value="list" bind:group={d.mode} onchange={() => (d.error = '')} /> Valeurs saisies</label>
-					<label><input type="radio" name="dv-mode" value="range" bind:group={d.mode} onchange={() => ((d.error = ''), refreshPreview(0))} /> Plage</label>
+				<div class="menu-title" title={tr('grid.validation.title', { target: d.target })}>{tr('grid.validation.title', { target: d.target })}</div>
+				<div class="dv-mode" role="radiogroup" aria-label={tr('grid.validation.source')}>
+					<label><input type="radio" name="dv-mode" value="list" bind:group={d.mode} onchange={() => (d.error = '')} /> {tr('grid.validation.mode.list')}</label>
+					<label><input type="radio" name="dv-mode" value="range" bind:group={d.mode} onchange={() => ((d.error = ''), refreshPreview(0))} /> {tr('grid.validation.mode.range')}</label>
 				</div>
 				{#if d.mode === 'list'}
 					<p class="menu-note">
-						Valeurs permises dans la sélection, une par ligne (ou séparées par « ; »). Une flèche ▾ propose la liste dans la cellule (Alt+↓) ; toute autre saisie est
-						refusée. Sur toute une colonne de tableau, la liste vaut aussi pour les lignes ajoutées ensuite.
+						{tr('grid.validation.list.help')}
 					</p>
-					<div class="add"><textarea bind:value={d.text} rows="7" placeholder={'Oui\nNon'}></textarea></div>
+					<div class="add"><textarea bind:value={d.text} rows="7" placeholder={tr('grid.validation.list.placeholder')}></textarea></div>
 				{:else}
 					<p class="menu-note">
-						Les valeurs de la plage (distinctes, sans les vides, dans l’ordre) sont relues à chaque ouverture de la liste et à chaque saisie : une colonne de tableau
-						(Clients[Ville]), des cellules (Cell[A1:A10], Feuille2!Cell[A1:A10]) ou une cellule nommée. La référence suit les renommages et déplacements.
+						{tr('grid.validation.range.help')}
 					</p>
 					<div class="add dv-src">
 						<input
 							type="text"
-							aria-label="Plage source"
-							placeholder="Clients[Ville]"
+							aria-label={tr('grid.validation.range.aria')}
+							placeholder={tr('grid.validation.range.placeholder')}
 							spellcheck="false"
 							bind:value={d.src}
 							oninput={() => ((d.error = ''), refreshPreview())}
@@ -12161,25 +12151,25 @@
 								if (ev.key === 'Enter') applyValidation();
 							}}
 						/>
-						<button title="Désigner la plage dans la feuille (Entrée pour la reprendre)" onclick={startPick}>Sélectionner</button>
+						<button title={tr('grid.validation.pick.tooltip')} onclick={startPick}>{tr('grid.validation.pick.button')}</button>
 					</div>
 					{#if d.loading}
-						<p class="menu-note">Lecture de la plage…</p>
+						<p class="menu-note">{tr('grid.validation.reading')}</p>
 					{:else if d.preview}
 						<p class="menu-note" class:error={!!d.preview.error || !d.preview.values.length}>{dvPreview(d.preview)}</p>
 					{/if}
 				{/if}
 				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
 				<div class="foot">
-					{#if listOf(active.row, active.col)}<button onclick={() => applyValidation(true)}>Effacer la validation</button>{/if}
+					{#if listOf(active.row, active.col)}<button onclick={() => applyValidation(true)}>{tr('grid.validation.clear')}</button>{/if}
 					<span class="sp"></span>
-					<button class="primary" onclick={() => applyValidation()}>OK</button>
+					<button class="primary" onclick={() => applyValidation()}>{tr('common.ok')}</button>
 					<button
 						onclick={() => {
 							clearTimeout(previewTimer);
 							validDlg = null;
 							wrap.focus();
-						}}>Annuler</button
+						}}>{tr('common.cancel')}</button
 					>
 				</div>
 			</div>
@@ -12201,13 +12191,13 @@
 			>
 				<div class="note-bar">
 					{#if source.pinNote}
-						<button class="note-ico" class:on={d.pinned} title={d.pinned ? 'Ne plus épingler (infobulle au survol)' : 'Épingler : toujours afficher la note'} aria-pressed={d.pinned} onclick={togglePin}
+						<button class="note-ico" class:on={d.pinned} title={d.pinned ? tr('grid.note.unpin') : tr('grid.note.pin')} aria-pressed={d.pinned} onclick={togglePin}
 							><Icon name="pin" size={15} /></button
 						>
 					{/if}
-					<button class="note-ico" title="Supprimer la note" onclick={() => saveNote(true)}><Icon name="trash" size={15} /></button>
+					<button class="note-ico" title={tr('grid.note.delete')} onclick={() => saveNote(true)}><Icon name="trash" size={15} /></button>
 				</div>
-				<textarea bind:value={d.text} rows="6" placeholder="Note de la cellule" aria-label="Note de la cellule"></textarea>
+				<textarea bind:value={d.text} rows="6" placeholder={tr('grid.note.placeholder')} aria-label={tr('grid.note.placeholder')}></textarea>
 			</div>
 		{/if}
 		{#if listMenu}
@@ -12217,7 +12207,7 @@
 				{#each m.values as v (v)}
 					<button class:on={cellInfo(m.row, m.col).value === v} onclick={() => pickFromList(v)}>{v}</button>
 				{/each}
-				{#if m.error}<p class="menu-note error">Liste introuvable : {m.error}</p>{:else if m.loading && !m.values.length}<p class="menu-note">Lecture de la liste…</p>{:else if !m.values.length}<p class="menu-note">La plage de la liste est vide</p>{/if}
+				{#if m.error}<p class="menu-note error">{tr('grid.validation.listMenu.notFound', { error: m.error })}</p>{:else if m.loading && !m.values.length}<p class="menu-note">{tr('grid.validation.listMenu.reading')}</p>{:else if !m.values.length}<p class="menu-note">{tr('grid.validation.listMenu.empty')}</p>{/if}
 			</div>
 		{/if}
 		{#if sizeDlg}
@@ -12236,16 +12226,16 @@
 					}
 				}}
 			>
-				<div class="menu-title">{d.rows ? 'Hauteur de ligne' : 'Largeur de colonne'} (pixels)</div>
+				<div class="menu-title">{d.rows ? tr('grid.size.rowHeight') : tr('grid.size.colWidth')}</div>
 				<div class="add"><input type="number" min="4" max="1000" bind:value={d.value} /></div>
 				<div class="foot">
 					<span class="sp"></span>
-					<button class="primary" onclick={applySize}>OK</button>
+					<button class="primary" onclick={applySize}>{tr('common.ok')}</button>
 					<button
 						onclick={() => {
 							sizeDlg = null;
 							wrap.focus();
-						}}>Annuler</button
+						}}>{tr('common.cancel')}</button
 					>
 				</div>
 			</div>
