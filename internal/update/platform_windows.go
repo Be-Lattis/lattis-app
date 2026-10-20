@@ -12,8 +12,8 @@ import (
 )
 
 // uninstallKey : clé de désinstallation écrite par les installeurs NSIS
-// (build/windows/nsis/wails_tools.nsh, UNINST_KEY), sous HKCU pour
-// l'installeur par utilisateur, sous HKLM pour celui par machine.
+// (build/windows/nsis/wails_tools.nsh, UNINST_KEY), sous HKCU pour une
+// installation pour l'utilisateur, sous HKLM pour tous les utilisateurs.
 const uninstallKey = `Software\Microsoft\Windows\CurrentVersion\Uninstall\LattisLattis`
 
 // DetectKind : genre d'installation de l'exécutable exe.
@@ -72,18 +72,11 @@ func SelfSigned(exe string) bool { return exe != "" && VerifySignature(exe) == n
 
 // apply installe la mise à jour p (voir Updater.ApplyOnExit).
 func apply(p Pending, exe string, relaunch bool) error {
-	args := "/S /UPDATE"
-	if relaunch {
-		args += " /RELAUNCH"
-	}
-	// /D= : dernier paramètre, sans guillemets, même avec des espaces (NSIS).
-	if p.Dir != "" {
-		args += " /D=" + p.Dir
-	}
+	args := installerArgs(p.Kind, p.Dir, relaunch)
 	switch p.Kind {
 	case KindUser:
-		// Installeur par utilisateur : sans élévation, il attend la fin de
-		// l'application, s'installe et la relance (/RELAUNCH).
+		// Pour l'utilisateur (/CurrentUser) : sans élévation, l'installeur
+		// attend la fin de l'application, s'installe et la relance (/RELAUNCH).
 		cmd := exec.Command(p.File)
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			CmdLine:       syscall.EscapeArg(p.File) + " " + args,
@@ -94,7 +87,8 @@ func apply(p Pending, exe string, relaunch bool) error {
 		}
 		return cmd.Process.Release()
 	case KindMachine:
-		// Installeur par machine : « runas » fait poser la question de l'UAC ;
+		// Pour tous les utilisateurs (/AllUsers) : « runas » fait poser la
+		// question de l'UAC ici (l'installeur s'élèverait sinon lui-même) ;
 		// relancée par l'installeur (élevé), l'application l'est par
 		// l'Explorateur, sans les droits d'administration.
 		verb, _ := windows.UTF16PtrFromString("runas")

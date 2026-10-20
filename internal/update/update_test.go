@@ -123,7 +123,8 @@ func TestNewestChannel(t *testing.T) {
 }
 
 func TestAssetFor(t *testing.T) {
-	for k, want := range map[Kind]string{KindUser: AssetUserSetup, KindMachine: AssetMachineSetup, KindPortable: AssetPortable} {
+	// Un seul installeur pour les deux genres d'installation.
+	for k, want := range map[Kind]string{KindUser: AssetSetup, KindMachine: AssetSetup, KindPortable: AssetPortable} {
 		if got, ok := AssetFor(k); !ok || got != want {
 			t.Errorf("%s → %q, attendu %q", k, got, want)
 		}
@@ -197,14 +198,14 @@ func TestParseManifestAndSums(t *testing.T) {
 	if e, ok := ParseSums(sums, AssetPortable); !ok || e.SHA256 != strings.Repeat("cd", 32) {
 		t.Errorf("SHA256SUMS : %+v %v", e, ok)
 	}
-	if _, ok := ParseSums(sums, AssetMachineSetup); ok {
+	if _, ok := ParseSums(sums, AssetLegacyMachineSetup); ok {
 		t.Error("fichier absent de SHA256SUMS")
 	}
 }
 
 func TestClientHTTPS(t *testing.T) {
 	gh := newFakeGitHub(t)
-	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetUserSetup: []byte("setup")})
+	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetSetup: []byte("setup")})
 	c := gh.client("0.2.0-beta")
 	list, err := c.Releases(context.Background())
 	if err != nil || len(list) != 1 {
@@ -228,18 +229,18 @@ func TestClientHTTPS(t *testing.T) {
 func TestDownloadVerifies(t *testing.T) {
 	gh := newFakeGitHub(t)
 	payload := []byte("installeur Lattis 0.3.0-beta")
-	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetUserSetup: payload})
+	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetSetup: payload})
 	c := gh.client("0.2.0-beta")
 	ctx := context.Background()
 	rel, err := c.ReleaseByTag(ctx, "v0.3.0-beta")
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, err := c.Expected(ctx, rel, AssetUserSetup)
+	want, err := c.Expected(ctx, rel, AssetSetup)
 	if err != nil || want.Size != int64(len(payload)) {
 		t.Fatalf("Expected : %+v %v", want, err)
 	}
-	a, _ := rel.Asset(AssetUserSetup)
+	a, _ := rel.Asset(AssetSetup)
 	dir := t.TempDir()
 	dest := filepath.Join(dir, "setup.exe")
 	if err := c.Download(ctx, a.URL, dest, want); err != nil {
@@ -284,7 +285,7 @@ func TestExpectedFallsBackToSums(t *testing.T) {
 	if err != nil || e.SHA256 != hex.EncodeToString(sum[:]) {
 		t.Errorf("SHA256SUMS : %+v %v", e, err)
 	}
-	if _, err := c.Expected(context.Background(), rel, AssetUserSetup); msgID(err) != "update.noChecksum" {
+	if _, err := c.Expected(context.Background(), rel, AssetSetup); msgID(err) != "update.noChecksum" {
 		t.Errorf("fichier sans empreinte : %v", err)
 	}
 }
@@ -357,16 +358,89 @@ func TestFirstLaunchAfterUpdate(t *testing.T) {
 	}
 }
 
+// Paramètres de l'installeur silencieux : la portée explicite, /D= en
+// dernier, sans guillemets.
+func TestInstallerArgs(t *testing.T) {
+	cases := []struct {
+		kind     Kind
+		dir      string
+		relaunch bool
+		want     string
+	}{
+		{KindUser, `C:\Users\Ana\AppData\Local\Programs\Lattis`, true, `/S /CurrentUser /UPDATE /RELAUNCH /D=C:\Users\Ana\AppData\Local\Programs\Lattis`},
+		{KindUser, `C:\Users\Ana\AppData\Local\Programs\Lattis`, false, `/S /CurrentUser /UPDATE /D=C:\Users\Ana\AppData\Local\Programs\Lattis`},
+		{KindMachine, `C:\Program Files\Lattis\Lattis`, true, `/S /AllUsers /UPDATE /RELAUNCH /D=C:\Program Files\Lattis\Lattis`},
+		{KindMachine, ``, false, `/S /AllUsers /UPDATE`},
+	}
+	for _, c := range cases {
+		if got := installerArgs(c.kind, c.dir, c.relaunch); got != c.want {
+			t.Errorf("%s : %q, attendu %q", c.kind, got, c.want)
+		}
+	}
+}
+
+// Une 0.3.0-beta installée pour tous les utilisateurs lit la release d'une
+// version plus récente avec son propre code : elle cherche
+// AssetLegacyMachineSetup dans les fichiers de la release, puis son
+// empreinte dans latest.json par ce nom (Client.Asset, Client.Expected et
+// Client.Download n'ont pas changé depuis). La release publie donc
+// l'installeur aussi sous ce nom, avec une entrée windows-setup-machine dans
+// latest.json (scripts/release-manifest.sh) : la mise à jour se télécharge
+// et se vérifie. L'installeur, lancé élevé sans /AllUsers, prend la portée
+// de l'installation du dossier /D= (lattis_scope.nsh).
+func TestLegacyMachineUpdateCompat(t *testing.T) {
+	gh := newFakeGitHub(t)
+	setup := []byte("installeur unique")
+	sum := sha256.Sum256(setup)
+	sha := hex.EncodeToString(sum[:])
+	// latest.json tel que le produit scripts/release-manifest.sh.
+	manifest := []byte(`{
+  "version": "0.3.1-beta",
+  "tag": "v0.3.1-beta",
+  "prerelease": true,
+  "files": {
+    "windows-setup": {"name": "` + AssetSetup + `", "url": "x", "sha256": "` + sha + `", "size": ` + fmt.Sprint(len(setup)) + `},
+    "windows-setup-machine": {"name": "` + AssetLegacyMachineSetup + `", "url": "x", "sha256": "` + sha + `", "size": ` + fmt.Sprint(len(setup)) + `}
+  }
+}`)
+	gh.publish("v0.3.1-beta", true, false, map[string][]byte{AssetSetup: setup, AssetLegacyMachineSetup: setup, ManifestName: manifest})
+	c := gh.client("0.3.0-beta")
+	ctx := context.Background()
+	rel, err := c.ReleaseByTag(ctx, "v0.3.1-beta")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{AssetLegacyMachineSetup, AssetSetup} {
+		a, ok := rel.Asset(name)
+		if !ok {
+			t.Fatalf("%s absent de la release", name)
+		}
+		want, err := c.Expected(ctx, rel, name)
+		if err != nil || want.SHA256 != sha {
+			t.Fatalf("%s : %+v %v", name, want, err)
+		}
+		dest := filepath.Join(t.TempDir(), name)
+		if err := c.Download(ctx, a.URL, dest, want); err != nil {
+			t.Fatalf("%s : %v", name, err)
+		}
+		if b, _ := os.ReadFile(dest); string(b) != string(setup) {
+			t.Errorf("%s : %q", name, b)
+		}
+	}
+}
+
 func TestCheckPrepareInstaller(t *testing.T) {
 	gh := newFakeGitHub(t)
-	user, machine := []byte("setup utilisateur"), []byte("setup machine")
-	gh.publish("v0.2.0-beta", true, true, map[string][]byte{AssetUserSetup: []byte("vieux")})
-	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetUserSetup: user, AssetMachineSetup: machine, AssetPortable: []byte("exe")})
+	// Comme release.yml : l'installeur, et sa copie sous l'ancien nom par
+	// machine (ici d'un autre contenu, pour vérifier qu'elle n'est plus prise).
+	setup, legacy := []byte("setup"), []byte("ancien nom")
+	gh.publish("v0.2.0-beta", true, true, map[string][]byte{AssetSetup: []byte("vieux")})
+	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetSetup: setup, AssetLegacyMachineSetup: legacy, AssetPortable: []byte("exe")})
 	ctx := context.Background()
 	for _, c := range []struct {
 		kind Kind
 		want []byte
-	}{{KindUser, user}, {KindMachine, machine}} {
+	}{{KindUser, setup}, {KindMachine, setup}} {
 		u := newTestUpdater(t, gh, "0.2.0-beta", c.kind)
 		var events []Status
 		u.OnChange = func(s Status) { events = append(events, s) }
@@ -427,9 +501,9 @@ func phasesText(p []Phase) []string {
 
 func TestPrepareRejectsBadChecksum(t *testing.T) {
 	gh := newFakeGitHub(t)
-	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetUserSetup: []byte("bon")})
+	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetSetup: []byte("bon")})
 	// Le fichier servi n'est plus celui du manifeste.
-	gh.files["/download/v0.3.0-beta/"+AssetUserSetup] = []byte("mau")
+	gh.files["/download/v0.3.0-beta/"+AssetSetup] = []byte("mau")
 	u := newTestUpdater(t, gh, "0.2.0-beta", KindUser)
 	u.Init()
 	ctx := context.Background()
@@ -453,7 +527,7 @@ func TestPrepareRejectsBadChecksum(t *testing.T) {
 
 func TestPrepareSignatureRequired(t *testing.T) {
 	gh := newFakeGitHub(t)
-	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetUserSetup: []byte("non signé")})
+	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetSetup: []byte("non signé")})
 	u := newTestUpdater(t, gh, "0.2.0-beta", KindUser)
 	u.Verify = func(string) error { return fmt.Errorf("pas de signature") }
 	u.Init()
@@ -520,7 +594,7 @@ func TestOtherKindIsManual(t *testing.T) {
 
 func TestDisabledAndDev(t *testing.T) {
 	gh := newFakeGitHub(t)
-	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetUserSetup: []byte("x")})
+	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetSetup: []byte("x")})
 	on := true
 	u := newTestUpdater(t, gh, "0.2.0-beta", KindUser)
 	u.Enabled = func() bool { return on }
@@ -555,7 +629,7 @@ func TestDisabledAndDev(t *testing.T) {
 
 func TestCheckEveryAndRestartWindow(t *testing.T) {
 	gh := newFakeGitHub(t)
-	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetUserSetup: []byte("x")})
+	gh.publish("v0.3.0-beta", true, true, map[string][]byte{AssetSetup: []byte("x")})
 	now := time.Date(2026, 10, 20, 9, 0, 0, 0, time.UTC)
 	u := newTestUpdater(t, gh, "0.2.0-beta", KindUser)
 	u.Now = func() time.Time { return now }

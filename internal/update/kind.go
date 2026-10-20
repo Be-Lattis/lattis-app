@@ -7,11 +7,11 @@ import "strings"
 type Kind string
 
 const (
-	// KindUser : installeur par utilisateur (%LOCALAPPDATA%\Programs,
+	// KindUser : installé pour l'utilisateur (%LOCALAPPDATA%\Programs,
 	// HKCU) : mise à jour silencieuse, sans droits d'administration.
 	KindUser Kind = "user"
-	// KindMachine : installeur par machine (Program Files, HKLM) : la mise
-	// à jour demande les droits d'administration (invite UAC).
+	// KindMachine : installé pour tous les utilisateurs (Program Files,
+	// HKLM) : la mise à jour demande les droits d'administration (invite UAC).
 	KindMachine Kind = "machine"
 	// KindPortable : l'exécutable seul : remplacé sur place, si son dossier
 	// est inscriptible.
@@ -27,23 +27,49 @@ const (
 // Fichiers Windows publiés avec chaque version (.github/workflows/release.yml,
 // scripts/release-manifest.sh).
 const (
-	AssetUserSetup    = "Lattis-windows-x64-setup.exe"
-	AssetMachineSetup = "Lattis-windows-x64-setup-machine.exe"
-	AssetPortable     = "Lattis-windows-x64-portable.exe"
+	// AssetSetup : l'installeur, pour l'utilisateur ou pour tous les
+	// utilisateurs du poste (build/windows/nsis/lattis_scope.nsh).
+	AssetSetup = "Lattis-windows-x64-setup.exe"
+	// AssetLegacyMachineSetup : le même fichier sous le nom de l'ancien
+	// installeur par machine. La 0.3.0-beta installée pour tous les
+	// utilisateurs cherche sa mise à jour sous ce nom (dans les fichiers de
+	// la release puis dans latest.json) et la lance sans /AllUsers : la
+	// release le publie encore, et l'installeur prend alors la portée de
+	// l'installation du dossier /D=. Plus utilisé par l'application.
+	AssetLegacyMachineSetup = "Lattis-windows-x64-setup-machine.exe"
+	AssetPortable           = "Lattis-windows-x64-portable.exe"
 )
 
 // AssetFor : le fichier de la version qui met à jour une installation de
 // ce genre ; faux si l'application ne se met pas à jour elle-même.
 func AssetFor(k Kind) (string, bool) {
 	switch k {
-	case KindUser:
-		return AssetUserSetup, true
-	case KindMachine:
-		return AssetMachineSetup, true
+	case KindUser, KindMachine:
+		return AssetSetup, true
 	case KindPortable:
 		return AssetPortable, true
 	}
 	return "", false
+}
+
+// installerArgs : paramètres de l'installeur silencieux qui met à jour une
+// installation de ce genre dans le dossier dir : la portée explicite
+// (/CurrentUser : jamais d'élévation ; /AllUsers : lancé élevé), /UPDATE,
+// /RELAUNCH pour rouvrir Lattis, et /D= en dernier, sans guillemets même
+// avec des espaces (convention NSIS).
+func installerArgs(k Kind, dir string, relaunch bool) string {
+	args := "/S /CurrentUser"
+	if k == KindMachine {
+		args = "/S /AllUsers"
+	}
+	args += " /UPDATE"
+	if relaunch {
+		args += " /RELAUNCH"
+	}
+	if dir != "" {
+		args += " /D=" + dir
+	}
+	return args
 }
 
 // Automatic dit si l'application sait installer elle-même la mise à jour.
