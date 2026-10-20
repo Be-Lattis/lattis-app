@@ -50,6 +50,6 @@ describe('compte rendu d’export', () => {
 
 	it('signale les graphiques non imprimés', () => {
 		expect(printNotice(0)).toBe('');
-		expect(printNotice(2)).toBe("2 graphiques non imprimés : l'impression d'une feuille ne reprend que ses cellules");
+		expect(printNotice(2)).toBe('2 graphiques non imprimés');
 	});
 });

@@ -73,7 +73,7 @@
 		"dialog": {
 			"title": "Paramètres",
 			"sections": "Sections",
-			"mcpTooltip": "Laisser un assistant compatible MCP (Claude Desktop, Claude Code…) lire et modifier le classeur ouvert",
+			"mcpTooltip": "Laisser un assistant MCP lire et modifier le classeur ouvert",
 			"mcp": "Serveur MCP (assistants)…"
 		}
 	},
@@ -277,7 +277,7 @@
 			"fitNote": "Une case vide : autant de pages qu’il faut dans ce sens.",
 			"paper": "Format du papier :",
 			"firstPage": "Commencer la numérotation à :",
-			"marginsNote": "En centimètres. L’en-tête et le pied de page s’impriment à leur distance du bord, dans les marges du haut et du bas.",
+			"marginsNote": "En centimètres.",
 			"centerOnPage": "Centrer sur la page",
 			"horizontally": "Horizontalement",
 			"vertically": "Verticalement",
@@ -373,7 +373,7 @@
 	},
 	"mcp": {
 		"title": "Serveur MCP",
-		"intro": "Un assistant compatible MCP (Claude Desktop, Claude Code…) peut lire et modifier le classeur ouvert : feuilles, tableaux, cellules, sélection, SQL, scripts, boutons. Ce qu’il modifie au cours d’une série d’actions s’annule d’un coup (Ctrl+Z). Le serveur n’écoute que sur cet ordinateur et exige un jeton.",
+		"intro": "Un assistant MCP (Claude Desktop, Claude Code…) lit et modifie le classeur ouvert, depuis cet ordinateur seulement.",
 		"enable": "Activer le serveur MCP",
 		"enableRunning": "Activer le serveur MCP (en marche)",
 		"enableStopped": "Activer le serveur MCP (arrêté)",
@@ -386,10 +386,10 @@
 		"configs": {
 			"desktop": {
 				"label": "Claude Desktop (et clients stdio)",
-				"hint": "À ajouter dans claude_desktop_config.json : le client lance Lattis en relais vers l'application ouverte."
+				"hint": "À ajouter dans claude_desktop_config.json."
 			},
 			"code": {
-				"hint": "Commande à lancer dans un terminal (portée user : Lattis est proposé dans tous vos projets)."
+				"hint": "Commande à lancer dans un terminal."
 			},
 			"http": {
 				"label": "Clients HTTP (Streamable HTTP)",
@@ -443,7 +443,7 @@
 			"protected": "Protection de la feuille non exportée",
 			"clipped": "{n, plural, one {# cellule au-delà de 1 048 576 lignes × 16 384 colonnes non exportée} other {# cellules au-delà de 1 048 576 lignes × 16 384 colonnes non exportées}}"
 		},
-		"printCharts": "{n, plural, one {# graphique non imprimé} other {# graphiques non imprimés}} : l'impression d'une feuille ne reprend que ses cellules",
+		"printCharts": "{n, plural, one {# graphique non imprimé} other {# graphiques non imprimés}}",
 		"dialog": {
 			"aria": "Détails de l'export",
 			"title": "Export {format} : détails",
@@ -451,8 +451,8 @@
 			"lost": "Non exporté tel quel :",
 			"all": "Tout a été exporté.",
 			"workbook": "Classeur",
-			"scripts": "{n, plural, one {# script non exporté} other {# scripts non exportés}} (Excel et LibreOffice ne lisent pas les scripts de Lattis)",
-			"note": "Les valeurs, la mise en forme des cellules, les tableaux et les formules qui ont un équivalent sont exportés."
+			"scripts": "{n, plural, one {# script non exporté} other {# scripts non exportés}}",
+			"note": "Le reste du classeur est exporté."
 		}
 	},
 	"notice": {
@@ -510,7 +510,7 @@
 		"noWorkbook": "Aucun classeur ouvert.",
 		"first": {
 			"title": "Bienvenue dans Lattis",
-			"intro": "Le tableur qui reconnaît vos tableaux, calcule par nom de colonne et se laisse interroger en SQL. Choisissez votre langue, puis créez ou ouvrez un classeur.",
+			"intro": "Le tableur qui reconnaît vos tableaux, calcule par nom de colonne et se lit en SQL.",
 			"language": "Langue de l’interface",
 			"languageHint": "Modifiable à tout moment dans Fichier › Paramètres.",
 			"guide": "Lire la prise en main"
@@ -556,7 +556,7 @@
 		"name": "Nom :",
 		"formula": "Formule :",
 		"suggestions": "Suggestions",
-		"hint": "Les colonnes se citent entre crochets : [Date], [Montant]. La formule est calculée pour chaque ligne.",
+		"hint": "Les colonnes entre crochets : [Date], [Montant].",
 		"count": "{n, plural, =0 {Valeurs} one {# valeur} other {# valeurs}}",
 		"follow": "{label} : {list}",
 		"others": " · sans ces colonnes, ne suivent pas : {list}",
@@ -631,9 +631,8 @@
 		"name": "Nom",
 		"save": "Ajouter à mes thèmes (proposé dans tous les classeurs)",
 		"mine": "Mes thèmes",
-		"removeTooltip": "Retirer « {name} » de mes thèmes (les classeurs qui l'utilisent gardent leurs couleurs)",
+		"removeTooltip": "Retirer « {name} » de mes thèmes (les classeurs gardent leurs couleurs)",
 		"remove": "Retirer",
-		"note": "Le thème est enregistré avec le classeur : il s'affiche pareil sur les autres postes. Les nuances (en-tête, texte, bordure) se déduisent des deux couleurs ; les cellules colorées avec une couleur du thème changent avec lui.",
 		"apply": "Appliquer"
 	},
 	"select": {
@@ -729,7 +728,7 @@
 			"sheet": "Feuille",
 			"sheetAria": "Nom de la nouvelle feuille",
 			"oldSheets": "Anciens onglets",
-			"keepCells": "Reprendre les cellules libres des onglets (titres, totaux, objectifs ; une par {category} quand elles changent)",
+			"keepCells": "Reprendre les cellules libres des onglets",
 			"layout": "Sur la feuille commune (disposition du dernier onglet) :",
 			"left": "Restent sur leur onglet : {list}",
 			"rewritten": "Formules reprises ({n})",
@@ -744,7 +743,7 @@
 		"notice": {
 			"none": "Aucun onglet semblable trouvé : sélectionnez les onglets (Ctrl+clic), puis clic droit › Regrouper des onglets…",
 			"noTables": "Ces onglets n’ont pas de tableaux à regrouper (il en faut au moins deux, aux mêmes colonnes)",
-			"dismissed": "Ces onglets ne seront plus proposés au regroupement (choix gardé dans le classeur)"
+			"dismissed": "Ces onglets ne seront plus proposés au regroupement"
 		}
 	},
 	"tabs": {
@@ -784,7 +783,7 @@
 		"menu": {
 			"selected": "{n} feuilles sélectionnées",
 			"title": "Feuille « {name} »",
-			"mergeTooltip": "Réunir les tableaux de ces onglets (mêmes colonnes) en un seul, avec une colonne de catégorie",
+			"mergeTooltip": "Réunir en un seul les tableaux aux mêmes colonnes de ces onglets",
 			"merge": "Regrouper des onglets…",
 			"insert": "Insérer",
 			"sheet": "Feuille",
@@ -794,11 +793,11 @@
 			"colorAria": "Couleur {color}",
 			"noColor": "Aucune couleur",
 			"chooseBy": "Choisir par",
-			"chooseByTooltip": "Une flèche sur l’onglet choisit la valeur affichée (année, mois, ville…)",
+			"chooseByTooltip": "Une flèche sur l’onglet choisit la valeur affichée",
 			"readingColumns": "Lecture des colonnes…",
 			"noColumns": "Aucune colonne de tableau de cette feuille n’a peu de valeurs différentes",
 			"columnTooltip": "« {column} » du tableau {table} — {n, plural, one {# valeur différente} other {# valeurs différentes}}",
-			"formulaTooltip": "Une formule sur les colonnes de chaque ligne donne la valeur à choisir : =ANNEE([Date]), =TEXTE([Date];\"mmmm\"), =SI([Montant]>1000;\"Gros\";\"Petit\")",
+			"formulaTooltip": "Valeur calculée sur chaque ligne, par exemple =ANNEE([Date])",
 			"formula": "Une formule…",
 			"stopChoosing": "Ne plus choisir par « {name} »",
 			"unprotect": "Ôter la protection de la feuille…",
@@ -820,12 +819,12 @@
 		},
 		"byFormula": {
 			"title": "Choisir par une formule",
-			"intro": "La flèche de l’onglet choisira parmi les valeurs de la formule ; les tableaux de la feuille qui ont ses colonnes ne montrent que les lignes de la valeur choisie.",
+			"intro": "La flèche de l’onglet choisira parmi les valeurs de la formule.",
 			"name": "Nom de la catégorie :",
 			"follow": "Suivent l’onglet"
 		},
 		"adding": {
-			"intro": "La valeur s’ajoute à la liste de « {name} » et l’onglet l’affiche : la feuille paraît vide, prête à être remplie. Ctrl+Z l’annule.",
+			"intro": "La valeur s’ajoute à la liste de « {name} » (Ctrl+Z l’annule).",
 			"label": "{name} :"
 		},
 		"move": {
@@ -932,13 +931,13 @@
 			"bookOn": "Protéger la structure du classeur"
 		},
 		"explain": {
-			"sheet": "Saisie, collage, mise en forme, lignes et colonnes, tri, objets et requêtes SQL d’écriture seront refusés sur cette feuille. Lecture, copie et filtres restent permis.",
-			"structure": "Tout sera verrouillé sauf la saisie dans les tableaux : cellules libres, mise en forme, colonnes et en-têtes, tableaux, objets, lignes et colonnes de la feuille, mise en page et onglet. On pourra encore taper, coller (valeurs seules) et effacer des valeurs dans les tableaux, y ajouter ou supprimer des lignes, trier et filtrer.",
-			"bookSheets": "Ajouter, supprimer, renommer, déplacer ou masquer des feuilles sera refusé, ainsi que toute modification du contenu des feuilles.",
-			"bookStructure": "Ajouter, supprimer, renommer, déplacer ou masquer des feuilles sera refusé ; sur chaque feuille, seule la saisie dans les tableaux restera permise.",
-			"bookTabs": "Ajouter, supprimer, renommer, déplacer ou masquer des feuilles sera refusé. Le contenu des feuilles non protégées reste modifiable."
+			"sheet": "Seules la lecture, la copie et les filtres resteront permis sur cette feuille.",
+			"structure": "Seule la saisie dans les tableaux restera permise (valeurs, lignes, tri, filtres).",
+			"bookSheets": "Les feuilles et leur contenu ne pourront plus être modifiés.",
+			"bookStructure": "Les feuilles ne pourront plus changer ; seule la saisie dans les tableaux restera permise.",
+			"bookTabs": "Ajouter, supprimer, renommer, déplacer ou masquer des feuilles sera refusé."
 		},
-		"notSecurity": "Cette protection évite les modifications accidentelles ; ce n’est pas une sécurité : le fichier n’est pas chiffré, ses données restent lisibles et la protection peut être retirée par quelqu’un d’outillé.",
+		"notSecurity": "Contre les erreurs, pas une sécurité : le fichier n’est pas chiffré.",
 		"lock": "Verrouiller",
 		"lockTabs": "Onglets seulement",
 		"lockStructure": "Onglets et structure de toutes les feuilles (saisie dans les tableaux seulement)",
@@ -987,10 +986,10 @@
 	},
 	"locked": {
 		"title": "Classeur déjà ouvert",
-		"coEditHint": "À plusieurs, chacun modifie les données des tableaux et voit celles des autres en direct ; la mise en forme, les colonnes et les feuilles attendent que vous soyez seul. En lecture seule, vos modifications s'enregistrent sous un autre nom.",
+		"coEditHint": "À plusieurs, seules les données des tableaux se modifient. En lecture seule, vos modifications s'enregistrent sous un autre nom.",
 		"together": "Travailler à plusieurs",
 		"readOnly": "Ouvrir en lecture seule",
-		"hint": "En lecture seule, vos modifications s'enregistrent sous un autre nom. L'ouvrir quand même risque d'écraser les modifications de l'autre poste (Lattis vérifie le fichier avant d'enregistrer).",
+		"hint": "En lecture seule, vos modifications s'enregistrent sous un autre nom. L'ouvrir quand même risque d'écraser celles de l'autre poste.",
 		"anyway": "Ouvrir quand même"
 	},
 	"conflictFile": {
@@ -1005,7 +1004,7 @@
 		"details": "Détails",
 		"backTooltip": "Revenir à la cellule d'où vous avez basculé (Alt+←)",
 		"back": "← Revenir à {label}",
-		"useHeaderTooltip": "Les cellules tapées au-dessus du tableau deviennent ses en-têtes ; l'en-tête actuel devient la 1re ligne de données (Ctrl+Z pour annuler)",
+		"useHeaderTooltip": "Les cellules tapées au-dessus du tableau deviennent ses en-têtes (Ctrl+Z pour annuler)",
 		"useHeader": "Utiliser comme en-têtes",
 		"keepTitleTooltip": "Garder la ligne en cellules libres (un titre)",
 		"no": "Non",
@@ -1026,14 +1025,14 @@
 		"history": "Historique",
 		"historyCount": "Historique ({n})",
 		"renameAria": "Nouveau nom du tableau",
-		"objectTooltipRename": "Double-clic ou F2 : renommer ; clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille",
-		"objectTooltip": "Clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille",
+		"objectTooltipRename": "Double-clic ou F2 : renommer ; clic droit : exemples SQL",
+		"objectTooltip": "Clic droit : exemples SQL",
 		"pivot": "Tableau croisé",
 		"table": "Tableau",
 		"rows": "{n, plural, one {# ligne} other {# lignes}}",
 		"insertColumn": "Insérer dans la requête",
 		"dataLake": "Data Lake Lattis · {label}",
-		"dataViewTooltip": "{view} : vue du serveur en lecture seule, limitée aux lignes de votre audience (double-clic : exemple SELECT)",
+		"dataViewTooltip": "{view} : vue en lecture seule, limitée à vos lignes (double-clic : exemple SELECT)",
 		"dataView": "Vue du Data Lake (lecture seule)",
 		"rights": "Droits (serveur)",
 		"rightsEditTooltip": "Écran Partager : membres, rôles, restrictions",
@@ -1054,7 +1053,7 @@
 		"rename": "Renommer",
 		"remove": "Retirer",
 		"run": "Exécuter",
-		"noFavorites": "Aucune requête favorite. ☆ dans la barre de l'éditeur ou dans l'historique pour en ajouter une ; elles sont enregistrées dans le classeur.",
+		"noFavorites": "Aucune requête favorite : ☆ dans la barre de l'éditeur ou l'historique pour en ajouter.",
 		"search": "Rechercher",
 		"clear": "Effacer",
 		"error": "erreur",
@@ -1071,7 +1070,7 @@
 		"hintTooltip": "Les instructions sont séparées par « ; » ou une ligne vide. 1 000 lignes au plus.",
 		"hint": "Ctrl+Entrée : exécuter la sélection, sinon l'instruction sous le curseur · Ctrl+Espace : noms · Alt+↑↓ : historique",
 		"splitAria": "Hauteur de l'éditeur",
-		"splitTooltip": "Glisser pour partager la place entre la requête et le résultat (double-clic : taille d'origine)",
+		"splitTooltip": "Glisser pour redimensionner (double-clic : taille d'origine)",
 		"result": "{n, plural, one {# ligne} other {# lignes}} · {ms} ms",
 		"resultTruncated": "{n, plural, one {# ligne} other {# lignes}} (tronqué) · {ms} ms",
 		"sent": "· SQL exécuté",
@@ -1080,9 +1079,9 @@
 		"copied": "Copié ✓",
 		"clipboard": "Presse-papiers",
 		"toSheet": "Vers une feuille :",
-		"copyToSheetTooltip": "Copie les valeurs du résultat dans un nouveau tableau, sur une nouvelle feuille (Ctrl+Z pour annuler)",
+		"copyToSheetTooltip": "Copie le résultat dans un nouveau tableau, sur une nouvelle feuille",
 		"copyToSheet": "Copier",
-		"linkToSheetTooltip": "Crée un tableau lié à la requête, sur une nouvelle feuille : couleur des sources externes (bleu clair par défaut), actualisable au clic droit comme une source externe",
+		"linkToSheetTooltip": "Crée sur une nouvelle feuille un tableau lié à la requête, actualisable",
 		"linkToSheet": "Référencer"
 	},
 	"update": {

@@ -111,7 +111,6 @@
 				{/each}
 			</ul>
 		{/if}
-		<p class="muted">{t('shell.theme.note')}</p>
 		<div class="actions">
 			<button onclick={cancel}>{t('common.cancel')}</button>
 			<button class="primary" onclick={() => onapply(theme, save && !saveLocked)}>{t('shell.theme.apply')}</button>
@@ -290,12 +289,6 @@
 	}
 	.link:hover {
 		text-decoration: underline;
-	}
-	.muted {
-		margin: 0;
-		color: #6b7280;
-		font-size: 12px;
-		line-height: 1.5;
 	}
 	.actions {
 		display: flex;

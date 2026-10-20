@@ -73,7 +73,7 @@
 		"dialog": {
 			"title": "Configuración",
 			"sections": "Secciones",
-			"mcpTooltip": "Permitir que un asistente compatible con MCP (Claude Desktop, Claude Code…) lea y modifique el libro abierto",
+			"mcpTooltip": "Permitir que un asistente MCP lea y modifique el libro abierto",
 			"mcp": "Servidor MCP (asistentes)…"
 		}
 	},
@@ -277,7 +277,7 @@
 			"fitNote": "Un cuadro vacío: tantas páginas como sean necesarias en esa dirección.",
 			"paper": "Tamaño del papel:",
 			"firstPage": "Primer número de página:",
-			"marginsNote": "En centímetros. El encabezado y el pie de página se imprimen a su distancia del borde, dentro de los márgenes superior e inferior.",
+			"marginsNote": "En centímetros.",
 			"centerOnPage": "Centrar en la página",
 			"horizontally": "Horizontalmente",
 			"vertically": "Verticalmente",
@@ -373,7 +373,7 @@
 	},
 	"mcp": {
 		"title": "Servidor MCP",
-		"intro": "Un asistente compatible con MCP (Claude Desktop, Claude Code…) puede leer y modificar el libro abierto: hojas, tablas, celdas, selección, SQL, scripts, botones. Lo que cambia durante una serie de acciones se deshace en un solo paso (Ctrl+Z). El servidor solo escucha en este equipo y requiere un token.",
+		"intro": "Un asistente MCP (Claude Desktop, Claude Code…) lee y modifica el libro abierto, solo desde este equipo.",
 		"enable": "Activar el servidor MCP",
 		"enableRunning": "Activar el servidor MCP (en ejecución)",
 		"enableStopped": "Activar el servidor MCP (detenido)",
@@ -386,10 +386,10 @@
 		"configs": {
 			"desktop": {
 				"label": "Claude Desktop (y clientes stdio)",
-				"hint": "Añadir a claude_desktop_config.json: el cliente inicia Lattis como relé hacia la aplicación abierta."
+				"hint": "Añadir a claude_desktop_config.json."
 			},
 			"code": {
-				"hint": "Comando que se ejecuta en un terminal (ámbito de usuario: Lattis se ofrece en todos sus proyectos)."
+				"hint": "Comando que se ejecuta en un terminal."
 			},
 			"http": {
 				"label": "Clientes HTTP (Streamable HTTP)",
@@ -443,7 +443,7 @@
 			"protected": "Protección de hoja no exportada",
 			"clipped": "{n, plural, one {# celda más allá de 1.048.576 filas × 16.384 columnas no exportada} other {# celdas más allá de 1.048.576 filas × 16.384 columnas no exportadas}}"
 		},
-		"printCharts": "{n, plural, one {# gráfico no impreso} other {# gráficos no impresos}}: al imprimir una hoja solo se incluyen sus celdas",
+		"printCharts": "{n, plural, one {# gráfico no impreso} other {# gráficos no impresos}}",
 		"dialog": {
 			"aria": "Detalles de la exportación",
 			"title": "Exportación {format}: detalles",
@@ -451,8 +451,8 @@
 			"lost": "No exportado tal cual:",
 			"all": "Se ha exportado todo.",
 			"workbook": "Libro",
-			"scripts": "{n, plural, one {# script no exportado} other {# scripts no exportados}} (Excel y LibreOffice no leen los scripts de Lattis)",
-			"note": "Se exportan los valores, el formato de las celdas, las tablas y las fórmulas que tienen un equivalente."
+			"scripts": "{n, plural, one {# script no exportado} other {# scripts no exportados}}",
+			"note": "El resto del libro se exporta."
 		}
 	},
 	"notice": {
@@ -510,7 +510,7 @@
 		"noWorkbook": "Ningún libro abierto.",
 		"first": {
 			"title": "Bienvenido a Lattis",
-			"intro": "La hoja de cálculo que reconoce sus tablas, calcula por nombre de columna y se consulta en SQL. Elija su idioma y luego cree o abra un libro.",
+			"intro": "La hoja de cálculo que reconoce sus tablas, calcula por nombre de columna y se consulta en SQL.",
 			"language": "Idioma de la interfaz",
 			"languageHint": "Puede cambiarlo en cualquier momento en Archivo › Configuración.",
 			"guide": "Leer la guía de inicio"
@@ -556,7 +556,7 @@
 		"name": "Nombre:",
 		"formula": "Fórmula:",
 		"suggestions": "Sugerencias",
-		"hint": "Las columnas se escriben entre corchetes: [Fecha], [Importe]. La fórmula se calcula para cada fila.",
+		"hint": "Columnas entre corchetes: [Fecha], [Importe].",
 		"count": "{n, plural, =0 {Valores} one {# valor} other {# valores}}",
 		"follow": "{label}: {list}",
 		"others": " · sin estas columnas, no siguen: {list}",
@@ -631,9 +631,8 @@
 		"name": "Nombre",
 		"save": "Añadir a mis temas (ofrecido en todos los libros)",
 		"mine": "Mis temas",
-		"removeTooltip": "Quitar «{name}» de mis temas (los libros que lo usan conservan sus colores)",
+		"removeTooltip": "Quitar «{name}» de mis temas (los libros conservan sus colores)",
 		"remove": "Quitar",
-		"note": "El tema se guarda con el libro: se ve igual en otros equipos. Los matices (encabezado, texto, borde) se derivan de los dos colores; las celdas coloreadas con un color del tema cambian con él.",
 		"apply": "Aplicar"
 	},
 	"select": {
@@ -729,7 +728,7 @@
 			"sheet": "Hoja",
 			"sheetAria": "Nombre de la nueva hoja",
 			"oldSheets": "Pestañas antiguas",
-			"keepCells": "Trasladar las celdas libres de las pestañas (títulos, totales, objetivos; una por {category} cuando difieren)",
+			"keepCells": "Trasladar las celdas libres de las pestañas",
 			"layout": "En la hoja combinada (diseño de la última pestaña):",
 			"left": "Se quedan en su pestaña: {list}",
 			"rewritten": "Fórmulas reescritas ({n})",
@@ -744,7 +743,7 @@
 		"notice": {
 			"none": "No se han encontrado pestañas similares: seleccione las pestañas (Ctrl+clic) y luego clic derecho › Combinar pestañas…",
 			"noTables": "Estas pestañas no tienen tablas que combinar (se necesitan al menos dos, con las mismas columnas)",
-			"dismissed": "Estas pestañas ya no se propondrán para combinar (elección guardada en el libro)"
+			"dismissed": "Estas pestañas ya no se propondrán para combinar"
 		}
 	},
 	"tabs": {
@@ -784,7 +783,7 @@
 		"menu": {
 			"selected": "{n} hojas seleccionadas",
 			"title": "Hoja «{name}»",
-			"mergeTooltip": "Combinar las tablas de estas pestañas (mismas columnas) en una sola, con una columna de categoría",
+			"mergeTooltip": "Combinar en una sola las tablas con las mismas columnas de estas pestañas",
 			"merge": "Combinar pestañas…",
 			"insert": "Insertar",
 			"sheet": "Hoja",
@@ -794,11 +793,11 @@
 			"colorAria": "Color {color}",
 			"noColor": "Sin color",
 			"chooseBy": "Elegir por",
-			"chooseByTooltip": "Una flecha en la pestaña elige el valor mostrado (año, mes, ciudad…)",
+			"chooseByTooltip": "Una flecha en la pestaña elige el valor mostrado",
 			"readingColumns": "Leyendo las columnas…",
 			"noColumns": "Ninguna columna de tabla de esta hoja tiene pocos valores distintos",
 			"columnTooltip": "«{column}» de la tabla {table} — {n, plural, one {# valor distinto} other {# valores distintos}}",
-			"formulaTooltip": "Una fórmula sobre las columnas de cada fila da el valor que elegir: =AÑO([Fecha]), =TEXTO([Fecha];\"mmmm\"), =SI([Importe]>1000;\"Grande\";\"Pequeño\")",
+			"formulaTooltip": "Valor calculado en cada fila, por ejemplo =AÑO([Fecha])",
 			"formula": "Una fórmula…",
 			"stopChoosing": "Dejar de elegir por «{name}»",
 			"unprotect": "Desproteger hoja…",
@@ -820,12 +819,12 @@
 		},
 		"byFormula": {
 			"title": "Elegir por una fórmula",
-			"intro": "La flecha de la pestaña elegirá entre los valores de la fórmula; las tablas de la hoja que tienen sus columnas solo muestran las filas del valor elegido.",
+			"intro": "La flecha de la pestaña elegirá entre los valores de la fórmula.",
 			"name": "Nombre de la categoría:",
 			"follow": "Seguir la pestaña"
 		},
 		"adding": {
-			"intro": "El valor se añade a la lista de «{name}» y la pestaña lo muestra: la hoja parece vacía, lista para rellenar. Ctrl+Z lo deshace.",
+			"intro": "El valor se añade a la lista de «{name}» (Ctrl+Z lo deshace).",
 			"label": "{name}:"
 		},
 		"move": {
@@ -932,13 +931,13 @@
 			"bookOn": "Proteger la estructura del libro"
 		},
 		"explain": {
-			"sheet": "En esta hoja se rechazarán la entrada de datos, el pegado, el formato, las filas y columnas, la ordenación, los objetos y las consultas SQL de escritura. La lectura, la copia y los filtros siguen permitidos.",
-			"structure": "Todo quedará bloqueado salvo la entrada de datos en las tablas: celdas libres, formato, columnas y encabezados, tablas, objetos, filas y columnas de la hoja, diseño de página y pestaña. Podrá seguir escribiendo, pegando (solo valores) y borrando valores en las tablas, añadiendo o eliminando filas en ellas, ordenando y filtrando.",
-			"bookSheets": "Se rechazará añadir, eliminar, renombrar, mover u ocultar hojas, así como cualquier cambio en el contenido de las hojas.",
-			"bookStructure": "Se rechazará añadir, eliminar, renombrar, mover u ocultar hojas; en cada hoja, solo seguirá permitida la entrada de datos en las tablas.",
-			"bookTabs": "Se rechazará añadir, eliminar, renombrar, mover u ocultar hojas. El contenido de las hojas no protegidas se puede seguir modificando."
+			"sheet": "En esta hoja solo se permitirá leer, copiar y filtrar.",
+			"structure": "Solo se permitirá la entrada de datos en las tablas (valores, filas, orden, filtros).",
+			"bookSheets": "Las hojas y su contenido ya no se podrán modificar.",
+			"bookStructure": "Las hojas ya no podrán cambiar; solo se permitirá la entrada de datos en las tablas.",
+			"bookTabs": "Se rechazará añadir, eliminar, cambiar el nombre, mover u ocultar hojas."
 		},
-		"notSecurity": "Esta protección evita los cambios accidentales; no es una medida de seguridad: el archivo no está cifrado, sus datos siguen siendo legibles y alguien con las herramientas adecuadas puede quitar la protección.",
+		"notSecurity": "Protege contra errores, no es una seguridad: el archivo no está cifrado.",
 		"lock": "Bloquear",
 		"lockTabs": "Solo las pestañas",
 		"lockStructure": "Pestañas y estructura de todas las hojas (solo entrada de datos en las tablas)",
@@ -987,10 +986,10 @@
 	},
 	"locked": {
 		"title": "Libro ya abierto",
-		"coEditHint": "Al trabajar juntos, cada uno edita los datos de las tablas y ve los cambios de los demás en directo; el formato, las columnas y las hojas esperan a que esté solo. En solo lectura, sus cambios se guardan con otro nombre.",
+		"coEditHint": "Al trabajar juntos, solo se editan los datos de las tablas. En solo lectura, sus cambios se guardan con otro nombre.",
 		"together": "Trabajar juntos",
 		"readOnly": "Abrir en solo lectura",
-		"hint": "En solo lectura, sus cambios se guardan con otro nombre. Abrirlo de todos modos puede sobrescribir los cambios del otro equipo (Lattis comprueba el archivo antes de guardar).",
+		"hint": "En solo lectura, sus cambios se guardan con otro nombre. Abrirlo de todos modos puede sobrescribir los cambios del otro equipo.",
 		"anyway": "Abrir de todos modos"
 	},
 	"conflictFile": {
@@ -1005,7 +1004,7 @@
 		"details": "Detalles",
 		"backTooltip": "Volver a la celda de la que partió (Alt+←)",
 		"back": "← Volver a {label}",
-		"useHeaderTooltip": "Las celdas escritas encima de la tabla pasan a ser sus encabezados; el encabezado actual pasa a ser la 1.ª fila de datos (Ctrl+Z para deshacer)",
+		"useHeaderTooltip": "Las celdas escritas encima de la tabla pasan a ser sus encabezados (Ctrl+Z para deshacer)",
 		"useHeader": "Usar como encabezados",
 		"keepTitleTooltip": "Conservar la fila como celdas libres (un título)",
 		"no": "No",
@@ -1026,14 +1025,14 @@
 		"history": "Historial",
 		"historyCount": "Historial ({n})",
 		"renameAria": "Nuevo nombre de la tabla",
-		"objectTooltipRename": "Doble clic o F2: cambiar nombre; clic derecho: ejemplos SELECT, INSERT, UPDATE, DELETE, mostrar en la hoja",
-		"objectTooltip": "Clic derecho: ejemplos SELECT, INSERT, UPDATE, DELETE, mostrar en la hoja",
+		"objectTooltipRename": "Doble clic o F2: cambiar nombre; clic derecho: ejemplos SQL",
+		"objectTooltip": "Clic derecho: ejemplos SQL",
 		"pivot": "Tabla dinámica",
 		"table": "Tabla",
 		"rows": "{n, plural, one {# fila} other {# filas}}",
 		"insertColumn": "Insertar en la consulta",
 		"dataLake": "Data Lake de Lattis · {label}",
-		"dataViewTooltip": "{view}: vista de servidor de solo lectura, limitada a las filas de su audiencia (doble clic: ejemplo SELECT)",
+		"dataViewTooltip": "{view}: vista de solo lectura, limitada a sus filas (doble clic: ejemplo SELECT)",
 		"dataView": "Vista del Data Lake (solo lectura)",
 		"rights": "Derechos (servidor)",
 		"rightsEditTooltip": "Pantalla de uso compartido: miembros, roles, restricciones",
@@ -1054,7 +1053,7 @@
 		"rename": "Cambiar nombre",
 		"remove": "Quitar",
 		"run": "Ejecutar",
-		"noFavorites": "No hay consultas favoritas. Use ☆ en la barra del editor o en el historial para añadir una; se guardan en el libro.",
+		"noFavorites": "No hay consultas favoritas: use ☆ en la barra del editor o el historial para añadir una.",
 		"search": "Buscar",
 		"clear": "Borrar",
 		"error": "error",
@@ -1071,7 +1070,7 @@
 		"hintTooltip": "Las instrucciones se separan con «;» o una línea en blanco. 1000 filas como máximo.",
 		"hint": "Ctrl+Entrar: ejecutar la selección; si no, la instrucción bajo el cursor · Ctrl+Barra espaciadora: nombres · Alt+↑↓: historial",
 		"splitAria": "Altura del editor",
-		"splitTooltip": "Arrastre para repartir el espacio entre la consulta y el resultado (doble clic: tamaño original)",
+		"splitTooltip": "Arrastre para cambiar el tamaño (doble clic: tamaño original)",
 		"result": "{n, plural, one {# fila} other {# filas}} · {ms} ms",
 		"resultTruncated": "{n, plural, one {# fila} other {# filas}} (truncado) · {ms} ms",
 		"sent": "· SQL ejecutado",
@@ -1080,9 +1079,9 @@
 		"copied": "Copiado ✓",
 		"clipboard": "Portapapeles",
 		"toSheet": "A una hoja:",
-		"copyToSheetTooltip": "Copia los valores del resultado en una nueva tabla, en una hoja nueva (Ctrl+Z para deshacer)",
+		"copyToSheetTooltip": "Copia el resultado en una nueva tabla, en una hoja nueva",
 		"copyToSheet": "Copiar",
-		"linkToSheetTooltip": "Crea una tabla vinculada a la consulta, en una hoja nueva: color de origen externo (azul claro de forma predeterminada), actualizable con clic derecho como un origen externo",
+		"linkToSheetTooltip": "Crea en una hoja nueva una tabla vinculada a la consulta, actualizable",
 		"linkToSheet": "Vincular"
 	},
 	"update": {

@@ -73,7 +73,7 @@
 		"dialog": {
 			"title": "Einstellungen",
 			"sections": "Abschnitte",
-			"mcpTooltip": "Einem MCP-kompatiblen Assistenten (Claude Desktop, Claude Code…) erlauben, die geöffnete Arbeitsmappe zu lesen und zu ändern",
+			"mcpTooltip": "Einem MCP-Assistenten erlauben, die geöffnete Arbeitsmappe zu lesen und zu ändern",
 			"mcp": "MCP-Server (Assistenten)…"
 		}
 	},
@@ -277,7 +277,7 @@
 			"fitNote": "Ein leeres Feld: so viele Seiten wie nötig in dieser Richtung.",
 			"paper": "Papierformat:",
 			"firstPage": "Erste Seitenzahl:",
-			"marginsNote": "In Zentimetern. Kopf- und Fußzeile werden in ihrem Abstand vom Rand gedruckt, innerhalb des oberen und unteren Seitenrands.",
+			"marginsNote": "In Zentimetern.",
 			"centerOnPage": "Auf der Seite zentrieren",
 			"horizontally": "Horizontal",
 			"vertically": "Vertikal",
@@ -373,7 +373,7 @@
 	},
 	"mcp": {
 		"title": "MCP-Server",
-		"intro": "Ein MCP-kompatibler Assistent (Claude Desktop, Claude Code…) kann die geöffnete Arbeitsmappe lesen und ändern: Tabellenblätter, Tabellen, Zellen, Auswahl, SQL, Skripts, Schaltflächen. Was er im Lauf einer Reihe von Aktionen ändert, lässt sich in einem Schritt rückgängig machen (Strg+Z). Der Server lauscht nur auf diesem Computer und verlangt ein Token.",
+		"intro": "Ein MCP-Assistent (Claude Desktop, Claude Code…) liest und ändert die geöffnete Arbeitsmappe, nur von diesem Computer aus.",
 		"enable": "MCP-Server aktivieren",
 		"enableRunning": "MCP-Server aktivieren (läuft)",
 		"enableStopped": "MCP-Server aktivieren (angehalten)",
@@ -386,10 +386,10 @@
 		"configs": {
 			"desktop": {
 				"label": "Claude Desktop (und stdio-Clients)",
-				"hint": "In claude_desktop_config.json einfügen: Der Client startet Lattis als Relais zur geöffneten Anwendung."
+				"hint": "In claude_desktop_config.json einfügen."
 			},
 			"code": {
-				"hint": "In einem Terminal auszuführender Befehl (Bereich user: Lattis wird in all Ihren Projekten angeboten)."
+				"hint": "In einem Terminal auszuführender Befehl."
 			},
 			"http": {
 				"label": "HTTP-Clients (Streamable HTTP)",
@@ -443,7 +443,7 @@
 			"protected": "Blattschutz nicht exportiert",
 			"clipped": "{n, plural, one {# Zelle jenseits von 1.048.576 Zeilen × 16.384 Spalten nicht exportiert} other {# Zellen jenseits von 1.048.576 Zeilen × 16.384 Spalten nicht exportiert}}"
 		},
-		"printCharts": "{n, plural, one {# Diagramm nicht gedruckt} other {# Diagramme nicht gedruckt}}: Beim Drucken eines Tabellenblatts werden nur seine Zellen berücksichtigt",
+		"printCharts": "{n, plural, one {# Diagramm nicht gedruckt} other {# Diagramme nicht gedruckt}}",
 		"dialog": {
 			"aria": "Exportdetails",
 			"title": "{format}-Export: Details",
@@ -451,8 +451,8 @@
 			"lost": "Nicht unverändert exportiert:",
 			"all": "Alles wurde exportiert.",
 			"workbook": "Arbeitsmappe",
-			"scripts": "{n, plural, one {# Skript nicht exportiert} other {# Skripts nicht exportiert}} (Excel und LibreOffice lesen keine Lattis-Skripts)",
-			"note": "Werte, Zellformatierung, Tabellen und Formeln mit einer Entsprechung werden exportiert."
+			"scripts": "{n, plural, one {# Skript nicht exportiert} other {# Skripts nicht exportiert}}",
+			"note": "Der Rest der Arbeitsmappe wird exportiert."
 		}
 	},
 	"notice": {
@@ -510,7 +510,7 @@
 		"noWorkbook": "Keine Arbeitsmappe geöffnet.",
 		"first": {
 			"title": "Willkommen bei Lattis",
-			"intro": "Die Tabellenkalkulation, die Ihre Tabellen erkennt, mit Spaltennamen rechnet und sich mit SQL abfragen lässt. Wählen Sie Ihre Sprache und erstellen oder öffnen Sie dann eine Arbeitsmappe.",
+			"intro": "Die Tabellenkalkulation, die Ihre Tabellen erkennt, mit Spaltennamen rechnet und sich mit SQL abfragen lässt.",
 			"language": "Sprache der Benutzeroberfläche",
 			"languageHint": "Jederzeit änderbar unter Datei › Einstellungen.",
 			"guide": "Erste Schritte lesen"
@@ -556,7 +556,7 @@
 		"name": "Name:",
 		"formula": "Formel:",
 		"suggestions": "Vorschläge",
-		"hint": "Spalten werden in eckigen Klammern geschrieben: [Datum], [Betrag]. Die Formel wird für jede Zeile berechnet.",
+		"hint": "Spalten in eckigen Klammern: [Datum], [Betrag].",
 		"count": "{n, plural, =0 {Werte} one {# Wert} other {# Werte}}",
 		"follow": "{label}: {list}",
 		"others": " · ohne diese Spalten, folgen nicht: {list}",
@@ -631,9 +631,8 @@
 		"name": "Name",
 		"save": "Zu meinen Designs hinzufügen (in allen Arbeitsmappen angeboten)",
 		"mine": "Meine Designs",
-		"removeTooltip": "„{name}“ aus meinen Designs entfernen (Arbeitsmappen, die es verwenden, behalten ihre Farben)",
+		"removeTooltip": "„{name}“ aus meinen Designs entfernen (Arbeitsmappen behalten ihre Farben)",
 		"remove": "Entfernen",
-		"note": "Das Design wird mit der Arbeitsmappe gespeichert: Es sieht auf anderen Computern gleich aus. Die Abstufungen (Überschrift, Text, Rahmen) werden aus den beiden Farben abgeleitet; Zellen, die mit einer Designfarbe gefärbt sind, ändern sich mit ihm.",
 		"apply": "Übernehmen"
 	},
 	"select": {
@@ -729,7 +728,7 @@
 			"sheet": "Blatt",
 			"sheetAria": "Name des neuen Blatts",
 			"oldSheets": "Alte Register",
-			"keepCells": "Freie Zellen der Register übernehmen (Titel, Summen, Ziele; eine pro {category}, wenn sie sich unterscheiden)",
+			"keepCells": "Freie Zellen der Register übernehmen",
 			"layout": "Auf dem gemeinsamen Blatt (Layout des letzten Registers):",
 			"left": "Bleiben auf ihrem Register: {list}",
 			"rewritten": "Umgeschriebene Formeln ({n})",
@@ -744,7 +743,7 @@
 		"notice": {
 			"none": "Keine ähnlichen Register gefunden: Wählen Sie die Register aus (Strg+Klick), dann Rechtsklick › Register zusammenführen…",
 			"noTables": "Diese Register haben keine Tabellen zum Zusammenführen (mindestens zwei mit denselben Spalten sind nötig)",
-			"dismissed": "Diese Register werden nicht mehr zum Zusammenführen vorgeschlagen (Auswahl in der Arbeitsmappe gespeichert)"
+			"dismissed": "Diese Register werden nicht mehr zum Zusammenführen vorgeschlagen"
 		}
 	},
 	"tabs": {
@@ -784,7 +783,7 @@
 		"menu": {
 			"selected": "{n} Blätter ausgewählt",
 			"title": "Blatt „{name}“",
-			"mergeTooltip": "Die Tabellen dieser Register (gleiche Spalten) in eine einzige zusammenführen, mit einer Kategoriespalte",
+			"mergeTooltip": "Tabellen mit gleichen Spalten aus diesen Registern zu einer zusammenführen",
 			"merge": "Register zusammenführen…",
 			"insert": "Einfügen",
 			"sheet": "Blatt",
@@ -794,11 +793,11 @@
 			"colorAria": "Farbe {color}",
 			"noColor": "Keine Farbe",
 			"chooseBy": "Auswählen nach",
-			"chooseByTooltip": "Ein Pfeil auf dem Register wählt den angezeigten Wert (Jahr, Monat, Ort…)",
+			"chooseByTooltip": "Ein Pfeil auf dem Register wählt den angezeigten Wert",
 			"readingColumns": "Spalten werden gelesen…",
 			"noColumns": "Keine Tabellenspalte dieses Blatts hat wenige unterschiedliche Werte",
 			"columnTooltip": "„{column}“ der Tabelle {table} — {n, plural, one {# unterschiedlicher Wert} other {# unterschiedliche Werte}}",
-			"formulaTooltip": "Eine Formel auf den Spalten jeder Zeile ergibt den auszuwählenden Wert: =JAHR([Datum]), =TEXT([Datum];\"mmmm\"), =WENN([Betrag]>1000;\"Groß\";\"Klein\")",
+			"formulaTooltip": "Für jede Zeile berechneter Wert, zum Beispiel =JAHR([Datum])",
 			"formula": "Eine Formel…",
 			"stopChoosing": "Nicht mehr nach „{name}“ auswählen",
 			"unprotect": "Blattschutz aufheben…",
@@ -820,12 +819,12 @@
 		},
 		"byFormula": {
 			"title": "Nach einer Formel auswählen",
-			"intro": "Der Pfeil des Registers wählt unter den Werten der Formel; die Tabellen des Blatts, die ihre Spalten haben, zeigen nur die Zeilen des gewählten Werts.",
+			"intro": "Der Pfeil des Registers wählt unter den Werten der Formel.",
 			"name": "Name der Kategorie:",
 			"follow": "Folgen dem Register"
 		},
 		"adding": {
-			"intro": "Der Wert wird zur Liste von „{name}“ hinzugefügt und das Register zeigt ihn an: Das Blatt wirkt leer, bereit zum Ausfüllen. Strg+Z macht es rückgängig.",
+			"intro": "Der Wert wird zur Liste von „{name}“ hinzugefügt (Strg+Z macht es rückgängig).",
 			"label": "{name}:"
 		},
 		"move": {
@@ -932,13 +931,13 @@
 			"bookOn": "Struktur der Arbeitsmappe schützen"
 		},
 		"explain": {
-			"sheet": "Eingabe, Einfügen, Formatierung, Zeilen und Spalten, Sortieren, Objekte und SQL-Schreibabfragen werden auf diesem Blatt abgelehnt. Lesen, Kopieren und Filter bleiben erlaubt.",
-			"structure": "Alles wird gesperrt außer der Eingabe in Tabellen: freie Zellen, Formatierung, Spalten und Überschriften, Tabellen, Objekte, Zeilen und Spalten des Blatts, Seitenlayout und Register. Sie können in Tabellen weiterhin Werte eingeben, einfügen (nur Werte) und löschen, dort Zeilen hinzufügen oder löschen, sortieren und filtern.",
-			"bookSheets": "Das Hinzufügen, Löschen, Umbenennen, Verschieben oder Ausblenden von Blättern wird abgelehnt, ebenso jede Änderung am Inhalt der Blätter.",
-			"bookStructure": "Das Hinzufügen, Löschen, Umbenennen, Verschieben oder Ausblenden von Blättern wird abgelehnt; auf jedem Blatt bleibt nur die Eingabe in Tabellen erlaubt.",
-			"bookTabs": "Das Hinzufügen, Löschen, Umbenennen, Verschieben oder Ausblenden von Blättern wird abgelehnt. Der Inhalt nicht geschützter Blätter kann weiterhin geändert werden."
+			"sheet": "Auf diesem Blatt bleiben nur Lesen, Kopieren und Filtern erlaubt.",
+			"structure": "Nur die Eingabe in Tabellen bleibt erlaubt (Werte, Zeilen, Sortieren, Filtern).",
+			"bookSheets": "Blätter und ihr Inhalt können nicht mehr geändert werden.",
+			"bookStructure": "Blätter können nicht mehr geändert werden; nur die Eingabe in Tabellen bleibt erlaubt.",
+			"bookTabs": "Hinzufügen, Löschen, Umbenennen, Verschieben oder Ausblenden von Blättern wird abgelehnt."
 		},
-		"notSecurity": "Dieser Schutz verhindert versehentliche Änderungen; er ist keine Sicherheitsmaßnahme: Die Datei ist nicht verschlüsselt, ihre Daten bleiben lesbar und der Schutz kann von jemandem mit den richtigen Werkzeugen entfernt werden.",
+		"notSecurity": "Schutz vor Versehen, keine Sicherheit: Die Datei ist nicht verschlüsselt.",
 		"lock": "Sperren",
 		"lockTabs": "Nur Register",
 		"lockStructure": "Register und Struktur aller Blätter (nur Eingabe in Tabellen)",
@@ -987,10 +986,10 @@
 	},
 	"locked": {
 		"title": "Arbeitsmappe bereits geöffnet",
-		"coEditHint": "Beim gemeinsamen Bearbeiten ändern alle die Tabellendaten und sehen die Änderungen der anderen live; Formatierung, Spalten und Blätter warten, bis Sie allein sind. Im schreibgeschützten Modus werden Ihre Änderungen unter einem anderen Namen gespeichert.",
+		"coEditHint": "Beim gemeinsamen Bearbeiten lassen sich nur Tabellendaten ändern. Im schreibgeschützten Modus werden Ihre Änderungen unter einem anderen Namen gespeichert.",
 		"together": "Gemeinsam bearbeiten",
 		"readOnly": "Schreibgeschützt öffnen",
-		"hint": "Im schreibgeschützten Modus werden Ihre Änderungen unter einem anderen Namen gespeichert. Wenn Sie sie trotzdem öffnen, können die Änderungen des anderen Computers überschrieben werden (Lattis prüft die Datei vor dem Speichern).",
+		"hint": "Im schreibgeschützten Modus werden Ihre Änderungen unter einem anderen Namen gespeichert. Trotzdem öffnen kann die Änderungen des anderen Computers überschreiben.",
 		"anyway": "Trotzdem öffnen"
 	},
 	"conflictFile": {
@@ -1005,7 +1004,7 @@
 		"details": "Details",
 		"backTooltip": "Zur Zelle zurückkehren, von der Sie gewechselt sind (Alt+←)",
 		"back": "← Zurück zu {label}",
-		"useHeaderTooltip": "Die über der Tabelle eingegebenen Zellen werden zu ihren Überschriften; die aktuelle Überschrift wird zur 1. Datenzeile (Strg+Z zum Rückgängigmachen)",
+		"useHeaderTooltip": "Die über der Tabelle eingegebenen Zellen werden zu ihren Überschriften (Strg+Z zum Rückgängigmachen)",
 		"useHeader": "Als Überschriften verwenden",
 		"keepTitleTooltip": "Die Zeile als freie Zellen behalten (ein Titel)",
 		"no": "Nein",
@@ -1026,14 +1025,14 @@
 		"history": "Verlauf",
 		"historyCount": "Verlauf ({n})",
 		"renameAria": "Neuer Tabellenname",
-		"objectTooltipRename": "Doppelklick oder F2: umbenennen; Rechtsklick: Beispiele für SELECT, INSERT, UPDATE, DELETE, auf dem Blatt anzeigen",
-		"objectTooltip": "Rechtsklick: Beispiele für SELECT, INSERT, UPDATE, DELETE, auf dem Blatt anzeigen",
+		"objectTooltipRename": "Doppelklick oder F2: umbenennen; Rechtsklick: SQL-Beispiele",
+		"objectTooltip": "Rechtsklick: SQL-Beispiele",
 		"pivot": "PivotTable",
 		"table": "Tabelle",
 		"rows": "{n, plural, one {# Zeile} other {# Zeilen}}",
 		"insertColumn": "In die Abfrage einfügen",
 		"dataLake": "Lattis Data Lake · {label}",
-		"dataViewTooltip": "{view}: schreibgeschützte Serveransicht, beschränkt auf die Zeilen Ihrer Zielgruppe (Doppelklick: SELECT-Beispiel)",
+		"dataViewTooltip": "{view}: schreibgeschützte Ansicht, auf Ihre Zeilen beschränkt (Doppelklick: SELECT-Beispiel)",
 		"dataView": "Data-Lake-Ansicht (schreibgeschützt)",
 		"rights": "Rechte (Server)",
 		"rightsEditTooltip": "Freigabedialog: Mitglieder, Rollen, Einschränkungen",
@@ -1054,7 +1053,7 @@
 		"rename": "Umbenennen",
 		"remove": "Entfernen",
 		"run": "Ausführen",
-		"noFavorites": "Keine Favoritenabfragen. Mit ☆ in der Editorleiste oder im Verlauf fügen Sie eine hinzu; sie werden in der Arbeitsmappe gespeichert.",
+		"noFavorites": "Keine Favoritenabfragen: Mit ☆ in der Editorleiste oder im Verlauf hinzufügen.",
 		"search": "Suchen",
 		"clear": "Löschen",
 		"error": "Fehler",
@@ -1071,7 +1070,7 @@
 		"hintTooltip": "Anweisungen werden durch „;“ oder eine Leerzeile getrennt. Höchstens 1.000 Zeilen.",
 		"hint": "Strg+Eingabe: Auswahl ausführen, sonst die Anweisung unter dem Cursor · Strg+Leertaste: Namen · Alt+↑↓: Verlauf",
 		"splitAria": "Höhe des Editors",
-		"splitTooltip": "Ziehen, um den Platz zwischen Abfrage und Ergebnis aufzuteilen (Doppelklick: ursprüngliche Größe)",
+		"splitTooltip": "Ziehen, um die Größe zu ändern (Doppelklick: ursprüngliche Größe)",
 		"result": "{n, plural, one {# Zeile} other {# Zeilen}} · {ms} ms",
 		"resultTruncated": "{n, plural, one {# Zeile} other {# Zeilen}} (abgeschnitten) · {ms} ms",
 		"sent": "· SQL ausgeführt",
@@ -1080,9 +1079,9 @@
 		"copied": "Kopiert ✓",
 		"clipboard": "Zwischenablage",
 		"toSheet": "In ein Blatt:",
-		"copyToSheetTooltip": "Kopiert die Werte des Ergebnisses in eine neue Tabelle auf einem neuen Blatt (Strg+Z zum Rückgängigmachen)",
+		"copyToSheetTooltip": "Kopiert das Ergebnis in eine neue Tabelle auf einem neuen Blatt",
 		"copyToSheet": "Kopieren",
-		"linkToSheetTooltip": "Erstellt eine mit der Abfrage verknüpfte Tabelle auf einem neuen Blatt: Farbe der externen Quellen (standardmäßig hellblau), per Rechtsklick aktualisierbar wie eine externe Quelle",
+		"linkToSheetTooltip": "Erstellt auf einem neuen Blatt eine mit der Abfrage verknüpfte, aktualisierbare Tabelle",
 		"linkToSheet": "Verknüpfen"
 	},
 	"update": {

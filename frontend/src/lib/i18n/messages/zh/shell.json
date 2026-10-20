@@ -73,7 +73,7 @@
 		"dialog": {
 			"title": "设置",
 			"sections": "分区",
-			"mcpTooltip": "允许兼容 MCP 的助手（Claude Desktop、Claude Code…）读取和修改打开的工作簿",
+			"mcpTooltip": "允许 MCP 助手读取和修改打开的工作簿",
 			"mcp": "MCP 服务器（助手）…"
 		}
 	},
@@ -277,7 +277,7 @@
 			"fitNote": "留空：该方向上需要多少页就用多少页。",
 			"paper": "纸张大小：",
 			"firstPage": "起始页码：",
-			"marginsNote": "单位为厘米。页眉和页脚按其与边缘的距离打印，位于上下页边距之内。",
+			"marginsNote": "单位为厘米。",
 			"centerOnPage": "居中方式",
 			"horizontally": "水平",
 			"vertically": "垂直",
@@ -373,7 +373,7 @@
 	},
 	"mcp": {
 		"title": "MCP 服务器",
-		"intro": "兼容 MCP 的助手（Claude Desktop、Claude Code…）可以读取和修改打开的工作簿：工作表、表格、单元格、所选内容、SQL、脚本、按钮。它在一系列操作中所做的更改可一步撤消（Ctrl+Z）。服务器只在本计算机上监听，并需要令牌。",
+		"intro": "MCP 助手（Claude Desktop、Claude Code…）可读取和修改打开的工作簿，仅限本计算机。",
 		"enable": "启用 MCP 服务器",
 		"enableRunning": "启用 MCP 服务器（运行中）",
 		"enableStopped": "启用 MCP 服务器（已停止）",
@@ -386,10 +386,10 @@
 		"configs": {
 			"desktop": {
 				"label": "Claude Desktop（及 stdio 客户端）",
-				"hint": "添加到 claude_desktop_config.json：客户端会启动 Lattis，作为通向已打开应用程序的中继。"
+				"hint": "添加到 claude_desktop_config.json。"
 			},
 			"code": {
-				"hint": "在终端中运行的命令（user 范围：Lattis 将出现在你的所有项目中）。"
+				"hint": "在终端中运行的命令。"
 			},
 			"http": {
 				"label": "HTTP 客户端（Streamable HTTP）",
@@ -443,7 +443,7 @@
 			"protected": "工作表保护未导出",
 			"clipped": "{n, plural, other {超出 1,048,576 行 × 16,384 列的 # 个单元格未导出}}"
 		},
-		"printCharts": "{n, plural, other {# 个图表未打印}}：打印工作表时只包含其单元格",
+		"printCharts": "{n, plural, other {# 个图表未打印}}",
 		"dialog": {
 			"aria": "导出详细信息",
 			"title": "{format} 导出：详细信息",
@@ -451,8 +451,8 @@
 			"lost": "未按原样导出：",
 			"all": "已全部导出。",
 			"workbook": "工作簿",
-			"scripts": "{n, plural, other {# 个脚本未导出}}（Excel 和 LibreOffice 无法读取 Lattis 脚本）",
-			"note": "值、单元格格式、表格以及有对应项的公式都已导出。"
+			"scripts": "{n, plural, other {# 个脚本未导出}}",
+			"note": "工作簿的其余部分均已导出。"
 		}
 	},
 	"notice": {
@@ -510,7 +510,7 @@
 		"noWorkbook": "没有打开的工作簿。",
 		"first": {
 			"title": "欢迎使用 Lattis",
-			"intro": "这款电子表格能识别你的表格，按列名计算，并可用 SQL 查询。请选择语言，然后新建或打开一个工作簿。",
+			"intro": "能识别表格、按列名计算并可用 SQL 查询的电子表格。",
 			"language": "界面语言",
 			"languageHint": "随时可在“文件 › 设置”中更改。",
 			"guide": "阅读入门指南"
@@ -556,7 +556,7 @@
 		"name": "名称：",
 		"formula": "公式：",
 		"suggestions": "建议",
-		"hint": "列名写在方括号中：[日期]、[金额]。公式按每一行计算。",
+		"hint": "列名写在方括号中：[日期]、[金额]。",
 		"count": "{n, plural, =0 {值} other {# 个值}}",
 		"follow": "{label}：{list}",
 		"others": " · 没有这些列，因此不跟随：{list}",
@@ -631,9 +631,8 @@
 		"name": "名称",
 		"save": "添加到我的主题（在所有工作簿中提供）",
 		"mine": "我的主题",
-		"removeTooltip": "从我的主题中移除“{name}”（使用它的工作簿保留其颜色）",
+		"removeTooltip": "从我的主题中移除“{name}”（工作簿保留其颜色）",
 		"remove": "移除",
-		"note": "主题随工作簿保存：在其他计算机上显示效果相同。色调（标题、文字、边框）由这两种颜色推导而来；使用主题颜色着色的单元格会随主题一起变化。",
 		"apply": "应用"
 	},
 	"select": {
@@ -729,7 +728,7 @@
 			"sheet": "工作表",
 			"sheetAria": "新工作表名称",
 			"oldSheets": "旧标签",
-			"keepCells": "转入标签中的自由单元格（标题、合计、目标；值不同时每个{category}一个）",
+			"keepCells": "转入标签中的自由单元格",
 			"layout": "在合并后的工作表上（沿用最后一个标签的布局）：",
 			"left": "留在原标签上：{list}",
 			"rewritten": "已改写的公式（{n}）",
@@ -744,7 +743,7 @@
 		"notice": {
 			"none": "未找到相似的标签：请选择这些标签（Ctrl+单击），然后右键单击 › 合并标签…",
 			"noTables": "这些标签中没有可合并的表格（至少需要两个具有相同列的表格）",
-			"dismissed": "将不再建议合并这些标签（此选择保存在工作簿中）"
+			"dismissed": "将不再建议合并这些标签"
 		}
 	},
 	"tabs": {
@@ -784,7 +783,7 @@
 		"menu": {
 			"selected": "已选择 {n} 个工作表",
 			"title": "工作表“{name}”",
-			"mergeTooltip": "将这些标签中（列相同）的表格合并为一个，并添加类别列",
+			"mergeTooltip": "将这些标签中列相同的表格合并为一个",
 			"merge": "合并标签…",
 			"insert": "插入",
 			"sheet": "工作表",
@@ -794,11 +793,11 @@
 			"colorAria": "颜色 {color}",
 			"noColor": "无颜色",
 			"chooseBy": "选择依据",
-			"chooseByTooltip": "标签上的箭头选择显示的值（年、月、城市…）",
+			"chooseByTooltip": "标签上的箭头选择显示的值",
 			"readingColumns": "正在读取列…",
 			"noColumns": "此工作表上没有非重复值较少的表格列",
 			"columnTooltip": "表格 {table} 的“{column}”— {n, plural, other {# 个非重复值}}",
-			"formulaTooltip": "对每行各列的公式给出要选择的值：=YEAR([日期])、=TEXT([日期],\"mmmm\")、=IF([金额]>1000,\"大\",\"小\")",
+			"formulaTooltip": "按每行计算的值，例如 =YEAR([日期])",
 			"formula": "公式…",
 			"stopChoosing": "停止按“{name}”选择",
 			"unprotect": "撤消工作表保护…",
@@ -820,12 +819,12 @@
 		},
 		"byFormula": {
 			"title": "按公式选择",
-			"intro": "标签的箭头将在公式的值中进行选择；工作表中包含这些列的表格只显示所选值对应的行。",
+			"intro": "标签的箭头将在公式的值中进行选择。",
 			"name": "类别名称：",
 			"follow": "跟随标签"
 		},
 		"adding": {
-			"intro": "该值将添加到“{name}”的列表中，标签会显示它：工作表看起来是空的，可以开始填写。Ctrl+Z 可撤消。",
+			"intro": "该值将添加到“{name}”的列表中（Ctrl+Z 可撤消）。",
 			"label": "{name}："
 		},
 		"move": {
@@ -932,13 +931,13 @@
 			"bookOn": "保护工作簿结构"
 		},
 		"explain": {
-			"sheet": "此工作表上将拒绝数据输入、粘贴、格式设置、行和列、排序、对象以及 SQL 写入查询。仍允许读取、复制和筛选。",
-			"structure": "除表格中的数据输入外，所有内容都将被锁定：自由单元格、格式、列和标题、表格、对象、工作表的行和列、页面布局和标签。你仍可以在表格中键入、粘贴（仅值）和清除值，在表格中添加或删除行，以及排序和筛选。",
-			"bookSheets": "将拒绝添加、删除、重命名、移动或隐藏工作表，以及对工作表内容的任何更改。",
-			"bookStructure": "将拒绝添加、删除、重命名、移动或隐藏工作表；在每个工作表上，只允许在表格中输入数据。",
-			"bookTabs": "将拒绝添加、删除、重命名、移动或隐藏工作表。未受保护的工作表的内容仍可更改。"
+			"sheet": "此工作表上将只允许读取、复制和筛选。",
+			"structure": "将只允许在表格中输入数据（值、行、排序、筛选）。",
+			"bookSheets": "工作表及其内容将无法再修改。",
+			"bookStructure": "工作表将无法再更改；只允许在表格中输入数据。",
+			"bookTabs": "将拒绝添加、删除、重命名、移动或隐藏工作表。"
 		},
-		"notSecurity": "此保护用于防止意外更改，并非安全措施：文件未加密，其数据仍可读取，拥有相应工具的人可以移除保护。",
+		"notSecurity": "仅防止误操作，并非安全措施：文件未加密。",
 		"lock": "锁定",
 		"lockTabs": "仅标签",
 		"lockStructure": "所有工作表的标签和结构（仅允许在表格中输入数据）",
@@ -987,10 +986,10 @@
 	},
 	"locked": {
 		"title": "工作簿已打开",
-		"coEditHint": "协同工作时，每个人都可以编辑表格数据，并实时看到他人的更改；格式、列和工作表的更改要等到只剩你一人时才能进行。以只读方式打开时，你的更改将以另一个名称保存。",
+		"coEditHint": "协同工作时只能编辑表格数据。以只读方式打开时，你的更改将以另一个名称保存。",
 		"together": "协同工作",
 		"readOnly": "以只读方式打开",
-		"hint": "以只读方式打开时，你的更改将以另一个名称保存。仍然打开可能会覆盖另一台计算机上的更改（Lattis 在保存前会检查文件）。",
+		"hint": "以只读方式打开时，你的更改将以另一个名称保存。仍然打开可能会覆盖另一台计算机上的更改。",
 		"anyway": "仍然打开"
 	},
 	"conflictFile": {
@@ -1005,7 +1004,7 @@
 		"details": "详细信息",
 		"backTooltip": "返回到跳转前所在的单元格（Alt+←）",
 		"back": "← 返回 {label}",
-		"useHeaderTooltip": "表格上方键入的单元格将成为其标题；当前标题将成为第 1 个数据行（按 Ctrl+Z 撤消）",
+		"useHeaderTooltip": "表格上方键入的单元格将成为其标题（按 Ctrl+Z 撤消）",
 		"useHeader": "用作标题",
 		"keepTitleTooltip": "将该行保留为自由单元格（标题）",
 		"no": "否",
@@ -1026,14 +1025,14 @@
 		"history": "历史记录",
 		"historyCount": "历史记录（{n}）",
 		"renameAria": "新表格名称",
-		"objectTooltipRename": "双击或 F2：重命名；右键单击：SELECT、INSERT、UPDATE、DELETE 示例，在工作表上显示",
-		"objectTooltip": "右键单击：SELECT、INSERT、UPDATE、DELETE 示例，在工作表上显示",
+		"objectTooltipRename": "双击或 F2：重命名；右键单击：SQL 示例",
+		"objectTooltip": "右键单击：SQL 示例",
 		"pivot": "数据透视表",
 		"table": "表格",
 		"rows": "{n, plural, other {# 行}}",
 		"insertColumn": "插入到查询中",
 		"dataLake": "Lattis 数据湖 · {label}",
-		"dataViewTooltip": "{view}：服务器上的只读视图，仅限于你的受众范围内的行（双击：SELECT 示例）",
+		"dataViewTooltip": "{view}：只读视图，仅限你的行（双击：SELECT 示例）",
 		"dataView": "数据湖视图（只读）",
 		"rights": "权限（服务器）",
 		"rightsEditTooltip": "共享界面：成员、角色、限制",
@@ -1054,7 +1053,7 @@
 		"rename": "重命名",
 		"remove": "移除",
 		"run": "运行",
-		"noFavorites": "没有收藏的查询。使用编辑器栏或历史记录中的 ☆ 添加收藏；收藏保存在工作簿中。",
+		"noFavorites": "没有收藏的查询：使用编辑器栏或历史记录中的 ☆ 添加。",
 		"search": "搜索",
 		"clear": "清除",
 		"error": "错误",
@@ -1071,7 +1070,7 @@
 		"hintTooltip": "语句之间用“;”或空行分隔。最多 1,000 行。",
 		"hint": "Ctrl+Enter：运行所选内容，否则运行光标所在的语句 · Ctrl+Space：名称 · Alt+↑↓：历史记录",
 		"splitAria": "编辑器高度",
-		"splitTooltip": "拖动以分配查询和结果之间的空间（双击：原始大小）",
+		"splitTooltip": "拖动以调整大小（双击：原始大小）",
 		"result": "{n, plural, other {# 行}} · {ms} 毫秒",
 		"resultTruncated": "{n, plural, other {# 行}}（已截断）· {ms} 毫秒",
 		"sent": "· SQL 已运行",
@@ -1080,9 +1079,9 @@
 		"copied": "已复制 ✓",
 		"clipboard": "剪贴板",
 		"toSheet": "到工作表：",
-		"copyToSheetTooltip": "将结果的值复制到新工作表上的新表格中（按 Ctrl+Z 撤消）",
+		"copyToSheetTooltip": "将结果复制到新工作表上的新表格中",
 		"copyToSheet": "复制",
-		"linkToSheetTooltip": "在新工作表上创建一个链接到查询的表格：使用外部源颜色（默认浅蓝色），可像外部源一样通过右键单击刷新",
+		"linkToSheetTooltip": "在新工作表上创建链接到查询的可刷新表格",
 		"linkToSheet": "引用"
 	},
 	"update": {

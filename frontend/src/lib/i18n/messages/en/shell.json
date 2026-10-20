@@ -73,7 +73,7 @@
 		"dialog": {
 			"title": "Settings",
 			"sections": "Sections",
-			"mcpTooltip": "Let an MCP-compatible assistant (Claude Desktop, Claude Code…) read and change the open workbook",
+			"mcpTooltip": "Let an MCP assistant read and change the open workbook",
 			"mcp": "MCP server (assistants)…"
 		}
 	},
@@ -277,7 +277,7 @@
 			"fitNote": "An empty box: as many pages as needed in that direction.",
 			"paper": "Paper size:",
 			"firstPage": "First page number:",
-			"marginsNote": "In centimeters. The header and footer print at their distance from the edge, within the top and bottom margins.",
+			"marginsNote": "In centimeters.",
 			"centerOnPage": "Center on page",
 			"horizontally": "Horizontally",
 			"vertically": "Vertically",
@@ -373,7 +373,7 @@
 	},
 	"mcp": {
 		"title": "MCP server",
-		"intro": "An MCP-compatible assistant (Claude Desktop, Claude Code…) can read and change the open workbook: sheets, tables, cells, selection, SQL, scripts, buttons. What it changes during a series of actions is undone in one step (Ctrl+Z). The server only listens on this computer and requires a token.",
+		"intro": "An MCP assistant (Claude Desktop, Claude Code…) reads and changes the open workbook, from this computer only.",
 		"enable": "Turn on the MCP server",
 		"enableRunning": "Turn on the MCP server (running)",
 		"enableStopped": "Turn on the MCP server (stopped)",
@@ -386,10 +386,10 @@
 		"configs": {
 			"desktop": {
 				"label": "Claude Desktop (and stdio clients)",
-				"hint": "Add to claude_desktop_config.json: the client launches Lattis as a relay to the open application."
+				"hint": "Add to claude_desktop_config.json."
 			},
 			"code": {
-				"hint": "Command to run in a terminal (user scope: Lattis is offered in all your projects)."
+				"hint": "Command to run in a terminal."
 			},
 			"http": {
 				"label": "HTTP clients (Streamable HTTP)",
@@ -443,7 +443,7 @@
 			"protected": "Sheet protection not exported",
 			"clipped": "{n, plural, one {# cell beyond 1,048,576 rows × 16,384 columns not exported} other {# cells beyond 1,048,576 rows × 16,384 columns not exported}}"
 		},
-		"printCharts": "{n, plural, one {# chart not printed} other {# charts not printed}}: printing a sheet only includes its cells",
+		"printCharts": "{n, plural, one {# chart not printed} other {# charts not printed}}",
 		"dialog": {
 			"aria": "Export details",
 			"title": "{format} export: details",
@@ -451,8 +451,8 @@
 			"lost": "Not exported as is:",
 			"all": "Everything was exported.",
 			"workbook": "Workbook",
-			"scripts": "{n, plural, one {# script not exported} other {# scripts not exported}} (Excel and LibreOffice do not read Lattis scripts)",
-			"note": "Values, cell formatting, tables and formulas that have an equivalent are exported."
+			"scripts": "{n, plural, one {# script not exported} other {# scripts not exported}}",
+			"note": "The rest of the workbook is exported."
 		}
 	},
 	"notice": {
@@ -510,7 +510,7 @@
 		"noWorkbook": "No workbook open.",
 		"first": {
 			"title": "Welcome to Lattis",
-			"intro": "The spreadsheet that recognizes your tables, calculates by column name and can be queried in SQL. Choose your language, then create or open a workbook.",
+			"intro": "The spreadsheet that recognizes your tables, calculates by column name and can be queried in SQL.",
 			"language": "Interface language",
 			"languageHint": "You can change it at any time in File › Settings.",
 			"guide": "Read the getting started guide"
@@ -556,7 +556,7 @@
 		"name": "Name:",
 		"formula": "Formula:",
 		"suggestions": "Suggestions",
-		"hint": "Columns are written in square brackets: [Date], [Amount]. The formula is calculated for each row.",
+		"hint": "Columns in square brackets: [Date], [Amount].",
 		"count": "{n, plural, =0 {Values} one {# value} other {# values}}",
 		"follow": "{label}: {list}",
 		"others": " · without these columns, they do not follow: {list}",
@@ -631,9 +631,8 @@
 		"name": "Name",
 		"save": "Add to my themes (offered in all workbooks)",
 		"mine": "My themes",
-		"removeTooltip": "Remove “{name}” from my themes (workbooks that use it keep their colors)",
+		"removeTooltip": "Remove “{name}” from my themes (workbooks keep their colors)",
 		"remove": "Remove",
-		"note": "The theme is saved with the workbook: it looks the same on other computers. The shades (header, text, border) are derived from the two colors; cells colored with a theme color change with it.",
 		"apply": "Apply"
 	},
 	"select": {
@@ -729,7 +728,7 @@
 			"sheet": "Sheet",
 			"sheetAria": "Name of the new sheet",
 			"oldSheets": "Old tabs",
-			"keepCells": "Carry over the tabs' free cells (titles, totals, targets; one per {category} when they differ)",
+			"keepCells": "Carry over the tabs' free cells",
 			"layout": "On the combined sheet (layout of the last tab):",
 			"left": "Stay on their tab: {list}",
 			"rewritten": "Formulas rewritten ({n})",
@@ -744,7 +743,7 @@
 		"notice": {
 			"none": "No similar tabs found: select the tabs (Ctrl+click), then right-click › Combine tabs…",
 			"noTables": "These tabs have no tables to combine (at least two are needed, with the same columns)",
-			"dismissed": "These tabs will no longer be offered for combining (choice kept in the workbook)"
+			"dismissed": "These tabs will no longer be offered for combining"
 		}
 	},
 	"tabs": {
@@ -784,7 +783,7 @@
 		"menu": {
 			"selected": "{n} sheets selected",
 			"title": "Sheet “{name}”",
-			"mergeTooltip": "Combine the tables of these tabs (same columns) into one, with a category column",
+			"mergeTooltip": "Combine the tables with the same columns from these tabs into one",
 			"merge": "Combine tabs…",
 			"insert": "Insert",
 			"sheet": "Sheet",
@@ -794,11 +793,11 @@
 			"colorAria": "Color {color}",
 			"noColor": "No color",
 			"chooseBy": "Choose by",
-			"chooseByTooltip": "An arrow on the tab chooses the value shown (year, month, city…)",
+			"chooseByTooltip": "An arrow on the tab chooses the value shown",
 			"readingColumns": "Reading the columns…",
 			"noColumns": "No table column on this sheet has few distinct values",
 			"columnTooltip": "“{column}” in table {table} — {n, plural, one {# distinct value} other {# distinct values}}",
-			"formulaTooltip": "A formula on each row's columns gives the value to choose: =YEAR([Date]), =TEXT([Date],\"mmmm\"), =IF([Amount]>1000,\"Large\",\"Small\")",
+			"formulaTooltip": "Value calculated on each row, for example =YEAR([Date])",
 			"formula": "A formula…",
 			"stopChoosing": "Stop choosing by “{name}”",
 			"unprotect": "Unprotect sheet…",
@@ -820,12 +819,12 @@
 		},
 		"byFormula": {
 			"title": "Choose by a formula",
-			"intro": "The tab's arrow will choose among the formula's values; the sheet's tables that have its columns show only the rows for the chosen value.",
+			"intro": "The tab's arrow will choose among the formula's values.",
 			"name": "Category name:",
 			"follow": "Follow the tab"
 		},
 		"adding": {
-			"intro": "The value is added to the list of “{name}” and the tab shows it: the sheet looks empty, ready to be filled. Ctrl+Z undoes it.",
+			"intro": "The value is added to the list of “{name}” (Ctrl+Z undoes it).",
 			"label": "{name}:"
 		},
 		"move": {
@@ -932,13 +931,13 @@
 			"bookOn": "Protect workbook structure"
 		},
 		"explain": {
-			"sheet": "Data entry, pasting, formatting, rows and columns, sorting, objects and SQL write queries will be refused on this sheet. Reading, copying and filters remain allowed.",
-			"structure": "Everything will be locked except data entry in tables: free cells, formatting, columns and headers, tables, objects, the sheet's rows and columns, page layout and tab. You will still be able to type, paste (values only) and clear values in tables, add or delete rows in them, sort and filter.",
-			"bookSheets": "Adding, deleting, renaming, moving or hiding sheets will be refused, as will any change to the content of the sheets.",
-			"bookStructure": "Adding, deleting, renaming, moving or hiding sheets will be refused; on each sheet, only data entry in tables will remain allowed.",
-			"bookTabs": "Adding, deleting, renaming, moving or hiding sheets will be refused. The content of unprotected sheets can still be changed."
+			"sheet": "Only reading, copying and filters will remain allowed on this sheet.",
+			"structure": "Only data entry in tables will remain allowed (values, rows, sorting, filters).",
+			"bookSheets": "Sheets and their content can no longer be changed.",
+			"bookStructure": "Sheets can no longer change; only data entry in tables will remain allowed.",
+			"bookTabs": "Adding, deleting, renaming, moving or hiding sheets will be refused."
 		},
-		"notSecurity": "This protection prevents accidental changes; it is not security: the file is not encrypted, its data remains readable and the protection can be removed by someone with the right tools.",
+		"notSecurity": "Guards against mistakes, not a security measure: the file is not encrypted.",
 		"lock": "Lock",
 		"lockTabs": "Tabs only",
 		"lockStructure": "Tabs and structure of all sheets (data entry in tables only)",
@@ -987,10 +986,10 @@
 	},
 	"locked": {
 		"title": "Workbook already open",
-		"coEditHint": "When working together, everyone edits the table data and sees the others' changes live; formatting, columns and sheets wait until you are alone. In read-only mode, your changes are saved under another name.",
+		"coEditHint": "When working together, only table data can be edited. In read-only mode, your changes are saved under another name.",
 		"together": "Work together",
 		"readOnly": "Open read-only",
-		"hint": "In read-only mode, your changes are saved under another name. Opening it anyway may overwrite the other computer's changes (Lattis checks the file before saving).",
+		"hint": "In read-only mode, your changes are saved under another name. Opening it anyway may overwrite the other computer's changes.",
 		"anyway": "Open anyway"
 	},
 	"conflictFile": {
@@ -1005,7 +1004,7 @@
 		"details": "Details",
 		"backTooltip": "Go back to the cell you jumped from (Alt+←)",
 		"back": "← Back to {label}",
-		"useHeaderTooltip": "The cells typed above the table become its headers; the current header becomes the 1st data row (Ctrl+Z to undo)",
+		"useHeaderTooltip": "The cells typed above the table become its headers (Ctrl+Z to undo)",
 		"useHeader": "Use as headers",
 		"keepTitleTooltip": "Keep the row as free cells (a title)",
 		"no": "No",
@@ -1026,14 +1025,14 @@
 		"history": "History",
 		"historyCount": "History ({n})",
 		"renameAria": "New table name",
-		"objectTooltipRename": "Double-click or F2: rename; right-click: SELECT, INSERT, UPDATE, DELETE examples, show on the sheet",
-		"objectTooltip": "Right-click: SELECT, INSERT, UPDATE, DELETE examples, show on the sheet",
+		"objectTooltipRename": "Double-click or F2: rename; right-click: SQL examples",
+		"objectTooltip": "Right-click: SQL examples",
 		"pivot": "PivotTable",
 		"table": "Table",
 		"rows": "{n, plural, one {# row} other {# rows}}",
 		"insertColumn": "Insert into the query",
 		"dataLake": "Lattis Data Lake · {label}",
-		"dataViewTooltip": "{view}: read-only server view, limited to the rows of your audience (double-click: SELECT example)",
+		"dataViewTooltip": "{view}: read-only view, limited to your rows (double-click: SELECT example)",
 		"dataView": "Data Lake view (read-only)",
 		"rights": "Rights (server)",
 		"rightsEditTooltip": "Share screen: members, roles, restrictions",
@@ -1054,7 +1053,7 @@
 		"rename": "Rename",
 		"remove": "Remove",
 		"run": "Run",
-		"noFavorites": "No favorite queries. Use ☆ in the editor bar or in the history to add one; they are saved in the workbook.",
+		"noFavorites": "No favorite queries: use ☆ in the editor bar or the history to add one.",
 		"search": "Search",
 		"clear": "Clear",
 		"error": "error",
@@ -1071,7 +1070,7 @@
 		"hintTooltip": "Statements are separated by “;” or a blank line. 1,000 rows at most.",
 		"hint": "Ctrl+Enter: run the selection, otherwise the statement under the cursor · Ctrl+Space: names · Alt+↑↓: history",
 		"splitAria": "Editor height",
-		"splitTooltip": "Drag to share the space between the query and the result (double-click: original size)",
+		"splitTooltip": "Drag to resize (double-click: original size)",
 		"result": "{n, plural, one {# row} other {# rows}} · {ms} ms",
 		"resultTruncated": "{n, plural, one {# row} other {# rows}} (truncated) · {ms} ms",
 		"sent": "· SQL run",
@@ -1080,9 +1079,9 @@
 		"copied": "Copied ✓",
 		"clipboard": "Clipboard",
 		"toSheet": "To a sheet:",
-		"copyToSheetTooltip": "Copies the result's values into a new table, on a new sheet (Ctrl+Z to undo)",
+		"copyToSheetTooltip": "Copies the result into a new table, on a new sheet",
 		"copyToSheet": "Copy",
-		"linkToSheetTooltip": "Creates a table linked to the query, on a new sheet: external source color (light blue by default), refreshable with right-click like an external source",
+		"linkToSheetTooltip": "Creates a refreshable table linked to the query, on a new sheet",
 		"linkToSheet": "Reference"
 	},
 	"update": {
