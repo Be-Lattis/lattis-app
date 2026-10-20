@@ -5,24 +5,35 @@
 // (docs/collaboration/droits.md).
 import type { ACL, Grant, Member, Role, Team, WorkbookMember } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
-import { compareText } from '#lib/i18n/index.js';
+import { compareText, t, tAny } from '#lib/i18n/index.js';
 
 export const LEVELS = ['none', 'reader', 'participant', 'editor'] as const;
 export type Level = (typeof LEVELS)[number];
 
-const LEVEL_LABELS: Record<string, string> = { none: 'Aucun', reader: 'Lecteur', participant: 'Participant', editor: 'Éditeur' };
+const LEVEL_IDS = new Set<string>(LEVELS);
 
 /** Libellé d'un niveau (« Lecteur »…). */
 export function levelLabel(l: string | undefined): string {
-	return l ? (LEVEL_LABELS[l] ?? l) : '';
+	return l ? (LEVEL_IDS.has(l) ? tAny(`remote.rights.level.${l}`) : l) : '';
 }
 
-export const BUILTIN_LABELS: Record<string, string> = {
-	owner: 'Propriétaire',
-	designer: 'Concepteur',
-	editor: 'Éditeur',
-	participant: 'Participant',
-	reader: 'Lecteur'
+/** Noms des rôles fournis (relus dans la langue de l'interface à chaque accès). */
+	export const BUILTIN_LABELS: Record<string, string> = {
+	get owner() {
+	return t('remote.rights.builtin.owner');
+	},
+	get designer() {
+return t('remote.rights.builtin.designer');
+},
+get editor() {
+return t('remote.rights.builtin.editor');
+},
+get participant() {
+return t('remote.rights.builtin.participant');
+},
+get reader() {
+return t('remote.rights.builtin.reader');
+}
 };
 
 /** Rôles fournis qu'une invitation peut donner (lattis.invite). */
@@ -132,7 +143,7 @@ export function isPipeline(email: string | undefined): boolean {
 }
 
 export function memberCount(n: number): string {
-	return `${n} membre${n > 1 ? 's' : ''}`;
+	return t('remote.rights.members', { n });
 }
 
 /** Nombre de propriétaires (on garde au moins un). */
@@ -230,18 +241,14 @@ export function sheetLevel(role: Role, workbookId: string, sheet: SheetNode): No
 
 export type FilterOp = '=' | '<>' | '<' | '<=' | '>' | '>=' | 'contains' | 'starts' | 'empty' | 'filled';
 
-export const FILTER_OPS: { op: FilterOp; label: string }[] = [
-	{ op: '=', label: 'est égal à' },
-	{ op: '<>', label: 'est différent de' },
-	{ op: '<', label: 'est inférieur à' },
-	{ op: '<=', label: 'est inférieur ou égal à' },
-	{ op: '>', label: 'est supérieur à' },
-	{ op: '>=', label: 'est supérieur ou égal à' },
-	{ op: 'contains', label: 'contient' },
-	{ op: 'starts', label: 'commence par' },
-	{ op: 'empty', label: 'est vide' },
-	{ op: 'filled', label: "n'est pas vide" }
-];
+const OP_KEYS: Record<FilterOp, string> = { '=': 'eq', '<>': 'ne', '<': 'lt', '<=': 'le', '>': 'gt', '>=': 'ge', contains: 'contains', starts: 'starts', empty: 'empty', filled: 'filled' };
+	const filterOp = (op: FilterOp) => ({
+	op,
+	get label() {
+	return tAny(`remote.rights.op.${OP_KEYS[op]}`);
+	}
+	});
+	export const FILTER_OPS: { op: FilterOp; readonly label: string }[] = (['=', '<>', '<', '<=', '>', '>=', 'contains', 'starts', 'empty', 'filled'] as FilterOp[]).map(filterOp);
 
 /** Opérateurs utiles pour une colonne de ce type (contient, commence par : texte ; comparaisons : nombres et dates). */
 export function opsFor(type: string | undefined): FilterOp[] {
@@ -252,41 +259,36 @@ export function opsFor(type: string | undefined): FilterOp[] {
 }
 
 /** Valeurs spéciales en clair (en SQL : current_user, lattis.my_teams()). */
-export const ME_LABEL = 'la personne connectée';
-export const TEAM_LABEL = 'une de ses équipes';
-
-const SHORT_OPS: Record<FilterOp, string> = {
-	'=': '=',
-	'<>': '≠',
-	'<': '<',
-	'<=': '≤',
-	'>': '>',
-	'>=': '≥',
-	contains: 'contient',
-	starts: 'commence par',
-	empty: 'est vide',
-	filled: "n'est pas vide"
-};
+export function meLabel(): string {
+return t('remote.rights.me');
+}
+export function teamLabel(): string {
+	return t('remote.rights.team');
+	}
+	
+	const SYMBOLS: Partial<Record<FilterOp, string>> = { '=': '=', '<>': '≠', '<': '<', '<=': '≤', '>': '>', '>=': '≥' };
+	/** Opérateur court d'une règle en clair (symbole, sinon mots). */
+	const shortOp = (op: FilterOp) => SYMBOLS[op] ?? tAny(`remote.rights.op.${OP_KEYS[op]}`);
 
 /**
  * Règle d'un filtre en clair : « Visible si Région = « Nord » et Commercial
  * = la personne connectée » ; prefix et none : autre tournure (« Modifie
  * les lignes où », filtre d'écriture ou règle avancée).
  */
-export function filterSentence(cs: readonly Condition[], prefix = 'Visible si', none = 'Toutes les lignes sont visibles'): string {
-	if (!cs.length) return none;
-	return `${prefix} ${conditionsText(cs)}`;
+export function filterSentence(cs: readonly Condition[], prefix?: string, none?: string): string {
+	if (!cs.length) return none ?? t('remote.rights.sentence.none');
+	return `${prefix ?? t('remote.rights.sentence.prefix')} ${conditionsText(cs)}`;
 }
 
 /** Conditions en clair, sans préfixe : « Région = « Nord » et Commercial = la personne connectée ». */
 export function conditionsText(cs: readonly Condition[]): string {
 	const one = (c: Condition) => {
-		if (c.op === 'empty' || c.op === 'filled') return `${c.column} ${SHORT_OPS[c.op]}`;
-		if (c.value.kind === 'team') return `${c.column} ${c.op === '<>' ? "n'est pas" : 'est'} ${TEAM_LABEL}`;
-		const v = c.value.kind === 'me' ? ME_LABEL : c.value.value.trim() ? `« ${c.value.value.trim()} »` : '…';
-		return `${c.column} ${SHORT_OPS[c.op]} ${v}`;
+		if (c.op === 'empty' || c.op === 'filled') return `${c.column} ${shortOp(c.op)}`;
+		if (c.value.kind === 'team') return c.op === '<>' ? t('remote.rights.sentence.notTeam', { column: c.column, team: teamLabel() }) : t('remote.rights.sentence.team', { column: c.column, team: teamLabel() });
+		const v = c.value.kind === 'me' ? meLabel() : c.value.value.trim() ? `« ${c.value.value.trim()} »` : '…';
+		return `${c.column} ${shortOp(c.op)} ${v}`;
 	};
-	return cs.map(one).join(' et ');
+	return cs.map(one).join(t('remote.rights.sentence.and'));
 }
 
 /**
@@ -297,11 +299,11 @@ export function conditionsText(cs: readonly Condition[]): string {
 export function filterPrompt(subject: string, columns: readonly { name: string; type: string }[], teams = false): string {
 	const cols = columns.map((c) => `${quoteIdent(c.name)} (${c.type})`).join(', ');
 	return [
-		`Écris un filtre de lignes Lattis pour ${subject}.`,
-		`C'est une expression SQL booléenne (PostgreSQL) sur ces colonnes : ${cols || '(aucune colonne)'}.`,
-		`La personne qui lit s'écrit current_user (son adresse)${teams ? ` ; ses équipes : ${MY_TEAMS}` : ''}.`,
-		"Pas de point-virgule ni de commentaire. Réponds par l'expression seule, à coller dans « SQL libre », puis une phrase qui dit ce qu'elle fait.",
-		'Ma règle : '
+		t('remote.rights.prompt.write', { subject }),
+		t('remote.rights.prompt.columns', { columns: cols || t('remote.rights.prompt.noColumn') }),
+		teams ? t('remote.rights.prompt.readerTeams', { teams: MY_TEAMS }) : t('remote.rights.prompt.reader'),
+		t('remote.rights.prompt.answer'),
+		t('remote.rights.prompt.rule')
 	].join('\n');
 }
 
@@ -331,19 +333,19 @@ export function literal(value: string, type: string): string {
 		case 'integer':
 		case 'decimal': {
 			const n = v.replace(/\s/g, '').replace(',', '.');
-			if (!/^-?\d+(\.\d+)?$/.test(n) || (type === 'integer' && n.includes('.'))) throw new Error(`« ${value} » n'est pas un nombre${type === 'integer' ? ' entier' : ''}`);
+			if (!/^-?\d+(\.\d+)?$/.test(n) || (type === 'integer' && n.includes('.'))) throw new Error(type === 'integer' ? t('remote.rights.literal.notInteger', { value }) : t('remote.rights.literal.notNumber', { value }));
 			return n;
 		}
 		case 'boolean': {
 			const b = v.toLowerCase();
 			if (['vrai', 'true', 'oui', '1'].includes(b)) return 'true';
 			if (['faux', 'false', 'non', '0'].includes(b)) return 'false';
-			throw new Error(`« ${value} » n'est pas vrai ou faux`);
+			throw new Error(t('remote.rights.literal.notBoolean', { value }));
 		}
 		case 'date': {
 			const fr = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(v);
 			const iso = fr ? `${fr[3]}-${fr[2].padStart(2, '0')}-${fr[1].padStart(2, '0')}` : v;
-			if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error(`« ${value} » n'est pas une date (jj/mm/aaaa)`);
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error(t('remote.rights.literal.notDate', { value }));
 			return quoteText(iso);
 		}
 	}
@@ -359,20 +361,20 @@ export const MY_TEAMS = '(SELECT lattis.my_teams())';
  */
 export function conditionSQL(c: Condition, types: Record<string, string>, teams = false): string {
 	const type = types[c.column];
-	if (type === undefined) throw new Error(`colonne inconnue : ${c.column}`);
+	if (type === undefined) throw new Error(t('remote.rights.condition.unknownColumn', { column: c.column }));
 	const col = quoteIdent(c.column);
 	if (c.op === 'empty') return type === 'text' ? `coalesce(${col}, '') = ''` : `${col} IS NULL`;
 	if (c.op === 'filled') return type === 'text' ? `coalesce(${col}, '') <> ''` : `${col} IS NOT NULL`;
 	if (c.value.kind === 'team') {
-		if (!teams) throw new Error("« mon équipe » : ce serveur ne connaît pas les équipes (mise à jour de lattisd nécessaire)");
-		if (type !== 'text') throw new Error("« mon équipe » se compare à une colonne de texte (nom de l'équipe)");
-		if (c.op !== '=' && c.op !== '<>') throw new Error('« mon équipe » : égal ou différent seulement');
+		if (!teams) throw new Error(t('remote.rights.condition.teamUnsupported'));
+		if (type !== 'text') throw new Error(t('remote.rights.condition.teamText'));
+		if (c.op !== '=' && c.op !== '<>') throw new Error(t('remote.rights.condition.teamOp'));
 		return `${col} ${c.op === '=' ? 'IN' : 'NOT IN'} ${MY_TEAMS}`;
 	}
 	let val: string;
 	if (c.value.kind === 'me') {
-		if (type !== 'text') throw new Error('« moi » se compare à une colonne de texte (adresse de la personne)');
-		if (c.op !== '=' && c.op !== '<>') throw new Error('« moi » : égal ou différent seulement');
+		if (type !== 'text') throw new Error(t('remote.rights.condition.meText'));
+		if (c.op !== '=' && c.op !== '<>') throw new Error(t('remote.rights.condition.meOp'));
 		val = 'current_user';
 	} else val = c.op === 'contains' || c.op === 'starts' ? quoteText(c.value.value) : literal(c.value.value, type);
 	if (c.op === 'contains') return `strpos(${col}, ${val}) > 0`;
@@ -484,24 +486,24 @@ export function checkFreeFilter(sql: string): string {
 			continue;
 		}
 		if (c === "'" || c === '"') quote = c;
-		else if (c === ';' || c === '$' || c === '\\' || sql.startsWith('--', i) || sql.startsWith('/*', i)) return `« ${c} » n'est pas permis hors d'une chaîne`;
+		else if (c === ';' || c === '$' || c === '\\' || sql.startsWith('--', i) || sql.startsWith('/*', i)) return t('remote.rights.free.forbidden', { char: c });
 		else if (c === '(') depth++;
-		else if (c === ')' && --depth < 0) return 'parenthèses déséquilibrées';
+		else if (c === ')' && --depth < 0) return t('remote.rights.free.parens');
 	}
-	if (quote) return 'chaîne ou nom non fermé';
-	if (depth) return 'parenthèses déséquilibrées';
+	if (quote) return t('remote.rights.free.unclosed');
+	if (depth) return t('remote.rights.free.parens');
 	return '';
 }
 
 // --- Restrictions ------------------------------------------------------------------
 
-export const COMMANDS: { cmd: string; label: string }[] = [
-	{ cmd: 'all', label: 'Tout' },
-	{ cmd: 'select', label: 'Lire' },
-	{ cmd: 'insert', label: 'Ajouter' },
-	{ cmd: 'update', label: 'Modifier' },
-	{ cmd: 'delete', label: 'Supprimer' }
-];
+const command = (cmd: string) => ({
+	cmd,
+	get label() {
+	return tAny(`remote.rights.command.${cmd}`);
+	}
+	});
+export const COMMANDS: { cmd: string; readonly label: string }[] = ['all', 'select', 'insert', 'update', 'delete'].map(command);
 
 export function commandLabel(cmd: string): string {
 	return COMMANDS.find((c) => c.cmd === cmd)?.label ?? cmd;
@@ -525,11 +527,11 @@ function policyLine(table: string, level: string, read?: string, write?: string)
 		case 'reader':
 			return `${table} : SELECT USING (${r})`;
 		case 'participant':
-			return `${table} : SELECT USING (${r}) ; INSERT, UPDATE, DELETE de ses lignes (lattis_author = current_user)${write ? ` WITH CHECK (${w})` : ''}`;
+			return `${table} : SELECT USING (${r}) ; INSERT, UPDATE, DELETE ${t('remote.rights.sql.ownRows')} (lattis_author = current_user)${write ? ` WITH CHECK (${w})` : ''}`;
 		case 'editor':
 			return `${table} : ALL USING (${r}) WITH CHECK (${w})`;
 	}
-	return `${table} : aucun droit`;
+	return `${table} : ${t('remote.rights.sql.noRight')}`;
 }
 
 /**
@@ -543,33 +545,33 @@ export function rightsObjects(v: RightsView | null | undefined): RightsObject[] 
 	const tables = v.tables ?? [];
 	const acl = v.acl;
 	if (!acl) {
-		const mine: string[] = tables.map((t) => {
-			const extra = [t.filtered ? 'vue filtrée' : '', ...(t.restrictions ?? []).map((r) => `restriction « ${r.label || commandLabel(r.command)} »`)].filter(Boolean);
-			return `${t.name} : ${levelLabel(t.level)}${extra.length ? ` (${extra.join(', ')})` : ''}`;
+		const mine: string[] = tables.map((tb) => {
+			const extra = [tb.filtered ? t('remote.rights.sql.filtered') : '', ...(tb.restrictions ?? []).map((r) => t('remote.rights.sql.restriction', { label: r.label || commandLabel(r.command) }))].filter(Boolean);
+			return `${tb.name} : ${levelLabel(tb.level)}${extra.length ? ` (${extra.join(', ')})` : ''}`;
 		});
 		const roles = [...(v.roles ?? []).map((r) => BUILTIN_LABELS[r] ?? r), ...(v.customRoles ?? [])];
-		return [{ name: 'Vos droits', kind: roles.join(', ') || 'aucun rôle', lines: mine }];
+		return [{ name: t('remote.rights.sql.yours'), kind: roles.join(', ') || t('remote.rights.sql.noRole'), lines: mine }];
 	}
-	const names = new Map(tables.map((t) => [t.remoteId, t.name]));
-	const nameOf = (id: string) => quoteIdent(names.get(id) ?? acl.tables?.find((t) => t.table_id === id)?.name ?? id);
+	const names = new Map(tables.map((tb) => [tb.remoteId, tb.name]));
+	const nameOf = (id: string) => quoteIdent(names.get(id) ?? acl.tables?.find((tb) => tb.table_id === id)?.name ?? id);
 	const out: RightsObject[] = [];
 	for (const r of acl.roles ?? []) {
 		const lines = fullRights(r)
-			? ['Tous les droits (structure, mise en page, scripts' + (r.builtin === 'owner' ? ', droits' : '') + ')']
-			: (acl.tables ?? []).map((t) => {
-					const l = tableLevel(r, acl.workbook.id, t.table_id, t.sheet_id || undefined);
-					return policyLine(nameOf(t.table_id), l.effective, l.read, l.write);
+			? [r.builtin === 'owner' ? t('remote.rights.sql.allRightsOwner') : t('remote.rights.sql.allRights')]
+			: (acl.tables ?? []).map((tb) => {
+					const l = tableLevel(r, acl.workbook.id, tb.table_id, tb.sheet_id || undefined);
+					return policyLine(nameOf(tb.table_id), l.effective, l.read, l.write);
 				});
-		const teams = (r.teams ?? []).map((t) => t.name);
+		const teams = (r.teams ?? []).map((tm) => tm.name);
 		out.push({
 			name: roleLabel(r),
-			kind: `${r.builtin ? 'rôle fourni' : 'rôle personnalisé'} · ${memberCount(r.members?.length ?? 0)}${teams.length ? ` · équipe${teams.length > 1 ? 's' : ''} ${teams.join(', ')}` : ''}`,
+			kind: `${r.builtin ? t('remote.rights.sql.builtinRole') : t('remote.rights.sql.customRole')} · ${memberCount(r.members?.length ?? 0)}${teams.length ? ` · ${t('remote.rights.sql.teams', { n: teams.length, names: teams.join(', ') })}` : ''}`,
 			lines
 		});
 	}
 	for (const x of acl.restrictions ?? []) {
-		const who = (x.applies_to ?? []).length ? (x.applies_to ?? []).map((id) => roleLabel(acl.roles?.find((r) => r.id === id) ?? { name: id, builtin: '' })).join(', ') : 'tous les rôles';
-		out.push({ name: x.label || 'Restriction', kind: 'restriction', lines: [`${nameOf(x.table_id)} : AS RESTRICTIVE FOR ${x.command.toUpperCase()} TO ${who} USING (${x.predicate})`] });
+		const who = (x.applies_to ?? []).length ? (x.applies_to ?? []).map((id) => roleLabel(acl.roles?.find((r) => r.id === id) ?? { name: id, builtin: '' })).join(', ') : t('remote.rights.sql.allRoles');
+		out.push({ name: x.label || t('remote.rights.sql.restrictionName'), kind: t('remote.rights.sql.restrictionKind'), lines: [`${nameOf(x.table_id)} : AS RESTRICTIVE FOR ${x.command.toUpperCase()} TO ${who} USING (${x.predicate})`] });
 	}
 	return out;
 }

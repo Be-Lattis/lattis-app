@@ -1,7 +1,7 @@
 // Partager au Data Lake Lattis : choix entre publier le classeur (avec ses
 // droits) et publier le tableau seul comme source poussée liée au classeur
 // (pipeline « push » alimenté par le poste, internal/bridge/table_source.go).
-import { fmtDateTime, fmtTime } from '#lib/i18n/index.js';
+import { fmtDateTime, fmtTime, t, tAny } from '#lib/i18n/index.js';
 
 /** Valeur refusée par le pipeline (workbook.PushReject). */
 export interface PushReject {
@@ -26,12 +26,17 @@ export interface PushResult {
 /** Mode d'écriture d'une source poussée (fixé à sa création). */
 export type PushMode = 'replace' | 'append' | 'upsert';
 
-/** Modes proposés, avec leur explication. */
-export const PUSH_MODES: { mode: PushMode; label: string; detail: string }[] = [
-	{ mode: 'replace', label: 'Remplacer tout', detail: 'La donnée devient le tableau envoyé.' },
-	{ mode: 'append', label: 'Ajouter à la suite', detail: 'Les lignes s’ajoutent à celles déjà reçues (journal, relevés).' },
-	{ mode: 'upsert', label: 'Mettre à jour par clé', detail: 'Même clé : ligne modifiée ; sinon ajoutée. Rien n’est supprimé.' }
-];
+/** Modes proposés, avec leur explication (textes relus dans la langue de l'interface). */
+const pushMode = (mode: PushMode) => ({
+	mode,
+	get label() {
+	return tAny(`remote.source.mode.${mode}.label`);
+},
+get detail() {
+return tAny(`remote.source.mode.${mode}.detail`);
+}
+});
+export const PUSH_MODES: { mode: PushMode; readonly label: string; readonly detail: string }[] = [pushMode('replace'), pushMode('append'), pushMode('upsert')];
 
 /** Lien d'un tableau avec sa source (bridge.TableSourceLink). */
 export interface SourceLink {
@@ -76,16 +81,16 @@ export function shareWays(choice: string, reason: string): WayChoice[] {
 	return [
 		{
 			way: 'workbook',
-			title: republish ? 'Republier le classeur avec ce tableau' : 'Publier le classeur avec gestion des droits',
+			title: republish ? t('remote.source.way.republish.title') : t('remote.source.way.publish.title'),
 			detail: republish
-				? 'Le classeur est republié avec ce tableau ; ses rôles et filtres s’appliquent.'
-				: 'Tout le classeur va sur le serveur, avec rôles et filtres ; le tableau se partage ensuite.',
+				? t('remote.source.way.republish.detail')
+				: t('remote.source.way.publish.detail'),
 			disabled: reason
 		},
 		{
 			way: 'table',
-			title: 'Publier uniquement ce tableau',
-			detail: 'Seules les colonnes choisies sont envoyées ; le classeur reste sur votre poste, sans être mis à disposition.',
+			title: t('remote.source.way.table.title'),
+			detail: t('remote.source.way.table.detail'),
 			disabled: ''
 		}
 	];
@@ -116,69 +121,65 @@ export function chooser(choice: string, reason: string): Chooser {
 		// publier seul au Data Lake.
 		const table = ways.find((w) => w.way === 'table') as WayChoice;
 		return {
-			title: 'Ce tableau n’est que sur votre poste',
-			lead: 'Le classeur est partagé en direct, mais ce tableau n’en fait pas partie.',
+			title: t('remote.source.chooser.localTitle'),
+			lead: t('remote.source.chooser.notInCollab'),
 			ways: [
 				{
 					way: 'shared',
-					title: 'Ajouter ce tableau au classeur partagé',
-					detail: 'Recommandé. Il est créé sur le serveur avec ses lignes ; les membres le reçoivent et le modifient selon leurs droits. Il se partage ensuite au Data Lake depuis ce même menu.',
+					title: t('remote.source.way.shared.title'),
+					detail: t('remote.source.way.shared.detail'),
 					disabled: reason
 				},
-				{ ...table, title: 'Publier ce tableau seul au Data Lake' }
+				{ ...table, title: t('remote.source.way.tableAlone') }
 			],
 			why: ''
 		};
 	}
-	if (!reason) return { title: 'Comment partager ce tableau ?', lead: 'Ce tableau n’est pas dans un classeur publié.', ways, why: '' };
+	if (!reason) return { title: t('remote.source.chooser.howTitle'), lead: t('remote.source.chooser.notPublished'), ways, why: '' };
 	const table = ways.find((w) => w.way === 'table') as WayChoice;
 	return {
-		title: 'Ce tableau n’est que sur votre poste',
-		lead: choice === 'table' ? 'Le classeur est partagé en direct, mais ce tableau n’en fait pas partie.' : reason,
-		ways: [{ ...table, title: 'Publier ce tableau seul au Data Lake' }],
+		title: t('remote.source.chooser.localTitle'),
+		lead: choice === 'table' ? t('remote.source.chooser.notInCollab') : reason,
+		ways: [{ ...table, title: t('remote.source.way.tableAlone') }],
 		why:
 			choice === 'table'
-				? 'Un classeur partagé en direct ne se republie pas : la liste de ses tableaux est fixée à sa publication, et un tableau créé ensuite reste sur votre poste.'
+				? t('remote.source.chooser.whyCollab')
 				: reason
 	};
 }
 
-const plural = (n: number) =>(n > 1 ? 's' : '');
 
 /** Message de la barre d'état après un envoi (comme bridge.PushSummary). */
 export function pushSummary(table: string, r: PushResult | null | undefined, blanked = 0): string {
-	if (!r) return `Source « ${table} » mise à jour`;
+	if (!r) return t('remote.source.push.done', { table });
 	const n = r.rows_read ?? 0;
-	let msg = `Source « ${table} » mise à jour : ${n} ligne${plural(n)} lue${plural(n)}`;
+	let msg = t('remote.source.push.read', { table, n });
 	const parts: string[] = [];
-	if (r.inserted) parts.push(`${r.inserted} ajoutée${plural(r.inserted)}`);
-	if (r.updated) parts.push(`${r.updated} modifiée${plural(r.updated)}`);
-	if (r.deleted) parts.push(`${r.deleted} supprimée${plural(r.deleted)}`);
-	if (r.rejected) parts.push(`${r.rejected} refusée${plural(r.rejected)}`);
-	msg += parts.length ? ` (${parts.join(', ')})` : ", rien n'a changé";
+	if (r.inserted) parts.push(t('remote.source.push.inserted', { n: r.inserted }));
+	if (r.updated) parts.push(t('remote.source.push.updated', { n: r.updated }));
+	if (r.deleted) parts.push(t('remote.source.push.deleted', { n: r.deleted }));
+	if (r.rejected) parts.push(t('remote.source.push.rejected', { n: r.rejected }));
+	msg += parts.length ? ` (${parts.join(', ')})` : t('remote.source.push.unchanged');
 	const x = r.rejects?.[0];
-	if (x) msg += ` ; ligne ${x.row}, ${x.column} « ${x.value} » : ${x.error}`;
-	if (blanked) {
-		const s = plural(blanked);
-		msg += ` ; ${blanked} valeur${s} envoyée${s} vide${s} (erreur ou saisie hors type)`;
-	}
+	if (x) msg += t('remote.source.push.reject', { row: String(x.row), column: x.column, value: x.value, error: x.error });
+	if (blanked) msg += t('remote.source.push.blanked', { n: blanked });
 	return msg;
 }
 
 /** État d'une source en une ligne : dernier envoi, ou son échec. */
 export function sourceStatus(l: Pick<SourceLink, 'lastPush' | 'lastResult' | 'lastError' | 'tableName' | 'suspended'>, now = new Date()): string {
-	if (!l.tableName) return 'Tableau supprimé du classeur : la source ne reçoit plus rien';
-	if (l.suspended) return 'Source suspendue : plus aucun envoi';
-	if (l.lastError) return `Dernière mise à jour en échec : ${l.lastError}`;
-	if (!l.lastPush) return 'Jamais mise à jour';
+	if (!l.tableName) return t('remote.source.status.tableGone');
+	if (l.suspended) return t('remote.source.status.suspended');
+	if (l.lastError) return t('remote.source.status.failed', { error: l.lastError });
+	if (!l.lastPush) return t('remote.source.status.never');
 	const at = new Date(l.lastPush);
 	const sameDay = at.toDateString() === now.toDateString();
 	const when = sameDay
-		? `aujourd’hui à ${fmtTime(at, { hour: '2-digit', minute: '2-digit' })}`
-		: `le ${fmtDateTime(at, { dateStyle: 'short', timeStyle: 'short' })}`;
+		? t('remote.source.status.today', { time: fmtTime(at, { hour: '2-digit', minute: '2-digit' }) })
+		: t('remote.source.status.on', { date: fmtDateTime(at, { dateStyle: 'short', timeStyle: 'short' }) });
 	const n = l.lastResult?.rows_read ?? 0;
 	const rej = l.lastResult?.rejected ?? 0;
-	return `Mise à jour ${when} · ${n} ligne${plural(n)}${rej ? ` · ${rej} refusée${plural(rej)}` : ''}`;
+	return t('remote.source.status.updated', { when, n }) + (rej ? ` · ${t('remote.source.push.rejected', { n: rej })}` : '');
 }
 
 /** Nom SQL proposé pour un nom (minuscules sans accents, chiffres, _). */
@@ -198,7 +199,7 @@ export function pushedOrigin(d: { source?: { kind?: string; title?: string; orig
 	const s = d.source;
 	if (s?.kind !== 'source') return null;
 	const o = s.origin;
-	if (!o?.workbook) return s.title || 'classeur local';
+	if (!o?.workbook) return s.title || t('remote.source.localWorkbook');
 	return o.table ? `${o.workbook} › ${o.table}` : o.workbook;
 }
 
@@ -219,13 +220,13 @@ export interface PushedSource {
 export function pushedLine(p: PushedSource): string {
 	const mode = PUSH_MODES.find((m) => m.mode === p.mode)?.label ?? p.mode;
 	const parts = [`${p.origin?.workbook || '?'} › ${p.origin?.table || '?'}`, mode + (p.mode === 'upsert' && p.key_columns?.length ? ` (${p.key_columns.join(', ')})` : '')];
-	if (!p.enabled) parts.push('suspendue');
-	else if (p.pending) parts.push('envoi en attente');
+	if (!p.enabled) parts.push(t('remote.source.suspended'));
+	else if (p.pending) parts.push(t('remote.source.pending'));
 	const r = p.last_run;
 	if (r?.finished_at) {
 		const when = fmtDateTime(new Date(r.finished_at), { dateStyle: 'short', timeStyle: 'short' });
-		parts.push(r.status === 'error' ? `échec le ${when}` : `mise à jour le ${when}`);
-	} else if (!r) parts.push('jamais mise à jour');
+		parts.push(r.status === 'error' ? t('remote.source.failedOn', { date: when }) : t('remote.source.updatedOn', { date: when }));
+	} else if (!r) parts.push(t('remote.source.never'));
 	return parts.join(' · ');
 }
 
@@ -238,9 +239,9 @@ export function keptKeys(keys: readonly string[], sent: ReadonlySet<string>): st
 export function sqlNameProblem(s: string): string {
 	const v = s.trim();
 	if (!v) return '';
-	if (v.length > 63) return '63 caractères au plus';
-	if (!/^[a-z]/.test(v)) return 'Commence par une lettre minuscule';
-	if (!/^[a-z0-9_]+$/.test(v)) return 'Minuscules sans accent, chiffres et _ seulement';
+	if (v.length > 63) return t('remote.source.sqlName.length');
+	if (!/^[a-z]/.test(v)) return t('remote.source.sqlName.start');
+	if (!/^[a-z0-9_]+$/.test(v)) return t('remote.source.sqlName.chars');
 	return '';
 }
 
@@ -263,13 +264,13 @@ export type ShareProblems = Partial<Record<'server' | 'name' | 'sql' | 'columns'
 /** Ce qui empêche d'envoyer le formulaire, champ par champ (messages affichés sous le champ). */
 export function shareProblems(f: ShareForm): ShareProblems {
 	const p: ShareProblems = {};
-	if (!f.server) p.server = 'Connectez-vous à un Serveur Lattis';
-	if (!f.name.trim()) p.name = 'Donnez un nom à la donnée';
+	if (!f.server) p.server = t('remote.source.problem.server');
+	if (!f.name.trim()) p.name = t('remote.source.problem.name');
 	const sql = f.sqlName === null ? '' : sqlNameProblem(f.sqlName);
 	if (sql) p.sql = sql;
-	if (f.columns === 0) p.columns = 'Cochez au moins une colonne';
-	if (f.mode === 'upsert' && !f.key) p.key = 'Choisissez la colonne qui identifie une ligne';
-	if (f.badFilter) p.audience = 'Un filtre de lignes est à corriger';
+	if (f.columns === 0) p.columns = t('remote.source.problem.columns');
+	if (f.mode === 'upsert' && !f.key) p.key = t('remote.source.problem.key');
+	if (f.badFilter) p.audience = t('remote.source.problem.filter');
 	return p;
 }
 
@@ -281,7 +282,7 @@ export function advancedSummary(o: { sqlName: string; mode?: PushMode; key?: str
 		const m = PUSH_MODES.find((x) => x.mode === o.mode)?.label ?? o.mode;
 		parts.push(o.mode === 'upsert' && o.key ? `${m} (${o.key})` : m);
 	}
-	if (o.suspended) parts.push('suspendue');
-	else if (o.onSave !== undefined) parts.push(o.onSave ? 'à chaque enregistrement' : 'à la demande');
+	if (o.suspended) parts.push(t('remote.source.suspended'));
+	else if (o.onSave !== undefined) parts.push(o.onSave ? t('remote.source.onSave') : t('remote.source.onDemand'));
 	return parts.join(' · ');
 }

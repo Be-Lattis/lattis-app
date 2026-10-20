@@ -42,6 +42,7 @@
 		type ServerForm
 	} from './forms';
 	import './shareForm.css';
+	import { errorText, lower, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		table: string;
@@ -56,7 +57,7 @@
 	let { table, ondone, onpublish, onaddshared, onnotice }: Props = $props();
 
 	const HELP = 'fichiers#partager-un-tableau-comme-formulaire';
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 
 	let info = $state<FormInfo | null>(null);
 	let error = $state('');
@@ -86,7 +87,9 @@
 	const names = $derived(columnNames(cols));
 	const colOf = (id?: string): FormColumn | undefined => cols.find((c) => c.columnId === id);
 	const manageable = $derived((info?.forms ?? []).filter((f) => f.manageable));
-	const hasReceived = $derived(cols.some((c) => /^reçu le$/i.test(c.name.trim())));
+	/** Colonne « Reçu le » (nom par défaut dans la langue de l'interface). */
+	const isReceived = (name: string) => lower(name.trim()) === lower(t('remote.formDialog.receivedColumn'));
+	const hasReceived = $derived(cols.some((c) => isReceived(c.name)));
 
 	onMount(load);
 
@@ -137,7 +140,7 @@
 	async function copyLink(u: string) {
 		try {
 			await navigator.clipboard.writeText(u);
-			onnotice?.('Lien du formulaire copié');
+			onnotice?.(t('remote.formQR.copied'));
 		} catch (e) {
 			error = err(e);
 		}
@@ -165,7 +168,7 @@
 			audience = [...audience.filter((a) => !removed.includes(a.principal)), ...adds.filter((a) => !refused.some((r) => r.startsWith(a.email || a.team))).map((a) => ({ principal: a.team || a.email, kind: a.team ? 'team' : 'user', name: a.name || a.email }))];
 			adds = [];
 			removed = [];
-			if (refused.length) error = `Formulaire enregistré, mais une partie de l’audience est refusée : ${refused.join(' ; ')}`;
+			if (refused.length) error = t('remote.formDialog.refused', { list: refused.join(' ; ') });
 			return true;
 		} catch (e) {
 			error = err(e);
@@ -176,7 +179,7 @@
 	}
 
 	async function saveDraft() {
-		if (await save()) onnotice?.(`Brouillon du formulaire « ${draft?.appearance.title} » enregistré`);
+		if (await save()) onnotice?.(t('remote.formDialog.draftSaved', { title: draft?.appearance.title ?? '' }));
 	}
 
 	async function openForm() {
@@ -187,7 +190,7 @@
 			await DocumentService.FormSetState(info.server, form.id, 'open', names);
 			form.state = 'open';
 			step = 'done';
-			onnotice?.(`Formulaire « ${draft?.appearance.title} » ouvert`);
+			onnotice?.(t('remote.formDialog.opened', { title: draft?.appearance.title ?? '' }));
 		} catch (e) {
 			error = err(e);
 		} finally {
@@ -256,13 +259,13 @@
 
 	// --- Valeurs posées par le serveur ------------------------------------
 
-	const SERVER_TOKENS = [
-		{ value: 'received_at', label: 'Reçu le (date et heure)' },
-		{ value: 'respondent', label: 'Répondant (adresse)' },
-		{ value: 'form_title', label: 'Formulaire (son titre)' },
-		{ value: 'next_number', label: 'Numéro suivant' },
-		{ value: 'fixed', label: 'Valeur fixe' }
-	];
+	const SERVER_TOKENS = $derived([
+		{ value: 'received_at', label: t('remote.formDialog.token.receivedAt') },
+		{ value: 'respondent', label: t('remote.formDialog.token.respondent') },
+		{ value: 'form_title', label: t('remote.formDialog.token.formTitle') },
+		{ value: 'next_number', label: t('remote.formDialog.token.nextNumber') },
+		{ value: 'fixed', label: t('remote.formDialog.token.fixed') }
+	]);
 	/** Colonnes libres pour une valeur posée par le serveur (ni champ coché, ni déjà posée). */
 	const freeColumns = $derived(
 		draft ? cols.filter((c) => !draft!.fields.some((f) => f.include && fieldColumns(f).includes(c.columnId)) && !draft!.serverValues.some((v) => v.column === c.columnId) && c.columnId !== draft!.choice?.column) : []
@@ -278,10 +281,11 @@
 		busy = true;
 		error = '';
 		try {
-			info = (await DocumentService.FormAddColumn(table, 'Reçu le', 'date')) as unknown as FormInfo;
-			const c = (info.columns ?? []).find((x) => /^reçu le$/i.test(x.name.trim()));
+			const received = t('remote.formDialog.receivedColumn');
+			info = (await DocumentService.FormAddColumn(table, received, 'date')) as unknown as FormInfo;
+			const c = (info.columns ?? []).find((x) => isReceived(x.name));
 			if (c) addServerValue(c.columnId, 'received_at');
-			onnotice?.('Colonne « Reçu le » ajoutée au tableau');
+			onnotice?.(t('remote.formDialog.receivedAdded', { name: received }));
 		} catch (e) {
 			error = err(e);
 		} finally {
@@ -298,7 +302,7 @@
 		if (!file || !info || !draft) return;
 		const limit = kind === 'logo' ? 200 << 10 : 1 << 20;
 		if (file.size > limit) {
-			error = `Image trop lourde : ${kind === 'logo' ? '200 Ko pour un logo' : '1 Mo pour une bannière'} au plus.`;
+			error = kind === 'logo' ? t('remote.formDialog.image.logoTooBig') : t('remote.formDialog.image.bannerTooBig');
 			return;
 		}
 		if (!form && !(await save())) return;
@@ -307,7 +311,7 @@
 			const b64 = await new Promise<string>((ok, ko) => {
 				const r = new FileReader();
 				r.onload = () => ok(String(r.result).replace(/^data:[^,]*,/, ''));
-				r.onerror = () => ko(new Error('image illisible'));
+				r.onerror = () => ko(new Error(t('remote.formDialog.image.unreadable')));
 				r.readAsDataURL(file);
 			});
 			const id = await DocumentService.FormImage(info.server, form!.id, kind, file.name, b64);
@@ -340,17 +344,21 @@
 		email = '';
 	}
 	function addTeam() {
-		const t = info?.teams?.find((x) => x.id === team);
-		if (!t || adds.some((a) => a.team === t.id) || audience.some((a) => a.principal === t.id)) return;
-		adds = [...adds, { email: '', team: t.id, name: t.name }];
+		const tm = info?.teams?.find((x) => x.id === team);
+		if (!tm || adds.some((a) => a.team === tm.id) || audience.some((a) => a.principal === tm.id)) return;
+		adds = [...adds, { email: '', team: tm.id, name: tm.name }];
 		team = '';
 	}
 
 	const ACCESS: { value: Access; label: string; detail: string }[] = $derived([
-		{ value: 'members', label: 'Membres du classeur', detail: 'Toute personne qui a un rôle sur le classeur, lecteurs compris. Connexion Lattis.' },
-		{ value: 'audience', label: 'Personnes et équipes choisies', detail: 'Elles répondent sans devenir membres du classeur. Connexion Lattis.' },
-		{ value: 'server_accounts', label: `Toute personne disposant d’un compte sur ${info?.serverName || 'ce serveur'}`, detail: 'Utile pour un formulaire interne à toute l’organisation. Connexion Lattis.' },
-		{ value: 'public', label: 'Lien public', detail: info?.public ? 'Toute personne qui a le lien, sans connexion : bientôt dans Lattis.' : 'Désactivé sur ce serveur (réglage de son propriétaire).' }
+		{ value: 'members', label: t('remote.formDialog.access.members.label'), detail: t('remote.formDialog.access.members.detail') },
+		{ value: 'audience', label: t('remote.formDialog.access.audience.label'), detail: t('remote.formDialog.access.audience.detail') },
+		{
+			value: 'server_accounts',
+			label: t('remote.formDialog.access.serverAccounts.label', { server: info?.serverName || t('remote.formDialog.thisServer') }),
+			detail: t('remote.formDialog.access.serverAccounts.detail')
+		},
+		{ value: 'public', label: t('remote.formDialog.access.public.label'), detail: info?.public ? t('remote.formDialog.access.public.detail') : t('remote.formDialog.access.public.disabled') }
 	]);
 </script>
 
@@ -370,24 +378,24 @@
 		}}
 	>
 		<header>
-			<Icon name="text-input" size={18} /><span id="fd-title" class="title">{form ? `Formulaire « ${draft?.appearance.title} »` : `Partager « ${table} » comme formulaire`}</span>
+			<Icon name="text-input" size={18} /><span id="fd-title" class="title">{form ? t('remote.formDialog.titleForm', { title: draft?.appearance.title ?? '' }) : t('remote.formDialog.titleShare', { table })}</span>
 			{#if form}<span class="state s-{form.state}">{STATE_LABELS[form.state] ?? form.state}</span>{/if}
-			<HelpLink target={HELP} label="Aide : partager comme formulaire" />
-			<button type="button" class="close" aria-label="Fermer" title="Fermer (Échap)" disabled={busy} onclick={ondone}>✕</button>
+			<HelpLink target={HELP} label={t('remote.formDialog.help')} />
+			<button type="button" class="close" aria-label={t('common.close')} title={t('remote.closeEsc')} disabled={busy} onclick={ondone}>✕</button>
 		</header>
 
 		{#if !info}
-			<div class="sf-body"><p class={error ? 'sf-error' : 'sf-hint'}>{error || 'Lecture du tableau…'}</p></div>
-			<footer class="sf-foot"><span class="sf-grow"></span><button type="button" class="sf-btn" onclick={ondone}>Fermer</button></footer>
+			<div class="sf-body"><p class={error ? 'sf-error' : 'sf-hint'}>{error || t('remote.formDialog.reading')}</p></div>
+			<footer class="sf-foot"><span class="sf-grow"></span><button type="button" class="sf-btn" onclick={ondone}>{t('common.close')}</button></footer>
 		{:else if step === 'reason'}
 			{@const a = reasonAction(info.reason)}
 			<div class="sf-body">
 				<p class="lead">{info.message}</p>
 				{#if info.reason === 'rights' && info.forms?.length}
-					<p class="sf-hint">Formulaires de ce tableau qui vous sont ouverts :</p>
+					<p class="sf-hint">{t('remote.formDialog.openToYou')}</p>
 					<ul class="forms">
 						{#each info.forms as f (f.id)}
-							<li><strong>{f.title}</strong><span class="sf-grow"></span><button type="button" class="sf-btn" onclick={() => copyLink(f.url)}>Copier le lien</button></li>
+							<li><strong>{f.title}</strong><span class="sf-grow"></span><button type="button" class="sf-btn" onclick={() => copyLink(f.url)}>{t('remote.formQR.copy')}</button></li>
 						{/each}
 					</ul>
 				{/if}
@@ -395,23 +403,23 @@
 			</div>
 			<footer class="sf-foot">
 				<span class="sf-grow"></span>
-				<button type="button" class="sf-btn" onclick={ondone}>{a ? 'Annuler' : 'Fermer'}</button>
+				<button type="button" class="sf-btn" onclick={ondone}>{a ? t('common.cancel') : t('common.close')}</button>
 				{#if a && (a.action !== 'publish' || onpublish) && (a.action !== 'addshared' || onaddshared)}
 					<button type="button" class="sf-btn primary" onclick={() => act(a.action)}>{a.label}</button>
 				{/if}
 			</footer>
 		{:else if step === 'list'}
 			<div class="sf-body">
-				<p class="lead">Ce tableau a déjà {manageable.length > 1 ? `${manageable.length} formulaires` : 'un formulaire'}. Plusieurs formulaires peuvent remplir le même tableau.</p>
+				<p class="lead">{t('remote.formDialog.already', { n: manageable.length })}</p>
 				<ul class="forms">
 					{#each manageable as f (f.id)}
 						<li>
 							<strong>{f.title}</strong>
 							<span class="state s-{f.state}">{STATE_LABELS[f.state] ?? f.state}</span>
-							<span class="sf-hint">{f.responses} {f.responses > 1 ? 'réponses' : 'réponse'}</span>
+							<span class="sf-hint">{t('remote.formDialog.responses', { n: f.responses })}</span>
 							<span class="sf-grow"></span>
-							<button type="button" class="sf-btn" onclick={() => copyLink(f.url)}>Copier le lien</button>
-							<button type="button" class="sf-btn" onclick={() => edit(f)}>Modifier…</button>
+							<button type="button" class="sf-btn" onclick={() => copyLink(f.url)}>{t('remote.formQR.copy')}</button>
+							<button type="button" class="sf-btn" onclick={() => edit(f)}>{t('remote.formDialog.edit')}</button>
 						</li>
 					{/each}
 				</ul>
@@ -419,28 +427,28 @@
 			</div>
 			<footer class="sf-foot">
 				<span class="sf-grow"></span>
-				<button type="button" class="sf-btn" onclick={ondone}>Fermer</button>
-				<button type="button" class="sf-btn primary" onclick={fresh}>Nouveau formulaire…</button>
+				<button type="button" class="sf-btn" onclick={ondone}>{t('common.close')}</button>
+				<button type="button" class="sf-btn primary" onclick={fresh}>{t('remote.formDialog.newForm')}</button>
 			</footer>
 		{:else if step === 'done' && form && draft}
 			<div class="sf-body">
-				<p class="lead">Le formulaire « {draft.appearance.title} » est ouvert. Les réponses arrivent comme de nouvelles lignes du tableau, en direct.</p>
+				<p class="lead">{t('remote.formDialog.done', { title: draft.appearance.title })}</p>
 				<FormQR url={form.url} title={draft.appearance.title} {onnotice} />
 				{#if error}<p class="sf-error" role="alert">{error}</p>{/if}
 			</div>
 			<footer class="sf-foot">
-				<button type="button" class="sf-btn" onclick={() => (prefill = true)}>Lien pré-rempli…</button>
-				<button type="button" class="sf-btn" onclick={() => (step = 'design')}>Modifier…</button>
+				<button type="button" class="sf-btn" onclick={() => (prefill = true)}>{t('remote.formDialog.prefill.label')}</button>
+				<button type="button" class="sf-btn" onclick={() => (step = 'design')}>{t('remote.formDialog.edit')}</button>
 				<span class="sf-grow"></span>
-				<button type="button" class="sf-btn primary" onclick={ondone}>Fermer</button>
+				<button type="button" class="sf-btn primary" onclick={ondone}>{t('common.close')}</button>
 			</footer>
 		{:else if draft && def}
 			<div class="split">
 				<div class="left">
 					<div class="tabs" role="tablist">
-						<button type="button" role="tab" aria-selected={tab === 'fields'} class:on={tab === 'fields'} onclick={() => (tab = 'fields')}>Champs</button>
-						<button type="button" role="tab" aria-selected={tab === 'appearance'} class:on={tab === 'appearance'} onclick={() => (tab = 'appearance')}>Apparence</button>
-						<button type="button" role="tab" aria-selected={tab === 'access'} class:on={tab === 'access'} onclick={() => (tab = 'access')}>Accès</button>
+						<button type="button" role="tab" aria-selected={tab === 'fields'} class:on={tab === 'fields'} onclick={() => (tab = 'fields')}>{t('remote.formDialog.tab.fields')}</button>
+						<button type="button" role="tab" aria-selected={tab === 'appearance'} class:on={tab === 'appearance'} onclick={() => (tab = 'appearance')}>{t('remote.formDialog.tab.appearance')}</button>
+						<button type="button" role="tab" aria-selected={tab === 'access'} class:on={tab === 'access'} onclick={() => (tab = 'access')}>{t('remote.formDialog.tab.access')}</button>
 					</div>
 					<div class="pane">
 						{#if tab === 'fields'}
@@ -466,8 +474,8 @@
 													draggable="true"
 													role="button"
 													tabindex="0"
-													aria-label="Déplacer (Alt+↑ / Alt+↓)"
-													title="Glisser pour déplacer (Alt+↑ / Alt+↓)"
+													aria-label={t('remote.formDialog.field.move.aria')}
+													title={t('remote.formDialog.field.move.tooltip')}
 													ondragstart={() => (dragging = f.uid)}
 													ondragend={() => (dragging = null)}
 													onkeydown={(e) => {
@@ -476,89 +484,94 @@
 													}}>⋮⋮</span
 												>
 												{#if f.kind === 'section'}
-													<input class="sf-input grow" bind:value={f.title} placeholder="Intertitre" aria-label="Intertitre" maxlength="200" />
-													<button type="button" class="mini" title="Retirer l’intertitre" aria-label="Retirer l’intertitre" onclick={() => draft && (draft.fields = draft.fields.filter((x) => x !== f))}>✕</button>
+													<input class="sf-input grow" bind:value={f.title} placeholder={t('remote.formDialog.section.label')} aria-label={t('remote.formDialog.section.label')} maxlength="200" />
+													<button type="button" class="mini" title={t('remote.formDialog.section.remove')} aria-label={t('remote.formDialog.section.remove')} onclick={() => draft && (draft.fields = draft.fields.filter((x) => x !== f))}>✕</button>
 												{:else}
-													<input type="checkbox" bind:checked={f.include} aria-label="Dans le formulaire" title="Dans le formulaire" />
-													<span class="cname" title={f.kind === 'position' ? 'Position du répondant' : `Colonne « ${c?.name} »`}>{f.kind === 'position' ? 'Position' : (c?.name ?? '?')}</span>
-													<input class="sf-input grow" bind:value={f.label} aria-label="Libellé" placeholder="Libellé" maxlength="200" disabled={!f.include} />
+													<input type="checkbox" bind:checked={f.include} aria-label={t('remote.formDialog.field.include')} title={t('remote.formDialog.field.include')} />
+													<span class="cname" title={f.kind === 'position' ? t('remote.formDialog.field.position') : t('remote.formDialog.field.column', { name: c?.name ?? '' })}>{f.kind === 'position' ? t('remote.forms.position') : (c?.name ?? '?')}</span>
+													<input class="sf-input grow" bind:value={f.label} aria-label={t('remote.formDialog.field.label')} placeholder={t('remote.formDialog.field.label')} maxlength="200" disabled={!f.include} />
 													{#if f.kind === undefined && c}
-														<select class="sf-input wsel" bind:value={f.widget} aria-label="Type de champ" disabled={!f.include}>
+														<select class="sf-input wsel" bind:value={f.widget} aria-label={t('remote.formDialog.field.widget')} disabled={!f.include}>
 															{#each widgetsFor(c) as w (w.value)}<option value={w.value}>{w.label}</option>{/each}
 														</select>
 													{/if}
-													<label class="req" title="Obligatoire"><input type="checkbox" bind:checked={f.required} disabled={!f.include} />Obligatoire</label>
-													<button type="button" class="mini" aria-expanded={open === f.uid} title="Réglages du champ" disabled={!f.include} onclick={() => (open = open === f.uid ? null : f.uid)}>{open === f.uid ? '▾' : '▸'}</button>
+													<label class="req" title={t('remote.formDialog.field.required')}><input type="checkbox" bind:checked={f.required} disabled={!f.include} />{t('remote.formDialog.field.required')}</label>
+													<button type="button" class="mini" aria-expanded={open === f.uid} title={t('remote.formDialog.field.settings')} disabled={!f.include} onclick={() => (open = open === f.uid ? null : f.uid)}>{open === f.uid ? '▾' : '▸'}</button>
 												{/if}
 											</div>
 											{#if f.kind === 'section'}
-												<textarea class="sf-input sub" rows="1" bind:value={f.description} placeholder="Courte description (facultatif)" aria-label="Description de la section"></textarea>
+												<textarea class="sf-input sub" rows="1" bind:value={f.description} placeholder={t('remote.formDialog.section.description.placeholder')} aria-label={t('remote.formDialog.section.description.aria')}></textarea>
 											{:else if open === f.uid && f.include}
 												<div class="more">
-													<label>Aide <input class="sf-input" bind:value={f.help} maxlength="500" /></label>
+													<label>{t('remote.formDialog.field.help')} <input class="sf-input" bind:value={f.help} maxlength="500" /></label>
 													{#if f.kind === 'position'}
-														<p class="sf-hint">Rempli par le navigateur du répondant quand il touche « Ma position » (jamais automatiquement), avec la précision affichée. {f.column ? `Colonne « ${colOf(f.column)?.name} » : « lat, lon ».` : `Colonnes « ${colOf(f.latitude)?.name} » et « ${colOf(f.longitude)?.name} ».`}</p>
+														<p class="sf-hint">
+															{t('remote.formDialog.field.positionHelp')}
+															{f.column
+																? t('remote.formDialog.field.positionColumn', { name: colOf(f.column)?.name ?? '' })
+																: t('remote.formDialog.field.positionColumns', { lat: colOf(f.latitude)?.name ?? '', lon: colOf(f.longitude)?.name ?? '' })}
+														</p>
 													{:else}
-														<label>Texte indicatif <input class="sf-input" bind:value={f.placeholder} /></label>
+														<label>{t('remote.formDialog.field.placeholder')} <input class="sf-input" bind:value={f.placeholder} /></label>
 														<div class="pair">
 															<label
-																>Valeur par défaut
+																>{t('remote.formDialog.field.default.label')}
 																<select class="sf-input" value={defaultMode(f)} onchange={(e) => setDefault(f, e.currentTarget.value)}>
-																	<option value="">Aucune</option>
-																	<option value="fixed">Valeur fixe</option>
-																	{#if c?.type === 'date' || c?.type === 'datetime'}<option value="today">Aujourd’hui</option>{/if}
-																	{#if c?.type === 'datetime'}<option value="now">Maintenant</option>{/if}
-																	{#if c?.type === 'integer' || c?.type === 'text'}<option value="year">Année en cours</option>{/if}
-																	{#if c?.type === 'text'}<option value="respondent">Adresse du répondant</option>{/if}
+																	<option value="">{t('remote.formDialog.field.default.none')}</option>
+																	<option value="fixed">{t('remote.formDialog.token.fixed')}</option>
+																	{#if c?.type === 'date' || c?.type === 'datetime'}<option value="today">{t('remote.formDialog.field.default.today')}</option>{/if}
+																	{#if c?.type === 'datetime'}<option value="now">{t('remote.formDialog.field.default.now')}</option>{/if}
+																	{#if c?.type === 'integer' || c?.type === 'text'}<option value="year">{t('remote.formDialog.field.default.year')}</option>{/if}
+																	{#if c?.type === 'text'}<option value="respondent">{t('remote.formDialog.field.default.respondent')}</option>{/if}
 																</select>
 															</label>
 															{#if f.default && f.default.token === undefined}
-																<label>Valeur <input class="sf-input" value={String(f.default.fixed ?? '')} oninput={(e) => (f.default = { fixed: e.currentTarget.value })} /></label>
+																<label>{t('remote.formDialog.field.value')} <input class="sf-input" value={String(f.default.fixed ?? '')} oninput={(e) => (f.default = { fixed: e.currentTarget.value })} /></label>
 															{/if}
 														</div>
 														{#if f.default}
-															<label class="sf-check"><input type="checkbox" bind:checked={f.hidden} />Caché : la valeur par défaut est posée sans être montrée</label>
+															<label class="sf-check"><input type="checkbox" bind:checked={f.hidden} />{t('remote.formDialog.field.hidden')}</label>
 														{/if}
 														{#if f.widget === 'number'}
 															<div class="pair">
-																<label>Minimum <input class="sf-input" value={f.min ?? ''} oninput={(e) => (f.min = numberOrNull(e.currentTarget.value))} /></label>
-																<label>Maximum <input class="sf-input" value={f.max ?? ''} oninput={(e) => (f.max = numberOrNull(e.currentTarget.value))} /></label>
-																<label>Pas <input class="sf-input" value={f.step ?? ''} oninput={(e) => (f.step = numberOrNull(e.currentTarget.value))} /></label>
-																<label>Unité <input class="sf-input" bind:value={f.unit} maxlength="10" /></label>
+																<label>{t('remote.formDialog.field.min')} <input class="sf-input" value={f.min ?? ''} oninput={(e) => (f.min = numberOrNull(e.currentTarget.value))} /></label>
+																<label>{t('remote.formDialog.field.max')} <input class="sf-input" value={f.max ?? ''} oninput={(e) => (f.max = numberOrNull(e.currentTarget.value))} /></label>
+																<label>{t('remote.formDialog.field.step')} <input class="sf-input" value={f.step ?? ''} oninput={(e) => (f.step = numberOrNull(e.currentTarget.value))} /></label>
+																<label>{t('remote.formDialog.field.unit')} <input class="sf-input" bind:value={f.unit} maxlength="10" /></label>
 															</div>
 														{:else if f.widget === 'text' || f.widget === 'textarea'}
 															<div class="pair">
-																<label>Longueur maximale <input class="sf-input" type="number" min="1" max="10000" value={f.max_length ?? ''} oninput={(e) => (f.max_length = numberOrNull(e.currentTarget.value))} /></label>
+																<label>{t('remote.formDialog.field.maxLength')} <input class="sf-input" type="number" min="1" max="10000" value={f.max_length ?? ''} oninput={(e) => (f.max_length = numberOrNull(e.currentTarget.value))} /></label>
 																<label
-																	>Format
+																	>{t('remote.formDialog.field.format.label')}
 																	<select class="sf-input" bind:value={f.format}>
-																		<option value="">Libre</option>
-																		<option value="email">Adresse e-mail</option>
-																		<option value="tel">Téléphone</option>
-																		<option value="url">Adresse web</option>
+																		<option value="">{t('remote.formDialog.field.format.free')}</option>
+																		<option value="email">{t('remote.formDialog.field.format.email')}</option>
+																		<option value="tel">{t('remote.formDialog.field.format.tel')}</option>
+																		<option value="url">{t('remote.formDialog.field.format.url')}</option>
 																	</select>
 																</label>
 															</div>
 														{/if}
 														{#if f.list}
 															{#if f.list.table_id}
-																<p class="sf-hint">Liste tirée de « {c?.list?.source} », relue par le serveur à chaque affichage ({c?.list?.values?.length ?? 0} valeurs aujourd’hui).</p>
+																<p class="sf-hint">{t('remote.formDialog.field.listFrom', { source: c?.list?.source ?? '', n: c?.list?.values?.length ?? 0 })}</p>
 															{:else}
 																<label
-																	>Valeurs de la liste (une par ligne)
+																	>{t('remote.formDialog.field.listValues')}
 																	<textarea class="sf-input" rows="4" value={(f.list.values ?? []).join('\n')} oninput={(e) => f.list && (f.list = { ...f.list, values: e.currentTarget.value.split('\n') })}></textarea>
 																</label>
 																{#if f.list.copied_at}
 																	<div class="sf-static">
-																		<span class="sf-hint">{copiedLabel(f.list.copied_at)} depuis « {f.list.source} »</span>
-																		<button type="button" class="sf-btn" onclick={() => refreshList(f)} disabled={busy}>Mettre à jour</button>
+																		<span class="sf-hint">{t('remote.formDialog.field.copiedFrom', { copied: copiedLabel(f.list.copied_at), source: f.list.source ?? '' })}</span>
+																		<button type="button" class="sf-btn" onclick={() => refreshList(f)} disabled={busy}>{t('remote.tableSources.update')}</button>
 																	</div>
 																{/if}
 															{/if}
 														{/if}
 														<div class="pair">
-															<label>Nom court dans le lien <input class="sf-input" bind:value={f.param} spellcheck="false" placeholder={paramName(f.label ?? '')} /></label>
-															<label class="sf-check lock"><input type="checkbox" bind:checked={f.locked} />Verrouillé par le lien</label>
+															<label>{t('remote.formDialog.field.param')} <input class="sf-input" bind:value={f.param} spellcheck="false" placeholder={paramName(f.label ?? '')} /></label>
+															<label class="sf-check lock"><input type="checkbox" bind:checked={f.locked} />{t('remote.formDialog.field.locked')}</label>
 														</div>
 													{/if}
 												</div>
@@ -567,93 +580,93 @@
 									{/if}
 								{/each}
 							</ul>
-							<button type="button" class="sf-btn" onclick={addSection}>+ Intertitre</button>
+							<button type="button" class="sf-btn" onclick={addSection}>{t('remote.formDialog.section.add')}</button>
 
 							{#if draft.choice}
 								{@const ch = draft.choice}
-								<h3>Onglet à choix · « {colOf(ch.column)?.name} »</h3>
-								<div class="sf-seg" role="radiogroup" aria-label="Valeur de la catégorie">
-									<label class:on={ch.mode === 'fixed'}><input type="radio" bind:group={ch.mode} value="fixed" />Valeur fixe</label>
-									{#if /^\d{4}$/.test(ch.value)}<label class:on={ch.mode === 'year'}><input type="radio" bind:group={ch.mode} value="year" />Année en cours</label>{/if}
-									<label class:on={ch.mode === 'field'}><input type="radio" bind:group={ch.mode} value="field" />Un champ</label>
+								<h3>{t('remote.formDialog.choice.title', { name: colOf(ch.column)?.name ?? '' })}</h3>
+								<div class="sf-seg" role="radiogroup" aria-label={t('remote.formDialog.choice.aria')}>
+									<label class:on={ch.mode === 'fixed'}><input type="radio" bind:group={ch.mode} value="fixed" />{t('remote.formDialog.token.fixed')}</label>
+									{#if /^\d{4}$/.test(ch.value)}<label class:on={ch.mode === 'year'}><input type="radio" bind:group={ch.mode} value="year" />{t('remote.formDialog.field.default.year')}</label>{/if}
+									<label class:on={ch.mode === 'field'}><input type="radio" bind:group={ch.mode} value="field" />{t('remote.formDialog.choice.field')}</label>
 								</div>
-								{#if ch.mode === 'fixed'}<input class="sf-input inline" bind:value={ch.value} aria-label="Valeur fixe de la catégorie" />{/if}
+								{#if ch.mode === 'fixed'}<input class="sf-input inline" bind:value={ch.value} aria-label={t('remote.formDialog.choice.fixedAria')} />{/if}
 							{/if}
 
-							<h3>Valeurs posées par le serveur</h3>
-							<p class="sf-hint">Sans champ visible, chacune sur une colonne choisie. {cols.some((c) => c.auto) ? 'La clé numérotée reçoit le numéro suivant, posé par le serveur.' : ''}</p>
+							<h3>{t('remote.formDialog.serverValues.title')}</h3>
+							<p class="sf-hint">{t('remote.formDialog.serverValues.help')} {cols.some((c) => c.auto) ? t('remote.formDialog.serverValues.auto') : ''}</p>
 							{#each draft.serverValues as v, i (i)}
 								<div class="sv">
-									<select class="sf-input" bind:value={v.column} aria-label="Colonne">
+									<select class="sf-input" bind:value={v.column} aria-label={t('remote.formDialog.serverValues.column')}>
 										{#each cols.filter((c) => c.columnId === v.column || freeColumns.includes(c)) as c (c.columnId)}<option value={c.columnId}>{c.name}</option>{/each}
 									</select>
-									<select class="sf-input" value={v.value.token ?? 'fixed'} aria-label="Valeur" onchange={(e) => (v.value = e.currentTarget.value === 'fixed' ? { fixed: '' } : { token: e.currentTarget.value })}>
-										{#each SERVER_TOKENS as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
+									<select class="sf-input" value={v.value.token ?? 'fixed'} aria-label={t('remote.formDialog.field.value')} onchange={(e) => (v.value = e.currentTarget.value === 'fixed' ? { fixed: '' } : { token: e.currentTarget.value })}>
+										{#each SERVER_TOKENS as tk (tk.value)}<option value={tk.value}>{tk.label}</option>{/each}
 									</select>
-									{#if v.value.token === undefined}<input class="sf-input" value={String(v.value.fixed ?? '')} aria-label="Valeur fixe" oninput={(e) => (v.value = { fixed: e.currentTarget.value })} />{/if}
-									<button type="button" class="mini" aria-label="Retirer" onclick={() => draft && (draft.serverValues = draft.serverValues.filter((_, j) => j !== i))}>✕</button>
+									{#if v.value.token === undefined}<input class="sf-input" value={String(v.value.fixed ?? '')} aria-label={t('remote.formDialog.token.fixed')} oninput={(e) => (v.value = { fixed: e.currentTarget.value })} />{/if}
+									<button type="button" class="mini" aria-label={t('remote.audience.remove')} onclick={() => draft && (draft.serverValues = draft.serverValues.filter((_, j) => j !== i))}>✕</button>
 								</div>
 							{/each}
 							<div class="sf-static">
-								<button type="button" class="sf-btn" disabled={!freeColumns.length} onclick={() => addServerValue()}>+ Valeur posée par le serveur</button>
-								{#if !hasReceived}<button type="button" class="sf-btn" disabled={busy} onclick={addReceivedColumn} title="Ajoute une colonne au tableau, pour tous les membres">Ajouter une colonne Reçu le</button>{/if}
+								<button type="button" class="sf-btn" disabled={!freeColumns.length} onclick={() => addServerValue()}>{t('remote.formDialog.serverValues.add')}</button>
+								{#if !hasReceived}<button type="button" class="sf-btn" disabled={busy} onclick={addReceivedColumn} title={t('remote.formDialog.serverValues.addReceived.tooltip')}>{t('remote.formDialog.serverValues.addReceived.label', { name: t('remote.formDialog.receivedColumn') })}</button>{/if}
 							</div>
 						{:else if tab === 'appearance'}
 							<div class="sf-fields">
-								<label class="sf-label" for="fd-t">Titre</label>
+								<label class="sf-label" for="fd-t">{t('remote.formDialog.look.title')}</label>
 								<input id="fd-t" class="sf-input" bind:value={draft.appearance.title} maxlength="120" />
-								<label class="sf-label" for="fd-i">Introduction</label>
+								<label class="sf-label" for="fd-i">{t('remote.formDialog.look.intro')}</label>
 								<div class="sf-field">
 									<textarea id="fd-i" class="sf-input" rows="3" bind:value={draft.appearance.intro} maxlength="2000"></textarea>
-									<p class="sf-hint">**gras**, *italique*, [lien](https://…), listes avec « - ».</p>
+									<p class="sf-hint">{t('remote.formDialog.look.markdown')}</p>
 								</div>
-								<span class="sf-label">Logo</span>
+								<span class="sf-label">{t('remote.formDialog.look.logo')}</span>
 								<div class="sf-static">
-									{#if logoSrc}<img class="thumb" src={logoSrc} alt="Logo" />{:else if !draft.appearance.logo}<span class="sf-hint">Celui du serveur</span>{/if}
-									<label class="sf-btn file">Choisir…<input type="file" accept=".png,.jpg,.jpeg,.svg" onchange={(e) => pickImage('logo', e)} disabled={busy} /></label>
-									{#if draft.appearance.logo}<button type="button" class="sf-btn" onclick={() => dropImage('logo')}>Retirer</button>{/if}
-									<span class="sf-hint">PNG, JPEG ou SVG, 200 Ko au plus</span>
+									{#if logoSrc}<img class="thumb" src={logoSrc} alt={t('remote.formDialog.look.logo')} />{:else if !draft.appearance.logo}<span class="sf-hint">{t('remote.formDialog.look.serverLogo')}</span>{/if}
+									<label class="sf-btn file">{t('remote.preview.choose')}<input type="file" accept=".png,.jpg,.jpeg,.svg" onchange={(e) => pickImage('logo', e)} disabled={busy} /></label>
+									{#if draft.appearance.logo}<button type="button" class="sf-btn" onclick={() => dropImage('logo')}>{t('remote.audience.remove')}</button>{/if}
+									<span class="sf-hint">{t('remote.formDialog.look.logoHint')}</span>
 								</div>
-								<span class="sf-label">Bannière</span>
+								<span class="sf-label">{t('remote.formDialog.look.banner')}</span>
 								<div class="sf-static">
-									{#if bannerSrc}<img class="thumb wide" src={bannerSrc} alt="Bannière" />{/if}
-									<label class="sf-btn file">Choisir…<input type="file" accept=".png,.jpg,.jpeg" onchange={(e) => pickImage('banner', e)} disabled={busy} /></label>
-									{#if draft.appearance.banner}<button type="button" class="sf-btn" onclick={() => dropImage('banner')}>Retirer</button>{/if}
-									<span class="sf-hint">1 Mo au plus ; le serveur retire la position GPS de la photo</span>
+									{#if bannerSrc}<img class="thumb wide" src={bannerSrc} alt={t('remote.formDialog.look.banner')} />{/if}
+									<label class="sf-btn file">{t('remote.preview.choose')}<input type="file" accept=".png,.jpg,.jpeg" onchange={(e) => pickImage('banner', e)} disabled={busy} /></label>
+									{#if draft.appearance.banner}<button type="button" class="sf-btn" onclick={() => dropImage('banner')}>{t('remote.audience.remove')}</button>{/if}
+									<span class="sf-hint">{t('remote.formDialog.look.bannerHint')}</span>
 								</div>
-								<span class="sf-label">Couleur</span>
-								<div class="palette" role="radiogroup" aria-label="Couleur d’accent">
+								<span class="sf-label">{t('remote.formDialog.look.color')}</span>
+								<div class="palette" role="radiogroup" aria-label={t('remote.formDialog.look.accent')}>
 									{#each PALETTE as p (p.name)}
 										<label class="swatch" class:on={draft.appearance.accent === p.name} title={p.label} style:background={accentColor(p.name)}>
 											<input type="radio" bind:group={draft.appearance.accent} value={p.name} aria-label={p.label} />
 										</label>
 									{/each}
 								</div>
-								<span class="sf-label">Pages</span>
-								<label class="sf-check"><input type="checkbox" bind:checked={draft.appearance.paged} />Une section par page (Suivant, Précédent, barre d’avancement)</label>
-								<label class="sf-label" for="fd-b">Bouton</label>
+								<span class="sf-label">{t('remote.formDialog.look.pages')}</span>
+								<label class="sf-check"><input type="checkbox" bind:checked={draft.appearance.paged} />{t('remote.formDialog.look.paged')}</label>
+								<label class="sf-label" for="fd-b">{t('remote.formDialog.look.button')}</label>
 								<input id="fd-b" class="sf-input" bind:value={draft.appearance.submit_label} maxlength="40" />
-								<label class="sf-label" for="fd-m">Remerciement</label>
+								<label class="sf-label" for="fd-m">{t('remote.formDialog.look.thanks')}</label>
 								<div class="sf-field">
 									<textarea id="fd-m" class="sf-input" rows="2" bind:value={draft.appearance.thanks}></textarea>
-									<label class="sf-check"><input type="checkbox" bind:checked={draft.appearance.another} />Bouton « Envoyer une autre réponse »</label>
-									<p class="sf-hint">Gras et italique seulement : ni lien ni redirection.</p>
+									<label class="sf-check"><input type="checkbox" bind:checked={draft.appearance.another} />{t('remote.formDialog.look.another')}</label>
+									<p class="sf-hint">{t('remote.formDialog.look.thanksHint')}</p>
 								</div>
-								<label class="sf-label" for="fd-c">Fermé</label>
-								<input id="fd-c" class="sf-input" bind:value={draft.appearance.closed_message} maxlength="500" placeholder="Message quand le formulaire est fermé, plein ou pas encore ouvert" />
-								<label class="sf-label" for="fd-p">Données</label>
+								<label class="sf-label" for="fd-c">{t('remote.formDialog.look.closed.label')}</label>
+								<input id="fd-c" class="sf-input" bind:value={draft.appearance.closed_message} maxlength="500" placeholder={t('remote.formDialog.look.closed.placeholder')} />
+								<label class="sf-label" for="fd-p">{t('remote.formDialog.look.privacy.label')}</label>
 								<div class="sf-field">
-									<textarea id="fd-p" class="sf-input" rows="3" bind:value={draft.appearance.privacy} maxlength="1000" placeholder="Mention de protection des données, au-dessus du bouton"></textarea>
-									{#if !draft.appearance.privacy}<button type="button" class="sf-more" onclick={() => draft && (draft.appearance.privacy = privacyTemplate(info?.serverName ?? ''))}>Partir du modèle</button>{/if}
+									<textarea id="fd-p" class="sf-input" rows="3" bind:value={draft.appearance.privacy} maxlength="1000" placeholder={t('remote.formDialog.look.privacy.placeholder')}></textarea>
+									{#if !draft.appearance.privacy}<button type="button" class="sf-more" onclick={() => draft && (draft.appearance.privacy = privacyTemplate(info?.serverName ?? ''))}>{t('remote.formDialog.look.privacy.template')}</button>{/if}
 								</div>
-								<label class="sf-label" for="fd-l">Langue</label>
+								<label class="sf-label" for="fd-l">{t('remote.formDialog.look.lang.label')}</label>
 								<select id="fd-l" class="sf-input" bind:value={draft.lang}>
-									<option value="fr">Français</option>
-									<option value="en">Anglais</option>
+									<option value="fr">{t('remote.formDialog.look.lang.fr')}</option>
+									<option value="en">{t('remote.formDialog.look.lang.en')}</option>
 								</select>
 							</div>
 						{:else}
-							<div class="ways" role="radiogroup" aria-label="Qui répond">
+							<div class="ways" role="radiogroup" aria-label={t('remote.formDialog.access.aria')}>
 								{#each ACCESS as a (a.value)}
 									<label class="way" class:on={draft.access === a.value} class:dis={a.value === 'public'}>
 										<input type="radio" bind:group={draft.access} value={a.value} disabled={a.value === 'public'} />
@@ -662,39 +675,39 @@
 								{/each}
 							</div>
 							{#if draft.access === 'audience'}
-								<h3>Personnes et équipes</h3>
+								<h3>{t('remote.formDialog.audience.title')}</h3>
 								<ul class="aud">
 									{#each audience.filter((a) => !removed.includes(a.principal)) as a (a.principal)}
-										<li>{a.kind === 'team' ? 'Équipe ' : ''}{a.name}<button type="button" class="mini" aria-label="Retirer {a.name}" onclick={() => (removed = [...removed, a.principal])}>✕</button></li>
+										<li>{a.kind === 'team' ? t('remote.formDialog.audience.team', { name: a.name }) : a.name}<button type="button" class="mini" aria-label={t('remote.audience.removeName', { name: a.name })} onclick={() => (removed = [...removed, a.principal])}>✕</button></li>
 									{/each}
 									{#each adds as a, i (i)}
-										<li>{a.team ? 'Équipe ' : ''}{a.name} <span class="sf-hint">(à ajouter)</span><button type="button" class="mini" aria-label="Retirer {a.name}" onclick={() => (adds = adds.filter((_, j) => j !== i))}>✕</button></li>
+										<li>{a.team ? t('remote.formDialog.audience.team', { name: a.name }) : a.name} <span class="sf-hint">{t('remote.formDialog.audience.toAdd')}</span><button type="button" class="mini" aria-label={t('remote.audience.removeName', { name: a.name })} onclick={() => (adds = adds.filter((_, j) => j !== i))}>✕</button></li>
 									{/each}
 								</ul>
 								<div class="sf-inline">
-									<input class="sf-input" type="email" bind:value={email} placeholder="adresse@exemple.fr" aria-label="Adresse" onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addEmail())} />
-									<button type="button" class="sf-btn" onclick={addEmail}>Ajouter</button>
+									<input class="sf-input" type="email" bind:value={email} placeholder={t('remote.audience.email.placeholder')} aria-label={t('remote.formDialog.audience.address')} onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addEmail())} />
+									<button type="button" class="sf-btn" onclick={addEmail}>{t('remote.formDialog.audience.add')}</button>
 									{#if info.teams?.length}
-										<select class="sf-input" bind:value={team} aria-label="Équipe">
-											<option value="">Équipe…</option>
-											{#each info.teams as t (t.id)}<option value={t.id}>{t.name}</option>{/each}
+										<select class="sf-input" bind:value={team} aria-label={t('remote.audience.team')}>
+											<option value="">{t('remote.formDialog.audience.teamChoose')}</option>
+											{#each info.teams as tm (tm.id)}<option value={tm.id}>{tm.name}</option>{/each}
 										</select>
-										<button type="button" class="sf-btn" onclick={addTeam} disabled={!team}>Ajouter</button>
+										<button type="button" class="sf-btn" onclick={addTeam} disabled={!team}>{t('remote.formDialog.audience.add')}</button>
 									{/if}
 								</div>
 							{/if}
-							<p class="sf-hint note">Les réponses sont écrites sous l’identité du formulaire « Formulaire : {draft.appearance.title} » : le répondant n’a aucun droit sur le classeur.</p>
+							<p class="sf-hint note">{t('remote.formDialog.audience.identity', { title: draft.appearance.title })}</p>
 						{/if}
 					</div>
 				</div>
 				<div class="right">
 					<div class="ptools">
-						<div class="sf-seg" role="radiogroup" aria-label="Largeur de l’aperçu">
-							<label class:on={device === 'phone'}><input type="radio" bind:group={device} value="phone" />Téléphone</label>
-							<label class:on={device === 'desktop'}><input type="radio" bind:group={device} value="desktop" />Ordinateur</label>
+						<div class="sf-seg" role="radiogroup" aria-label={t('remote.formDialog.preview.aria')}>
+							<label class:on={device === 'phone'}><input type="radio" bind:group={device} value="phone" />{t('remote.formDialog.preview.phone')}</label>
+							<label class:on={device === 'desktop'}><input type="radio" bind:group={device} value="desktop" />{t('remote.formDialog.preview.desktop')}</label>
 						</div>
 						<span class="sf-grow"></span>
-						<button type="button" class="sf-more" onclick={browserPreview} disabled={busy} title="Enregistre le brouillon et ouvre la vraie page du serveur (lien valable 10 minutes, réponses non enregistrées)">Ouvrir l’aperçu dans le navigateur</button>
+						<button type="button" class="sf-more" onclick={browserPreview} disabled={busy} title={t('remote.formDialog.preview.browser.tooltip')}>{t('remote.formDialog.preview.browser.label')}</button>
 					</div>
 					<div class="pscroll">
 						<FormPreview {def} columns={cols} {device} serverName={info.serverName} logo={logoSrc} banner={bannerSrc} />
@@ -707,10 +720,10 @@
 					{#each verdict.errors as m (m)}<p class="sf-error">{m}</p>{/each}
 					{#each verdict.warnings as m (m)}<p class="warn">{m}</p>{/each}
 				</div>
-				<button type="button" class="sf-btn" disabled={!form?.url || busy} onclick={() => (prefill = true)} title={form?.url ? 'Liens qui remplissent des champs, et leurs QR codes' : 'Enregistrez d’abord le brouillon'}>Lien pré-rempli…</button>
-				{#if form?.url}<button type="button" class="sf-btn" onclick={() => form && copyLink(form.url)}>Copier le lien</button>{/if}
-				<button type="button" class="sf-btn" onclick={saveDraft} disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer le brouillon'}</button>
-				<button type="button" class="sf-btn primary" onclick={openForm} disabled={busy || verdict.errors.length > 0}>{form?.state === 'open' ? 'Enregistrer' : 'Ouvrir le formulaire'}</button>
+				<button type="button" class="sf-btn" disabled={!form?.url || busy} onclick={() => (prefill = true)} title={form?.url ? t('remote.formDialog.prefill.tooltip') : t('remote.formDialog.prefill.saveFirst')}>{t('remote.formDialog.prefill.label')}</button>
+				{#if form?.url}<button type="button" class="sf-btn" onclick={() => form && copyLink(form.url)}>{t('remote.formQR.copy')}</button>{/if}
+				<button type="button" class="sf-btn" onclick={saveDraft} disabled={busy}>{busy ? t('remote.formDialog.saving') : t('remote.formDialog.saveDraft')}</button>
+				<button type="button" class="sf-btn primary" onclick={openForm} disabled={busy || verdict.errors.length > 0}>{form?.state === 'open' ? t('remote.formDialog.save') : t('remote.formDialog.open')}</button>
 			</footer>
 		{/if}
 	</div>

@@ -12,7 +12,8 @@
 	import { askAssistant } from '#lib/ai/state.svelte.js';
 	import { tick, untrack } from 'svelte';
 	import { typeLabel } from './data';
-	import { FILTER_OPS, ME_LABEL, MY_TEAMS, TEAM_LABEL, checkFreeFilter, filterPrompt, filterSQL, filterSentence, opsFor, parseFilter, quoteIdent, type Condition, type FilterOp } from './rights';
+	import { FILTER_OPS, MY_TEAMS, checkFreeFilter, filterPrompt, filterSQL, filterSentence, meLabel, opsFor, parseFilter, quoteIdent, teamLabel, type Condition, type FilterOp } from './rights';
+import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		columns: RightsColumn[];
@@ -55,7 +56,7 @@
 			error = '';
 			onchange(s, '');
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 			onchange(null, error);
 		}
 	}
@@ -68,9 +69,9 @@
 
 	function setColumn(c: Condition, name: string) {
 		c.column = name;
-		const t = types[name];
-		if (!opsFor(t).includes(c.op)) c.op = '=';
-		if (c.value.kind !== 'value' && t !== 'text') c.value = { kind: 'value', value: '' };
+		const ty = types[name];
+		if (!opsFor(ty).includes(c.op)) c.op = '=';
+		if (c.value.kind !== 'value' && ty !== 'text') c.value = { kind: 'value', value: '' };
 		emit();
 	}
 
@@ -124,54 +125,54 @@
 
 	function ask() {
 		switchMode('sql');
-		askAssistant(filterPrompt(assist ?? 'ces lignes', columns, teams));
+		askAssistant(filterPrompt(assist ?? t('remote.filter.theseRows'), columns, teams));
 	}
 
 	const noValue = (op: FilterOp) => op === 'empty' || op === 'filled';
 	const canForm = $derived(mode === 'form' || parseFilter(sql, types) !== null);
 	const colOptions = $derived(columns.map((c) => ({ value: c.name, label: `${c.name} · ${typeLabel(c.type).toLowerCase()}` })));
-	const textCol = $derived(columns.find((c) => c.type === 'text')?.name ?? columns[0]?.name ?? 'Colonne');
+	const textCol = $derived(columns.find((c) => c.type === 'text')?.name ?? columns[0]?.name ?? t('remote.filter.column'));
 	const snippets = $derived([
-		{ label: `${textCol} = valeur`, sql: `${quoteIdent(textCol)} = 'valeur'`, title: 'Égal à une valeur (texte entre apostrophes)' },
-		{ label: `= ${ME_LABEL}`, sql: '= current_user', title: 'current_user : adresse de la personne qui lit' },
-		...(teams ? [{ label: `est ${TEAM_LABEL}`, sql: `IN ${MY_TEAMS}`, title: 'lattis.my_teams() : équipes de la personne qui lit' }] : []),
-		{ label: 'et', sql: 'AND ', title: 'Les deux conditions' },
-		{ label: 'ou', sql: 'OR ', title: "L'une ou l'autre condition" },
-		{ label: 'est vide', sql: 'IS NULL', title: 'Cellule vide' }
+		{ label: `${textCol} = ${t('remote.filter.snippet.value')}`, sql: `${quoteIdent(textCol)} = '${t('remote.filter.snippet.value')}'`, title: t('remote.filter.snippet.equal') },
+		{ label: `= ${meLabel()}`, sql: '= current_user', title: t('remote.filter.snippet.me') },
+		...(teams ? [{ label: t('remote.filter.snippet.teamLabel', { team: teamLabel() }), sql: `IN ${MY_TEAMS}`, title: t('remote.filter.snippet.team') }] : []),
+		{ label: t('remote.filter.snippet.and.label'), sql: 'AND ', title: t('remote.filter.snippet.and.tooltip') },
+		{ label: t('remote.filter.snippet.or.label'), sql: 'OR ', title: t('remote.filter.snippet.or.tooltip') },
+		{ label: t('remote.filter.snippet.empty.label'), sql: 'IS NULL', title: t('remote.filter.snippet.empty.tooltip') }
 	]);
 </script>
 
 <div class="filter" role="group" aria-label={label}>
 	<div class="head">
 		<span class="title">{label}</span>
-		<span class="modes" role="radiogroup" aria-label="Forme du filtre">
-			<button type="button" role="radio" aria-checked={mode === 'form'} class:on={mode === 'form'} disabled={disabled || !canForm} title={canForm ? 'Conditions en clair' : 'Ce filtre SQL ne se traduit pas en formulaire'} onclick={() => switchMode('form')}>Formulaire</button>
-			<button type="button" role="radio" aria-checked={mode === 'sql'} class:on={mode === 'sql'} {disabled} onclick={() => switchMode('sql')}>SQL libre</button>
+		<span class="modes" role="radiogroup" aria-label={t('remote.filter.mode.aria')}>
+			<button type="button" role="radio" aria-checked={mode === 'form'} class:on={mode === 'form'} disabled={disabled || !canForm} title={canForm ? t('remote.filter.mode.form.tooltip') : t('remote.filter.mode.form.disabled')} onclick={() => switchMode('form')}>{t('remote.filter.mode.form.label')}</button>
+			<button type="button" role="radio" aria-checked={mode === 'sql'} class:on={mode === 'sql'} {disabled} onclick={() => switchMode('sql')}>{t('remote.filter.mode.sql')}</button>
 		</span>
 		{#if assist}
-			<button type="button" class="assist" {disabled} onclick={ask} title="Ouvre l'assistant avec une demande à compléter ; il ne reçoit que les noms et les types des colonnes">
-				<Icon name="sparkle" size={13} />Rédiger avec l'assistant
+			<button type="button" class="assist" {disabled} onclick={ask} title={t('remote.filter.assist.tooltip')}>
+				<Icon name="sparkle" size={13} />{t('remote.filter.assist.label')}
 			</button>
 		{/if}
 	</div>
 	{#if mode === 'form'}
 		{#each conds as c, i (i)}
-			{@const t = types[c.column]}
+			{@const ty = types[c.column]}
 			<div class="cond">
-				<span class="and">{i > 0 ? 'et' : ''}</span>
-				<Select label="Colonne" value={c.column} options={colOptions} {disabled} onchange={(v) => setColumn(c, v)} />
-				<Select label="Condition" value={c.op} options={FILTER_OPS.filter((o) => opsFor(t).includes(o.op)).map((o) => ({ value: o.op, label: o.label }))} {disabled} onchange={(v) => setOp(c, v)} />
+				<span class="and">{i > 0 ? t('remote.filter.and') : ''}</span>
+				<Select label={t('remote.filter.column')} value={c.column} options={colOptions} {disabled} onchange={(v) => setColumn(c, v)} />
+				<Select label={t('remote.filter.condition')} value={c.op} options={FILTER_OPS.filter((o) => opsFor(ty).includes(o.op)).map((o) => ({ value: o.op, label: o.label }))} {disabled} onchange={(v) => setOp(c, v)} />
 				{#if !noValue(c.op)}
-					{#if t === 'text' && (c.op === '=' || c.op === '<>')}
+					{#if ty === 'text' && (c.op === '=' || c.op === '<>')}
 						<Select
-							label="Valeur"
+							label={t('remote.filter.value')}
 							value={c.value.kind}
 							options={[
-								{ value: 'value', label: 'la valeur…' },
-								{ value: 'me', label: ME_LABEL },
-								{ value: 'team', label: TEAM_LABEL, disabled: !teams && c.value.kind !== 'team' }
+								{ value: 'value', label: t('remote.filter.theValue') },
+								{ value: 'me', label: meLabel() },
+								{ value: 'team', label: teamLabel(), disabled: !teams && c.value.kind !== 'team' }
 							]}
-							title={teams ? '' : '« une de ses équipes » : ce serveur ne connaît pas les équipes'}
+							title={teams ? '' : t('remote.filter.noTeams')}
 							{disabled}
 							onchange={(k) => {
 								c.value = k === 'value' ? { kind: 'value', value: '' } : { kind: k };
@@ -182,9 +183,9 @@
 					{#if c.value.kind === 'value'}
 						<input
 							class="val"
-							aria-label="Valeur"
+							aria-label={t('remote.filter.value')}
 							list={values ? `fv-${uid}-${i}` : undefined}
-							placeholder={t === 'date' ? 'jj/mm/aaaa' : t === 'boolean' ? 'vrai ou faux' : t === 'integer' || t === 'decimal' ? 'nombre' : 'valeur'}
+							placeholder={ty === 'date' ? t('remote.filter.placeholder.date') : ty === 'boolean' ? t('remote.filter.placeholder.boolean') : ty === 'integer' || ty === 'decimal' ? t('remote.filter.placeholder.number') : t('remote.filter.snippet.value')}
 							bind:value={c.value.value}
 							{disabled}
 							onfocus={() => suggest(c.column)}
@@ -200,8 +201,8 @@
 				<button
 					type="button"
 					class="x"
-					aria-label="Retirer la condition"
-					title="Retirer la condition"
+					aria-label={t('remote.filter.remove')}
+					title={t('remote.filter.remove')}
 					{disabled}
 					onclick={() => {
 						conds.splice(i, 1);
@@ -211,18 +212,18 @@
 			</div>
 		{/each}
 		<div class="foot">
-			<button type="button" class="link" disabled={disabled || !columns.length} onclick={add}>+ Condition</button>
+			<button type="button" class="link" disabled={disabled || !columns.length} onclick={add}>{t('remote.filter.add')}</button>
 			<span class="rule" aria-live="polite"><Icon name="show" size={13} />{filterSentence(conds, readback?.prefix, readback?.none)}</span>
 		</div>
 	{:else}
-		<div class="chips" aria-label="Colonnes à insérer">
+		<div class="chips" aria-label={t('remote.filter.insertColumns')}>
 			{#each columns as col (col.name)}
-				<button type="button" class="chip col" {disabled} title="{typeLabel(col.type)} : insère {quoteIdent(col.name)}" onclick={() => insert(quoteIdent(col.name))}>{col.name}</button>
+				<button type="button" class="chip col" {disabled} title={t('remote.filter.inserts', { what: typeLabel(col.type), sql: quoteIdent(col.name) })} onclick={() => insert(quoteIdent(col.name))}>{col.name}</button>
 			{/each}
 		</div>
 		<textarea
 			bind:this={area}
-			aria-label="Filtre SQL"
+			aria-label={t('remote.filter.sqlAria')}
 			aria-invalid={!!error}
 			aria-describedby={error ? `fe-err-${uid}` : undefined}
 			rows="2"
@@ -232,9 +233,9 @@
 			spellcheck="false"
 			placeholder={`${quoteIdent(textCol)} = current_user`}
 		></textarea>
-		<div class="chips snippets" aria-label="Morceaux à insérer">
+		<div class="chips snippets" aria-label={t('remote.filter.insertSnippets')}>
 			{#each snippets as s (s.label)}
-				<button type="button" class="chip" {disabled} title="{s.title} : insère {s.sql.trim()}" onclick={() => insert(s.sql)}>{s.label}</button>
+				<button type="button" class="chip" {disabled} title={t('remote.filter.inserts', { what: s.title, sql: s.sql.trim() })} onclick={() => insert(s.sql)}>{s.label}</button>
 			{/each}
 		</div>
 	{/if}

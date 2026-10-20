@@ -325,5 +325,591 @@
 		"imposed": "Moyen de connexion imposé par votre organisation.",
 		"otherServer": "Autre serveur",
 		"cancel": "Annuler la connexion"
+	},
+	"forms": {
+		"reason": {
+			"publish": "Publier sur un serveur…",
+			"addShared": "Ajouter au classeur partagé…"
+		},
+		"widget": {
+			"text": "Ligne de texte",
+			"textarea": "Texte long",
+			"number": "Nombre",
+			"date": "Date",
+			"datetime": "Date et heure",
+			"checkbox": "Case à cocher",
+			"yesno": "Oui / Non",
+			"radio": "Boutons radio",
+			"list": "Liste avec recherche"
+		},
+		"copiedOn": "Liste copiée le {date}",
+		"copied": "Liste copiée",
+		"accent": {
+			"green": "Vert",
+			"teal": "Sarcelle",
+			"blue": "Bleu",
+			"indigo": "Indigo",
+			"purple": "Violet",
+			"red": "Rouge",
+			"orange": "Orange",
+			"slate": "Ardoise"
+		},
+		"position": "Position",
+		"check": {
+			"noTitle": "Le formulaire n’a pas de titre.",
+			"titleLength": "Titre : 120 caractères au plus.",
+			"introLength": "Introduction : 2 000 caractères au plus.",
+			"submitLength": "Bouton : 40 caractères au plus.",
+			"privacyLength": "Mention de protection des données : 1 000 caractères au plus.",
+			"closedLength": "Message de fermeture : 500 caractères au plus.",
+			"thanksLink": "Remerciement : ni lien ni redirection.",
+			"noField": "Aucun champ : cochez au moins une colonne.",
+			"sections": "{n} sections au plus.",
+			"paramShared": "Le nom court « {param} » sert à plusieurs champs.",
+			"emptySection": "Un intertitre n’a pas de texte.",
+			"labelLength": "{label} : libellé de 200 caractères au plus.",
+			"helpLength": "{label} : aide de 500 caractères au plus.",
+			"emptyList": "{label} : liste vide.",
+			"defaultNotInList": "{label} : valeur par défaut hors de la liste.",
+			"defaultOutOfBounds": "{label} : valeur par défaut hors des bornes.",
+			"minMax": "{label} : le minimum dépasse le maximum.",
+			"listVisible": "{label} : les valeurs de la liste seront visibles par tous les répondants.",
+			"requiredRestricted": "{label} est obligatoire, mais une restriction interdit d’ajouter des lignes à ce tableau : le formulaire sera bloqué aussi.",
+			"lockedNoParam": "{label} : un champ verrouillé par le lien demande un nom court.",
+			"publicOpen": "Lien public sans date de fermeture ni plafond de réponses."
+		},
+		"state": {
+			"draft": "Brouillon",
+			"open": "Ouvert",
+			"paused": "En pause",
+			"closed": "Fermé"
+		}
+	},
+	"formDialog": {
+		"receivedColumn": "Reçu le",
+		"refused": "Formulaire enregistré, mais une partie de l’audience est refusée : {list}",
+		"draftSaved": "Brouillon du formulaire « {title} » enregistré",
+		"opened": "Formulaire « {title} » ouvert",
+		"token": {
+			"receivedAt": "Reçu le (date et heure)",
+			"respondent": "Répondant (adresse)",
+			"formTitle": "Formulaire (son titre)",
+			"nextNumber": "Numéro suivant",
+			"fixed": "Valeur fixe"
+		},
+		"receivedAdded": "Colonne « {name} » ajoutée au tableau",
+		"image": {
+			"logoTooBig": "Image trop lourde : 200 Ko pour un logo au plus.",
+			"bannerTooBig": "Image trop lourde : 1 Mo pour une bannière au plus.",
+			"unreadable": "image illisible"
+		},
+		"thisServer": "ce serveur",
+		"access": {
+			"aria": "Qui répond",
+			"members": {
+				"label": "Membres du classeur",
+				"detail": "Toute personne qui a un rôle sur le classeur, lecteurs compris. Connexion Lattis."
+			},
+			"audience": {
+				"label": "Personnes et équipes choisies",
+				"detail": "Elles répondent sans devenir membres du classeur. Connexion Lattis."
+			},
+			"serverAccounts": {
+				"label": "Toute personne disposant d’un compte sur {server}",
+				"detail": "Utile pour un formulaire interne à toute l’organisation. Connexion Lattis."
+			},
+			"public": {
+				"label": "Lien public",
+				"detail": "Toute personne qui a le lien, sans connexion : bientôt dans Lattis.",
+				"disabled": "Désactivé sur ce serveur (réglage de son propriétaire)."
+			}
+		},
+		"titleForm": "Formulaire « {title} »",
+		"titleShare": "Partager « {table} » comme formulaire",
+		"help": "Aide : partager comme formulaire",
+		"reading": "Lecture du tableau…",
+		"openToYou": "Formulaires de ce tableau qui vous sont ouverts :",
+		"already": "Ce tableau a déjà {n, plural, one {un formulaire} other {# formulaires}}. Plusieurs formulaires peuvent remplir le même tableau.",
+		"responses": "{n, plural, one {# réponse} other {# réponses}}",
+		"edit": "Modifier…",
+		"newForm": "Nouveau formulaire…",
+		"done": "Le formulaire « {title} » est ouvert. Les réponses arrivent comme de nouvelles lignes du tableau, en direct.",
+		"prefill": {
+			"label": "Lien pré-rempli…",
+			"tooltip": "Liens qui remplissent des champs, et leurs QR codes",
+			"saveFirst": "Enregistrez d’abord le brouillon"
+		},
+		"tab": {
+			"fields": "Champs",
+			"appearance": "Apparence",
+			"access": "Accès"
+		},
+		"field": {
+			"move": {
+				"aria": "Déplacer (Alt+↑ / Alt+↓)",
+				"tooltip": "Glisser pour déplacer (Alt+↑ / Alt+↓)"
+			},
+			"include": "Dans le formulaire",
+			"position": "Position du répondant",
+			"column": "Colonne « {name} »",
+			"label": "Libellé",
+			"widget": "Type de champ",
+			"required": "Obligatoire",
+			"settings": "Réglages du champ",
+			"help": "Aide",
+			"positionHelp": "Rempli par le navigateur du répondant quand il touche « Ma position » (jamais automatiquement), avec la précision affichée.",
+			"positionColumn": "Colonne « {name} » : « lat, lon ».",
+			"positionColumns": "Colonnes « {lat} » et « {lon} ».",
+			"placeholder": "Texte indicatif",
+			"default": {
+				"label": "Valeur par défaut",
+				"none": "Aucune",
+				"today": "Aujourd’hui",
+				"now": "Maintenant",
+				"year": "Année en cours",
+				"respondent": "Adresse du répondant"
+			},
+			"value": "Valeur",
+			"hidden": "Caché : la valeur par défaut est posée sans être montrée",
+			"min": "Minimum",
+			"max": "Maximum",
+			"step": "Pas",
+			"unit": "Unité",
+			"maxLength": "Longueur maximale",
+			"format": {
+				"label": "Format",
+				"free": "Libre",
+				"email": "Adresse e-mail",
+				"tel": "Téléphone",
+				"url": "Adresse web"
+			},
+			"listFrom": "Liste tirée de « {source} », relue par le serveur à chaque affichage ({n} valeurs aujourd’hui).",
+			"listValues": "Valeurs de la liste (une par ligne)",
+			"copiedFrom": "{copied} depuis « {source} »",
+			"param": "Nom court dans le lien",
+			"locked": "Verrouillé par le lien"
+		},
+		"section": {
+			"label": "Intertitre",
+			"remove": "Retirer l’intertitre",
+			"description": {
+				"placeholder": "Courte description (facultatif)",
+				"aria": "Description de la section"
+			},
+			"add": "+ Intertitre"
+		},
+		"choice": {
+			"title": "Onglet à choix · « {name} »",
+			"aria": "Valeur de la catégorie",
+			"field": "Un champ",
+			"fixedAria": "Valeur fixe de la catégorie"
+		},
+		"serverValues": {
+			"title": "Valeurs posées par le serveur",
+			"help": "Sans champ visible, chacune sur une colonne choisie.",
+			"auto": "La clé numérotée reçoit le numéro suivant, posé par le serveur.",
+			"column": "Colonne",
+			"add": "+ Valeur posée par le serveur",
+			"addReceived": {
+				"label": "Ajouter une colonne {name}",
+				"tooltip": "Ajoute une colonne au tableau, pour tous les membres"
+			}
+		},
+		"look": {
+			"title": "Titre",
+			"intro": "Introduction",
+			"markdown": "**gras**, *italique*, [lien](https://…), listes avec « - ».",
+			"logo": "Logo",
+			"serverLogo": "Celui du serveur",
+			"logoHint": "PNG, JPEG ou SVG, 200 Ko au plus",
+			"banner": "Bannière",
+			"bannerHint": "1 Mo au plus ; le serveur retire la position GPS de la photo",
+			"color": "Couleur",
+			"accent": "Couleur d’accent",
+			"pages": "Pages",
+			"paged": "Une section par page (Suivant, Précédent, barre d’avancement)",
+			"button": "Bouton",
+			"thanks": "Remerciement",
+			"another": "Bouton « Envoyer une autre réponse »",
+			"thanksHint": "Gras et italique seulement : ni lien ni redirection.",
+			"closed": {
+				"label": "Fermé",
+				"placeholder": "Message quand le formulaire est fermé, plein ou pas encore ouvert"
+			},
+			"privacy": {
+				"label": "Données",
+				"placeholder": "Mention de protection des données, au-dessus du bouton",
+				"template": "Partir du modèle"
+			},
+			"lang": {
+				"label": "Langue",
+				"fr": "Français",
+				"en": "Anglais"
+			}
+		},
+		"audience": {
+			"title": "Personnes et équipes",
+			"team": "Équipe {name}",
+			"toAdd": "(à ajouter)",
+			"address": "Adresse",
+			"add": "Ajouter",
+			"teamChoose": "Équipe…",
+			"identity": "Les réponses sont écrites sous l’identité du formulaire « Formulaire : {title} » : le répondant n’a aucun droit sur le classeur."
+		},
+		"preview": {
+			"aria": "Largeur de l’aperçu",
+			"phone": "Téléphone",
+			"desktop": "Ordinateur",
+			"browser": {
+				"label": "Ouvrir l’aperçu dans le navigateur",
+				"tooltip": "Enregistre le brouillon et ouvre la vraie page du serveur (lien valable 10 minutes, réponses non enregistrées)"
+			}
+		},
+		"saving": "Enregistrement…",
+		"saveDraft": "Enregistrer le brouillon",
+		"save": "Enregistrer",
+		"open": "Ouvrir le formulaire"
+	},
+	"source": {
+		"mode": {
+			"replace": {
+				"label": "Remplacer tout",
+				"detail": "La donnée devient le tableau envoyé."
+			},
+			"append": {
+				"label": "Ajouter à la suite",
+				"detail": "Les lignes s’ajoutent à celles déjà reçues (journal, relevés)."
+			},
+			"upsert": {
+				"label": "Mettre à jour par clé",
+				"detail": "Même clé : ligne modifiée ; sinon ajoutée. Rien n’est supprimé."
+			}
+		},
+		"way": {
+			"republish": {
+				"title": "Republier le classeur avec ce tableau",
+				"detail": "Le classeur est republié avec ce tableau ; ses rôles et filtres s’appliquent."
+			},
+			"publish": {
+				"title": "Publier le classeur avec gestion des droits",
+				"detail": "Tout le classeur va sur le serveur, avec rôles et filtres ; le tableau se partage ensuite."
+			},
+			"table": {
+				"title": "Publier uniquement ce tableau",
+				"detail": "Seules les colonnes choisies sont envoyées ; le classeur reste sur votre poste, sans être mis à disposition."
+			},
+			"shared": {
+				"title": "Ajouter ce tableau au classeur partagé",
+				"detail": "Recommandé. Il est créé sur le serveur avec ses lignes ; les membres le reçoivent et le modifient selon leurs droits. Il se partage ensuite au Data Lake depuis ce même menu."
+			},
+			"tableAlone": "Publier ce tableau seul au Data Lake"
+		},
+		"chooser": {
+			"localTitle": "Ce tableau n’est que sur votre poste",
+			"notInCollab": "Le classeur est partagé en direct, mais ce tableau n’en fait pas partie.",
+			"howTitle": "Comment partager ce tableau ?",
+			"notPublished": "Ce tableau n’est pas dans un classeur publié.",
+			"whyCollab": "Un classeur partagé en direct ne se republie pas : la liste de ses tableaux est fixée à sa publication, et un tableau créé ensuite reste sur votre poste."
+		},
+		"push": {
+			"done": "Source « {table} » mise à jour",
+			"read": "Source « {table} » mise à jour : {n, plural, one {# ligne lue} other {# lignes lues}}",
+			"inserted": "{n, plural, one {# ajoutée} other {# ajoutées}}",
+			"updated": "{n, plural, one {# modifiée} other {# modifiées}}",
+			"deleted": "{n, plural, one {# supprimée} other {# supprimées}}",
+			"rejected": "{n, plural, one {# refusée} other {# refusées}}",
+			"unchanged": ", rien n'a changé",
+			"reject": " ; ligne {row}, {column} « {value} » : {error}",
+			"blanked": " ; {n, plural, one {# valeur envoyée vide} other {# valeurs envoyées vides}} (erreur ou saisie hors type)"
+		},
+		"status": {
+			"tableGone": "Tableau supprimé du classeur : la source ne reçoit plus rien",
+			"suspended": "Source suspendue : plus aucun envoi",
+			"failed": "Dernière mise à jour en échec : {error}",
+			"never": "Jamais mise à jour",
+			"today": "aujourd’hui à {time}",
+			"on": "le {date}",
+			"updated": "Mise à jour {when} · {n, plural, one {# ligne} other {# lignes}}"
+		},
+		"localWorkbook": "classeur local",
+		"suspended": "suspendue",
+		"pending": "envoi en attente",
+		"failedOn": "échec le {date}",
+		"updatedOn": "mise à jour le {date}",
+		"never": "jamais mise à jour",
+		"sqlName": {
+			"length": "63 caractères au plus",
+			"start": "Commence par une lettre minuscule",
+			"chars": "Minuscules sans accent, chiffres et _ seulement"
+		},
+		"problem": {
+			"server": "Connectez-vous à un Serveur Lattis",
+			"name": "Donnez un nom à la donnée",
+			"columns": "Cochez au moins une colonne",
+			"key": "Choisissez la colonne qui identifie une ligne",
+			"filter": "Un filtre de lignes est à corriger"
+		},
+		"onSave": "à chaque enregistrement",
+		"onDemand": "à la demande"
+	},
+	"rights": {
+		"level": {
+			"none": "Aucun",
+			"reader": "Lecteur",
+			"participant": "Participant",
+			"editor": "Éditeur"
+		},
+		"builtin": {
+			"owner": "Propriétaire",
+			"designer": "Concepteur",
+			"editor": "Éditeur",
+			"participant": "Participant",
+			"reader": "Lecteur"
+		},
+		"members": "{n, plural, one {# membre} other {# membres}}",
+		"op": {
+			"eq": "est égal à",
+			"ne": "est différent de",
+			"lt": "est inférieur à",
+			"le": "est inférieur ou égal à",
+			"gt": "est supérieur à",
+			"ge": "est supérieur ou égal à",
+			"contains": "contient",
+			"starts": "commence par",
+			"empty": "est vide",
+			"filled": "n'est pas vide"
+		},
+		"me": "la personne connectée",
+		"team": "une de ses équipes",
+		"sentence": {
+			"none": "Toutes les lignes sont visibles",
+			"prefix": "Visible si",
+			"team": "{column} est {team}",
+			"notTeam": "{column} n'est pas {team}",
+			"and": " et "
+		},
+		"prompt": {
+			"write": "Écris un filtre de lignes Lattis pour {subject}.",
+			"columns": "C'est une expression SQL booléenne (PostgreSQL) sur ces colonnes : {columns}.",
+			"noColumn": "(aucune colonne)",
+			"reader": "La personne qui lit s'écrit current_user (son adresse).",
+			"readerTeams": "La personne qui lit s'écrit current_user (son adresse) ; ses équipes : {teams}.",
+			"answer": "Pas de point-virgule ni de commentaire. Réponds par l'expression seule, à coller dans « SQL libre », puis une phrase qui dit ce qu'elle fait.",
+			"rule": "Ma règle : "
+		},
+		"literal": {
+			"notNumber": "« {value} » n'est pas un nombre",
+			"notInteger": "« {value} » n'est pas un nombre entier",
+			"notBoolean": "« {value} » n'est pas vrai ou faux",
+			"notDate": "« {value} » n'est pas une date (jj/mm/aaaa)"
+		},
+		"condition": {
+			"unknownColumn": "colonne inconnue : {column}",
+			"teamUnsupported": "« mon équipe » : ce serveur ne connaît pas les équipes (mise à jour de lattisd nécessaire)",
+			"teamText": "« mon équipe » se compare à une colonne de texte (nom de l'équipe)",
+			"teamOp": "« mon équipe » : égal ou différent seulement",
+			"meText": "« moi » se compare à une colonne de texte (adresse de la personne)",
+			"meOp": "« moi » : égal ou différent seulement"
+		},
+		"free": {
+			"forbidden": "« {char} » n'est pas permis hors d'une chaîne",
+			"parens": "parenthèses déséquilibrées",
+			"unclosed": "chaîne ou nom non fermé"
+		},
+		"command": {
+			"all": "Tout",
+			"select": "Lire",
+			"insert": "Ajouter",
+			"update": "Modifier",
+			"delete": "Supprimer"
+		},
+		"sql": {
+			"ownRows": "de ses lignes",
+			"noRight": "aucun droit",
+			"filtered": "vue filtrée",
+			"restriction": "restriction « {label} »",
+			"yours": "Vos droits",
+			"noRole": "aucun rôle",
+			"allRights": "Tous les droits (structure, mise en page, scripts)",
+			"allRightsOwner": "Tous les droits (structure, mise en page, scripts, droits)",
+			"builtinRole": "rôle fourni",
+			"customRole": "rôle personnalisé",
+			"teams": "{n, plural, one {équipe} other {équipes}} {names}",
+			"allRoles": "tous les rôles",
+			"restrictionName": "Restriction",
+			"restrictionKind": "restriction"
+		}
+	},
+	"filter": {
+		"theseRows": "ces lignes",
+		"column": "Colonne",
+		"condition": "Condition",
+		"value": "Valeur",
+		"theValue": "la valeur…",
+		"and": "et",
+		"snippet": {
+			"value": "valeur",
+			"equal": "Égal à une valeur (texte entre apostrophes)",
+			"me": "current_user : adresse de la personne qui lit",
+			"teamLabel": "est {team}",
+			"team": "lattis.my_teams() : équipes de la personne qui lit",
+			"and": {
+				"label": "et",
+				"tooltip": "Les deux conditions"
+			},
+			"or": {
+				"label": "ou",
+				"tooltip": "L'une ou l'autre condition"
+			},
+			"empty": {
+				"label": "est vide",
+				"tooltip": "Cellule vide"
+			}
+		},
+		"mode": {
+			"aria": "Forme du filtre",
+			"form": {
+				"label": "Formulaire",
+				"tooltip": "Conditions en clair",
+				"disabled": "Ce filtre SQL ne se traduit pas en formulaire"
+			},
+			"sql": "SQL libre"
+		},
+		"assist": {
+			"label": "Rédiger avec l'assistant",
+			"tooltip": "Ouvre l'assistant avec une demande à compléter ; il ne reçoit que les noms et les types des colonnes"
+		},
+		"noTeams": "« une de ses équipes » : ce serveur ne connaît pas les équipes",
+		"placeholder": {
+			"date": "jj/mm/aaaa",
+			"boolean": "vrai ou faux",
+			"number": "nombre"
+		},
+		"remove": "Retirer la condition",
+		"add": "+ Condition",
+		"insertColumns": "Colonnes à insérer",
+		"inserts": "{what} : insère {sql}",
+		"sqlAria": "Filtre SQL",
+		"insertSnippets": "Morceaux à insérer"
+	},
+	"access": {
+		"cap": {
+			"read": {
+				"label": "Voir",
+				"hint": "Lire les lignes du tableau"
+			},
+			"add": {
+				"label": "Ajouter des lignes",
+				"hint": "Ajouter de nouvelles lignes"
+			},
+			"editOwn": {
+				"label": "Modifier ses lignes",
+				"hint": "Modifier ou supprimer les lignes que la personne a ajoutées"
+			},
+			"editAll": {
+				"label": "Modifier toutes les lignes",
+				"hint": "Modifier ou supprimer les lignes de tout le monde"
+			},
+			"manage": {
+				"label": "Structure et droits",
+				"hint": "Colonnes, tableaux, mise en page, scripts ; les droits : propriétaires seulement"
+			}
+		},
+		"designerManage": "La structure, pas les droits",
+		"frozen": "Classeur figé : les données changent en republiant",
+		"allows": {
+			"none": "Aucun accès",
+			"reader": "Voir",
+			"participant": "Voir, ajouter, modifier ses lignes",
+			"editor": "Voir et tout modifier"
+		},
+		"word": {
+			"none": "aucun",
+			"reader": "lecteur",
+			"participant": "participant",
+			"editor": "éditeur"
+		},
+		"mixed": "Différent selon le tableau",
+		"likeSheet": "Comme la feuille : {allows}",
+		"likeWorkbook": "Comme le classeur : {allows}",
+		"readFilter": "Voit seulement les lignes où {text}",
+		"writeFilter": "Modifie seulement les lignes où {text}",
+		"rule": {
+			"cannot": "Ne peut pas {verb} (règle avancée)",
+			"onlyWhere": "Peut {verb} seulement les lignes où {text} (règle avancée)"
+		},
+		"onlyIn": "Seulement dans {tables}",
+		"inTable": "« {table} » : {why}",
+		"summary": {
+			"allWithRights": "Tout, y compris les droits",
+			"seeStructureRights": "Voir, structure et droits",
+			"allWithStructure": "Tout modifier, y compris la structure",
+			"seeStructure": "Voir et changer la structure",
+			"seeEditAll": "Voir et tout modifier",
+			"seeEditAllNoAdd": "Voir et modifier toutes les lignes, sans ajouter",
+			"seeAddOwn": "Voir, ajouter, modifier ses lignes",
+			"seeOwnNoAdd": "Voir et modifier ses lignes, sans ajouter",
+			"seeAdd": "Voir et ajouter des lignes",
+			"seeOnly": "Voir seulement",
+			"none": "Aucun accès",
+			"partly": "{summary} (en partie)"
+		},
+		"verb": {
+			"select": "voir",
+			"insert": "ajouter",
+			"update": "modifier",
+			"delete": "supprimer",
+			"all": "voir ni modifier"
+		},
+		"action": {
+			"select": "Voir",
+			"insert": "Ajouter",
+			"update": "Modifier",
+			"delete": "Supprimer",
+			"all": "Tout"
+		},
+		"nor": " ni ",
+		"or": " ou ",
+		"ofRole": "du rôle {role}",
+		"ofRoles": "des rôles {roles} et {last}",
+		"sentence": {
+			"nobody": "Personne ne peut {verbs} de lignes dans « {table} », sauf les propriétaires et concepteurs.",
+			"nobodyExcept": "Personne ne peut {verbs} de lignes dans « {table} » sauf celles où {cond} (propriétaires et concepteurs exceptés).",
+			"membersNever": "Les membres {who} ne peuvent pas {verbs} de lignes dans « {table} ».",
+			"membersOnly": "Les membres {who} ne peuvent {verbs}, dans « {table} », que les lignes où {cond}."
+		},
+		"preset": {
+			"noDelete": {
+				"label": "Interdire la suppression",
+				"hint": "Personne ne supprime de lignes, sauf propriétaires et concepteurs",
+				"rule": "Pas de suppression"
+			},
+			"appendOnly": {
+				"label": "Ajout seulement",
+				"hint": "On ajoute des lignes, sans modifier ni supprimer celles qui existent",
+				"rule": "Ajout seulement"
+			},
+			"status": {
+				"label": "Modifier seulement les lignes au statut…",
+				"hint": "Les lignes se modifient et se suppriment tant qu’elles ont ce statut",
+				"rule": "Selon le statut"
+			},
+			"ownNoCreate": {
+				"label": "Modifier ses lignes sans en créer",
+				"hint": "Pour un rôle « Voir, ajouter, modifier ses lignes » : il ne peut plus ajouter de lignes",
+				"rule": "Pas d’ajout"
+			}
+		},
+		"problem": {
+			"table": "Choisissez un tableau.",
+			"who": "Choisissez au moins un rôle.",
+			"commands": "Choisissez au moins une action.",
+			"predicate": "Ajoutez une condition, ou choisissez « Aucune » exception.",
+			"missingValue": "Une condition n’a pas de valeur."
+		},
+		"email": {
+			"empty": "Saisissez l’adresse de la personne.",
+			"invalid": "« {email} » n’est pas une adresse."
+		}
 	}
 }

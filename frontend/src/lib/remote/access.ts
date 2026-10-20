@@ -7,19 +7,23 @@
 import type { ACL, RestrictionRule, Role } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
 import { LEVELS, columnTypes, conditionsText, fullRights, parseFilter, quoteIdent, roleLabel, tableLevel, workbookLevel, type Condition } from './rights';
+import { t, tAny } from '#lib/i18n/index.js';
 
 // --- Capacités -------------------------------------------------------------------------
 
 export type Cap = 'read' | 'add' | 'editOwn' | 'editAll' | 'manage';
 
 /** Colonnes de la matrice des droits, dans l'ordre. */
-export const CAPS: { id: Cap; label: string; hint: string }[] = [
-	{ id: 'read', label: 'Voir', hint: 'Lire les lignes du tableau' },
-	{ id: 'add', label: 'Ajouter des lignes', hint: 'Ajouter de nouvelles lignes' },
-	{ id: 'editOwn', label: 'Modifier ses lignes', hint: 'Modifier ou supprimer les lignes que la personne a ajoutées' },
-	{ id: 'editAll', label: 'Modifier toutes les lignes', hint: 'Modifier ou supprimer les lignes de tout le monde' },
-	{ id: 'manage', label: 'Structure et droits', hint: 'Colonnes, tableaux, mise en page, scripts ; les droits : propriétaires seulement' }
-];
+const cap = (id: Cap) => ({
+	id,
+	get label() {
+	return tAny(`remote.access.cap.${id}.label`);
+	},
+	get hint() {
+return tAny(`remote.access.cap.${id}.hint`);
+}
+});
+export const CAPS: { id: Cap; readonly label: string; readonly hint: string }[] = (['read', 'add', 'editOwn', 'editAll', 'manage'] as Cap[]).map(cap);
 
 /** oui ; en partie (certaines lignes, certains tableaux, structure sans les droits) ; non. */
 export type CapState = 'yes' | 'some' | 'no';
@@ -41,7 +45,7 @@ const cell = (state: CapState): CapCell => ({ state, why: [] });
  */
 export function levelCaps(level: string, builtin = ''): Caps {
 	if (builtin === 'owner' || builtin === 'designer') {
-		return { read: cell('yes'), add: cell('yes'), editOwn: cell('yes'), editAll: cell('yes'), manage: builtin === 'owner' ? cell('yes') : { state: 'some', why: ['La structure, pas les droits'] } };
+		return { read: cell('yes'), add: cell('yes'), editOwn: cell('yes'), editAll: cell('yes'), manage: builtin === 'owner' ? cell('yes') : { state: 'some', why: [t('remote.access.designerManage')] } };
 	}
 	const rank = Math.max(0, LEVELS.indexOf(level as (typeof LEVELS)[number]));
 	return {
@@ -60,7 +64,7 @@ export function levelCaps(level: string, builtin = ''): Caps {
  */
 export function frozenCaps(builtin = ''): Caps {
 	const c = levelCaps('reader');
-	const why = 'Classeur figé : les données changent en republiant';
+	const why = t('remote.access.frozen');
 	for (const k of ['add', 'editOwn', 'editAll'] as const) c[k] = { state: 'no', why: [why] };
 	if (builtin === 'owner' || builtin === 'designer') c.manage = levelCaps('', builtin).manage;
 	return c;
@@ -68,14 +72,35 @@ export function frozenCaps(builtin = ''): Caps {
 
 /** Ce que permet un niveau, pour le choix du niveau (« Voir, ajouter, modifier ses lignes »). */
 export const LEVEL_ALLOWS: Record<string, string> = {
-	none: 'Aucun accès',
-	reader: 'Voir',
-	participant: 'Voir, ajouter, modifier ses lignes',
-	editor: 'Voir et tout modifier'
+	get none() {
+	return t('remote.access.allows.none');
+	},
+	get reader() {
+return t('remote.access.allows.reader');
+},
+get participant() {
+return t('remote.access.allows.participant');
+},
+get editor() {
+return t('remote.access.allows.editor');
+}
 };
 
 /** Nom du niveau dans le modèle du serveur (infobulle). */
-export const LEVEL_WORD: Record<string, string> = { none: 'aucun', reader: 'lecteur', participant: 'participant', editor: 'éditeur' };
+export const LEVEL_WORD: Record<string, string> = {
+get none() {
+return t('remote.access.word.none');
+},
+get reader() {
+return t('remote.access.word.reader');
+},
+get participant() {
+return t('remote.access.word.participant');
+},
+get editor() {
+return t('remote.access.word.editor');
+}
+};
 
 export interface LevelOption {
 	value: string;
@@ -88,8 +113,11 @@ export interface LevelOption {
  */
 export function levelOptions(inherit?: { from: 'workbook' | 'sheet'; level: string }, mixed = false): LevelOption[] {
 	const out: LevelOption[] = [];
-	if (mixed) out.push({ value: '*', label: 'Différent selon le tableau' });
-	if (inherit) out.push({ value: '', label: `Comme ${inherit.from === 'sheet' ? 'la feuille' : 'le classeur'} : ${LEVEL_ALLOWS[inherit.level] ?? inherit.level}` });
+	if (mixed) out.push({ value: '*', label: t('remote.access.mixed') });
+	if (inherit) {
+	const allows = LEVEL_ALLOWS[inherit.level] ?? inherit.level;
+	out.push({ value: '', label: inherit.from === 'sheet' ? t('remote.access.likeSheet', { allows }) : t('remote.access.likeWorkbook', { allows }) });
+	}
 	for (const l of LEVELS) out.push({ value: l, label: LEVEL_ALLOWS[l] });
 	return out;
 }
@@ -128,9 +156,9 @@ export function filterText(sql: string | null | undefined, types: Record<string,
 }
 
 /** « Voit seulement les lignes où Région = « Nord » » (filtre de lecture). */
-export const readFilterSentence = (text: string) => `Voit seulement les lignes où ${text}`;
+export const readFilterSentence = (text: string) => t('remote.access.readFilter', { text });
 /** « Modifie seulement les lignes où … » (filtre d'écriture : ajout et modification). */
-export const writeFilterSentence = (text: string) => `Modifie seulement les lignes où ${text}`;
+export const writeFilterSentence = (text: string) => t('remote.access.writeFilter', { text });
 
 /**
  * Capacités d'un rôle sur un tableau publié : son niveau (propre ou
@@ -169,8 +197,8 @@ function applyRules(caps: Caps, rules: readonly RestrictionRule[], types: Record
 
 /** Clause d'une règle pour une infobulle : « Ne peut pas supprimer », « Modifie seulement si … ». */
 function ruleClause(command: string, predicate: string, types: Record<string, string>): string {
-	const verb = VERBS[command] ?? command;
-	return isNever(predicate) ? `Ne peut pas ${verb} (règle avancée)` : `Peut ${verb} seulement les lignes où ${filterText(predicate, types)} (règle avancée)`;
+	const verb = verbOf(command);
+	return isNever(predicate) ? t('remote.access.rule.cannot', { verb }) : t('remote.access.rule.onlyWhere', { verb, text: filterText(predicate, types) });
 }
 
 /**
@@ -195,8 +223,8 @@ function combine(per: { name: string; caps: Caps }[]): Caps {
 		const why: string[] = [];
 		if (!all('yes') && !all('no')) {
 			const yes = per.filter((p) => p.caps[c].state !== 'no').map((p) => p.name);
-			if (!all('some') && yes.length < per.length) why.push(yes.length ? `Seulement dans ${yes.map((n) => `« ${n} »`).join(', ')}` : '');
-			for (const p of per) for (const w of p.caps[c].why) if (p.caps[c].state !== 'yes') why.push(per.length > 1 ? `« ${p.name} » : ${w}` : w);
+			if (!all('some') && yes.length < per.length) why.push(yes.length ? t('remote.access.onlyIn', { tables: yes.map((n) => `« ${n} »`).join(', ') }) : '');
+			for (const p of per) for (const w of p.caps[c].why) if (p.caps[c].state !== 'yes') why.push(per.length > 1 ? t('remote.access.inTable', { table: p.name, why: w }) : w);
 		}
 		out[c] = { state: all('yes') ? 'yes' : all('no') ? 'no' : 'some', why: [...new Set(why.filter(Boolean))] };
 	}
@@ -235,44 +263,45 @@ function union(list: Caps[]): Caps {
 export function capsSummary(c: Caps): string {
 	const on = (k: Cap) => c[k].state !== 'no';
 	let s: string;
-	if (c.manage.state === 'yes') s = on('editAll') ? 'Tout, y compris les droits' : 'Voir, structure et droits';
-	else if (on('manage')) s = on('editAll') ? 'Tout modifier, y compris la structure' : 'Voir et changer la structure';
-	else if (on('editAll')) s = on('add') ? 'Voir et tout modifier' : 'Voir et modifier toutes les lignes, sans ajouter';
-	else if (on('editOwn')) s = on('add') ? 'Voir, ajouter, modifier ses lignes' : 'Voir et modifier ses lignes, sans ajouter';
-	else if (on('add')) s = 'Voir et ajouter des lignes';
-	else if (on('read')) s = 'Voir seulement';
-	else return 'Aucun accès';
+	if (c.manage.state === 'yes') s = on('editAll') ? t('remote.access.summary.allWithRights') : t('remote.access.summary.seeStructureRights');
+	else if (on('manage')) s = on('editAll') ? t('remote.access.summary.allWithStructure') : t('remote.access.summary.seeStructure');
+	else if (on('editAll')) s = on('add') ? t('remote.access.summary.seeEditAll') : t('remote.access.summary.seeEditAllNoAdd');
+	else if (on('editOwn')) s = on('add') ? t('remote.access.summary.seeAddOwn') : t('remote.access.summary.seeOwnNoAdd');
+	else if (on('add')) s = t('remote.access.summary.seeAdd');
+	else if (on('read')) s = t('remote.access.summary.seeOnly');
+	else return t('remote.access.summary.none');
 	const keys: Cap[] = ['read', 'add', 'editOwn', 'editAll'];
-	return keys.some((k) => c[k].state === 'some') ? `${s} (en partie)` : s;
+	return keys.some((k) => c[k].state === 'some') ? t('remote.access.summary.partly', { summary: s }) : s;
 }
 
 // --- Règles avancées (restrictions) -----------------------------------------------------
 
 /** Verbes des commandes : « ne peut pas supprimer ». */
-const VERBS: Record<string, string> = { select: 'voir', insert: 'ajouter', update: 'modifier', delete: 'supprimer', all: 'voir ni modifier' };
+const VERB_CMDS = new Set(['select', 'insert', 'update', 'delete', 'all']);
+const verbOf = (cmd: string) => (VERB_CMDS.has(cmd) ? tAny(`remote.access.verb.${cmd}`) : cmd);
 
 /** Actions qu'une règle peut limiter, dans l'ordre du formulaire. */
-export const RULE_ACTIONS: { cmd: string; label: string }[] = [
-	{ cmd: 'select', label: 'Voir' },
-	{ cmd: 'insert', label: 'Ajouter' },
-	{ cmd: 'update', label: 'Modifier' },
-	{ cmd: 'delete', label: 'Supprimer' },
-	{ cmd: 'all', label: 'Tout' }
-];
+const ruleAction = (cmd: string) => ({
+	cmd,
+	get label() {
+	return tAny(`remote.access.action.${cmd}`);
+	}
+	});
+export const RULE_ACTIONS: { cmd: string; readonly label: string }[] = ['select', 'insert', 'update', 'delete', 'all'].map(ruleAction);
 
 const CMD_ORDER = RULE_ACTIONS.map((a) => a.cmd);
 
 /** Verbes de plusieurs commandes : « modifier ni supprimer » (négatif), « modifier ou supprimer ». */
 function verbs(commands: readonly string[], neg: boolean): string {
-	const vs = [...commands].sort((a, b) => CMD_ORDER.indexOf(a) - CMD_ORDER.indexOf(b)).map((c) => VERBS[c] ?? c);
+	const vs = [...commands].sort((a, b) => CMD_ORDER.indexOf(a) - CMD_ORDER.indexOf(b)).map(verbOf);
 	if (vs.length <= 1) return vs[0] ?? '';
-	return vs.slice(0, -1).join(', ') + (neg ? ' ni ' : ' ou ') + vs[vs.length - 1];
+	return vs.slice(0, -1).join(', ') + (neg ? t('remote.access.nor') : t('remote.access.or')) + vs[vs.length - 1];
 }
 
 /** « du rôle Participant », « des rôles Participant et Lecteur ». */
 function rolesPhrase(names: readonly string[]): string {
-	if (names.length === 1) return `du rôle ${names[0]}`;
-	return `des rôles ${names.slice(0, -1).join(', ')} et ${names[names.length - 1]}`;
+	if (names.length === 1) return t('remote.access.ofRole', { role: names[0] });
+	return t('remote.access.ofRoles', { roles: names.slice(0, -1).join(', '), last: names[names.length - 1] });
 }
 
 export interface RuleShape {
@@ -292,13 +321,13 @@ export interface RuleShape {
 export function ruleSentence(r: RuleShape, types: Record<string, string> = {}): string {
 	const never = isNever(r.predicate);
 	const cond = never ? '' : filterText(r.predicate, types) || '…';
-	const t = `« ${r.table} »`;
+	const table = r.table;
 	if (!r.roles.length) {
-		const v = verbs(r.commands, true);
-		return never ? `Personne ne peut ${v} de lignes dans ${t}, sauf les propriétaires et concepteurs.` : `Personne ne peut ${v} de lignes dans ${t} sauf celles où ${cond} (propriétaires et concepteurs exceptés).`;
+		const verbs_ = verbs(r.commands, true);
+		return never ? t('remote.access.sentence.nobody', { verbs: verbs_, table }) : t('remote.access.sentence.nobodyExcept', { verbs: verbs_, table, cond });
 	}
-	const who = `Les membres ${rolesPhrase(r.roles)}`;
-	return never ? `${who} ne peuvent pas ${verbs(r.commands, true)} de lignes dans ${t}.` : `${who} ne peuvent ${verbs(r.commands, false)}, dans ${t}, que les lignes où ${cond}.`;
+	const who = rolesPhrase(r.roles);
+	return never ? t('remote.access.sentence.membersNever', { who, verbs: verbs(r.commands, true), table }) : t('remote.access.sentence.membersOnly', { who, verbs: verbs(r.commands, false), table, cond });
 }
 
 export interface RuleGroup {
@@ -361,12 +390,17 @@ export interface Preset {
 	hint: string;
 }
 
-export const PRESETS: Preset[] = [
-	{ id: 'no-delete', label: 'Interdire la suppression', hint: 'Personne ne supprime de lignes, sauf propriétaires et concepteurs' },
-	{ id: 'append-only', label: 'Ajout seulement', hint: 'On ajoute des lignes, sans modifier ni supprimer celles qui existent' },
-	{ id: 'status', label: 'Modifier seulement les lignes au statut…', hint: 'Les lignes se modifient et se suppriment tant qu’elles ont ce statut' },
-	{ id: 'own-no-create', label: 'Modifier ses lignes sans en créer', hint: 'Pour un rôle « Voir, ajouter, modifier ses lignes » : il ne peut plus ajouter de lignes' }
-];
+const PRESET_KEYS: Record<string, string> = { 'no-delete': 'noDelete', 'append-only': 'appendOnly', status: 'status', 'own-no-create': 'ownNoCreate' };
+	const preset = (id: string): Preset => ({
+	id,
+	get label() {
+	return tAny(`remote.access.preset.${PRESET_KEYS[id]}.label`);
+},
+get hint() {
+return tAny(`remote.access.preset.${PRESET_KEYS[id]}.hint`);
+}
+});
+export const PRESETS: Preset[] = ['no-delete', 'append-only', 'status', 'own-no-create'].map(preset);
 
 /** Colonne de statut probable (Statut, État, Status…), sinon la première colonne de texte. */
 export function statusColumn(columns: readonly { name: string; type: string }[]): string {
@@ -383,15 +417,15 @@ export function applyPreset(id: string, d: RuleDraft, ctx: { columns: readonly {
 	const base = { ...d, predicate: '', when: 'never' as const };
 	switch (id) {
 		case 'no-delete':
-			return { ...base, who: 'all', roles: [], commands: ['delete'], label: 'Pas de suppression' };
+			return { ...base, who: 'all', roles: [], commands: ['delete'], label: t('remote.access.preset.noDelete.rule') };
 		case 'append-only':
-			return { ...base, who: 'all', roles: [], commands: ['update', 'delete'], label: 'Ajout seulement' };
+			return { ...base, who: 'all', roles: [], commands: ['update', 'delete'], label: t('remote.access.preset.appendOnly.rule') };
 		case 'status': {
 			const col = statusColumn(ctx.columns);
-			return { ...base, who: 'all', roles: [], commands: ['update', 'delete'], when: 'if', predicate: col ? `${quoteIdent(col)} = ''` : '', label: 'Selon le statut' };
+			return { ...base, who: 'all', roles: [], commands: ['update', 'delete'], when: 'if', predicate: col ? `${quoteIdent(col)} = ''` : '', label: t('remote.access.preset.status.rule') };
 		}
 		case 'own-no-create':
-			return { ...base, who: 'roles', roles: ctx.participant ? [ctx.participant] : [], commands: ['insert'], label: 'Pas d’ajout' };
+			return { ...base, who: 'roles', roles: ctx.participant ? [ctx.participant] : [], commands: ['insert'], label: t('remote.access.preset.ownNoCreate.rule') };
 	}
 	return d;
 }
@@ -414,14 +448,14 @@ export interface DraftProblems {
  */
 export function draftProblems(d: RuleDraft, types: Record<string, string>, predicateError = ''): DraftProblems {
 	const p: DraftProblems = {};
-	if (!d.table) p.table = 'Choisissez un tableau.';
-	if (d.who === 'roles' && !d.roles.length) p.who = 'Choisissez au moins un rôle.';
-	if (!d.commands.length) p.commands = 'Choisissez au moins une action.';
+	if (!d.table) p.table = t('remote.access.problem.table');
+	if (d.who === 'roles' && !d.roles.length) p.who = t('remote.access.problem.who');
+	if (!d.commands.length) p.commands = t('remote.access.problem.commands');
 	if (d.when === 'if') {
 		const cs = parseFilter(d.predicate, types);
 		if (predicateError) p.predicate = predicateError;
-		else if (!d.predicate.trim()) p.predicate = 'Ajoutez une condition, ou choisissez « Aucune » exception.';
-		else if (cs && missingValue(cs)) p.predicate = 'Une condition n’a pas de valeur.';
+		else if (!d.predicate.trim()) p.predicate = t('remote.access.problem.predicate');
+		else if (cs && missingValue(cs)) p.predicate = t('remote.access.problem.missingValue');
 	}
 	return p;
 }
@@ -451,8 +485,8 @@ export function roleNames(ids: readonly string[], roles: readonly Role[]): strin
 /** Adresse plausible (le serveur vérifie). */
 export function emailProblem(email: string): string {
 	const e = email.trim();
-	if (!e) return 'Saisissez l’adresse de la personne.';
-	return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) ? '' : `« ${e} » n’est pas une adresse.`;
+	if (!e) return t('remote.access.email.empty');
+	return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) ? '' : t('remote.access.email.invalid', { email: e });
 }
 
 // --- Écran -------------------------------------------------------------------------------

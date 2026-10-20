@@ -5,6 +5,7 @@
 // pages de sections, le Markdown réduit et les liens pré-remplis. L'aperçu
 // (FormPreview.svelte) lit la même définition que le serveur.
 import qrcode from 'qrcode-generator';
+import { fmtDate, t, tAny } from '#lib/i18n/index.js';
 
 /** Liste de validation d'une colonne (bridge.FormList). */
 export interface ColumnList {
@@ -162,11 +163,11 @@ export interface Draft {
 export function reasonAction(reason: string): { label: string; action: 'publish' | 'addshared' | 'retry' } | null {
 	switch (reason) {
 		case 'local':
-			return { label: 'Publier sur un serveur…', action: 'publish' };
+			return { label: t('remote.forms.reason.publish'), action: 'publish' };
 		case 'private':
-			return { label: 'Ajouter au classeur partagé…', action: 'addshared' };
+			return { label: t('remote.forms.reason.addShared'), action: 'addshared' };
 		case 'offline':
-			return { label: 'Réessayer', action: 'retry' };
+			return { label: t('remote.share.banner.retry'), action: 'retry' };
 	}
 	return null;
 }
@@ -178,17 +179,7 @@ export const RADIO_MAX = 7;
 /** Longueur moyenne au-delà de laquelle on propose un texte long. */
 export const LONG_TEXT = 80;
 
-const WIDGET_LABELS: Record<Widget, string> = {
-	text: 'Ligne de texte',
-	textarea: 'Texte long',
-	number: 'Nombre',
-	date: 'Date',
-	datetime: 'Date et heure',
-	checkbox: 'Case à cocher',
-	yesno: 'Oui / Non',
-	radio: 'Boutons radio',
-	list: 'Liste avec recherche'
-};
+const widgetLabel = (w: Widget) => tAny(`remote.forms.widget.${w}`);
 
 /** Champs possibles pour une colonne, le premier étant celui proposé d'office. */
 export function widgetsFor(c: Pick<FormColumn, 'type' | 'avgLength' | 'list'>): { value: Widget; label: string }[] {
@@ -200,7 +191,7 @@ export function widgetsFor(c: Pick<FormColumn, 'type' | 'avgLength' | 'list'>): 
 	else if (c.type === 'datetime') ws = ['datetime'];
 	else if (c.type === 'boolean') ws = ['checkbox', 'yesno'];
 	else ws = c.avgLength > LONG_TEXT ? ['textarea', 'text'] : ['text', 'textarea'];
-	return ws.map((w) => ({ value: w, label: WIDGET_LABELS[w] }));
+	return ws.map((w) => ({ value: w, label: widgetLabel(w) }));
 }
 
 /** Champ proposé d'office pour une colonne. */
@@ -223,7 +214,7 @@ export function isoDay(d: Date): string {
 /** « Liste copiée le 19/10 ». */
 export function copiedLabel(day: string): string {
 	const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(day);
-	return m ? `Liste copiée le ${m[3]}/${m[2]}` : 'Liste copiée';
+	return m ? t('remote.forms.copiedOn', { date: fmtDate(new Date(+m[1], +m[2] - 1, +m[3]), { day: '2-digit', month: '2-digit' }) }) : t('remote.forms.copied');
 }
 
 /**
@@ -469,15 +460,23 @@ export function pagesOf(fields: FormField[], paged: boolean): FormField[][] {
 // --- Palette (§4.1) ------------------------------------------------------
 
 /** Couleurs d'accent : contraste AA (4,5:1) sur blanc (clair) et sur le fond sombre (sombre). */
-export const PALETTE: { name: string; label: string; light: string; dark: string }[] = [
-	{ name: 'green', label: 'Vert', light: '#217346', dark: '#4ade80' },
-	{ name: 'teal', label: 'Sarcelle', light: '#0f766e', dark: '#2dd4bf' },
-	{ name: 'blue', label: 'Bleu', light: '#1d4ed8', dark: '#60a5fa' },
-	{ name: 'indigo', label: 'Indigo', light: '#4338ca', dark: '#a5b4fc' },
-	{ name: 'purple', label: 'Violet', light: '#7e22ce', dark: '#d8b4fe' },
-	{ name: 'red', label: 'Rouge', light: '#b91c1c', dark: '#f87171' },
-	{ name: 'orange', label: 'Orange', light: '#c2410c', dark: '#fb923c' },
-	{ name: 'slate', label: 'Ardoise', light: '#475569', dark: '#94a3b8' }
+const accent = (name: string, light: string, dark: string) => ({
+	name,
+	get label() {
+		return tAny(`remote.forms.accent.${name}`);
+	},
+	light,
+	dark
+});
+export const PALETTE: { name: string; readonly label: string; light: string; dark: string }[] = [
+	accent('green', '#217346', '#4ade80'),
+	accent('teal', '#0f766e', '#2dd4bf'),
+	accent('blue', '#1d4ed8', '#60a5fa'),
+	accent('indigo', '#4338ca', '#a5b4fc'),
+	accent('purple', '#7e22ce', '#d8b4fe'),
+	accent('red', '#b91c1c', '#f87171'),
+	accent('orange', '#c2410c', '#fb923c'),
+	accent('slate', '#475569', '#94a3b8')
 ];
 
 /** Fond de la page en thème sombre. */
@@ -564,41 +563,41 @@ export function checks(d: Draft, info: Pick<FormInfo, 'columns' | 'restricted'>)
 	const name = (id?: string) => cols.find((c) => c.columnId === id)?.name ?? '?';
 	const def = buildDefinition(d);
 	const a = def.appearance;
-	if (!a.title.trim()) errors.push('Le formulaire n’a pas de titre.');
-	if (a.title.length > 120) errors.push('Titre : 120 caractères au plus.');
-	if (a.intro.length > 2000) errors.push('Introduction : 2 000 caractères au plus.');
-	if (a.submit_label.length > 40) errors.push('Bouton : 40 caractères au plus.');
-	if (a.privacy.length > 1000) errors.push('Mention de protection des données : 1 000 caractères au plus.');
-	if (a.closed_message.length > 500) errors.push('Message de fermeture : 500 caractères au plus.');
-	if (/\]\(|https?:\/\//i.test(a.thanks)) errors.push('Remerciement : ni lien ni redirection.');
+	if (!a.title.trim()) errors.push(t('remote.forms.check.noTitle'));
+	if (a.title.length > 120) errors.push(t('remote.forms.check.titleLength'));
+	if (a.intro.length > 2000) errors.push(t('remote.forms.check.introLength'));
+	if (a.submit_label.length > 40) errors.push(t('remote.forms.check.submitLength'));
+	if (a.privacy.length > 1000) errors.push(t('remote.forms.check.privacyLength'));
+	if (a.closed_message.length > 500) errors.push(t('remote.forms.check.closedLength'));
+	if (/\]\(|https?:\/\//i.test(a.thanks)) errors.push(t('remote.forms.check.thanksLink'));
 	const inputs = def.fields.filter((f) => f.kind !== 'section' && !f.hidden);
-	if (!inputs.length) errors.push('Aucun champ : cochez au moins une colonne.');
-	if (def.fields.filter((f) => f.kind === 'section').length > MAX_SECTIONS) errors.push(`${MAX_SECTIONS} sections au plus.`);
+	if (!inputs.length) errors.push(t('remote.forms.check.noField'));
+	if (def.fields.filter((f) => f.kind === 'section').length > MAX_SECTIONS) errors.push(t('remote.forms.check.sections', { n: MAX_SECTIONS }));
 	const params = new Map<string, number>();
 	for (const f of def.fields) if (f.param) params.set(f.param, (params.get(f.param) ?? 0) + 1);
-	for (const [p, n] of params) if (n > 1) errors.push(`Le nom court « ${p} » sert à plusieurs champs.`);
+	for (const [p, n] of params) if (n > 1) errors.push(t('remote.forms.check.paramShared', { param: p }));
 	for (const f of def.fields) {
 		if (f.kind === 'section') {
-			if (!f.title?.trim()) errors.push('Un intertitre n’a pas de texte.');
+			if (!f.title?.trim()) errors.push(t('remote.forms.check.emptySection'));
 			continue;
 		}
-		const label = f.kind === 'position' ? f.label || 'Position' : `${f.label || name(f.column)}`;
-		if ((f.label ?? '').length > 200) errors.push(`${label} : libellé de 200 caractères au plus.`);
-		if ((f.help ?? '').length > 500) errors.push(`${label} : aide de 500 caractères au plus.`);
+		const label = f.kind === 'position' ? f.label || t('remote.forms.position') : `${f.label || name(f.column)}`;
+		if ((f.label ?? '').length > 200) errors.push(t('remote.forms.check.labelLength', { label }));
+		if ((f.help ?? '').length > 500) errors.push(t('remote.forms.check.helpLength', { label }));
 		const values = f.list && !f.list.table_id ? (f.list.values ?? []) : null;
-		if (values && values.length === 0) warnings.push(`${label} : liste vide.`);
+		if (values && values.length === 0) warnings.push(t('remote.forms.check.emptyList', { label }));
 		const fixed = f.default?.fixed;
 		if (fixed !== undefined && fixed !== '') {
-			if (values && values.length && !values.some((v) => v.toLowerCase() === String(fixed).toLowerCase())) warnings.push(`${label} : valeur par défaut hors de la liste.`);
+			if (values && values.length && !values.some((v) => v.toLowerCase() === String(fixed).toLowerCase())) warnings.push(t('remote.forms.check.defaultNotInList', { label }));
 			const n = Number(String(fixed).replace(',', '.'));
-			if (!Number.isNaN(n) && ((f.min != null && n < f.min) || (f.max != null && n > f.max))) warnings.push(`${label} : valeur par défaut hors des bornes.`);
+			if (!Number.isNaN(n) && ((f.min != null && n < f.min) || (f.max != null && n > f.max))) warnings.push(t('remote.forms.check.defaultOutOfBounds', { label }));
 		}
-		if (f.min != null && f.max != null && f.min > f.max) errors.push(`${label} : le minimum dépasse le maximum.`);
-		if (f.list?.table_id) warnings.push(`${label} : les valeurs de la liste seront visibles par tous les répondants.`);
-		if (f.required && (info.restricted ?? []).length) warnings.push(`${label} est obligatoire, mais une restriction interdit d’ajouter des lignes à ce tableau : le formulaire sera bloqué aussi.`);
-		if (f.locked && !f.param) errors.push(`${label} : un champ verrouillé par le lien demande un nom court.`);
+		if (f.min != null && f.max != null && f.min > f.max) errors.push(t('remote.forms.check.minMax', { label }));
+		if (f.list?.table_id) warnings.push(t('remote.forms.check.listVisible', { label }));
+		if (f.required && (info.restricted ?? []).length) warnings.push(t('remote.forms.check.requiredRestricted', { label }));
+		if (f.locked && !f.param) errors.push(t('remote.forms.check.lockedNoParam', { label }));
 	}
-	if (d.access === 'public') warnings.push('Lien public sans date de fermeture ni plafond de réponses.');
+	if (d.access === 'public') warnings.push(t('remote.forms.check.publicOpen'));
 	return { errors, warnings };
 }
 
@@ -641,5 +640,18 @@ export function fileName(title: string): string {
 	return (title.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'formulaire').slice(0, 80);
 }
 
-/** État lisible d'un formulaire. */
-export const STATE_LABELS: Record<string, string> = { draft: 'Brouillon', open: 'Ouvert', paused: 'En pause', closed: 'Fermé' };
+/** État lisible d'un formulaire (dans la langue de l'interface, relu à chaque accès). */
+export const STATE_LABELS: Record<string, string> = {
+	get draft() {
+		return t('remote.forms.state.draft');
+	},
+	get open() {
+		return t('remote.forms.state.open');
+	},
+	get paused() {
+		return t('remote.forms.state.paused');
+	},
+	get closed() {
+		return t('remote.forms.state.closed');
+	}
+};
