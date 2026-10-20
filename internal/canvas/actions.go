@@ -59,6 +59,10 @@ type Event struct {
 	// AutoKey : colonne du tableau créé devenue clé d'office (en-tête ID,
 	// ou 1, 2, 3… : autokey.go).
 	AutoKey string `json:"autoKey,omitempty"`
+	// HeaderOffer : la saisie, juste au-dessus de ce tableau, ressemble à
+	// sa ligne d'en-têtes (titlehead.go) ; la barre d'état propose
+	// « Utiliser comme en-têtes » (TitleToHeader).
+	HeaderOffer string `json:"headerOffer,omitempty"`
 }
 
 // SetCell traite une saisie validée dans la cellule (row, col) d'une feuille,
@@ -81,6 +85,9 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 		return err
 	})
 	ev.Split = m.splitBirth(ctx, ev, err)
+	if err == nil && strings.TrimSpace(raw) != "" {
+		ev.HeaderOffer, _ = m.HeaderOffer(ctx, sheet, row, col)
+	}
 	return ev, err
 }
 

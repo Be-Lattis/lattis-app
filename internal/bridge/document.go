@@ -1468,6 +1468,12 @@ func (s *DocumentService) HeaderToTitle(ctx context.Context, table string) (DocS
 	return s.act(ctx, func(d *doc.Document) error { return d.HeaderToTitle(ctx, table) })
 }
 
+// TitleToHeader : « Utiliser comme en-têtes » ; la ligne juste au-dessus du
+// tableau donne les noms des colonnes, l'ancien en-tête devient la 1re ligne.
+func (s *DocumentService) TitleToHeader(ctx context.Context, table string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.TitleToHeader(ctx, table) })
+}
+
 // SetTwoLevel affiche (ou non) les en-têtes d'un tableau sur deux lignes
 // (groupe « Groupe.Sous » dans une bande au-dessus de l'en-tête).
 func (s *DocumentService) SetTwoLevel(ctx context.Context, table string, on bool) (DocState, error) {

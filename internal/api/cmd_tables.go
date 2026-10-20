@@ -456,6 +456,11 @@ tables.sort_custom("Commandes", "Client", nil, "Jours", true) -- liste nommée, 
 				d, _ := c.Doc()
 				return nil, d.HeaderToTitle(c, t.Name)
 			}),
+		tableCmd("tables.title_to_header", "Utiliser comme en-têtes", "L'inverse de tables.header_to_title, pour des en-têtes tapés après les données : les cellules libres juste au-dessus du tableau, sur ses colonnes, deviennent les noms des colonnes (une cellule vide garde le nom) ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »), typée comme une saisie. Les formules suivent les renommages. Refusé sur des en-têtes sur deux lignes, sous des cellules fusionnées ou une formule.", true,
+			func(c *Call, t tableRef) (any, error) {
+				d, _ := c.Doc()
+				return nil, d.TitleToHeader(c, t.Name)
+			}),
 		tableCmd("tables.last_row_out", "Sortir la dernière ligne", "La dernière ligne de données sort du tableau : elle reste juste dessous en cellules libres, gardées hors du tableau (une note, ou un total si elle commence par « Total »).", true,
 			func(c *Call, t tableRef) (any, error) {
 				d, _ := c.Doc()

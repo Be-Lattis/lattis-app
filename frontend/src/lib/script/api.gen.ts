@@ -1118,6 +1118,14 @@ export const apiReference: RefEntry[] = [
 		args: [1, 3]
 	},
 	{
+		name: "tables.title_to_header",
+		category: "tables",
+		signature: "tables.title_to_header(table)",
+		summary: "L'inverse de tables.header_to_title, pour des en-têtes tapés après les données : les cellules libres juste au-dessus du tableau, sur ses colonnes, deviennent les noms des colonnes (une cellule vide garde le nom) ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »), typée comme une saisie. Les formules suivent les renommages. Refusé sur des en-têtes sur deux lignes, sous des cellules fusionnées ou une formule.",
+		details: "Paramètres — table : nom du tableau. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 1]
+	},
+	{
 		name: "tables.to_range",
 		category: "tables",
 		signature: "tables.to_range(table)",

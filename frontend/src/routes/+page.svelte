@@ -26,6 +26,7 @@
 	import { visibleSheet } from '#lib/shell/sheets.js';
 	import { choiceStatus, choiceStep, type ChoiceActions } from '#lib/shell/choice.js';
 	import { tabChoiceNotice } from '#lib/grid/tabchoice.js';
+	import { headerOfferText } from '#lib/grid/titlehead.js';
 	import { popBack, pushBack, type RefSpot } from '#lib/grid/reflink.js';
 	import { count } from '#lib/sql/result.js';
 	import { printSheet } from '#lib/shell/print.js';
@@ -513,6 +514,10 @@
 	let similar = $state<SheetGroup[]>([]);
 	const tabGroups = $derived(shownGroups(similar));
 	let mergeOffer = $state<SheetGroup | null>(null);
+	// En-têtes tapés après les données : la ligne saisie au-dessus de ce
+	// tableau ressemble à ses en-têtes (Event.headerOffer) ; la barre d'état
+	// propose « Utiliser comme en-têtes » jusqu'à la saisie suivante.
+	let headerOffer = $state<{ sheet: number; table: string } | null>(null);
 	// Plan du volet Regrouper ouvert (null : fermé), et tableaux qu'on peut y ajouter.
 	let mergePlan = $state<MergePlan | null>(null);
 	// Groupe d'où vient le plan (familles, sources de la catégorie), s'il y en a un.
@@ -1513,14 +1518,24 @@
 	/** Clé posée d'office à la création (première colonne ID, ou 1, 2, 3…). */
 	const autoKeyNote = (ev: { autoKey?: string }) => (ev.autoKey ? `, clé posée sur ${ev.autoKey}` : '');
 
+	/** « Utiliser comme en-têtes » : la ligne juste au-dessus du tableau devient son en-tête. */
+	async function titleToHeader(table: string) {
+		headerOffer = null;
+		const st = await DocumentService.TitleToHeader(table);
+		await reload();
+		if (st.notice) notice = st.notice;
+	}
+
 	const docSource: SheetSource = {
 		window: (t, first, count) => DocumentService.Window(sheetId, t.id, first, count) as Promise<Fetched>,
 		reload: () => reload(),
 		async setCell(row, col, raw, _target, key) {
+			headerOffer = null;
 			const ev = await (key ? DocumentService.SetCellKeyed(sheetId, row, col, raw, key) : DocumentService.SetCell(sheetId, row, col, raw));
 			// Relire tout de suite (l'événement doc:changed sert aux changements venus
 			// d'ailleurs, et n'existe pas en mode serveur).
 			await reload();
+			if (ev.headerOffer) headerOffer = { sheet: sheetId, table: ev.headerOffer };
 			if (ev.keyed) return `Clé posée sur « ${ev.keyed.slice(ev.keyed.indexOf('.') + 1)} » pour REFERENCE`;
 			const undoBirth = ev.split ? ' (Ctrl+Z : le défaire, les cellules restent libres)' : '';
 			if (ev.created && ev.headless) return `Tableau « ${ev.created} » créé sans en-têtes (« Colonne n ») : tapez les noms dans sa ligne d'en-tête${autoKeyNote(ev)}${undoBirth}`;
@@ -1529,7 +1544,7 @@
 			if (ev.invalid) return 'Valeur hors type : cellule marquée en erreur';
 		},
 		editing: (row, col, on) => DocumentService.ShareEditing(sheetId, row, col, on),
-		undo: () => DocumentService.Undo().then(reload),
+		undo: () => ((headerOffer = null), DocumentService.Undo().then(reload)),
 		redo: () => DocumentService.Redo().then(reload),
 		async paste(row, col, block) {
 			const ev = await DocumentService.Paste(sheetId, row, col, block);
@@ -1589,6 +1604,7 @@
 		renameTable: (t, name) => DocumentService.RenameTable(t.name, name).then(reload),
 		promoteHeader: (t) => DocumentService.PromoteHeader(t.name).then(reload),
 		headerToTitle: (t) => DocumentService.HeaderToTitle(t.name).then(reload),
+		titleToHeader: (t) => titleToHeader(t.name),
 		setTwoLevel: (t, on) => DocumentService.SetTwoLevel(t.name, on).then(reload),
 		rowToNote: (t, n) => DocumentService.RowToNote(t.name, n).then(reload),
 		joinTable: (row, col) => DocumentService.JoinTable(sheetId, row, col).then(reload),
@@ -2988,6 +3004,13 @@
 			{@const b = refBack[refBack.length - 1]}
 			<!-- Après « Basculer sur » (colonne de référence) : retour à la cellule de départ. -->
 			<button class="offer-act back" title="Revenir à la cellule d'où vous avez basculé (Alt+←)" onclick={() => void refGoBack()}>← Revenir à {b.label}</button>
+		{/if}
+		{#if headerOffer && headerOffer.sheet === sheetId && mode === 'doc' && view === 'grid'}
+			{@const o = headerOffer}
+			<!-- En-têtes tapés après les données : proposés jusqu'à la saisie suivante. -->
+			<span class="offer" role="status">{headerOfferText(o.table)}</span>
+			<button class="offer-act" title="Les cellules tapées au-dessus du tableau deviennent ses en-têtes ; l'en-tête actuel devient la 1re ligne de données (Ctrl+Z pour annuler)" onclick={() => titleToHeader(o.table).catch((e) => (notice = err(e)))}>Utiliser comme en-têtes</button>
+			<button class="offer-act" title="Garder la ligne en cellules libres (un titre)" onclick={() => (headerOffer = null)}>Non</button>
 		{/if}
 		{#if mergeOffer && mode === 'doc'}
 			{@const g = mergeOffer}

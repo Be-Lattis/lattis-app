@@ -2429,6 +2429,14 @@ export function TextToColumnsPreview(sheet: number, r0: number, r1: number, col:
 }
 
 /**
+ * TitleToHeader : « Utiliser comme en-têtes » ; la ligne juste au-dessus du
+ * tableau donne les noms des colonnes, l'ancien en-tête devient la 1re ligne.
+ */
+export function TitleToHeader(table: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3462914548, table);
+}
+
+/**
  * Transfer copie ou déplace (move) une zone d'une feuille vers une autre
  * zone, d'une feuille à l'autre : copier-coller et couper-coller internes,
  * glisser de la bordure de la sélection (voir canvas.Model.Transfer).

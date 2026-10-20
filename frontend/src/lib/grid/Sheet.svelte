@@ -48,6 +48,7 @@
 	import { followLabel } from '#lib/shell/mergesheets.js';
 	import { editMode, viewKey } from './readonlyedit';
 	import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, splitGroup, tableTop } from './twolevel';
+	import { tableUnderTitle, titleAboveFilled } from './titlehead';
 	import { grown as growFrame, type Grown } from './grown';
 	import { pivotLayer, pivotValueText } from './pivotformat';
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
@@ -526,6 +527,8 @@
 		promoteHeader?(table: SheetTable): Promise<unknown>;
 		/** Sortir l'en-tête du tableau : c'est un titre, la 1re ligne devient l'en-tête. */
 		headerToTitle?(table: SheetTable): Promise<unknown>;
+		/** L'inverse : la ligne juste au-dessus du tableau donne les noms des colonnes, l'en-tête devient la 1re ligne. */
+		titleToHeader?(table: SheetTable): Promise<unknown>;
 		/** En-têtes sur deux lignes (ou une) : la ligne au-dessus de l'en-tête donne les groupes. */
 		setTwoLevel?(table: SheetTable, on: boolean): Promise<unknown>;
 		/** Sortir la dernière ligne du tableau : elle reste dessous comme note ou total. */
@@ -10103,6 +10106,15 @@
 	/** La cellule est dans une zone « plage » (tableau converti). */
 	// Cellule libre gardée hors du tableau voisin (note, total : style « out »).
 	const keptOut = (row: number, col: number) => !!(freeStyles.get(key(row, col)) as { out?: boolean } | undefined)?.out;
+	// « Utiliser comme en-têtes » : le tableau (hors requête) dont l'en-tête est
+	// juste sous la cellule libre remplie (row, col) ; sur l'en-tête, une
+	// cellule remplie au-dessus de ses colonnes.
+	const titleTableAt = (row: number, col: number) => {
+		if (!source.titleToHeader || !(cells.get(key(row, col)) ?? '').trim() || tableAt(row, col)) return undefined;
+		const t = tableUnderTitle(entries.map((e) => e.t), row, col);
+		return t && !t.query ? t : undefined;
+	};
+	const titleAbove = (t: SheetTable) => !!source.titleToHeader && !t.query && titleAboveFilled(t, (r, c) => cells.get(key(r, c)));
 	const inRangeZone = (row: number, col: number) => (data.ranges ?? []).some((z) => row >= z.r0 && row <= z.r1 && col >= z.c0 && col <= z.c1);
 
 	// Menu du clic droit hors tableau : presse-papiers et effacement.
@@ -10874,6 +10886,7 @@
 			{@const filtered = cols && !!source.clearFilters && m.e.t.columns.some((c) => c.filter)}
 			{@const sortCount = (cols && source.sortTable ? 2 : 0) + (cols && source.sortTableCustom ? 1 : 0) + (cols && source.setFilter ? 1 : 0) + (filtered ? 1 : 0)}
 			{@const toTitle = cols && !!source.headerToTitle && m.e.t.rows > 0}
+			{@const toHeader = cols && titleAbove(m.e.t)}
 			{@const toNote = rowItems && !!source.rowToNote && m.n === m.e.t.rows - 1}
 			{@const refresh = !!m.e.t.query && !!source.refreshTable}
 			{@const share = cols && !!onsharedata && !m.e.t.query}
@@ -10881,7 +10894,7 @@
 			{@const pushSource = cols && !!onpushsource && sourceTables.includes(m.e.t.name)}
 			{@const twoLevel = cols && !!source.setTwoLevel && !m.e.t.query}
 			{@const follow = cols && !!source.setFollow && !!data?.choice && !m.e.t.query}
-			{@const tableItems = toTitle || twoLevel || refresh || share || pushSource || follow || !!source.convertToRange || !!source.deleteTables}
+			{@const tableItems = toTitle || toHeader || twoLevel || refresh || share || pushSource || follow || !!source.convertToRange || !!source.deleteTables}
 			{#snippet sortItems()}
 				{#if cols && source.sortTable}
 					{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
@@ -11018,6 +11031,9 @@
 						<Submenu label="Tableau">
 							{#if toTitle}
 								<button title="La 1re ligne de données devient l'en-tête ; l'en-tête actuel reste au-dessus du tableau, en titre (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>Sortir l'en-tête</button>
+							{/if}
+							{#if toHeader}
+								<button title="Les cellules tapées juste au-dessus du tableau deviennent les noms de ses colonnes ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.titleToHeader!(m.e.t))}>Utiliser la ligne du dessus comme en-têtes</button>
 							{/if}
 							{#if twoLevel}
 								{@const on = !!m.e.t.twoLevel}
@@ -11202,6 +11218,8 @@
 				{#if !m.kind}
 					{@const join = !!source.joinTable && keptOut(active.row, active.col)}
 					{@const asTable = !!source.formatAsTable && inRangeZone(active.row, active.col)}
+					{@const under = titleTableAt(active.row, active.col)}
+					{@const asHeader = !!under}
 					{#if source.applyStyle || source.setNote}
 						<hr />
 						{#if source.applyStyle}
@@ -11209,9 +11227,13 @@
 						{/if}
 						{#if source.setNote}{@render noteItems()}{/if}
 					{/if}
-					{#if join || asTable}
+					{#if join || asTable || asHeader}
 						{@const at = { row: active.row, col: active.col }}
 						<hr />
+						{#if asHeader && under}
+							{@const t = under}
+							<button data-shed="1" title="Les cellules de cette ligne, au-dessus des colonnes du tableau, deviennent ses en-têtes ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.titleToHeader!(t))}>Utiliser comme en-têtes de « {t.name} »</button>
+						{/if}
 						{#if join}
 							<button data-shed="1" title="Cette cellule est gardée hors du tableau voisin (note, total) ; elle le rejoint" onclick={() => menuAction(() => source.joinTable!(at.row, at.col))}>Ajouter au tableau</button>
 						{/if}

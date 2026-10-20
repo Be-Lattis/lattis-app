@@ -68,7 +68,7 @@ var Structure = []string{
 	// Réparer des tableaux mal créés : limites (tables.to_range puis
 	// tables.from_range), en-tête, titre ou note pris dans le tableau, lignes,
 	// colonnes à scinder, déplacement.
-	"tables.from_range", "tables.to_range", "tables.promote_header", "tables.header_to_title", "tables.last_row_out", "tables.two_level_headers",
+	"tables.from_range", "tables.to_range", "tables.promote_header", "tables.header_to_title", "tables.title_to_header", "tables.last_row_out", "tables.two_level_headers",
 	"tables.insert_row", "tables.delete_row", "tables.move", "tables.text_to_columns", "cells.text_to_columns", "cells.paste", "cells.clear",
 	"pivots.create", "pivots.set", "charts.create", "charts.set", "charts.place",
 	// Tableaux de bord sur mesure : une page web (HTML, CSS, JavaScript) qui

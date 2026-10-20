@@ -631,6 +631,13 @@ export interface Event {
      * ou 1, 2, 3… : autokey.go).
      */
     "autoKey"?: string;
+
+    /**
+     * HeaderOffer : la saisie, juste au-dessus de ce tableau, ressemble à
+     * sa ligne d'en-têtes (titlehead.go) ; la barre d'état propose
+     * « Utiliser comme en-têtes » (TitleToHeader).
+     */
+    "headerOffer"?: string;
 }
 
 /**
