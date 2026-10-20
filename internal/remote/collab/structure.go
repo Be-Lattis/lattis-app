@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"maps"
 	"slices"
 	"strconv"
@@ -48,28 +47,32 @@ import (
 // envoyé par la file, et de l'ajout d'un tableau au classeur partagé.
 var StructureTimeout = 30 * time.Second
 
-// RefusedError est un changement de structure refusé par le serveur ; Msg
+// RefusedError est un changement de structure refusé par le serveur ; Text
 // est le texte du serveur.
 type RefusedError struct {
 	Kind string // command.KindDo, KindUndo, KindRedo
-	Msg  string
+	Text string
 }
 
-func (e *RefusedError) Error() string {
+func (e *RefusedError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *RefusedError) Msg() msg.Message {
+	id := msg.ID("collab.refused")
 	switch e.Kind {
 	case command.KindUndo:
-		return "Annulation refusée par le serveur : " + e.Msg
+		id = "collab.undoRefused"
 	case command.KindRedo:
-		return "Rétablissement refusé par le serveur : " + e.Msg
+		id = "collab.redoRefused"
 	}
-	return "Refusé par le serveur : " + e.Msg
+	return msg.M(id, msg.Args{"err": e.Text})
 }
 
 // serverError rend l'erreur d'un appel de structure : refus du serveur
 // (RefusedError, son texte) ou coupure.
 func serverError(kind string, err error) error {
 	if _, ok := workbook.Rejected(err); ok {
-		return &RefusedError{Kind: kind, Msg: workbook.ServerMessage(err)}
+		return &RefusedError{Kind: kind, Text: workbook.ServerMessage(err)}
 	}
 	return msg.New("collab.structureOffline", msg.Args{"errText": errText(err)})
 }
@@ -140,8 +143,8 @@ func (en entry) structureChanges() ([]oplog.Change, error) {
 // RefusedNotice : message de la barre d'état quand le serveur refuse un
 // changement de structure déjà appliqué en local (écriture optimiste) : il
 // est défait sur ce poste.
-func RefusedNotice(kind, msg string) string {
-	return (&RefusedError{Kind: kind, Msg: msg}).Error() + " — la modification a été annulée"
+func RefusedNotice(l msg.Lang, kind, text string) string {
+	return msg.Format(l, "collab.refusedNotice", msg.Args{"refused": (&RefusedError{Kind: kind, Text: text}).Msg()})
 }
 
 // sendStructure fait sur le serveur les changements de structure d'une
@@ -215,7 +218,7 @@ func (e *Engine) sendStructure(ctx context.Context, srv workbook.Server, info *w
 		e.link.Unpublish(tbl)
 	}
 	for _, name := range restored {
-		rep.notice("Le tableau « " + name + " » est rétabli sur ce poste seulement : il a été supprimé du serveur et n'est plus partagé")
+		rep.notice(e.say("collab.restoredLocally", msg.Args{"table": name}))
 	}
 	rep.Sent++
 	return nil
@@ -227,7 +230,7 @@ func (e *Engine) sendStructure(ctx context.Context, srv workbook.Server, info *w
 // données du serveur en local (hors du journal d'annulation ; les données
 // en attente d'envoi restent et partent ensuite : une valeur d'une colonne
 // qui n'est plus sur le serveur est écartée).
-func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info *workbook.Info, en entry, changes []oplog.Change, msg string, rep *Report) error {
+func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info *workbook.Info, en entry, changes []oplog.Change, text string, rep *Report) error {
 	tbls := map[int64]bool{}
 	added := map[int64]bool{}  // colonnes ajoutées en local, à retirer
 	calc := map[int64]string{} // colonnes converties en valeurs (ou l'inverse)
@@ -246,7 +249,7 @@ func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info 
 	dropped := 0
 	err := e.db.Write(ctx, func(tx *sql.Tx) error {
 		dropped = 0
-		if _, err := tx.ExecContext(ctx, `UPDATE _lattis_outbox SET state = 'rejected', error = ? WHERE id = ?`, msg, en.id); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE _lattis_outbox SET state = 'rejected', error = ? WHERE id = ?`, text, en.id); err != nil {
 			return err
 		}
 		rs, err := tx.QueryContext(ctx, `SELECT id, ops FROM _lattis_outbox WHERE state = 'pending' AND id > ? AND ops LIKE ? ORDER BY id`, en.id, `%"k":"`+oplog.OpStructure+`"%`)
@@ -284,7 +287,7 @@ func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info 
 			return err
 		}
 		for _, id := range later {
-			if _, err := tx.ExecContext(ctx, `UPDATE _lattis_outbox SET state = 'rejected', error = ? WHERE id = ?`, "abandonnée : "+msg, id); err != nil {
+			if _, err := tx.ExecContext(ctx, `UPDATE _lattis_outbox SET state = 'rejected', error = ? WHERE id = ?`, e.say("collab.dropped", msg.Args{"err": text}), id); err != nil {
 				return err
 			}
 			dropped++
@@ -295,9 +298,9 @@ func (e *Engine) refuseStructure(ctx context.Context, srv workbook.Server, info 
 		return err
 	}
 	rep.Rejected++
-	note := RefusedNotice(en.kind, msg)
+	note := RefusedNotice(e.lang(), en.kind, text)
 	if dropped > 0 {
-		note += fmt.Sprintf(" (et %d changement(s) de structure suivant(s) du même tableau)", dropped)
+		note += e.say("collab.alsoDropped", msg.Args{"n": dropped})
 	}
 	rep.notice(note)
 	r, err := e.revertStructure(ctx, srv, info, tbls, added, calc)
@@ -481,7 +484,7 @@ func (e *Engine) revertStructure(ctx context.Context, srv workbook.Server, info 
 		return rep, err
 	}
 	if forgot {
-		rep.notice("historique d'annulation effacé")
+		rep.notice(e.say("collab.historyCleared", nil))
 	}
 	full := map[int64]bool{}
 	for _, p := range plans {
@@ -671,15 +674,15 @@ func forgetTable(ctx context.Context, tx *sql.Tx, tbl int64) error {
 
 // StructureNotice : message de la barre d'état quand la structure d'un
 // tableau a changé sur le serveur.
-func structureNotice(name string, gone, forgot bool) string {
-	msg := "Structure du tableau « " + name + " » modifiée sur le serveur"
+func structureNotice(l msg.Lang, name string, gone, forgot bool) string {
+	id := "collab.structureChangedOnServer"
 	if gone {
-		msg = "Tableau « " + name + " » supprimé sur le serveur"
+		id = "collab.tableDeletedOnServer"
 	}
 	if forgot {
-		msg += " : historique d'annulation effacé"
+		id += "Forgot"
 	}
-	return msg
+	return msg.Format(l, msg.ID(id), msg.Args{"table": name})
 }
 
 // sameShape dit si la structure du serveur st est celle que le poste
@@ -905,7 +908,7 @@ func (e *Engine) syncStructure(ctx context.Context, only map[int64]bool) (Report
 		if p.shape.Gone {
 			e.link.Unpublish(p.shape.Table)
 		}
-		rep.notice(structureNotice(p.name, p.shape.Gone, forgot))
+		rep.notice(structureNotice(e.lang(), p.name, p.shape.Gone, forgot))
 	}
 	var reload []int64
 	for _, tbl := range changed {

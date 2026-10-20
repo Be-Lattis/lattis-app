@@ -172,7 +172,7 @@ func (w *worker) cycle(ctx context.Context) {
 		now := w.e.link.Gone()
 		if err == nil && changed && now == "" {
 			ev.State = true
-			ev.Notices = append(ev.Notices, RightsNotice)
+			ev.Notices = append(ev.Notices, w.e.say("collab.rightsChanged", nil))
 		}
 		if w.e.link.State().Title != title || now != gone {
 			ev.State = true

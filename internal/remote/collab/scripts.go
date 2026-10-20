@@ -4,10 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -59,7 +59,7 @@ func (e *Engine) SyncScripts(ctx context.Context, force bool) (Report, error) {
 	if len(res.Received) > 0 {
 		rep.Layout = true
 		sort.Strings(res.Received)
-		rep.notice(scriptsNotice(res.Received))
+		rep.notice(scriptsNotice(e.lang(), res.Received))
 	}
 	if e.scripts, err = e.scriptsSignature(ctx); err != nil {
 		return rep, err
@@ -68,9 +68,9 @@ func (e *Engine) SyncScripts(ctx context.Context, force bool) (Report, error) {
 }
 
 // scriptsNotice : message des scripts reçus d'un concepteur.
-func scriptsNotice(names []string) string {
+func scriptsNotice(l msg.Lang, names []string) string {
 	if len(names) == 1 {
-		return fmt.Sprintf("Script « %s » mis à jour par un concepteur du classeur (votre accord sera demandé avant sa prochaine exécution)", names[0])
+		return msg.Format(l, "collab.scriptUpdated", msg.Args{"script": names[0]})
 	}
-	return fmt.Sprintf("%d scripts mis à jour par un concepteur du classeur (votre accord sera demandé avant leur prochaine exécution)", len(names))
+	return msg.Format(l, "collab.scriptsUpdated", msg.Args{"n": len(names)})
 }

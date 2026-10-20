@@ -3,10 +3,10 @@ package collab
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -66,18 +66,18 @@ func (e *Engine) syncLayout(ctx context.Context, force bool) (Report, error) {
 		e.settleChoices(ctx)
 	}
 	if res.Lost {
-		rep.notice("Vos changements de mise en page n'ont pas été envoyés : vous n'êtes plus propriétaire ni concepteur de ce classeur ; la mise en page du serveur est reprise")
+		rep.notice(e.say("collab.layoutLost", nil))
 	}
 	if res.Conflicts > 0 {
 		e.link.AddLayoutConflicts(res.Conflicts)
 		if res.ServerWon {
-			rep.notice(LayoutLongAwayNotice(res.Conflicts))
+			rep.notice(e.say("collab.layoutLongAway", msg.Args{"n": res.Conflicts}))
 		} else {
-			rep.notice(LayoutConflictNotice(res.Conflicts))
+			rep.notice(e.say("collab.layoutConflict", msg.Args{"n": res.Conflicts}))
 		}
 	}
 	if res.Forgot {
-		rep.notice(LayoutForgotNotice)
+		rep.notice(e.say("collab.layoutForgot", nil))
 	}
 	return rep, nil
 }
@@ -89,10 +89,7 @@ const LayoutForgotNotice = "Mise en page modifiée sur le serveur : historique d
 // LayoutConflictNotice : modifications d'un collègue remplacées par les
 // siennes (même élément de la mise en page changé des deux côtés).
 func LayoutConflictNotice(n int) string {
-	if n == 1 {
-		return "Mise en page : 1 modification d'un collègue faite au même moment a été remplacée par la vôtre (la dernière enregistrée l'emporte)"
-	}
-	return fmt.Sprintf("Mise en page : %d modifications d'un collègue faites au même moment ont été remplacées par les vôtres (la dernière enregistrée l'emporte)", n)
+	return msg.Format(msg.FR, "collab.layoutConflict", msg.Args{"n": n})
 }
 
 // LongAway : au-delà de cette durée sans synchronisation de la mise en
@@ -103,11 +100,7 @@ var LongAway = 24 * time.Hour
 // LayoutLongAwayNotice explique pourquoi, au retour d'une longue coupure,
 // des changements de mise en page du poste ont été remplacés.
 func LayoutLongAwayNotice(n int) string {
-	what := "1 élément modifié des deux côtés"
-	if n > 1 {
-		what = fmt.Sprintf("%d éléments modifiés des deux côtés", n)
-	}
-	return "Mise en page : après plus de 24 h sans connexion, la version de vos collègues a été gardée pour " + what + " : elle est plus récente que la vôtre"
+	return msg.Format(msg.FR, "collab.layoutLongAway", msg.Args{"n": n})
 }
 
 // layoutSyncedKey : date (RFC 3339) de la dernière synchronisation réussie

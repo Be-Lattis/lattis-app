@@ -385,7 +385,7 @@ func (s *DocumentService) MCPUndoSeries(ctx context.Context, series int) (DocSta
 	s.mcp.mu.Lock()
 	ser.closed = true
 	s.mcp.mu.Unlock()
-	d.Notify(collab.UndoNotice(d.Oplog, false))
+	d.Notify(collab.UndoNoticeIn(s.sessionLang(), d.Oplog, false))
 	return s.changed(ctx)
 }
 

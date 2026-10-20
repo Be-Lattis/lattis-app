@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Structure des tableaux publiés d'un classeur collaboratif (spécification
@@ -90,7 +91,7 @@ type StructureFunc func(ctx context.Context, tx *sql.Tx, kind string, changes []
 type structure struct {
 	mu     sync.Mutex
 	fn     StructureFunc
-	notice string
+	notice msg.Message
 	// watch voit chaque instruction des étapes du bus (SetWatch).
 	watch func(q string) error
 }
@@ -130,17 +131,20 @@ func (r *Recorder) structureFn() StructureFunc {
 
 // TakeNotice rend (et oublie) le message laissé par la dernière
 // annulation (tableau rétabli sur ce poste seulement), "" sinon.
-func (r *Recorder) TakeNotice() string {
+func (r *Recorder) TakeNotice() string { return r.TakeNoticeMsg().String() }
+
+// TakeNoticeMsg : TakeNotice, comme message (ID vide : aucun).
+func (r *Recorder) TakeNoticeMsg() msg.Message {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()
 	n := r.st.notice
-	r.st.notice = ""
+	r.st.notice = msg.Message{}
 	return n
 }
 
-func (r *Recorder) setNotice(msg string) {
+func (r *Recorder) setNotice(m msg.Message) {
 	r.st.mu.Lock()
-	r.st.notice = msg
+	r.st.notice = m
 	r.st.mu.Unlock()
 }
 
@@ -281,8 +285,11 @@ func changes(ids []int64, before, after map[int64]*tshape, kind string) []Change
 // le supprimer du serveur pour tous.
 type ErrImplicitDrop struct{ Table string }
 
-func (e ErrImplicitDrop) Error() string {
-	return "Le tableau partagé « " + e.Table + " » ne peut pas être remplacé ni retiré par cette action : supprimez-le d'abord avec « Supprimer le tableau », qui le retire aussi du serveur"
+func (e ErrImplicitDrop) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e ErrImplicitDrop) Msg() msg.Message {
+	return msg.M("collab.implicitDrop", msg.Args{"table": e.Table})
 }
 
 // dropWanted dit si la transaction a voulu supprimer le tableau tbl
@@ -376,7 +383,7 @@ func (s *session) restored() error {
 			return err
 		}
 		if was == 0 {
-			s.r.setNotice("Le tableau « " + g.name + " » est rétabli sur ce poste seulement : il a été supprimé du serveur et n'est plus partagé")
+			s.r.setNotice(msg.M("collab.restoredLocally", msg.Args{"table": g.name}))
 		}
 	}
 	return nil

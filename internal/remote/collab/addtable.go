@@ -18,15 +18,15 @@ import (
 // ErrAddOffline : l'ajout passe par le serveur.
 var ErrAddOffline = msg.New("collab.addTableOffline", nil)
 
-// AddedNotice : message de la barre d'état après l'ajout.
-func AddedNotice(name string) string {
-	return "Tableau « " + name + " » ajouté au classeur partagé : les autres membres le reçoivent"
+// AddedNotice : message de la barre d'état après l'ajout, dans la langue l.
+func AddedNotice(l msg.Lang, name string) string {
+	return msg.Format(l, "collab.tableAdded", msg.Args{"table": name})
 }
 
 // ArrivedNotice : message de la barre d'état quand un tableau ajouté par un
-// collègue est reçu.
-func ArrivedNotice(name string) string {
-	return "Tableau « " + name + " » ajouté au classeur partagé par un concepteur"
+// collègue est reçu, dans la langue l.
+func ArrivedNotice(l msg.Lang, name string) string {
+	return msg.Format(l, "collab.tableArrived", msg.Args{"table": name})
 }
 
 // CanAdd dit pourquoi le tableau local tbl ne peut pas être ajouté au
@@ -35,13 +35,13 @@ func (e *Engine) CanAdd(tbl int64) string {
 	info := e.link.Info()
 	switch {
 	case info == nil || info.Mode != workbook.Collaborative:
-		return ErrNotCollaborative.Error()
+		return msg.Text(e.lang(), ErrNotCollaborative)
 	case e.link.TableShare(tbl) == "published":
-		return "Ce tableau est déjà dans le classeur partagé"
+		return e.say("collab.alreadyShared", nil)
 	case !info.CanDesign():
-		return workbook.ErrAddDesign.Error()
+		return msg.Text(e.lang(), workbook.ErrAddDesign)
 	case e.server() == nil || !e.link.Online():
-		return ErrAddOffline.Error()
+		return msg.Text(e.lang(), ErrAddOffline)
 	}
 	return ""
 }
@@ -71,7 +71,7 @@ func (e *Engine) AddTable(ctx context.Context, tbl int64) (string, error) {
 	})
 	if err != nil {
 		if _, ok := workbook.Rejected(err); ok {
-			return "", &RefusedError{Kind: command.KindDo, Msg: workbook.ServerMessage(err)}
+			return "", &RefusedError{Kind: command.KindDo, Text: workbook.ServerMessage(err)}
 		}
 		return "", err
 	}
@@ -136,7 +136,7 @@ func (e *Engine) receiveArrivals(ctx context.Context) (Report, error) {
 	}
 	e.settleChoices(ctx) // feuille reçue avec un onglet à choix
 	for _, t := range got {
-		rep.notice(ArrivedNotice(t.Name))
+		rep.notice(ArrivedNotice(e.lang(), t.Name))
 		rep.Applied.Tables = append(rep.Applied.Tables, t.Table)
 	}
 	return rep, nil

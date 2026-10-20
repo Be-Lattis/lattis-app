@@ -148,7 +148,7 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 	// et qu'un collègue supprime : la suppression l'emporte (question 11 de
 	// l'audit du mode en ligne), mais le poste le dit.
 	if n := mineDeleted(ctx, e.db.Read(), batches); n > 0 {
-		rep.notice(mineDeletedNotice(n))
+		rep.notice(mineDeletedNotice(e.lang(), n))
 	}
 	applied, err := e.model.ApplyRemote(ctx, batches, e.keep, func(tx *sql.Tx) error {
 		// Cellule en conflit modifiée encore par un collègue : la réception
@@ -172,7 +172,7 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 	rep.Reloaded = reloaded
 	rep.Applied = applied
 	if len(applied.Failed) > 0 {
-		rep.notice(fmt.Sprintf("%d ligne(s) reçue(s) du serveur n'ont pas pu être appliquées : %s", len(applied.Failed), applied.Failed[0]))
+		rep.notice(e.say("collab.rowsNotApplied", msg.Args{"n": len(applied.Failed), "first": applied.Failed[0]}))
 	}
 	return rep, err
 }
@@ -204,11 +204,8 @@ func mineDeleted(ctx context.Context, q *sql.DB, batches []canvas.RemoteTable) i
 
 // mineDeletedNotice : message des lignes modifiées ici et supprimées par un
 // collègue.
-func mineDeletedNotice(n int) string {
-	if n == 1 {
-		return "Une ligne que vous aviez modifiée a été supprimée par un collègue (une suppression l'emporte sur une modification faite au même moment)"
-	}
-	return fmt.Sprintf("%d lignes que vous aviez modifiées ont été supprimées par un collègue (une suppression l'emporte sur une modification faite au même moment)", n)
+func mineDeletedNotice(l msg.Lang, n int) string {
+	return msg.Format(l, "collab.mineDeleted", msg.Args{"n": n})
 }
 
 // whoKey : une ligne d'un tableau (dernier modificateur reçu).

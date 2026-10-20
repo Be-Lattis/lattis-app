@@ -200,6 +200,8 @@ type outcome struct {
 	// changements reçus ensuite (échos).
 	xid string
 	rep Report
+	// lang : langue des notes (celle de la session du classeur).
+	lang msg.Lang
 }
 
 // conflict est un conflit à noter.
@@ -254,6 +256,7 @@ func (o *outcome) reject(it item, msg string) {
 // est seule refusée, le reste de l'étape s'applique.
 func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workbook.Info, tables map[int64]*rtable, entries []entry) (*outcome, error) {
 	o := newOutcome(entries)
+	o.lang = e.lang()
 	var items []item
 	for ei, en := range entries {
 		for _, op := range en.ops {
@@ -363,9 +366,9 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 				// l'état du serveur, le reste de l'étape continue.
 				o.reject(it, errText(err))
 				if workbook.Privilege(err) {
-					o.rep.notice("Droits insuffisants sur « " + it.t.remote.Name + " » : modification annulée")
+					o.rep.notice(e.say("collab.noRightsOn", msg.Args{"table": it.t.remote.Name}))
 				} else {
-					o.rep.notice("Modification refusée par le serveur, annulée : " + workbook.ServerMessage(err))
+					o.rep.notice(e.say("collab.refusedUndone", msg.Args{"err": workbook.ServerMessage(err)}))
 				}
 				continue
 			}
@@ -398,9 +401,9 @@ func (e *Engine) sendBatch(ctx context.Context, srv workbook.Server, info *workb
 		o.reject(it, err.Error())
 	}
 	if workbook.Privilege(err) {
-		o.rep.notice("Droits insuffisants sur un tableau partagé : modification annulée")
+		o.rep.notice(e.say("collab.noRights", nil))
 	} else {
-		o.rep.notice("Modification refusée par le serveur, annulée : " + err.Error())
+		o.rep.notice(e.say("collab.refusedUndone", msg.Args{"err": err}))
 	}
 	return o, nil
 }
@@ -441,20 +444,20 @@ func (o *outcome) refused(it item, why workbook.WhyNot) {
 			return // déjà supprimée
 		}
 		o.rep.Lost++
-		who := why.By
-		if who == "" {
-			who = "un collègue"
+		var who any = why.By
+		if why.By == "" {
+			who = msg.M("collab.aColleague", nil)
 		}
-		o.rep.notice("Ligne supprimée entre-temps par " + who + " : modification abandonnée")
+		o.rep.notice(msg.Format(o.lang, "collab.rowDeletedMeanwhile", msg.Args{"who": who}))
 		o.refetch(op.Table, op.Row)
 	case workbook.WhyMissing:
 		if op.Kind == command.OpDelete {
 			return
 		}
-		o.reject(it, "ligne inconnue du serveur")
+		o.reject(it, msg.Format(o.lang, "collab.rowUnknown", nil))
 	default: // forbidden
-		o.reject(it, "droits insuffisants")
-		o.rep.notice("Droits insuffisants sur « " + it.t.remote.Name + " » : modification annulée")
+		o.reject(it, msg.Format(o.lang, "collab.noRightsShort", nil))
+		o.rep.notice(msg.Format(o.lang, "collab.noRightsOn", msg.Args{"table": it.t.remote.Name}))
 	}
 }
 
@@ -515,20 +518,13 @@ func (e *Engine) finish(ctx context.Context, srv workbook.Server, info *workbook
 		}
 	}
 	if o.rep.Conflicts > 0 {
-		o.rep.notice(conflictNotice(o.rep.Conflicts))
+		o.rep.notice(e.say("collab.conflicts", msg.Args{"n": o.rep.Conflicts}))
 	}
 	if o.rep.Skipped > 0 {
-		o.rep.notice(skippedNotice(o.rep.Skipped, o.entries[0].kind == command.KindRedo))
+		o.rep.notice(skippedNotice(e.lang(), o.rep.Skipped, o.entries[0].kind == command.KindRedo))
 	}
 	rep.add(o.rep)
 	return nil
-}
-
-func conflictNotice(n int) string {
-	if n == 1 {
-		return "Conflit : une cellule a été modifiée par un collègue entre-temps (voir le volet Conflits)"
-	}
-	return fmt.Sprintf("Conflits : %d cellules ont été modifiées par un collègue entre-temps (voir le volet Conflits)", n)
 }
 
 // fetchRows relit des lignes sur le serveur ; une ligne absente

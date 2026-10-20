@@ -622,7 +622,7 @@ func (s *DocumentService) AIUndoRun(ctx context.Context, run int) (DocState, err
 			return DocState{}, err
 		}
 	}
-	d.Notify(collab.UndoNotice(d.Oplog, false))
+	d.Notify(collab.UndoNoticeIn(s.sessionLang(), d.Oplog, false))
 	s.ai.mu.Lock()
 	r.undone = true
 	s.ai.notes = append(s.ai.notes, "L'utilisateur a annulé les modifications de votre réponse précédente.")

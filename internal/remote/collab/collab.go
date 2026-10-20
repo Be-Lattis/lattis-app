@@ -468,12 +468,19 @@ func lattisIDs(ctx context.Context, db *sql.DB, tbl int64, rids []int64) (map[in
 // un rétablissement, redo) dont des cellules, modifiées par un collègue
 // depuis, n'ont pas été touchées (§7), ou qui a rétabli sur ce poste
 // seulement un tableau supprimé du serveur ; "" sinon.
-func UndoNotice(rec *oplog.Recorder, redo bool) string {
+func UndoNotice(rec *oplog.Recorder, redo bool) string { return UndoNoticeIn(msg.FR, rec, redo) }
+
+// UndoNoticeIn : UndoNotice dans la langue l.
+func UndoNoticeIn(l msg.Lang, rec *oplog.Recorder, redo bool) string {
 	if rec == nil {
 		return ""
 	}
 	var out []string
-	for _, s := range []string{skippedNotice(rec.TakeSkipped(), redo), rec.TakeNotice()} {
+	note := ""
+	if m := rec.TakeNoticeMsg(); m.ID != "" {
+		note = m.Text(l)
+	}
+	for _, s := range []string{skippedNotice(l, rec.TakeSkipped(), redo), note} {
 		if s != "" {
 			out = append(out, s)
 		}
@@ -481,19 +488,27 @@ func UndoNotice(rec *oplog.Recorder, redo bool) string {
 	return strings.Join(out, " ; ")
 }
 
-func skippedNotice(n int, redo bool) string {
-	verb, verbs := "annulée", "annulées"
+func skippedNotice(l msg.Lang, n int, redo bool) string {
+	if n < 1 {
+		return ""
+	}
+	id := msg.ID("collab.skippedUndo")
 	if redo {
-		verb, verbs = "rétablie", "rétablies"
+		id = "collab.skippedRedo"
 	}
-	switch {
-	case n == 1:
-		return "1 cellule modifiée par un collègue depuis n'a pas été " + verb
-	case n > 1:
-		return fmt.Sprintf("%d cellules modifiées par un collègue depuis n'ont pas été %s", n, verbs)
-	}
-	return ""
+	return msg.Format(l, id, msg.Args{"n": n})
 }
+
+// lang : la langue de la session du classeur (notes de la barre d'état).
+func (e *Engine) lang() msg.Lang {
+	if e.model == nil {
+		return msg.FR
+	}
+	return e.model.Language()
+}
+
+// say : le message id dans la langue de la session du classeur.
+func (e *Engine) say(id msg.ID, args msg.Args) string { return msg.Format(e.lang(), id, args) }
 
 // ErrNotCollaborative : l'action ne vaut que pour un classeur collaboratif.
 var ErrNotCollaborative = msg.New("collab.notCollaborative", nil)

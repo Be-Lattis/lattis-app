@@ -578,7 +578,7 @@ func (s *DocumentService) ShareAddTable(ctx context.Context, table string) (DocS
 	if err != nil {
 		return DocState{}, err
 	}
-	d.Notify(collab.AddedNotice(name))
+	d.Notify(collab.AddedNotice(s.sessionLang(), name))
 	s.emitShare(d)
 	return s.changed(ctx)
 }

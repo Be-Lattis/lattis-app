@@ -757,7 +757,7 @@ func (s *DocumentService) Undo(ctx context.Context) (DocState, error) {
 	}
 	// Classeur collaboratif : cellules modifiées par un collègue depuis,
 	// laissées à sa valeur (§7).
-	d.Notify(collab.UndoNotice(d.Oplog, false))
+	d.Notify(collab.UndoNoticeIn(s.sessionLang(), d.Oplog, false))
 	return s.changed(ctx)
 }
 
@@ -769,7 +769,7 @@ func (s *DocumentService) Redo(ctx context.Context) (DocState, error) {
 	if _, err := d.Bus.Redo(ctx); err != nil {
 		return DocState{}, err
 	}
-	d.Notify(collab.UndoNotice(d.Oplog, true))
+	d.Notify(collab.UndoNoticeIn(s.sessionLang(), d.Oplog, true))
 	return s.changed(ctx)
 }
 

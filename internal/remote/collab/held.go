@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"slices"
 
 	"github.com/lalamefine/lattis/internal/command"
@@ -89,7 +88,7 @@ func (e *Engine) hold(ctx context.Context, entries []entry, cause error, rep *Re
 	if err := e.setHeld(ctx, entries, errText(cause)); err != nil {
 		return false, err
 	}
-	rep.notice(fmt.Sprintf("Une modification ne part pas vers le serveur (%s) : mise de côté, voir Conflits", errText(cause)))
+	rep.notice(e.say("collab.held", msg.Args{"err": errText(cause)}))
 	return true, nil
 }
 
