@@ -18,7 +18,7 @@
 	import { TAB_COLORS, moveTarget, tabWindow, textOn, visibleSheets, type SimilarMark, type TabSheet } from './sheets.js';
 	import { allLabel, choiceLabel, choiceStatus, newLabel, nextChoice, type ChoiceActions } from './choice.js';
 	import RowFormulaDialog from '#lib/ui/RowFormulaDialog.svelte';
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { t } from '#lib/i18n/index.js';
 
 	type Sheet = TabSheet;
 	interface Props {
@@ -135,7 +135,6 @@
 		if (a.id !== active) onselect(a.id);
 		onchoice?.add(a.id, a.draft.trim());
 	}
-	const LOCKED = 'La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles';
 	const onadd = $derived(locked ? undefined : add);
 	const oninsert = $derived(locked ? undefined : insert);
 	const onpage = $derived(locked ? undefined : page);
@@ -241,7 +240,7 @@
 		}
 	}
 	function startRename(s: Sheet) {
-		if (locked) onrefused?.(LOCKED);
+		if (locked) onrefused?.(t('shell.tabs.locked'));
 		if (!onrename) return;
 		renaming = s.id;
 		draft = s.name;
@@ -271,7 +270,7 @@
 			await onrename(id, name);
 			renaming = null;
 		} catch (e) {
-			await refuseName(() => renameInput, refusedName('Nom de feuille refusé', e));
+			await refuseName(() => renameInput, refusedName(t('shell.tabs.renameRefused'), e));
 		} finally {
 			renameBusy = false;
 		}
@@ -332,7 +331,6 @@
 	const group = $derived(picked.size > 1 ? picked : null);
 	// Menu ouvert sur un onglet de la sélection : ses actions visent toutes les feuilles choisies.
 	const many = $derived(!!menu && !!group?.has(menu.id));
-	const ONE = 'Une feuille à la fois : sélectionnez un seul onglet';
 	$effect(() => {
 		// Feuilles disparues ou masquées : retirées de la sélection.
 		if (picked.size && [...picked].some((id) => !shown.some((s) => s.id === id))) picked = new Set([...picked].filter((id) => shown.some((s) => s.id === id)));
@@ -410,8 +408,8 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="sheet-tabs" bind:this={host} bind:clientWidth={width} data-region="tabs" onkeydown={tabKeys}>
 	<div class="nav" bind:clientWidth={navW}>
-		<button disabled={index <= 0} onclick={() => onselect(shown[index - 1].id)} title="Feuille précédente (Ctrl+Pg.Préc)" aria-label="Feuille précédente">◀</button>
-		<button disabled={index < 0 || index >= shown.length - 1} onclick={() => onselect(shown[index + 1].id)} title="Feuille suivante (Ctrl+Pg.Suiv)" aria-label="Feuille suivante">▶</button>
+		<button disabled={index <= 0} onclick={() => onselect(shown[index - 1].id)} title={t('shell.tabs.previousTooltip')} aria-label={t('shell.tabs.previous')}>◀</button>
+		<button disabled={index < 0 || index >= shown.length - 1} onclick={() => onselect(shown[index + 1].id)} title={t('shell.tabs.nextTooltip')} aria-label={t('shell.tabs.next')}>▶</button>
 	</div>
 	<div class="strip" class:scroll={coarse} bind:this={strip}>
 	{#each vis as s, si (s.id)}
@@ -421,7 +419,7 @@
 				class="rename"
 				bind:this={renameInput}
 				bind:value={draft}
-				aria-label="Nouveau nom de la feuille"
+				aria-label={t('shell.tabs.renameAria')}
 				autofocus
 				onfocus={(e) => e.currentTarget.select()}
 				onkeydown={(e) => {
@@ -475,8 +473,8 @@
 						}
 					}
 				}}
-				title={(s.choice ? choiceStatus(s.choice) + (onchoice ? ' — Alt+↓ : choisir. ' : '. ') : '') + (s.protected ? 'Feuille protégée. ' : '') + (locked ? 'Classeur protégé' : onmove ? 'Double-clic pour renommer, glisser pour déplacer' : 'Double-clic pour renommer')}
-				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? 'Feuille protégée' : 'Classeur protégé'}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label="Page web"><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label="Document"><Icon name="document" size={12} /></span>{/if}{s.choice ? s.name : label(s)}{#if s.choice}<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+				title={(s.choice ? choiceStatus(s.choice) + (onchoice ? t('shell.tabs.tip.choiceKeys') : t('shell.tabs.tip.end')) : '') + (s.protected ? t('shell.tabs.tip.sheetProtected') : '') + (locked ? t('shell.tabs.tip.bookProtected') : onmove ? t('shell.tabs.tip.renameMove') : t('shell.tabs.tip.rename'))}
+				>{#if s.protected || locked}<span class="lock" aria-label={s.protected ? t('shell.tabs.sheetProtected') : t('shell.tabs.bookProtected')}><Icon name="lock" size={12} /></span>{/if}{#if s.kind === 'html'}<span class="kind" aria-label={t('shell.tabs.htmlPage')}><Icon name="web" size={12} /></span>{:else if s.kind === 'doc'}<span class="kind" aria-label={t('shell.tabs.document')}><Icon name="document" size={12} /></span>{/if}{s.choice ? s.name : label(s)}{#if s.choice}<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 					<span
 						class="choice-arrow"
 						class:off={!onchoice}
@@ -506,7 +504,7 @@
 				e.preventDefault();
 				chipMenu = { group: gi, x: (e.currentTarget as HTMLElement).offsetLeft };
 			}}
-			title="{g.label} : les regrouper en un seul tableau (clic droit : Ne plus proposer){out ? ` — ${out} hors de vue` : ''}">⧉ {g.label}{out ? ` (+${out})` : ''}</button
+			title={out ? t('shell.tabs.chipTooltipOut', { label: g.label, n: out }) : t('shell.tabs.chipTooltip', { label: g.label })}>⧉ {g.label}{out ? ` (+${out})` : ''}</button
 		>
 	{/each}
 	{#if chipMenu}
@@ -517,7 +515,7 @@
 				onclick={() => {
 					chipMenu = null;
 					onmergegroup?.(cm.group);
-				}}><span class="ic"><Icon name="append-queries" size={16} /></span>Regrouper…</button
+				}}><span class="ic"><Icon name="append-queries" size={16} /></span>{t('shell.tabs.mergeShort')}</button
 			>
 			<button
 				role="menuitem"
@@ -525,13 +523,13 @@
 					chipMenu = null;
 					hot = null;
 					ondismissgroup?.(cm.group);
-				}}><span class="ic"><Icon name="no-color" size={16} /></span>Ne plus proposer</button
+				}}><span class="ic"><Icon name="no-color" size={16} /></span>{t('shell.tabs.dismiss')}</button
 			>
 		</div>
 	{/if}
 	{#if hiddenTabs > 0}
 		<!-- Toujours à droite des onglets affichés (choix de Louis). -->
-		<button class="more" onclick={() => (listing = true)} title="{hiddenTabs} feuille{hiddenTabs > 1 ? 's' : ''} non affichée{hiddenTabs > 1 ? 's' : ''} : toutes les feuilles">…</button>
+		<button class="more" onclick={() => (listing = true)} title={t('shell.tabs.moreTooltip', { n: hiddenTabs })}>…</button>
 	{/if}
 	{#if drag?.moved && drag.drop >= 0}<span class="drop-mark" style:left="{dropX - 1}px"></span>{/if}
 	<button
@@ -542,7 +540,7 @@
 			e.preventDefault();
 			if (onadd || onpage) addMenu = { x: (e.currentTarget as HTMLElement).offsetLeft };
 		}}
-		title={locked ? 'Structure du classeur protégée' : page ? 'Nouvelle feuille (clic droit : Page web ou Document)' : 'Nouvelle feuille (clic droit : Document)'}>+</button
+		title={locked ? t('shell.tabs.add.locked') : page ? t('shell.tabs.add.tooltipPage') : t('shell.tabs.add.tooltip')}>+</button
 	>
 	{#if addMenu}
 		<div class="menu" role="menu" style:left="{addMenu.x}px" use:dismiss={() => (addMenu = null)}>
@@ -552,7 +550,7 @@
 				onclick={() => {
 					addMenu = null;
 					onadd?.();
-				}}><span class="ic"><Icon name="sheet" size={16} /></span>Nouvelle feuille</button
+				}}><span class="ic"><Icon name="sheet" size={16} /></span>{t('shell.tabs.add.sheet')}</button
 			>
 			{#if page}
 			<button
@@ -561,7 +559,7 @@
 				onclick={() => {
 					addMenu = null;
 					onpage?.();
-				}}><span class="ic"><Icon name="web" size={16} /></span>Nouvelle page web</button
+				}}><span class="ic"><Icon name="web" size={16} /></span>{t('shell.tabs.add.page')}</button
 			>
 			{/if}
 			<button
@@ -570,7 +568,7 @@
 				onclick={() => {
 					addMenu = null;
 					ondocpage?.();
-				}}><span class="ic"><Icon name="document" size={16} /></span>Nouveau document</button
+				}}><span class="ic"><Icon name="document" size={16} /></span>{t('shell.tabs.add.doc')}</button
 			>
 		</div>
 	{/if}
@@ -600,27 +598,27 @@
 		{@const m = menu}
 		{@const ms = sheets.find((x) => x.id === m.id)}
 		<div class="menu" role="menu" style:left="{m.x}px" use:dismiss={closeMenu}>
-			<div class="menu-title" title={!group?.has(m.id) && clipped(ms?.name) ? ms?.name : undefined}>{group?.has(m.id) ? `${group.size} feuilles sélectionnées` : `Feuille « ${clip(ms?.name)} »`}</div>
+			<div class="menu-title" title={!group?.has(m.id) && clipped(ms?.name) ? ms?.name : undefined}>{group?.has(m.id) ? t('shell.tabs.menu.selected', { n: group.size }) : t('shell.tabs.menu.title', { name: clip(ms?.name) })}</div>
 			<!-- Ordre (demande de Louis) : la situation (plusieurs onglets choisis : les regrouper) ; le plus courant
 			     (insérer ; renommer, déplacer, couleur) ; les données (choisir par, regrouper) ; protection et
 			     affichage ; la suppression en dernier. -->
 			{#snippet mergeItem()}
 				<button
 					role="menuitem"
-					title="Réunir les tableaux de ces onglets (mêmes colonnes) en un seul, avec une colonne de catégorie"
+					title={t('shell.tabs.menu.mergeTooltip')}
 					onclick={() => {
 						const ids = many ? [...(group ?? [])] : [m.id];
 						closeMenu();
 						if (many) picked = new Set();
 						onmergesheets?.(ids);
-					}}><span class="ic"><Icon name="append-queries" size={16} /></span>Regrouper des onglets…</button
+					}}><span class="ic"><Icon name="append-queries" size={16} /></span>{t('shell.tabs.menu.merge')}</button
 				>
 			{/snippet}
 			{#if many && onmergesheets}
 				{@render mergeItem()}
 				<hr />
 			{/if}
-			<Submenu label="Insérer" disabled={!oninsert && !onpage && !ondocpage}>
+			<Submenu label={t('shell.tabs.menu.insert')} disabled={!oninsert && !onpage && !ondocpage}>
 				{#snippet icon()}<span class="ic"><Icon name="sheet" size={16} /></span>{/snippet}
 				<button
 					role="menuitem"
@@ -629,7 +627,7 @@
 						const id = m.id;
 						closeMenu();
 						oninsert?.(id);
-					}}><span class="ic"><Icon name="sheet" size={16} /></span>Feuille</button
+					}}><span class="ic"><Icon name="sheet" size={16} /></span>{t('shell.tabs.menu.sheet')}</button
 				>
 				{#if page}
 					<button
@@ -639,7 +637,7 @@
 							const id = m.id;
 							closeMenu();
 							onpage?.(id);
-						}}><span class="ic"><Icon name="web" size={16} /></span>Page web</button
+						}}><span class="ic"><Icon name="web" size={16} /></span>{t('shell.tabs.htmlPage')}</button
 					>
 				{/if}
 				<button
@@ -649,32 +647,32 @@
 						const id = m.id;
 						closeMenu();
 						ondocpage?.(id);
-					}}><span class="ic"><Icon name="document" size={16} /></span>Document</button
+					}}><span class="ic"><Icon name="document" size={16} /></span>{t('shell.tabs.document')}</button
 				>
 			</Submenu>
 			<button
 				role="menuitem"
 				disabled={!onrename || many}
-				title={many ? ONE : undefined}
+				title={many ? t('shell.tabs.one') : undefined}
 				onclick={() => {
 					// La feuille d'abord : ms se relit sur le menu, que la fermeture efface.
 					const sheet = ms;
 					closeMenu();
 					if (sheet) startRename(sheet);
-				}}><span class="ic"><Icon name="rename" size={16} /></span>Renommer</button
+				}}><span class="ic"><Icon name="rename" size={16} /></span>{t('shell.tabs.menu.rename')}</button
 			>
 			<button
 				role="menuitem"
 				disabled={(!onmove && !oncopy) || many}
-				title={many ? ONE : undefined}
+				title={many ? t('shell.tabs.one') : undefined}
 				onclick={() => {
 					const id = m.id;
 					closeMenu();
 					const i = sheets.findIndex((x) => x.id === id);
 					moving = { id, before: sheets[i + 1]?.id ?? null, copy: !onmove };
-				}}><span class="ic"><Icon name="move-sheet" size={16} /></span>Déplacer ou copier…</button
+				}}><span class="ic"><Icon name="move-sheet" size={16} /></span>{t('shell.tabs.menu.move')}</button
 			>
-			<Submenu label="Couleur d'onglet" disabled={!oncolor}>
+			<Submenu label={t('shell.tabs.menu.color')} disabled={!oncolor}>
 				{#snippet icon()}<span class="ic"><Icon name="tab-color" size={16} /></span>{/snippet}
 				<div class="swatches">
 					{#each TAB_COLORS as c (c)}
@@ -683,7 +681,7 @@
 							class:sel={ms?.color === c}
 							style:background={c}
 							title={c}
-							aria-label="Couleur {c}"
+							aria-label={t('shell.tabs.menu.colorAria', { color: c })}
 							onclick={() => {
 								const id = m.id;
 								const ids = many ? [...(group ?? [])] : null;
@@ -703,23 +701,23 @@
 						closeMenu();
 						if (ids) oncolormany?.(ids, '');
 						else oncolor?.(id, '');
-					}}><span class="ic"><Icon name="no-color" size={16} /></span>Aucune couleur</button
+					}}><span class="ic"><Icon name="no-color" size={16} /></span>{t('shell.tabs.menu.noColor')}</button
 				>
 			</Submenu>
 			{#if (onchoice && !ms?.kind) || (onmergesheets && !many)}<hr />{/if}
 			{#if onchoice && !ms?.kind}
 				<!-- Onglet à choix : une colonne d'un tableau de la feuille choisit ce qu'elle montre. -->
-				<Submenu label="Choisir par" disabled={many} title={many ? ONE : 'Une flèche sur l’onglet choisit la valeur affichée (année, mois, ville…)'}>
+				<Submenu label={t('shell.tabs.menu.chooseBy')} disabled={many} title={many ? t('shell.tabs.one') : t('shell.tabs.menu.chooseByTooltip')}>
 					{#snippet icon()}<span class="ic"><Icon name="filter" size={16} /></span>{/snippet}
 					{#if candidates === null}
-						<div class="menu-note">Lecture des colonnes…</div>
+						<div class="menu-note">{t('shell.tabs.menu.readingColumns')}</div>
 					{:else if candidates.length === 0}
-						<div class="menu-note">Aucune colonne de tableau de cette feuille n’a peu de valeurs différentes</div>
+						<div class="menu-note">{t('shell.tabs.menu.noColumns')}</div>
 					{:else}
 						{#each candidates as c (c.table + '\u0000' + c.column)}
 							<button
 								role="menuitem"
-								title="« {c.column} » du tableau {c.table} — {c.values} valeur{c.values > 1 ? 's' : ''} différente{c.values > 1 ? 's' : ''}"
+								title={t('shell.tabs.menu.columnTooltip', { column: c.column, table: c.table, n: c.values })}
 								onclick={() => {
 									const id = m.id;
 									closeMenu();
@@ -732,14 +730,14 @@
 					<hr />
 					<button
 						role="menuitem"
-						title="Une formule sur les colonnes de chaque ligne donne la valeur à choisir : =ANNEE([Date]), =TEXTE([Date];&quot;mmmm&quot;), =SI([Montant]&gt;1000;&quot;Gros&quot;;&quot;Petit&quot;)"
+						title={t('shell.tabs.menu.formulaTooltip')}
 						onclick={() => {
 							const id = m.id;
 							const f = ms?.choice?.formula;
 							closeMenu();
 							byFormula = { id, name: f ? (ms?.choice?.name ?? '') : '', formula: f ?? '' };
 						}}
-						><span class="ic">{#if ms?.choice?.formula}●{/if}</span><span class="cname">Une formule…</span>{#if ms?.choice?.formula}<span class="menu-hint">{clip(ms.choice.formula)}</span>{/if}</button
+						><span class="ic">{#if ms?.choice?.formula}●{/if}</span><span class="cname">{t('shell.tabs.menu.formula')}</span>{#if ms?.choice?.formula}<span class="menu-hint">{clip(ms.choice.formula)}</span>{/if}</button
 					>
 					{#if ms?.choice}
 						<hr />
@@ -749,7 +747,7 @@
 								const id = m.id;
 								closeMenu();
 								onchoice?.clear(id);
-							}}><span class="ic"></span>Ne plus choisir par « {clip(ms.choice.name)} »</button
+							}}><span class="ic"></span>{t('shell.tabs.menu.stopChoosing', { name: clip(ms.choice.name) })}</button
 						>
 					{/if}
 				</Submenu>
@@ -759,18 +757,18 @@
 			<button
 				role="menuitem"
 				disabled={!onprotect || many}
-				title={many ? ONE : undefined}
+				title={many ? t('shell.tabs.one') : undefined}
 				onclick={() => {
 					const id = m.id;
 					closeMenu();
 					onprotect?.(id);
 				}}
-				><span class="ic"><Icon name={ms?.protected ? 'unlock' : 'lock-sheet'} size={16} /></span>{ms?.protected ? 'Ôter la protection de la feuille…' : 'Protéger la feuille…'}</button
+				><span class="ic"><Icon name={ms?.protected ? 'unlock' : 'lock-sheet'} size={16} /></span>{ms?.protected ? t('shell.tabs.menu.unprotect') : t('shell.tabs.menu.protect')}</button
 			>
 			<button
 				role="menuitem"
 				disabled={!onhide || shown.length <= (many ? group?.size ?? 1 : 1)}
-				title={shown.length <= (many ? group?.size ?? 1 : 1) ? 'Le classeur garde au moins une feuille visible' : undefined}
+				title={shown.length <= (many ? group?.size ?? 1 : 1) ? t('shell.tabs.menu.keepOne') : undefined}
 				onclick={() => {
 					const id = m.id;
 					const ids = many ? [...(group ?? [])] : null;
@@ -779,7 +777,7 @@
 						picked = new Set();
 						onhidemany?.(ids);
 					} else onhide?.(id, true);
-				}}><span class="ic"><Icon name="hide" size={16} /></span>{many ? `Masquer les ${group?.size} feuilles` : 'Masquer'}</button
+				}}><span class="ic"><Icon name="hide" size={16} /></span>{many ? t('shell.tabs.menu.hideMany', { n: group?.size ?? 0 }) : t('shell.tabs.menu.hide')}</button
 			>
 			<button
 				role="menuitem"
@@ -787,7 +785,7 @@
 				onclick={() => {
 					closeMenu();
 					unhiding = hiddenSheets[0]?.id ?? null;
-				}}><span class="ic"><Icon name="show" size={16} /></span>Afficher…</button
+				}}><span class="ic"><Icon name="show" size={16} /></span>{t('shell.tabs.menu.unhide')}</button
 			>
 			<hr />
 			{#if many}
@@ -799,7 +797,7 @@
 						closeMenu();
 						picked = new Set();
 						ondeletemany?.(ids);
-					}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer les {group?.size} feuilles</button
+					}}><span class="ic"><Icon name="trash" size={16} /></span>{t('shell.tabs.menu.deleteMany', { n: group?.size ?? 0 })}</button
 				>
 			{:else}
 				<button
@@ -809,7 +807,7 @@
 					const id = m.id;
 					closeMenu();
 					ondelete?.(id);
-				}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer</button
+				}}><span class="ic"><Icon name="trash" size={16} /></span>{t('shell.tabs.menu.delete')}</button
 				>
 			{/if}
 		</div>
@@ -819,20 +817,20 @@
 		{@const cs = sheets.find((x) => x.id === cm.id)}
 		{#if cs?.choice}
 			{@const ch = cs.choice}
-			<div class="menu choice-menu" role="menu" aria-label="Choix de l’onglet « {cs.name} »" style:left="{cm.x}px" use:dismiss={() => (choiceMenu = null)}>
+			<div class="menu choice-menu" role="menu" aria-label={t('shell.tabs.choice.aria', { name: cs.name })} style:left="{cm.x}px" use:dismiss={() => (choiceMenu = null)}>
 				<div class="menu-title">{ch.name}</div>
 				<button role="menuitemradio" aria-checked={ch.all} use:focus onclick={() => choose(cm.id, '', true)}><span class="ic">{ch.all ? '●' : ''}</span>{allLabel(ch.name)}</button>
 				{#if cm.values === null}
-					<div class="menu-note">Lecture des valeurs…</div>
+					<div class="menu-note">{t('shell.tabs.choice.reading')}</div>
 				{:else}
 					<div class="choice-values">
 						{#each cm.values as v (v.text)}
 							<button
 								role="menuitemradio"
 								aria-checked={!ch.all && ch.value === v.text}
-								title={v.count ? `${fmtNumber(v.count)} ligne${v.count > 1 ? 's' : ''}` : 'Aucune ligne encore'}
+								title={v.count ? t('shell.tabs.choice.rows', { n: v.count }) : t('shell.tabs.choice.noRows')}
 								onclick={() => choose(cm.id, v.text, false)}
-								><span class="ic">{!ch.all && ch.value === v.text ? '●' : ''}</span>{v.text}{#if !v.count}<span class="menu-hint">vide</span>{/if}</button
+								><span class="ic">{!ch.all && ch.value === v.text ? '●' : ''}</span>{v.text}{#if !v.count}<span class="menu-hint">{t('shell.tabs.choice.empty')}</span>{/if}</button
 							>
 						{/each}
 					</div>
@@ -841,7 +839,7 @@
 					<hr />
 					<button role="menuitem" disabled={cm.values === null} onclick={() => startAdding(cm.id)}><span class="ic"><Icon name="plus" size={16} /></span>{newLabel(ch.name)}</button>
 				{:else}
-					<div class="menu-note" title={ch.formula}>Valeurs calculées par {clip(ch.formula)}</div>
+					<div class="menu-note" title={ch.formula}>{t('shell.tabs.choice.computed', { formula: clip(ch.formula) })}</div>
 				{/if}
 			</div>
 		{/if}
@@ -852,13 +850,13 @@
 	{@const bf = byFormula}
 	{@const actions = onchoice}
 	<RowFormulaDialog
-		title="Choisir par une formule"
-		intro="La flèche de l’onglet choisira parmi les valeurs de la formule ; les tableaux de la feuille qui ont ses colonnes ne montrent que les lignes de la valeur choisie."
-		nameLabel="Nom de la catégorie :"
+		title={t('shell.tabs.byFormula.title')}
+		intro={t('shell.tabs.byFormula.intro')}
+		nameLabel={t('shell.tabs.byFormula.name')}
 		name={bf.name}
 		formula={bf.formula}
 		guess={!bf.name}
-		follow="Suivent l’onglet"
+		follow={t('shell.tabs.byFormula.follow')}
 		help={actions.formulaHelp?.(bf.id)}
 		preview={(f) => actions.preview(bf.id, f)}
 		onok={async (name, f) => {
@@ -874,12 +872,12 @@
 	<div class="modal-back" role="presentation" use:backdrop={() => (adding = null)}>
 		<div class="dialog" role="dialog" aria-modal="true" aria-label={newLabel(ad.name)} tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmAdding, () => (adding = null))}>
 			<h2>{newLabel(ad.name).replace('…', '')}</h2>
-			<p>La valeur s’ajoute à la liste de « {ad.name} » et l’onglet l’affiche : la feuille paraît vide, prête à être remplie. Ctrl+Z l’annule.</p>
-			<label for="choice-new">{ad.name} :</label>
+			<p>{t('shell.tabs.adding.intro', { name: ad.name })}</p>
+			<label for="choice-new">{t('shell.tabs.adding.label', { name: ad.name })}</label>
 			<input id="choice-new" bind:value={adding.draft} use:focus onfocus={(e) => e.currentTarget.select()} />
 			<div class="actions">
-				<button class="primary" disabled={!ad.draft.trim()} onclick={confirmAdding}>OK</button>
-				<button onclick={() => (adding = null)}>Annuler</button>
+				<button class="primary" disabled={!ad.draft.trim()} onclick={confirmAdding}>{t('common.ok')}</button>
+				<button onclick={() => (adding = null)}>{t('common.cancel')}</button>
 			</div>
 		</div>
 	</div>
@@ -888,22 +886,22 @@
 {#if moving}
 	{@const mv = moving}
 	<div class="modal-back" role="presentation" use:backdrop={() => (moving = null)}>
-		<div class="dialog" role="dialog" aria-modal="true" aria-label="Déplacer ou copier" tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmMove, () => (moving = null))}>
-			<h2>Déplacer ou copier</h2>
-			<p>Déplacer la feuille « {sheets.find((x) => x.id === mv.id)?.name ?? ''} »</p>
-			<label for="move-before">Avant la feuille :</label>
+		<div class="dialog" role="dialog" aria-modal="true" aria-label={t('shell.tabs.move.title')} tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmMove, () => (moving = null))}>
+			<h2>{t('shell.tabs.move.title')}</h2>
+			<p>{t('shell.tabs.move.sheet', { name: sheets.find((x) => x.id === mv.id)?.name ?? '' })}</p>
+			<label for="move-before">{t('shell.tabs.move.before')}</label>
 			<select id="move-before" size="8" bind:value={moving.before} use:focus>
 				{#each sheets as s (s.id)}
 					{#if s.id !== mv.id || moving.copy}
-						<option value={s.id}>{s.name}{s.hidden ? ' (masquée)' : ''}</option>
+						<option value={s.id}>{s.hidden ? t('shell.tabs.move.hidden', { name: s.name }) : s.name}</option>
 					{/if}
 				{/each}
-				<option value={null}>(en dernier)</option>
+				<option value={null}>{t('shell.tabs.move.last')}</option>
 			</select>
-			<label class="check"><input type="checkbox" bind:checked={moving.copy} disabled={!oncopy || !onmove} /> Créer une copie</label>
+			<label class="check"><input type="checkbox" bind:checked={moving.copy} disabled={!oncopy || !onmove} /> {t('shell.tabs.move.copy')}</label>
 			<div class="actions">
-				<button class="primary" onclick={confirmMove}>OK</button>
-				<button onclick={() => (moving = null)}>Annuler</button>
+				<button class="primary" onclick={confirmMove}>{t('common.ok')}</button>
+				<button onclick={() => (moving = null)}>{t('common.cancel')}</button>
 			</div>
 		</div>
 	</div>
@@ -911,8 +909,8 @@
 
 {#if listing}
 	<div class="modal-back" role="presentation" use:backdrop={() => (listing = false)}>
-		<div class="dialog" role="dialog" aria-modal="true" aria-label="Toutes les feuilles" tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, () => (listing = false), () => (listing = false))} use:focus>
-			<h2>Toutes les feuilles</h2>
+		<div class="dialog" role="dialog" aria-modal="true" aria-label={t('shell.tabs.all.title')} tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, () => (listing = false), () => (listing = false))} use:focus>
+			<h2>{t('shell.tabs.all.title')}</h2>
 			<ul class="all-sheets">
 				{#each shown as s (s.id)}
 					<li>
@@ -929,7 +927,7 @@
 				{/each}
 			</ul>
 			<div class="actions">
-				<button onclick={() => (listing = false)}>Fermer</button>
+				<button onclick={() => (listing = false)}>{t('common.close')}</button>
 			</div>
 		</div>
 	</div>
@@ -937,17 +935,17 @@
 
 {#if unhiding !== null}
 	<div class="modal-back" role="presentation" use:backdrop={() => (unhiding = null)}>
-		<div class="dialog" role="dialog" aria-modal="true" aria-label="Afficher" tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmUnhide, () => (unhiding = null))}>
-			<h2>Afficher</h2>
-			<label for="unhide">Afficher la feuille :</label>
+		<div class="dialog" role="dialog" aria-modal="true" aria-label={t('shell.tabs.unhide.title')} tabindex="-1" use:modal onkeydown={(e) => dialogKeys(e, confirmUnhide, () => (unhiding = null))}>
+			<h2>{t('shell.tabs.unhide.title')}</h2>
+			<label for="unhide">{t('shell.tabs.unhide.label')}</label>
 			<select id="unhide" size="6" bind:value={unhiding} ondblclick={confirmUnhide} use:focus>
 				{#each hiddenSheets as s (s.id)}
 					<option value={s.id}>{s.name}</option>
 				{/each}
 			</select>
 			<div class="actions">
-				<button class="primary" onclick={confirmUnhide}>OK</button>
-				<button onclick={() => (unhiding = null)}>Annuler</button>
+				<button class="primary" onclick={confirmUnhide}>{t('common.ok')}</button>
+				<button onclick={() => (unhiding = null)}>{t('common.cancel')}</button>
 			</div>
 		</div>
 	</div>

@@ -673,5 +673,102 @@
 			"merge": "Regrouper",
 			"checkTwo": "Cochez au moins deux onglets"
 		}
+	},
+	"tabs": {
+		"locked": "La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles",
+		"renameRefused": "Nom de feuille refusé",
+		"one": "Une feuille à la fois : sélectionnez un seul onglet",
+		"previous": "Feuille précédente",
+		"previousTooltip": "Feuille précédente (Ctrl+Pg.Préc)",
+		"next": "Feuille suivante",
+		"nextTooltip": "Feuille suivante (Ctrl+Pg.Suiv)",
+		"renameAria": "Nouveau nom de la feuille",
+		"tip": {
+			"choiceKeys": " — Alt+↓ : choisir. ",
+			"end": ". ",
+			"sheetProtected": "Feuille protégée. ",
+			"bookProtected": "Classeur protégé",
+			"renameMove": "Double-clic pour renommer, glisser pour déplacer",
+			"rename": "Double-clic pour renommer"
+		},
+		"sheetProtected": "Feuille protégée",
+		"bookProtected": "Classeur protégé",
+		"htmlPage": "Page web",
+		"document": "Document",
+		"chipTooltip": "{label} : les regrouper en un seul tableau (clic droit : Ne plus proposer)",
+		"chipTooltipOut": "{label} : les regrouper en un seul tableau (clic droit : Ne plus proposer) — {n} hors de vue",
+		"mergeShort": "Regrouper…",
+		"dismiss": "Ne plus proposer",
+		"moreTooltip": "{n, plural, one {# feuille non affichée} other {# feuilles non affichées}} : toutes les feuilles",
+		"add": {
+			"locked": "Structure du classeur protégée",
+			"tooltipPage": "Nouvelle feuille (clic droit : Page web ou Document)",
+			"tooltip": "Nouvelle feuille (clic droit : Document)",
+			"sheet": "Nouvelle feuille",
+			"page": "Nouvelle page web",
+			"doc": "Nouveau document"
+		},
+		"menu": {
+			"selected": "{n} feuilles sélectionnées",
+			"title": "Feuille « {name} »",
+			"mergeTooltip": "Réunir les tableaux de ces onglets (mêmes colonnes) en un seul, avec une colonne de catégorie",
+			"merge": "Regrouper des onglets…",
+			"insert": "Insérer",
+			"sheet": "Feuille",
+			"rename": "Renommer",
+			"move": "Déplacer ou copier…",
+			"color": "Couleur d'onglet",
+			"colorAria": "Couleur {color}",
+			"noColor": "Aucune couleur",
+			"chooseBy": "Choisir par",
+			"chooseByTooltip": "Une flèche sur l’onglet choisit la valeur affichée (année, mois, ville…)",
+			"readingColumns": "Lecture des colonnes…",
+			"noColumns": "Aucune colonne de tableau de cette feuille n’a peu de valeurs différentes",
+			"columnTooltip": "« {column} » du tableau {table} — {n, plural, one {# valeur différente} other {# valeurs différentes}}",
+			"formulaTooltip": "Une formule sur les colonnes de chaque ligne donne la valeur à choisir : =ANNEE([Date]), =TEXTE([Date];\"mmmm\"), =SI([Montant]>1000;\"Gros\";\"Petit\")",
+			"formula": "Une formule…",
+			"stopChoosing": "Ne plus choisir par « {name} »",
+			"unprotect": "Ôter la protection de la feuille…",
+			"protect": "Protéger la feuille…",
+			"keepOne": "Le classeur garde au moins une feuille visible",
+			"hideMany": "Masquer les {n} feuilles",
+			"hide": "Masquer",
+			"unhide": "Afficher…",
+			"deleteMany": "Supprimer les {n} feuilles",
+			"delete": "Supprimer"
+		},
+		"choice": {
+			"aria": "Choix de l’onglet « {name} »",
+			"reading": "Lecture des valeurs…",
+			"rows": "{n, plural, one {# ligne} other {# lignes}}",
+			"noRows": "Aucune ligne encore",
+			"empty": "vide",
+			"computed": "Valeurs calculées par {formula}"
+		},
+		"byFormula": {
+			"title": "Choisir par une formule",
+			"intro": "La flèche de l’onglet choisira parmi les valeurs de la formule ; les tableaux de la feuille qui ont ses colonnes ne montrent que les lignes de la valeur choisie.",
+			"name": "Nom de la catégorie :",
+			"follow": "Suivent l’onglet"
+		},
+		"adding": {
+			"intro": "La valeur s’ajoute à la liste de « {name} » et l’onglet l’affiche : la feuille paraît vide, prête à être remplie. Ctrl+Z l’annule.",
+			"label": "{name} :"
+		},
+		"move": {
+			"title": "Déplacer ou copier",
+			"sheet": "Déplacer la feuille « {name} »",
+			"before": "Avant la feuille :",
+			"hidden": "{name} (masquée)",
+			"last": "(en dernier)",
+			"copy": "Créer une copie"
+		},
+		"all": {
+			"title": "Toutes les feuilles"
+		},
+		"unhide": {
+			"title": "Afficher",
+			"label": "Afficher la feuille :"
+		}
 	}
 }
