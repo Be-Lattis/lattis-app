@@ -1,0 +1,81 @@
+package bridge
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/lalamefine/lattis/internal/archive"
+	"github.com/lalamefine/lattis/internal/remote/workbook"
+)
+
+func copyTree(t *testing.T, from, to string) {
+	t.Helper()
+	mustShare(t, os.MkdirAll(to, 0o755))
+	es, err := os.ReadDir(from)
+	mustShare(t, err)
+	for _, e := range es {
+		if e.IsDir() || e.Name() == "lattis.lock" {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(from, e.Name()))
+		mustShare(t, err)
+		mustShare(t, os.WriteFile(filepath.Join(to, e.Name()), b, 0o644))
+	}
+}
+
+// B1 : plantage pendant une session hors ligne, puis réouverture depuis le
+// serveur (récents) une fois celui-ci revenu : la session interrompue doit
+// être proposée en récupération ; ShareOpen avale l'erreur de doc.Open et
+// recharge le cache depuis le serveur, par-dessus la file enregistrée.
+func TestAuditShareOpenAfterCrash(t *testing.T) {
+	ctx := context.Background()
+	root := workRoot(t)
+	s, h, fake, _, tbl, id, cache := offlineSetup(t)
+
+	// Session 1 : hors ligne, saisie A, fermeture : le cache garde la file.
+	fake.SetDown(true)
+	waitShare(t, h.shareHost, "hors ligne", func(s workbook.State) bool { return !s.Online })
+	_, err := s.SetCell(ctx, 1, 1, 1, "5")
+	mustShare(t, err)
+	mustShare(t, s.CloseDocument(ctx))
+
+	// Session 2 : rouvert hors ligne, saisie B, puis « plantage ».
+	s2, h2 := shareService(t)
+	_, err = s2.Open(ctx, cache)
+	mustShare(t, err)
+	waitShare(t, h2, "hors ligne", func(s workbook.State) bool { return !s.Online })
+	_, err = s2.SetCell(ctx, 1, 2, 1, "9")
+	mustShare(t, err)
+	before, err := os.ReadFile(cache)
+	mustShare(t, err)
+	sum := sha256.Sum256([]byte(archive.PathKey(cache)))
+	wd := filepath.Join(root, hex.EncodeToString(sum[:8]))
+	backup := filepath.Join(t.TempDir(), "wd")
+	copyTree(t, wd, backup)
+	mustShare(t, s2.CloseDocument(ctx))
+	// État après un plantage : cache d'avant la session, répertoire orphelin.
+	mustShare(t, os.WriteFile(cache, before, 0o644))
+	copyTree(t, backup, wd)
+	if os, _ := archive.Orphans(); len(os) != 1 {
+		t.Fatalf("orphelins : %+v", os)
+	}
+
+	// Le serveur revient ; l'utilisateur rouvre depuis les récents.
+	fake.SetDown(false)
+	s3, h3 := shareService(t)
+	UseHost(h3, nil, s3)
+	r, err := s3.ShareOpen(ctx, "https://lattis.example.test", id, "")
+	t.Logf("ShareOpen : recoverable=%v err=%v", r.Recoverable != nil, err)
+	if r.Recoverable == nil {
+		st := s3.ShareState()
+		t.Errorf("RÉCUPÉRATION NON PROPOSÉE : cache rechargé du serveur ; en attente=%d, prix=%s", st.Pending, prices(t, s3, tbl))
+	}
+	m, _ := archive.ReadManifest(cache)
+	t.Logf("manifeste du cache : remote=%v", m.Remote != nil)
+	orph, _ := archive.Orphans()
+	t.Logf("orphelins après : %d", len(orph))
+}
