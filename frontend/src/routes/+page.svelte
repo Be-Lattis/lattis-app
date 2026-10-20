@@ -788,7 +788,7 @@
 				return;
 			}
 			if (!r.path) throw e;
-			await openPath(r.path);
+			await opened(await DocumentService.OpenLocalCopy(r.path));
 			// Détail technique dans le bandeau (« Détails ») et dans la console.
 			console.warn('serveur injoignable', err(e));
 			notice = `${serverDown(serverLabel({ server, serverName: r.serverName ?? '' }))} : copie locale ouverte`;
@@ -818,6 +818,13 @@
 	}
 
 	async function opened(r: OpenResult) {
+		// Fichier de l'auteur d'un classeur partagé en direct : ouvert depuis le
+		// serveur (en ligne, synchronisé), pas le fichier qui ne l'est pas.
+		if (r.shared) {
+			await openRecent(r.shared);
+			if (mode === 'doc' && !notice) notice = `« ${r.shared.title} » est partagé sur ${serverLabel({ server: r.shared.server ?? '', serverName: r.shared.serverName ?? '' })} : ouvert en ligne`;
+			return;
+		}
 		if (r.locked) {
 			locked = r.locked;
 			lockedCoEdit = !!r.coEdit;

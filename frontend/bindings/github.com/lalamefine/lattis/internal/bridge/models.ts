@@ -789,6 +789,13 @@ export interface OpenResult {
      * partagé, features.coEditing).
      */
     "coEdit"?: boolean;
+
+    /**
+     * Shared : le fichier est celui de l'auteur d'un classeur partagé en direct ;
+     * l'interface l'ouvre depuis le serveur (en ligne, synchronisé) plutôt
+     * que le fichier (OpenLocalCopy l'ouvre tel quel, serveur injoignable).
+     */
+    "shared"?: RecentFile | null;
     "cancelled": boolean;
 }
 

@@ -130,3 +130,41 @@ func TestRecentAuthorFile(t *testing.T) {
 		t.Fatalf("classeur figé : %+v", g)
 	}
 }
+
+// Ouvrir le fichier de l'auteur d'un classeur partagé en direct : le
+// classeur du serveur (sharedFile) ; un classeur figé ou un fichier ordinaire
+// s'ouvre tel quel.
+func TestSharedFile(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	old := shareCacheDir
+	shareCacheDir = func() (string, error) { return filepath.Join(dir, "partages"), nil }
+	t.Cleanup(func() { shareCacheDir = old })
+	save := func(name, mode string) string {
+		a, err := archive.New()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer a.Close()
+		if mode != "" {
+			a.Remote = func(context.Context) (*archive.Remote, error) {
+				return &archive.Remote{Server: "https://srv.test", WorkbookID: "480f6888-5ec4-45ee-801b-b0891115cf3f", Mode: mode}, nil
+			}
+		}
+		p := filepath.Join(dir, name+".lattis")
+		if err := a.Save(ctx, p); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	r := sharedFile(save("Fichier nids", "collaborative"))
+	if r == nil || r.WorkbookID != "480f6888-5ec4-45ee-801b-b0891115cf3f" || r.Title != "Fichier nids" || r.Link != "https://srv.test/w/480f6888-5ec4-45ee-801b-b0891115cf3f" || r.Path == "" {
+		t.Fatalf("classeur partagé : %+v", r)
+	}
+	if r := sharedFile(save("Bilan", "frozen")); r != nil {
+		t.Fatalf("classeur figé : %+v", r)
+	}
+	if r := sharedFile(save("Notes", "")); r != nil {
+		t.Fatalf("fichier ordinaire : %+v", r)
+	}
+}

@@ -21,6 +21,7 @@ import (
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/protocol"
 )
 
 // ChangedEvent est émis après chaque modification du document : l'interface
@@ -69,6 +70,10 @@ type OpenResult struct {
 	// remplace « Ouvrir quand même » (travail à plusieurs sur un dossier
 	// partagé, features.coEditing).
 	CoEdit    bool `json:"coEdit,omitempty"`
+	// Shared : le fichier est celui de l'auteur d'un classeur partagé en direct ;
+	// l'interface l'ouvre depuis le serveur (en ligne, synchronisé) plutôt
+	// que le fichier (OpenLocalCopy l'ouvre tel quel, serveur injoignable).
+	Shared *RecentFile `json:"shared,omitempty"`
 	Cancelled bool `json:"cancelled"`
 }
 
@@ -209,9 +214,36 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 		}
 		path = p
 	}
+	if r := sharedFile(path); r != nil {
+		return OpenResult{Shared: r}, nil
+	}
 	// Ouvert sur un autre poste (verrou ~$ à côté du fichier, ou sessions
 	// du travail à plusieurs) : l'interface propose la lecture seule, et de
 	// travailler à plusieurs (ou, sans, de l'ouvrir quand même).
+	if q, together := openQuestion(path); q != nil {
+		return OpenResult{Locked: q, CoEdit: together}, nil
+	}
+	return s.open(ctx, path, doc.OpenNormal)
+}
+
+// sharedFile rend le classeur du serveur d'un fichier d'auteur partagé en
+// direct (manifeste : section remote, mode collaboratif ; pas un cache), nil
+// sinon. Un classeur figé garde son fichier : l'auteur y modifie et republie.
+func sharedFile(path string) *RecentFile {
+	if inShareCache(path) {
+		return nil
+	}
+	m, err := archive.ReadManifest(path)
+	if err != nil || m.Remote == nil || m.Remote.Mode != workbook.Collaborative {
+		return nil
+	}
+	abs, _ := filepath.Abs(path)
+	return &RecentFile{Path: abs, Title: strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), Server: m.Remote.Server, WorkbookID: m.Remote.WorkbookID, Link: protocol.WorkbookLink(m.Remote.Server, m.Remote.WorkbookID)}
+}
+
+// OpenLocalCopy ouvre le fichier path tel quel, même celui d'un classeur
+// partagé en direct (serveur injoignable, ou choix de l'utilisateur).
+func (s *DocumentService) OpenLocalCopy(ctx context.Context, path string) (OpenResult, error) {
 	if q, together := openQuestion(path); q != nil {
 		return OpenResult{Locked: q, CoEdit: together}, nil
 	}

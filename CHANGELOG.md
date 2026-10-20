@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Changements
+
+- Ouvrir le fichier local d'un classeur partagé en direct (Fichier › Ouvrir, double-clic, récents) l'ouvre depuis le serveur, en ligne et synchronisé, avec un message ; serveur injoignable, le fichier s'ouvre tel quel. Un classeur figé garde son fichier, où l'auteur modifie et republie.
+
 ## 0.1.0-beta.2.1 (20/10/2026)
 
 ### Nouveautés

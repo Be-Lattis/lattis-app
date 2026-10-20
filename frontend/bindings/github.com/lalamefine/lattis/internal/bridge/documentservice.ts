@@ -1226,6 +1226,14 @@ export function OpenDemo(): $CancellablePromise<$models.DemoResult> {
 }
 
 /**
+ * OpenLocalCopy ouvre le fichier path tel quel, même celui d'un classeur
+ * partagé en direct (serveur injoignable, ou choix de l'utilisateur).
+ */
+export function OpenLocalCopy(path: string): $CancellablePromise<$models.OpenResult> {
+    return $Call.ByID(1490960004, path);
+}
+
+/**
  * OpenLocked ouvre un classeur verrouillé par un autre poste : en lecture
  * seule (Enregistrer sous seulement), ou quand même (sans prendre son
  * verrou ; l'enregistrement vérifie encore que le fichier n'a pas changé).
