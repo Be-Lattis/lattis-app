@@ -174,6 +174,7 @@ func (s *DocumentService) Recent(ctx context.Context) []RecentFile {
 				r.Title = remoteTitle
 			}
 			r.Link = protocol.WorkbookLink(r.Server, r.WorkbookID)
+			r.ServerName = shownName(r.Server, r.ServerName)
 		}
 		if !slices.ContainsFunc(list, r.same) {
 			list = append(list, r)

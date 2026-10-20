@@ -66,6 +66,14 @@ export async function forgetServer(url: string) {
 }
 
 /**
+ * Donne à un serveur un nom choisi, local à ce poste (Gérer les serveurs ›
+ * Renommer) ; vide : le nom annoncé par le serveur.
+ */
+export async function renameServer(url: string, label: string) {
+	lattis.state = await DocumentService.LattisRename(url, label);
+}
+
+/**
  * Ajoute un serveur à la liste : adresse vérifiée (découverte), puis page
  * de connexion. Rend l'adresse normalisée du serveur.
  */

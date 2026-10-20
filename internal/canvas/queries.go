@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
@@ -450,9 +451,8 @@ func (m *Model) Connections(ctx context.Context) ([]ConnectionDef, error) {
 	return out, err
 }
 
-// SaveConnection crée (ID nul) ou modifie une connexion. Les requêtes qui
-// la citent par son ancien nom sont laissées telles quelles : renommer une
-// connexion utilisée est refusé.
+// SaveConnection crée (ID nul) ou modifie une connexion. Renommée, les
+// requêtes qui la citent suivent son nouveau nom (même étape annulable).
 func (m *Model) SaveConnection(ctx context.Context, c ConnectionDef) (int64, error) {
 	c.Name = strings.TrimSpace(c.Name)
 	if c.Name == "" {
@@ -490,11 +490,8 @@ func (m *Model) SaveConnection(ctx context.Context, c ConnectionDef) (int64, err
 			}
 			return err
 		}
-		if !strings.EqualFold(old.Name, c.Name) {
-			if used, err := t.connectionUsed(old.Name); err != nil || used != "" {
-				if err == nil {
-					err = msg.Wrap(ErrQuery, "query.connectionInUseRename", msg.Args{"connection": old.Name, "query": used})
-				}
+		if old.Name != c.Name {
+			if err := t.renameConnectionRefs(old.Name, c.Name); err != nil {
 				return err
 			}
 		}
@@ -502,6 +499,102 @@ func (m *Model) SaveConnection(ctx context.Context, c ConnectionDef) (int64, err
 		return t.apply([]stmt{st(u, c.Name, c.Kind, c.Config, c.ID)}, []stmt{st(u, old.Name, old.Kind, old.Config, c.ID)})
 	})
 	return id, err
+}
+
+// RenameConnection renomme une connexion (« Requêtes et connexions » ›
+// Renommer) ; les requêtes qui la citent suivent, dans la même étape
+// annulable.
+func (m *Model) RenameConnection(ctx context.Context, id int64, name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return msg.Wrap(ErrQuery, "query.emptyConnectionName", nil)
+	}
+	return m.Do(ctx, "Renommer la connexion", func(t *tx) error {
+		var old string
+		if err := t.row(`SELECT name FROM _lattis_connections WHERE id = ?`, id).Scan(&old); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return msg.Wrap(ErrQuery, "query.connectionNotFound", nil)
+			}
+			return err
+		}
+		if old == name {
+			return nil
+		}
+		var k int
+		if err := t.row(`SELECT count(*) FROM _lattis_connections WHERE name = ? COLLATE NOCASE AND id <> ?`, name, id).Scan(&k); err != nil {
+			return err
+		}
+		if k > 0 {
+			return msg.Wrap(ErrQuery, "query.connectionExists", msg.Args{"connection": name})
+		}
+		if err := t.renameConnectionRefs(old, name); err != nil {
+			return err
+		}
+		u := `UPDATE _lattis_connections SET name = ? WHERE id = ?`
+		return t.apply([]stmt{st(u, name, id)}, []stmt{st(u, old, id)})
+	})
+}
+
+// renameConnectionRefs fait suivre aux requêtes le renommage d'une
+// connexion : leur source, et celle d'une étape qui en lit une autre
+// (fusion, ajout).
+func (t *tx) renameConnectionRefs(old, neu string) error {
+	rs, err := t.query(`SELECT id, source, coalesce(steps, '') FROM _lattis_queries ORDER BY id`)
+	if err != nil {
+		return err
+	}
+	type q struct {
+		id            int64
+		source, steps string
+	}
+	var qs []q
+	for rs.Next() {
+		var x q
+		if err := rs.Scan(&x.id, &x.source, &x.steps); err != nil {
+			rs.Close()
+			return err
+		}
+		qs = append(qs, x)
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil {
+		return err
+	}
+	follow := func(s map[string]any) bool {
+		if c, _ := s["connection"].(string); c != "" && strings.EqualFold(c, old) {
+			s["connection"] = neu
+			return true
+		}
+		return false
+	}
+	var srcUps, stepUps []textUpdate
+	for _, x := range qs {
+		var src map[string]any
+		if json.Unmarshal([]byte(x.source), &src) == nil && follow(src) {
+			if v, err := encodeJSON(src); err == nil {
+				srcUps = append(srcUps, textUpdate{[]any{x.id}, x.source, v})
+			}
+		}
+		var steps []map[string]any
+		if strings.TrimSpace(x.steps) == "" || json.Unmarshal([]byte(x.steps), &steps) != nil {
+			continue
+		}
+		changed := false
+		for _, s := range steps {
+			if o, ok := s["other"].(map[string]any); ok && follow(o) {
+				changed = true
+			}
+		}
+		if changed {
+			if v, err := encodeJSON(steps); err == nil {
+				stepUps = append(stepUps, textUpdate{[]any{x.id}, x.steps, v})
+			}
+		}
+	}
+	if err := t.applyUpdates(`UPDATE _lattis_queries SET source = ? WHERE id = ?`, srcUps); err != nil {
+		return err
+	}
+	return t.applyUpdates(`UPDATE _lattis_queries SET steps = ? WHERE id = ?`, stepUps)
 }
 
 // connectionUsed donne le nom d'une requête dont la source cite la

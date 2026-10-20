@@ -233,6 +233,12 @@
 		"deleted": "Requête « {name} » supprimée (Ctrl+Z pour annuler)",
 		"deletedTable": "Requête « {name} » supprimée ; le tableau {table} reste sur sa feuille (Ctrl+Z pour annuler)",
 		"connDeleted": "Connexion « {name} » supprimée (Ctrl+Z pour annuler)",
+		"connRenamed": "Connexion « {old} » renommée en « {name} » (Ctrl+Z pour annuler)",
+		"rename": {
+			"label": "Renommer",
+			"aria": "Nouveau nom de la connexion « {name} »",
+			"empty": "Saisissez un nom pour la connexion."
+		},
 		"forgotten": "Mot de passe de « {name} » oublié",
 		"panel": {
 			"title": "Requêtes et connexions",

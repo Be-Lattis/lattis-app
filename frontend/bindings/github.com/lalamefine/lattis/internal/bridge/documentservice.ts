@@ -1039,6 +1039,15 @@ export function LattisLogin(url: string, provider: string): $CancellablePromise<
 }
 
 /**
+ * LattisRename donne à un serveur le nom choisi par l'utilisateur (Gérer
+ * les serveurs › Renommer ; vide : le nom du serveur). Local : jamais
+ * envoyé au serveur ; les récents, le bandeau et les messages le prennent.
+ */
+export function LattisRename(url: string, label: string): $CancellablePromise<$models.LattisState> {
+    return $Call.ByID(1642907107, url, label);
+}
+
+/**
  * LattisSignOut ferme la session d'un serveur (jeton révoqué et oublié du
  * trousseau) et rend l'état à jour.
  */
@@ -1630,6 +1639,14 @@ export function RemoveDuplicates(table: string, cols: number[] | null): $Cancell
  */
 export function RemoveRecent(r: $models.RecentFile): $CancellablePromise<void> {
     return $Call.ByID(3493286641, r);
+}
+
+/**
+ * RenameConnection renomme une connexion ; les requêtes qui la citent
+ * suivent (une seule étape annulable).
+ */
+export function RenameConnection(id: number, name: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1449921584, id, name);
 }
 
 /**

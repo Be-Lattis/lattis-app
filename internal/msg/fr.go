@@ -1011,6 +1011,7 @@ var fr = map[ID]string{
 	"auth.failedDetail":         "Connexion impossible ({code}) : {detail}",
 	"auth.incompleteResponse":   "{server} : réponse incomplète de {path}",
 	"auth.keyringRefused":       "connecté, mais le trousseau du système a refusé le jeton (session limitée à cette exécution) : {err}",
+	"auth.labelTooLong":         "nom trop long : {max} caractères au plus",
 	"auth.loginRequired":        "connectez-vous à {server} (menu Compte de la barre de titre)",
 	"auth.loginRequiredCause":   "connectez-vous à {server} (menu Compte de la barre de titre) : {err}",
 	"auth.loopbackFailed":       "écoute locale impossible ({err}) : connectez-vous depuis un autre appareil",

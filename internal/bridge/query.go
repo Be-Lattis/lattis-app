@@ -318,6 +318,12 @@ func (s *DocumentService) DeleteConnection(ctx context.Context, id int64) (DocSt
 	return s.act(ctx, func(d *doc.Document) error { return d.DeleteConnection(ctx, id) })
 }
 
+// RenameConnection renomme une connexion ; les requêtes qui la citent
+// suivent (une seule étape annulable).
+func (s *DocumentService) RenameConnection(ctx context.Context, id int64, name string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.RenameConnection(ctx, id, name) })
+}
+
 // TestConnection essaie une connexion (password vide : celui qui est
 // connu). Renvoie "" si elle répond, sinon le message d'erreur.
 func (s *DocumentService) TestConnection(ctx context.Context, c query.Connection, password string, remember bool) (string, error) {

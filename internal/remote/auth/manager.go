@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 // TokenStore garde les jetons de rafraîchissement (trousseau du système,
@@ -77,10 +78,13 @@ type server struct {
 	disc *Discovery
 	// name, logo : derniers connus (index), pour l'affichage hors ligne.
 	name, logo string
-	sess       *session
-	cancel     context.CancelFunc
-	device     *DeviceCode
-	known      bool // ajouté par l'utilisateur ou connecté une fois (index)
+	// custom : nom choisi par l'utilisateur (Gérer les serveurs › Renommer),
+	// local, jamais envoyé au serveur ; vide : le nom du serveur.
+	custom string
+	sess   *session
+	cancel context.CancelFunc
+	device *DeviceCode
+	known  bool // ajouté par l'utilisateur ou connecté une fois (index)
 }
 
 type session struct {
@@ -121,8 +125,13 @@ func (s memStore) Forget(a string) error       { delete(s, a); return nil }
 
 // ServerState décrit un serveur pour l'interface.
 type ServerState struct {
-	URL        string     `json:"url"`
-	Name       string     `json:"name"`
+	URL string `json:"url"`
+	// Name : nom affiché (Label s'il est choisi, sinon ServerName).
+	Name string `json:"name"`
+	// Label : nom choisi par l'utilisateur (local, Rename) ; ServerName :
+	// celui qu'annonce le serveur.
+	Label      string     `json:"label,omitempty"`
+	ServerName string     `json:"serverName,omitempty"`
 	Logo       string     `json:"logo,omitempty"`
 	Version    string     `json:"version,omitempty"`
 	Edition    string     `json:"edition,omitempty"`
@@ -203,7 +212,16 @@ func (m *Manager) get(u string) *server {
 	return s
 }
 
+// label : nom affiché, celui choisi par l'utilisateur d'abord.
 func (s *server) label() string {
+	if s.custom != "" {
+		return s.custom
+	}
+	return s.own()
+}
+
+// own : nom annoncé par le serveur (découverte, index), sinon son hôte.
+func (s *server) own() string {
 	switch {
 	case s.disc != nil:
 		return s.disc.Name
@@ -214,12 +232,15 @@ func (s *server) label() string {
 }
 
 func (m *Manager) state(p Policy, s *server) ServerState {
-	st := ServerState{URL: s.url, Name: s.label(), Logo: s.logo, Providers: []Provider{}, Pending: s.cancel != nil}
+	st := ServerState{URL: s.url, Name: s.label(), Label: s.custom, ServerName: s.own(), Logo: s.logo, Providers: []Provider{}, Pending: s.cancel != nil}
 	if mg, ok := m.managed(p, s.url); ok {
 		st.Managed = true
 		st.ImposedProvider = mg.Provider
 		if s.disc == nil && s.name == "" && mg.Name != "" {
-			st.Name = mg.Name
+			st.ServerName = mg.Name
+			if s.custom == "" {
+				st.Name = mg.Name
+			}
 		}
 	}
 	if d := s.disc; d != nil {
@@ -333,10 +354,10 @@ func (m *Manager) prepare(ctx context.Context, raw, provider string, kind string
 		}
 	}
 	if pr == nil {
-		return nil, nil, msg.New("auth.providerNotOffered", msg.Args{"server": disc.Name, "provider": provider})
+		return nil, nil, msg.New("auth.providerNotOffered", msg.Args{"server": s.label(), "provider": provider})
 	}
 	if mg, ok := m.managed(m.policy(), u); ok && mg.Provider != "" && mg.Provider != provider {
-		return nil, nil, msg.New("auth.providerImposed", msg.Args{"server": disc.Name, "provider": mg.Provider})
+		return nil, nil, msg.New("auth.providerImposed", msg.Args{"server": s.label(), "provider": mg.Provider})
 	}
 	if kind == ProviderPassword && pr.Kind != ProviderPassword {
 		return nil, nil, msg.New("auth.noPassword", msg.Args{"provider": pr.Label})
@@ -551,6 +572,51 @@ func (m *Manager) Forget(ctx context.Context, raw string) error {
 	return nil
 }
 
+// MaxLabel : longueur maximale (en caractères) du nom choisi pour un
+// serveur.
+const MaxLabel = 60
+
+// Rename donne à un serveur le nom choisi par l'utilisateur (Gérer les
+// serveurs › Renommer), gardé dans l'index et jamais envoyé au serveur :
+// une nouvelle lecture de la découverte ne le remplace pas. Un nom vide,
+// ou celui du serveur, revient au nom du serveur.
+func (m *Manager) Rename(raw, label string) (ServerState, error) {
+	u, err := NormalizeURL(raw)
+	if err != nil {
+		return ServerState{}, err
+	}
+	label = strings.Join(strings.Fields(label), " ")
+	if n := utf8.RuneCountInString(label); n > MaxLabel {
+		return ServerState{}, msg.New("auth.labelTooLong", msg.Args{"max": MaxLabel})
+	}
+	p := m.policy()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	s := m.get(u)
+	if label == m.state(p, s).ServerName {
+		label = ""
+	}
+	s.custom = label
+	m.save()
+	return m.state(p, s), nil
+}
+
+// Label donne le nom choisi par l'utilisateur pour un serveur ("" : aucun,
+// ou adresse invalide).
+func (m *Manager) Label(raw string) string {
+	u, err := NormalizeURL(raw)
+	if err != nil {
+		return ""
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.load()
+	if s := m.servers[u]; s != nil {
+		return s.custom
+	}
+	return ""
+}
+
 // Session donne l'utilisateur connecté et la découverte d'un serveur
 // (relue si besoin) ; *ErrLoginRequired sans session.
 func (m *Manager) Session(ctx context.Context, raw string) (User, *Discovery, error) {
@@ -683,8 +749,10 @@ type indexFile struct {
 type indexEntry struct {
 	URL  string `json:"url"`
 	Name string `json:"name,omitempty"`
-	Logo string `json:"logo,omitempty"`
-	User *User  `json:"user,omitempty"`
+	// Label : nom choisi par l'utilisateur (Rename).
+	Label string `json:"label,omitempty"`
+	Logo  string `json:"logo,omitempty"`
+	User  *User  `json:"user,omitempty"`
 }
 
 // load lit l'index (une fois) ; mu tenu. Un compte dont le trousseau a
@@ -710,7 +778,7 @@ func (m *Manager) load() {
 		if err != nil {
 			continue
 		}
-		s := &server{url: u, name: e.Name, logo: e.Logo, known: true}
+		s := &server{url: u, name: e.Name, logo: e.Logo, custom: e.Label, known: true}
 		if e.User != nil {
 			a := account(u, *e.User)
 			if _, ok := m.opts.Store.Get(a); ok {
@@ -728,10 +796,10 @@ func (m *Manager) save() {
 	}
 	f := indexFile{Servers: []indexEntry{}}
 	for _, s := range m.servers {
-		if !s.known && s.sess == nil {
+		if !s.known && s.sess == nil && s.custom == "" {
 			continue
 		}
-		e := indexEntry{URL: s.url, Name: s.label(), Logo: s.logo}
+		e := indexEntry{URL: s.url, Name: s.name, Label: s.custom, Logo: s.logo}
 		if s.sess != nil {
 			u := s.sess.user
 			e.User = &u

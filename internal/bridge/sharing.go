@@ -240,7 +240,7 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 // en plus espacés, restent silencieux.
 func (s *DocumentService) shareDown(d *doc.Document, info *workbook.Info, err error) {
 	reason := err.Error()
-	if !d.Share.Online() && d.Share.State().Offline == reason {
+	if !d.Share.Online() && shownState(d).Offline == reason {
 		return
 	}
 	trace.Logf(1, trace.Doc, "serveur %s injoignable (classeur partagé « %s ») : %s", info.Server, info.Title, reason)
@@ -626,7 +626,7 @@ func (s *DocumentService) emitShare(d *doc.Document) {
 	s.mu.Lock()
 	s.tables = map[int64]*grid.Table{} // lecture seule ou non : relire
 	s.mu.Unlock()
-	s.sys().Emit(ShareEvent, d.Share.State())
+	s.sys().Emit(ShareEvent, shownState(d))
 }
 
 // emitSync prévient l'interface d'un changement de la file d'envoi du
@@ -645,7 +645,7 @@ func (s *DocumentService) ShareState() workbook.State {
 	if err != nil {
 		return workbook.State{Roles: []string{}}
 	}
-	return d.Share.State()
+	return shownState(d)
 }
 
 // ShareCheck fait les vérifications avant publication sur tous les
@@ -748,7 +748,7 @@ func (s *DocumentService) afterShare(ctx context.Context, d *doc.Document) (work
 	}
 	if d.Path() != "" {
 		if err := saveDoc(ctx, d, ""); err != nil {
-			return d.Share.State(), err
+			return shownState(d), err
 		}
 	}
 	return s.shareReady(ctx, d)
@@ -762,11 +762,11 @@ func (s *DocumentService) shareReady(ctx context.Context, d *doc.Document) (work
 	s.tables, s.memo = map[int64]*grid.Table{}, nil
 	s.mu.Unlock()
 	if _, err := s.changed(ctx); err != nil {
-		return d.Share.State(), err
+		return shownState(d), err
 	}
 	s.watchShare(d)
-	s.sys().Emit(ShareEvent, d.Share.State())
-	return d.Share.State(), nil
+	s.sys().Emit(ShareEvent, shownState(d))
+	return shownState(d), nil
 }
 
 // ShareWorkbooks liste les classeurs accessibles sur un serveur (Fichier ›
@@ -930,10 +930,7 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 // plus pour l'utilisateur, et n'a pas de cache à ouvrir. Mêmes mots que le
 // bandeau (frontend/src/lib/remote/share.ts, goneText).
 func goneError(gone, name, server string) error {
-	where := strings.TrimSpace(name)
-	if where == "" {
-		where = auth.Host(server)
-	}
+	where := serverLabel(server, name)
 	if gone == workbook.GoneRevoked {
 		return msg.New("share.accessLost", msg.Args{"server": where})
 	}

@@ -1269,6 +1269,15 @@
 			"inUse": "Le classeur ouvert « {title} » est publié sur ce serveur : il reste ouvert depuis sa copie sur ce poste, mais ne se synchronisera plus tant que vous n’aurez pas ajouté ce serveur de nouveau et ne vous y serez pas reconnecté.",
 			"queries": "Les requêtes et classeurs qui utilisent ce serveur vous demanderont de vous y connecter."
 		},
+		"rename": {
+			"label": "Renommer",
+			"tooltip": "Donner à ce serveur un autre nom sur ce poste (le serveur n’est pas modifié)",
+			"aria": "Nom du serveur sur ce poste",
+			"empty": "Saisissez un nom pour ce serveur.",
+			"tooLong": "Nom trop long : {max} caractères au plus.",
+			"serverName": "Nom sur le serveur : {name}",
+			"reset": "Rétablir"
+		},
 		"emptyAdd": "Aucun serveur. Ajoutez-en un ci-dessous.",
 		"add": {
 			"title": "Ajouter un serveur",

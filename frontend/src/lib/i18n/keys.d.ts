@@ -1775,6 +1775,7 @@ export interface MessageParams {
 	'query.editor.tabs': Record<never, never>;
 	'query.editor.title': Record<never, never>;
 	'query.host.connDeleted': { name: number | string };
+	'query.host.connRenamed': { name: number | string; old: number | string };
 	'query.host.connectionOnly': Record<never, never>;
 	'query.host.connections': Record<never, never>;
 	'query.host.delete': Record<never, never>;
@@ -1807,6 +1808,9 @@ export interface MessageParams {
 	'query.host.refreshedOn': { date: number | string };
 	'query.host.refreshing': Record<never, never>;
 	'query.host.refreshingAll': Record<never, never>;
+	'query.host.rename.aria': { name: number | string };
+	'query.host.rename.empty': Record<never, never>;
+	'query.host.rename.label': Record<never, never>;
 	'query.host.saved': { name: number | string };
 	'query.host.source.csv': Record<never, never>;
 	'query.host.source.sqlite': Record<never, never>;
@@ -2738,6 +2742,13 @@ export interface MessageParams {
 	'remote.servers.remove.queries': Record<never, never>;
 	'remote.servers.remove.signedOut': Record<never, never>;
 	'remote.servers.remove.tooltip': Record<never, never>;
+	'remote.servers.rename.aria': Record<never, never>;
+	'remote.servers.rename.empty': Record<never, never>;
+	'remote.servers.rename.label': Record<never, never>;
+	'remote.servers.rename.reset': Record<never, never>;
+	'remote.servers.rename.serverName': { name: number | string };
+	'remote.servers.rename.tooLong': { max: number | string };
+	'remote.servers.rename.tooltip': Record<never, never>;
 	'remote.servers.title': Record<never, never>;
 	'remote.share.banner.conflicts': { n: number | string };
 	'remote.share.banner.detach': Record<never, never>;

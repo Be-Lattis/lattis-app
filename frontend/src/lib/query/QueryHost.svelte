@@ -281,6 +281,46 @@
 		}
 	}
 
+	/** Connexion renommée (champ dans sa ligne), nom saisi, refus. */
+	let renaming = $state(0);
+	let newName = $state('');
+	let renameError = $state('');
+
+	function startRename(c: Connection) {
+		menuFor = null;
+		renaming = c.id;
+		newName = c.name;
+		renameError = '';
+	}
+
+	function cancelRename() {
+		renaming = 0;
+		renameError = '';
+	}
+
+	/** Enregistre le nom saisi : les requêtes qui citent la connexion suivent (Go). */
+	async function commitRename(c: Connection) {
+		if (renaming !== c.id || busy) return;
+		const name = newName.trim();
+		if (name === c.name) return cancelRename();
+		if (!name) return void (renameError = t('query.host.rename.empty'));
+		try {
+			await DocumentService.RenameConnection(c.id, name);
+			cancelRename();
+			await load();
+			onchanged();
+			onnotice(t('query.host.connRenamed', { old: c.name, name }));
+		} catch (e) {
+			renameError = err(e);
+		}
+	}
+
+	/** Champ du nom : prend le focus, texte sélectionné. */
+	function focusSelect(el: HTMLInputElement) {
+		el.focus();
+		el.select();
+	}
+
 	function editConn(c: Connection) {
 		newConnection(c).then((n) => (n ? load() : undefined));
 	}
@@ -334,18 +374,47 @@
 		</div>
 		{#each conns as c (c.id)}
 			<div class="row" class:open={menuFor === `c${c.id}`}>
-				<button class="main" title={t('query.host.editConn', { name: c.name })} onclick={() => editConn(c)}>
-					<Icon name={kindIcon(c.kind)} size={16} />
-					<span class="txt">
-						<span class="name">{c.name}</span>
-						<span class="sub">{describe(c)}{c.remembered ? ` · ${c.kind === 'web' ? t('query.host.tokenRemembered') : t('query.host.passwordRemembered')}` : ''}</span>
-					</span>
-				</button>
+				{#if renaming === c.id}
+					<div class="main">
+						<Icon name={kindIcon(c.kind)} size={16} />
+						<span class="txt">
+							<input
+								class="rename"
+								bind:value={newName}
+								aria-label={t('query.host.rename.aria', { name: c.name })}
+								aria-invalid={!!renameError}
+								use:focusSelect
+								oninput={() => (renameError = '')}
+								onkeydown={(e) => {
+									e.stopPropagation();
+									if (e.key === 'Enter') {
+										e.preventDefault();
+										commitRename(c);
+									} else if (e.key === 'Escape') {
+										e.preventDefault();
+										cancelRename();
+									}
+								}}
+								onblur={() => (renameError ? cancelRename() : commitRename(c))}
+							/>
+							{#if renameError}<span class="sub rename-error" role="alert">{renameError}</span>{/if}
+						</span>
+					</div>
+				{:else}
+					<button class="main" title={t('query.host.editConn', { name: c.name })} onclick={() => editConn(c)}>
+						<Icon name={kindIcon(c.kind)} size={16} />
+						<span class="txt">
+							<span class="name">{c.name}</span>
+							<span class="sub">{describe(c)}{c.remembered ? ` · ${c.kind === 'web' ? t('query.host.tokenRemembered') : t('query.host.passwordRemembered')}` : ''}</span>
+						</span>
+					</button>
+				{/if}
 				<div class="acts">
 					<button class="ic more" title={t('query.host.more')} aria-label={t('query.host.more')} aria-haspopup="menu" aria-expanded={menuFor === `c${c.id}`} onclick={() => (menuFor = menuFor === `c${c.id}` ? null : `c${c.id}`)}>⋯</button>
 					{#if menuFor === `c${c.id}`}
 						<div class="row-menu" role="menu" use:dismiss={() => (menuFor = null)}>
 							<button role="menuitem" onclick={() => ((menuFor = null), editConn(c))}><Icon name="edit" size={14} />{t('query.host.edit')}</button>
+							<button role="menuitem" onclick={() => startRename(c)}><Icon name="rename" size={14} />{t('query.host.rename.label')}</button>
 							{#if c.kind !== 'lattis'}
 								<button role="menuitem" onclick={() => ((menuFor = null), forget(c))}><Icon name="key" size={14} />{c.kind === 'web' ? t('query.host.forgetToken') : t('query.host.forgetPassword')}</button>
 							{/if}
@@ -478,6 +547,19 @@
 	.sub {
 		color: #6b7280;
 		font-size: 11px;
+	}
+	input.rename {
+		font: inherit;
+		font-weight: 600;
+		min-width: 0;
+		padding: 1px 4px;
+		border: 1px solid #217346;
+		border-radius: 3px;
+		outline: none;
+	}
+	.rename-error {
+		color: #c0392b;
+		white-space: normal;
 	}
 	.acts {
 		position: relative;

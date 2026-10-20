@@ -200,6 +200,23 @@ func (s *DocumentService) LattisForget(ctx context.Context, url string) (LattisS
 	return s.LattisState(), nil
 }
 
+// LattisRename donne à un serveur le nom choisi par l'utilisateur (Gérer
+// les serveurs › Renommer ; vide : le nom du serveur). Local : jamais
+// envoyé au serveur ; les récents, le bandeau et les messages le prennent.
+func (s *DocumentService) LattisRename(ctx context.Context, url, label string) (LattisState, error) {
+	m, err := lattisOn()
+	if err != nil {
+		return s.LattisState(), err
+	}
+	if _, err := m.Rename(url, label); err != nil {
+		return s.LattisState(), err
+	}
+	if d, err := s.current(); err == nil && d.Share != nil && d.Share.State().Shared {
+		s.emitShare(d)
+	}
+	return s.LattisState(), nil
+}
+
 // checkLattisConnection vérifie qu'une connexion de genre lattis vise un
 // serveur permis (fonction active, stratégie de l'organisation).
 func checkLattisConnection(c query.Connection) error {

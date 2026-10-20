@@ -26,7 +26,18 @@ export type Provider = protocol$0.Provider;
  */
 export interface ServerState {
     "url": string;
+
+    /**
+     * Name : nom affiché (Label s'il est choisi, sinon ServerName).
+     */
     "name": string;
+
+    /**
+     * Label : nom choisi par l'utilisateur (local, Rename) ; ServerName :
+     * celui qu'annonce le serveur.
+     */
+    "label"?: string;
+    "serverName"?: string;
     "logo"?: string;
     "version"?: string;
     "edition"?: string;

@@ -35,7 +35,7 @@ Une requête est écrite dans le classeur. Pour qu'un classeur reçu ne puisse p
 
 ## Connexions aux bases
 
-Une **connexion** décrit un serveur (PostgreSQL, MySQL / MariaDB, SQL Server, ou une API web) : hôte, port, base, utilisateur. Elle est rangée dans le classeur et sert à plusieurs requêtes.
+Une **connexion** décrit un serveur (PostgreSQL, MySQL / MariaDB, SQL Server, ou une API web) : hôte, port, base, utilisateur. Elle est rangée dans le classeur et sert à plusieurs requêtes. Son menu **⋯** dans le volet la renomme : les requêtes qui l'utilisent suivent son nouveau nom (`Ctrl+Z` annule le tout).
 
 Les mots de passe ne sont jamais enregistrés dans le classeur : ils restent dans le trousseau du système, et Lattis les demande à la première actualisation. Le volet permet aussi de les oublier.
 

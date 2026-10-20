@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Provider, ServerState } from '#bindings/internal/remote/auth/models.js';
-import { accountTitle, connected, initials, loginRows, pickServer, providerButton, providerGlyph, remaining, serverOption, serverUrlOk, userDetail, userName } from './lattis';
+import { accountTitle, cleanLabel, connected, initials, loginRows, MAX_SERVER_LABEL, pickServer, providerButton, providerGlyph, remaining, serverLabelError, serverOption, serverUrlOk, userDetail, userName } from './lattis';
 
 const providers: Provider[] = [
 	{ id: 'google', kind: 'google', label: 'Google' },
@@ -83,5 +83,16 @@ describe('choix du serveur', () => {
 		expect(pickServer(urls, 'https://retiré')).toBe('https://a');
 		expect(pickServer(urls, 'https://b', 'https://pas-connecté')).toBe('https://b');
 		expect(pickServer([], 'https://a')).toBe('');
+	});
+});
+
+describe('nom choisi pour un serveur', () => {
+	it('espaces resserrés, vide et trop long refusés', () => {
+		expect(cleanLabel('  Serveur \t du  labo ')).toBe('Serveur du labo');
+		expect(serverLabelError('Serveur du labo')).toBe('');
+		expect(serverLabelError('   ')).toBe('Saisissez un nom pour ce serveur.');
+		expect(serverLabelError('é'.repeat(MAX_SERVER_LABEL))).toBe('');
+		expect(serverLabelError('é'.repeat(MAX_SERVER_LABEL + 1))).toBe('Nom trop long : 60 caractères au plus.');
+		expect(serverLabelError(`  ${'a'.repeat(MAX_SERVER_LABEL)}  `)).toBe('');
 	});
 });

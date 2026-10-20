@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/auth"
@@ -40,7 +41,7 @@ func remoteDoc(d *doc.Document) *workbook.State {
 	if d == nil || d.Share == nil || d.Share.Info() == nil || !inShareCache(d.Path()) {
 		return nil
 	}
-	st := d.Share.State()
+	st := shownState(d)
 	if strings.TrimSpace(st.Title) == "" {
 		st.Title = remoteTitle
 	}
@@ -96,8 +97,42 @@ func closeKeeping(d *doc.Document) error {
 	return nil
 }
 
-// serverLabel : nom du serveur, sinon son hôte.
+// serverLabelOf : nom choisi par l'utilisateur pour un serveur (Gérer les
+// serveurs › Renommer), "" sans. Local : le classeur et le serveur gardent
+// le nom annoncé par le serveur, l'affichage prend celui-ci d'abord.
+// Surchargé par les essais.
+var serverLabelOf = func(server string) string {
+	if fixed != nil || server == "" || !config.SharedWorkbooks(config.Current()) {
+		return ""
+	}
+	return lattisManager().Label(server)
+}
+
+// shownName : nom d'un serveur à montrer, celui choisi par l'utilisateur
+// d'abord, sinon name (nom annoncé, éventuellement vide).
+func shownName(server, name string) string {
+	if l := serverLabelOf(server); l != "" {
+		return l
+	}
+	return name
+}
+
+// shownState : état de partage du classeur d pour l'interface, avec le nom
+// du serveur choisi par l'utilisateur.
+func shownState(d *doc.Document) workbook.State {
+	st := d.Share.State()
+	if st.Shared {
+		st.ServerName = shownName(st.Server, st.ServerName)
+	}
+	return st
+}
+
+// serverLabel : nom du serveur (celui choisi par l'utilisateur d'abord),
+// sinon son hôte.
 func serverLabel(server, name string) string {
+	if l := serverLabelOf(server); l != "" {
+		return l
+	}
 	if strings.TrimSpace(name) != "" {
 		return name
 	}

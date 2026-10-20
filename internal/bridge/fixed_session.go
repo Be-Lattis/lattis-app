@@ -139,6 +139,7 @@ func (f *FixedSession) state() LattisState {
 	if f.disc != nil && f.disc.Name != "" {
 		st.Name = f.disc.Name
 	}
+	st.ServerName = st.Name
 	st.User = &auth.User{PGRole: f.role}
 	return LattisState{Enabled: true, Servers: []auth.ServerState{st}}
 }

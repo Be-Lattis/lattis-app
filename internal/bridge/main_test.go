@@ -15,6 +15,8 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	recentFile = func() (string, error) { return filepath.Join(dir, "recent.json"), nil }
+	// Ni l'index des serveurs ni le trousseau de l'utilisateur.
+	serverLabelOf = func(string) string { return "" }
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)

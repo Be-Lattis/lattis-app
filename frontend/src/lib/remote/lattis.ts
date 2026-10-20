@@ -111,6 +111,22 @@ export function serverUrlOk(url: string): boolean {
 	}
 }
 
+/** Longueur maximale du nom choisi pour un serveur (auth.MaxLabel). */
+export const MAX_SERVER_LABEL = 60;
+
+/** Nom choisi pour un serveur, espaces resserrés (comme auth.Manager.Rename). */
+export function cleanLabel(v: string): string {
+	return v.split(/\s+/).filter(Boolean).join(' ');
+}
+
+/** Refus d'un nom choisi pour un serveur ('' : valable). */
+export function serverLabelError(v: string): string {
+	const c = cleanLabel(v);
+	if (!c) return t('remote.servers.rename.empty');
+	if ([...c].length > MAX_SERVER_LABEL) return t('remote.servers.rename.tooLong', { max: MAX_SERVER_LABEL });
+	return '';
+}
+
 /** Temps restant d'un code de connexion (« 9 min 59 s »), '' une fois expiré. */
 export function remaining(expiresAt: string, now = Date.now()): string {
 	const ms = Date.parse(expiresAt) - now;

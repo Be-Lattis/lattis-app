@@ -3,7 +3,8 @@
 	// les Serveurs Lattis connus sur ce poste, le compte connecté à chacun ;
 	// ajouter un serveur (adresse vérifiée, puis page de connexion), se
 	// connecter ou se déconnecter, retirer un serveur de la liste (rien n'est
-	// supprimé sur le serveur). Les serveurs déclarés par l'organisation
+	// supprimé sur le serveur), le renommer sur ce poste (nom local, jamais
+	// envoyé au serveur). Les serveurs déclarés par l'organisation
 	// restent ; une stratégie qui verrouille l'ajout masque « Ajouter ».
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
@@ -11,8 +12,8 @@
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { ServerState } from '#bindings/internal/remote/auth/models.js';
-	import { hostOf, serverUrlOk, userDetail, userName } from './lattis';
-	import { addServer, forgetServer, lattis, loadLattis, requestLogin, signOut } from './lattis.svelte.js';
+	import { cleanLabel, hostOf, MAX_SERVER_LABEL, serverLabelError, serverUrlOk, userDetail, userName } from './lattis';
+	import { addServer, forgetServer, lattis, loadLattis, renameServer, requestLogin, signOut } from './lattis.svelte.js';
 	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
@@ -27,6 +28,9 @@
 	let error = $state('');
 	/** Serveur dont le retrait attend confirmation. */
 	let removing = $state<ServerState | null>(null);
+	/** Serveur renommé (champ dans sa rangée) et nom saisi. */
+	let renaming = $state('');
+	let label = $state('');
 	/** Classeur ouvert publié sur un serveur (retrait : il ne se synchronise plus). */
 	let inUse = $state<{ server: string; title: string } | null>(null);
 	const err = errorText;
@@ -71,6 +75,44 @@
 			removing = null;
 		});
 
+	function startRename(s: ServerState) {
+		error = '';
+		removing = null;
+		renaming = s.url;
+		label = s.name || hostOf(s.url);
+	}
+
+	function cancelRename() {
+		renaming = '';
+		error = '';
+	}
+
+	/** Enregistre le nom saisi (Entrée, sortie du champ) ; inchangé : rien. */
+	function commitRename(s: ServerState) {
+		if (renaming !== s.url || busy) return;
+		const v = cleanLabel(label);
+		if (v === (s.name || hostOf(s.url))) return cancelRename();
+		const bad = serverLabelError(v);
+		if (bad) return void (error = bad);
+		return run(async () => {
+			await renameServer(s.url, v);
+			renaming = '';
+		});
+	}
+
+	/** Revient au nom annoncé par le serveur. */
+	const resetName = (s: ServerState) =>
+		run(async () => {
+			await renameServer(s.url, '');
+			renaming = '';
+		});
+
+	/** Champ du nom : prend le focus, texte sélectionné. */
+	function focusSelect(el: HTMLInputElement) {
+		el.focus();
+		el.select();
+	}
+
 	function close() {
 		if (!busy) onclose(added);
 	}
@@ -88,7 +130,8 @@
 		onkeydown={(e) => {
 			e.stopPropagation();
 			if (e.key === 'Escape') {
-				if (removing) removing = null;
+				if (renaming) cancelRename();
+				else if (removing) removing = null;
 				else close();
 			}
 		}}
@@ -104,8 +147,37 @@
 							<div class="srv">
 								{#if s.logo}<img src={s.logo} alt="" />{:else}<Icon name="database" size={18} />{/if}
 								<div class="who">
-									<strong title={s.url}>{s.name || hostOf(s.url)}</strong>
+									{#if renaming === s.url}
+										<input
+											class="name"
+											bind:value={label}
+											placeholder={s.serverName || hostOf(s.url)}
+											aria-label={t('remote.servers.rename.aria')}
+											aria-invalid={!!serverLabelError(label)}
+											disabled={busy}
+											use:focusSelect
+											onkeydown={(e) => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													commitRename(s);
+												} else if (e.key === 'Escape') {
+													e.preventDefault();
+													e.stopPropagation();
+													cancelRename();
+												}
+											}}
+											onblur={() => (serverLabelError(label) ? cancelRename() : commitRename(s))}
+										/>
+									{:else}
+										<strong title={s.url}>{s.name || hostOf(s.url)}</strong>
+									{/if}
 									<span class="muted">{hostOf(s.url)}{s.managed ? ` · ${t('remote.servers.managed')}` : ''}</span>
+									{#if s.label}
+										<span class="muted">
+											{t('remote.servers.rename.serverName', { name: s.serverName || hostOf(s.url) })}
+											<button class="link" disabled={busy} onclick={() => resetName(s)}>{t('remote.servers.rename.reset')}</button>
+										</span>
+									{/if}
 									{#if s.user}
 										<span class="ok">{t('remote.servers.connected', { user: userName(s.user) })}{userDetail(s.user) ? ` (${userDetail(s.user)})` : ''}</span>
 									{:else}
@@ -118,6 +190,9 @@
 									{:else}
 										<button disabled={busy} onclick={() => login(s)}>{t('remote.account.signIn')}</button>
 									{/if}
+									<button disabled={busy || renaming === s.url} title={t('remote.servers.rename.tooltip')} onclick={() => startRename(s)}
+										>{t('remote.servers.rename.label')}</button
+									>
 									<button
 										class="danger"
 										disabled={busy || s.managed}
@@ -257,6 +332,21 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+	.who input.name {
+		font-weight: 600;
+		margin: -3px 0 1px;
+	}
+	button.link {
+		border: none;
+		background: none;
+		padding: 0 2px;
+		color: #217346;
+		text-decoration: underline;
+		font-size: 12px;
+	}
+	button.link:hover:not(:disabled) {
+		background: none;
 	}
 	.acts {
 		display: flex;
