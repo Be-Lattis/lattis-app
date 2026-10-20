@@ -203,7 +203,12 @@ func TestShareDetach(t *testing.T) {
 	pub := filepath.Join(dir, "Publié.lattis")
 	mustShare(t, ad.Save(ctx, pub))
 	mustShare(t, s.CloseDocument(ctx))
-	_, err = s.Open(ctx, pub)
+	// Ouvrir le fichier d'un classeur collaboratif renvoie vers le serveur
+	// (Shared) ; OpenLocalCopy l'ouvre tel quel.
+	if or, err := s.Open(ctx, pub); err != nil || or.Shared == nil {
+		t.Fatalf("Open du fichier publié : %+v %v", or, err)
+	}
+	_, err = s.OpenLocalCopy(ctx, pub)
 	mustShare(t, err)
 	if !s.ShareState().Shared || !s.ShareState().CanManage {
 		t.Fatalf("fichier publié : %+v", s.ShareState())
