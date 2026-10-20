@@ -8,6 +8,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Changements
 
+- Clic droit : les actions propres à la situation (Utiliser comme en-têtes, Ajouter au tableau, Utiliser la première ligne comme en-têtes, Sortir cette ligne du tableau, Convertir le résultat déversé, Basculer sur…) sont en tête du menu, avant Couper, Copier, Coller.
 - Édition web : un écran « Lattis » avec une barre de chargement s'affiche pendant le chargement de l'application, puis pendant l'ouverture du classeur, au lieu d'une page blanche.
 
 ## 0.1.0-beta.3.2 (20/10/2026)

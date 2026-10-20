@@ -10930,6 +10930,18 @@
 					     suppression ; tri et filtre ; mise en forme ; puis ce qui est propre à
 					     Lattis : la colonne (type, clé, nom), le tableau (sous-menu), l'assistant. -->
 					{#if !m.rowOnly && !m.header}{@render refMenuItems()}{/if}
+					<!-- Actions propres à la ligne : en tête, avant les génériques (demande de Louis). -->
+					{#if !m.rowOnly && (promoteHere || toNote)}
+						{#if promoteHere}
+							<!-- Tableau sans en-têtes (que des « Colonne n ») : sur sa 1re ligne. -->
+							<button title="La 1re ligne de données donne les noms des colonnes et devient l'en-tête, à sa place ; l'en-tête actuel disparaît (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la première ligne comme en-têtes</button>
+						{/if}
+						{#if toNote}
+							<!-- Seulement sur la dernière ligne de données (le moteur refuse les autres). -->
+							<button title="La ligne reste juste sous le tableau, gardée à part comme total ou note (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir cette ligne du tableau (total ou note)</button>
+						{/if}
+						<hr />
+					{/if}
 					<button data-shed="3"
 						onclick={() => {
 							menu = null;
@@ -10974,14 +10986,6 @@
 								clearSelection();
 							}}>Effacer le contenu</button
 						>
-						{#if promoteHere}
-							<!-- Tableau sans en-têtes (que des « Colonne n ») : sur sa 1re ligne. -->
-							<button title="La 1re ligne de données donne les noms des colonnes et devient l'en-tête, à sa place ; l'en-tête actuel disparaît (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>Utiliser la première ligne comme en-têtes</button>
-						{/if}
-						{#if toNote}
-							<!-- Seulement sur la dernière ligne de données (le moteur refuse les autres). -->
-							<button title="La ligne reste juste sous le tableau, gardée à part comme total ou note (Ctrl+Z pour annuler)" onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>Sortir cette ligne du tableau (total ou note)</button>
-						{/if}
 					{/if}
 					{#if sortCount}
 						<hr />
@@ -11147,6 +11151,36 @@
 			{@const below = groupCandidate()}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (freeMenu = null)}>
 				{#if !m.kind}{@render refMenuItems()}{/if}
+				<!-- Actions propres à la cellule (en-têtes, tableau voisin, plage, résultat déversé) : en tête. -->
+				{#if !m.kind}
+					{@const join = !!source.joinTable && keptOut(active.row, active.col)}
+					{@const asTable = !!source.formatAsTable && inRangeZone(active.row, active.col)}
+					{@const under = titleTableAt(active.row, active.col)}
+					{@const asHeader = !!under}
+					{@const spilled = source.convertSpill ? spillUnder(active.row, active.col) : null}
+					{#if join || asTable || asHeader}
+						{@const at = { row: active.row, col: active.col }}
+						{#if asHeader && under}
+							{@const t = under}
+							<button data-shed="1" title="Les cellules de cette ligne, au-dessus des colonnes du tableau, deviennent ses en-têtes ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.titleToHeader!(t))}>Utiliser comme en-têtes de « {t.name} »</button>
+						{/if}
+						{#if join}
+							<button data-shed="1" title="Cette cellule est gardée hors du tableau voisin (note, total) ; elle le rejoint" onclick={() => menuAction(() => source.joinTable!(at.row, at.col))}>Ajouter au tableau</button>
+						{/if}
+						{#if asTable}
+							<button data-shed="1" title="La plage redevient un tableau (sa première ligne donne les en-têtes)" onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>Mettre sous forme de tableau</button>
+						{/if}
+					{/if}
+					{#if spilled}
+						{@const sp = spilled}
+						{#if sp}
+							{@const at = { row: sp.row, col: sp.col }}
+							<button data-shed="1" title="Un tableau chargé par la formule remplace le résultat déversé : il se recalcule quand ses sources changent (colonnes en lecture seule, colonnes saisies possibles à droite)" onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, true))}>Convertir en tableau lié</button>
+							<button data-shed="1" title="Un tableau ordinaire garde les valeurs actuelles du résultat déversé, sans lien avec la formule" onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, false))}>Convertir en tableau (valeurs)</button>
+						{/if}
+					{/if}
+					{#if join || asTable || asHeader || spilled}<hr />{/if}
+				{/if}
 				{#if below}
 					<!-- Ligne juste au-dessus de l'en-tête d'un tableau : ses cases peuvent devenir les groupes d'en-têtes. -->
 					<button title="Les cases de cette ligne, fusionnées ou non, deviennent les groupes d'en-têtes du tableau « {below.t.name} »" onclick={() => { freeMenu = null; menuAction(() => source.setTwoLevel!(below.t, true)); }}>Intégrer comme groupes d'en-têtes du tableau</button>
@@ -11217,40 +11251,13 @@
 						<button onclick={() => removePivot(dp)}>Supprimer le tableau croisé</button>
 					{/if}
 				{/if}
-				{#if !m.kind && source.convertSpill}
-					{@const sp = spillUnder(active.row, active.col)}
-					{#if sp}
-						{@const at = { row: sp.row, col: sp.col }}
-						<hr />
-						<button data-shed="1" title="Un tableau chargé par la formule remplace le résultat déversé : il se recalcule quand ses sources changent (colonnes en lecture seule, colonnes saisies possibles à droite)" onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, true))}>Convertir en tableau lié</button>
-						<button data-shed="1" title="Un tableau ordinaire garde les valeurs actuelles du résultat déversé, sans lien avec la formule" onclick={() => menuAction(() => source.convertSpill!(at.row, at.col, false))}>Convertir en tableau (valeurs)</button>
-					{/if}
-				{/if}
 				{#if !m.kind}
-					{@const join = !!source.joinTable && keptOut(active.row, active.col)}
-					{@const asTable = !!source.formatAsTable && inRangeZone(active.row, active.col)}
-					{@const under = titleTableAt(active.row, active.col)}
-					{@const asHeader = !!under}
 					{#if source.applyStyle || source.setNote}
 						<hr />
 						{#if source.applyStyle}
 							<button data-shed="1" onclick={() => openFormat()}>Format de cellule… <span class="keys">Ctrl+1</span></button>
 						{/if}
 						{#if source.setNote}{@render noteItems()}{/if}
-					{/if}
-					{#if join || asTable || asHeader}
-						{@const at = { row: active.row, col: active.col }}
-						<hr />
-						{#if asHeader && under}
-							{@const t = under}
-							<button data-shed="1" title="Les cellules de cette ligne, au-dessus des colonnes du tableau, deviennent ses en-têtes ; l'en-tête actuel devient la 1re ligne de données (sauf les noms « Colonne n »)" onclick={() => menuAction(() => source.titleToHeader!(t))}>Utiliser comme en-têtes de « {t.name} »</button>
-						{/if}
-						{#if join}
-							<button data-shed="1" title="Cette cellule est gardée hors du tableau voisin (note, total) ; elle le rejoint" onclick={() => menuAction(() => source.joinTable!(at.row, at.col))}>Ajouter au tableau</button>
-						{/if}
-						{#if asTable}
-							<button data-shed="1" title="La plage redevient un tableau (sa première ligne donne les en-têtes)" onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>Mettre sous forme de tableau</button>
-						{/if}
 					{/if}
 				{/if}
 				{#if onask}
