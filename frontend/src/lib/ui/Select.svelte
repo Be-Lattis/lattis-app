@@ -4,6 +4,7 @@
 	// clavier (flèches, Entrée, Échap, première lettre).
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import { tick } from 'svelte';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Option {
 		value: T;
@@ -113,7 +114,7 @@
 	style:width
 	{id}
 	{title}
-	aria-label={label ? `${label} : ${current?.label ?? ''}` : undefined}
+	aria-label={label ? t('shell.select.aria', { label, value: current?.label ?? '' }) : undefined}
 	{disabled}
 	aria-haspopup="listbox"
 	aria-expanded={open}

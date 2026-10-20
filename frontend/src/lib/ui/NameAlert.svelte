@@ -3,6 +3,7 @@
 	// bouton OK ; Entrée, Échap ou OK la ferment et la saisie reprend dans
 	// le champ du nom, le texte tapé gardé et sélectionné.
 	import { modal } from './focus.js';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		title: string;
@@ -30,7 +31,7 @@
 		</header>
 		<p id="name-alert-msg">{message}</p>
 		<div class="actions">
-			<button class="primary" data-autofocus onclick={onclose}>OK</button>
+			<button class="primary" data-autofocus onclick={onclose}>{t('common.ok')}</button>
 		</div>
 	</div>
 </div>

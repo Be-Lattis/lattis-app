@@ -4,7 +4,7 @@
 // (internal/canvas : RenameTable, RenameSheet, SetName, en-têtes de
 // colonnes, SaveScript, RenameFavorite) ; un refus du moteur (classeur
 // partagé, nom pris ailleurs…) s'affiche de la même façon (refusedName).
-import { lower, upper } from '#lib/i18n/index.js';
+import { errorText, lower, msgCause, t, upper } from '#lib/i18n/index.js';
 
 /** Un nom refusé : titre de la boîte et explication (pourquoi, ce qui est permis). */
 export interface NameProblem {
@@ -26,17 +26,15 @@ export function a1Name(name: string): boolean {
 /** Pourquoi un identifiant (lettre ou _, puis lettres, chiffres, _ et extra) n'en est pas un ; vide s'il l'est. */
 function identifierFault(name: string, extra = ''): string {
 	const chars = [...name];
-	if (/^\p{Nd}$/u.test(chars[0])) return 'il commence par un chiffre';
+	if (/^\p{Nd}$/u.test(chars[0])) return t('shell.names.fault.digit');
 	const ok = new RegExp(`^[\\p{L}\\p{Nd}_${extra}]$`, 'u');
 	for (const [i, ch] of chars.entries()) {
-		if (i === 0 && !/^[\p{L}_]$/u.test(ch)) return `il commence par « ${ch} »`;
-		if (/^\s$/u.test(ch)) return 'il contient une espace';
-		if (!ok.test(ch)) return `le caractère « ${ch} » n'est pas permis`;
+		if (i === 0 && !/^[\p{L}_]$/u.test(ch)) return t('shell.names.fault.start', { char: ch });
+		if (/^\s$/u.test(ch)) return t('shell.names.fault.space');
+		if (!ok.test(ch)) return t('shell.names.fault.char', { char: ch });
 	}
 	return '';
 }
-
-const TABLE_RULE = "Un nom de tableau commence par une lettre (ou _) et ne contient que des lettres, des chiffres et _, sans espace : il s'écrit tel quel dans les formules (exemple : Ventes_2024).";
 
 /**
  * Nom de tableau (zone de nom, onglet SQL) : identifiant, pas une adresse
@@ -44,36 +42,36 @@ const TABLE_RULE = "Un nom de tableau commence par une lettre (ou _) et ne conti
  */
 export function tableNameProblem(raw: string, others: Iterable<string> = []): NameProblem | null {
 	const name = raw.trim();
-	const title = 'Nom de tableau invalide';
-	if (!name) return { title, message: `Le nom du tableau ne peut pas être vide.\n\n${TABLE_RULE}` };
+	const title = t('shell.names.table.invalid');
+	const rule = t('shell.names.table.rule');
+	if (!name) return { title, message: t('shell.names.table.empty', { rule }) };
 	const fault = identifierFault(name);
-	if (fault) return { title, message: `« ${name} » : ${fault}.\n\n${TABLE_RULE}` };
-	if (a1Name(name)) return { title, message: `« ${name} » est une adresse de cellule : la zone de nom et les formules ne sauraient pas lequel des deux on veut dire.\n\nEssayez par exemple « ${name}_ » ou « T_${name} ».` };
+	if (fault) return { title, message: t('shell.names.fault.message', { name, fault, rule }) };
+	if (a1Name(name)) return { title, message: t('shell.names.table.address', { name }) };
 	const other = taken(name, others);
-	if (other) return { title: 'Nom de tableau déjà pris', message: `Un autre tableau s'appelle déjà « ${other} » (les majuscules ne comptent pas).\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur.` };
+	if (other) return { title: t('shell.names.table.taken'), message: t('shell.names.table.takenMessage', { name: other }) };
 	return null;
 }
 
 /** Nom de feuille (onglet) : non vide et libre parmi others (sans tenir compte des majuscules). */
 export function sheetNameProblem(raw: string, others: Iterable<string> = []): NameProblem | null {
 	const name = raw.trim();
-	if (!name) return { title: 'Nom de feuille invalide', message: "Le nom de la feuille ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l'ancien." };
+	if (!name) return { title: t('shell.names.sheet.invalid'), message: t('shell.names.sheet.empty') };
 	const other = taken(name, others);
-	if (other) return { title: 'Nom de feuille déjà pris', message: `Une autre feuille s'appelle déjà « ${other} » (les majuscules ne comptent pas).\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur.` };
+	if (other) return { title: t('shell.names.sheet.taken'), message: t('shell.names.sheet.takenMessage', { name: other }) };
 	return null;
 }
-
-const CELL_RULE = 'Un nom de cellule commence par une lettre (ou _) et ne contient que des lettres, des chiffres, _ et des points, sans espace (exemple : Taux_TVA).';
 
 /** Nom d'une cellule libre (zone de nom) ; vide : retire le nom, permis. */
 export function cellNameProblem(raw: string): NameProblem | null {
 	const name = raw.trim();
 	if (!name) return null;
-	const title = 'Nom de cellule invalide';
+	const title = t('shell.names.cell.invalid');
+	const rule = t('shell.names.cell.rule');
 	const fault = identifierFault(name, '.');
-	if (fault) return { title, message: `« ${name} » : ${fault}.\n\n${CELL_RULE}` };
-	if (['VRAI', 'FAUX', 'TRUE', 'FALSE'].includes(name.toUpperCase())) return { title, message: `« ${name} » est un mot réservé des formules.\n\n${CELL_RULE}` };
-	if (a1Name(name) || /^cell_[a-z]{1,4}[1-9][0-9]{0,8}$/i.test(name)) return { title, message: `« ${name} » est une adresse de cellule.\n\n${CELL_RULE}` };
+	if (fault) return { title, message: t('shell.names.fault.message', { name, fault, rule }) };
+	if (['VRAI', 'FAUX', 'TRUE', 'FALSE'].includes(name.toUpperCase())) return { title, message: t('shell.names.cell.reserved', { name, rule }) };
+	if (a1Name(name) || /^cell_[a-z]{1,4}[1-9][0-9]{0,8}$/i.test(name)) return { title, message: t('shell.names.cell.address', { name, rule }) };
 	return null;
 }
 
@@ -82,34 +80,45 @@ export function columnNameProblem(raw: string, others: Iterable<string> = [], ta
 	const name = raw.trim();
 	if (!name) return null;
 	const other = taken(name, others);
-	if (other) return { title: 'Nom de colonne déjà pris', message: `Le tableau${table ? ` ${table}` : ''} a déjà une colonne « ${other} » (les majuscules ne comptent pas) : ${table || 'Tableau'}[${name}] serait ambigu dans les formules.\n\nChoisissez un autre nom.` };
+	if (other)
+		return {
+			title: t('shell.names.column.taken'),
+			message: table ? t('shell.names.column.takenMessage', { table, name: other, ref: `${table}[${name}]` }) : t('shell.names.column.takenMessageNoTable', { name: other, ref: `${t('shell.names.column.tableWord')}[${name}]` })
+		};
 	return null;
 }
 
 /** Nom de script : non vide et libre parmi others. */
 export function scriptNameProblem(raw: string, others: Iterable<string> = []): NameProblem | null {
 	const name = raw.trim();
-	if (!name) return { title: 'Nom de script invalide', message: "Le nom du script ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l'ancien." };
-	for (const o of others) if (o.trim() === name) return { title: 'Nom de script déjà pris', message: `Un autre script s'appelle déjà « ${o} ».\n\nChoisissez un autre nom.` };
+	if (!name) return { title: t('shell.names.script.invalid'), message: t('shell.names.script.empty') };
+	for (const o of others) if (o.trim() === name) return { title: t('shell.names.script.taken'), message: t('shell.names.script.takenMessage', { name: o }) };
 	return null;
 }
 
 /** Nom de requête favorite : non vide. */
 export function favoriteNameProblem(raw: string): NameProblem | null {
 	if (raw.trim()) return null;
-	return { title: 'Nom de favori invalide', message: "Le nom de la requête favorite ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l'ancien." };
+	return { title: t('shell.names.favorite.invalid'), message: t('shell.names.favorite.empty') };
 }
+
+/** Identifiants des messages du moteur (internal/msg) qui disent qu'un nom est pris. */
+const TAKEN_IDS = ['table.nameTaken', 'sheet.nameTaken'];
 
 /**
  * Refus du moteur ou du serveur (exception) mis en forme pour la boîte :
  * le préfixe technique (« tableau : », « feuille : »…) retiré.
  */
 export function refusedName(title: string, e: unknown): NameProblem {
-	let m = String(e instanceof Error ? e.message : e).trim();
+	let m = errorText(e).trim();
+	// Préfixes et formes des messages français du moteur (les messages traduits n'en ont pas besoin).
 	m = m.replace(/^(?:tableau|feuille|onglet|script|requête|favori)\s*:\s*/i, '');
 	m = m.replace(/^nom « (.*) » refusé : /s, '« $1 » : ');
-	if (!m) return { title, message: 'Le nom a été refusé.' };
+	if (!m) return { title, message: t('shell.names.refused') };
 	m = upper(m.charAt(0)) + m.slice(1);
-	if (/existe déjà|déjà utilisé/.test(m) && !/choisissez/i.test(m)) m += ".\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur.";
+	// Nom pris : par l'identifiant du message du moteur ; les messages pas encore
+	// au catalogue (lot 3) se reconnaissent encore à leur texte français.
+	const isTaken = TAKEN_IDS.includes(msgCause(e)?.id ?? '') || /existe déjà|déjà utilisé/.test(m);
+	if (isTaken && !/choisissez/i.test(m)) m += t('shell.names.takenAdvice');
 	return { title, message: m };
 }

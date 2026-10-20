@@ -9,7 +9,7 @@
 	import { modal } from './focus.js';
 	import { apply as applySuggestion, type Completion } from '#lib/grid/autocomplete.js';
 	import { guessCategoryName, previewText, rowSuggest, type RowFormulaHelp } from './rowformula.js';
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Preview {
 		values: { text: string; count: number }[];
@@ -36,7 +36,7 @@
 		onok: (name: string, formula: string) => unknown;
 		oncancel: () => void;
 	}
-	let { title, intro, nameLabel = 'Nom :', name = '', formula = '', guess = false, help, follow = '', okLabel = 'OK', preview, onok, oncancel }: Props = $props();
+	let { title, intro, nameLabel = t('shell.rowFormula.name'), name = '', formula = '', guess = false, help, follow = '', okLabel = t('common.ok'), preview, onok, oncancel }: Props = $props();
 
 	// Valeurs de départ (la boîte est recréée à chaque ouverture).
 	let draftName = $state(untrack(() => name));
@@ -65,7 +65,7 @@
 		timer = setTimeout(() => {
 			preview(f)
 				.then((p) => n === asked && (shown = p))
-				.catch((e) => n === asked && (shown = { values: [], count: 0, error: String(e?.message ?? e) }));
+				.catch((e) => n === asked && (shown = { values: [], count: 0, error: errorText(e) }));
 		}, 250);
 		return () => clearTimeout(timer);
 	});
@@ -110,7 +110,7 @@
 		try {
 			await onok(draftName.trim(), draft.trim());
 		} catch (e) {
-			failed = String((e as Error)?.message ?? e);
+			failed = errorText(e);
 		} finally {
 			busy = false;
 		}
@@ -129,7 +129,7 @@
 	<div class="rf" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" use:modal onkeydown={keys}>
 		<h2>{title}</h2>
 		<p>{intro}</p>
-		<label for="rf-formula">Formule :</label>
+		<label for="rf-formula">{t('shell.rowFormula.formula')}</label>
 		<div class="field">
 			<input
 				id="rf-formula"
@@ -146,7 +146,7 @@
 				onblur={() => setTimeout(() => (completion = null), 150)}
 			/>
 			{#if completion}
-				<div class="rf-suggest" role="listbox" aria-label="Suggestions">
+				<div class="rf-suggest" role="listbox" aria-label={t('shell.rowFormula.suggestions')}>
 					{#each completion.items as s, i (s.kind + s.label)}
 						<button role="option" aria-selected={i === pick} class:on={i === pick} tabindex="-1" onmousedown={(e) => e.preventDefault()} onclick={() => choose(i)}
 							><span class="kind {s.kind}">{s.kind === 'column' ? '[ ]' : 'ƒ'}</span>{s.label}<span class="detail">{s.detail}</span></button
@@ -155,24 +155,24 @@
 				</div>
 			{/if}
 		</div>
-		<div class="hint">Les colonnes se citent entre crochets : [Date], [Montant]. La formule est calculée pour chaque ligne.</div>
+		<div class="hint">{t('shell.rowFormula.hint')}</div>
 		<label for="rf-name">{nameLabel}</label>
 		<input id="rf-name" bind:value={draftName} oninput={() => (typedName = true)} />
 		<div class="preview" aria-live="polite">
 			{#if failed || shown?.error}
 				<div class="error">{failed || shown?.error}</div>
 			{:else if shown}
-				<div><b>{shown.count > 1 ? `${fmtNumber(shown.count)} valeurs` : shown.count === 1 ? '1 valeur' : 'Valeurs'}</b> : {previewText(shown.values, shown.count)}</div>
+				<div><b>{t('shell.rowFormula.count', { n: shown.count })}</b> : {previewText(shown.values, shown.count)}</div>
 				{#if follow && shown.tables?.length}
-					<div class="tables">{follow} : {shown.tables.join(', ')}{#if shown.others?.length} · sans ces colonnes, ne suivent pas : {shown.others.join(', ')}{/if}</div>
+					<div class="tables">{t('shell.rowFormula.follow', { label: follow, list: shown.tables.join(', ') })}{#if shown.others?.length}{t('shell.rowFormula.others', { list: shown.others.join(', ') })}{/if}</div>
 				{/if}
 			{:else}
-				<div class="muted">L’aperçu des valeurs s’affiche ici.</div>
+				<div class="muted">{t('shell.rowFormula.previewEmpty')}</div>
 			{/if}
 		</div>
 		<div class="actions">
 			<button class="primary" disabled={!ready} onclick={ok}>{okLabel}</button>
-			<button onclick={oncancel}>Annuler</button>
+			<button onclick={oncancel}>{t('common.cancel')}</button>
 		</div>
 	</div>
 </div>

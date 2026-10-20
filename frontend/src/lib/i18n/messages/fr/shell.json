@@ -438,5 +438,240 @@
 	},
 	"notice": {
 		"importCreatesSheet": "Importer crée une feuille : {reason}"
+	},
+	"welcome": {
+		"progressStart": "{label}…",
+		"progress": "{label} : {done} / {total} lignes",
+		"progressCells": "{label} : {done} / {total} lignes · {cells} / {totalCells} cellules",
+		"steps": {
+			"table": {
+				"title": "Tapez un tableau",
+				"text": "quelques lignes avec des en-têtes : Lattis le reconnaît et en fait une vraie table typée."
+			},
+			"formula": {
+				"title": "Calculez par nom de colonne",
+				"text": "=[Quantité]*[Prix] s’applique à toute la colonne, sans recopier la formule."
+			},
+			"sql": {
+				"title": "Interrogez en SQL",
+				"text": "l’onglet SQL lit vos tableaux comme une base de données."
+			}
+		}
+	},
+	"doc": {
+		"online": "en ligne sur {server}",
+		"offline": "hors ligne — {server}",
+		"savedRemote": "Enregistré sur {server} : {title}",
+		"savedWeb": "Enregistré dans votre session en ligne : {path}. Fichier › Télécharger une copie pour le garder sur votre appareil, ou Publier sur un serveur pour le partager et le retrouver",
+		"saved": "Enregistré : {path}",
+		"sharedUntitled": "Classeur partagé",
+		"recentOnline": "En ligne sur {server}",
+		"recentOnlineLink": "En ligne sur {server} : {link}"
+	},
+	"choice": {
+		"empty": "(vide)",
+		"allValues": "Toutes les valeurs de « {name} »",
+		"newValue": "Nouvelle valeur…",
+		"status": "{name} : {value} (choix de l'onglet)",
+		"statusHidden": "{status} · {n, plural, one {# ligne d'autres valeurs masquée} other {# lignes d'autres valeurs masquées}}"
+	},
+	"rowFormula": {
+		"names": {
+			"year": "Année",
+			"month": "Mois",
+			"day": "Jour",
+			"week": "Semaine",
+			"category": "Catégorie"
+		},
+		"noValues": "Aucune valeur : la formule ne donne que des cellules vides",
+		"more": "{list}… ({n, plural, one {# valeur} other {# valeurs}})",
+		"name": "Nom :",
+		"formula": "Formule :",
+		"suggestions": "Suggestions",
+		"hint": "Les colonnes se citent entre crochets : [Date], [Montant]. La formule est calculée pour chaque ligne.",
+		"count": "{n, plural, =0 {Valeurs} one {# valeur} other {# valeurs}}",
+		"follow": "{label} : {list}",
+		"others": " · sans ces colonnes, ne suivent pas : {list}",
+		"previewEmpty": "L’aperçu des valeurs s’affiche ici."
+	},
+	"names": {
+		"fault": {
+			"digit": "il commence par un chiffre",
+			"start": "il commence par « {char} »",
+			"space": "il contient une espace",
+			"char": "le caractère « {char} » n'est pas permis",
+			"message": "« {name} » : {fault}.\n\n{rule}"
+		},
+		"table": {
+			"invalid": "Nom de tableau invalide",
+			"rule": "Un nom de tableau commence par une lettre (ou _) et ne contient que des lettres, des chiffres et _, sans espace : il s'écrit tel quel dans les formules (exemple : Ventes_2024).",
+			"empty": "Le nom du tableau ne peut pas être vide.\n\n{rule}",
+			"address": "« {name} » est une adresse de cellule : la zone de nom et les formules ne sauraient pas lequel des deux on veut dire.\n\nEssayez par exemple « {name}_ » ou « T_{name} ».",
+			"taken": "Nom de tableau déjà pris",
+			"takenMessage": "Un autre tableau s'appelle déjà « {name} » (les majuscules ne comptent pas).\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur."
+		},
+		"sheet": {
+			"invalid": "Nom de feuille invalide",
+			"empty": "Le nom de la feuille ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l'ancien.",
+			"taken": "Nom de feuille déjà pris",
+			"takenMessage": "Une autre feuille s'appelle déjà « {name} » (les majuscules ne comptent pas).\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur."
+		},
+		"cell": {
+			"invalid": "Nom de cellule invalide",
+			"rule": "Un nom de cellule commence par une lettre (ou _) et ne contient que des lettres, des chiffres, _ et des points, sans espace (exemple : Taux_TVA).",
+			"reserved": "« {name} » est un mot réservé des formules.\n\n{rule}",
+			"address": "« {name} » est une adresse de cellule.\n\n{rule}"
+		},
+		"column": {
+			"taken": "Nom de colonne déjà pris",
+			"takenMessage": "Le tableau {table} a déjà une colonne « {name} » (les majuscules ne comptent pas) : {ref} serait ambigu dans les formules.\n\nChoisissez un autre nom.",
+			"takenMessageNoTable": "Le tableau a déjà une colonne « {name} » (les majuscules ne comptent pas) : {ref} serait ambigu dans les formules.\n\nChoisissez un autre nom.",
+			"tableWord": "Tableau"
+		},
+		"script": {
+			"invalid": "Nom de script invalide",
+			"empty": "Le nom du script ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l'ancien.",
+			"taken": "Nom de script déjà pris",
+			"takenMessage": "Un autre script s'appelle déjà « {name} ».\n\nChoisissez un autre nom."
+		},
+		"favorite": {
+			"invalid": "Nom de favori invalide",
+			"empty": "Le nom de la requête favorite ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l'ancien."
+		},
+		"refused": "Le nom a été refusé.",
+		"takenAdvice": ".\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur."
+	},
+	"theme": {
+		"title": "Personnaliser le thème",
+		"custom": "Personnalisé",
+		"customOf": "{name} (personnalisé)",
+		"tables": "Tableaux",
+		"sources": "Sources externes",
+		"otherColors": "Autres couleurs des palettes (police, remplissage)",
+		"accent": "Accent {n}",
+		"text2": "Texte 2",
+		"background2": "Arrière-plan 2",
+		"derive": "Déduire des deux premières couleurs",
+		"sample": {
+			"sales": "Ventes",
+			"product": "Produit",
+			"quantity": "Quantité",
+			"customers": "Clients (requête)",
+			"customer": "Client",
+			"city": "Ville"
+		},
+		"name": "Nom",
+		"save": "Ajouter à mes thèmes (proposé dans tous les classeurs)",
+		"mine": "Mes thèmes",
+		"removeTooltip": "Retirer « {name} » de mes thèmes (les classeurs qui l'utilisent gardent leurs couleurs)",
+		"remove": "Retirer",
+		"note": "Le thème est enregistré avec le classeur : il s'affiche pareil sur les autres postes. Les nuances (en-tête, texte, bordure) se déduisent des deux couleurs ; les cellules colorées avec une couleur du thème changent avec lui.",
+		"apply": "Appliquer"
+	},
+	"select": {
+		"aria": "{label} : {value}"
+	},
+	"merge": {
+		"chipTables": "{n, plural, one {# tableau semblable} other {# tableaux semblables}}",
+		"chipSheets": "{n, plural, one {# onglet semblable} other {# onglets semblables}}",
+		"rangeTwo": "{first} et {last}",
+		"range": "{first} à {last}",
+		"defaultName": "Regroupement",
+		"offerStacked": "{n} tableaux de « {sheet} » ({range}) ont les mêmes colonnes. Les regrouper en un seul tableau « {tab} » ?",
+		"offerColumns": "{n} onglets ({range}) ont les mêmes colonnes. Les regrouper en un seul onglet « {tab} » ?",
+		"offerTables": "{n} onglets ({range}) ont les mêmes tableaux. Les regrouper en un seul onglet « {tab} » ?",
+		"quoted": "« {name} »",
+		"mode": {
+			"onceOne": "Le mettre sur la feuille commune",
+			"once": "En garder un seul exemplaire (le dernier)",
+			"leaveOne": "Le laisser sur son onglet",
+			"leave": "Les laisser sur leurs onglets",
+			"followOne": "Le regrouper : suit {category}",
+			"follow": "Les regrouper : suit {category}",
+			"merge": "Les regrouper"
+		},
+		"family": {
+			"only": "seulement dans {sheet}",
+			"sheets": "{n} onglets",
+			"same": " · mêmes données partout"
+		},
+		"source": {
+			"sheet": "nom de l'onglet",
+			"title": "titre au-dessus de chaque tableau",
+			"cell": "cellule {cell}"
+		},
+		"layout": {
+			"table": "{name} en {at} · {n, plural, =0 {# lignes} one {# ligne} other {# lignes}}",
+			"tableFollows": "{name} en {at} · {n, plural, =0 {# lignes} one {# ligne} other {# lignes}} · suit le choix",
+			"cells": "{n, plural, =1 {Une cellule libre reprise} other {# cellules libres reprises}}",
+			"perValue": "{cells}, dont {n} par {category}",
+			"value": "valeur",
+			"lost": "{n, plural, =1 {Une cellule libre tombe sur un tableau commun : non reprise} other {# cellules libres tombent sur un tableau commun : non reprises}}"
+		},
+		"refused": "Impossible de regrouper : {reason}",
+		"pending": "{n, plural, =1 {Une formule ou un objet cite} other {# formules ou objets citent}} les anciens tableaux sans équivalent exact : à reprendre à la main",
+		"pendingHidden": "{n, plural, =1 {Une formule ou un objet cite} other {# formules ou objets citent}} les anciens tableaux sans équivalent exact : à reprendre à la main (les anciens onglets sont gardés masqués)",
+		"refs": {
+			"done": "{n, plural, =1 {une formule reprise} other {# formules reprises}}",
+			"leftAfter": "{n, plural, =1 {une à reprendre à la main} other {# à reprendre à la main}}",
+			"left": "{n, plural, =1 {une formule à reprendre à la main} other {# formules à reprendre à la main}}",
+			"separator": ", ",
+			"line": "{where} : {formula} → {after}",
+			"lineWhy": "{where} : {formula} ({why})",
+			"lineLeft": "{where} : {formula}"
+		},
+		"old": {
+			"deleted": "Supprimés quand même : {n, plural, =1 {une formule ou un objet les cite encore, qui ne trouvera plus son tableau} other {# formules ou objets les citent encore, qui ne trouveront plus leur tableau}}",
+			"hidden": "Gardés masqués : {n, plural, =1 {une formule ou un objet les cite encore} other {# formules ou objets les citent encore}}",
+			"hide": "Garder une copie masquée (tableaux renommés …_ancien)",
+			"delete": "Supprimer les onglets (Ctrl+Z les rend)"
+		},
+		"panel": {
+			"title": "Regrouper des onglets",
+			"subtitle": "Un seul tableau, avec une colonne de catégorie",
+			"sheets": "1. Onglets",
+			"tableRows": " · {n, plural, =0 {# lignes} one {# ligne} other {# lignes}}",
+			"addTableAria": "Ajouter un tableau",
+			"addTablePlaceholder": "Ajouter un tableau…",
+			"add": "Ajouter",
+			"category": "2. Colonne de catégorie",
+			"noCategoryData": "Ne pas ajouter de colonne : la colonne « {column} » suffit (ses dates tombent dans le mois de chaque onglet)",
+			"noCategory": "Ne pas ajouter de colonne (la catégorie est déjà dans les données)",
+			"name": "Nom",
+			"categoryNameAria": "Nom de la colonne de catégorie",
+			"type": "Type",
+			"categoryTypeAria": "Type de la colonne de catégorie",
+			"types": {
+				"text": "Texte",
+				"integer": "Nombre entier",
+				"date": "Date"
+			},
+			"from": "Tirée du",
+			"sourceAria": "Source de la catégorie",
+			"valueFromSheet": "Valeur tirée du nom de chaque onglet, à corriger au besoin :",
+			"valueFrom": "Valeur tirée de : {source}, à corriger au besoin :",
+			"valueAria": "Valeur de {sheet}",
+			"columns": "3. Colonnes",
+			"column": "Colonne",
+			"otherTables": "Autres tableaux des onglets",
+			"modeAria": "Ce que devient {name}",
+			"after": "4. Après",
+			"table": "Tableau",
+			"tableAria": "Nom du tableau commun",
+			"sheet": "Feuille",
+			"sheetAria": "Nom de la nouvelle feuille",
+			"oldSheets": "Anciens onglets",
+			"keepCells": "Reprendre les cellules libres des onglets (titres, totaux, objectifs ; une par {category} quand elles changent)",
+			"layout": "Sur la feuille commune (disposition du dernier onglet) :",
+			"left": "Restent sur leur onglet : {list}",
+			"rewritten": "Formules reprises ({n})",
+			"pending": "À reprendre à la main ({n})",
+			"why": " : {why}",
+			"preview": "5. Aperçu",
+			"total": "{n, plural, =0 {# lignes} one {# ligne} other {# lignes}} au total",
+			"totalKey": "{n, plural, =0 {# lignes} one {# ligne} other {# lignes}} au total · clé : {key}",
+			"merge": "Regrouper",
+			"checkTwo": "Cochez au moins deux onglets"
+		}
 	}
 }

@@ -5,6 +5,7 @@
 // vient de internal/bridge (remotedoc.go).
 import type { DocState, RecentFile } from '#bindings/internal/bridge/models.js';
 import { hostOf } from '#lib/remote/lattis.js';
+import { t } from '#lib/i18n/index.js';
 
 /** Ce qu'il faut savoir du serveur d'un classeur. */
 interface ServerRef {
@@ -28,7 +29,7 @@ export function remoteBadge(st: DocState | null | undefined): string {
 	const r = st?.remote;
 	if (!r) return '';
 	const where = serverLabel(r);
-	return r.online ? `en ligne sur ${where}` : `hors ligne — ${where}`;
+	return r.online ? t('shell.doc.online', { server: where }) : t('shell.doc.offline', { server: where });
 }
 
 /**
@@ -39,7 +40,7 @@ export function remoteBadge(st: DocState | null | undefined): string {
 export function shareBadge(s: (ServerRef & { shared?: boolean; online?: boolean; gone?: string }) | null | undefined): string {
 	if (!s?.shared || s.gone === 'deleted') return '';
 	const where = serverLabel(s);
-	return s.online ? `en ligne sur ${where}` : `hors ligne — ${where}`;
+	return s.online ? t('shell.doc.online', { server: where }) : t('shell.doc.offline', { server: where });
 }
 
 /** Titre de la fenêtre du système (barre des tâches) : « Fichier nids — en ligne sur LPO – Lattis ». */
@@ -65,9 +66,9 @@ export function docFileName(st: DocState): string {
  */
 export function savedNotice(st: DocState, web = false): string {
 	if (st.notice) return st.notice;
-	if (st.remote) return `Enregistré sur ${serverLabel(st.remote)} : ${st.title}`;
-	if (web) return `Enregistré dans votre session en ligne : ${st.path}. Fichier › Télécharger une copie pour le garder sur votre appareil, ou Publier sur un serveur pour le partager et le retrouver`;
-	return `Enregistré : ${st.path}`;
+	if (st.remote) return t('shell.doc.savedRemote', { server: serverLabel(st.remote), title: st.title });
+	if (web) return t('shell.doc.savedWeb', { path: st.path });
+	return t('shell.doc.saved', { path: st.path });
 }
 
 /** Classeur du serveur dans les récents. */
@@ -82,10 +83,10 @@ export function recentKey(r: RecentFile): string {
 
 /** Nom d'un récent : titre d'un classeur du serveur, nom d'un fichier local. */
 export function recentLabel(r: RecentFile): string {
-	return recentRemote(r) ? r.title || 'Classeur partagé' : baseName(r.path);
+	return recentRemote(r) ? r.title || t('shell.doc.sharedUntitled') : baseName(r.path);
 }
 
 /** Infobulle d'un récent : « En ligne sur LPO : https://…/w/<id> », ou le chemin du fichier. */
 export function recentDetail(r: RecentFile): string {
-	return recentRemote(r) ? `En ligne sur ${serverLabel(r)}${r.link ? ` : ${r.link}` : ''}` : r.path;
+	return recentRemote(r) ? (r.link ? t('shell.doc.recentOnlineLink', { server: serverLabel(r), link: r.link }) : t('shell.doc.recentOnline', { server: serverLabel(r) })) : r.path;
 }

@@ -22,7 +22,7 @@
 	import { panelKeys } from '#lib/ui/focus.js';
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	import { cellText, familyLine, familyPlan, layoutLines, leftTables, modeLabel, oldHint, oldLabel, previewWarnings, refCounts, sourceLabel, withTables } from './mergesheets';
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { errorText, lower, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Plan de départ (groupe détecté, ou sélection d'onglets). */
@@ -111,7 +111,7 @@
 		const timer = setTimeout(async () => {
 			if (chosen.length < 2) {
 				view = null;
-				error = 'Cochez au moins deux onglets';
+				error = t('shell.merge.panel.checkTwo');
 				return;
 			}
 			try {
@@ -131,7 +131,7 @@
 				});
 				if (!name) name = v.plan.name ?? '';
 			} catch (e) {
-				if (n === seq) error = e instanceof Error ? e.message : String(e);
+				if (n === seq) error = errorText(e);
 			}
 		}, 250);
 		return () => clearTimeout(timer);
@@ -179,70 +179,70 @@
 	const rowsOf = (t: string) => view?.tables?.find((x) => x.table === t)?.rows;
 </script>
 
-<aside class="panel" use:resizePanel={{ key: 'mergesheets' }} use:panelKeys={onclose} aria-label="Regrouper des onglets">
-	<PanelHeader title="Regrouper des onglets" help="prise-en-main#regrouper-des-onglets" {onclose}>
-		<span class="sub">Un seul tableau, avec une colonne de catégorie</span>
+<aside class="panel" use:resizePanel={{ key: 'mergesheets' }} use:panelKeys={onclose} aria-label={t('shell.merge.panel.title')}>
+	<PanelHeader title={t('shell.merge.panel.title')} help="prise-en-main#regrouper-des-onglets" {onclose}>
+		<span class="sub">{t('shell.merge.panel.subtitle')}</span>
 	</PanelHeader>
 
 	<section>
-		<h3>1. Onglets</h3>
+		<h3>{t('shell.merge.panel.sheets')}</h3>
 		<ul class="tables">
-			{#each listed as t (t)}
+			{#each listed as tb (tb)}
 				<li>
 					<label>
-						<input type="checkbox" checked={checked.has(t)} onchange={() => toggle(t)} />
-						<span class="sheet">{sheetOf(t) || t}</span>
-						<span class="muted">· {t}{rowsOf(t) !== undefined ? ` · ${rowsOf(t)} ligne${rowsOf(t) === 1 ? '' : 's'}` : ''}</span>
+						<input type="checkbox" checked={checked.has(tb)} onchange={() => toggle(tb)} />
+						<span class="sheet">{sheetOf(tb) || tb}</span>
+						<span class="muted">· {tb}{rowsOf(tb) !== undefined ? t('shell.merge.panel.tableRows', { n: rowsOf(tb) ?? 0 }) : ''}</span>
 					</label>
 				</li>
 			{/each}
 		</ul>
 		{#if others.some((o) => !listed.includes(o.table))}
 			<div class="row">
-				<select bind:value={added} aria-label="Ajouter un tableau">
-					<option value="">Ajouter un tableau…</option>
+				<select bind:value={added} aria-label={t('shell.merge.panel.addTableAria')}>
+					<option value="">{t('shell.merge.panel.addTablePlaceholder')}</option>
 					{#each others.filter((o) => !listed.includes(o.table)) as o (o.table)}
 						<option value={o.table}>{o.sheet} · {o.table}</option>
 					{/each}
 				</select>
-				<button disabled={!added} onclick={addTable}>Ajouter</button>
+				<button disabled={!added} onclick={addTable}>{t('shell.merge.panel.add')}</button>
 			</div>
 		{/if}
 	</section>
 
 	<section>
-		<h3>2. Colonne de catégorie</h3>
+		<h3>{t('shell.merge.panel.category')}</h3>
 		<label class="check"
 			><input type="checkbox" bind:checked={noCat} />
-			{group?.dataColumn ? `Ne pas ajouter de colonne : la colonne « ${group.dataColumn} » suffit (ses dates tombent dans le mois de chaque onglet)` : 'Ne pas ajouter de colonne (la catégorie est déjà dans les données)'}</label
+			{group?.dataColumn ? t('shell.merge.panel.noCategoryData', { column: group.dataColumn }) : t('shell.merge.panel.noCategory')}</label
 		>
 		{#if !noCat}
 			<div class="row">
-				<label>Nom <input class="name" bind:value={catName} oninput={() => (catAuto = false)} aria-label="Nom de la colonne de catégorie" /></label>
+				<label>{t('shell.merge.panel.name')} <input class="name" bind:value={catName} oninput={() => (catAuto = false)} aria-label={t('shell.merge.panel.categoryNameAria')} /></label>
 				<label
-					>Type
-					<select bind:value={catType} onchange={() => (catAuto = false)} aria-label="Type de la colonne de catégorie">
-						<option value="text">Texte</option>
-						<option value="integer">Nombre entier</option>
-						<option value="date">Date</option>
+					>{t('shell.merge.panel.type')}
+					<select bind:value={catType} onchange={() => (catAuto = false)} aria-label={t('shell.merge.panel.categoryTypeAria')}>
+						<option value="text">{t('shell.merge.panel.types.text')}</option>
+						<option value="integer">{t('shell.merge.panel.types.integer')}</option>
+						<option value="date">{t('shell.merge.panel.types.date')}</option>
 					</select></label
 				>
 			</div>
 			{#if sources.length > 1}
 				<label
-					>Tirée du
-					<select value={catFrom} onchange={(e) => changeSource((e.currentTarget as HTMLSelectElement).value)} aria-label="Source de la catégorie">
+					>{t('shell.merge.panel.from')}
+					<select value={catFrom} onchange={(e) => changeSource((e.currentTarget as HTMLSelectElement).value)} aria-label={t('shell.merge.panel.sourceAria')}>
 						{#each sources as s (s.source)}<option value={s.source}>{s.label}</option>{/each}
 					</select></label
 				>
 			{/if}
-			<p class="muted">Valeur tirée {catFrom === 'sheet' ? "du nom de chaque onglet" : `de : ${sourceLabel(catFrom, sources)}`}, à corriger au besoin :</p>
+			<p class="muted">{catFrom === 'sheet' ? t('shell.merge.panel.valueFromSheet') : t('shell.merge.panel.valueFrom', { source: sourceLabel(catFrom, sources) })}</p>
 			<table class="values">
 				<tbody>
-					{#each chosen as t (t)}
+					{#each chosen as tb (tb)}
 						<tr>
-							<td>{sheetOf(t) || t}</td>
-							<td><input bind:value={values[t]} oninput={() => (catAuto = false)} aria-label="Valeur de {sheetOf(t) || t}" /></td>
+							<td>{sheetOf(tb) || tb}</td>
+							<td><input bind:value={values[tb]} oninput={() => (catAuto = false)} aria-label={t('shell.merge.panel.valueAria', { sheet: sheetOf(tb) || tb })} /></td>
 						</tr>
 					{/each}
 				</tbody>
@@ -252,14 +252,14 @@
 
 	{#if view}
 		<section>
-			<h3>3. Colonnes</h3>
+			<h3>{t('shell.merge.panel.columns')}</h3>
 			<div class="scroll">
 				<table class="grid">
 					<thead>
 						<tr>
-							<th>Colonne</th>
-							<th>Type</th>
-							{#each view.tables ?? [] as t (t.table)}<th>{t.sheetName}</th>{/each}
+							<th>{t('shell.merge.panel.column')}</th>
+							<th>{t('shell.merge.panel.type')}</th>
+							{#each view.tables ?? [] as tb (tb.table)}<th>{tb.sheetName}</th>{/each}
 						</tr>
 					</thead>
 					<tbody>
@@ -280,12 +280,12 @@
 
 	{#if families.length}
 		<section>
-			<h3>Autres tableaux des onglets</h3>
+			<h3>{t('shell.merge.panel.otherTables')}</h3>
 			<ul class="families">
 				{#each families as f, i (i)}
 					<li>
-						<span class="fam" title={(f.tables ?? []).map((t) => `${t.sheetName} · ${t.table}`).join('\n')}>{familyLine(f)}</span>
-						<select bind:value={modes[i]} aria-label="Ce que devient {f.name}">
+						<span class="fam" title={(f.tables ?? []).map((tb) => `${tb.sheetName} · ${tb.table}`).join('\n')}>{familyLine(f)}</span>
+						<select bind:value={modes[i]} aria-label={t('shell.merge.panel.modeAria', { name: f.name })}>
 							{#each ['merge', 'once', 'leave'] as m (m)}
 								<option value={m}>{modeLabel(m, noCat ? '' : catName, (f.tables?.length ?? 0) === 1)}</option>
 							{/each}
@@ -298,29 +298,29 @@
 	{/if}
 
 	<section>
-		<h3>4. Après</h3>
+		<h3>{t('shell.merge.panel.after')}</h3>
 		<div class="row">
-			<label>Tableau <input class="name" bind:value={name} aria-label="Nom du tableau commun" /></label>
-			<label>Feuille <input class="name" bind:value={sheet} placeholder={name} aria-label="Nom de la nouvelle feuille" /></label>
+			<label>{t('shell.merge.panel.table')} <input class="name" bind:value={name} aria-label={t('shell.merge.panel.tableAria')} /></label>
+			<label>{t('shell.merge.panel.sheet')} <input class="name" bind:value={sheet} placeholder={name} aria-label={t('shell.merge.panel.sheetAria')} /></label>
 		</div>
 		<fieldset>
-			<legend>Anciens onglets</legend>
+			<legend>{t('shell.merge.panel.oldSheets')}</legend>
 			{#each ['delete', 'hide'] as o (o)}
 				<label class="check"><input type="radio" name="old" value={o} checked={effectiveOld === o} onchange={() => (old = o as 'delete' | 'hide')} /> {oldLabel(o)}</label>
 			{/each}
 			{#if hint}<p class="hint">{hint}</p>{/if}
 		</fieldset>
 		{#if !group?.stacked}
-			<label class="check"><input type="checkbox" checked={!noCells} onchange={(e) => (noCells = !(e.currentTarget as HTMLInputElement).checked)} /> Reprendre les cellules libres des onglets (titres, totaux, objectifs ; une par {(catName || 'valeur').toLowerCase()} quand elles changent)</label>
+			<label class="check"><input type="checkbox" checked={!noCells} onchange={(e) => (noCells = !(e.currentTarget as HTMLInputElement).checked)} /> {t('shell.merge.panel.keepCells', { category: lower(catName || t('shell.merge.layout.value')) })}</label>
 		{/if}
 		{#if layout.length}
-			<p class="muted">Sur la feuille commune (disposition du dernier onglet) :</p>
+			<p class="muted">{t('shell.merge.panel.layout')}</p>
 			<ul class="layout">
 				{#each layout as l, i (i)}<li>{l}</li>{/each}
 			</ul>
 		{/if}
 		{#if left.length}
-			<p class="muted">Restent sur leur onglet : {left.join(', ')}</p>
+			<p class="muted">{t('shell.merge.panel.left', { list: left.join(', ') })}</p>
 		{/if}
 	</section>
 
@@ -335,7 +335,7 @@
 	{/if}
 	{#if view?.rewritten?.length}
 		<details>
-			<summary>Formules reprises ({view.rewritten.length})</summary>
+			<summary>{t('shell.merge.panel.rewritten', { n: view.rewritten.length })}</summary>
 			<ul class="pending">
 				{#each view.rewritten as r, i (i)}<li><strong>{r.where}</strong> <code>{r.formula}</code> → <code>{r.after}</code></li>{/each}
 			</ul>
@@ -343,9 +343,9 @@
 	{/if}
 	{#if view?.pending?.length}
 		<details open>
-			<summary>À reprendre à la main ({view.pending.length})</summary>
+			<summary>{t('shell.merge.panel.pending', { n: view.pending.length })}</summary>
 			<ul class="pending">
-				{#each view.pending as p, i (i)}<li><strong>{p.where}</strong> <code>{p.formula}</code>{#if p.why}<span class="why"> : {p.why}</span>{/if}</li>{/each}
+				{#each view.pending as p, i (i)}<li><strong>{p.where}</strong> <code>{p.formula}</code>{#if p.why}<span class="why">{t('shell.merge.panel.why', { why: p.why })}</span>{/if}</li>{/each}
 			</ul>
 		</details>
 	{/if}
@@ -357,7 +357,7 @@
 
 	{#if view}
 		<section>
-			<h3>5. Aperçu</h3>
+			<h3>{t('shell.merge.panel.preview')}</h3>
 			<div class="scroll">
 				<table class="grid">
 					<thead>
@@ -370,13 +370,13 @@
 					</tbody>
 				</table>
 			</div>
-			<p class="muted">{fmtNumber(view.total)} ligne{view.total === 1 ? '' : 's'} au total{view.key ? (view.keyKept ? ` · clé : ${view.key}` : '') : ''}</p>
+			<p class="muted">{view.key && view.keyKept ? t('shell.merge.panel.totalKey', { n: view.total, key: view.key }) : t('shell.merge.panel.total', { n: view.total })}</p>
 		</section>
 	{/if}
 
 	<div class="acts">
-		<button class="primary" disabled={!view || !!view.refused || busy || chosen.length < 2} onclick={run}>Regrouper</button>
-		<button onclick={onclose}>Annuler</button>
+		<button class="primary" disabled={!view || !!view.refused || busy || chosen.length < 2} onclick={run}>{t('shell.merge.panel.merge')}</button>
+		<button onclick={onclose}>{t('common.cancel')}</button>
 	</div>
 </aside>
 

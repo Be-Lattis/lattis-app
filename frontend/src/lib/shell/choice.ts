@@ -6,7 +6,7 @@
 
 import { fillSeries } from '#lib/grid/fill.js';
 import type { RowFormulaHelp, RowFormulaPreview } from '#lib/ui/rowformula.js';
-import { fmtNumber } from '#lib/i18n/index.js';
+import { t } from '#lib/i18n/index.js';
 
 /** Onglet à choix d'une feuille (canvas.SheetChoice). */
 export interface TabChoice {
@@ -41,7 +41,11 @@ export interface ChoiceActions {
 	clear(sheet: number): unknown;
 }
 
-/** Catégories courantes : pluriel et genre, pour les entrées de la liste. */
+/**
+ * Catégories courantes : pluriel et genre, pour les entrées de la liste.
+ * Ce sont des noms de colonnes français (tapés par l'utilisateur), accordés
+ * en français ; un autre nom prend l'entrée générique, traduite.
+ */
 const KNOWN: Record<string, { all: string; add: string }> = {
 	année: { all: 'Toutes les années', add: 'Nouvelle année…' },
 	annee: { all: 'Toutes les années', add: 'Nouvelle année…' },
@@ -66,24 +70,24 @@ function known(name: string) {
 
 /** Libellé de l'onglet : « Ventes · 2025 », « Ventes · Année » sur (Toutes). */
 export function choiceLabel(sheet: string, c: TabChoice): string {
-	return `${sheet} · ${c.all ? c.name : c.value || '(vide)'}`;
+	return `${sheet} · ${c.all ? c.name : c.value || t('shell.choice.empty')}`;
 }
 
 /** Entrée « (Toutes les années) » de la liste. */
 export function allLabel(name: string): string {
-	return `(${known(name)?.all ?? `Toutes les valeurs de « ${name} »`})`;
+	return `(${known(name)?.all ?? t('shell.choice.allValues', { name })})`;
 }
 
 /** Entrée « + Nouvelle année… » de la liste. */
 export function newLabel(name: string): string {
-	return known(name)?.add ?? 'Nouvelle valeur…';
+	return known(name)?.add ?? t('shell.choice.newValue');
 }
 
 /** Rappel pour la barre d'état et l'infobulle : « Année : 2025 (choix de l'onglet) ». */
 export function choiceStatus(c: TabChoice, hidden = 0): string {
 	const v = c.all ? allLabel(c.name) : c.value;
-	const more = hidden > 0 ? ` · ${fmtNumber(hidden)} ligne${hidden > 1 ? 's' : ''} d'autres valeurs masquée${hidden > 1 ? 's' : ''}` : '';
-	return `${c.name} : ${v} (choix de l'onglet)${more}`;
+	const status = t('shell.choice.status', { name: c.name, value: v });
+	return hidden > 0 ? t('shell.choice.statusHidden', { status, n: hidden }) : status;
 }
 
 const DAY1 = /^01\/(\d{2})\/(\d{4})$/;

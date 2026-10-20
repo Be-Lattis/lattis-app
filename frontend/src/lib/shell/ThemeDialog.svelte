@@ -8,6 +8,7 @@
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import { modal } from '#lib/ui/focus.js';
 	import { family, themeColors, type ThemeDef, type WorkbookTheme } from '#lib/grid/theme.js';
+	import { t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Couleurs de départ (thème du classeur). */
@@ -25,7 +26,7 @@
 
 	// Valeurs de départ seulement : la boîte garde ensuite les siennes.
 	const start = untrack(() => initial);
-	let name = $state(start.id ? `${start.name} (personnalisé)` : start.name || 'Personnalisé');
+	let name = $state(start.id ? t('shell.theme.customOf', { name: start.name }) : start.name || t('shell.theme.custom'));
 	let table = $state(start.table);
 	let source = $state(start.source);
 	const c0 = themeColors(start);
@@ -33,9 +34,9 @@
 	let dark = $state(c0.dk2);
 	let light = $state(c0.lt2);
 	let save = $state(false);
-	const t = $derived(family(table));
+	const fam = $derived(family(table));
 	const s = $derived(family(source));
-	const theme = $derived<WorkbookTheme>({ name: name.trim() || 'Personnalisé', table, source, accents: [...accents], dark, light });
+	const theme = $derived<WorkbookTheme>({ name: name.trim() || t('shell.theme.custom'), table, source, accents: [...accents], dark, light });
 	const all = $derived(themeColors(theme));
 
 	/** Autres couleurs reprises des deux premières (comme un thème qui ne les donne pas). */
@@ -55,32 +56,32 @@
 </script>
 
 <div class="back" role="presentation" use:backdrop={() => cancel()}>
-	<div class="dialog" role="dialog" aria-modal="true" aria-label="Personnaliser le thème" tabindex="-1" use:modal={cancel}>
-		<h2>Personnaliser le thème</h2>
+	<div class="dialog" role="dialog" aria-modal="true" aria-label={t('shell.theme.title')} tabindex="-1" use:modal={cancel}>
+		<h2>{t('shell.theme.title')}</h2>
 		<div class="row">
 			<label class="pick">
 				<input type="color" bind:value={table} />
-				<span>Tableaux</span>
+				<span>{t('shell.theme.tables')}</span>
 			</label>
 			<label class="pick">
 				<input type="color" bind:value={source} />
-				<span>Sources externes</span>
+				<span>{t('shell.theme.sources')}</span>
 			</label>
 		</div>
-		<p class="sub">Autres couleurs des palettes (police, remplissage)</p>
+		<p class="sub">{t('shell.theme.otherColors')}</p>
 		<div class="row extra">
 			{#each accents as _, i (i)}
-				<label class="pick small" title="Accent {i + 3}"><input type="color" bind:value={accents[i]} /><span>Accent {i + 3}</span></label>
+				<label class="pick small" title={t('shell.theme.accent', { n: i + 3 })}><input type="color" bind:value={accents[i]} /><span>{t('shell.theme.accent', { n: i + 3 })}</span></label>
 			{/each}
-			<label class="pick small" title="Texte 2"><input type="color" bind:value={dark} /><span>Texte 2</span></label>
-			<label class="pick small" title="Arrière-plan 2"><input type="color" bind:value={light} /><span>Arrière-plan 2</span></label>
+			<label class="pick small" title={t('shell.theme.text2')}><input type="color" bind:value={dark} /><span>{t('shell.theme.text2')}</span></label>
+			<label class="pick small" title={t('shell.theme.background2')}><input type="color" bind:value={light} /><span>{t('shell.theme.background2')}</span></label>
 		</div>
 		<div class="row strip-row">
 			<span class="strip" aria-hidden="true">{#each [all.lt1, all.dk1, all.lt2, all.dk2, all.accent1, all.accent2, all.accent3, all.accent4, all.accent5, all.accent6] as c, i (i)}<i style:background={c}></i>{/each}</span>
-			<button class="link" onclick={derive}>Déduire des deux premières couleurs</button>
+			<button class="link" onclick={derive}>{t('shell.theme.derive')}</button>
 		</div>
 		<div class="preview" aria-hidden="true">
-			{#each [{ f: t, label: 'Ventes', cols: ['Produit', 'Quantité'] }, { f: s, label: 'Clients (requête)', cols: ['Client', 'Ville'] }] as p (p.label)}
+			{#each [{ f: fam, label: t('shell.theme.sample.sales'), cols: [t('shell.theme.sample.product'), t('shell.theme.sample.quantity')] }, { f: s, label: t('shell.theme.sample.customers'), cols: [t('shell.theme.sample.customer'), t('shell.theme.sample.city')] }] as p (p.label)}
 				<div class="mini" style:border-color={p.f.border}>
 					<span class="badge" style:background={p.f.badge}>{p.label}</span>
 					<div class="head" style:background={p.f.head} style:color={p.f.text} style:border-color={p.f.border}>
@@ -91,29 +92,29 @@
 			{/each}
 		</div>
 		<label class="name">
-			<span>Nom</span>
+			<span>{t('shell.theme.name')}</span>
 			<input type="text" bind:value={name} maxlength="60" spellcheck="false" />
 		</label>
 		<label class="save" class:off={saveLocked}>
 			<input type="checkbox" bind:checked={save} disabled={saveLocked} />
-			<span>Ajouter à mes thèmes (proposé dans tous les classeurs)</span>
+			<span>{t('shell.theme.save')}</span>
 		</label>
 		{#if mine.length}
-			<p class="mine-title">Mes thèmes</p>
+			<p class="mine-title">{t('shell.theme.mine')}</p>
 			<ul class="mine">
 				{#each mine as m (m.id)}
 					<li>
 						<span class="sw"><i style:background={m.table}></i><i style:background={m.source}></i></span>
 						<span class="mname">{m.name}</span>
-						<button class="link" title="Retirer « {m.name} » de mes thèmes (les classeurs qui l'utilisent gardent leurs couleurs)" onclick={() => ondelete(m.id)}>Retirer</button>
+						<button class="link" title={t('shell.theme.removeTooltip', { name: m.name })} onclick={() => ondelete(m.id)}>{t('shell.theme.remove')}</button>
 					</li>
 				{/each}
 			</ul>
 		{/if}
-		<p class="muted">Le thème est enregistré avec le classeur : il s'affiche pareil sur les autres postes. Les nuances (en-tête, texte, bordure) se déduisent des deux couleurs ; les cellules colorées avec une couleur du thème changent avec lui.</p>
+		<p class="muted">{t('shell.theme.note')}</p>
 		<div class="actions">
-			<button onclick={cancel}>Annuler</button>
-			<button class="primary" onclick={() => onapply(theme, save && !saveLocked)}>Appliquer</button>
+			<button onclick={cancel}>{t('common.cancel')}</button>
+			<button class="primary" onclick={() => onapply(theme, save && !saveLocked)}>{t('shell.theme.apply')}</button>
 		</div>
 	</div>
 </div>

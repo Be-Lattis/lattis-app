@@ -3,7 +3,7 @@
 // suggestions de fonctions et de colonnes à la saisie, résumé de l'aperçu.
 
 import { suggest, type Catalog, type Completion, type FunctionDoc } from '#lib/grid/autocomplete.js';
-import { fmtNumber } from '#lib/i18n/index.js';
+import { t } from '#lib/i18n/index.js';
 
 /** Fonctions et colonnes proposées à la saisie. */
 export interface RowFormulaHelp {
@@ -38,27 +38,27 @@ export function guessCategoryName(formula: string): string {
 		case 'ANNEE':
 		case 'ANNÉE':
 		case 'YEAR':
-			return 'Année';
+			return t('shell.rowFormula.names.year');
 		case 'MOIS':
 		case 'MONTH':
-			return 'Mois';
+			return t('shell.rowFormula.names.month');
 		case 'JOUR':
 		case 'DAY':
-			return 'Jour';
+			return t('shell.rowFormula.names.day');
 		case 'JOURSEM':
 		case 'WEEKDAY':
-			return 'Jour';
+			return t('shell.rowFormula.names.day');
 		case 'NO.SEMAINE':
 		case 'NO.SEMAINE.ISO':
 		case 'WEEKNUM':
 		case 'ISOWEEKNUM':
-			return 'Semaine';
+			return t('shell.rowFormula.names.week');
 		case 'TEXTE':
 		case 'TEXT': {
 			const fmt = /"([^"]*)"\s*\)\s*$/.exec(f)?.[1] ?? '';
-			if (MONTH.test(fmt)) return 'Mois';
-			if (YEAR.test(fmt)) return 'Année';
-			if (DAY.test(fmt)) return 'Jour';
+			if (MONTH.test(fmt)) return t('shell.rowFormula.names.month');
+			if (YEAR.test(fmt)) return t('shell.rowFormula.names.year');
+			if (DAY.test(fmt)) return t('shell.rowFormula.names.day');
 			break;
 		}
 		case 'GAUCHE':
@@ -84,7 +84,7 @@ export function guessCategoryName(formula: string): string {
 			break;
 		}
 	}
-	return 'Catégorie';
+	return t('shell.rowFormula.names.category');
 }
 
 /** Aperçu d'une formule par ligne (canvas.ChoicePreview). */
@@ -103,7 +103,7 @@ export function previewOf(p: { values?: { text: string; count: number }[] | null
 
 /** Résumé de l'aperçu : « 2024, 2025 » ou « A, B, C… (25 valeurs) ». */
 export function previewText(values: readonly { text: string }[], count: number): string {
-	if (count === 0) return 'Aucune valeur : la formule ne donne que des cellules vides';
+	if (count === 0) return t('shell.rowFormula.noValues');
 	const list = values.map((v) => v.text).join(', ');
-	return count > values.length ? `${list}… (${fmtNumber(count)} valeurs)` : list;
+	return count > values.length ? t('shell.rowFormula.more', { list, n: count }) : list;
 }

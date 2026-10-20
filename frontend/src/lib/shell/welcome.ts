@@ -1,35 +1,28 @@
 // Accueil sans classeur ouvert : premiers pas et classeur d'exemple
 // (audit 6, I8).
-import { fmtNumber } from '#lib/i18n/index.js';
+import { t } from '#lib/i18n/index.js';
 
 export type DemoProgress = { done: number; total: number; cells: number; totalCells: number };
 
-const fr = (n: number) => fmtNumber(n);
 
 /** Avancement de la fabrication d'une démonstration ou de l'exemple. */
 export function demoProgressText(label: string, p: DemoProgress | null): string {
-	if (!p || p.total <= 0) return `${label}…`;
-	return `${label} : ${fr(p.done)} / ${fr(p.total)} lignes` + (p.totalCells ? ` · ${fr(p.cells)} / ${fr(p.totalCells)} cellules` : '');
+	if (!p || p.total <= 0) return t('shell.welcome.progressStart', { label });
+	return p.totalCells ? t('shell.welcome.progressCells', { label, done: p.done, total: p.total, cells: p.cells, totalCells: p.totalCells }) : t('shell.welcome.progress', { label, done: p.done, total: p.total });
 }
 
 /** Ce qui fait la différence de Lattis, en trois points (cible : page d'aide). */
-export const firstSteps: { title: string; text: string; help: string }[] = [
-	{
-		title: 'Tapez un tableau',
-		text: 'quelques lignes avec des en-têtes : Lattis le reconnaît et en fait une vraie table typée.',
-		help: 'prise-en-main#tableaux-detectes'
+// Titre et texte lus dans la langue courante à chaque affichage (getters).
+const step = (key: 'table' | 'formula' | 'sql', help: string) => ({
+	get title() {
+		return t(`shell.welcome.steps.${key}.title`);
 	},
-	{
-		title: 'Calculez par nom de colonne',
-		text: '=[Quantité]*[Prix] s’applique à toute la colonne, sans recopier la formule.',
-		help: 'formules#colonnes-calculees'
+	get text() {
+		return t(`shell.welcome.steps.${key}.text`);
 	},
-	{
-		title: 'Interrogez en SQL',
-		text: 'l’onglet SQL lit vos tableaux comme une base de données.',
-		help: 'sql'
-	}
-];
+	help
+});
+export const firstSteps: { title: string; text: string; help: string }[] = [step('table', 'prise-en-main#tableaux-detectes'), step('formula', 'formules#colonnes-calculees'), step('sql', 'sql')];
 
 const KEY = 'lattis.welcome.hidden';
 

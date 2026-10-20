@@ -5,15 +5,13 @@
 // Regrouper. Sans composant, testé par vitest.
 
 import type { CategorySource, FamilyOutcome, MergeFamily, MergePlan, MergePreview, PendingRef, SheetGroup, TableFamily } from '#bindings/internal/canvas/models.js';
-import { fmtNumber } from '#lib/i18n/index.js';
+import { fmtNumber, lower, t, upper } from '#lib/i18n/index.js';
 
 /** Couleurs des traits sous les onglets semblables : un groupe, une couleur (la première est l'accent). */
 export const GROUP_COLORS = ['#217346', '#0f6cbd', '#b4009e', '#ca5010', '#5c2e91', '#038387'];
 
 /** Moments où la proposition se fait d'elle-même (§4) ; « menu » : à la demande. */
 export type OfferMoment = 'import' | 'open' | 'copy';
-
-const nf = (n: number) => fmtNumber(n);
 
 /**
  * Onglets d'un groupe (lot 4 : on regroupe des feuilles entières, sheets ;
@@ -28,17 +26,17 @@ export function groupSheets(g: SheetGroup): { sheet: number; name: string }[] {
 
 /** « 12 onglets semblables » (puce au bout de la série) ; « 3 tableaux semblables » sur une feuille (cas E). */
 export function chipLabel(g: SheetGroup): string {
-	if (g.stacked) return `${nf(g.tables?.length ?? 0)} tableaux semblables`;
-	return `${nf(groupSheets(g).length)} onglets semblables`;
+	if (g.stacked) return t('shell.merge.chipTables', { n: g.tables?.length ?? 0 });
+	return t('shell.merge.chipSheets', { n: groupSheets(g).length });
 }
 
 /** « Janvier à Décembre » : le premier et le dernier onglet du groupe (cas E : les titres des tableaux). */
 export function sheetRange(g: SheetGroup): string {
-	const t = g.stacked ? (g.category?.labels ?? []) : groupSheets(g).map((s) => s.name);
-	if (!t.length) return '';
-	if (t.length === 1) return t[0];
-	if (t.length === 2) return `${t[0]} et ${t[1]}`;
-	return `${t[0]} à ${t[t.length - 1]}`;
+	const s = g.stacked ? (g.category?.labels ?? []) : groupSheets(g).map((x) => x.name);
+	if (!s.length) return '';
+	if (s.length === 1) return s[0];
+	if (s.length === 2) return t('shell.merge.rangeTwo', { first: s[0], last: s[1] });
+	return t('shell.merge.range', { first: s[0], last: s[s.length - 1] });
 }
 
 /** Nom proposé pour le tableau commun : celui du groupe, sinon le nom du fichier (sans extension), sinon « Regroupement ». */
@@ -49,7 +47,7 @@ export function proposedName(g: SheetGroup, fileTitle = ''): string {
 		.pop()!
 		.replace(/\.[^.]+$/, '')
 		.replace(/[^\p{L}\p{N}_]/gu, '');
-	return base && !/^\d/.test(base) ? base : 'Regroupement';
+	return base && !/^\d/.test(base) ? base : t('shell.merge.defaultName');
 }
 
 /** Libellé du futur onglet : « Ventes · Mois ▾ ». */
@@ -62,11 +60,11 @@ export function futureTab(g: SheetGroup, fileTitle = ''): string {
 export function offerText(g: SheetGroup, fileTitle = ''): string {
 	if (g.stacked) {
 		const sheet = g.tables?.[0]?.sheetName ?? '';
-		return `${nf(g.tables?.length ?? 0)} tableaux de « ${sheet} » (${sheetRange(g)}) ont les mêmes colonnes. Les regrouper en un seul tableau « ${futureTab(g, fileTitle)} » ?`;
+		return t('shell.merge.offerStacked', { n: g.tables?.length ?? 0, sheet, range: sheetRange(g), tab: futureTab(g, fileTitle) });
 	}
 	const n = groupSheets(g).length;
-	const what = (g.families ?? []).some((f) => f.mode !== 'leave') ? 'les mêmes tableaux' : 'les mêmes colonnes';
-	return `${nf(n)} onglets (${sheetRange(g)}) ont ${what}. Les regrouper en un seul onglet « ${futureTab(g, fileTitle)} » ?`;
+	const tables = (g.families ?? []).some((f) => f.mode !== 'leave');
+	return t(tables ? 'shell.merge.offerTables' : 'shell.merge.offerColumns', { n, range: sheetRange(g), tab: futureTab(g, fileTitle) });
 }
 
 /**
@@ -146,37 +144,42 @@ export function familyPlan(families: readonly TableFamily[], modes: readonly str
 	return out;
 }
 
-/** « l'année », « le mois », « la ville » ; « « Lot » » sinon (pour « Suivre l'année »). */
+/**
+ * « l'année », « le mois », « la ville » ; « « Lot » » sinon (pour « Suivre l'année »).
+ * Noms de colonnes français (tapés par l'utilisateur), accordés en français ;
+ * un autre nom est cité entre guillemets, dans la langue de l'interface.
+ */
 export function followLabel(name: string): string {
 	const k: Record<string, string> = { année: "l'année", mois: 'le mois', trimestre: 'le trimestre', semaine: 'la semaine', ville: 'la ville', date: 'la date', catégorie: 'la catégorie' };
-	return k[name.trim().toLowerCase()] ?? `« ${name} »`;
+	return k[name.trim().toLowerCase()] ?? t('shell.merge.quoted', { name });
 }
 
 /** Libellé d'un mode dans le volet (cat : nom de la catégorie ; single : un seul tableau). */
 export function modeLabel(mode: string, cat: string, single = false): string {
 	switch (mode) {
 		case 'once':
-			return single ? 'Le mettre sur la feuille commune' : 'En garder un seul exemplaire (le dernier)';
+			return single ? t('shell.merge.mode.onceOne') : t('shell.merge.mode.once');
 		case 'leave':
-			return single ? 'Le laisser sur son onglet' : 'Les laisser sur leurs onglets';
+			return single ? t('shell.merge.mode.leaveOne') : t('shell.merge.mode.leave');
 	}
-	return cat ? `${single ? 'Le' : 'Les'} regrouper : suit ${followLabel(cat)}` : single ? 'Le mettre sur la feuille commune' : 'Les regrouper';
+	if (cat) return t(single ? 'shell.merge.mode.followOne' : 'shell.merge.mode.follow', { category: followLabel(cat) });
+	return single ? t('shell.merge.mode.onceOne') : t('shell.merge.mode.merge');
 }
 
 /** Une famille dans le volet : « Tarifs · 3 onglets · mêmes données partout ». */
 export function familyLine(f: TableFamily): string {
 	const n = f.tables?.length ?? 0;
-	const where = n === 1 ? `seulement dans ${f.tables?.[0]?.sheetName ?? ""}` : `${nf(n)} onglets`;
-	return `${f.name} · ${where}${f.same ? ' · mêmes données partout' : ''}`;
+	const where = n === 1 ? t('shell.merge.family.only', { sheet: f.tables?.[0]?.sheetName ?? '' }) : t('shell.merge.family.sheets', { n });
+	return `${f.name} · ${where}${f.same ? t('shell.merge.family.same') : ''}`;
 }
 
 /** D'où vient la catégorie, pour le volet : « nom de l'onglet », « cellule A1 », « titre au-dessus de chaque tableau ». */
 export function sourceLabel(source: string, sources: readonly CategorySource[] = []): string {
 	const s = sources.find((x) => x.source === source);
 	if (s) return s.label;
-	if (!source || source === 'sheet') return "nom de l'onglet";
-	if (source === 'title') return 'titre au-dessus de chaque tableau';
-	return `cellule ${source.replace(/^cell:/, '')}`;
+	if (!source || source === 'sheet') return t('shell.merge.source.sheet');
+	if (source === 'title') return t('shell.merge.source.title');
+	return t('shell.merge.source.cell', { cell: source.replace(/^cell:/, '') });
 }
 
 /** Colonne en lettres (0 → A). */
@@ -192,13 +195,13 @@ export function layoutLines(p: MergePreview): string[] {
 	for (const it of p.layout ?? []) {
 		if (it.kind !== 'table') continue;
 		const at = `${letters(it.col)}${it.row + 1}`;
-		out.push(`${it.name} en ${at} · ${nf(it.rows)} ligne${it.rows === 1 ? '' : 's'}${it.follows ? ' · suit le choix' : ''}`);
+		out.push(t(it.follows ? 'shell.merge.layout.tableFollows' : 'shell.merge.layout.table', { name: it.name, at, n: it.rows }));
 	}
 	if (p.cells) {
-		const per = p.perValue ? `, dont ${nf(p.perValue)} par ${(p.plan?.category?.name ?? 'valeur').toLowerCase()}` : '';
-		out.push(`${p.cells === 1 ? 'Une cellule libre reprise' : `${nf(p.cells)} cellules libres reprises`}${per}`);
+		const cells = t('shell.merge.layout.cells', { n: p.cells });
+		out.push(p.perValue ? t('shell.merge.layout.perValue', { cells, n: p.perValue, category: lower(p.plan?.category?.name ?? t('shell.merge.layout.value')) }) : cells);
 	}
-	if (p.lost) out.push(`${p.lost === 1 ? 'Une cellule libre tombe' : `${nf(p.lost)} cellules libres tombent`} sur un tableau commun : non reprise${p.lost === 1 ? '' : 's'}`);
+	if (p.lost) out.push(t('shell.merge.layout.lost', { n: p.lost }));
 	return out;
 }
 
@@ -246,10 +249,10 @@ export function withTables(p: MergePlan, keep: number[]): MergePlan {
 /** Avertissements du volet (en orange) : clé retirée, formules à reprendre, refus. */
 export function previewWarnings(p: MergePreview): string[] {
 	const out: string[] = [];
-	if (p.refused) out.push(`Impossible de regrouper : ${p.refused}`);
+	if (p.refused) out.push(t('shell.merge.refused', { reason: p.refused }));
 	if (p.keyNote) out.push(p.keyNote);
 	const n = p.pending?.length ?? 0;
-	if (n) out.push(`${n === 1 ? 'Une formule ou un objet cite' : `${nf(n)} formules ou objets citent`} les anciens tableaux sans équivalent exact : à reprendre à la main${p.old === 'hide' ? ' (les anciens onglets sont gardés masqués)' : ''}`);
+	if (n) out.push(t(p.old === 'hide' ? 'shell.merge.pendingHidden' : 'shell.merge.pending', { n }));
 	// Onglets qui ne partiront pas malgré « Supprimer » : ils contiennent autre chose.
 	out.push(...(p.kept ?? []));
 	return out;
@@ -264,33 +267,28 @@ export function refCounts(p: Pick<MergePreview, 'rewritten' | 'pending'>): strin
 	const done = p.rewritten?.length ?? 0;
 	const left = p.pending?.length ?? 0;
 	const parts: string[] = [];
-	if (done) parts.push(done === 1 ? 'une formule reprise' : `${nf(done)} formules reprises`);
-	if (left) {
-		if (done) parts.push(left === 1 ? 'une à reprendre à la main' : `${nf(left)} à reprendre à la main`);
-		else parts.push(left === 1 ? 'une formule à reprendre à la main' : `${nf(left)} formules à reprendre à la main`);
-	}
-	const s = parts.join(', ');
-	return s && s[0].toUpperCase() + s.slice(1);
+	if (done) parts.push(t('shell.merge.refs.done', { n: done }));
+	if (left) parts.push(t(done ? 'shell.merge.refs.leftAfter' : 'shell.merge.refs.left', { n: left }));
+	const s = parts.join(t('shell.merge.refs.separator'));
+	return s && upper(s[0]) + s.slice(1);
 }
 
 /** Une ligne de la liste : « Synthèse A1 : =SOMME(Janvier[Montant]) → =SOMME.SI.ENS(…) », ou la raison si elle reste à reprendre. */
 export function refLine(r: PendingRef): string {
-	if (r.after) return `${r.where} : ${r.formula} → ${r.after}`;
-	return `${r.where} : ${r.formula}${r.why ? ` (${r.why})` : ''}`;
+	if (r.after) return t('shell.merge.refs.line', { where: r.where, formula: r.formula, after: r.after });
+	return r.why ? t('shell.merge.refs.lineWhy', { where: r.where, formula: r.formula, why: r.why }) : t('shell.merge.refs.lineLeft', { where: r.where, formula: r.formula });
 }
 
 /** Sous le choix des anciens onglets : pourquoi ils sont gardés masqués par défaut (décision 12.1). */
 export function oldHint(p: MergePreview | null, chosen: string): string {
 	const n = p?.pending?.length ?? 0;
 	if (!p || !n) return '';
-	const what = n === 1 ? 'une formule ou un objet les cite encore' : `${nf(n)} formules ou objets les citent encore`;
-	if (chosen === 'delete') return `Supprimés quand même : ${what}, ${n === 1 ? 'qui ne trouvera plus son tableau' : 'qui ne trouveront plus leur tableau'}`;
-	return `Gardés masqués : ${what}`;
+	return t(chosen === 'delete' ? 'shell.merge.old.deleted' : 'shell.merge.old.hidden', { n });
 }
 
 /** Ce que deviennent les anciens onglets. */
 export function oldLabel(old: string): string {
-	return old === 'hide' ? 'Garder une copie masquée (tableaux renommés …_ancien)' : 'Supprimer les onglets (Ctrl+Z les rend)';
+	return old === 'hide' ? t('shell.merge.old.hide') : t('shell.merge.old.delete');
 }
 
 /** Valeur d'une case de l'aperçu. */
