@@ -1,1 +1,175 @@
-{}
+{
+	"consent": {
+		"warning": "Permítalo solo si confía en la persona que le ha proporcionado este libro. En caso de duda, elija «No ejecutar»: el resto del libro sigue siendo utilizable.",
+		"site": "La pestaña «{name}» muestra el sitio externo {url}, que todavía no se ha permitido nunca en este libro en este equipo (libro recibido, o pestaña modificada en otro lugar). Este sitio se ejecuta en la pestaña, sin acceso al libro.",
+		"page": "La pestaña «{name}» contiene una página web (HTML y JavaScript) que todavía no se ha permitido nunca en este equipo (libro recibido, o página modificada en otro lugar). Una página puede leer y modificar el libro, ejecutar las acciones de sus botones, hacerle preguntas y, con su consentimiento, contactar con sitios web.",
+		"title": "¿Ejecutar una página web del libro?",
+		"ok": "Permitir",
+		"cancel": "No ejecutar",
+		"code": "Código de la página"
+	},
+	"web": {
+		"lost": "Conexión con el motor de Lattis perdida",
+		"canceled": "Llamada cancelada",
+		"pick": {
+			"title": "Elegir un archivo",
+			"help": "El archivo elegido se envía al servidor Lattis.",
+			"choose": "Elegir un archivo…"
+		},
+		"pdf": {
+			"windows": "impresora «Microsoft Print to PDF»",
+			"browser": "destino «Guardar como PDF»"
+		}
+	},
+	"pivot": {
+		"expand": "Expandir",
+		"collapse": "Contraer",
+		"expandName": "Expandir {name}",
+		"collapseName": "Contraer {name}",
+		"error": "Tabla dinámica: {error}",
+		"empty": "Tabla dinámica de «{source}»: elija campos (clic derecho › Modificar…)."
+	},
+	"chart": {
+		"error": "Gráfico «{name}»: {error}"
+	},
+	"button": {
+		"default": "Botón",
+		"runs": "Ejecuta {what}",
+		"noAction": "Ninguna acción vinculada",
+		"nothing": "Este botón no ejecuta nada: clic derecho para vincularle un script.",
+		"noActionOption": "(ninguna acción)",
+		"run": "Ejecutar",
+		"wholeScript": "todo el script",
+		"function": "la función {name}()",
+		"script": "Script",
+		"background": "Fondo",
+		"text": "Texto",
+		"help": "Un clic en el botón ejecuta su acción; clic derecho para volver aquí.",
+		"try": "Probar"
+	},
+	"rightClickEdit": "clic derecho: modificar",
+	"control": {
+		"linked": "celda vinculada: {cell}",
+		"kept": "valor conservado en el control",
+		"deleted": "Control eliminado",
+		"choice": "Opción {n}",
+		"gone": "Este control ya no existe: elimínelo del texto.",
+		"insertTitle": "Insertar: {kind}",
+		"editTitle": "Modificar: {kind}",
+		"type": "Tipo",
+		"name": "Nombre (para los scripts)",
+		"auto": "automático",
+		"label": "Etiqueta",
+		"buttonText": "Texto del botón",
+		"placeholder": "Texto indicativo (opcional)",
+		"keptIn": "Valor conservado en",
+		"inControl": "el control (ninguna celda vinculada)",
+		"sheet": "la hoja {name}",
+		"cell": "Celda",
+		"choices": {
+			"source": "Origen de las opciones",
+			"typed": "Escritas",
+			"column": "Columna de una tabla",
+			"from": "Opciones tomadas de (valores distintos)",
+			"list": "Opciones (una por línea)"
+		},
+		"script": "Script (en cada cambio)",
+		"help": "El valor del control es el de la celda vinculada (en este documento, o en una hoja para leerlo en las fórmulas). Los scripts lo controlan con controls.get / controls.set y controls.on(\"change\", …)."
+	},
+	"page": {
+		"escapes": "La página intenta sin cesar abrir otra dirección: se ha detenido.",
+		"navBlocked": "Página «{name}»: navegación a otra dirección bloqueada, la página se ha vuelto a cargar.",
+		"urlSet": "Pestaña «{name}»: página web {url} (Ctrl+Z para deshacer)",
+		"saved": "Página «{name}» guardada (Ctrl+Z para deshacer)",
+		"save": "Guardar",
+		"preview": {
+			"label": "Vista previa",
+			"tooltip": "Mostrar el borrador en la vista previa, sin guardarlo (Ctrl+Entrar)"
+		},
+		"show": {
+			"label": "Mostrar",
+			"tooltip": "Volver a la página (el borrador sigue pendiente de guardar)"
+		},
+		"discard": "Descartar los cambios",
+		"keys": "Ctrl+S: guardar · Ctrl+Entrar: vista previa",
+		"edit": {
+			"label": "Modificar",
+			"html": "Página HTML",
+			"tooltip": "Modificar el HTML, el CSS y el JavaScript de la página"
+		},
+		"site": {
+			"label": "Sitio web…",
+			"tooltip": "Mostrar una página web externa en esta pestaña"
+		},
+		"reload": {
+			"label": "Volver a cargar",
+			"tooltip": "Volver a cargar la página"
+		},
+		"openBrowser": "Abrir en el navegador",
+		"blank": "Página en blanco: puede que el sitio no admita mostrarse en un marco (ábralo en el navegador).",
+		"unsaved": "Cambios no guardados",
+		"blocked": {
+			"title": "Esta página web no se ha ejecutado.",
+			"help": "Todavía no se ha permitido nunca en este equipo (libro recibido, o página modificada en otro lugar). Permítala solo si confía en la persona que le ha proporcionado este libro.",
+			"preview": "Vista previa (Ctrl+Entrar) ejecuta el código mostrado en el editor.",
+			"decide": "Decidir…"
+		},
+		"frame": "Página {name}",
+		"pasteHint": "Pegar: use Ctrl+V en el texto",
+		"noTableChart": "Ninguna tabla en el libro: cree una en una hoja para representarla aquí.",
+		"noTablePivot": "Ninguna tabla en el libro: cree una en una hoja para analizarla aquí.",
+		"placeholder": "Escriba aquí… (Insertar: gráficos y botones)",
+		"aria": "Documento {name}",
+		"grip": "Arrastrar para cambiar el tamaño"
+	},
+	"clip": {
+		"chartPasted": "Gráfico pegado",
+		"pivotPasted": "Tabla dinámica pegada",
+		"chartCopied": "Gráfico copiado: Ctrl+V en el texto o en una hoja",
+		"pivotCopied": "Tabla dinámica copiada: Ctrl+V en el texto o en una hoja",
+		"cutAnywhere": "Elemento cortado: Ctrl+V en el texto o en una hoja",
+		"copiedAnywhere": "Elemento copiado: Ctrl+V en el texto o en una hoja",
+		"cutText": "Elemento cortado: clic derecho › Pegar en el texto",
+		"copiedText": "Elemento copiado: clic derecho › Pegar en el texto"
+	},
+	"panel": {
+		"source": "Tabla de origen",
+		"missing": "{name} (no encontrada)",
+		"height": "Alto (px)",
+		"deleteChart": "Eliminar el gráfico",
+		"help": "Ayuda sobre los botones y controles",
+		"close": "Cerrar el panel",
+		"insert": "Insertar",
+		"save": "Guardar"
+	},
+	"link": {
+		"title": "Vínculo",
+		"address": "Dirección",
+		"selection": "El texto seleccionado se convierte en vínculo.",
+		"inserted": "La dirección se inserta como vínculo.",
+		"ctrlClick": "Ctrl+clic en un vínculo lo abre en el navegador.",
+		"apply": "Aplicar",
+		"remove": "Quitar el vínculo"
+	},
+	"menu": {
+		"pasteItem": "Pegar el elemento ({what})",
+		"what": {
+			"chart": "gráfico",
+			"pivot": "tabla dinámica",
+			"control": "control",
+			"button": "botón"
+		},
+		"spelling": "Mayús + clic derecho: sugerencias ortográficas",
+		"pivot": "Tabla dinámica",
+		"field": "Campo (texto, casilla, lista, archivo)…",
+		"image": "Imagen…",
+		"link": "Vínculo…",
+		"title": {
+			"pivot": "Tabla dinámica",
+			"control": "Control"
+		},
+		"pasteAfter": "Pegar el elemento después",
+		"runAction": "Ejecutar la acción",
+		"edit": "Modificar…"
+	}
+}

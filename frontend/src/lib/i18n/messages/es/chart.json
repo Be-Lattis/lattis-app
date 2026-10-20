@@ -1,1 +1,258 @@
-{}
+{
+	"chart": "Gráfico",
+	"kind": {
+		"bar": {
+			"label": "Columna",
+			"hint": "Barras verticales"
+		},
+		"column": {
+			"label": "Barra",
+			"hint": "Barras horizontales"
+		},
+		"line": {
+			"label": "Línea",
+			"hint": "Líneas"
+		},
+		"area": {
+			"label": "Área",
+			"hint": "Áreas"
+		},
+		"pie": {
+			"label": "Circular",
+			"hint": "Sectores"
+		},
+		"doughnut": {
+			"label": "Anillo",
+			"hint": "Anillo"
+		},
+		"scatter": {
+			"label": "Dispersión",
+			"hint": "Gráfico de dispersión"
+		},
+		"combo": {
+			"label": "Combinado",
+			"hint": "Columnas y líneas en el mismo gráfico (eje secundario posible)"
+		},
+		"bar3d": {
+			"label": "Columna 3D",
+			"hint": "Columnas en perspectiva"
+		},
+		"pie3d": {
+			"label": "Circular 3D",
+			"hint": "Gráfico circular en perspectiva"
+		},
+		"map": {
+			"label": "Mapa",
+			"hint": "Puntos o densidad en un mapa de OpenStreetMap, a partir de columnas de latitud y longitud"
+		},
+		"waterfall": {
+			"label": "Cascada",
+			"hint": "Aumentos y disminuciones sucesivos, hasta el total"
+		},
+		"treemap": {
+			"label": "Rectángulos",
+			"hint": "Rectángulos proporcionales a los valores (treemap)"
+		},
+		"radar": {
+			"label": "Radial",
+			"hint": "Un radio por categoría, un polígono por serie"
+		},
+		"funnel": {
+			"label": "Embudo",
+			"hint": "Etapas sucesivas de un proceso"
+		},
+		"boxplot": {
+			"label": "Cajas y bigotes",
+			"hint": "Mediana, cuartiles y extremos de cada serie"
+		},
+		"histogram": {
+			"label": "Histograma",
+			"hint": "Histograma de frecuencias: distribución de los valores en intervalos"
+		},
+		"gauge": {
+			"label": "Medidor",
+			"hint": "Un valor en un cuadrante, entre un mínimo y un máximo"
+		}
+	},
+	"note": {
+		"truncated": "Primeros {max} puntos de {total}",
+		"sampled": "Línea reducida a {max} puntos de {total} (extremos conservados)",
+		"negativeIgnored": "{n, plural, =1 {1 valor negativo ignorado.} other {# valores negativos ignorados.}}",
+		"negativeAbs": "{n, plural, =1 {1 valor negativo tomado en valor absoluto.} other {# valores negativos tomados en valor absoluto.}}",
+		"scatterRank": "El eje X no es ni un número ni una fecha: cada punto se coloca según su posición.",
+		"firstSeries": "Este tipo solo dibuja la primera serie."
+	},
+	"summary": {
+		"series": "{name}, {n, plural, =1 {1 serie} other {# series}}",
+		"points": "{n} puntos, de «{first}» a «{last}»",
+		"range": "{name}: de {min} a {max}"
+	},
+	"box": {
+		"stats": "mín. {min}, Q1 {q1}, mediana {median}, Q3 {q3}, máx. {max}, media {mean}",
+		"values": "{n} valores",
+		"outliers": "{n} valores atípicos"
+	},
+	"legend": {
+		"more": "y {n} más"
+	},
+	"table": {
+		"group": "Grupo",
+		"category": "Categoría",
+		"median": "mediana {value}"
+	},
+	"waterfall": {
+		"up": "Aumento",
+		"down": "Disminución",
+		"total": "Total"
+	},
+	"radarMin": "Un gráfico radial necesita al menos tres categorías",
+	"map": {
+		"pending": {
+			"aria": "Mapa: coordenadas por elegir",
+			"text": "Elija las coordenadas en el panel"
+		},
+		"density": "Densidad",
+		"offline": {
+			"tooltip": "El mapa base viene de tile.openstreetmap.org: permita este host (pestaña Script › Acceso a la red) o compruebe su conexión.",
+			"label": "Mapa base no disponible"
+		},
+		"noPoint": "Ningún punto: se esperan latitud y longitud",
+		"clickHint": "Clic: ir a la fila",
+		"legend": "Leyenda: {name}",
+		"legendItem": "{label}: {n, plural, one {# punto} other {# puntos}}",
+		"zoomIn": {
+			"tooltip": "Acercar (+)",
+			"aria": "Acercar"
+		},
+		"zoomOut": {
+			"tooltip": "Alejar (−)",
+			"aria": "Alejar"
+		},
+		"recenter": "Volver a centrar en los puntos"
+	},
+	"panel": {
+		"shape": {
+			"bar": "Columnas",
+			"line": "Línea",
+			"area": "Área"
+		},
+		"choose": "(elegir)",
+		"help": "Ayuda sobre los gráficos",
+		"type": "Tipo",
+		"stacked": "Apilado",
+		"data": "Datos",
+		"coords": {
+			"label": "Coordenadas",
+			"pair": {
+				"label": "2 columnas",
+				"tooltip": "Una columna de latitudes, una columna de longitudes"
+			},
+			"single": {
+				"label": "1 columna",
+				"tooltip": "Latitud y longitud en la misma celda, escritas de cualquier forma estándar"
+			},
+			"pairHelp": "Números decimales (48,8566 o 48.8566), o grados 48°51'24\"N.",
+			"singleHelp": "Cualquier notación estándar: 48.8566, 2.3522 · 48,8566;2,3522 · 48°51'24\"N 2°21'03\"E · 48°51.4'N 2°21.05'E · N48.85 E2.35 · POINT(2.3522 48.8566) · geo:48.8566,2.3522"
+		},
+		"latitude": "Latitud",
+		"longitude": "Longitud",
+		"position": "Posición",
+		"draft": {
+			"proposed": "Columnas propuestas: compruébelas y luego muestre el mapa.",
+			"choose": "Elija las columnas de coordenadas: el mapa se dibuja a continuación.",
+			"show": "Mostrar el mapa"
+		},
+		"invalid": "{n, plural, =1 {1 valor ilegible ignorado} other {# valores ilegibles ignorados}}",
+		"name": "Nombre",
+		"noneM": "(ninguno)",
+		"value": "Valor",
+		"noneF": "(ninguno)",
+		"display": "Presentación",
+		"points": "Puntos",
+		"heat": "Densidad (calor)",
+		"colorBy": {
+			"label": "Color según",
+			"heatTooltip": "La densidad es una sola capa de calor: cambie a «Puntos» para colorear según un valor",
+			"pointsOnly": "(solo puntos)",
+			"tooltip": "Cada valor distinto de la columna recibe su propio color, repartido por todo el espectro",
+			"single": "(un solo color)"
+		},
+		"colorLegend": "Leyenda de colores",
+		"pointSize": {
+			"label": "Tamaño de los puntos",
+			"tooltip": "Multiplica el tamaño de los puntos; la columna Valor ya fija su tamaño relativo"
+		},
+		"hidden": {
+			"label": "Filas ocultas por el filtro",
+			"mapTooltip": "De forma predeterminada, como en Excel, el mapa solo muestra las filas que deja visibles el filtro de la tabla",
+			"tooltip": "De forma predeterminada, como en Excel, el gráfico solo muestra las filas que deja visibles el filtro de la tabla"
+		},
+		"view": {
+			"label": "Vista",
+			"saved": "Guardada (zoom {zoom})",
+			"recenterTooltip": "Volver a la vista ajustada a los puntos",
+			"recenter": "Volver a centrar",
+			"fitted": "Ajustada a los puntos"
+		},
+		"mapHelp": "Mapa seleccionado: la rueda del ratón acerca o aleja, arrastrar desplaza el mapa (Alt+arrastrar mueve el gráfico), doble clic o + / − para el zoom; hacer clic en un punto lleva a su fila en la tabla.",
+		"mapTiles": "Mapa base © OpenStreetMap (tile.openstreetmap.org), sujeto al permiso de red del libro. El valor fija el tamaño de los puntos, o el peso de cada uno en la densidad.",
+		"source": {
+			"label": "Origen",
+			"tooltip": "Tabla o tabla dinámica cuyos datos representa el gráfico",
+			"pivot": "{name} (tabla dinámica)"
+		},
+		"filter": {
+			"tooltip": "El gráfico solo lee las filas en las que {field} es {values}",
+			"or": " o ",
+			"label": "Filtro",
+			"remove": "Quitar el filtro: todas las filas de la tabla"
+		},
+		"axisX": "Eje X",
+		"axisY": "Eje Y",
+		"axisY2": "Eje Y 2",
+		"singleSeries": "Este tipo solo dibuja una serie",
+		"series": {
+			"up": {
+				"tooltip": "Subir la serie (orden de dibujo y de la leyenda)",
+				"aria": "Subir la serie {name}"
+			},
+			"down": {
+				"tooltip": "Bajar la serie",
+				"aria": "Bajar la serie {name}"
+			},
+			"color": "Color de la serie",
+			"shape": "Forma de la serie",
+			"secondaryOn": "Serie en el eje secundario (a la derecha): haga clic para devolverla al eje principal",
+			"secondaryOff": "Trazar la serie en un eje secundario, a la derecha, con su propia escala",
+			"axis2": "Eje 2"
+		},
+		"bins": "Intervalos",
+		"blanks": {
+			"label": "Celdas vacías",
+			"tooltip": "Como en Excel: una celda vacía corta la línea (rango vacío), cuenta como cero, o se unen sus vecinas",
+			"gap": "Rango vacío",
+			"zero": "Cero",
+			"span": "Conectar puntos de datos"
+		},
+		"colors": "Colores",
+		"paletteRepeat": "Las categorías siguientes reutilizan la paleta.",
+		"titles": "Títulos",
+		"elements": "Elementos",
+		"legend": {
+			"label": "Leyenda",
+			"bottom": "Abajo",
+			"top": "Arriba",
+			"right": "Derecha",
+			"none": "Ninguna"
+		},
+		"dataLabels": "Etiquetas de datos",
+		"grid": "Líneas de cuadrícula",
+		"moveHelp": "Arrastre el gráfico para moverlo y sus controladores para cambiar su tamaño. Clic derecho: cortar, copiar, eliminar.",
+		"keyboardHelp": "Con el teclado: flechas para moverlo, Mayús+flechas para cambiar su tamaño, Tab para pasar al gráfico siguiente, Supr para eliminarlo."
+	},
+	"image": {
+		"unreadable": "imagen ilegible",
+		"noCanvas": "no se puede dibujar",
+		"empty": "imagen vacía"
+	}
+}

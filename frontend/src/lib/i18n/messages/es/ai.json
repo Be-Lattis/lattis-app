@@ -1,1 +1,230 @@
-{}
+{
+	"result": {
+		"none": "Ninguna fila",
+		"firstOf": "Primeras {n} filas de {total}",
+		"firstOfMore": "Primeras {n} filas de más de {total}"
+	},
+	"steps": "{n, plural, one {# paso} other {# pasos}}",
+	"errors": "{n, plural, one {# error} other {# errores}}",
+	"changes": "{n, plural, one {# cambio} other {# cambios}}",
+	"cost": {
+		"small": "< ${min} para esta conversación",
+		"about": "≈ ${cost} para esta conversación"
+	},
+	"context": {
+		"plain": "Contexto: {where}",
+		"selection": "Contexto: {where}, selección {selection}"
+	},
+	"suggest": {
+		"repair": "Reparar las tablas de esta hoja",
+		"name": "Poner nombre automáticamente a todas las tablas del libro.",
+		"contents": "¿Qué contiene este libro?",
+		"analysis": "Proponer un análisis de mis datos",
+		"pivot": "Crear una tabla dinámica pertinente con un gráfico",
+		"explain": "Explicar la selección {selection} de {table}",
+		"pivotsFor": "Proponer tablas dinámicas para {table}",
+		"analyze": "Analizar {table} ({n, plural, one {# fila} other {# filas}})",
+		"types": "Comprobar los tipos de {table}",
+		"duplicates": "Buscar duplicados en {table}"
+	},
+	"retryIn": "Reintentar en {n} s",
+	"retry": "Reintentar",
+	"sharing": {
+		"label": {
+			"sample": "Estructura y filas de ejemplo",
+			"full": "Libro completo",
+			"schema": "Solo la estructura"
+		},
+		"summary": {
+			"sample": "ve la estructura del libro y algunas filas de ejemplo en cada lectura (20 como máximo).",
+			"full": "puede leer todo el contenido del libro.",
+			"schema": "ve la estructura del libro (hojas, tablas, columnas, tipos), sin los valores de las celdas."
+		}
+	},
+	"external": {
+		"changes": "{n, plural, one {# cambio} other {# cambios}}",
+		"reads": "{n, plural, one {# lectura} other {# lecturas}}",
+		"errors": "{n, plural, one {# error} other {# errores}}",
+		"connected": "{client} conectado",
+		"waiting": "Esperando una conexión",
+		"undo": {
+			"nothing": "Ningún cambio que deshacer.",
+			"checking": "Comprobando…",
+			"tooltip": "Deshace de una vez lo que {client} ha cambiado en esta serie",
+			"running": "Deshaciendo…",
+			"label": "Deshacer estos cambios"
+		},
+		"intro": "Abra Claude Desktop o Claude Code y pregunte, por ejemplo, «¿Qué contiene mi libro de Lattis?»: cada acción aparecerá aquí.",
+		"confirm": {
+			"label": "Preguntar antes de cambiar",
+			"help": "Lattis pide su aprobación antes de cada cambio en el libro; las lecturas se hacen sin preguntar."
+		}
+	},
+	"goto": {
+		"label": "Ir a",
+		"tooltip": "Ir a «{target}»"
+	},
+	"setup": {
+		"intro": "Con una suscripción a Claude (Pro, Max, Team), no necesita clave de API: conversa en Claude Desktop o Claude Code, que actúa sobre el libro abierto, y Lattis muestra lo que se hace.",
+		"sharing": {
+			"before": "El ajuste «Datos enviados al asistente» (Archivo › Configuración › Asistente de IA) también se aplica a Claude:",
+			"after": "Tras un cambio, reinicie Claude para que vea la nueva lista de herramientas."
+		},
+		"badge": {
+			"connected": "Conectado",
+			"configured": "Configurado",
+			"installed": "Instalado",
+			"notInstalled": "No instalado",
+			"notFound": "No encontrado"
+		},
+		"desktop": {
+			"help": "La aplicación de escritorio de Claude. Lattis aparece en las herramientas de la conversación.",
+			"done": "Configurado ✓ — reinicie Claude Desktop (ciérrelo por completo y vuelva a abrirlo).",
+			"download": "Descargar Claude Desktop",
+			"manual": "Configurar manualmente",
+			"mergeInto": "Para combinar en"
+		},
+		"configuring": "Configurando…",
+		"reconfigure": "Volver a configurar",
+		"configure": "Configurar",
+		"code": {
+			"help": "El asistente de Claude en el terminal (o en su aplicación de escritorio). Lattis se agrega para todos sus proyectos.",
+			"done": {
+				"before": "Configurado ✓ — abra una nueva sesión de Claude Code:",
+				"after": "muestra Lattis en ella."
+			},
+			"notFound": "comando claude no encontrado en este equipo",
+			"install": "Instalar Claude Code",
+			"manual": "Comando que ejecutar usted mismo"
+		}
+	},
+	"connect": {
+		"claudeApps": "Claude Desktop o Claude Code",
+		"keySaved": "Clave guardada en el llavero del sistema.",
+		"keyValid": "Clave válida: se ha guardado en el llavero del sistema.",
+		"aria": "Conexión del asistente",
+		"title": "Conectar el asistente",
+		"close": "Cerrar la conexión",
+		"managed": "El proveedor y el modelo los elige su organización, que hace pasar el asistente por su puerta de enlace.",
+		"gatewayNoKey": "Conectado a través de la puerta de enlace de su organización: no hay ninguna clave que introducir.",
+		"gatewayKeySaved": "Su clave personal para la puerta de enlace está guardada en el llavero del sistema.",
+		"forgetKey": "Olvidar la clave",
+		"gatewayPaste": "Pegue la clave personal que su organización le ha dado para su puerta de enlace.",
+		"personalKey": "Clave personal",
+		"pasteTooltip": "Pegar desde el portapapeles",
+		"ways": "Modo de conexión",
+		"apiKey": "Clave de API",
+		"recommended": "recomendado",
+		"desktop": {
+			"tooltip": "Controlar Lattis desde Claude Desktop o Claude Code (servidor MCP)",
+			"labelDialog": "Aplicación de escritorio…",
+			"label": "Aplicación de escritorio",
+			"help": "La aplicación de escritorio de un proveedor controla Lattis con su suscripción a ese proveedor, sin clave de API.",
+			"claude": {
+				"before": "Una suscripción a Claude no se puede usar directamente en otra aplicación, pero",
+				"and": "y",
+				"after": "pueden controlar Lattis. Usted habla con Claude en su aplicación; Lattis muestra lo que hace («Desde Claude») y puede deshacerlo todo."
+			},
+			"needsDesktop": "Este modo requiere la aplicación de escritorio de Lattis.",
+			"maxTeam": "Suscriptores de Max o Team: sus créditos de API mensuales también pagan una clave de API (pestaña «Clave de API»), que mantiene la conversación en Lattis."
+		},
+		"providerModel": "Proveedor y modelo",
+		"provider": "Proveedor",
+		"model": "Modelo",
+		"defaultModel": "modelo predeterminado",
+		"local": {
+			"help": "El modelo se ejecuta en este equipo (Ollama, LM Studio…): ningún dato sale del equipo y no hay clave.",
+			"url": "Dirección del modelo local",
+			"experimental": "Experimental: los modelos pequeños llaman peor a las herramientas de Lattis."
+		},
+		"keyStored": "Hay una clave de API de {provider} guardada en el llavero del sistema.",
+		"step1": {
+			"create": "Cree una clave",
+			"console": "en la consola de {provider}.",
+			"open": "Abrir la consola",
+			"credits": "Una clave nueva solo funciona con créditos: agréguelos en",
+			"billing": "Facturación",
+			"maxTeam": "¿Suscriptor de Claude Max o Team? Vincule esta organización en claude.ai › Settings › Billing para recibir sus créditos de API mensuales (de 100 a 500 $).",
+			"other": "Según el proveedor, la cuenta necesita créditos o un medio de pago."
+		},
+		"step2": "Péguela aquí.",
+		"keyHint": "Una clave de {provider} suele empezar por «{hint}».",
+		"step3": {
+			"verify": "Comprobar y guardar",
+			"keychain": "La clave se conserva en el llavero del sistema, nunca en el libro."
+		},
+		"start": "Empezar",
+		"providerApp": "Proveedor y aplicación"
+	},
+	"panel": {
+		"title": "Asistente de IA",
+		"modelUsed": "Modelo usado",
+		"connect": {
+			"label": "Conexión",
+			"tooltip": "Conexión: clave de API, suscripción a Claude, modelo"
+		},
+		"new": {
+			"label": "Nueva",
+			"tooltip": "Nueva conversación (la conversación actual sigue en la lista)"
+		},
+		"conversations": "Conversaciones",
+		"close": {
+			"tooltip": "Cerrar el panel (Esc)"
+		},
+		"noConversation": "Ninguna conversación para este libro.",
+		"conv": {
+			"current": "Conversación actual",
+			"resume": "Reanudar esta conversación",
+			"inProgress": "en curso",
+			"delete": "Eliminar esta conversación",
+			"deleteName": "Eliminar «{title}»"
+		},
+		"unavailable": "El asistente no está disponible en esta versión.",
+		"loading": "Cargando…",
+		"enable": {
+			"title": "Activar el asistente",
+			"intro": "El Asistente de IA lee la estructura de sus tablas, propone un enfoque y puede agregar columnas calculadas, claves, tablas dinámicas y gráficos. Todo lo que cambia en una respuesta se puede deshacer de una vez.",
+			"how": "Pasa por un proveedor de IA con su clave de API, por un modelo instalado en este equipo, o por Claude Desktop con su suscripción a Claude. Nunca recibe el libro completo.",
+			"locked": "El Asistente de IA está desactivado por la directiva de su organización.",
+			"check": "Activar el Asistente de IA",
+			"settings": "También disponible en Archivo › Configuración › Funciones.",
+			"learnMore": "Más información (ayuda F1)"
+		},
+		"source": {
+			"aria": "Conversación",
+			"lattis": "En Lattis",
+			"claude": "Desde Claude"
+		},
+		"log": "Conversación con el asistente",
+		"empty": "Describa lo que quiere analizar: el asistente lee la estructura del libro, propone un enfoque y puede crear columnas calculadas, claves, tablas dinámicas y gráficos.",
+		"noDoc": "Abra o cree primero un libro (Archivo › Nuevo).",
+		"compact": "Los mensajes anteriores se han resumido para el asistente; se siguen mostrando aquí",
+		"undone": "{n, plural, =1 {Cambio deshecho} other {Cambios deshechos}}",
+		"undo": {
+			"tooltip": "Deshace todo lo que ha cambiado esta respuesta",
+			"later": "Han seguido otros cambios: use Ctrl+Z",
+			"label": "Deshacer esta respuesta"
+		},
+		"resume": "Reanuda la respuesta donde se detuvo",
+		"copy": "Copiar la respuesta",
+		"link": {
+			"aria": "Abrir un vínculo",
+			"question": "¿Abrir este vínculo propuesto por el asistente? Todo lo que contiene su dirección se envía a",
+			"open": "Abrir"
+		},
+		"contextTooltip": "Adjunto a cada mensaje: el asistente sabe lo que está mirando",
+		"message": {
+			"aria": "Mensaje al asistente",
+			"notReady": "Conecte primero el asistente (Conexión)",
+			"noDoc": "Abra primero un libro",
+			"placeholder": "Su mensaje (Entrar para enviar, Mayús+Entrar para una nueva línea)"
+		},
+		"stop": {
+			"label": "Detener",
+			"tooltip": "Detener la respuesta (Esc)"
+		},
+		"send": "Enviar",
+		"sharingTooltip": "Datos enviados al asistente (Archivo › Configuración › Asistente de IA)",
+		"costTooltip": "Coste aproximado según los tokens usados, facturado por el proveedor"
+	}
+}
