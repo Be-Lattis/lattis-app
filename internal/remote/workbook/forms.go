@@ -260,15 +260,18 @@ type FormInvalid struct {
 	Fields  map[string]string
 }
 
-func (e *FormInvalid) Error() string {
+func (e *FormInvalid) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *FormInvalid) Msg() msg.Message {
 	if len(e.Fields) == 0 {
-		return "Formulaire refusé par le serveur : " + e.Message
+		return msg.M("forms.refusedByServer", msg.Args{"reasons": e.Message})
 	}
 	var parts []string
 	for _, r := range e.Fields {
 		parts = append(parts, r)
 	}
-	return "Formulaire refusé par le serveur : " + strings.Join(parts, " ; ")
+	return msg.M("forms.refusedByServer", msg.Args{"reasons": strings.Join(parts, " ; ")})
 }
 
 // errDetail rend le DETAIL d'une erreur du serveur ("" sans).

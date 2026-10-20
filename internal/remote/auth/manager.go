@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
 	"net/http"
 	"os"
@@ -148,14 +147,17 @@ type ErrLoginRequired struct {
 	Cause  error
 }
 
-func (e *ErrLoginRequired) Error() string {
-	msg := fmt.Sprintf("connectez-vous à %s (menu Compte de la barre de titre)", e.Name)
-	if e.Cause != nil && !errors.Is(e.Cause, ErrSessionExpired) {
-		msg += " : " + e.Cause.Error()
-	} else if e.Cause != nil {
-		msg = fmt.Sprintf("session expirée sur %s : reconnectez-vous (menu Compte de la barre de titre)", e.Name)
+func (e *ErrLoginRequired) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *ErrLoginRequired) Msg() msg.Message {
+	switch {
+	case e.Cause != nil && !errors.Is(e.Cause, ErrSessionExpired):
+		return msg.M("auth.loginRequiredCause", msg.Args{"server": e.Name, "err": e.Cause})
+	case e.Cause != nil:
+		return msg.M("auth.sessionExpiredOn", msg.Args{"server": e.Name})
 	}
-	return msg
+	return msg.M("auth.loginRequired", msg.Args{"server": e.Name})
 }
 
 func (e *ErrLoginRequired) Unwrap() error { return e.Cause }

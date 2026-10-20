@@ -169,38 +169,41 @@ type LoginError struct {
 	Server string
 }
 
-func (e *LoginError) Error() string {
-	srv := e.Server
-	if srv == "" {
-		srv = "le serveur"
+func (e *LoginError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *LoginError) Msg() msg.Message {
+	var srv any = e.Server
+	if e.Server == "" {
+		srv = msg.M("auth.theServer", nil)
 	}
+	args := msg.Args{"server": srv, "detail": e.Description, "code": e.Code}
 	switch e.Reason {
 	case ReasonTenant:
-		return fmt.Sprintf("Connexion refusée : votre compte n'appartient pas à une organisation autorisée sur %s. Utilisez un autre compte ou demandez à l'administrateur du serveur d'autoriser la vôtre.", srv)
+		return msg.M("auth.refusedTenant", args)
 	case ReasonInvitation:
-		return fmt.Sprintf("Connexion refusée : %s n'accepte que les personnes invitées. Demandez une invitation à son administrateur, puis reconnectez-vous avec l'adresse invitée.", srv)
+		return msg.M("auth.refusedInvitation", args)
 	case ReasonDisabled:
-		return fmt.Sprintf("Connexion refusée : votre compte est désactivé sur %s. Contactez son administrateur.", srv)
+		return msg.M("auth.refusedDisabled", args)
 	}
 	switch e.Code {
 	case "invalid_grant":
 		if e.Description != "" {
-			return "Connexion refusée : " + e.Description
+			return msg.M("auth.refusedDetail", args)
 		}
-		return "Adresse ou mot de passe incorrect."
+		return msg.M("auth.wrongPassword", args)
 	case "access_denied":
 		if e.Description != "" {
-			return "Connexion refusée : " + e.Description
+			return msg.M("auth.refusedDetail", args)
 		}
-		return "Connexion refusée par " + srv + "."
+		return msg.M("auth.refusedBy", args)
 	case "expired_token":
-		return "Le code de connexion a expiré : recommencez."
+		return msg.M("auth.codeExpired", args)
 	}
-	msg := "Connexion impossible (" + e.Code + ")"
 	if e.Description != "" {
-		msg += " : " + e.Description
+		return msg.M("auth.failedDetail", args)
 	}
-	return msg
+	return msg.M("auth.failed", args)
 }
 
 // newLoginError lit un refus (paramètres de redirection ou corps JSON).

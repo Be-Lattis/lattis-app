@@ -52,22 +52,22 @@ func startLoopback(state, issuer, server string) (*loopback, error) {
 		q := r.URL.Query()
 		if subtle.ConstantTimeCompare([]byte(q.Get("state")), []byte(state)) != 1 {
 			// Pas notre demande (onglet ancien, page tierce) : ignorée.
-			page(w, http.StatusBadRequest, "Lien de connexion inconnu", "Cette page ne correspond pas à la connexion en cours dans Lattis. Recommencez depuis Lattis.")
+			page(w, http.StatusBadRequest, say("auth.page.unknownTitle"), say("auth.page.unknown"))
 			return
 		}
 		var res callbackResult
 		switch {
 		case q.Get("iss") != "" && issuer != "" && strings.TrimRight(q.Get("iss"), "/") != strings.TrimRight(issuer, "/"):
 			res.err = msg.New("auth.otherIssuer", msg.Args{"got": q.Get("iss"), "issuer": issuer})
-			page(w, http.StatusBadRequest, "Connexion refusée", res.err.Error())
+			page(w, http.StatusBadRequest, say("auth.page.refusedTitle"), msg.Text(msg.Current(), res.err))
 		case q.Get("error") != "":
 			res.err = newLoginError(q.Get("error"), q.Get("error_description"), q.Get("reason"), server)
-			page(w, http.StatusOK, "Connexion refusée", res.err.Error())
+			page(w, http.StatusOK, say("auth.page.refusedTitle"), msg.Text(msg.Current(), res.err))
 		case q.Get("code") != "":
 			res.code = q.Get("code")
-			page(w, http.StatusOK, "Connexion réussie", "Vous pouvez fermer cet onglet et revenir à Lattis.")
+			page(w, http.StatusOK, say("auth.page.successTitle"), say("auth.page.success"))
 		default:
-			page(w, http.StatusBadRequest, "Réponse incomplète", "Le serveur n'a renvoyé ni code ni erreur. Recommencez depuis Lattis.")
+			page(w, http.StatusBadRequest, say("auth.page.incompleteTitle"), say("auth.page.incomplete"))
 			return
 		}
 		l.once.Do(func() { l.result <- res })
@@ -93,15 +93,19 @@ func (l *loopback) close() {
 	l.srv.Shutdown(ctx)
 }
 
-func page(w http.ResponseWriter, status int, title, msg string) {
+// say : un texte de la page de retour, dans la langue de la session du
+// bureau (la connexion par le navigateur n'existe que sur le bureau).
+func say(id msg.ID) string { return msg.Format(msg.Current(), id, nil) }
+
+func page(w http.ResponseWriter, status int, title, text string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'")
 	w.WriteHeader(status)
-	fmt.Fprintf(w, `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>%s – Lattis</title>
+	fmt.Fprintf(w, `<!doctype html><html lang="%s"><head><meta charset="utf-8"><title>%s – Lattis</title>
 <style>body{font:15px 'Segoe UI',system-ui,sans-serif;color:#1f2328;display:flex;justify-content:center;margin-top:18vh}
 main{max-width:460px;border:1px solid #d4d7db;border-radius:8px;padding:24px 28px}h1{font-size:18px;color:#1b5e3a;margin:0 0 8px}</style>
-</head><body><main><h1>%s</h1><p>%s</p></main></body></html>`, html.EscapeString(title), html.EscapeString(title), html.EscapeString(msg))
+</head><body><main><h1>%s</h1><p>%s</p></main></body></html>`, msg.Current(), html.EscapeString(title), html.EscapeString(title), html.EscapeString(text))
 }
 
 // ErrBrowser : le navigateur du système n'a pas pu être ouvert.

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -203,19 +202,24 @@ type PushError struct {
 	Message string
 }
 
-func (e *PushError) Error() string {
+func (e *PushError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager) ; le texte du serveur tel
+// quel s'il n'y a rien à ajouter.
+func (e *PushError) Msg() msg.Message {
+	args := msg.Args{"detail": e.Message, "status": e.Status}
 	switch e.Status {
 	case http.StatusConflict:
-		return "un envoi précédent n'est pas encore écrit, ou la source est suspendue : réessayez dans un moment (" + e.Message + ")"
+		return msg.M("lake.pushBusy", args)
 	case http.StatusRequestEntityTooLarge:
-		return "tableau trop gros pour le serveur : " + e.Message
+		return msg.M("lake.pushTooLarge", args)
 	case http.StatusUnauthorized:
-		return "session expirée sur ce serveur : reconnectez-vous"
+		return msg.M("lake.pushSessionExpired", args)
 	}
 	if e.Message != "" {
-		return e.Message
+		return msg.M("lake.pushServerText", args)
 	}
-	return fmt.Sprintf("le serveur a répondu %d", e.Status)
+	return msg.M("lake.pushStatus", args)
 }
 
 // PushClient est le Pusher HTTP : émetteur (issuer de la découverte) et

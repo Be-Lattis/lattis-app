@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -17,6 +18,8 @@ import (
 // Check est le résultat des vérifications, tableau par tableau.
 type Check struct {
 	Tables []TableCheck `json:"tables"`
+	// lang : langue des problèmes décrits (InspectIn).
+	lang msg.Lang
 }
 
 // TableCheck décrit un tableau à publier.
@@ -68,47 +71,59 @@ func (c Check) Blocking(ids []int64) []string {
 			continue
 		}
 		for _, p := range t.Problems {
-			out = append(out, fmt.Sprintf("« %s » : %s", t.Name, p))
+			out = append(out, msg.Format(c.lang, "check.tableProblem", msg.Args{"table": t.Name, "problem": p}))
 		}
 		if t.Invalid > 0 {
-			out = append(out, fmt.Sprintf("« %s » : %d saisie(s) invalide(s) à corriger, ou colonne à accepter comme texte", t.Name, t.Invalid))
+			out = append(out, msg.Format(c.lang, "check.invalidEntries", msg.Args{"table": t.Name, "n": t.Invalid}))
 		}
 		k := strings.ToLower(strings.TrimSpace(t.Name))
 		if other, ok := seen[k]; ok {
-			out = append(out, fmt.Sprintf("« %s » et « %s » : même nom sur le serveur (la casse n'y compte pas)", other, t.Name))
+			out = append(out, msg.Format(c.lang, "check.sameName", msg.Args{"table": other, "other": t.Name}))
 		}
 		seen[k] = t.Name
 		delete(want, t.ID)
 	}
 	for id := range want {
-		out = append(out, fmt.Sprintf("tableau %d introuvable", id))
+		out = append(out, msg.Format(c.lang, "check.tableNotFound", msg.Args{"id": id}))
 	}
 	return out
 }
 
 // NameProblem dit pourquoi un nom de tableau ou de colonne n'est pas
 // valable sur le serveur (lattis.check_name : 1 à 63 octets, sans espaces
-// autour, préfixe lattis_ réservé), vide s'il l'est.
-func NameProblem(name string) string {
+// autour, préfixe lattis_ réservé), vide s'il l'est ; en français.
+func NameProblem(name string) string { return nameProblem(msg.FR, name) }
+
+// nameProblem : NameProblem dans la langue l.
+func nameProblem(l msg.Lang, name string) string {
+	var id msg.ID
 	switch {
 	case strings.TrimSpace(name) == "":
-		return "nom vide"
+		id = "check.nameEmpty"
 	case strings.TrimSpace(name) != name:
-		return "espaces au début ou à la fin du nom"
+		id = "check.nameSpaces"
 	case len(name) > 63:
-		return fmt.Sprintf("nom trop long pour le serveur (%d octets, 63 au plus)", len(name))
+		id = "check.nameTooLong"
 	case strings.HasPrefix(strings.ToLower(name), "lattis_"):
-		return "le préfixe lattis_ est réservé"
+		id = "check.namePrefix"
 	case strings.ContainsRune(name, 0):
-		return "caractère nul dans le nom"
+		id = "check.nameNul"
+	default:
+		return ""
 	}
-	return ""
+	return msg.Format(l, id, msg.Args{"n": len(name)})
 }
 
-// Inspect fait les vérifications sur tous les tableaux du classeur.
+// Inspect fait les vérifications sur tous les tableaux du classeur ; les
+// problèmes sont décrits en français (InspectIn : dans une langue).
 func Inspect(ctx context.Context, db *store.Store) (Check, error) {
+	return InspectIn(ctx, db, msg.FR)
+}
+
+// InspectIn : Inspect, problèmes décrits dans la langue l.
+func InspectIn(ctx context.Context, db *store.Store, l msg.Lang) (Check, error) {
 	r := db.Read()
-	out := Check{Tables: []TableCheck{}}
+	out := Check{Tables: []TableCheck{}, lang: l}
 	rs, err := r.QueryContext(ctx, `SELECT t.id, t.name, s.name, coalesce((SELECT published FROM _lattis_remote_tables p WHERE p.tbl = t.id), 0),
 		coalesce((SELECT q.name FROM _lattis_queries q WHERE q.target = t.id), '')
 		FROM _lattis_tables t JOIN _lattis_sheets s ON s.id = t.sheet ORDER BY s.pos, s.id, t.row, t.col`)
@@ -128,16 +143,16 @@ func Inspect(ctx context.Context, db *store.Store) (Check, error) {
 		return out, err
 	}
 	for i := range out.Tables {
-		if err := inspectTable(ctx, r, &out.Tables[i]); err != nil {
+		if err := inspectTable(ctx, r, l, &out.Tables[i]); err != nil {
 			return out, err
 		}
 	}
 	return out, nil
 }
 
-func inspectTable(ctx context.Context, r *sql.DB, t *TableCheck) error {
+func inspectTable(ctx context.Context, r *sql.DB, l msg.Lang, t *TableCheck) error {
 	t.Problems = []string{}
-	if p := NameProblem(t.Name); p != "" {
+	if p := nameProblem(l, t.Name); p != "" {
 		t.Problems = append(t.Problems, p)
 	}
 	if err := r.QueryRowContext(ctx, `SELECT count(*) FROM t_`+fmt.Sprint(t.ID)).Scan(&t.Rows); err != nil {
@@ -166,12 +181,12 @@ func inspectTable(ctx context.Context, r *sql.DB, t *TableCheck) error {
 			c.Remote = RemoteType(grid.Type(c.Type))
 			c.Inferred = !fixed
 			stored++
-			if p := NameProblem(c.Name); p != "" {
-				t.Problems = append(t.Problems, fmt.Sprintf("colonne « %s » : %s", c.Name, p))
+			if p := nameProblem(l, c.Name); p != "" {
+				t.Problems = append(t.Problems, msg.Format(l, "check.columnProblem", msg.Args{"column": c.Name, "problem": p}))
 			}
 			k := strings.ToLower(c.Name)
 			if other, ok := names[k]; ok {
-				t.Problems = append(t.Problems, fmt.Sprintf("colonnes « %s » et « %s » : même nom sur le serveur", other, c.Name))
+				t.Problems = append(t.Problems, msg.Format(l, "check.sameColumnName", msg.Args{"column": other, "other": c.Name}))
 			}
 			names[k] = c.Name
 		}
@@ -183,7 +198,7 @@ func inspectTable(ctx context.Context, r *sql.DB, t *TableCheck) error {
 		return err
 	}
 	if stored == 0 {
-		t.Problems = append(t.Problems, "aucune colonne saisie (les colonnes calculées ne sont pas publiées)")
+		t.Problems = append(t.Problems, msg.Format(l, "check.noStoredColumn", nil))
 	}
 	for i, id := range ids {
 		c := &t.Columns[i]

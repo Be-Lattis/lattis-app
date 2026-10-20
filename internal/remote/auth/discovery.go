@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"mime"
 	"net"
@@ -70,8 +69,11 @@ type ErrClientTooOld struct {
 	Server, Min, Have string
 }
 
-func (e *ErrClientTooOld) Error() string {
-	return fmt.Sprintf("%s demande Lattis %s ou plus récent (vous avez la version %s) : mettez Lattis à jour pour vous y connecter", e.Server, e.Min, e.Have)
+func (e *ErrClientTooOld) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *ErrClientTooOld) Msg() msg.Message {
+	return msg.M("auth.clientTooOld", msg.Args{"server": e.Server, "min": e.Min, "have": e.Have})
 }
 
 // NormalizeURL ramène l'adresse d'un serveur à sa forme canonique

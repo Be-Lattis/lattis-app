@@ -655,7 +655,7 @@ func (s *DocumentService) ShareCheck(ctx context.Context) (workbook.Check, error
 	if err != nil {
 		return workbook.Check{}, err
 	}
-	return workbook.Inspect(ctx, d.DB())
+	return workbook.InspectIn(ctx, d.DB(), s.sessionLang())
 }
 
 // ShareAcceptText convertit en texte la colonne i d'un tableau en y
@@ -672,7 +672,7 @@ func (s *DocumentService) ShareAcceptText(ctx context.Context, table string, i i
 	if _, err := s.changed(ctx); err != nil {
 		return workbook.Check{}, err
 	}
-	return workbook.Inspect(ctx, d.DB())
+	return workbook.InspectIn(ctx, d.DB(), s.sessionLang())
 }
 
 // ShareRequest est une demande de publication.
