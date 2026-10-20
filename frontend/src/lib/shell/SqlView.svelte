@@ -19,7 +19,7 @@
 	// noms internes t_1, c_0… avant l'exécution), historique des requêtes.
 	// Les requêtes d'écriture (INSERT, UPDATE, DELETE) partent telles quelles au
 	// backend, qui les rend annulables (Ctrl+Z).
-	import { fmtNumber } from '#lib/i18n/index.js';
+	import { errorText, fmtNumber, t } from '#lib/i18n/index.js';
 	import { formatValue, typeLabel } from '#lib/grid/format.js';
 	import { alterRename } from '#lib/sql/rename.js';
 	import SqlEditor from '#lib/sql/SqlEditor.svelte';
@@ -34,7 +34,7 @@
 	import { favoriteNameProblem, refusedName, tableNameProblem } from '#lib/ui/names.js';
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 	import Icon from '#lib/icons/Icon.svelte';
-	import { count, toTSV } from '#lib/sql/result.js';
+	import { toTSV } from '#lib/sql/result.js';
 	import { tick } from 'svelte';
 	import type { RightsObject } from '#lib/remote/rights.js';
 	import { dataExample, dataTarget, pgIdent, type DataGroup } from '#lib/remote/data.js';
@@ -134,7 +134,7 @@
 			await onrename(r.name, to);
 			tblRen = null;
 		} catch (e) {
-			await refuseName(() => tblRenInput, refusedName('Nom de tableau refusé', e));
+			await refuseName(() => tblRenInput, refusedName(t('shell.sqlView.tableRenameRefused'), e));
 		} finally {
 			tblRenBusy = false;
 		}
@@ -245,8 +245,8 @@
 			const ren = onrename ? alterRename(text) : null;
 			if (ren && onrename) {
 				await onrename(ren.from, ren.to);
-				result = { columns: ['Tableau renommé'], rows: [[`${ren.from} → ${ren.to}`]], truncated: false, micros: 0 };
-				headers = ['Tableau renommé (Ctrl+Z pour annuler)'];
+				result = { columns: [t('shell.sqlView.renamed')], rows: [[`${ren.from} → ${ren.to}`]], truncated: false, micros: 0 };
+				headers = [t('shell.sqlView.renamedHeader')];
 				remember({ sql: text, at, rows: 0, micros: 0 });
 				running = false;
 				return;
@@ -255,24 +255,24 @@
 				sent = text;
 				const r = await exec(text);
 				ran = '';
-				result = { columns: ['Lignes touchées'], rows: [[r.changed]], truncated: false, micros: r.micros };
-				headers = ['Lignes touchées (Ctrl+Z pour annuler)'];
+				result = { columns: [t('shell.sqlView.changed')], rows: [[r.changed]], truncated: false, micros: r.micros };
+				headers = [t('shell.sqlView.changedHeader')];
 				remember({ sql: text, at, rows: r.changed, micros: r.micros });
 				running = false;
 				return;
 			}
-			const t = translate(text, catalog);
-			sent = t.sql;
-			const r = await run(t.sql);
+			const tr = translate(text, catalog);
+			sent = tr.sql;
+			const r = await run(tr.sql);
 			result = r;
 			ran = text;
 			copied = false;
-			headers = displayHeaders(r.columns ?? [], t.scope);
+			headers = displayHeaders(r.columns ?? [], tr.scope);
 			remember({ sql: text, at, rows: (r.rows ?? []).length, micros: r.micros });
 		} catch (e) {
 			result = null;
 			// Sans le préfixe technique du moteur.
-			error = String(e instanceof Error ? e.message : e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, '');
+			error = errorText(e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, '');
 			editor?.showError(error);
 			remember({ sql: text, at, error });
 		}
@@ -337,7 +337,7 @@
 			const f = favorites.list.find((x) => x.id === id);
 			renaming = { id, name: f?.name ?? '' };
 		} catch (e) {
-			favError = String(e instanceof Error ? e.message : e);
+			favError = errorText(e);
 		}
 	}
 
@@ -360,7 +360,7 @@
 			await favorites.rename(r.id, r.name);
 			renaming = null;
 		} catch (e) {
-			await refuseName(() => favRenInput, refusedName('Nom de favori refusé', e));
+			await refuseName(() => favRenInput, refusedName(t('shell.sqlView.favoriteRenameRefused'), e));
 		} finally {
 			favRenBusy = false;
 		}
@@ -370,7 +370,7 @@
 		try {
 			await favorites?.remove(f.id);
 		} catch (e) {
-			favError = String(e instanceof Error ? e.message : e);
+			favError = errorText(e);
 		}
 	}
 
@@ -393,7 +393,7 @@
 			copied = true;
 			setTimeout(() => (copied = false), 1500);
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		}
 	}
 
@@ -409,7 +409,7 @@
 			const fav = favList.find((f) => same(f.sql, ran));
 			await tosheet(sent, fav?.name ?? '', headers, link, result?.columns ?? []);
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, '');
+			error = errorText(e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, '');
 		}
 		sending = false;
 	}
@@ -420,14 +420,14 @@
 <div class="sql" bind:this={root} onfocusin={(e) => (lastFocus = e.target instanceof HTMLElement ? e.target : null)}>
 	<aside class="side">
 		<div class="tabs" role="tablist">
-			<button role="tab" aria-selected={panel === 'objects'} class:on={panel === 'objects'} onclick={() => (panel = 'objects')}>Objets</button>
+			<button role="tab" aria-selected={panel === 'objects'} class:on={panel === 'objects'} onclick={() => (panel = 'objects')}>{t('shell.sqlView.objects')}</button>
 			{#if favorites}
 				<button role="tab" aria-selected={panel === 'favorites'} class:on={panel === 'favorites'} onclick={() => (panel = 'favorites')}>
-					Favoris{favList.length ? ` (${favList.length})` : ''}
+					{favList.length ? t('shell.sqlView.favoritesCount', { n: favList.length }) : t('shell.sqlView.favorites')}
 				</button>
 			{/if}
 			<button role="tab" aria-selected={panel === 'history'} class:on={panel === 'history'} onclick={() => (panel = 'history')}>
-				Historique{entries.length ? ` (${entries.length})` : ''}
+				{entries.length ? t('shell.sqlView.historyCount', { n: entries.length }) : t('shell.sqlView.history')}
 			</button>
 		</div>
 		{#if panel === 'objects'}
@@ -442,7 +442,7 @@
 									bind:this={tblRenInput}
 									bind:value={tblRen.draft}
 									use:focusAll
-									aria-label="Nouveau nom du tableau"
+									aria-label={t('shell.sqlView.renameAria')}
 									onkeydown={(e) => {
 										e.stopPropagation();
 										if (e.key === 'Enter') {
@@ -469,23 +469,23 @@
 								e.preventDefault();
 								objMenu = { o, x: e.clientX, y: e.clientY };
 							}}
-							title={onrename && !isReadOnly(o) ? 'Double-clic ou F2 : renommer ; clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille' : 'Clic droit : exemples SELECT, INSERT, UPDATE, DELETE, voir sur la feuille'}
+							title={onrename && !isReadOnly(o) ? t('shell.sqlView.objectTooltipRename') : t('shell.sqlView.objectTooltip')}
 						>
 							<span>{open === o.sqlName ? '▾' : '▸'}</span>
-							<span class="kind" title={isReadOnly(o) ? 'Tableau croisé' : 'Tableau'}><Icon name={isReadOnly(o) ? 'pivot-table' : 'table'} size={14} /></span>
+							<span class="kind" title={isReadOnly(o) ? t('shell.sqlView.pivot') : t('shell.sqlView.table')}><Icon name={isReadOnly(o) ? 'pivot-table' : 'table'} size={14} /></span>
 							{#if !isReadOnly(o) && isDefaultTableName(o.name)}
 								<strong class="default-name" title={DEFAULT_NAME_HINT}>{o.name}</strong>
 							{:else}
 								<strong>{o.name}</strong>
 							{/if}
-							<span class="muted count">{count(o.rows)}</span>
+							<span class="muted count">{t('shell.sqlView.rows', { n: o.rows })}</span>
 						</button>
 						{/if}
 						{#if open === o.sqlName}
 							<ul>
 								{#each o.columns as c (c.sql)}
 									<li>
-										<button class="col" title="Insérer dans la requête" onclick={() => editor?.insert(quote(c.name))}>{c.name}</button>
+										<button class="col" title={t('shell.sqlView.insertColumn')} onclick={() => editor?.insert(quote(c.name))}>{c.name}</button>
 										<span class="muted">{c.sql} · {typeLabel(c.type)}</span>
 									</li>
 								{/each}
@@ -496,7 +496,7 @@
 				{#if rundata}
 					{#each data as g (g.server)}
 						{#if g.views.length}
-							<div class="rights-head"><span title={g.server}>Data Lake Lattis · {g.label}</span></div>
+							<div class="rights-head"><span title={g.server}>{t('shell.sqlView.dataLake', { label: g.label })}</span></div>
 							{#each g.views as v (v.name)}
 								{@const key = g.server + ' ' + v.name}
 								<div class="obj">
@@ -507,10 +507,10 @@
 											cursor = -1;
 											editor?.load(dataExample(v));
 										}}
-										title={`${v.label}${v.description ? ' — ' + v.description : ''} : vue du serveur en lecture seule, limitée aux lignes de votre audience (double-clic : exemple SELECT)`}
+										title={t('shell.sqlView.dataViewTooltip', { view: v.description ? `${v.label} — ${v.description}` : v.label })}
 									>
 										<span>{dataOpen === key ? '▾' : '▸'}</span>
-										<span class="kind" title="Vue du Data Lake (lecture seule)"><Icon name="database" size={14} /></span>
+										<span class="kind" title={t('shell.sqlView.dataView')}><Icon name="database" size={14} /></span>
 										<strong>donnees.{v.name}</strong>
 										<span class="muted">{v.label}</span>
 									</button>
@@ -518,7 +518,7 @@
 										<ul>
 											{#each v.columns as c (c.name)}
 												<li>
-													<button class="col" title="Insérer dans la requête" onclick={() => editor?.insert(pgIdent(c.name))}>{c.name}</button>
+													<button class="col" title={t('shell.sqlView.insertColumn')} onclick={() => editor?.insert(pgIdent(c.name))}>{c.name}</button>
 													<span class="muted">{typeLabel(c.type)}</span>
 												</li>
 											{/each}
@@ -531,12 +531,12 @@
 				{/if}
 				{#if rights.length}
 					<div class="rights-head">
-						<span>Droits (serveur)</span>
-						{#if onrights}<button class="link" onclick={onrights} title="Écran Partager : membres, rôles, restrictions">Modifier…</button>{/if}
+						<span>{t('shell.sqlView.rights')}</span>
+						{#if onrights}<button class="link" onclick={onrights} title={t('shell.sqlView.rightsEditTooltip')}>{t('shell.sqlView.rightsEdit')}</button>{/if}
 					</div>
 					{#each rights as r (r.name + r.kind)}
 						<div class="obj">
-							<button class="obj-head" onclick={() => (rightsOpen = rightsOpen === r.name + r.kind ? null : r.name + r.kind)} title="Généré par le serveur : lecture seule">
+							<button class="obj-head" onclick={() => (rightsOpen = rightsOpen === r.name + r.kind ? null : r.name + r.kind)} title={t('shell.sqlView.rightsTooltip')}>
 								<span>{rightsOpen === r.name + r.kind ? '▾' : '▸'}</span>
 								<strong>{r.name}</strong>
 								<span class="muted">{r.kind}</span>
@@ -553,17 +553,17 @@
 			{#if objMenu}
 				{@const m = objMenu}
 				<div class="ctx" role="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (objMenu = null)}>
-					<div class="ctx-title" title={clipped(m.o.name) ? m.o.name : undefined}>{isReadOnly(m.o) ? 'Tableau croisé' : 'Tableau'} « {clip(m.o.name)} »</div>
+					<div class="ctx-title" title={clipped(m.o.name) ? m.o.name : undefined}>{isReadOnly(m.o) ? t('shell.sqlView.menuPivot', { name: clip(m.o.name) }) : t('shell.sqlView.menuTable', { name: clip(m.o.name) })}</div>
 					{#if exec && !isReadOnly(m.o)}
 						<!-- Exemples de requête : sous-menu (SELECT, INSERT, UPDATE, DELETE). -->
-						<Submenu label="Exemple de requête">
-							<button role="menuitem" title="Remplace la requête par un exemple de lecture" onclick={() => showExample(m.o, 'select')}>SELECT</button>
-							<button role="menuitem" title="Remplace la requête par un exemple d'ajout de ligne" onclick={() => showExample(m.o, 'insert')}>INSERT</button>
-							<button role="menuitem" title="Remplace la requête par un exemple de modification" onclick={() => showExample(m.o, 'update')}>UPDATE</button>
-							<button role="menuitem" title="Remplace la requête par un exemple de suppression" onclick={() => showExample(m.o, 'delete')}>DELETE</button>
+						<Submenu label={t('shell.sqlView.example')}>
+							<button role="menuitem" title={t('shell.sqlView.exampleSelect')} onclick={() => showExample(m.o, 'select')}>SELECT</button>
+							<button role="menuitem" title={t('shell.sqlView.exampleInsert')} onclick={() => showExample(m.o, 'insert')}>INSERT</button>
+							<button role="menuitem" title={t('shell.sqlView.exampleUpdate')} onclick={() => showExample(m.o, 'update')}>UPDATE</button>
+							<button role="menuitem" title={t('shell.sqlView.exampleDelete')} onclick={() => showExample(m.o, 'delete')}>DELETE</button>
 						</Submenu>
 					{:else}
-						<button role="menuitem" title="Remplace la requête par un exemple de lecture" onclick={() => showExample(m.o, 'select')}>Exemple SELECT</button>
+						<button role="menuitem" title={t('shell.sqlView.exampleSelect')} onclick={() => showExample(m.o, 'select')}>{t('shell.sqlView.exampleSelectItem')}</button>
 					{/if}
 					<hr />
 					<button
@@ -573,10 +573,10 @@
 							const name = m.o.name;
 							objMenu = null;
 							ongoto(name);
-						}}>Voir sur la feuille</button
+						}}>{t('shell.sqlView.goto')}</button
 					>
 					{#if onrename && !isReadOnly(m.o)}
-						<button role="menuitem" onclick={() => startTblRen(m.o)}>Renommer… <span class="keys">F2</span></button>
+						<button role="menuitem" onclick={() => startTblRen(m.o)}>{t('shell.sqlView.renameItem')} <span class="keys">F2</span></button>
 					{/if}
 				</div>
 			{/if}
@@ -588,7 +588,7 @@
 						{#if renaming?.id === f.id}
 							<input
 								class="fav-name"
-								aria-label="Nom du favori"
+								aria-label={t('shell.sqlView.favoriteNameAria')}
 								bind:this={favRenInput}
 								bind:value={renaming.name}
 								use:select
@@ -601,63 +601,63 @@
 								}}
 							/>
 						{:else}
-							<button class="fav-title" title="Reprendre dans l'éditeur (double-clic : exécuter)" onclick={() => useFavorite(f, false)} ondblclick={() => useFavorite(f, true)}>★ {f.name}</button>
+							<button class="fav-title" title={t('shell.sqlView.reuse')} onclick={() => useFavorite(f, false)} ondblclick={() => useFavorite(f, true)}>★ {f.name}</button>
 						{/if}
-						<button class="entry-sql" title="Reprendre dans l'éditeur (double-clic : exécuter)" onclick={() => useFavorite(f, false)} ondblclick={() => useFavorite(f, true)}>{f.sql}</button>
+						<button class="entry-sql" title={t('shell.sqlView.reuse')} onclick={() => useFavorite(f, false)} ondblclick={() => useFavorite(f, true)}>{f.sql}</button>
 						<div class="entry-foot">
 							<span>
-								<button class="link" onclick={() => (renaming = { id: f.id, name: f.name })}>Renommer</button>
+								<button class="link" onclick={() => (renaming = { id: f.id, name: f.name })}>{t('shell.sqlView.rename')}</button>
 								·
-								<button class="link" onclick={() => removeFavorite(f)}>Retirer</button>
+								<button class="link" onclick={() => removeFavorite(f)}>{t('shell.sqlView.remove')}</button>
 							</span>
-							<button class="link" title="Exécuter" onclick={() => useFavorite(f, true)}>▶</button>
+							<button class="link" title={t('shell.sqlView.run')} onclick={() => useFavorite(f, true)}>▶</button>
 						</div>
 					</div>
 				{:else}
-					<p class="muted empty">Aucune requête favorite. ☆ dans la barre de l'éditeur ou dans l'historique pour en ajouter une ; elles sont enregistrées dans le classeur.</p>
+					<p class="muted empty">{t('shell.sqlView.noFavorites')}</p>
 				{/each}
 			</div>
 		{:else}
 			<div class="hist-tools">
-				<input type="search" placeholder="Rechercher" bind:value={filter} />
-				{#if entries.length}<button class="link clear" onclick={clearHistory}><Icon name="trash" size={14} />Effacer</button>{/if}
+				<input type="search" placeholder={t('shell.sqlView.search')} bind:value={filter} />
+				{#if entries.length}<button class="link clear" onclick={clearHistory}><Icon name="trash" size={14} />{t('shell.sqlView.clear')}</button>{/if}
 			</div>
 			<div class="list">
 				{#each shown as e (e.at + e.sql)}
 					<div class="entry" class:failed={!!e.error}>
-						<button class="entry-sql" title="Reprendre dans l'éditeur (double-clic : exécuter)" onclick={() => useEntry(e, false)} ondblclick={() => useEntry(e, true)}>{e.sql}</button>
+						<button class="entry-sql" title={t('shell.sqlView.reuse')} onclick={() => useEntry(e, false)} ondblclick={() => useEntry(e, true)}>{e.sql}</button>
 						<div class="entry-foot">
-							<span class="muted">{when(e.at)} · {e.error ? 'erreur' : count(e.rows ?? 0)}</span>
+							<span class="muted">{when(e.at)} · {e.error ? t('shell.sqlView.error') : t('shell.sqlView.rows', { n: e.rows ?? 0 })}</span>
 							<span>
 								{#if favorites}
 									{@const fav = favList.some((f) => same(f.sql, e.sql))}
-									<button class="link star" class:on={fav} title={fav ? 'Déjà dans les favoris' : 'Ajouter aux favoris'} disabled={fav} onclick={() => addFavorite(e.sql)}>{fav ? '★' : '☆'}</button>
+									<button class="link star" class:on={fav} title={fav ? t('shell.sqlView.alreadyFavorite') : t('shell.sqlView.addFavorite')} disabled={fav} onclick={() => addFavorite(e.sql)}>{fav ? '★' : '☆'}</button>
 								{/if}
-								<button class="link" title="Exécuter" onclick={() => useEntry(e, true)}>▶</button>
+								<button class="link" title={t('shell.sqlView.run')} onclick={() => useEntry(e, true)}>▶</button>
 							</span>
 						</div>
 					</div>
 				{:else}
-					<p class="muted empty">{entries.length ? 'Aucune requête ne correspond.' : 'Les requêtes exécutées apparaîtront ici.'}</p>
+					<p class="muted empty">{entries.length ? t('shell.sqlView.noMatch') : t('shell.sqlView.noHistory')}</p>
 				{/each}
 			</div>
 		{/if}
 	</aside>
 	<section class="main">
 		<div class="toolbar">
-			<button class="run" onclick={() => editor?.runCurrent()} disabled={running} title="Exécute la sélection, sinon l'instruction sous le curseur (Ctrl+Entrée)"><Icon name="play" size={14} />Exécuter</button>
+			<button class="run" onclick={() => editor?.runCurrent()} disabled={running} title={t('shell.sqlView.runTooltip')}><Icon name="play" size={14} />{t('shell.sqlView.run')}</button>
 			{#if stop && running}
-				<button class="stop" onclick={() => stop()} title="Arrête la requête en cours ; une écriture arrêtée ne modifie rien"><Icon name="stop" size={14} />Arrêter</button>
+				<button class="stop" onclick={() => stop()} title={t('shell.sqlView.stopTooltip')}><Icon name="stop" size={14} />{t('shell.sqlView.stop')}</button>
 			{/if}
 			{#if favorites}
 				<button
 					class="fav-btn"
 					class:on={!!starred}
-					title={starred ? `Dans les favoris : « ${starred.name} » (cliquer pour le retirer)` : 'Ajouter la requête (ou la sélection) aux favoris du classeur'}
-					onclick={() => (starred ? removeFavorite(starred) : addFavorite(editor?.selectedOrAll() ?? sql))}>{starred ? '★' : '☆'} Favori</button
+					title={starred ? t('shell.sqlView.starredTooltip', { name: starred.name }) : t('shell.sqlView.starTooltip')}
+					onclick={() => (starred ? removeFavorite(starred) : addFavorite(editor?.selectedOrAll() ?? sql))}>{starred ? '★' : '☆'} {t('shell.sqlView.favorite')}</button
 				>
 			{/if}
-			<span class="muted hint" title="Les instructions sont séparées par « ; » ou une ligne vide. 1 000 lignes au plus.">Ctrl+Entrée : exécuter la sélection, sinon l'instruction sous le curseur · Ctrl+Espace : noms · Alt+↑↓ : historique</span>
+			<span class="muted hint" title={t('shell.sqlView.hintTooltip')}>{t('shell.sqlView.hint')}</span>
 		</div>
 		<div class="code" style:height="{codeH}px">
 			<SqlEditor bind:this={editor} bind:value={sql} {catalog} onrun={execute} onhistory={step} />
@@ -667,10 +667,10 @@
 			class="split"
 			role="separator"
 			aria-orientation="horizontal"
-			aria-label="Hauteur de l'éditeur"
+			aria-label={t('shell.sqlView.splitAria')}
 			aria-valuenow={codeH}
 			tabindex="0"
-			title="Glisser pour partager la place entre la requête et le résultat (double-clic : taille d'origine)"
+			title={t('shell.sqlView.splitTooltip')}
 			onpointerdown={startSplit}
 			ondblclick={() => setCodeH(CODE_H)}
 			onkeydown={(e) => {
@@ -686,21 +686,21 @@
 			{:else if result}
 				<div class="result-bar">
 					<p class="muted">
-						{count((result.rows ?? []).length)}{result.truncated ? ' (tronqué)' : ''} · {fmtNumber(result.micros / 1000, { maximumFractionDigits: 1 })} ms
-						<span class="sent" title={sent}>· SQL exécuté</span>
+						{t(result.truncated ? 'shell.sqlView.resultTruncated' : 'shell.sqlView.result', { n: (result.rows ?? []).length, ms: fmtNumber(result.micros / 1000, { maximumFractionDigits: 1 }) })}
+						<span class="sent" title={sent}>{t('shell.sqlView.sent')}</span>
 					</p>
 					{#if ran}
-						<button class="res-btn" onclick={copyResult} title={result.truncated ? 'Copie les lignes affichées (tronquées), à coller dans Excel' : 'Copie le résultat (en-têtes compris), à coller dans Excel'}
-							><Icon name="copy" size={14} />{copied ? 'Copié ✓' : 'Presse-papiers'}</button
+						<button class="res-btn" onclick={copyResult} title={result.truncated ? t('shell.sqlView.copyTruncated') : t('shell.sqlView.copyTooltip')}
+							><Icon name="copy" size={14} />{copied ? t('shell.sqlView.copied') : t('shell.sqlView.clipboard')}</button
 						>
 						{#if tosheet}
 							<span class="to-sheet">
-								Vers une feuille :
-								<button class="res-btn" onclick={() => sendToSheet(false)} disabled={sending} title="Copie les valeurs du résultat dans un nouveau tableau, sur une nouvelle feuille (Ctrl+Z pour annuler)"
-									><Icon name="sheet" size={14} />Copier</button
+								{t('shell.sqlView.toSheet')}
+								<button class="res-btn" onclick={() => sendToSheet(false)} disabled={sending} title={t('shell.sqlView.copyToSheetTooltip')}
+									><Icon name="sheet" size={14} />{t('shell.sqlView.copyToSheet')}</button
 								>
-								<button class="res-btn" onclick={() => sendToSheet(true)} disabled={sending} title="Crée un tableau lié à la requête, sur une nouvelle feuille : couleur des sources externes (bleu clair par défaut), actualisable au clic droit comme une source externe"
-									><Icon name="reference" size={14} />Référencer</button
+								<button class="res-btn" onclick={() => sendToSheet(true)} disabled={sending} title={t('shell.sqlView.linkToSheetTooltip')}
+									><Icon name="reference" size={14} />{t('shell.sqlView.linkToSheet')}</button
 								>
 							</span>
 						{/if}

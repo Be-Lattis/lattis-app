@@ -18,7 +18,7 @@
 	import { TAB_COLORS, moveTarget, tabWindow, textOn, visibleSheets, type SimilarMark, type TabSheet } from './sheets.js';
 	import { allLabel, choiceLabel, choiceStatus, newLabel, nextChoice, type ChoiceActions } from './choice.js';
 	import RowFormulaDialog from '#lib/ui/RowFormulaDialog.svelte';
-	import { t } from '#lib/i18n/index.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	type Sheet = TabSheet;
 	interface Props {
@@ -110,7 +110,7 @@
 			if (choiceMenu?.id === s.id) choiceMenu = { ...choiceMenu, values };
 		} catch (e) {
 			choiceMenu = null;
-			onrefused?.(String((e as Error)?.message ?? e));
+			onrefused?.(errorText(e));
 		}
 	}
 
