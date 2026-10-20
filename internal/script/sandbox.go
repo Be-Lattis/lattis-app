@@ -16,10 +16,19 @@ import (
 // os.difftime. Rien ne touche aux fichiers, aux processus ni au réseau, et
 // rien ne charge de code (load, require, string.dump...).
 //
-// gopher-lua n'a pas de crochet « toutes les N instructions » ; il vérifie en
-// revanche le contexte qu'on lui donne (SetContext) : un délai ou le bouton
-// Arrêter annulent ce contexte, qui est aussi transmis aux requêtes SQL en
-// cours. Les fonctions de motifs de string tournent en Go, hors de la VM :
+// Interruption : gopher-lua n'a pas de crochet « toutes les N instructions »
+// comme le debug.sethook de Lua C, mais sa boucle d'exécution
+// (mainLoopWithContext) regarde le contexte donné par SetContext AVANT
+// CHAQUE instruction : c'est l'équivalent d'un crochet à chaque instruction,
+// sans le coût d'un appel de fonction. Une boucle infinie (while true do end)
+// s'arrête donc dans les 10 ms qui suivent l'annulation. Trois choses
+// annulent ce contexte : le bouton Arrêter, le dépassement de la durée
+// maximale (Limits.Timeout, réglable de 1 s à 1 h : Paramètres › Limites,
+// limits.scriptSeconds, 30 s par défaut, verrouillable par la DSI ; le
+// décompte est suspendu pendant une boîte de dialogue du script, voir
+// clock) et le chien de garde de la mémoire. Le contexte est aussi transmis
+// aux requêtes SQL en cours. Le script tourne hors du fil de l'interface :
+// elle reste fluide pendant son exécution. Les fonctions de motifs de string tournent en Go, hors de la VM :
 // elles sont remplacées par des versions qui vérifient aussi ce contexte
 // (strpat.go). gopher-lua ne bornant pas la mémoire, un chien de garde surveille
 // le tas du processus (voir watchHeap).
