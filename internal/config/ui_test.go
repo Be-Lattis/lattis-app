@@ -95,3 +95,31 @@ func TestThemeSettings(t *testing.T) {
 		t.Fatalf("ui.theme imposé = %+v", s)
 	}
 }
+
+// Les autres couleurs des palettes (Accent 3 à 6, Texte 2, Arrière-plan 2)
+// sont facultatives, mais valides quand elles sont données.
+func TestThemeAccentsSetting(t *testing.T) {
+	base := func(extra Tree) Tree {
+		m := Tree{"name": "ACME", "table": "#0b5394", "source": "#e69138"}
+		for k, v := range extra {
+			m[k] = v
+		}
+		return m
+	}
+	for _, ok := range []Tree{base(nil), base(Tree{"accents": []any{"#ff0000", "#00B050"}, "dark": "#1e293b", "light": "#e2e8f0"})} {
+		if err := isTheme(ok); err != nil {
+			t.Errorf("thème refusé : %v (%v)", ok, err)
+		}
+	}
+	for _, bad := range []Tree{
+		base(Tree{"accents": []any{"rouge"}}),
+		base(Tree{"accents": "#ff0000"}),
+		base(Tree{"accents": []any{"#000000", "#000000", "#000000", "#000000", "#000000"}}),
+		base(Tree{"dark": "#12"}),
+		base(Tree{"light": 3}),
+	} {
+		if err := isTheme(bad); err == nil {
+			t.Errorf("thème invalide accepté : %v", bad)
+		}
+	}
+}

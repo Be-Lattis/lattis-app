@@ -56,6 +56,7 @@
 	import { fillSeries, shiftTableColumns } from './fill';
 	import { citeLabel, refMessage, refTarget, type Citation, type KeyRow } from './reflink';
 	import { gridPalette } from './theme';
+	import { paint as themed } from './colors';
 	import { tableTheme } from './theme.svelte.js';
 	import {
 		condArgs,
@@ -2594,7 +2595,7 @@
 						const hs = single ? bandStyle(e, i, i) : styleAt(r, c, e);
 						if (hs && !single) borders(hs, x, y, cw, rh(r));
 						if (hs?.bg) {
-							ctx.fillStyle = hs.bg;
+							ctx.fillStyle = themed(hs.bg);
 							ctx.fillRect(x, y, cw, rh(r));
 						}
 						if (hs?.nt && !single) noteCorner(x + cw, y, hs);
@@ -2623,7 +2624,7 @@
 					const cf = cfAt(r, c, { v, text: row.text[i] ?? '', error: !!bad }, own ? { rules: own, loc: { k: 'tbl', t: e.t.id, c: i }, mark: (_, k) => !!row.marks?.has(i * 1000 + k) } : undefined);
 					const cs = resolveStyle(styleAt(r, c, e), cf?.style);
 					if (cs?.bg) {
-						ctx.fillStyle = cs.bg;
+						ctx.fillStyle = themed(cs.bg);
 						ctx.fillRect(x, y, cw, rh(r));
 					}
 					if (r === hoverLocked && row.locked) {
@@ -2687,7 +2688,7 @@
 			const fs = resolveStyle(styleAt(r, c, undefined), cf?.style);
 			if (!fs && !cf?.bar) return;
 			if (fs?.bg) {
-				ctx.fillStyle = fs.bg;
+				ctx.fillStyle = themed(fs.bg);
 				ctx.fillRect(cx(c), ry(r), cax().size(c), rh(r));
 			}
 			if (cf?.bar) drawBar(cf.bar, cx(c), ry(r), cax().size(c), rh(r), `f${r},${c}`, r, c);
@@ -3523,7 +3524,7 @@
 			const gh = rspan(g.row, gr1);
 			if (gw <= 0 || gh <= 0) continue;
 			// Le fond couvre le quadrillage à l'intérieur de la fusion seulement.
-			ctx.fillStyle = st?.bg ?? C.bg;
+			ctx.fillStyle = themed(st?.bg) ?? C.bg;
 			ctx.fillRect(Math.round(x), Math.round(y), gw - 1, gh - 1);
 			// Dans la sélection (sauf la fusion active) : surlignée comme les autres
 			// cellules ; traversée par des lignes ou colonnes entières, sur leur
@@ -3575,7 +3576,7 @@
 				// Aspect d'un en-tête (fond, quadrillage, gras), sous la mise en
 				// forme posée par le ruban sur ses cellules (fond, bordures, police…).
 				const st = bandStyle(e, s.i0, s.i1);
-				ctx.fillStyle = st?.bg ?? (e.t.query ? C.linkHead : C.head);
+				ctx.fillStyle = themed(st?.bg) ?? (e.t.query ? C.linkHead : C.head);
 				ctx.fillRect(x, y, sw, rh(r));
 				// Dans la sélection (sauf la cellule active) : surlignée comme l'en-tête.
 				if (many && r >= s0 && r <= s1 && b >= k0 && a <= k1 && !(ar.r0 === r && ar.c0 === a)) {
@@ -3606,7 +3607,7 @@
 		ctx.fillStyle = e.t.query ? C.linkHead : C.head;
 		ctx.fillRect(x, y, w, rh(hr - 1));
 		if (hs?.bg) {
-			ctx.fillStyle = hs.bg;
+			ctx.fillStyle = themed(hs.bg);
 			ctx.fillRect(x, y, w, rh(hr - 1));
 		}
 		// Partie de la bande : surlignée quand sa ligne est dans la sélection (la
@@ -3695,7 +3696,7 @@
 		ctx.rect(x, y, Math.max(0, w - right), h);
 		ctx.clip();
 		ctx.font = (hs?.i ? 'italic ' : '') + FONT_BOLD;
-		ctx.fillStyle = hs?.fg ?? color;
+		ctx.fillStyle = themed(hs?.fg) ?? color;
 		const al = hs?.al ?? align;
 		ctx.textAlign = al;
 		ctx.textBaseline = 'middle';
@@ -4067,8 +4068,8 @@
 		const Y1 = Math.round(y + h) - 0.5;
 		let list = pendingBorders;
 		if (st.bc) {
-			list = colorBorders.get(st.bc) ?? [];
-			colorBorders.set(st.bc, list);
+			list = colorBorders.get(themed(st.bc)) ?? [];
+			colorBorders.set(themed(st.bc), list);
 		}
 		if (st.bt) list.push(X0 - 0.5, Y0, X1 + 0.5, Y0);
 		if (st.bb) list.push(X0 - 0.5, Y1, X1 + 0.5, Y1);
@@ -4148,7 +4149,7 @@
 		ctx.font = fancy ? cellFont(st) : (st?.i ? 'italic ' : '') + (st?.b ? FONT_BOLD : FONT);
 		ctx.textAlign = align;
 		ctx.textBaseline = 'middle';
-		ctx.fillStyle = st?.fg ?? color;
+		ctx.fillStyle = themed(st?.fg) ?? color;
 		const tx = align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2;
 		const px = fontPx(st?.fs);
 		const lh = lineHeight(px);

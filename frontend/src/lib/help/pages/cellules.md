@@ -6,6 +6,17 @@ Les commandes du ruban suivent celles d'Excel, aux mêmes places. Elles s'appliq
 
 Accueil › Police, Alignement et Nombre mettent en forme la sélection ; le petit lanceur dans le coin de chaque groupe, ou `Ctrl+1`, ouvre la boîte **Format de cellule** (nombre, alignement, police, bordure, remplissage). Cliquer sur l'alignement déjà choisi (Gauche, Centrer, Droite) revient à l'alignement standard, comme dans Excel.
 
+## Couleurs de police et de remplissage
+
+Accueil › Couleur de police et Couleur de remplissage (Surlignage dans un Document) : le bouton pose la dernière couleur choisie, la flèche ▾ ouvre la palette, comme dans Excel.
+
+- **Couleurs du thème** : les dix couleurs du thème du classeur (Arrière-plan 1 et Texte 1, le blanc et le noir ; Arrière-plan 2 et Texte 2 ; Accent 1 à 6, dont la couleur des tableaux et celle des sources externes), et sous chacune cinq variantes plus claires ou plus foncées. Une couleur prise ici **suit le thème** : changer de thème (Affichage › Thème) recolore ces cellules.
+- **Couleurs standard** : rouge foncé, rouge, orange, jaune, vert clair, vert, bleu clair, bleu, bleu foncé et violet, les mêmes quel que soit le thème.
+- **Couleurs récentes** : celles choisies par « Autres couleurs… » sur ce poste.
+- **Aucun remplissage** ou **Automatique** retire la couleur ; **Autres couleurs…** en choisit une librement.
+
+L'infobulle de chaque pastille donne son nom (« Vert, Accent 1, plus clair 40 % »). Au clavier, les flèches parcourent les pastilles et `Entrée` choisit. La même palette sert dans Format de cellule (`Ctrl+1`) et dans la mise en forme conditionnelle. À l'export Excel ou OpenDocument, les couleurs du thème sont écrites telles qu'elles s'affichent.
+
 Accueil › Édition › Effacer retire les formats, le contenu (`Suppr`) ou la note de la sélection. Remplissage recopie la première ligne vers le bas (`Ctrl+D`) ou la première colonne vers la droite (`Ctrl+R`).
 
 Accueil › Mettre sous forme de tableau (`Ctrl+L`) fait un tableau du bloc de cellules libres de la cellule active, sa première ligne donnant les en-têtes.
@@ -58,7 +69,8 @@ Le réglage appartient à la feuille et s'enregistre avec le classeur.
 
 Affichage › Thème choisit la couleur des tableaux du classeur : celle des tableaux ordinaires (vert par défaut) et celle des tableaux chargés par une source externe ou une requête (bleu par défaut). Chaque thème du menu montre ses deux couleurs ; l'en-tête, son texte, le cadre, les icônes et la pastille du nom en sont tirés, avec un texte toujours lisible sur l'en-tête.
 
-- **Personnaliser…** : deux couleurs au choix, avec un aperçu immédiat dans la grille ; **Ajouter à mes thèmes** le garde dans la liste pour vos autres classeurs (il se retire depuis la même fenêtre).
+- **Personnaliser…** : deux couleurs au choix, avec un aperçu immédiat dans la grille, puis les autres couleurs des palettes (Accent 3 à 6, Texte 2, Arrière-plan 2), tirées des deux premières si vous n'y touchez pas ; **Ajouter à mes thèmes** le garde dans la liste pour vos autres classeurs (il se retire depuis la même fenêtre).
+- Chaque thème a ses **couleurs de palette** (voir Couleurs de police et de remplissage) : les cellules colorées avec une couleur du thème changent avec lui. Un classeur sans thème propre garde le thème par défaut dès qu'on y pose une couleur du thème, pour qu'elle reste la même chez un collègue.
 - Le thème s'enregistre avec le classeur (`Ctrl+Z` l'annule) : un collègue l'ouvre avec les mêmes couleurs, même s'il n'a pas ce thème. Un classeur partagé sur un Serveur Lattis le publie avec sa mise en page.
 - Un classeur qui n'a pas choisi de thème (classeur neuf, ou d'avant les thèmes) prend le **thème par défaut** de Fichier › Paramètres › Affichage.
 

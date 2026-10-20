@@ -48,6 +48,10 @@ type fmts struct {
 	list  []xfmt
 	idx   map[xfmt]int32
 	dated map[[2]int32]int32
+	// colors : couleurs du thème du classeur (canvas.ThemeColors), qui
+	// résolvent les couleurs prises dans le thème (« theme:accent1:+40 ») ;
+	// nil : celles du thème par défaut.
+	colors map[string]string
 }
 
 func newFmts() *fmts {
@@ -88,6 +92,12 @@ func (f *fmts) of(layers ...canvas.Style) int32 {
 	for _, l := range layers {
 		for k, v := range l {
 			st[k] = v
+		}
+	}
+	// Couleurs du thème écrites résolues (#rrggbb), comme à l'écran.
+	for _, k := range [...]string{"fg", "bg", "bc"} {
+		if s, ok := st[k].(string); ok && canvas.IsThemeRef(s) {
+			st[k] = canvas.ResolveColor(s, f.colors)
 		}
 	}
 	return f.id(toXfmt(st))

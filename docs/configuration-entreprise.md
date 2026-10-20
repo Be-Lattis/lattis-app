@@ -64,7 +64,7 @@ Le thème choisi dans Affichage › Thème est enregistré avec le classeur. La 
 | Clé | Rôle | Défaut |
 |---|---|---|
 | `ui.theme` | identifiant du thème par défaut : un prédéfini (`vert-bleu`, `bleu-orange`, `violet-sarcelle`, `sarcelle-violet`, `gris-bleu`, `orange-bleu`, `bordeaux-gris`) ou une clé de `ui.themes` | `vert-bleu` |
-| `ui.themes.<id>` | thème proposé : `name`, et deux couleurs `#rrggbb` : `table` (tableaux ordinaires) et `source` (tableaux d'une source externe) ; les nuances s'en déduisent | aucun |
+| `ui.themes.<id>` | thème proposé : `name`, et deux couleurs `#rrggbb` : `table` (tableaux ordinaires) et `source` (tableaux d'une source externe) ; les nuances s'en déduisent. En option, les autres couleurs des palettes de police et de remplissage : `accents` (Accent 3 à 6, quatre `#rrggbb` au plus), `dark` (Texte 2) et `light` (Arrière-plan 2) ; absentes, elles se déduisent des deux bases | aucun |
 | `ui.builtinThemes` | proposer les thèmes prédéfinis ; `false` : seulement ceux de `ui.themes` | `true` |
 
 ```json

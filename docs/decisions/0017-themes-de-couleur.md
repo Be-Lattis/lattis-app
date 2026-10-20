@@ -26,8 +26,36 @@ Les objets de la configuration se fusionnant couche par couche, l'organisation f
 - **Fichier › Paramètres › Affichage** : le thème par défaut, parmi les thèmes proposés.
 - **Scripts et MCP** : `doc.theme`, `doc.set_theme(table, source, name)` (sans couleurs : retour au défaut).
 
+## Extension : couleurs du thème dans les palettes (20/10/2026)
+
+Demande de Louis : « Améliore les palettes de couleurs qu'il y a dans le surlignement et dans la mise en couleur du texte […] Essaye de travailler comme sur Excel avec des gradients. On a quelques couleurs de base liées au thème et tout un gradient qui leur est associé », puis « les classiques rouge, orange, vert doivent être partout ». Code : `frontend/src/lib/grid/colors.ts`, `ColorPalette.svelte`, `ColorButton.svelte`, `theme.ts` (`themeColors`, `themeExtras`), `internal/canvas/themecolor.go`, `internal/transfer/exportstyle.go` ; essais : `grid/colors.test.ts`, `canvas/themecolor_test.go`, `transfer/themecolor_test.go`, `config/ui_test.go`.
+
+**Dix couleurs par thème, comme Excel.** Arrière-plan 1 et Texte 1 (blanc et noir, fixes), Arrière-plan 2 et Texte 2 (`light`, `dark`), Accent 1 et 2 (les deux bases `table` et `source`), Accent 3 à 6 (`accents`, quatre au plus). Les nouvelles clés sont facultatives partout (thème du classeur, `ui.themes.<id>` ; `doc.set_theme` ne prend que les deux bases) : absentes, elles se déduisent des deux bases (accents à 120° et 240° de la teinte de l'une et de l'autre, saturation 45–75 %, luminosité 45 % ; Texte 2 très foncé dans la teinte de la source ; Arrière-plan 2 très pâle dans celle des tableaux), et un classeur qui a gardé un thème prédéfini sans accents (d'avant cette extension) reprend ceux du thème prédéfini aux mêmes bases. Aucune migration : le JSON du thème gagne des champs.
+
+| Thème | Accent 3 | Accent 4 | Accent 5 | Accent 6 | Texte 2 | Arrière-plan 2 |
+|---|---|---|---|---|---|---|
+| Vert et bleu | `#e07b24` orange | `#7b4fb0` violet | `#c99a1e` or | `#b83b5e` framboise | `#34495e` | `#e8eeea` |
+| Bleu et orange | `#16a34a` vert | `#9333ea` violet | `#ca8a04` or | `#db2777` rose | `#1e293b` | `#e2e8f0` |
+| Violet et sarcelle | `#f59e0b` ambre | `#e11d48` rouge | `#2563eb` bleu | `#65a30d` vert | `#3b3355` | `#ede9f6` |
+| Sarcelle et violet | `#f59e0b` | `#e11d48` | `#2563eb` | `#65a30d` | `#134e4a` | `#e6f2f1` |
+| Gris et bleu | `#0d9488` sarcelle | `#d97706` orange | `#dc2626` rouge | `#7c3aed` violet | `#1e293b` | `#e2e8f0` |
+| Orange et bleu | `#15803d` vert | `#a16207` or | `#7c3aed` violet | `#be123c` rouge | `#3b2f2a` | `#f3ebe5` |
+| Bordeaux et gris | `#b45309` ambre | `#0f766e` sarcelle | `#1d4ed8` bleu | `#6d28d9` violet | `#3f1d2b` | `#efe7ea` |
+
+Les accents sont assez foncés pour une police lisible sur le blanc (luminosité < 62 %) et distincts dans chaque thème. La liste est dupliquée en Go (`builtinThemes`) pour l'export ; `TestBuiltinThemesMatchFrontend` relit `theme.ts` et vérifie qu'elles sont égales.
+
+**Palette (police, remplissage, bordure).** « Couleurs du thème » : une ligne des dix couleurs, puis cinq lignes de variantes, colonne par colonne, choisies selon la luminosité L comme Excel : plus clair 80, 60, 40 % et plus foncé 25, 50 % en général ; blanc : plus foncé 5 à 50 % ; noir : plus clair 50 à 5 % ; couleur très claire (L > 0,8) : plus foncé 10 à 90 % ; très foncée (L < 0,2) : plus clair 90 à 10 %. Le calcul est celui d'Excel sur la luminosité TSL : plus clair de t, L + (1 − L)·t ; plus foncé de s, L·(1 − s). Puis « Couleurs standard », les dix d'Excel, fixes (rouge, orange et vert restent toujours proposés, quel que soit le thème), « Couleurs récentes » (celles d'« Autres couleurs… », dix au plus, propres au poste : `localStorage`), Aucun remplissage ou Automatique, et Autres couleurs… (sélecteur du système). Infobulles nommées (« Vert, Accent 1, plus clair 40 % »), flèches, Début, Fin et Entrée au clavier. La même palette sert dans le ruban (Accueil, et l'onglet Document), Format de cellule et la mise en forme conditionnelle (bouton à pastille `ColorButton`).
+
+**Une couleur du thème est une référence au thème.** Le style garde `theme:<emplacement>[:<±pourcentage>]` (`theme:accent1`, `theme:accent1:+40`, `theme:dk2:-25` ; emplacements `lt1`, `dk1`, `lt2`, `dk2`, `accent1` à `accent6`) au lieu de `#rrggbb`, dans `fg`, `bg` et `bc` : changer le thème du classeur recolore ces cellules, comme Excel. Les couleurs standard et « Autres couleurs… » restent `#rrggbb` ; les anciens classeurs ne changent pas. La résolution se fait au dessin (`paint`, la grille, les aperçus de Format de cellule et de la mise en forme conditionnelle, le bouton de dernière couleur du ruban) avec le thème appliqué. Copier-coller entre classeurs garde la référence (comme Excel) : la couleur prend le thème du classeur d'arrivée. Une page (Document, éditeur de texte) reçoit la couleur résolue, `#rrggbb`, car son HTML n'a pas de thème.
+
+**Un classeur qui utilise une couleur du thème garde son thème.** Un classeur sans thème propre suit le défaut du poste ; dès qu'une couleur du thème y est posée depuis le ruban, le thème appliqué y est enregistré (comme un fichier Excel porte toujours son thème), pour que la couleur soit la même chez un collègue et à l'export. Les références posées autrement (Format de cellule, mise en forme conditionnelle, scripts) dans un classeur sans thème se résolvent avec le défaut du poste à l'écran et « Vert et bleu » à l'export.
+
+**Export.** L'export Excel et OpenDocument écrit la couleur résolue `#rrggbb` avec le thème du classeur (`canvas.ThemeColors`, `ResolveColor`, mêmes calculs que l'interface, vérifiés par les mêmes valeurs dans les deux suites d'essais), pas l'indice de thème d'Excel : le fichier s'affiche pareil partout, mais Excel n'y voit pas une couleur de thème. Les scripts et le MCP acceptent les références (`color`, `fill`, `border_color`).
+
 ## Laissé de côté
 
-- Un thème « à la Excel » plus large (polices, couleurs de graphiques, styles de cellules) : seules les couleurs des tableaux sont concernées.
+- Un thème « à la Excel » plus large (polices, couleurs de graphiques, styles de cellules) : seules les couleurs des tableaux et celles des palettes sont concernées.
+- L'export des couleurs du thème en couleurs de thème d'Excel (`theme="4" tint="0.4"` et un `theme1.xml` complet) : couleurs résolues seulement.
+- Les barres de données et nuances de couleurs de la mise en forme conditionnelle gardent leurs couleurs fixes.
 - L'interdiction des thèmes personnels par l'organisation (une clé `ui.userThemes` pourrait venir) ; aujourd'hui elle peut seulement ne pas proposer les prédéfinis et imposer le défaut.
 - Les panneaux et boîtes de l'interface (volet TCD, filtres…) gardent l'accent vert de l'application.

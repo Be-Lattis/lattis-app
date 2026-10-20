@@ -102,33 +102,6 @@ export function tipOf(c: { label: string; hint?: string; run?: unknown }, disabl
 	return c.run || !disabled ? c.label : `${c.label} : ouvrez ou créez un classeur`;
 }
 
-/** Noms des teintes de la palette du ruban (lecteurs d'écran, infobulles). */
-export const COLOR_NAMES: Record<string, string> = {
-	'#000000': 'Noir',
-	'#404040': 'Gris foncé',
-	'#7f7f7f': 'Gris',
-	'#bfbfbf': 'Gris clair',
-	'#ffffff': 'Blanc',
-	'#c00000': 'Rouge foncé',
-	'#ff0000': 'Rouge',
-	'#ffc000': 'Orange',
-	'#ffff00': 'Jaune',
-	'#92d050': 'Vert clair',
-	'#00b050': 'Vert',
-	'#00b0f0': 'Bleu clair',
-	'#0070c0': 'Bleu',
-	'#002060': 'Bleu foncé',
-	'#7030a0': 'Violet',
-	'#ffc7ce': 'Rose pâle',
-	'#fff2cc': 'Jaune pâle',
-	'#c6efce': 'Vert pâle',
-	'#ddebf7': 'Bleu pâle',
-	'#e4dfec': 'Mauve pâle'
-};
-
-/** Couleurs de la palette, dans l'ordre d'affichage. */
-export const COLORS = Object.keys(COLOR_NAMES);
-
 /** Alignement horizontal : un bouton enfoncé ramène au standard, comme Excel. */
 export function alignPatch(current: string | undefined, al: 'left' | 'center' | 'right'): { al: string | null } {
 	return { al: current === al ? null : al };

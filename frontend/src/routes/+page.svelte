@@ -50,7 +50,8 @@
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
 	import { htmlTabsEnabled, loadSettings, mcpAvailable, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
 	import ThemeDialog from '#lib/shell/ThemeDialog.svelte';
-	import { resolveTheme, themeCatalog, themeId, workbookTheme, type WorkbookTheme } from '#lib/grid/theme.js';
+	import { resolveTheme, themeCatalog, themeExtras, themeId, workbookTheme, type WorkbookTheme } from '#lib/grid/theme.js';
+	import { isThemeRef } from '#lib/grid/colors.js';
 	import { applyTheme } from '#lib/grid/theme.svelte.js';
 	import { listenExternal } from '#lib/ai/external.svelte.js';
 	import { isWeb } from '#lib/web/platform.js';
@@ -2071,6 +2072,18 @@
 		}
 	}
 
+	// Une couleur du thème posée dans un classeur sans thème propre : le thème
+	// appliqué (défaut du poste) y est gardé, pour que la couleur reste la même
+	// ailleurs et à l'export (décision 0017).
+	function keepThemeFor(patch: Record<string, unknown>) {
+		if (mode !== 'doc' || docState.theme || docState.readOnly || layoutShared || activeDoc) return;
+		if (!['fg', 'bg', 'bc'].some((k) => isThemeRef(patch[k]))) return;
+		const c = bookTheme.colors;
+		DocumentService.SetTheme({ id: bookTheme.id ?? undefined, name: bookTheme.name, table: c.accent1, source: c.accent2, accents: [c.accent3, c.accent4, c.accent5, c.accent6], dark: c.dk2, light: c.lt2 })
+			.then((d) => (docState = d))
+			.catch(() => {});
+	}
+
 	function chooseTheme(id: string) {
 		if (id === 'custom') {
 			themeOpen = true;
@@ -2086,7 +2099,7 @@
 		if (save) {
 			const id = themeId(t.name, themeCat.map((x) => x.id));
 			try {
-				await setSetting(`ui.themes.${id}`, { name: t.name, table: t.table, source: t.source });
+				await setSetting(`ui.themes.${id}`, { name: t.name, table: t.table, source: t.source, ...themeExtras(t) });
 				t = { ...t, id };
 			} catch (e) {
 				notice = err(e);
@@ -2269,7 +2282,7 @@
 		onsort={mode === 'doc' ? (desc) => sheet?.sortActive(desc) : undefined}
 		onsortcustom={mode === 'doc' ? () => sheet?.sortCustomActive() : undefined}
 		oncells={mode === 'doc' ? (op) => sheet?.cellsActive(op) : undefined}
-		onstyle={mode === 'doc' ? (patch) => (activeDoc ? docPage?.applyStyle(patch) : sheet?.applyStyle(patch)) : undefined}
+		onstyle={mode === 'doc' ? (patch) => (keepThemeFor(patch), activeDoc ? docPage?.applyStyle(patch) : sheet?.applyStyle(patch)) : undefined}
 		onfind={mode === 'doc' ? (replace) => sheet?.openFinder(replace) : undefined}
 		onrules={mode === 'doc' ? (x, y) => sheet?.rulesMenu(x, y) : undefined}
 		onfilter={mode === 'doc' ? (w) => (w === 'clear' ? sheet?.editActive('clearFilters') : sheet?.filterActive(w === 'errors')) : undefined}
@@ -2800,7 +2813,7 @@
 	{/if}
 	{#if themeOpen}
 		<ThemeDialog
-			initial={{ id: bookTheme.id ?? undefined, name: bookTheme.name, table: bookTheme.table.base, source: bookTheme.source.base }}
+			initial={{ id: bookTheme.id ?? undefined, name: bookTheme.name, table: bookTheme.table.base, source: bookTheme.source.base, accents: [bookTheme.colors.accent3, bookTheme.colors.accent4, bookTheme.colors.accent5, bookTheme.colors.accent6], dark: bookTheme.colors.dk2, light: bookTheme.colors.lt2 }}
 			mine={themeCat.filter((t) => t.origin === 'user')}
 			onpreview={(t) => (themePreview = t)}
 			onapply={applyCustomTheme}

@@ -12,6 +12,9 @@
 	import { categoryOf, DATE_FORMATS, formatCell, formatPatch, TIME_FORMATS, type Category } from './numfmt';
 	import { cellFont, DEFAULT_PT, FONTS, SIZES } from './textwrap';
 	import type { CellStyle } from './style';
+	import ColorPalette from './ColorPalette.svelte';
+	import { resolveColor } from './colors';
+	import { tableTheme } from './theme.svelte.js';
 
 	interface Props {
 		style: CellStyle;
@@ -44,12 +47,8 @@
 		{ id: 'time', label: 'Heure', note: 'Une heure (ou une date et une heure) affichée selon le modèle choisi.' },
 		{ id: 'text', label: 'Texte', note: 'Le contenu est affiché tel qu’il est saisi.' }
 	];
-	const COLORS = [
-		'#000000', '#404040', '#7f7f7f', '#bfbfbf', '#ffffff',
-		'#c00000', '#ff0000', '#ffc000', '#ffff00', '#92d050',
-		'#00b050', '#00b0f0', '#0070c0', '#002060', '#7030a0',
-		'#ffc7ce', '#fff2cc', '#c6efce', '#ddebf7', '#e4dfec'
-	];
+	/** Couleur affichée (référence au thème résolue). */
+	const shown = (c: string) => String(resolveColor(c, tableTheme.current.colors));
 	const SAMPLE_DATE = '2026-10-16T08:30:00';
 
 	// Valeurs initiales (copiées une fois : le dialogue édite une copie).
@@ -143,15 +142,7 @@
 </script>
 
 {#snippet palette(value: string, set: (c: string) => void, none: string)}
-	<div class="chips">
-		{#each COLORS as c (c)}
-			<button class="chip" class:on={value === c} style:background={c} title={c} aria-label={c} onclick={() => set(c)}></button>
-		{/each}
-	</div>
-	<div class="row">
-		<button class="plain" class:on={!value} onclick={() => set('')}>{none}</button>
-		<label class="row">Autre couleur <input type="color" value={value || '#000000'} onchange={(e) => set((e.currentTarget as HTMLInputElement).value)} /></label>
-	</div>
+	<div class="colors"><ColorPalette {value} {none} onpick={(c) => set(c ?? '')} /></div>
 {/snippet}
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -326,7 +317,7 @@
 						<div
 							class="sample font"
 							style:font={cellFont({ b: weight === 'b' || weight === 'bi', i: weight === 'i' || weight === 'bi', ff: ff === FONTS[0] ? undefined : ff, fs })}
-							style:color={fg || '#1f2328'}
+							style:color={fg ? shown(fg) : '#1f2328'}
 							style:text-decoration={[u ? 'underline' : '', x ? 'line-through' : ''].join(' ').trim() || 'none'}
 						>
 							AaBbCcYyZz
@@ -387,7 +378,7 @@
 					'Aucun remplissage'
 				)}
 				<div class="lbl">Aperçu</div>
-				<div class="sample" style:background={bg || '#fff'}>&nbsp;</div>
+				<div class="sample" style:background={bg ? shown(bg) : '#fff'}>&nbsp;</div>
 			{/if}
 		</div>
 		<div class="foot">
@@ -558,21 +549,11 @@
 		border: 1px solid #c9cdd2;
 		border-radius: 3px;
 	}
-	.chips {
-		display: grid;
-		grid-template-columns: repeat(5, 22px);
-		gap: 4px;
-	}
-	.chip {
-		width: 22px;
-		height: 22px;
-		padding: 0;
-		border: 1px solid #c9cdd2;
-		cursor: pointer;
-	}
-	.chip.on,
-	.chip:hover {
-		outline: 2px solid #217346;
+	.colors {
+		width: max-content;
+		padding: 6px;
+		border: 1px solid #e5e7eb;
+		border-radius: 3px;
 	}
 	button.plain {
 		font: inherit;
@@ -585,12 +566,6 @@
 	button.plain.on {
 		background: #d3e7dc;
 		border-color: #8fbc9f;
-	}
-	input[type='color'] {
-		width: 28px;
-		height: 20px;
-		padding: 0;
-		border: none;
 	}
 	.edges {
 		position: relative;

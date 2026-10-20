@@ -30,8 +30,20 @@ export interface Family {
 	strong: string;
 }
 
+/**
+ * Couleurs du thème au-delà des deux bases, comme Excel (facultatives :
+ * absentes, themeColors les déduit des deux bases). accents : Accent 3 à
+ * Accent 6 (Accent 1 et 2 sont table et source) ; dark et light : Texte 2
+ * et Arrière-plan 2 (Texte 1 et Arrière-plan 1 sont le noir et le blanc).
+ */
+export interface ThemeExtras {
+	accents?: string[] | null;
+	dark?: string;
+	light?: string;
+}
+
 /** Thème proposé (prédéfini, de l'organisation ou de l'utilisateur). */
-export interface ThemeDef {
+export interface ThemeDef extends ThemeExtras {
 	id: string;
 	name: string;
 	/** Couleur de base des tableaux ordinaires (#rrggbb). */
@@ -42,32 +54,40 @@ export interface ThemeDef {
 }
 
 /** Thème gardé dans un classeur (canvas.Theme). */
-export interface WorkbookTheme {
+export interface WorkbookTheme extends ThemeExtras {
 	id?: string;
 	name: string;
 	table: string;
 	source: string;
 }
 
-/** Thème appliqué : ses deux familles. */
+/** Emplacements des couleurs du thème (ordre des colonnes de la palette, comme Excel). */
+export const THEME_SLOTS = ['lt1', 'dk1', 'lt2', 'dk2', 'accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6'] as const;
+export type ThemeSlot = (typeof THEME_SLOTS)[number];
+/** Couleurs du thème (#rrggbb), par emplacement. */
+export type ThemeColors = Record<ThemeSlot, string>;
+
+/** Thème appliqué : ses deux familles et ses dix couleurs. */
 export interface ResolvedTheme {
 	/** Identifiant du thème de la liste qu'il est (coché dans le menu), null : couleurs personnalisées. */
 	id: string | null;
 	name: string;
 	table: Family;
 	source: Family;
+	colors: ThemeColors;
 }
 
 export const DEFAULT_THEME = 'vert-bleu';
 
+// Une ligne par thème (lue aussi par internal/canvas/themecolor_test.go).
 export const BUILTIN_THEMES: ThemeDef[] = [
-	{ id: 'vert-bleu', name: 'Vert et bleu', table: '#2f7d55', source: '#3b6fb6', origin: 'builtin' },
-	{ id: 'bleu-orange', name: 'Bleu et orange', table: '#2563eb', source: '#ea580c', origin: 'builtin' },
-	{ id: 'violet-sarcelle', name: 'Violet et sarcelle', table: '#7c3aed', source: '#0d9488', origin: 'builtin' },
-	{ id: 'sarcelle-violet', name: 'Sarcelle et violet', table: '#0d9488', source: '#7c3aed', origin: 'builtin' },
-	{ id: 'gris-bleu', name: 'Gris et bleu', table: '#64748b', source: '#2563eb', origin: 'builtin' },
-	{ id: 'orange-bleu', name: 'Orange et bleu', table: '#c2410c', source: '#2563eb', origin: 'builtin' },
-	{ id: 'bordeaux-gris', name: 'Bordeaux et gris', table: '#9f1239', source: '#64748b', origin: 'builtin' }
+	{ id: 'vert-bleu', name: 'Vert et bleu', table: '#2f7d55', source: '#3b6fb6', accents: ['#e07b24', '#7b4fb0', '#c99a1e', '#b83b5e'], dark: '#34495e', light: '#e8eeea', origin: 'builtin' },
+	{ id: 'bleu-orange', name: 'Bleu et orange', table: '#2563eb', source: '#ea580c', accents: ['#16a34a', '#9333ea', '#ca8a04', '#db2777'], dark: '#1e293b', light: '#e2e8f0', origin: 'builtin' },
+	{ id: 'violet-sarcelle', name: 'Violet et sarcelle', table: '#7c3aed', source: '#0d9488', accents: ['#f59e0b', '#e11d48', '#2563eb', '#65a30d'], dark: '#3b3355', light: '#ede9f6', origin: 'builtin' },
+	{ id: 'sarcelle-violet', name: 'Sarcelle et violet', table: '#0d9488', source: '#7c3aed', accents: ['#f59e0b', '#e11d48', '#2563eb', '#65a30d'], dark: '#134e4a', light: '#e6f2f1', origin: 'builtin' },
+	{ id: 'gris-bleu', name: 'Gris et bleu', table: '#64748b', source: '#2563eb', accents: ['#0d9488', '#d97706', '#dc2626', '#7c3aed'], dark: '#1e293b', light: '#e2e8f0', origin: 'builtin' },
+	{ id: 'orange-bleu', name: 'Orange et bleu', table: '#c2410c', source: '#2563eb', accents: ['#15803d', '#a16207', '#7c3aed', '#be123c'], dark: '#3b2f2a', light: '#f3ebe5', origin: 'builtin' },
+	{ id: 'bordeaux-gris', name: 'Bordeaux et gris', table: '#9f1239', source: '#64748b', accents: ['#b45309', '#0f766e', '#1d4ed8', '#6d28d9'], dark: '#3f1d2b', light: '#efe7ea', origin: 'builtin' }
 ];
 
 // Les couleurs d'avant les thèmes, gardées à l'identique pour « Vert et bleu ».
@@ -154,6 +174,48 @@ export function family(base: string): Family {
 	};
 }
 
+// --- Couleurs du thème (palettes de couleur) ----------------------------------
+
+/** Accents, Texte 2 et Arrière-plan 2 valides d'un thème (les autres sont écartés). */
+export function themeExtras(t: unknown): ThemeExtras {
+	const o = (t ?? {}) as Record<string, unknown>;
+	const out: ThemeExtras = {};
+	if (Array.isArray(o.accents) && o.accents.length && o.accents.length <= 4 && o.accents.every(isHex)) out.accents = o.accents.map((c: string) => c.toLowerCase());
+	if (isHex(o.dark)) out.dark = o.dark.toLowerCase();
+	if (isHex(o.light)) out.light = o.light.toLowerCase();
+	return out;
+}
+
+/**
+ * Les dix couleurs d'un thème. Ce qu'il ne donne pas se déduit de ses deux
+ * bases (même calcul que canvas.ThemeColors) : accents 3 à 6 à 120° de
+ * l'une et de l'autre, Texte 2 très foncé dans la teinte de la source,
+ * Arrière-plan 2 très pâle dans celle des tableaux.
+ */
+export function themeColors(t: { table: string; source: string } & ThemeExtras): ThemeColors {
+	const table = isHex(t.table) ? t.table.toLowerCase() : '#2f7d55';
+	const source = isHex(t.source) ? t.source.toLowerCase() : '#3b6fb6';
+	const [h1, s1] = toHsl(table);
+	const [h2, s2] = toHsl(source);
+	const s = clamp(Math.max(s1, s2), 0.45, 0.75);
+	const turn = (h: number, d: number) => fromHsl((((h + d) % 360) + 360) % 360, s, 0.45);
+	const derived = [turn(h1, 120), turn(h2, 120), turn(h1, 240), turn(h2, 240)];
+	const own = t.accents?.filter(isHex) ?? [];
+	const acc = derived.map((d, i) => own[i]?.toLowerCase() ?? d);
+	return {
+		lt1: '#ffffff',
+		dk1: '#000000',
+		lt2: isHex(t.light) ? t.light.toLowerCase() : fromHsl(h1, Math.min(s1, 0.25), 0.93),
+		dk2: isHex(t.dark) ? t.dark.toLowerCase() : fromHsl(h2, Math.min(s2, 0.3), 0.25),
+		accent1: table,
+		accent2: source,
+		accent3: acc[0],
+		accent4: acc[1],
+		accent5: acc[2],
+		accent6: acc[3]
+	};
+}
+
 // --- Liste et résolution ------------------------------------------------------
 
 /** Thèmes proposés : prédéfinis (sauf ui.builtinThemes = false), puis ceux de l'organisation, puis ceux de l'utilisateur. */
@@ -166,7 +228,7 @@ export function themeCatalog(list: readonly SettingState[]): ThemeDef[] {
 	for (const [id, v] of Object.entries(raw)) {
 		const t = v as Partial<WorkbookTheme> | null;
 		if (!t || !isHex(t.table) || !isHex(t.source) || typeof t.name !== 'string' || !t.name.trim()) continue;
-		added.push({ id, name: t.name.trim(), table: t.table.toLowerCase(), source: t.source.toLowerCase(), origin: managed.has(id) ? 'org' : 'user' });
+		added.push({ id, name: t.name.trim(), table: t.table.toLowerCase(), source: t.source.toLowerCase(), ...themeExtras(t), origin: managed.has(id) ? 'org' : 'user' });
 	}
 	const rank = (t: ThemeDef) => (t.origin === 'org' ? 0 : 1);
 	added.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'fr'));
@@ -188,15 +250,18 @@ export function resolveTheme(wb: WorkbookTheme | null | undefined, list: readonl
 	if (wb && isHex(wb.table) && isHex(wb.source)) {
 		// Coché dans le menu : le thème de la liste aux mêmes couleurs (de même identifiant d'abord).
 		const match = catalog.find((t) => t.id === wb.id && same(t.table, wb.table) && same(t.source, wb.source)) ?? catalog.find((t) => same(t.table, wb.table) && same(t.source, wb.source));
-		return { id: match?.id ?? null, name: wb.name || match?.name || 'Personnalisé', table: family(wb.table), source: family(wb.source) };
+		// Accents absents (classeur d'avant les palettes) : ceux du thème de la liste aux mêmes couleurs.
+		const own = themeExtras(wb);
+		const extras = own.accents || own.dark || own.light ? own : themeExtras(match);
+		return { id: match?.id ?? null, name: wb.name || match?.name || 'Personnalisé', table: family(wb.table), source: family(wb.source), colors: themeColors({ ...extras, table: wb.table, source: wb.source }) };
 	}
 	const d = defaultTheme(list, catalog);
-	return { id: d.id, name: d.name, table: family(d.table), source: family(d.source) };
+	return { id: d.id, name: d.name, table: family(d.table), source: family(d.source), colors: themeColors(d) };
 }
 
-/** Thème à garder dans le classeur pour un thème de la liste. */
+/** Thème à garder dans le classeur pour un thème de la liste (avec ses accents). */
 export function workbookTheme(t: ThemeDef): WorkbookTheme {
-	return { id: t.id, name: t.name, table: t.table, source: t.source };
+	return { id: t.id, name: t.name, table: t.table, source: t.source, ...themeExtras(t) };
 }
 
 /** Identifiant libre pour un thème de l'utilisateur tiré de son nom (« Mon thème » : mon-theme, mon-theme-2…). */

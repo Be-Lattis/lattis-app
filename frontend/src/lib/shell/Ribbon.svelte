@@ -11,6 +11,9 @@
 	import { reducedMotion } from '#lib/grid/anim.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { dismiss } from '#lib/grid/dismiss.js';
+	import ColorPalette from '#lib/grid/ColorPalette.svelte';
+	import { colorName, resolveColor } from '#lib/grid/colors.js';
+	import { tableTheme } from '#lib/grid/theme.svelte.js';
 	import { clearPatch, type CellStyle } from '#lib/grid/style.js';
 	import { DEFAULT_PT, FONTS, SIZES } from '#lib/grid/textwrap.js';
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
@@ -24,7 +27,7 @@
 	import Submenu from '#lib/ui/Submenu.svelte';
 	import type { RecentFile } from '#bindings/internal/bridge/models.js';
 	import { recentDetail, recentKey, recentLabel, recentRemote } from './doctitle';
-	import { alignPatch, COLOR_NAMES, COLORS, gate, protectedThing, tipOf, type Gated } from './ribbon';
+	import { alignPatch, gate, protectedThing, tipOf, type Gated } from './ribbon';
 	import { COMMAND_TIPS, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
 	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
 	import { cm, FIT_CHOICES, fitLabel, fitted, hasBreaks, MARGIN_LABELS, MARGINS, marginPreset, PAPERS, paperOf, SCALE_CHOICES, scaleLabel, type PageAction, type PageSetup } from './pagesetup';
@@ -250,8 +253,10 @@
 		const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
 		dropMenu = dropMenu?.label === c.label ? null : { label: c.label, x: r.left, y: r.bottom + 2 };
 	}
+	// Dernières couleurs choisies (bouton principal) : #rrggbb ou référence au thème (colors.ts).
 	let fg = $state('#c00000');
-	let bg = $state('#fff2cc');
+	let bg = $state('#ffff00');
+	const shown = (c: string) => String(resolveColor(c, tableTheme.current.colors));
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
 	let fileOpen = $state(false);
 	// Menu Fichier posé sous son onglet, hors de la barre des onglets (qui défile sur un téléphone).
@@ -1352,30 +1357,20 @@
 	{@const kind = c.color!}
 	{@const cur = kind === 'fg' ? fg : bg}
 		<div class="color-cmd">
-			<button class="cmd" disabled={!c.run} onclick={c.run} title={tipOf(c, disabled)} aria-label="{c.label} : {COLOR_NAMES[cur] ?? cur}" data-kt={c.label}>
+			<button class="cmd" disabled={!c.run} onclick={c.run} title="{tipOf(c, disabled)} ({colorName(cur, tableTheme.current.colors)})" aria-label="{c.label} : {colorName(cur, tableTheme.current.colors)}" data-kt={c.label}>
 				<!-- La lettre montre l'effet : couleur du texte, ou fond rempli. -->
 				<span
 					class="swatch-icon"
-					style:color={kind === 'fg' ? fg : '#1f2328'}
-					style:background={kind === 'bg' ? bg : 'transparent'}
+					style:color={kind === 'fg' ? shown(fg) : '#1f2328'}
+					style:background={kind === 'bg' ? shown(bg) : 'transparent'}
 					aria-hidden="true">A</span
 				>
 			</button>
 			<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title="Choisir la couleur" aria-label="{c.label} : choisir la couleur" aria-haspopup="menu" aria-expanded={palette === kind} data-kt="{c.label} ▾">▾</button>
 			{#if palette === kind}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div class="palette" role="menu" aria-label={c.label} style:left="{palettePos.x}px" style:top="{palettePos.y}px" use:dismiss={() => (palette = null)}>
-					<div class="grid" role="none">
-						{#each COLORS as col (col)}
-							<button class="chip" role="menuitem" style:background={col} title={COLOR_NAMES[col]} aria-label={COLOR_NAMES[col]} onclick={() => pick(kind, col)}></button>
-						{/each}
-					</div>
-					{#if kind === 'bg'}<button class="row" role="menuitem" onclick={() => pick('bg', null)}>Aucun remplissage</button>{/if}
-					{#if kind === 'fg'}<button class="row" role="menuitem" onclick={() => pick('fg', null)}>Automatique</button>{/if}
-					<label class="row">
-						Autres couleurs…
-						<input type="color" value={kind === 'fg' ? fg : bg} onchange={(e) => pick(kind, (e.currentTarget as HTMLInputElement).value)} />
-					</label>
+				<div class="palette" role="dialog" data-own-keys aria-label={c.label} style:left="{palettePos.x}px" style:top="{palettePos.y}px" use:dismiss={() => (palette = null)}>
+					<ColorPalette value={cur} none={kind === 'bg' ? 'Aucun remplissage' : 'Automatique'} autofocus onpick={(col) => pick(kind, col)} />
 				</div>
 			{/if}
 		</div>
@@ -2052,46 +2047,6 @@
 		padding: 8px;
 		/* Marge invisible : la palette ne se ferme pas au moindre écart. */
 		outline: 14px solid transparent;
-	}
-	.palette .grid {
-		display: grid;
-		grid-template-columns: repeat(5, 18px);
-		gap: 4px;
-		margin-bottom: 6px;
-	}
-	.chip {
-		width: 18px;
-		height: 18px;
-		padding: 0;
-		border: 1px solid #c9cdd2;
-		cursor: pointer;
-	}
-	.chip:hover {
-		outline: 2px solid #217346;
-	}
-	.palette .row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
-		width: 100%;
-		padding: 4px 2px;
-		font: inherit;
-		font-size: 12px;
-		background: none;
-		border: none;
-		cursor: pointer;
-		white-space: nowrap;
-		text-align: left;
-	}
-	.palette .row:hover {
-		background: #e3efe7;
-	}
-	.palette input[type='color'] {
-		width: 24px;
-		height: 18px;
-		padding: 0;
-		border: none;
 	}
 	.title {
 		position: relative;

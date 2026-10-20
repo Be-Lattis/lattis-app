@@ -1,12 +1,13 @@
 <script lang="ts">
 	// Affichage › Thème › Personnaliser… : deux couleurs (tableaux ordinaires,
-	// sources externes), aperçu en direct dans la grille, appliquées au
-	// classeur ; « Ajouter à mes thèmes » les garde dans les réglages
-	// (ui.themes) pour les autres classeurs.
+	// sources externes), puis les autres couleurs des palettes (Accent 3 à 6,
+	// Texte 2, Arrière-plan 2, déduites des deux premières d'office), aperçu en
+	// direct dans la grille, appliquées au classeur ; « Ajouter à mes thèmes »
+	// les garde dans les réglages (ui.themes) pour les autres classeurs.
 	import { untrack } from 'svelte';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import { modal } from '#lib/ui/focus.js';
-	import { family, type ThemeDef, type WorkbookTheme } from '#lib/grid/theme.js';
+	import { family, themeColors, type ThemeDef, type WorkbookTheme } from '#lib/grid/theme.js';
 
 	interface Props {
 		/** Couleurs de départ (thème du classeur). */
@@ -27,10 +28,23 @@
 	let name = $state(start.id ? `${start.name} (personnalisé)` : start.name || 'Personnalisé');
 	let table = $state(start.table);
 	let source = $state(start.source);
+	const c0 = themeColors(start);
+	let accents = $state([c0.accent3, c0.accent4, c0.accent5, c0.accent6]);
+	let dark = $state(c0.dk2);
+	let light = $state(c0.lt2);
 	let save = $state(false);
 	const t = $derived(family(table));
 	const s = $derived(family(source));
-	const theme = $derived<WorkbookTheme>({ name: name.trim() || 'Personnalisé', table, source });
+	const theme = $derived<WorkbookTheme>({ name: name.trim() || 'Personnalisé', table, source, accents: [...accents], dark, light });
+	const all = $derived(themeColors(theme));
+
+	/** Autres couleurs reprises des deux premières (comme un thème qui ne les donne pas). */
+	function derive() {
+		const d = themeColors({ table, source });
+		accents = [d.accent3, d.accent4, d.accent5, d.accent6];
+		dark = d.dk2;
+		light = d.lt2;
+	}
 
 	$effect(() => onpreview(theme));
 
@@ -52,6 +66,18 @@
 				<input type="color" bind:value={source} />
 				<span>Sources externes</span>
 			</label>
+		</div>
+		<p class="sub">Autres couleurs des palettes (police, remplissage)</p>
+		<div class="row extra">
+			{#each accents as _, i (i)}
+				<label class="pick small" title="Accent {i + 3}"><input type="color" bind:value={accents[i]} /><span>Accent {i + 3}</span></label>
+			{/each}
+			<label class="pick small" title="Texte 2"><input type="color" bind:value={dark} /><span>Texte 2</span></label>
+			<label class="pick small" title="Arrière-plan 2"><input type="color" bind:value={light} /><span>Arrière-plan 2</span></label>
+		</div>
+		<div class="row strip-row">
+			<span class="strip" aria-hidden="true">{#each [all.lt1, all.dk1, all.lt2, all.dk2, all.accent1, all.accent2, all.accent3, all.accent4, all.accent5, all.accent6] as c, i (i)}<i style:background={c}></i>{/each}</span>
+			<button class="link" onclick={derive}>Déduire des deux premières couleurs</button>
 		</div>
 		<div class="preview" aria-hidden="true">
 			{#each [{ f: t, label: 'Ventes', cols: ['Produit', 'Quantité'] }, { f: s, label: 'Clients (requête)', cols: ['Client', 'Ville'] }] as p (p.label)}
@@ -84,7 +110,7 @@
 				{/each}
 			</ul>
 		{/if}
-		<p class="muted">Le thème est enregistré avec le classeur : il s'affiche pareil sur les autres postes. Les nuances (en-tête, texte, bordure) se déduisent des deux couleurs.</p>
+		<p class="muted">Le thème est enregistré avec le classeur : il s'affiche pareil sur les autres postes. Les nuances (en-tête, texte, bordure) se déduisent des deux couleurs ; les cellules colorées avec une couleur du thème changent avec lui.</p>
 		<div class="actions">
 			<button onclick={cancel}>Annuler</button>
 			<button class="primary" onclick={() => onapply(theme, save && !saveLocked)}>Appliquer</button>
@@ -129,6 +155,29 @@
 		align-items: center;
 		gap: 6px;
 		cursor: pointer;
+	}
+	.extra {
+		flex-wrap: wrap;
+		gap: 6px 14px;
+	}
+	.small {
+		font-size: 12px;
+	}
+	.sub {
+		margin: 6px 0 0;
+		font-weight: 600;
+	}
+	.strip-row {
+		align-items: center;
+		justify-content: space-between;
+	}
+	.strip {
+		display: inline-flex;
+		border: 1px solid rgba(0, 0, 0, 0.2);
+	}
+	.strip i {
+		width: 16px;
+		height: 16px;
 	}
 	.pick input {
 		width: 34px;

@@ -23,6 +23,8 @@
 	import { tick } from 'svelte';
 	import Select from '#lib/ui/Select.svelte';
 	import { dismiss } from './dismiss';
+	import ColorButton from './ColorButton.svelte';
+	import { paint as themed } from './colors';
 	import { modal } from '#lib/ui/focus.js';
 	import { buildManaged, clearWhere, diffRules, emptyChanges, formatLocs, locIn, locKey, parseLocs, prependRule, type Managed } from './cfmodel';
 	import {
@@ -651,12 +653,12 @@
 
 	const styleCss = (st: CellStyle) =>
 		[
-			st.bg ? `background:${st.bg}` : '',
-			st.fg ? `color:${st.fg}` : '',
+			st.bg ? `background:${themed(st.bg)}` : '',
+			st.fg ? `color:${themed(st.fg)}` : '',
 			st.b ? 'font-weight:bold' : '',
 			st.i ? 'font-style:italic' : '',
 			st.u || st.x ? `text-decoration:${[st.u ? 'underline' : '', st.x ? 'line-through' : ''].join(' ')}` : '',
-			hasBorder(st) ? `outline:1px solid ${st.bc ?? '#000'};outline-offset:-1px` : ''
+			hasBorder(st) ? `outline:1px solid ${themed(st.bc) ?? '#000'};outline-offset:-1px` : ''
 		]
 			.filter(Boolean)
 			.join(';');
@@ -1065,11 +1067,9 @@
 					<label title="Souligné"><input type="checkbox" checked={!!d.style.u} onchange={(e) => (d.style = { ...d.style, u: e.currentTarget.checked || undefined })} /> <u>S</u></label>
 					<label title="Barré"><input type="checkbox" checked={!!d.style.x} onchange={(e) => (d.style = { ...d.style, x: e.currentTarget.checked || undefined })} /> <s>abc</s></label>
 					<span>Police :</span>
-					<input type="color" value={d.style.fg ?? '#000000'} oninput={(e) => (d.style = { ...d.style, fg: e.currentTarget.value })} />
-					<button class="mini" title="Couleur automatique" onclick={() => (d.style = { ...d.style, fg: undefined })}>✕</button>
+					<ColorButton label="Couleur de police" value={d.style.fg} none="Automatique" onpick={(c) => (d.style = { ...d.style, fg: c ?? undefined })} />
 					<span>Remplissage :</span>
-					<input type="color" value={d.style.bg ?? '#ffffff'} oninput={(e) => (d.style = { ...d.style, bg: e.currentTarget.value })} />
-					<button class="mini" title="Aucun remplissage" onclick={() => (d.style = { ...d.style, bg: undefined })}>✕</button>
+					<ColorButton label="Couleur de remplissage" value={d.style.bg} none="Aucun remplissage" onpick={(c) => (d.style = { ...d.style, bg: c ?? undefined })} />
 					<label
 						><input
 							type="checkbox"
@@ -1080,7 +1080,7 @@
 							}}
 						/> Bordure</label
 					>
-					{#if hasBorder(d.style)}<input type="color" value={d.style.bc ?? '#c00000'} oninput={(e) => (d.style = { ...d.style, bc: e.currentTarget.value })} />{/if}
+					{#if hasBorder(d.style)}<ColorButton label="Couleur de la bordure" value={d.style.bc ?? '#c00000'} onpick={(c) => c && (d.style = { ...d.style, bc: c })} />{/if}
 				</div>
 			{/if}
 		</div>
@@ -1417,8 +1417,7 @@
 		font: inherit;
 	}
 	.row > button,
-	.foot > button,
-	.mini {
+	.foot > button {
 		padding: 2px 8px;
 		border: 1px solid #c9cdd2;
 		background: #fff;
@@ -1429,10 +1428,6 @@
 	.foot > button:disabled {
 		color: #9aa0a6;
 		cursor: default;
-	}
-	.mini {
-		padding: 0 4px;
-		font-size: 11px;
 	}
 	button.primary {
 		background: #217346;

@@ -3,6 +3,7 @@
 // Alignement, plus l'état du groupe Paragraphe).
 
 import type { CellStyle } from '#lib/grid/style.js';
+import { paint } from '#lib/grid/colors.js';
 
 /** Police et taille du texte sans mise en forme (celles du ruban quand rien n'est imposé). */
 export const DOC_FONT = 'Segoe UI';
@@ -82,8 +83,9 @@ export function quillFormats(patch: Record<string, unknown>, cur: CellStyle): Re
 	flag('x', 'strike');
 	if ('ff' in patch) out.font = patch.ff ?? false;
 	if ('fs' in patch) out.size = patch.fs == null || patch.fs === DOC_PT ? false : `${patch.fs}pt`;
-	if ('fg' in patch) out.color = patch.fg ?? false;
-	if ('bg' in patch) out.background = patch.bg ?? false;
+	// Une couleur du thème (colors.ts) devient la couleur qu'elle donne : le texte d'une page garde sa couleur.
+	if ('fg' in patch) out.color = paint(patch.fg as string | null) ?? false;
+	if ('bg' in patch) out.background = paint(patch.bg as string | null) ?? false;
 	if ('al' in patch) out.align = patch.al == null || patch.al === 'left' ? false : patch.al;
 	return out;
 }

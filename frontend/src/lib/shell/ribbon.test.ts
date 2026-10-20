@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignPatch, blockedBy, COLOR_NAMES, COLORS, gate, protectedThing, tipOf, type Gated, type GatedMenu, type GateState } from './ribbon';
+import { alignPatch, blockedBy, gate, protectedThing, tipOf, type Gated, type GatedMenu, type GateState } from './ribbon';
 import { hintKeys, keyLabel, pdfPrinterHint } from '#lib/web/platform.js';
 
 const run = () => {};
@@ -122,11 +122,7 @@ describe('infobulles (audit 3, M1, M3, M13)', () => {
 	});
 });
 
-describe('palette et alignement (audit 3, M8, M10)', () => {
-	it('chaque teinte a un nom en français', () => {
-		expect(COLORS).toHaveLength(20);
-		for (const c of COLORS) expect(COLOR_NAMES[c]).toMatch(/^[A-ZÉ][a-zéèêâ ]+$/);
-	});
+describe('alignement (audit 3, M10)', () => {
 	it('cliquer sur l’alignement en cours revient au standard, comme Excel', () => {
 		expect(alignPatch(undefined, 'left')).toEqual({ al: 'left' });
 		expect(alignPatch('left', 'left')).toEqual({ al: null });

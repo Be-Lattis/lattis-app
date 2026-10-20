@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 )
@@ -29,11 +30,16 @@ type UI struct {
 }
 
 // ThemeDef est un thème : un nom et deux couleurs de base #rrggbb, celle
-// des tableaux ordinaires et celle des tableaux d'une source externe.
+// des tableaux ordinaires et celle des tableaux d'une source externe ; en
+// option, les autres couleurs des palettes (Accent 3 à 6, Texte 2,
+// Arrière-plan 2), déduites des deux bases quand elles manquent.
 type ThemeDef struct {
-	Name   string `json:"name"`
-	Table  string `json:"table"`
-	Source string `json:"source"`
+	Name    string   `json:"name"`
+	Table   string   `json:"table"`
+	Source  string   `json:"source"`
+	Accents []string `json:"accents,omitempty"`
+	Dark    string   `json:"dark,omitempty"`
+	Light   string   `json:"light,omitempty"`
 }
 
 // themesPrefix : chemin d'un thème ajouté (ui.themes.<id>).
@@ -60,7 +66,8 @@ func hexColor(v any) bool {
 	return true
 }
 
-// isTheme : {"name": "…", "table": "#rrggbb", "source": "#rrggbb"}.
+// isTheme : {"name": "…", "table": "#rrggbb", "source": "#rrggbb"}, et en
+// option "accents" (quatre #rrggbb au plus), "dark" et "light" (#rrggbb).
 func isTheme(v any) error {
 	t, ok := v.(Tree)
 	if !ok {
@@ -78,6 +85,22 @@ func isTheme(v any) error {
 	}
 	if !hexColor(get("table")) || !hexColor(get("source")) {
 		return errors.New("couleurs table et source attendues (#rrggbb)")
+	}
+	if a := get("accents"); a != nil {
+		list, ok := a.([]any)
+		if !ok || len(list) > 4 {
+			return errors.New("accents : quatre couleurs #rrggbb au plus (Accent 3 à 6)")
+		}
+		for _, c := range list {
+			if !hexColor(c) {
+				return errors.New("accents : couleurs #rrggbb attendues")
+			}
+		}
+	}
+	for _, k := range []string{"dark", "light"} {
+		if v := get(k); v != nil && !hexColor(v) {
+			return fmt.Errorf("%s : couleur #rrggbb attendue", k)
+		}
 	}
 	return nil
 }
@@ -99,7 +122,7 @@ func themeOrigins(c *Config) []string {
 	var out []string
 	for id := range t {
 		user := false
-		for _, k := range []string{"name", "table", "source"} {
+		for _, k := range []string{"name", "table", "source", "accents", "dark", "light"} {
 			if o, ok := c.Origin(themesPrefix + id + "." + k); ok && o.Rank == RankUser {
 				user = true
 			}

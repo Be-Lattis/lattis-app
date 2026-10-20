@@ -110,6 +110,11 @@ func exportBook(ctx context.Context, m *canvas.Model, tg target) ([]xsheet, *fmt
 		}
 	}
 	fm := newFmts()
+	th, err := m.Theme(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	fm.colors = canvas.ThemeColors(th)
 	sheets := make([]xsheet, len(first.Sheets))
 	for i, s := range first.Sheets {
 		sh, err := collectLayout(ctx, m, s, layouts[i], b, fm)

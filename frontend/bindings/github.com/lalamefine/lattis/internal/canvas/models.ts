@@ -2172,13 +2172,18 @@ export interface TextColumnsPreview {
 /**
  * Theme est le thème du classeur. ID : identifiant du thème choisi
  * (prédéfini, de l'organisation ou de l'utilisateur), vide pour des
- * couleurs personnalisées ; Table et Source : couleurs de base #rrggbb.
+ * couleurs personnalisées ; Table et Source : couleurs de base #rrggbb ;
+ * Accents : Accent 3 à 6 (quatre au plus), Dark et Light : Texte 2 et
+ * Arrière-plan 2 (absents : déduits de Table et Source).
  */
 export interface Theme {
     "id"?: string;
     "name": string;
     "table": string;
     "source": string;
+    "accents"?: string[] | null;
+    "dark"?: string;
+    "light"?: string;
 }
 
 /**
