@@ -88,61 +88,74 @@ func PrependWith(q string, defs []string) string {
 	return q
 }
 
-// frError est une erreur SQL traduite ; elle garde l'erreur d'origine
+// frError est une erreur SQL traduite (m) ou seulement débarrassée du
+// préfixe du pilote (text, m vide) ; elle garde l'erreur d'origine
 // (errors.Is, errors.As).
 type frError struct {
-	msg string
-	err error
+	m    msg.Message
+	text string
+	err  error
 }
 
-func (e *frError) Error() string { return e.msg }
+func (e *frError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *frError) Msg() msg.Message {
+	if e.m.ID == "" {
+		return msg.M("sql.raw", msg.Args{"text": e.text})
+	}
+	return e.m
+}
+
 func (e *frError) Unwrap() error { return e.err }
 
 // engine : préfixe technique des erreurs du pilote (« sqlite3: SQL logic
 // error: »), retiré du message.
 var engine = regexp.MustCompile(`^(?:sqlite3:\s*)?(?:(?:SQL logic error|constraint failed|datatype mismatch|generic error|SQL error or missing database|abort due to constraint violation):\s*)?`)
 
+// rule : un message de SQLite et son message (id) ; params nomme les
+// groupes de l'expression ; le message d'origine est le paramètre detail
+// (détail technique utile entre parenthèses).
 type rule struct {
-	re  *regexp.Regexp
-	out string // remplacement ($1, $2…) ; le détail d'origine suit entre parenthèses si keep
-	// keep : le message d'origine suit entre parenthèses (détail technique utile).
-	keep bool
+	re     *regexp.Regexp
+	id     msg.ID
+	params []string
 }
 
 var rules = []rule{
-	{regexp.MustCompile(`^no such table: (.+)$`), "Tableau inconnu : « $1 »", false},
-	{regexp.MustCompile(`^no such column: (.+)$`), "Colonne inconnue : « $1 »", false},
-	{regexp.MustCompile(`^no such function: (.+)$`), "Fonction inconnue : « $1 »", false},
-	{regexp.MustCompile(`^near "(.+)": syntax error$`), "Erreur de syntaxe près de « $1 »", false},
-	{regexp.MustCompile(`^unrecognized token: "?(.+?)"?$`), "Erreur de syntaxe : « $1 » n'est pas reconnu", false},
-	{regexp.MustCompile(`^incomplete input$`), "Requête incomplète : il manque la fin (parenthèse, mot-clé ou valeur)", false},
-	{regexp.MustCompile(`^ambiguous column name: (.+)$`), "Colonne ambiguë : « $1 » est dans plusieurs tableaux de la requête ; préciser le tableau (Tableau.\"$1\")", false},
-	{regexp.MustCompile(`^wrong number of arguments to function (.+)$`), "Nombre d'arguments incorrect pour la fonction $1", false},
-	{regexp.MustCompile(`^misuse of aggregate(?: function)?:? (.+)$`), "Fonction d'agrégat mal employée : $1 (dans WHERE, utiliser HAVING)", false},
-	{regexp.MustCompile(`^misuse of window function (.+)$`), "Fonction de fenêtre mal employée : $1", false},
-	{regexp.MustCompile(`^no tables specified$`), "Aucun tableau indiqué : ajouter FROM", false},
-	{regexp.MustCompile(`^SELECTs to the left and right of (\w+(?: ALL)?) do not have the same number of result columns$`), "Les SELECT de part et d'autre de $1 n'ont pas le même nombre de colonnes", false},
-	{regexp.MustCompile(`^sub-select returns (\d+) columns - expected 1$`), "La sous-requête rend $1 colonnes au lieu d'une", false},
-	{regexp.MustCompile(`^row value misused$`), "Liste de valeurs entre parenthèses mal employée", true},
-	{regexp.MustCompile(`^(\d+)(?:st|nd|rd|th) ORDER BY term out of range - should be between 1 and (\d+)$`), "Le terme n° $1 de ORDER BY est hors limites : entre 1 et $2", false},
-	{regexp.MustCompile(`^(\d+)(?:st|nd|rd|th) GROUP BY term out of range - should be between 1 and (\d+)$`), "Le terme n° $1 de GROUP BY est hors limites : entre 1 et $2", false},
-	{regexp.MustCompile(`^table (.+) has (\d+) columns but (\d+) values were supplied$`), "Le tableau « $1 » a $2 colonnes, mais $3 valeurs sont données", false},
-	{regexp.MustCompile(`^(\d+) values for (\d+) columns$`), "$1 valeurs pour $2 colonnes", false},
-	{regexp.MustCompile(`^(?:UNIQUE constraint failed|PRIMARY KEY must be unique): (.+)$`), "Valeur en double : une autre ligne a déjà cette clé", true},
-	{regexp.MustCompile(`^NOT NULL constraint failed: (.+)$`), "Valeur obligatoire manquante", true},
-	{regexp.MustCompile(`^attempt to write a readonly database$`), "Cette requête ne peut pas écrire : seules INSERT, UPDATE et DELETE modifient les tableaux", false},
-	{regexp.MustCompile(`^(?:interrupted|context deadline exceeded|context canceled)$`), "Requête interrompue : trop longue, ou arrêtée", false},
-	{regexp.MustCompile(`^database is locked$`), "Le classeur est occupé : réessayer dans un instant", false},
-	{regexp.MustCompile(`^circular reference: (.+)$`), "Référence circulaire : « $1 »", false},
-	{regexp.MustCompile(`^too many terms in compound SELECT$`), "Trop de SELECT réunis (UNION…)", false},
-	{regexp.MustCompile(`^DISTINCT aggregates must have exactly one argument$`), "Un agrégat DISTINCT prend un seul argument", false},
-	{regexp.MustCompile(`^cannot use window function in (.+)$`), "Fonction de fenêtre interdite dans $1", true},
-	{regexp.MustCompile(`^a GROUP BY clause is required before HAVING$`), "HAVING demande un GROUP BY", false},
-	{regexp.MustCompile(`^(?:aggregate functions are not allowed in the GROUP BY clause)$`), "Les fonctions d'agrégat ne vont pas dans GROUP BY", false},
-	{regexp.MustCompile(`^(?:LIMIT|OFFSET) clause should come after (\w+) not before$`), "LIMIT se place après $1", true},
-	{regexp.MustCompile(`^datatype mismatch$`), "Type de valeur incompatible", true},
+	{regexp.MustCompile(`^no such table: (.+)$`), "sql.sqlite.noSuchTable", []string{"name"}},
+	{regexp.MustCompile(`^no such column: (.+)$`), "sql.sqlite.noSuchColumn", []string{"name"}},
+	{regexp.MustCompile(`^no such function: (.+)$`), "sql.sqlite.noSuchFunction", []string{"name"}},
+	{regexp.MustCompile(`^near "(.+)": syntax error$`), "sql.sqlite.syntaxNear", []string{"token"}},
+	{regexp.MustCompile(`^unrecognized token: "?(.+?)"?$`), "sql.sqlite.unrecognizedToken", []string{"token"}},
+	{regexp.MustCompile(`^incomplete input$`), "sql.sqlite.incomplete", nil},
+	{regexp.MustCompile(`^ambiguous column name: (.+)$`), "sql.sqlite.ambiguousColumn", []string{"name"}},
+	{regexp.MustCompile(`^wrong number of arguments to function (.+)$`), "sql.sqlite.argumentCount", []string{"function"}},
+	{regexp.MustCompile(`^misuse of aggregate(?: function)?:? (.+)$`), "sql.sqlite.aggregateMisuse", []string{"function"}},
+	{regexp.MustCompile(`^misuse of window function (.+)$`), "sql.sqlite.windowMisuse", []string{"function"}},
+	{regexp.MustCompile(`^no tables specified$`), "sql.sqlite.noTables", nil},
+	{regexp.MustCompile(`^SELECTs to the left and right of (\w+(?: ALL)?) do not have the same number of result columns$`), "sql.sqlite.compoundColumns", []string{"operator"}},
+	{regexp.MustCompile(`^sub-select returns (\d+) columns - expected 1$`), "sql.sqlite.subselectColumns", []string{"n"}},
+	{regexp.MustCompile(`^row value misused$`), "sql.sqlite.rowValue", nil},
+	{regexp.MustCompile(`^(\d+)(?:st|nd|rd|th) ORDER BY term out of range - should be between 1 and (\d+)$`), "sql.sqlite.orderByRange", []string{"term", "max"}},
+	{regexp.MustCompile(`^(\d+)(?:st|nd|rd|th) GROUP BY term out of range - should be between 1 and (\d+)$`), "sql.sqlite.groupByRange", []string{"term", "max"}},
+	{regexp.MustCompile(`^table (.+) has (\d+) columns but (\d+) values were supplied$`), "sql.sqlite.valuesCount", []string{"table", "columns", "values"}},
+	{regexp.MustCompile(`^(\d+) values for (\d+) columns$`), "sql.sqlite.valuesForColumns", []string{"values", "columns"}},
+	{regexp.MustCompile(`^(?:UNIQUE constraint failed|PRIMARY KEY must be unique): (.+)$`), "sql.sqlite.unique", []string{"column"}},
+	{regexp.MustCompile(`^NOT NULL constraint failed: (.+)$`), "sql.sqlite.notNull", []string{"column"}},
+	{regexp.MustCompile(`^attempt to write a readonly database$`), "sql.sqlite.readOnly", nil},
+	{regexp.MustCompile(`^(?:interrupted|context deadline exceeded|context canceled)$`), "sql.sqlite.interrupted", nil},
+	{regexp.MustCompile(`^database is locked$`), "sql.sqlite.locked", nil},
+	{regexp.MustCompile(`^circular reference: (.+)$`), "sql.sqlite.circular", []string{"name"}},
+	{regexp.MustCompile(`^too many terms in compound SELECT$`), "sql.sqlite.tooManyTerms", nil},
+	{regexp.MustCompile(`^DISTINCT aggregates must have exactly one argument$`), "sql.sqlite.distinctArgument", nil},
+	{regexp.MustCompile(`^cannot use window function in (.+)$`), "sql.sqlite.windowForbidden", []string{"clause"}},
+	{regexp.MustCompile(`^a GROUP BY clause is required before HAVING$`), "sql.sqlite.havingNeedsGroupBy", nil},
+	{regexp.MustCompile(`^(?:aggregate functions are not allowed in the GROUP BY clause)$`), "sql.sqlite.aggregateInGroupBy", nil},
+	{regexp.MustCompile(`^(?:LIMIT|OFFSET) clause should come after (\w+) not before$`), "sql.sqlite.limitPlace", []string{"clause"}},
+	{regexp.MustCompile(`^datatype mismatch$`), "sql.sqlite.datatypeMismatch", nil},
 	// Autorisateur des requêtes de l'utilisateur (store.UserConn).
-	{regexp.MustCompile(`^(?:authorization denied:\s*)?not authorized$`), "Requête refusée : le SQL lit et modifie les tableaux du classeur, mais pas ses tables internes (_lattis_…), ni sa structure, ni un autre fichier (ATTACH), ni les réglages (PRAGMA)", false},
+	{regexp.MustCompile(`^(?:authorization denied:\s*)?not authorized$`), "sql.sqlite.notAuthorized", nil},
 }
 
 // French traduit en français une erreur de SQLite (no such table, no such
@@ -157,18 +170,18 @@ func French(err error) error {
 		return err
 	}
 	raw := err.Error()
-	msg := engine.ReplaceAllString(raw, "")
+	text := engine.ReplaceAllString(raw, "")
 	for _, r := range rules {
-		if m := r.re.FindStringSubmatchIndex(msg); m != nil {
-			out := string(r.re.ExpandString(nil, r.out, msg, m))
-			if r.keep {
-				out += " (" + msg + ")"
+		if m := r.re.FindStringSubmatch(text); m != nil {
+			args := msg.Args{"detail": text}
+			for i, p := range r.params {
+				args[p] = m[i+1]
 			}
-			return &frError{msg: out, err: err}
+			return &frError{m: msg.M(r.id, args), err: err}
 		}
 	}
-	if msg == raw {
+	if text == raw {
 		return err
 	}
-	return &frError{msg: msg, err: err}
+	return &frError{text: text, err: err}
 }

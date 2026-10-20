@@ -202,11 +202,14 @@ type ErrPassword struct {
 	Lattis string
 }
 
-func (e *ErrPassword) Error() string {
+func (e *ErrPassword) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *ErrPassword) Msg() msg.Message {
 	if e.Lattis != "" {
-		return fmt.Sprintf("connexion « %s » : %s", e.Connection, e.Message)
+		return msg.M("connection.error", msg.Args{"connection": e.Connection, "err": e.Message})
 	}
-	return fmt.Sprintf("connexion « %s » : mot de passe requis (%s)", e.Connection, e.Message)
+	return msg.M("connection.passwordRequired", msg.Args{"connection": e.Connection, "detail": e.Message})
 }
 
 // DBTable est une table ou une vue d'une base (navigateur).

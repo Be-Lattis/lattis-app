@@ -171,11 +171,14 @@ type StepError struct {
 	Err  error
 }
 
-func (e *StepError) Error() string {
+func (e *StepError) Error() string { return e.Msg().String() }
+
+// Msg : le message de l'erreur (msg.Messager).
+func (e *StepError) Msg() msg.Message {
 	if e.Step < 0 {
-		return "source : " + e.Err.Error()
+		return msg.M("query.sourceError", msg.Args{"err": e.Err})
 	}
-	return fmt.Sprintf("étape %d : %s", e.Step+1, e.Err)
+	return msg.M("query.stepError", msg.Args{"step": e.Step + 1, "err": e.Err})
 }
 
 func (e *StepError) Unwrap() error { return e.Err }
