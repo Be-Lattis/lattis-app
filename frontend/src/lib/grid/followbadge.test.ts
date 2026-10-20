@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { placeFollowBadge } from './followbadge';
+import { placeFollowBadge, showNameBadge } from './followbadge';
 
 // Cadre de 300 px à x = 100 ; pastille de 40 × 13 ; cellules sous un bandeau de 22 px.
 const base = { x: 100, w: 300, bw: 40, bh: 13, paneTop: 22, strip: true };
@@ -34,5 +34,16 @@ describe('pastille « suit l’année »', () => {
 
 	it('volet du bas (lignes figées au-dessus) : pas de bandeau, coin du cadre', () => {
 		expect(placeFollowBadge({ ...base, y: 100, paneTop: 100, strip: false, aboveFree: true }).place).toBe('corner');
+	});
+});
+
+describe('pastille du nom du tableau', () => {
+	it('seul tableau de la feuille : pas de pastille (son nom suit l’onglet)', () => {
+		expect(showNameBadge(1)).toBe(false);
+	});
+
+	it('plusieurs tableaux : la pastille de chacun', () => {
+		expect(showNameBadge(2)).toBe(true);
+		expect(showNameBadge(5)).toBe(true);
 	});
 });

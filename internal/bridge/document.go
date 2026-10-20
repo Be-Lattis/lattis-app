@@ -943,7 +943,7 @@ func (s *DocumentService) MoveSheet(ctx context.Context, sheet int64, to int) (D
 
 // RenameSheet et DeleteSheet agissent sur un onglet.
 func (s *DocumentService) RenameSheet(ctx context.Context, sheet int64, name string) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.RenameSheet(ctx, sheet, name) })
+	return s.act(ctx, func(d *doc.Document) error { return d.RenameSheetLinked(ctx, sheet, name) })
 }
 
 func (s *DocumentService) DeleteSheet(ctx context.Context, sheet int64) (DocState, error) {
@@ -1276,7 +1276,7 @@ func (s *DocumentService) FilterValues(ctx context.Context, table string, i int)
 
 // RenameTable renomme un tableau.
 func (s *DocumentService) RenameTable(ctx context.Context, old, name string) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.RenameTable(ctx, old, name) })
+	return s.act(ctx, func(d *doc.Document) error { return d.RenameTableLinked(ctx, old, name) })
 }
 
 // DeleteTables supprime des tableaux entiers.

@@ -32,3 +32,10 @@ export function placeFollowBadge(o: { x: number; y: number; w: number; bw: numbe
 	if (o.strip && above >= 0 && (o.aboveFree || o.y <= o.paneTop + 0.5)) return { x, y: above, place: 'above', radii: [4, 4, 0, 0] };
 	return { x: o.left ? x + 1 : x - 1, y: o.y - Math.floor(o.bh / 2), place: 'corner', radii: [4, 4, 4, 4] };
 }
+
+/**
+ * Pastille du nom (à gauche) : seulement sur une feuille de plusieurs
+ * tableaux. Le seul tableau d'une feuille a le nom de son onglet (ils se
+ * suivent : renommer l'un renomme l'autre) ; l'onglet le montre déjà.
+ */
+export const showNameBadge = (tablesOnSheet: number): boolean => tablesOnSheet > 1;

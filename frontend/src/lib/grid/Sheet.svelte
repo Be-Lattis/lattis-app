@@ -44,7 +44,7 @@
 	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
 	import { choiceHiddenCols, type TabChoice } from '#lib/shell/choice.js';
 	import { tabChoiceItem, type ChoiceCandidate, type TabChoiceItem } from './tabchoice';
-	import { placeFollowBadge } from './followbadge';
+	import { placeFollowBadge, showNameBadge } from './followbadge';
 	import { ReadRecovery, readFailNotice } from './readfail';
 	import { followLabel } from '#lib/shell/mergesheets.js';
 	import { editMode, viewKey } from './readonlyedit';
@@ -2968,7 +2968,7 @@
 					followBadges.push({ kind: 'follow', e, label, radii: b.radii, x0: b.x, x1: b.x + bw, y0: b.y, y1: b.y + bh, clip });
 					room -= bw + 4;
 				}
-				if (e.t.name && room >= 30) {
+				if (e.t.name && room >= 30 && showNameBadge(entries.length)) {
 					const dflt = isDefaultTableName(e.t.name);
 					const label = fitText(e.t.name + (dflt ? ' ✎' : ''), room - 10);
 					const bw = Math.ceil(ctx.measureText(label).width) + 10;

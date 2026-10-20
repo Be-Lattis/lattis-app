@@ -15,6 +15,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Changements
 
+- Un tableau seul sur sa feuille porte le nom de l'onglet : renommer l'onglet renomme le tableau, et l'inverse (une seule annulation ; si le nom est déjà pris, seul le premier est renommé et la barre d'état le dit). La pastille du nom n'apparaît plus sur le cadre d'un tableau seul sur sa feuille, son nom se lisant sur l'onglet.
 - Boîtes de dialogue : un cliqué-glissé commencé dans la boîte et relâché à côté (sélection d'un texte, curseur) ne la ferme plus ; seul un clic enfoncé et relâché sur le fond la ferme.
 - Clic droit : les actions propres à la situation (Utiliser comme en-têtes, Ajouter au tableau, Utiliser la première ligne comme en-têtes, Sortir cette ligne du tableau, Convertir le résultat déversé, Basculer sur…) sont en tête du menu, avant Couper, Copier, Coller.
 - Édition web : un écran « Lattis » avec une barre de chargement s'affiche pendant le chargement de l'application, puis pendant l'ouverture du classeur, au lieu d'une page blanche.

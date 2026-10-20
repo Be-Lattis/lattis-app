@@ -170,8 +170,18 @@ func (t *tx) moveSheet(sheet int64, to int) error {
 	return t.apply(do, undo)
 }
 
-// RenameSheet renomme un onglet.
+// RenameSheet renomme un onglet (scripts, assistant : l'onglet seul).
 func (m *Model) RenameSheet(ctx context.Context, sheet int64, name string) error {
+	return m.renameSheetAs(ctx, sheet, name, false)
+}
+
+// RenameSheetLinked renomme un onglet depuis l'application : son seul
+// tableau suit (soletable.go).
+func (m *Model) RenameSheetLinked(ctx context.Context, sheet int64, name string) error {
+	return m.renameSheetAs(ctx, sheet, name, true)
+}
+
+func (m *Model) renameSheetAs(ctx context.Context, sheet int64, name string, linked bool) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return fmt.Errorf("%w : nom vide", ErrSheet)
@@ -194,13 +204,24 @@ func (m *Model) RenameSheet(ctx context.Context, sheet int64, name string) error
 		if taken {
 			return fmt.Errorf("%w : « %s » existe déjà (les noms de feuilles ne tiennent pas compte des majuscules)", ErrSheet, name)
 		}
-		// Les adresses Feuille!Cell[A1] suivent.
-		if err := t.rewriteRefs(refChange{Renames: formula.Renames{Sheets: lowerMap(old, name)}}); err != nil {
+		if err := t.renameSheet(sheet, old, name); err != nil {
 			return err
 		}
-		q := `UPDATE _lattis_sheets SET name = ? WHERE id = ?`
-		return t.apply([]stmt{st(q, name, sheet)}, []stmt{st(q, old, sheet)})
+		if !linked {
+			return nil
+		}
+		// Seul tableau de la feuille : il prend le nouveau nom (soletable.go).
+		return t.tableFollowsSheet(sheet, name)
 	})
+}
+
+// renameSheet renomme un onglet ; les adresses Feuille!Cell[A1] suivent.
+func (t *tx) renameSheet(sheet int64, old, name string) error {
+	if err := t.rewriteRefs(refChange{Renames: formula.Renames{Sheets: lowerMap(old, name)}}); err != nil {
+		return err
+	}
+	q := `UPDATE _lattis_sheets SET name = ? WHERE id = ?`
+	return t.apply([]stmt{st(q, name, sheet)}, []stmt{st(q, old, sheet)})
 }
 
 // DeleteSheet supprime un onglet et tout ce qu'il contient (tableaux,
