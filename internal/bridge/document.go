@@ -1178,6 +1178,22 @@ func (s *DocumentService) ChooseSheetBy(ctx context.Context, sheet int64, table,
 	return s.act(ctx, func(d *doc.Document) error { return d.SetSheetChoice(ctx, sheet, table, column, value) })
 }
 
+// ChooseSheetByFormula fait de la feuille un onglet à choix par une formule
+// sur les colonnes des lignes (« Choisir par › Une formule… ») ; annulable.
+func (s *DocumentService) ChooseSheetByFormula(ctx context.Context, sheet int64, name, formula, value string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetSheetChoiceFormula(ctx, sheet, name, formula, value) })
+}
+
+// PreviewChoiceFormula donne l'aperçu d'une catégorie calculée : premières
+// valeurs, tableaux qui suivraient, ou l'erreur de la formule.
+func (s *DocumentService) PreviewChoiceFormula(ctx context.Context, sheet int64, formula string) (canvas.ChoicePreview, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.ChoicePreview{}, err
+	}
+	return d.PreviewChoiceFormula(ctx, sheet, formula)
+}
+
 // ChooseSheetValue règle l'onglet à choix sur une valeur (all : toutes) ;
 // de la navigation, hors du journal d'annulation.
 func (s *DocumentService) ChooseSheetValue(ctx context.Context, sheet int64, value string, all bool) (DocState, error) {
@@ -1369,6 +1385,22 @@ func (s *DocumentService) CreatePivot(ctx context.Context, cfg canvas.PivotConfi
 // SetPivot change la configuration d'un tableau croisé.
 func (s *DocumentService) SetPivot(ctx context.Context, id int64, cfg canvas.PivotConfig) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetPivot(ctx, id, cfg) })
+}
+
+// SetPivotCalcField ajoute (old vide), modifie ou retire (formula vide) un
+// champ calculé d'un tableau croisé (« Champ calculé… ») ; annulable.
+func (s *DocumentService) SetPivotCalcField(ctx context.Context, id int64, old, name, formula string) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetPivotCalcField(ctx, id, old, name, formula) })
+}
+
+// PreviewPivotFormula donne l'aperçu d'un champ calculé sur le tableau
+// source (premières valeurs, ou l'erreur de la formule).
+func (s *DocumentService) PreviewPivotFormula(ctx context.Context, source, formula string) (canvas.ChoicePreview, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.ChoicePreview{}, err
+	}
+	return d.PreviewPivotFormula(ctx, source, formula)
 }
 
 // DeletePivot supprime un tableau croisé.

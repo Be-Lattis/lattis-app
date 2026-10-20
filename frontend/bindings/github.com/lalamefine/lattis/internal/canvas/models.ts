@@ -415,6 +415,20 @@ export interface ChoiceCandidate {
 }
 
 /**
+ * ChoicePreview est l'aperçu de « Choisir par › Une formule… » : premières
+ * valeurs (Values, au plus 10, Count en tout), tableaux de la feuille qui
+ * suivraient (Tables) et ceux qui ne suivraient pas, faute de colonnes
+ * (Others) ; Error : formule refusée (rien d'autre n'est rempli).
+ */
+export interface ChoicePreview {
+    "values": FilterValue[] | null;
+    "count": number;
+    "tables": string[] | null;
+    "others": string[] | null;
+    "error"?: string;
+}
+
+/**
  * Citation : lignes d'un tableau qui citent une valeur de clé (Lignes qui
  * citent…) ; First est la première d'entre elles (identifiant, LocateRow).
  */
@@ -1261,6 +1275,24 @@ export interface PendingRef {
 }
 
 /**
+ * PivotCalcField est un champ calculé (« Champ calculé… ») : une formule
+ * sur les colonnes de chaque ligne du tableau source (=ANNEE([Date]),
+ * =GAUCHE([Code];2)), en anglais canonique. Il se place en lignes, en
+ * colonnes, en filtres ou en valeurs comme une colonne ; les lignes sont
+ * regroupées par son résultat (choiceformula.go).
+ */
+export interface PivotCalcField {
+    "name": string;
+    "formula"?: string;
+
+    /**
+     * Text : la formule en français, rendue à la lecture ; à l'écriture
+     * (volet, API), une formule saisie qui remplace Formula.
+     */
+    "text"?: string;
+}
+
+/**
  * PivotConfig décrit un tableau croisé dynamique, comme le volet « Champs de
  * tableau croisé » d'Excel : zones Lignes, Colonnes, Valeurs et Filtres. Les
  * champs sont désignés par le nom de leur colonne dans le tableau source.
@@ -1275,6 +1307,12 @@ export interface PivotConfig {
     "cols"?: string;
     "values"?: PivotValue[] | null;
     "filters"?: PivotFilter[] | null;
+
+    /**
+     * Calc : champs calculés par une formule (PivotCalcField), désignés
+     * par leur nom dans les zones comme une colonne.
+     */
+    "calc"?: PivotCalcField[] | null;
 
     /**
      * Items garde des valeurs des champs des lignes et des colonnes (le ▾ de
@@ -1344,6 +1382,13 @@ export interface PivotConfig {
 export interface PivotFilter {
     "field": string;
     "values": string[] | null;
+
+    /**
+     * Formula : filtre par une formule par ligne (anglais canonique) plutôt
+     * que par le champ Field : celui de l'onglet à choix par une formule
+     * (Choice), Field n'en est que le nom.
+     */
+    "formula"?: string;
 }
 
 /**
@@ -1638,6 +1683,12 @@ export interface SheetChoice {
     "value": string;
     "all": boolean;
     "fresh"?: boolean;
+
+    /**
+     * Formula : catégorie calculée par une formule (affichée en français),
+     * sans colonne ; vide pour une catégorie par colonne.
+     */
+    "formula"?: string;
 }
 
 /**
@@ -1960,6 +2011,12 @@ export interface TableInfo {
      */
     "follows"?: boolean;
     "choiceCol"?: number;
+
+    /**
+     * ByFormula : il suit une catégorie calculée (pas de colonne de
+     * catégorie, ChoiceCol sans objet).
+     */
+    "byFormula"?: boolean;
 }
 
 /**

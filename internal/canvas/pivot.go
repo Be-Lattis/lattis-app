@@ -55,6 +55,9 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 		if err := t.guardWorkbook(); err != nil {
 			return err
 		}
+		if err := t.prepareCalc(&cfg); err != nil {
+			return err
+		}
 		if _, err := t.pivotPlan(cfg); err != nil {
 			return err
 		}
@@ -104,6 +107,9 @@ func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
 	cfg = cfg.normalized().stored()
 	return m.Do(ctx, "Modifier le tableau croisé", func(t *tx) error {
 		if err := t.guardObject(`_lattis_pivots`, id); err != nil {
+			return err
+		}
+		if err := t.prepareCalc(&cfg); err != nil {
 			return err
 		}
 		if _, err := t.pivotPlan(cfg); err != nil {
@@ -213,6 +219,7 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 		if err := t.pivotChoice(sheet, &out[i].Config); err != nil {
 			return nil, err
 		}
+		calcText(&out[i].Config)
 	}
 	var names map[string]formula.Value // cellules libres, si une formule de colonne saisie en lit
 	for i := range out {
@@ -271,6 +278,10 @@ func (t *tx) pivotRows(sheet int64) ([]stmt, error) {
 func (m *Model) PivotData(ctx context.Context, cfg PivotConfig) PivotInfo {
 	out := PivotInfo{Config: cfg.normalized(), Cells: [][]string{}, Formats: []string{}}
 	err := m.read(ctx, func(t *tx) error {
+		if err := t.prepareCalc(&out.Config); err != nil {
+			return err
+		}
+		calcText(&out.Config)
 		cells, rows, err := t.pivotCells(out.Config)
 		if err != nil {
 			return err
@@ -374,6 +385,9 @@ func (m *Model) PlacePivot(ctx context.Context, sheet int64, row, col int, cfg P
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
+		if err := t.prepareCalc(&cfg); err != nil {
+			return err
+		}
 		if _, err := t.pivotPlan(cfg.normalized()); err != nil {
 			return err
 		}
@@ -398,6 +412,9 @@ func (m *Model) CreatePivotAt(ctx context.Context, sheet int64, row, col int, cf
 			return err
 		}
 		if err := t.sheetExists(sheet); err != nil {
+			return err
+		}
+		if err := t.prepareCalc(&cfg); err != nil {
 			return err
 		}
 		if _, err := t.pivotPlan(cfg.normalized()); err != nil {

@@ -14,15 +14,17 @@ type SheetChoiceView struct {
 	Value  string   `json:"value"`
 	All    bool     `json:"all"`
 	Values []string `json:"values"`
+	// Formula : catégorie calculée par une formule (sheets.choose_by_formula).
+	Formula string `json:"formula,omitempty"`
 }
 
 func init() {
 	register(
 		&Command{
 			Name:    "sheets.choice",
-			Summary: "Décrit l'onglet à choix d'une feuille : catégorie (colonne), valeur choisie et valeurs proposées ; nil si la feuille n'en a pas.",
-			Details: "Le choix filtre les tableaux de la feuille qui ont la colonne de catégorie (all : « (Toutes) », aucun filtre). Le SQL et les scripts voient toujours toutes les lignes.",
-			Returns: "{name, type, table, value, all, values} ou nil",
+			Summary: "Décrit l'onglet à choix d'une feuille : catégorie (colonne ou formule), valeur choisie et valeurs proposées ; nil si la feuille n'en a pas.",
+			Details: "Le choix filtre les tableaux de la feuille qui ont la colonne de catégorie, ou les colonnes de sa formule (formula, catégorie calculée) ; all : « (Toutes) », aucun filtre. Le SQL et les scripts voient toujours toutes les lignes.",
+			Returns: "{name, type, table, formula, value, all, values} ou nil",
 			Params:  []Param{pSheet},
 			Example: `local c = sheets.choice("Feuille1")
 if c then print(c.name .. " : " .. c.value) end`,
@@ -40,7 +42,7 @@ if c then print(c.name .. " : " .. c.value) end`,
 				if err != nil {
 					return nil, err
 				}
-				out := SheetChoiceView{Name: ch.Name, Type: string(ch.Type), Table: ch.Table, Value: ch.Value, All: ch.All, Values: []string{}}
+				out := SheetChoiceView{Name: ch.Name, Type: string(ch.Type), Table: ch.Table, Value: ch.Value, All: ch.All, Values: []string{}, Formula: ch.Formula}
 				for _, v := range vals {
 					out.Values = append(out.Values, v.Text)
 				}
@@ -102,6 +104,37 @@ sheets.choose_by{table = "Commandes", column = "Client", sheet = "Synthèse"}`,
 				}
 				d, _ := c.Doc()
 				return nil, d.SetSheetChoice(c, sheet, tb.Name, col, raw(c.Raw("value")))
+			},
+		},
+		&Command{
+			Name:    "sheets.choose_by_formula",
+			Label:   "Choisir par une formule",
+			Summary: "Fait d'une feuille un onglet à choix par une formule sur les colonnes de chaque ligne (« Choisir par › Une formule… ») : =ANNEE([Date]), =TEXTE([Date];\"mmmm\"), =SI([Montant]>1000;\"Gros\";\"Petit\").",
+			Details: "Les tableaux de la feuille qui ont toutes les colonnes citées par la formule suivent le choix (ainsi que ses tableaux croisés dont le tableau source les a) : seules les lignes dont la formule donne la valeur choisie restent affichées. Pas de colonne à remplir : une ligne ajoutée ne reçoit rien d'office, elle reste affichée jusqu'au prochain changement de valeur. « Nouvelle valeur » (sheets.new_choice) ne s'applique pas. Une étape d'annulation.",
+			Params: []Param{
+				{Name: "sheet", Type: Ref, Desc: "feuille de l'onglet à choix"},
+				{Name: "formula", Type: String, Desc: "formule en français, colonnes entre crochets ([Date])"},
+				{Name: "name", Type: String, Desc: "nom de la catégorie (Année, Mois, Taille…)"},
+				{Name: "value", Type: Value, Desc: "valeur affichée d'abord ; absente : toutes", Optional: true},
+			},
+			Write: true,
+			Example: `sheets.choose_by_formula("Feuille1", "=SI([Montant]>1000;\"Gros\";\"Petit\")", "Taille", "Gros")
+print(sheets.choice("Feuille1").value)`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				f, err := c.Str("formula")
+				if err != nil {
+					return nil, err
+				}
+				name, err := c.Str("name")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				return nil, d.SetSheetChoiceFormula(c, s.ID, name, f, raw(c.Raw("value")))
 			},
 		},
 		&Command{

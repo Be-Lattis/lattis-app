@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/grid"
 )
 
 // PivotValue est un champ de la zone Valeurs : la colonne agrégée (vide :
@@ -27,6 +28,23 @@ type PivotValue struct {
 type PivotFilter struct {
 	Field  string   `json:"field"`
 	Values []string `json:"values"`
+	// Formula : filtre par une formule par ligne (anglais canonique) plutôt
+	// que par le champ Field : celui de l'onglet à choix par une formule
+	// (Choice), Field n'en est que le nom.
+	Formula string `json:"formula,omitempty"`
+}
+
+// PivotCalcField est un champ calculé (« Champ calculé… ») : une formule
+// sur les colonnes de chaque ligne du tableau source (=ANNEE([Date]),
+// =GAUCHE([Code];2)), en anglais canonique. Il se place en lignes, en
+// colonnes, en filtres ou en valeurs comme une colonne ; les lignes sont
+// regroupées par son résultat (choiceformula.go).
+type PivotCalcField struct {
+	Name    string `json:"name"`
+	Formula string `json:"formula,omitempty"`
+	// Text : la formule en français, rendue à la lecture ; à l'écriture
+	// (volet, API), une formule saisie qui remplace Formula.
+	Text string `json:"text,omitempty"`
 }
 
 // PivotConfig décrit un tableau croisé dynamique, comme le volet « Champs de
@@ -40,6 +58,9 @@ type PivotConfig struct {
 	Cols      string        `json:"cols,omitempty"`
 	Values    []PivotValue  `json:"values,omitempty"`
 	Filters   []PivotFilter `json:"filters,omitempty"`
+	// Calc : champs calculés par une formule (PivotCalcField), désignés
+	// par leur nom dans les zones comme une colonne.
+	Calc []PivotCalcField `json:"calc,omitempty"`
 	// Items garde des valeurs des champs des lignes et des colonnes (le ▾ de
 	// leurs étiquettes, comme Excel) : un filtre qui n'est pas un filtre de
 	// rapport.
@@ -117,6 +138,59 @@ type pivotPlan struct {
 	cfg     PivotConfig
 	filters []string
 	args    []any
+	// extra : expressions des champs calculés (« expr AS c_N »), lues
+	// dans la source (from) sous les colonnes calc.
+	extra []string
+	calc  map[int64]bool
+}
+
+// pivotCalcBase numérote les colonnes des champs calculés d'un TCD, au-delà
+// de celles d'un tableau.
+const pivotCalcBase = 1 << 40
+
+// from est la source des requêtes du TCD : le tableau, avec les valeurs de
+// ses champs calculés.
+func (p pivotPlan) from() string {
+	if len(p.extra) == 0 {
+		return p.tb.sql()
+	}
+	return "(SELECT *, " + strings.Join(p.extra, ", ") + " FROM " + p.tb.sql() + ") AS " + p.tb.sql()
+}
+
+// text est le texte affiché d'un champ (voir textExpr : direct pour un
+// texte ; slt_label pour un champ calculé).
+func (p pivotPlan) text(c *Column) string {
+	if p.calc[c.ID] {
+		return formula.LabelFunc + "(" + colSQL(c.ID) + ")"
+	}
+	return textExpr(*c)
+}
+
+// calcColumn ajoute à la source la valeur de la formule en (anglais
+// canonique) pour chaque ligne, sous une colonne nommée name.
+func (t *tx) calcColumn(p *pivotPlan, name, en string) (*Column, error) {
+	e, ok, err := t.rowValueSQL(p.tb, en)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		n, _ := formula.Parse(en, formula.EN)
+		miss := []string{}
+		if n != nil {
+			miss = missingColumns(p.tb, formulaColumns(n))
+		}
+		if len(miss) == 0 {
+			return nil, fmt.Errorf("%w : le champ calculé « %s » ne se calcule pas", ErrPivot, name)
+		}
+		return nil, fmt.Errorf("%w : le champ calculé « %s » cite %s, absente de %s", ErrPivot, name, quoteList(miss), p.tb.Name)
+	}
+	id := int64(pivotCalcBase + len(p.extra))
+	p.extra = append(p.extra, e+" AS "+colSQL(id))
+	if p.calc == nil {
+		p.calc = map[int64]bool{}
+	}
+	p.calc[id] = true
+	return &Column{ID: id, Name: name, Type: grid.Text}, nil
 }
 
 func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
@@ -127,7 +201,22 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		return p, fmt.Errorf("%w : tableau « %s » introuvable", ErrPivot, cfg.Source)
 	}
 	p.tb = tb
+	calc := map[string]*Column{}
 	find := func(name string) (*Column, error) {
+		for _, f := range cfg.Calc {
+			if !strings.EqualFold(f.Name, name) {
+				continue
+			}
+			if c, ok := calc[strings.ToLower(f.Name)]; ok {
+				return c, nil
+			}
+			c, err := t.calcColumn(&p, f.Name, f.Formula)
+			if err != nil {
+				return nil, err
+			}
+			calc[strings.ToLower(f.Name)] = c
+			return c, nil
+		}
 		for i := range tb.Cols {
 			if strings.EqualFold(tb.Cols[i].Name, name) {
 				if tb.Cols[i].Formula != "" {
@@ -195,8 +284,12 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		}
 	}
 	for _, f := range all {
-		c, err := find(f.Field)
-		if err != nil {
+		var c *Column
+		if f.Formula != "" {
+			if c, err = t.calcColumn(&p, f.Field, f.Formula); err != nil {
+				continue // la source n'a pas les colonnes : pas de filtre
+			}
+		} else if c, err = find(f.Field); err != nil {
 			return p, err
 		}
 		marks := make([]string, len(f.Values))
@@ -207,19 +300,16 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		if len(marks) == 0 {
 			continue // aucune valeur choisie : toutes les lignes
 		}
-		p.filters = append(p.filters, pivotText(c)+" IN ("+strings.Join(marks, ", ")+")")
+		p.filters = append(p.filters, p.text(c)+" IN ("+strings.Join(marks, ", ")+")")
 	}
 	return p, nil
 }
-
-// pivotText est le texte affiché d'un champ (voir textExpr : direct pour un texte).
-func pivotText(c *Column) string { return textExpr(*c) }
 
 // pivotOrder est le tri des étiquettes d'un champ (ORDER BY, valeurs
 // d'origine : 9 avant 10), ou "" pour l'ordre de la source.
 func (p pivotPlan) pivotOrder(c *Column) string {
 	if k, ok := foldKey(p.cfg.Orders, c.Name); ok && len(p.cfg.Orders[k].Values) > 0 {
-		return OrderBy(pivotText(c), "min("+colSQL(c.ID)+")", p.cfg.Orders[k])
+		return OrderBy(p.text(c), "min("+colSQL(c.ID)+")", p.cfg.Orders[k])
 	}
 	switch p.cfg.Sort[c.Name] {
 	case "asc":
@@ -276,7 +366,7 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 		if o := p.pivotOrder(p.cols); o != "" {
 			order = "k = '', " + o + ", min(_pos)"
 		}
-		rs, err := t.query(`SELECT `+pivotText(p.cols)+` AS k FROM `+p.tb.sql()+where+` GROUP BY k ORDER BY `+order+` LIMIT ?`, append(append([]any{}, p.args...), MaxPivotCols+1)...)
+		rs, err := t.query(`SELECT `+p.text(p.cols)+` AS k FROM `+p.from()+where+` GROUP BY k ORDER BY `+order+` LIMIT ?`, append(append([]any{}, p.args...), MaxPivotCols+1)...)
 		if err != nil {
 			return nil, err
 		}
@@ -367,13 +457,13 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 		sel := make([]string, 0, nk+1+len(plain))
 		group := make([]string, 0, nk+1)
 		for i, c := range p.rows {
-			sel = append(sel, pivotText(c)+" AS k"+strconv.Itoa(i))
+			sel = append(sel, p.text(c)+" AS k"+strconv.Itoa(i))
 			group = append(group, "k"+strconv.Itoa(i))
 		}
-		sel = append(sel, pivotText(p.cols)+" AS kc")
+		sel = append(sel, p.text(p.cols)+" AS kc")
 		group = append(group, "kc")
 		sel = append(sel, plain...)
-		rs, err := t.query(`SELECT `+strings.Join(sel, ", ")+` FROM `+p.tb.sql()+where+` GROUP BY `+strings.Join(group, ", "), p.args...)
+		rs, err := t.query(`SELECT `+strings.Join(sel, ", ")+` FROM `+p.from()+where+` GROUP BY `+strings.Join(group, ", "), p.args...)
 		if err != nil {
 			return nil, err
 		}
@@ -464,7 +554,7 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 		sel := make([]string, nk)
 		group := make([]string, nk)
 		for i, c := range p.rows {
-			sel[i] = pivotText(c) + " AS k" + strconv.Itoa(i)
+			sel[i] = p.text(c) + " AS k" + strconv.Itoa(i)
 			group[i] = "k" + strconv.Itoa(i)
 		}
 		// Ordre de la source (première apparition), sauf tri choisi sur un
@@ -488,7 +578,7 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 			order = append(order, "o")
 		}
 		args := append(append([]any{}, p.args...), MaxPivotRows+1)
-		if err := scan(`SELECT `+strings.Join(cols, ", ")+` FROM `+p.tb.sql()+where+` GROUP BY `+strings.Join(group, ", ")+` ORDER BY `+strings.Join(order, ", ")+` LIMIT ?`, args, true); err != nil {
+		if err := scan(`SELECT `+strings.Join(cols, ", ")+` FROM `+p.from()+where+` GROUP BY `+strings.Join(group, ", ")+` ORDER BY `+strings.Join(order, ", ")+` LIMIT ?`, args, true); err != nil {
 			return nil, err
 		}
 		if len(lines) > MaxPivotRows {
@@ -500,7 +590,7 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 		// Total général : par valeur du champ des colonnes, puis tout confondu.
 		grand := map[string][]any{}
 		if len(keys) > 0 {
-			rs, err := t.query(`SELECT `+pivotText(p.cols)+` AS kc, `+strings.Join(plain, ", ")+` FROM `+p.tb.sql()+where+` GROUP BY kc`, p.args...)
+			rs, err := t.query(`SELECT `+p.text(p.cols)+` AS kc, `+strings.Join(plain, ", ")+` FROM `+p.from()+where+` GROUP BY kc`, p.args...)
 			if err != nil {
 				return nil, err
 			}
@@ -528,7 +618,7 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 			for i := range tot {
 				ptrs[i] = &tot[i]
 			}
-			if err := t.row(`SELECT `+strings.Join(exprs, ", ")+` FROM `+p.tb.sql()+where, p.args...).Scan(ptrs...); err != nil {
+			if err := t.row(`SELECT `+strings.Join(exprs, ", ")+` FROM `+p.from()+where, p.args...).Scan(ptrs...); err != nil {
 				return nil, err
 			}
 		}

@@ -269,7 +269,14 @@ export function ChooseSheetBy(sheet: number, table: string, column: string, valu
 }
 
 /**
- * ChooseSheetValue règle l'onglet à choix sur une valeur (all : toutes) ;
+ * ChooseSheetByFormula fait de la feuille un onglet à choix par une formule
+ * sur les colonnes des lignes (« Choisir par › Une formule… ») ; annulable.
+ */
+export function ChooseSheetByFormula(sheet: number, name: string, formula: string, value: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(138526115, sheet, name, formula, value);
+}
+
+/**
  * de la navigation, hors du journal d'annulation.
  */
 export function ChooseSheetValue(sheet: number, value: string, all: boolean): $CancellablePromise<$models.DocState> {
@@ -1397,6 +1404,22 @@ export function Platform(): $CancellablePromise<$models.Platform> {
 }
 
 /**
+ * PreviewChoiceFormula donne l'aperçu d'une catégorie calculée : premières
+ * valeurs, tableaux qui suivraient, ou l'erreur de la formule.
+ */
+export function PreviewChoiceFormula(sheet: number, formula: string): $CancellablePromise<canvas$0.ChoicePreview> {
+    return $Call.ByID(2585176569, sheet, formula);
+}
+
+/**
+ * PreviewPivotFormula donne l'aperçu d'un champ calculé sur le tableau
+ * source (premières valeurs, ou l'erreur de la formule).
+ */
+export function PreviewPivotFormula(source: string, formula: string): $CancellablePromise<canvas$0.ChoicePreview> {
+    return $Call.ByID(3094414380, source, formula);
+}
+
+/**
  * PreviewQuery calcule l'aperçu d'une requête (pas forcément enregistrée)
  * après ses upto premières étapes (-1 : toutes). fresh relit les sources.
  */
@@ -1939,6 +1962,14 @@ export function SetPageSetup(sheet: number, p: canvas$0.PageSetup, label: string
  */
 export function SetPivot(id: number, cfg: canvas$0.PivotConfig): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2338451198, id, cfg);
+}
+
+/**
+ * SetPivotCalcField ajoute (old vide), modifie ou retire (formula vide) un
+ * champ calculé d'un tableau croisé (« Champ calculé… ») ; annulable.
+ */
+export function SetPivotCalcField(id: number, old: string, name: string, formula: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2597856005, id, old, name, formula);
 }
 
 /**

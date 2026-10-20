@@ -537,7 +537,7 @@ export const apiReference: RefEntry[] = [
 		category: "objects",
 		signature: "pivots.create(config) → {id, name} (la feuille)",
 		summary: "Crée un tableau croisé dynamique sur une nouvelle feuille et renvoie cette feuille.",
-		details: "config : {source, rowFields, cols, values, filters, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source est un tableau, rowFields la liste des champs en lignes, cols le champ en colonnes, values une liste de {field, agg, show} (agg : \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" ou \"max\" ; show : \"\", \"pctTotal\", \"pctRow\" ou \"pctCol\"), filters une liste de {field, values}. Avec plusieurs champs en lignes, le tableau s'affiche en arborescence : subtotals place les sous-totaux des groupes (\"\" sur la ligne du groupe, \"bottom\" en dessous, \"none\" aucun) ; collapsed liste les groupes pliés, chacun par ses étiquettes ({\"RH\"}, {\"RH\", \"Paris\"}) ; collapseAll plie tout, sauf les groupes d'expanded. Paramètres — config : configuration du tableau croisé. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		details: "config : {source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source est un tableau, rowFields la liste des champs en lignes, cols le champ en colonnes, values une liste de {field, agg, show} (agg : \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" ou \"max\" ; show : \"\", \"pctTotal\", \"pctRow\" ou \"pctCol\"), filters une liste de {field, values}. Avec plusieurs champs en lignes, le tableau s'affiche en arborescence : subtotals place les sous-totaux des groupes (\"\" sur la ligne du groupe, \"bottom\" en dessous, \"none\" aucun) ; collapsed liste les groupes pliés, chacun par ses étiquettes ({\"RH\"}, {\"RH\", \"Paris\"}) ; collapseAll plie tout, sauf les groupes d'expanded. calc ajoute des champs calculés, une liste de {name, text} : text est une formule sur les colonnes de chaque ligne du tableau source (\"=ANNEE([Date])\", \"=GAUCHE([Code];2)\"), et name le nom du champ, qui se place ensuite dans rowFields, cols, values ou filters comme une colonne (les lignes sont regroupées par son résultat). Paramètres — config : configuration du tableau croisé. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "local f = pivots.create({source = \"Commandes\", rowFields = {\"Client\"}, values = {{field = \"Montant\", agg = \"sum\"}}})\nui.show_sheet(f.name)",
 		args: [1, 1]
 	},
@@ -554,7 +554,7 @@ export const apiReference: RefEntry[] = [
 		category: "objects",
 		signature: "pivots.set(pivot, config)",
 		summary: "Remplace la configuration d'un tableau croisé.",
-		details: "config : {source, rowFields, cols, values, filters, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source est un tableau, rowFields la liste des champs en lignes, cols le champ en colonnes, values une liste de {field, agg, show} (agg : \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" ou \"max\" ; show : \"\", \"pctTotal\", \"pctRow\" ou \"pctCol\"), filters une liste de {field, values}. Avec plusieurs champs en lignes, le tableau s'affiche en arborescence : subtotals place les sous-totaux des groupes (\"\" sur la ligne du groupe, \"bottom\" en dessous, \"none\" aucun) ; collapsed liste les groupes pliés, chacun par ses étiquettes ({\"RH\"}, {\"RH\", \"Paris\"}) ; collapseAll plie tout, sauf les groupes d'expanded. Paramètres — pivot : tableau croisé (identifiant ou nom) ; config : nouvelle configuration. Arguments dans l'ordre, ou une table d'arguments nommés : pivots.set{pivot = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		details: "config : {source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source est un tableau, rowFields la liste des champs en lignes, cols le champ en colonnes, values une liste de {field, agg, show} (agg : \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" ou \"max\" ; show : \"\", \"pctTotal\", \"pctRow\" ou \"pctCol\"), filters une liste de {field, values}. Avec plusieurs champs en lignes, le tableau s'affiche en arborescence : subtotals place les sous-totaux des groupes (\"\" sur la ligne du groupe, \"bottom\" en dessous, \"none\" aucun) ; collapsed liste les groupes pliés, chacun par ses étiquettes ({\"RH\"}, {\"RH\", \"Paris\"}) ; collapseAll plie tout, sauf les groupes d'expanded. calc ajoute des champs calculés, une liste de {name, text} : text est une formule sur les colonnes de chaque ligne du tableau source (\"=ANNEE([Date])\", \"=GAUCHE([Code];2)\"), et name le nom du champ, qui se place ensuite dans rowFields, cols, values ou filters comme une colonne (les lignes sont regroupées par son résultat). Paramètres — pivot : tableau croisé (identifiant ou nom) ; config : nouvelle configuration. Arguments dans l'ordre, ou une table d'arguments nommés : pivots.set{pivot = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		args: [1, 2]
 	},
 	{
@@ -648,9 +648,9 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "sheets.choice",
 		category: "sheets",
-		signature: "sheets.choice([sheet]) → {name, type, table, value, all, values} ou nil",
-		summary: "Décrit l'onglet à choix d'une feuille : catégorie (colonne), valeur choisie et valeurs proposées ; nil si la feuille n'en a pas.",
-		details: "Le choix filtre les tableaux de la feuille qui ont la colonne de catégorie (all : « (Toutes) », aucun filtre). Le SQL et les scripts voient toujours toutes les lignes. Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée.",
+		signature: "sheets.choice([sheet]) → {name, type, table, formula, value, all, values} ou nil",
+		summary: "Décrit l'onglet à choix d'une feuille : catégorie (colonne ou formule), valeur choisie et valeurs proposées ; nil si la feuille n'en a pas.",
+		details: "Le choix filtre les tableaux de la feuille qui ont la colonne de catégorie, ou les colonnes de sa formule (formula, catégorie calculée) ; all : « (Toutes) », aucun filtre. Le SQL et les scripts voient toujours toutes les lignes. Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée.",
 		example: "local c = sheets.choice(\"Feuille1\")\nif c then print(c.name .. \" : \" .. c.value) end",
 		args: [0, 1]
 	},
@@ -661,6 +661,15 @@ export const apiReference: RefEntry[] = [
 		summary: "Fait d'une feuille un onglet à choix par une colonne d'un de ses tableaux (« Choisir par… », « Filtrer l'onglet par cette colonne ») : la flèche de l'onglet choisit la valeur affichée.",
 		details: "Tous les tableaux de la feuille qui ont une colonne de ce nom suivent le choix, ainsi que ses tableaux croisés dont le tableau source a cette colonne. Avec sheet, l'onglet à choix est posé sur cette feuille-là : c'est « Filtrer l'onglet par ce champ » d'un tableau croisé posé ailleurs que son tableau source ; le TCD suit le choix, le tableau source (sur sa feuille) n'est pas filtré. Sans valeur, l'onglet montre toutes les valeurs. Paramètres — table : tableau de la colonne (pour un tableau croisé : son tableau source) ; column : colonne de catégorie (Année, Mois, Ville…) ; value : valeur affichée d'abord ; absente : toutes ; sheet : feuille de l'onglet à choix (celle d'un tableau croisé) ; absente : celle du tableau. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.choose_by{table = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
 		example: "sheets.choose_by(\"Commandes\", \"Client\", \"Durand\")\nsheets.add(\"Synthèse\")\nsheets.choose_by{table = \"Commandes\", column = \"Client\", sheet = \"Synthèse\"}",
+		args: [1, 4]
+	},
+	{
+		name: "sheets.choose_by_formula",
+		category: "sheets",
+		signature: "sheets.choose_by_formula(sheet, formula, name, [value])",
+		summary: "Fait d'une feuille un onglet à choix par une formule sur les colonnes de chaque ligne (« Choisir par › Une formule… ») : =ANNEE([Date]), =TEXTE([Date];\"mmmm\"), =SI([Montant]\u003e1000;\"Gros\";\"Petit\").",
+		details: "Les tableaux de la feuille qui ont toutes les colonnes citées par la formule suivent le choix (ainsi que ses tableaux croisés dont le tableau source les a) : seules les lignes dont la formule donne la valeur choisie restent affichées. Pas de colonne à remplir : une ligne ajoutée ne reçoit rien d'office, elle reste affichée jusqu'au prochain changement de valeur. « Nouvelle valeur » (sheets.new_choice) ne s'applique pas. Une étape d'annulation. Paramètres — sheet : feuille de l'onglet à choix ; formula : formule en français, colonnes entre crochets ([Date]) ; name : nom de la catégorie (Année, Mois, Taille…) ; value : valeur affichée d'abord ; absente : toutes. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.choose_by_formula{sheet = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.choose_by_formula(\"Feuille1\", \"=SI([Montant]\u003e1000;\\\"Gros\\\";\\\"Petit\\\")\", \"Taille\", \"Gros\")\nprint(sheets.choice(\"Feuille1\").value)",
 		args: [1, 4]
 	},
 	{

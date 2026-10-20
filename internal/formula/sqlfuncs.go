@@ -13,6 +13,10 @@ import (
 // tableaux utilisateur ne contiennent jamais de BLOB : pas d'ambiguïté.
 const blobMark = 0xE5
 
+// LabelFunc est la fonction SQL qui écrit un résultat de formule en texte
+// affiché (Value.String).
+const LabelFunc = "slt_label"
+
 func encodeBlob(v Value) []byte {
 	switch v.Kind {
 	case Bool:
@@ -251,6 +255,14 @@ func Register(c *sqlite3.Conn) error {
 			return Boolean(v.Num != 0)
 		}
 		return v
+	}); err != nil {
+		return err
+	}
+	// slt_label(v) : texte affiché d'un résultat de formule (2025, « VRAI »,
+	// « #VALEUR! » ; vide : ""), pour les catégories calculées (onglet à
+	// choix et champs de TCD par formule).
+	if err := c.CreateFunction(LabelFunc, 1, det, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+		ctx.ResultText(fromArg(arg[0]).String())
 	}); err != nil {
 		return err
 	}

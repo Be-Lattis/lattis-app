@@ -71,7 +71,7 @@ func (e ErrFiltered) Error() string {
 func (t Table) errFiltered(column bool) error {
 	e := ErrFiltered{Table: t.Name, Column: column}
 	if t.choiceOnly() && t.choice != nil {
-		e.Choice = t.choice.Col.Name + " : " + t.choice.Value
+		e.Choice = t.choice.Name + " : " + t.choice.Value
 	}
 	return e
 }
@@ -95,10 +95,14 @@ func (t *tx) loadFilter(tb *Table) error {
 		return err
 	}
 	if ch != nil && !tb.NoFollow {
-		if c, ok := choiceColumn(*tb, ch.Name); ok {
-			tb.choice = &tableChoice{Col: c, Value: ch.Value, All: ch.All}
+		tc, err := t.followChoice(*tb, ch)
+		if err != nil {
+			return err
+		}
+		if tc != nil {
+			tb.choice = tc
 			if !ch.All {
-				conds = append(conds, choiceCond(c, ch.Value))
+				conds = append(conds, tc.cond())
 			}
 		}
 	}

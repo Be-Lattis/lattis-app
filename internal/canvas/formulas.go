@@ -381,7 +381,7 @@ func (t *tx) schemaFor(sheet int64) (*formula.Schema, error) {
 				continue
 			}
 			c := *ft
-			c.SQL = "(SELECT * FROM " + tb.sql() + " WHERE " + choiceCond(tb.choice.Col, tb.choice.Value) + ")"
+			c.SQL = "(SELECT * FROM " + tb.sql() + " WHERE " + tb.choice.cond() + ")"
 			c.Visible = tb.visibleSQL()
 			s.Tables[i] = &c
 		}

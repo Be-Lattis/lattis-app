@@ -173,7 +173,11 @@ var internalTable = regexp.MustCompile(`^t_[0-9]+$`)
 // paramètres ?N remplacés par leur valeur en littéral, tables t_<id> lues
 // dans main (main.t_3). Les chaînes et identifiants entre guillemets restent
 // tels quels.
-func inlineSQL(s string, args []any) (string, error) {
+func inlineSQL(s string, args []any) (string, error) { return inlineExpr(s, args, true) }
+
+// inlineExpr : paramètres ?N remplacés par leur valeur en littéral, et
+// tables t_<id> lues dans main si inMain.
+func inlineExpr(s string, args []any, inMain bool) (string, error) {
 	var b strings.Builder
 	prev := "" // mot précédent, en minuscules
 	for i := 0; i < len(s); {
@@ -212,7 +216,7 @@ func inlineSQL(s string, args []any) (string, error) {
 			}
 			w := s[i:j]
 			qualified := i > 0 && s[i-1] == '.'
-			if internalTable.MatchString(w) && !qualified && prev != "as" {
+			if inMain && internalTable.MatchString(w) && !qualified && prev != "as" {
 				b.WriteString("main.")
 			}
 			b.WriteString(w)

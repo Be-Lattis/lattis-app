@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
@@ -37,6 +38,10 @@ import (
 //   - Classeur partagé : la catégorie est publiée avec la mise en page, la
 //     valeur choisie reste propre à chaque poste (remote/workbook/choice.go ;
 //     une catégorie reçue sans valeur prend la dernière, SettleChoices).
+//   - La catégorie peut aussi être une formule sur les colonnes de chaque
+//     ligne (« Choisir par › Une formule… », =ANNEE([Date]) ;
+//     choiceformula.go) : sans colonne, elle est suivie par les tableaux qui
+//     ont les colonnes de la formule.
 
 // MaxChoiceValues borne les colonnes proposées par « Choisir par… » (nombre
 // de valeurs distinctes).
@@ -52,6 +57,13 @@ type choiceRaw struct {
 	// Fresh : valeur posée par « Nouvelle année… » et pas encore quittée ;
 	// à l'ouverture, elle reste affichée même sans ligne (décision 12.2).
 	Fresh bool `json:"fresh,omitempty"`
+	// Formula : catégorie calculée (anglais canonique, colonnes citées par
+	// leur nom : =YEAR([Date])) ; Tbl et Col sont alors vides.
+	Formula string `json:"formula,omitempty"`
+	// Keep : lignes ajoutées sous une catégorie calculée depuis le dernier
+	// changement de valeur, montrées même hors de la valeur choisie (une
+	// ligne qu'on commence à saisir ne disparaît pas ; choiceformula.go).
+	Keep []int64 `json:"keep,omitempty"`
 }
 
 // SheetChoice décrit l'onglet à choix d'une feuille.
@@ -66,13 +78,62 @@ type SheetChoice struct {
 	Value string `json:"value"`
 	All   bool   `json:"all"`
 	Fresh bool   `json:"fresh,omitempty"`
+	// Formula : catégorie calculée par une formule (affichée en français),
+	// sans colonne ; vide pour une catégorie par colonne.
+	Formula string `json:"formula,omitempty"`
+
+	en   string  // formule en anglais canonique
+	keep []int64 // voir choiceRaw.Keep
 }
 
-// tableChoice : un tableau qui suit le choix de l'onglet.
+// tableChoice : un tableau qui suit le choix de l'onglet. Col est la
+// colonne de catégorie (ID 0 pour une catégorie calculée) ; Expr, le texte
+// de la catégorie de chaque ligne en SQL ; Name, le nom de la catégorie.
 type tableChoice struct {
 	Col   Column
+	Name  string
+	Expr  string
 	Value string
 	All   bool
+	Keep  []int64
+}
+
+// formula : la catégorie est calculée (pas de colonne).
+func (c *tableChoice) formula() bool { return c.Col.ID == 0 }
+
+// cond : condition SQL des lignes de la valeur choisie (et des lignes
+// gardées d'une catégorie calculée).
+func (c *tableChoice) cond() string {
+	w := c.Expr + " = " + sqlLiteral(c.Value)
+	if len(c.Keep) == 0 {
+		return w
+	}
+	ids := make([]string, len(c.Keep))
+	for i, id := range c.Keep {
+		ids[i] = strconv.FormatInt(id, 10)
+	}
+	return "(" + w + " OR id IN (" + strings.Join(ids, ", ") + "))"
+}
+
+// columnChoice : le choix suivi par la colonne de catégorie c.
+func columnChoice(c Column, ch *SheetChoice) *tableChoice {
+	return &tableChoice{Col: c, Name: c.Name, Expr: textExpr(c), Value: ch.Value, All: ch.All}
+}
+
+// followChoice : comment le tableau suit le choix ch (nil : il ne le suit
+// pas, faute de colonne de catégorie ou des colonnes de la formule).
+func (t *tx) followChoice(tb Table, ch *SheetChoice) (*tableChoice, error) {
+	if ch.en == "" {
+		if c, ok := choiceColumn(tb, ch.Name); ok {
+			return columnChoice(c, ch), nil
+		}
+		return nil, nil
+	}
+	expr, ok, err := t.rowLabelSQL(tb, ch.en)
+	if err != nil || !ok {
+		return nil, err
+	}
+	return &tableChoice{Name: ch.Name, Expr: expr, Value: ch.Value, All: ch.All, Keep: ch.keep}, nil
 }
 
 // ChoiceCandidate est une colonne proposée par « Choisir par… ».
@@ -91,11 +152,6 @@ func choiceColumn(tb Table, name string) (Column, bool) {
 		}
 	}
 	return Column{}, false
-}
-
-// choiceCond : condition SQL des lignes de la valeur choisie.
-func choiceCond(c Column, value string) string {
-	return textExpr(c) + " = " + sqlLiteral(value)
 }
 
 // readChoice lit la catégorie enregistrée d'une feuille (nil : aucune).
@@ -130,7 +186,9 @@ func (t *tx) sheetChoice(sheet int64) (*SheetChoice, error) {
 // resolveChoice : nom et type actuels de la colonne source.
 func (t *tx) resolveChoice(r *choiceRaw) (*SheetChoice, error) {
 	ch := &SheetChoice{Name: r.Name, Type: grid.Text, Value: r.Value, All: r.All, Fresh: r.Fresh}
-	if r.Tbl != 0 {
+	if r.Formula != "" {
+		ch.Formula, ch.en, ch.keep = displayFormula(r.Formula), r.Formula, r.Keep
+	} else if r.Tbl != 0 {
 		var name, typ, table string
 		err := t.row(`SELECT c.name, c.type, t.name FROM _lattis_columns c JOIN _lattis_tables t ON t.id = c.tbl WHERE c.tbl = ? AND c.id = ?`, r.Tbl, r.Col).Scan(&name, &typ, &table)
 		switch {
@@ -280,7 +338,7 @@ func (m *Model) ChooseSheetValue(ctx context.Context, sheet int64, value string,
 		if r.All == all && r.Value == value && !r.Fresh {
 			return nil
 		}
-		r.Value, r.All, r.Fresh = value, all, false
+		r.Value, r.All, r.Fresh, r.Keep = value, all, false, nil
 		b, err := json.Marshal(r)
 		if err != nil {
 			return err
@@ -379,8 +437,12 @@ func (t *tx) choiceSources(sheet int64, ch *SheetChoice, r *choiceRaw) ([]Table,
 			continue
 		}
 		seen[tb.ID] = true
-		if c, ok := choiceColumn(tb, ch.Name); ok {
-			tb.choice = &tableChoice{Col: c, Value: ch.Value, All: ch.All}
+		tc, err := t.followChoice(tb, ch)
+		if err != nil {
+			return nil, err
+		}
+		if tc != nil {
+			tb.choice = tc
 			tables = append(tables, tb)
 		}
 	}
@@ -449,10 +511,10 @@ func (t *tx) choiceValues(sheet int64) ([]FilterValue, error) {
 	for _, tb := range tables {
 		c := tb.choice.Col
 		order := "min(_pos)"
-		if c.Type != grid.Text {
+		if !tb.choice.formula() && c.Type != grid.Text {
 			order = "min(" + colSQL(c.ID) + ")"
 		}
-		rs, err := t.query(`SELECT `+textExpr(c)+` AS v, count(*) FROM `+tb.sql()+` GROUP BY v HAVING v <> '' ORDER BY `+order+` LIMIT ?`, MaxFilterValues)
+		rs, err := t.query(`SELECT `+tb.choice.Expr+` AS v, count(*) FROM `+tb.sql()+` GROUP BY v HAVING v <> '' ORDER BY `+order+` LIMIT ?`, MaxFilterValues)
 		if err != nil {
 			return out, err
 		}
@@ -486,6 +548,11 @@ func (t *tx) choiceValues(sheet int64) ([]FilterValue, error) {
 			}
 		}
 	}
+	// Catégorie calculée : ordre naturel (2024 avant 2025, janvier avant
+	// février), faute d'ordre de saisie d'une colonne.
+	if ch.en != "" {
+		sortChoiceValues(out)
+	}
 	// La valeur choisie reste proposée, même sans ligne.
 	if !ch.All && ch.Value != "" {
 		if _, ok := at[ch.Value]; !ok {
@@ -515,6 +582,9 @@ func (m *Model) NewSheetChoiceValue(ctx context.Context, sheet int64, value stri
 		}
 		if r == nil {
 			return fmt.Errorf("%w : la feuille n'a pas d'onglet à choix", ErrSheet)
+		}
+		if r.Formula != "" {
+			return fmt.Errorf("%w : « %s » est calculée par une formule, ses valeurs viennent des lignes : saisissez une ligne de la nouvelle valeur", ErrSheet, r.Name)
 		}
 		vals, err := t.choiceValues(sheet)
 		if err != nil {
@@ -697,6 +767,9 @@ func (t *tx) imposeChoice(tb Table, rid int64) error {
 	if ch == nil || ch.All || ch.Value == "" {
 		return nil
 	}
+	if ch.formula() {
+		return t.keepChoiceRow(tb.Sheet, rid)
+	}
 	v, err := grid.Parse(ch.Col.Type, ch.Value)
 	if err != nil {
 		return t.setValue(tb, rid, ch.Col, nil, ch.Value)
@@ -705,10 +778,18 @@ func (t *tx) imposeChoice(tb Table, rid int64) error {
 }
 
 // choiceValue est la valeur choisie d'une feuille pour ONGLET.CHOIX(),
-// avec le type de sa colonne source ; vide pour « (Toutes) ».
+// avec le type de sa colonne source ; vide pour « (Toutes) ». Celle d'une
+// catégorie calculée est un nombre quand elle s'écrit comme un nombre
+// (=ANNEE([Date]) : 2025), un texte sinon.
 func choiceValue(ch *SheetChoice) formula.Value {
 	if ch.All {
 		return formula.Value{}
+	}
+	if ch.en != "" {
+		if f, ok := frenchNumber(ch.Value); ok {
+			return formula.Num(f)
+		}
+		return formula.Str(ch.Value)
 	}
 	v, err := grid.Parse(ch.Type, ch.Value)
 	if err != nil {
@@ -732,7 +813,17 @@ func (t *tx) pivotChoice(sheet int64, cfg *PivotConfig) error {
 	if err != nil {
 		return nil // source introuvable : l'erreur du TCD le dira
 	}
-	if c, ok := choiceColumn(tb, ch.Name); ok && (tb.Sheet != sheet || !tb.NoFollow) {
+	if tb.Sheet == sheet && tb.NoFollow {
+		return nil
+	}
+	if ch.en != "" {
+		// Catégorie calculée : filtre par la formule, si la source a ses colonnes.
+		if rowFormulaFits(tb, ch.en) {
+			cfg.Choice = &PivotFilter{Field: ch.Name, Formula: ch.en, Values: []string{ch.Value}}
+		}
+		return nil
+	}
+	if c, ok := choiceColumn(tb, ch.Name); ok {
 		cfg.Choice = &PivotFilter{Field: c.Name, Values: []string{ch.Value}}
 	}
 	return nil

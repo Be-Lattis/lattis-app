@@ -67,7 +67,7 @@ func (t *tx) rewriteRefs(rc refChange) error {
 		return nil
 	}
 	steps := []func(refChange) error{t.rewriteCellFormulas, t.rewriteColumnFormulas, t.rewriteLineRules,
-		t.rewriteCellRules, t.rewritePivots, t.rewriteCharts, t.rewriteButtons, t.rewriteQueries, t.rewriteDocObjects, t.rewriteSortOrders, t.rewriteValidations}
+		t.rewriteCellRules, t.rewritePivots, t.rewriteCharts, t.rewriteButtons, t.rewriteQueries, t.rewriteDocObjects, t.rewriteSortOrders, t.rewriteValidations, t.rewriteChoiceFormulas}
 	for _, f := range steps {
 		if err := f(rc); err != nil {
 			return err
@@ -352,6 +352,17 @@ func renamePivotConfig(m map[string]any, rc refChange) bool {
 		changed = renameField(m, k, rc.Renames, src) || changed
 	}
 	changed = renameFieldList(m, "rowFields", rc.Renames, src) || changed
+	// Champs calculés : leurs [Colonne] sont celles du tableau source.
+	calc, _ := m["calc"].([]any)
+	for _, v := range calc {
+		if f, ok := v.(map[string]any); ok {
+			if s, _ := f["formula"].(string); s != "" {
+				if neu, ok := formula.RenameRefs(s, formula.EN, rc.Renames, src); ok {
+					f["formula"], changed = neu, true
+				}
+			}
+		}
+	}
 	for _, k := range []string{"values", "filters", "items"} {
 		list, _ := m[k].([]any)
 		for _, v := range list {

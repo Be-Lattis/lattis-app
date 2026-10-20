@@ -117,6 +117,9 @@ type TableInfo struct {
 	// valeur choisie, les autres gardent leur place (lignes à remplir).
 	Follows   bool `json:"follows,omitempty"`
 	ChoiceCol int  `json:"choiceCol,omitempty"`
+	// ByFormula : il suit une catégorie calculée (pas de colonne de
+	// catégorie, ChoiceCol sans objet).
+	ByFormula bool `json:"byFormula,omitempty"`
 }
 
 // SharingAccess est la partie facultative de Sharing qui donne les droits
@@ -262,6 +265,9 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 				if tb.choice != nil && c.ID == tb.choice.Col.ID {
 					ti.Follows, ti.ChoiceCol = true, i
 				}
+			}
+			if tb.choice != nil && tb.choice.formula() {
+				ti.Follows, ti.ByFormula = true, true
 			}
 			if ti.KeyHint, err = t.keyHint(tb); err != nil {
 				return err

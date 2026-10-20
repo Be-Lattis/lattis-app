@@ -40,7 +40,7 @@ func (t *tx) spillFree(sheet int64, raw string) ([][]string, bool, formula.Value
 func (t *tx) pivotFlat(cfg PivotConfig) ([][]string, error) {
 	cfg = cfg.flat()
 	// Un TCD ne lit que son tableau source (pas de colonne calculée comme champ).
-	if tb, err := t.tableByName(cfg.Source); err == nil {
+	if tb, err := t.tableByName(cfg.Source); err == nil && !cfg.byFormula() {
 		return cachedOn(t, keyOf("pivot:", cfg), []string{tb.sql()}, func() ([][]string, error) { return t.pivotCellsRaw(cfg) })
 	}
 	return cached(t, keyOf("pivot:", cfg), func() ([][]string, error) { return t.pivotCellsRaw(cfg) })
@@ -54,7 +54,7 @@ func (t *tx) pivotCells(cfg PivotConfig) ([][]string, []PivotRowInfo, error) {
 	calc := func() (pivotView, error) { return t.pivotViewRaw(cfg) }
 	var v pivotView
 	var err error
-	if tb, terr := t.tableByName(cfg.Source); terr == nil {
+	if tb, terr := t.tableByName(cfg.Source); terr == nil && !cfg.byFormula() {
 		v, err = cachedOn(t, keyOf("pivotview:", cfg), []string{tb.sql()}, calc)
 	} else {
 		v, err = cached(t, keyOf("pivotview:", cfg), calc)

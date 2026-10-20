@@ -342,6 +342,9 @@ func (t *tx) setTableFollow(tb Table, follow bool) (string, error) {
 		return "", fmt.Errorf("%w : la feuille n'a pas d'onglet à choix (clic droit sur l'onglet › Choisir par…)", ErrSheet)
 	}
 	what := FollowLabel(ch.Name)
+	if r.Formula != "" {
+		return t.setFormulaFollow(tb, ch, follow, what)
+	}
 	col, has := choiceColumn(tb, ch.Name)
 	if follow {
 		if err := t.setFollowFlag(tb, nil); err != nil {
@@ -450,8 +453,8 @@ func (t *tx) followNewTable(id int64) error {
 		return err
 	}
 	r, err := t.readChoice(tb.Sheet)
-	if err != nil || r == nil || r.All || r.Value == "" {
-		return err
+	if err != nil || r == nil || r.All || r.Value == "" || r.Formula != "" {
+		return err // catégorie calculée : le tableau la suit s'il en a les colonnes
 	}
 	ch, err := t.sheetChoice(tb.Sheet)
 	if err != nil || ch == nil {

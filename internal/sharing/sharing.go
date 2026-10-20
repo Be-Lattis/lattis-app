@@ -85,7 +85,7 @@ var Structure = []string{
 	"tables.clear_filters", "cells.note", "sheets.hide_lines", "tables.extract_columns", "sheets.replace",
 	"cells.dependencies",
 	// Onglet à choix (« Choisir par… », « Nouvelle année… », valeur affichée).
-	"sheets.choose_by", "sheets.set_choice", "sheets.new_choice", "sheets.clear_choice",
+	"sheets.choose_by", "sheets.choose_by_formula", "sheets.set_choice", "sheets.new_choice", "sheets.clear_choice",
 	// Regrouper les onglets aux mêmes colonnes : détection (noms de
 	// feuilles, de tableaux et de colonnes) et fusion (sans valeurs hors
 	// partage : Filter).

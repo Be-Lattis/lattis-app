@@ -38,6 +38,10 @@ type choicePick struct {
 	Value string `json:"value,omitempty"`
 	All   bool   `json:"all,omitempty"`
 	Fresh bool   `json:"fresh,omitempty"`
+	// Formula : catégorie calculée par une formule (=YEAR([Date])), publiée
+	// avec la catégorie ; Keep (lignes gardées visibles) reste sur le poste.
+	Formula string  `json:"formula,omitempty"`
+	Keep    []int64 `json:"keep,omitempty"`
 }
 
 // parseChoice lit une colonne choice (nil : aucune, ou illisible).
@@ -52,7 +56,7 @@ func parseChoice(v any) *choicePick {
 		return nil
 	}
 	var p choicePick
-	if s == "" || json.Unmarshal([]byte(s), &p) != nil || (p.Tbl == 0 && strings.TrimSpace(p.Name) == "") {
+	if s == "" || json.Unmarshal([]byte(s), &p) != nil || (p.Tbl == 0 && p.Formula == "" && strings.TrimSpace(p.Name) == "") {
 		return nil
 	}
 	return &p
@@ -63,7 +67,7 @@ func (p *choicePick) def() *choicePick {
 	if p == nil {
 		return nil
 	}
-	return &choicePick{Tbl: p.Tbl, Col: p.Col, Name: p.Name}
+	return &choicePick{Tbl: p.Tbl, Col: p.Col, Name: p.Name, Formula: p.Formula}
 }
 
 // choiceText écrit la colonne choice (nil : NULL).
@@ -91,10 +95,14 @@ func publishedChoice(v any, published map[int64]bool) any {
 	return choiceText(p)
 }
 
-// sameCategory : même colonne source, ou même nom.
+// sameCategory : même colonne source, ou même nom (et même formule pour une
+// catégorie calculée).
 func sameCategory(a, b *choicePick) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
+	}
+	if a.Formula != b.Formula {
+		return false
 	}
 	if a.Tbl != 0 && a.Tbl == b.Tbl && a.Col == b.Col {
 		return true
@@ -108,6 +116,9 @@ func sameCategory(a, b *choicePick) bool {
 func looseSame(a, b *choicePick) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
+	}
+	if a.Formula != b.Formula {
+		return false
 	}
 	if a.Tbl != 0 && b.Tbl != 0 && (a.Tbl != b.Tbl || a.Col != b.Col) {
 		return false
@@ -124,7 +135,7 @@ func mergeChoice(local, server *choicePick) *choicePick {
 	}
 	out := server.def()
 	if local != nil && sameCategory(local, server) {
-		out.Value, out.All, out.Fresh = local.Value, local.All, local.Fresh
+		out.Value, out.All, out.Fresh, out.Keep = local.Value, local.All, local.Fresh, local.Keep
 	}
 	return out
 }

@@ -286,3 +286,49 @@ func TestChoiceTabFollowed(t *testing.T) {
 	})
 	wantTab(t, "Bob", bob, "Site", "Bois")
 }
+
+// Catégorie calculée par une formule : publiée avec sa formule ; Bob la
+// reçoit et garde sa valeur tant que la formule ne change pas.
+func TestChoiceTabFormulaShared(t *testing.T) {
+	ctx := context.Background()
+	f, alice, bob, id := setupChoice(t, false)
+	must(t, alice.d.Model.SetSheetChoiceFormula(ctx, 1, "Taille", `=SI([Nids]>3;"Gros";"Petit")`, "Gros"))
+	must(t, alice.e.PublishChoices(ctx, false))
+	var lay struct {
+		Tables map[string]workbook.LayoutRows `json:"tables"`
+	}
+	must(t, json.Unmarshal(f.Meta(id, "layout"), &lay))
+	sheets := lay.Tables["_lattis_sheets"]
+	at := slices.Index(sheets.Columns, "choice")
+	s, _ := sheets.Rows[0][at].(string)
+	var def map[string]any
+	must(t, json.Unmarshal([]byte(s), &def))
+	if len(def) != 2 || def["name"] != "Taille" || def["formula"] != `=IF([Nids]>3, "Gros", "Petit")` {
+		t.Fatalf("catégorie publiée : %s", s)
+	}
+	_, err := bob.e.ReceiveStructure(ctx, nil, nil)
+	must(t, err)
+	wantTab(t, "Bob, catégorie calculée", bob, "Taille", "Petit")
+	ch, err := bob.d.Model.SheetChoice(ctx, 1)
+	must(t, err)
+	if ch.Formula != `=SI([Nids]>3; "Gros"; "Petit")` {
+		t.Fatalf("formule chez Bob : %q", ch.Formula)
+	}
+	l, err := bob.d.Model.Layout(ctx, 1)
+	must(t, err)
+	if tb := l.Tables[0]; !tb.ByFormula || tb.Rows != 2 || tb.Total != 4 {
+		t.Fatalf("tableau chez Bob : %+v", tb)
+	}
+	// Sa valeur lui reste à la réception suivante ; une autre formule est
+	// une autre catégorie (dernière valeur).
+	must(t, bob.d.Model.ChooseSheetValue(ctx, 1, "Gros", false))
+	must(t, alice.e.PublishChoices(ctx, true))
+	_, err = bob.e.ReceiveStructure(ctx, nil, nil)
+	must(t, err)
+	wantTab(t, "Bob, sa valeur", bob, "Taille", "Gros")
+	must(t, alice.d.Model.SetSheetChoiceFormula(ctx, 1, "Taille", `=SI([Nids]>4;"Gros";"Petit")`, "Gros"))
+	must(t, alice.e.PublishChoices(ctx, false))
+	_, err = bob.e.ReceiveStructure(ctx, nil, nil)
+	must(t, err)
+	wantTab(t, "Bob, autre formule", bob, "Taille", "Petit")
+}
