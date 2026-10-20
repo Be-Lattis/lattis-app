@@ -8,7 +8,7 @@
 // prédéfinis (sauf ui.builtinThemes = false), ceux de l'organisation et
 // ceux de l'utilisateur (ui.themes, un objet par identifiant).
 import type { SettingState } from '#lib/shell/settings.js';
-import { compareText, t } from '#lib/i18n/index.js';
+import { compareText, t, tAny } from '#lib/i18n/index.js';
 
 // Comme findSetting (settings.ts, qui importe ce fichier).
 const findSetting = (list: readonly SettingState[], path: string) => list.find((s) => s.path.toLowerCase() === path.toLowerCase());
@@ -90,6 +90,15 @@ export const BUILTIN_THEMES: ThemeDef[] = [
 	{ id: 'orange-bleu', name: 'Orange et bleu', table: '#c2410c', source: '#2563eb', accents: ['#15803d', '#a16207', '#7c3aed', '#be123c'], dark: '#3b2f2a', light: '#f3ebe5', origin: 'builtin' },
 	{ id: 'bordeaux-gris', name: 'Bordeaux et gris', table: '#9f1239', source: '#64748b', accents: ['#b45309', '#0f766e', '#1d4ed8', '#6d28d9'], dark: '#3f1d2b', light: '#efe7ea', origin: 'builtin' }
 ];
+
+/**
+ * Nom affiché d'un thème : celui d'un thème prédéfini dans la langue de
+ * l'interface (le nom enregistré, en français, ne change pas), sinon son nom.
+ */
+export function themeLabel(th: { id?: string | null; name: string; origin?: string }): string {
+	const builtin = th.id ? BUILTIN_THEMES.find((b) => b.id === th.id) : undefined;
+	return builtin && (th.origin === 'builtin' || th.name === builtin.name) ? tAny(`grid.theme.builtin.${builtin.id}`) : th.name;
+}
 
 // Les couleurs d'avant les thèmes, gardées à l'identique pour « Vert et bleu ».
 const EXACT: Record<string, Family> = {

@@ -1061,7 +1061,16 @@
 		"done.table": "Texte converti en {n, plural, one {# colonne} other {# colonnes}} (tableau {table}) (Ctrl+Z pour annuler)"
 	},
 	"theme": {
-		"custom": "Personnalisé"
+		"custom": "Personnalisé",
+		"builtin": {
+			"vert-bleu": "Vert et bleu",
+			"bleu-orange": "Bleu et orange",
+			"violet-sarcelle": "Violet et sarcelle",
+			"sarcelle-violet": "Sarcelle et violet",
+			"gris-bleu": "Gris et bleu",
+			"orange-bleu": "Orange et bleu",
+			"bordeaux-gris": "Bordeaux et gris"
+		}
 	},
 	"titleHead": {
 		"offer": "Cette ligne ressemble aux en-têtes de « {table} »"
@@ -1457,7 +1466,8 @@
 		"table": "Nom du tableau : modifiez puis Entrée pour le renommer",
 		"table.default": "Nom par défaut : renommez le tableau (modifiez puis Entrée)",
 		"column": "Colonne[ligne] : modifiez le nom puis Entrée pour renommer la colonne",
-		"cell": "Nom de la cellule : tapez un nom puis Entrée pour la nommer, ou le nom d'une cellule pour y aller"
+		"cell": "Nom de la cellule : tapez un nom puis Entrée pour la nommer, ou le nom d'une cellule pour y aller",
+		"size": "{rows}L × {cols}C"
 	},
 	"formulaBar": {
 		"aria": "Barre de formule",

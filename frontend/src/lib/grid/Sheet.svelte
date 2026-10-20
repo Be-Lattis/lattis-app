@@ -2964,7 +2964,7 @@
 				const clip = { x0: p.x0, x1: p.x1, y0: p.y0 === TOP_H ? 0 : p.y0, y1: p.y1 };
 				let room = fw;
 				if (e.t.follows && data?.choice && !data.choice.all) {
-					const label = data.choice.value || '(vide)';
+					const label = data.choice.value || tr('grid.follow.empty');
 					const bw = Math.ceil(ctx.measureText(label).width) + 10;
 					const b = placeFollowBadge({ x, y, w: fw, bw, bh, paneTop: p.y0, strip: p.y0 === TOP_H, aboveFree });
 					followBadges.push({ kind: 'follow', e, label, radii: b.radii, x0: b.x, x1: b.x + bw, y0: b.y, y1: b.y + bh, clip });
@@ -6925,7 +6925,7 @@
 		} else tableBox = null;
 		// Taille de la plage pendant le glissé seulement, comme Excel ; ensuite
 		// l'adresse de la cellule active revient.
-		if (multi && (dragging || headerDrag)) nameBox = `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C`;
+		if (multi && (dragging || headerDrag)) nameBox = tr('grid.nameBox.size', { rows: String(sel.r1 - sel.r0 + 1), cols: String(sel.c1 - sel.c0 + 1) });
 		refreshSpeech(e, sel, multi);
 		if (fxEditing) return;
 		fxRO = readOnlyReason(active.row, active.col);
@@ -8209,7 +8209,7 @@
 		// Glisser : le coin mobile suit la souris, la cellule active reste.
 		anchor = cell;
 		const sel = selection();
-		nameBox = !singleSelection() ? `${sel.r1 - sel.r0 + 1}L × ${sel.c1 - sel.c0 + 1}C` : cellName(active.row, active.col);
+		nameBox = !singleSelection() ? tr('grid.nameBox.size', { rows: String(sel.r1 - sel.r0 + 1), cols: String(sel.c1 - sel.c0 + 1) }) : cellName(active.row, active.col);
 		schedule();
 	}
 

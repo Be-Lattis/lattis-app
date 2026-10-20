@@ -807,6 +807,7 @@ export interface MessageParams {
 	'grid.nameBadge.tooltip': { name: number | string };
 	'grid.nameBox.cell': Record<never, never>;
 	'grid.nameBox.column': Record<never, never>;
+	'grid.nameBox.size': { cols: number | string; rows: number | string };
 	'grid.nameBox.table': Record<never, never>;
 	'grid.nameBox.table.default': Record<never, never>;
 	'grid.names.cell.inTable': { table: number | string };
@@ -1090,6 +1091,13 @@ export interface MessageParams {
 	'grid.textCols.step.separators': Record<never, never>;
 	'grid.textCols.thousands': Record<never, never>;
 	'grid.textCols.title': Record<never, never>;
+	'grid.theme.builtin.bleu-orange': Record<never, never>;
+	'grid.theme.builtin.bordeaux-gris': Record<never, never>;
+	'grid.theme.builtin.gris-bleu': Record<never, never>;
+	'grid.theme.builtin.orange-bleu': Record<never, never>;
+	'grid.theme.builtin.sarcelle-violet': Record<never, never>;
+	'grid.theme.builtin.vert-bleu': Record<never, never>;
+	'grid.theme.builtin.violet-sarcelle': Record<never, never>;
 	'grid.theme.custom': Record<never, never>;
 	'grid.titleHead.offer': { table: number | string };
 	'grid.twoLevel.split': { names: number | string };
