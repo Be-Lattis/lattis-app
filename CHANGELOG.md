@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.3.1-beta (21/10/2026)
+
 ### Changements
 
 - Tableau tapé : la première ligne tapée est l'en-tête, même quand elle ressemble aux suivantes (« Nom | Ville » puis « Léa | Paris »), sauf si elle contient un nombre, une date, une heure, un booléen, un pourcentage ou un montant (« Léa | 31 », « Pays | 2024 ») : alors toutes les lignes tapées sont des données, sous un en-tête « Colonne 1 », « Colonne 2 »… ajouté juste au-dessus (clic droit › « Utiliser la première ligne comme en-têtes » pour revenir ; un nombre tapé après une apostrophe, '2024, reste un nom). Sans place au-dessus (première ligne de la feuille, cellule juste au-dessus), ces lignes restent des cellules libres, que « Mettre sous forme de tableau » reprend. Un nombre tapé ensuite sous un nom de la première ligne ne change plus l'en-tête. Un bloc collé garde sa détection (années en en-tête reconnues).
