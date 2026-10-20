@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.3.0-beta (20/10/2026)
+
 ### Changements
 
 - Menus du clic droit réordonnés : en haut ce qui est propre à la cellule cliquée, puis le plus courant (tri et filtre, insertion et suppression de ligne, effacement, mise en forme, note), puis Couper, Copier, Coller. Les actions d'une colonne (renommer, type, validation, insérer ou supprimer la colonne) sont dans sa section « Colonne « Heure » », celles du tableau dans le sous-menu « Tableau « Relevés » », titrés du nom cliqué (plus de titre en tête du menu) ; de même pour la section « Tableau croisé » et le titre « Graphique « … » ». Onglets : insérer, renommer, déplacer, couleur d'abord, Supprimer en dernier ; avec plusieurs onglets choisis, Regrouper des onglets… en tête.
