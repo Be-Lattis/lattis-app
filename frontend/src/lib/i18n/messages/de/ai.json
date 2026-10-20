@@ -1,1 +1,230 @@
-{}
+{
+	"result": {
+		"none": "Keine Zeilen",
+		"firstOf": "Erste {n} Zeilen von {total}",
+		"firstOfMore": "Erste {n} Zeilen von mehr als {total}"
+	},
+	"steps": "{n, plural, one {# Schritt} other {# Schritte}}",
+	"errors": "{n, plural, one {# Fehler} other {# Fehler}}",
+	"changes": "{n, plural, one {# Änderung} other {# Änderungen}}",
+	"cost": {
+		"small": "< {min} $ für diese Unterhaltung",
+		"about": "≈ {cost} $ für diese Unterhaltung"
+	},
+	"context": {
+		"plain": "Kontext: {where}",
+		"selection": "Kontext: {where}, Auswahl {selection}"
+	},
+	"suggest": {
+		"repair": "Tabellen auf diesem Tabellenblatt reparieren",
+		"name": "Benenne alle Tabellen der Arbeitsmappe automatisch.",
+		"contents": "Was enthält diese Arbeitsmappe?",
+		"analysis": "Schlage eine Analyse meiner Daten vor",
+		"pivot": "Erstelle eine sinnvolle PivotTable mit einem Diagramm",
+		"explain": "Erkläre die Auswahl {selection} von {table}",
+		"pivotsFor": "Schlage PivotTables für {table} vor",
+		"analyze": "{table} analysieren ({n, plural, one {# Zeile} other {# Zeilen}})",
+		"types": "Typen von {table} prüfen",
+		"duplicates": "Duplikate in {table} suchen"
+	},
+	"retryIn": "Erneut versuchen in {n} s",
+	"retry": "Erneut versuchen",
+	"sharing": {
+		"label": {
+			"sample": "Struktur und Beispielzeilen",
+			"full": "Gesamte Arbeitsmappe",
+			"schema": "Nur Struktur"
+		},
+		"summary": {
+			"sample": "es sieht die Struktur der Arbeitsmappe und bei jedem Lesen einige Beispielzeilen (höchstens 20).",
+			"full": "es kann den gesamten Inhalt der Arbeitsmappe lesen.",
+			"schema": "es sieht die Struktur der Arbeitsmappe (Tabellenblätter, Tabellen, Spalten, Typen) ohne die Zellwerte."
+		}
+	},
+	"external": {
+		"changes": "{n, plural, one {# Änderung} other {# Änderungen}}",
+		"reads": "{n, plural, one {# Lesevorgang} other {# Lesevorgänge}}",
+		"errors": "{n, plural, one {# Fehler} other {# Fehler}}",
+		"connected": "{client} verbunden",
+		"waiting": "Warten auf eine Verbindung",
+		"undo": {
+			"nothing": "Keine Änderung rückgängig zu machen.",
+			"checking": "Wird geprüft…",
+			"tooltip": "Macht auf einmal rückgängig, was {client} in dieser Reihe geändert hat",
+			"running": "Wird rückgängig gemacht…",
+			"label": "Diese Änderungen rückgängig machen"
+		},
+		"intro": "Öffnen Sie Claude Desktop oder Claude Code und fragen Sie zum Beispiel „Was enthält meine Lattis-Arbeitsmappe?“: Jede Aktion erscheint hier.",
+		"confirm": {
+			"label": "Vor Änderungen fragen",
+			"help": "Lattis bittet vor jeder Änderung der Arbeitsmappe um Ihre Zustimmung; Lesevorgänge laufen ohne Rückfrage."
+		}
+	},
+	"goto": {
+		"label": "Gehe zu",
+		"tooltip": "Gehe zu „{target}“"
+	},
+	"setup": {
+		"intro": "Mit einem Claude-Abonnement (Pro, Max, Team) brauchen Sie keinen API-Schlüssel: Sie chatten in Claude Desktop oder Claude Code, das auf die geöffnete Arbeitsmappe wirkt, und Lattis zeigt, was getan wird.",
+		"sharing": {
+			"before": "Die Einstellung „An den Assistenten gesendete Daten“ (Datei › Einstellungen › KI-Assistent) gilt auch für Claude:",
+			"after": "Starten Sie Claude nach einer Änderung neu, damit es die neue Liste der Tools sieht."
+		},
+		"badge": {
+			"connected": "Verbunden",
+			"configured": "Konfiguriert",
+			"installed": "Installiert",
+			"notInstalled": "Nicht installiert",
+			"notFound": "Nicht gefunden"
+		},
+		"desktop": {
+			"help": "Die Desktop-App von Claude. Lattis erscheint dort in den Tools der Unterhaltung.",
+			"done": "Konfiguriert ✓ – starten Sie Claude Desktop neu (vollständig beenden und wieder öffnen).",
+			"download": "Claude Desktop herunterladen",
+			"manual": "Manuell konfigurieren",
+			"mergeInto": "Zusammenführen in"
+		},
+		"configuring": "Wird konfiguriert…",
+		"reconfigure": "Erneut konfigurieren",
+		"configure": "Konfigurieren",
+		"code": {
+			"help": "Der Assistent von Claude im Terminal (oder in seiner Desktop-App). Lattis wird für alle Ihre Projekte hinzugefügt.",
+			"done": {
+				"before": "Konfiguriert ✓ – öffnen Sie eine neue Sitzung von Claude Code:",
+				"after": "zeigt dort Lattis an."
+			},
+			"notFound": "Befehl claude auf diesem Computer nicht gefunden",
+			"install": "Claude Code installieren",
+			"manual": "Selbst auszuführender Befehl"
+		}
+	},
+	"connect": {
+		"claudeApps": "Claude Desktop oder Claude Code",
+		"keySaved": "Schlüssel im Schlüsselbund des Systems gespeichert.",
+		"keyValid": "Gültiger Schlüssel: Er ist im Schlüsselbund des Systems gespeichert.",
+		"aria": "Verbindung des Assistenten",
+		"title": "Assistenten verbinden",
+		"close": "Verbindung schließen",
+		"managed": "Anbieter und Modell werden von Ihrer Organisation gewählt, die den Assistenten über ihr Gateway leitet.",
+		"gatewayNoKey": "Über das Gateway Ihrer Organisation verbunden: Es ist kein Schlüssel einzugeben.",
+		"gatewayKeySaved": "Ihr persönlicher Schlüssel für das Gateway ist im Schlüsselbund des Systems gespeichert.",
+		"forgetKey": "Schlüssel vergessen",
+		"gatewayPaste": "Fügen Sie den persönlichen Schlüssel ein, den Ihnen Ihre Organisation für ihr Gateway gegeben hat.",
+		"personalKey": "Persönlicher Schlüssel",
+		"pasteTooltip": "Aus der Zwischenablage einfügen",
+		"ways": "Verbindungsart",
+		"apiKey": "API-Schlüssel",
+		"recommended": "empfohlen",
+		"desktop": {
+			"tooltip": "Lattis aus Claude Desktop oder Claude Code steuern (MCP-Server)",
+			"labelDialog": "Desktop-App…",
+			"label": "Desktop-App",
+			"help": "Die Desktop-App eines Anbieters steuert Lattis mit Ihrem Abonnement bei diesem Anbieter, ohne API-Schlüssel.",
+			"claude": {
+				"before": "Ein Claude-Abonnement lässt sich nicht direkt in einer anderen Anwendung nutzen, aber",
+				"and": "und",
+				"after": "können Lattis steuern. Sie sprechen mit Claude in seiner App; Lattis zeigt, was es tut („Von Claude“), und kann alles rückgängig machen."
+			},
+			"needsDesktop": "Diese Verbindungsart erfordert die Desktop-App von Lattis.",
+			"maxTeam": "Max- oder Team-Abonnenten: Ihre monatlichen API-Guthaben bezahlen auch einen API-Schlüssel (Registerkarte „API-Schlüssel“), mit dem die Unterhaltung in Lattis bleibt."
+		},
+		"providerModel": "Anbieter und Modell",
+		"provider": "Anbieter",
+		"model": "Modell",
+		"defaultModel": "Standardmodell",
+		"local": {
+			"help": "Das Modell läuft auf diesem Computer (Ollama, LM Studio…): Keine Daten verlassen den Computer, und es gibt keinen Schlüssel.",
+			"url": "Adresse des lokalen Modells",
+			"experimental": "Experimentell: Kleine Modelle rufen die Tools von Lattis weniger zuverlässig auf."
+		},
+		"keyStored": "Ein API-Schlüssel von {provider} ist im Schlüsselbund des Systems gespeichert.",
+		"step1": {
+			"create": "Erstellen Sie einen Schlüssel",
+			"console": "in der Konsole von {provider}.",
+			"open": "Konsole öffnen",
+			"credits": "Ein neuer Schlüssel funktioniert nur mit Guthaben: Fügen Sie welches hinzu unter",
+			"billing": "Abrechnung",
+			"maxTeam": "Claude Max- oder Team-Abonnent? Verknüpfen Sie diese Organisation unter claude.ai › Einstellungen › Abrechnung, um Ihr monatliches API-Guthaben (100 bis 500 $) zu erhalten.",
+			"other": "Je nach Anbieter braucht das Konto Guthaben oder ein Zahlungsmittel."
+		},
+		"step2": "Fügen Sie ihn hier ein.",
+		"keyHint": "Ein Schlüssel von {provider} beginnt meist mit „{hint}“.",
+		"step3": {
+			"verify": "Prüfen und speichern",
+			"keychain": "Der Schlüssel wird im Schlüsselbund des Systems aufbewahrt, nie in der Arbeitsmappe."
+		},
+		"start": "Los geht’s",
+		"providerApp": "Anbieter und App"
+	},
+	"panel": {
+		"title": "KI-Assistent",
+		"modelUsed": "Verwendetes Modell",
+		"connect": {
+			"label": "Verbindung",
+			"tooltip": "Verbindung: API-Schlüssel, Claude-Abonnement, Modell"
+		},
+		"new": {
+			"label": "Neu",
+			"tooltip": "Neue Unterhaltung (die aktuelle Unterhaltung bleibt in der Liste)"
+		},
+		"conversations": "Unterhaltungen",
+		"close": {
+			"tooltip": "Aufgabenbereich schließen (Esc)"
+		},
+		"noConversation": "Keine Unterhaltung für diese Arbeitsmappe.",
+		"conv": {
+			"current": "Aktuelle Unterhaltung",
+			"resume": "Diese Unterhaltung fortsetzen",
+			"inProgress": "läuft",
+			"delete": "Diese Unterhaltung löschen",
+			"deleteName": "„{title}“ löschen"
+		},
+		"unavailable": "Der Assistent ist in dieser Version nicht verfügbar.",
+		"loading": "Wird geladen…",
+		"enable": {
+			"title": "Assistenten aktivieren",
+			"intro": "Der KI-Assistent liest die Struktur Ihrer Tabellen, schlägt ein Vorgehen vor und kann berechnete Spalten, Schlüssel, PivotTables und Diagramme hinzufügen. Alles, was er in einer Antwort ändert, lässt sich auf einmal rückgängig machen.",
+			"how": "Er nutzt einen KI-Anbieter mit Ihrem API-Schlüssel, ein auf diesem Computer installiertes Modell oder Claude Desktop mit Ihrem Claude-Abonnement. Er erhält nie die gesamte Arbeitsmappe.",
+			"locked": "Der KI-Assistent ist durch die Richtlinie Ihrer Organisation deaktiviert.",
+			"check": "KI-Assistent aktivieren",
+			"settings": "Auch unter Datei › Einstellungen › Funktionen verfügbar.",
+			"learnMore": "Mehr erfahren (Hilfe F1)"
+		},
+		"source": {
+			"aria": "Unterhaltung",
+			"lattis": "In Lattis",
+			"claude": "Von Claude"
+		},
+		"log": "Unterhaltung mit dem Assistenten",
+		"empty": "Beschreiben Sie, was Sie analysieren möchten: Der Assistent liest die Struktur der Arbeitsmappe, schlägt ein Vorgehen vor und kann berechnete Spalten, Schlüssel, PivotTables und Diagramme erstellen.",
+		"noDoc": "Öffnen oder erstellen Sie zuerst eine Arbeitsmappe (Datei › Neu).",
+		"compact": "Frühere Nachrichten wurden für den Assistenten zusammengefasst; sie werden hier weiter angezeigt",
+		"undone": "{n, plural, =1 {Änderung rückgängig gemacht} other {Änderungen rückgängig gemacht}}",
+		"undo": {
+			"tooltip": "Macht alles rückgängig, was diese Antwort geändert hat",
+			"later": "Danach folgten weitere Änderungen: Verwenden Sie Strg+Z",
+			"label": "Diese Antwort rückgängig machen"
+		},
+		"resume": "Setzt die Antwort dort fort, wo sie angehalten hat",
+		"copy": "Antwort kopieren",
+		"link": {
+			"aria": "Link öffnen",
+			"question": "Diesen vom Assistenten vorgeschlagenen Link öffnen? Alles in seiner Adresse wird gesendet an",
+			"open": "Öffnen"
+		},
+		"contextTooltip": "Jeder Nachricht beigefügt: Der Assistent weiß, was Sie gerade ansehen",
+		"message": {
+			"aria": "Nachricht an den Assistenten",
+			"notReady": "Verbinden Sie zuerst den Assistenten (Verbindung)",
+			"noDoc": "Öffnen Sie zuerst eine Arbeitsmappe",
+			"placeholder": "Ihre Nachricht (Eingabe zum Senden, Umschalt+Eingabe für eine neue Zeile)"
+		},
+		"stop": {
+			"label": "Stopp",
+			"tooltip": "Antwort anhalten (Esc)"
+		},
+		"send": "Senden",
+		"sharingTooltip": "An den Assistenten gesendete Daten (Datei › Einstellungen › KI-Assistent)",
+		"costTooltip": "Ungefähre Kosten nach verbrauchten Tokens, vom Anbieter abgerechnet"
+	}
+}

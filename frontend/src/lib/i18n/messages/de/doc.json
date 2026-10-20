@@ -1,1 +1,175 @@
-{}
+{
+	"consent": {
+		"warning": "Erlauben Sie dies nur, wenn Sie der Person vertrauen, die Ihnen diese Arbeitsmappe gegeben hat. Wählen Sie im Zweifel „Nicht ausführen“: Der Rest der Arbeitsmappe bleibt nutzbar.",
+		"site": "Das Register „{name}“ zeigt die externe Website {url} an, die in dieser Arbeitsmappe auf diesem Computer noch nie erlaubt wurde (erhaltene Arbeitsmappe oder anderswo geändertes Register). Diese Website läuft im Register, ohne Zugriff auf die Arbeitsmappe.",
+		"page": "Das Register „{name}“ enthält eine Webseite (HTML und JavaScript), die auf diesem Computer noch nie erlaubt wurde (erhaltene Arbeitsmappe oder anderswo geänderte Seite). Eine Seite kann die Arbeitsmappe lesen und ändern, die Aktionen ihrer Schaltflächen ausführen, Ihnen Fragen stellen und mit Ihrer Zustimmung Websites kontaktieren.",
+		"title": "Eine Webseite aus der Arbeitsmappe ausführen?",
+		"ok": "Erlauben",
+		"cancel": "Nicht ausführen",
+		"code": "Code der Seite"
+	},
+	"web": {
+		"lost": "Verbindung zum Lattis-Engine verloren",
+		"canceled": "Aufruf abgebrochen",
+		"pick": {
+			"title": "Datei auswählen",
+			"help": "Die ausgewählte Datei wird an den Lattis Server gesendet.",
+			"choose": "Datei auswählen…"
+		},
+		"pdf": {
+			"windows": "Drucker „Microsoft Print to PDF“",
+			"browser": "Ziel „Als PDF speichern“"
+		}
+	},
+	"pivot": {
+		"expand": "Erweitern",
+		"collapse": "Reduzieren",
+		"expandName": "{name} erweitern",
+		"collapseName": "{name} reduzieren",
+		"error": "PivotTable: {error}",
+		"empty": "PivotTable von „{source}“: Wählen Sie Felder aus (Rechtsklick › Bearbeiten…)."
+	},
+	"chart": {
+		"error": "Diagramm „{name}“: {error}"
+	},
+	"button": {
+		"default": "Schaltfläche",
+		"runs": "Führt {what} aus",
+		"noAction": "Keine verknüpfte Aktion",
+		"nothing": "Diese Schaltfläche führt nichts aus: Rechtsklick, um ihr ein Script zuzuweisen.",
+		"noActionOption": "(keine Aktion)",
+		"run": "Ausführen",
+		"wholeScript": "das ganze Script",
+		"function": "die Funktion {name}()",
+		"script": "Script",
+		"background": "Füllung",
+		"text": "Text",
+		"help": "Ein Klick auf die Schaltfläche führt ihre Aktion aus; Rechtsklick, um hierher zurückzukehren.",
+		"try": "Testen"
+	},
+	"rightClickEdit": "Rechtsklick: bearbeiten",
+	"control": {
+		"linked": "verknüpfte Zelle: {cell}",
+		"kept": "Wert im Steuerelement gespeichert",
+		"deleted": "Steuerelement gelöscht",
+		"choice": "Auswahl {n}",
+		"gone": "Dieses Steuerelement existiert nicht mehr: Löschen Sie es aus dem Text.",
+		"insertTitle": "Einfügen: {kind}",
+		"editTitle": "Bearbeiten: {kind}",
+		"type": "Typ",
+		"name": "Name (für Scripts)",
+		"auto": "automatisch",
+		"label": "Beschriftung",
+		"buttonText": "Text der Schaltfläche",
+		"placeholder": "Platzhaltertext (optional)",
+		"keptIn": "Wert gespeichert in",
+		"inControl": "dem Steuerelement (keine verknüpfte Zelle)",
+		"sheet": "Tabellenblatt {name}",
+		"cell": "Zelle",
+		"choices": {
+			"source": "Quelle der Auswahlmöglichkeiten",
+			"typed": "Eingegeben",
+			"column": "Spalte einer Tabelle",
+			"from": "Auswahl aus (eindeutige Werte)",
+			"list": "Auswahlmöglichkeiten (eine pro Zeile)"
+		},
+		"script": "Script (bei jeder Änderung)",
+		"help": "Der Wert des Steuerelements ist der Wert der verknüpften Zelle (in diesem Dokument oder auf einem Tabellenblatt, um ihn in Formeln zu lesen). Scripts steuern es mit controls.get / controls.set und controls.on(\"change\", …)."
+	},
+	"page": {
+		"escapes": "Die Seite versucht ständig, eine andere Adresse zu öffnen: Sie wurde angehalten.",
+		"navBlocked": "Seite „{name}“: Navigation zu einer anderen Adresse blockiert, die Seite wurde neu geladen.",
+		"urlSet": "Register „{name}“: Webseite {url} (Strg+Z zum Rückgängigmachen)",
+		"saved": "Seite „{name}“ gespeichert (Strg+Z zum Rückgängigmachen)",
+		"save": "Speichern",
+		"preview": {
+			"label": "Vorschau",
+			"tooltip": "Entwurf in der Vorschau anzeigen, ohne ihn zu speichern (Strg+Eingabe)"
+		},
+		"show": {
+			"label": "Anzeigen",
+			"tooltip": "Zur Seite zurückkehren (der Entwurf muss noch gespeichert werden)"
+		},
+		"discard": "Änderungen verwerfen",
+		"keys": "Strg+S: speichern · Strg+Eingabe: Vorschau",
+		"edit": {
+			"label": "Bearbeiten",
+			"html": "HTML-Seite",
+			"tooltip": "HTML, CSS und JavaScript der Seite bearbeiten"
+		},
+		"site": {
+			"label": "Website…",
+			"tooltip": "Eine externe Webseite in diesem Register anzeigen"
+		},
+		"reload": {
+			"label": "Neu laden",
+			"tooltip": "Seite neu laden"
+		},
+		"openBrowser": "Im Browser öffnen",
+		"blank": "Leere Seite: Die Website lehnt möglicherweise die Anzeige in einem Frame ab (öffnen Sie sie im Browser).",
+		"unsaved": "Nicht gespeicherte Änderungen",
+		"blocked": {
+			"title": "Diese Webseite wurde nicht ausgeführt.",
+			"help": "Sie wurde auf diesem Computer noch nie erlaubt (erhaltene Arbeitsmappe oder anderswo geänderte Seite). Erlauben Sie sie nur, wenn Sie der Person vertrauen, die Ihnen diese Arbeitsmappe gegeben hat.",
+			"preview": "Vorschau (Strg+Eingabe) führt den im Editor angezeigten Code aus.",
+			"decide": "Entscheiden…"
+		},
+		"frame": "Seite {name}",
+		"pasteHint": "Einfügen: Verwenden Sie Strg+V im Text",
+		"noTableChart": "Keine Tabelle in der Arbeitsmappe: Erstellen Sie eine auf einem Tabellenblatt, um sie hier darzustellen.",
+		"noTablePivot": "Keine Tabelle in der Arbeitsmappe: Erstellen Sie eine auf einem Tabellenblatt, um sie hier zu analysieren.",
+		"placeholder": "Hier schreiben… (Einfügen: Diagramme und Schaltflächen)",
+		"aria": "Dokument {name}",
+		"grip": "Ziehen, um die Größe zu ändern"
+	},
+	"clip": {
+		"chartPasted": "Diagramm eingefügt",
+		"pivotPasted": "PivotTable eingefügt",
+		"chartCopied": "Diagramm kopiert: Strg+V im Text oder auf einem Tabellenblatt",
+		"pivotCopied": "PivotTable kopiert: Strg+V im Text oder auf einem Tabellenblatt",
+		"cutAnywhere": "Element ausgeschnitten: Strg+V im Text oder auf einem Tabellenblatt",
+		"copiedAnywhere": "Element kopiert: Strg+V im Text oder auf einem Tabellenblatt",
+		"cutText": "Element ausgeschnitten: Rechtsklick › Einfügen im Text",
+		"copiedText": "Element kopiert: Rechtsklick › Einfügen im Text"
+	},
+	"panel": {
+		"source": "Quelltabelle",
+		"missing": "{name} (nicht gefunden)",
+		"height": "Höhe (px)",
+		"deleteChart": "Diagramm löschen",
+		"help": "Hilfe zu Schaltflächen und Steuerelementen",
+		"close": "Aufgabenbereich schließen",
+		"insert": "Einfügen",
+		"save": "Speichern"
+	},
+	"link": {
+		"title": "Link",
+		"address": "Adresse",
+		"selection": "Der ausgewählte Text wird zu einem Link.",
+		"inserted": "Die Adresse wird als Link eingefügt.",
+		"ctrlClick": "Strg+Klick auf einen Link öffnet ihn im Browser.",
+		"apply": "Übernehmen",
+		"remove": "Link entfernen"
+	},
+	"menu": {
+		"pasteItem": "Element einfügen ({what})",
+		"what": {
+			"chart": "Diagramm",
+			"pivot": "PivotTable",
+			"control": "Steuerelement",
+			"button": "Schaltfläche"
+		},
+		"spelling": "Umschalt + Rechtsklick: Rechtschreibvorschläge",
+		"pivot": "PivotTable",
+		"field": "Feld (Text, Kontrollkästchen, Liste, Datei)…",
+		"image": "Bild…",
+		"link": "Link…",
+		"title": {
+			"pivot": "PivotTable",
+			"control": "Steuerelement"
+		},
+		"pasteAfter": "Element danach einfügen",
+		"runAction": "Aktion ausführen",
+		"edit": "Bearbeiten…"
+	}
+}
