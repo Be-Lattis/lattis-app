@@ -1723,6 +1723,16 @@ export function RequestOpen(path: string): $CancellablePromise<void> {
 }
 
 /**
+ * ResetSettings remet les réglages paths (ceux de Fichier › Paramètres) à
+ * leur valeur par défaut et rend les réglages à jour. Les réglages imposés
+ * par une stratégie restent tels quels ; serveurs Lattis, fichiers récents,
+ * clés d'API et thèmes créés ne sont pas touchés.
+ */
+export function ResetSettings(paths: string[] | null): $CancellablePromise<$models.Setting[] | null> {
+    return $Call.ByID(3062673500, paths);
+}
+
+/**
  * ResolveSave répond à DocState.Conflict (fichier modifié par ailleurs
  * depuis son ouverture) : overwrite l'écrase, sinon le classeur est
  * enregistré sous un autre nom (« Enregistrer une copie »).

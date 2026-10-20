@@ -74,7 +74,11 @@
 			"title": "Einstellungen",
 			"sections": "Abschnitte",
 			"mcpTooltip": "Einem MCP-Assistenten erlauben, die geöffnete Arbeitsmappe zu lesen und zu ändern",
-			"mcp": "MCP-Server (Assistenten)…"
+			"mcp": "MCP-Server (Assistenten)…",
+			"reset": "Auf Standardeinstellungen zurücksetzen…",
+			"resetConfirm": "Alle Einstellungen auf ihre Standardwerte zurücksetzen?",
+			"resetDetail": "Ihre Designs, Server und API-Schlüssel bleiben erhalten.",
+			"resetOk": "Zurücksetzen"
 		}
 	},
 	"shortcuts": {

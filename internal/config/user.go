@@ -165,11 +165,96 @@ func (l *Loader) SetUser(ctx context.Context, path string, v any) (*Config, erro
 // SetUserValue écrit un réglage de l'utilisateur avec le Loader de
 // l'application (un Loader sans option avant Init).
 func SetUserValue(ctx context.Context, path string, v any) (*Config, error) {
-	l := active.Load()
-	if l == nil {
-		l = &Loader{}
+	return activeLoader().SetUser(ctx, path, v)
+}
+
+func activeLoader() *Loader {
+	if l := active.Load(); l != nil {
+		return l
 	}
-	return l.SetUser(ctx, path, v)
+	return &Loader{}
+}
+
+// ResetUser remet les réglages paths à leur valeur par défaut (Fichier ›
+// Paramètres › Réinitialiser) : ils sont retirés du config.json de
+// l'utilisateur, ses autres clés (serveurs, thèmes créés…) gardées. Un
+// réglage imposé par une stratégie n'est pas touché. Refusé pour une clé
+// hors de UserEditable ; ui.themes (thèmes créés par l'utilisateur) n'est
+// jamais remis à zéro ici.
+func (l *Loader) ResetUser(ctx context.Context, paths []string) (*Config, error) {
+	for _, p := range paths {
+		if !Editable(p) || themePath(p) {
+			return nil, msg.New("config.notEditable", msg.Args{"path": p})
+		}
+	}
+	userMu.Lock()
+	defer userMu.Unlock()
+	cur := l.Load(ctx)
+	file := l.userFile()
+	if file == "" {
+		return nil, msg.New("config.userDirNotFound", nil)
+	}
+	b, err := os.ReadFile(file)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		// Rien d'écrit : déjà les valeurs par défaut.
+		SetCurrent(cur)
+		return cur, nil
+	case err != nil:
+		return nil, err
+	}
+	t, err := parseTree(b)
+	if err != nil {
+		// Ne pas écraser un fichier écrit à la main et cassé.
+		return nil, fmt.Errorf("%s : %w", file, err)
+	}
+	changed := false
+	for _, p := range paths {
+		if !cur.Locked(p) && deletePath(t, p) {
+			changed = true
+		}
+	}
+	if changed {
+		out, err := json.MarshalIndent(t, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+		if err := writeFileAtomic(file, append(out, '\n')); err != nil {
+			return nil, err
+		}
+	}
+	c := l.Load(ctx)
+	SetCurrent(c)
+	return c, nil
+}
+
+// ResetUserValues remet des réglages de l'utilisateur à leur valeur par
+// défaut avec le Loader de l'application.
+func ResetUserValues(ctx context.Context, paths []string) (*Config, error) {
+	return activeLoader().ResetUser(ctx, paths)
+}
+
+// deletePath retire la clé d'un chemin pointé (sans tenir compte de la
+// casse) et les objets devenus vides qui la contenaient ; faux si elle
+// n'y était pas.
+func deletePath(t Tree, path string) bool {
+	seg, rest, nested := strings.Cut(path, ".")
+	k, ok := findKey(t, seg)
+	if !ok {
+		return false
+	}
+	if !nested {
+		delete(t, k)
+		return true
+	}
+	sub, ok := t[k].(Tree)
+	if !ok || !deletePath(sub, rest) {
+		return false
+	}
+	if len(sub) == 0 {
+		delete(t, k)
+	}
+	return true
 }
 
 // writeFileAtomic écrit un fichier par un fichier temporaire renommé : une

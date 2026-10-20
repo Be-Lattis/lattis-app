@@ -19,6 +19,15 @@ func TestSettingsHtmlTabsOffByDefault(t *testing.T) {
 	t.Fatalf("features.htmlTabs absent : %+v", list)
 }
 
+func TestResetSettingsRefusesUnknownKey(t *testing.T) {
+	s := &DocumentService{}
+	for _, p := range []string{"connections", "ui.themes", "ai.apiKey"} {
+		if _, err := s.ResetSettings(context.Background(), []string{"features.htmlTabs", p}); err == nil {
+			t.Fatalf("%s accepté", p)
+		}
+	}
+}
+
 func TestSetSettingRefusesUnknownKey(t *testing.T) {
 	s := &DocumentService{}
 	if _, err := s.SetSetting(context.Background(), "configUrl", "https://exemple.fr/"); err == nil {

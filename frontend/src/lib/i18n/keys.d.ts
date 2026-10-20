@@ -4013,6 +4013,10 @@ export interface MessageParams {
 	'shell.settings.coEditing.label': Record<never, never>;
 	'shell.settings.dialog.mcp': Record<never, never>;
 	'shell.settings.dialog.mcpTooltip': Record<never, never>;
+	'shell.settings.dialog.reset': Record<never, never>;
+	'shell.settings.dialog.resetConfirm': Record<never, never>;
+	'shell.settings.dialog.resetDetail': Record<never, never>;
+	'shell.settings.dialog.resetOk': Record<never, never>;
 	'shell.settings.dialog.sections': Record<never, never>;
 	'shell.settings.dialog.title': Record<never, never>;
 	'shell.settings.fixed': { source: number | string };

@@ -74,7 +74,11 @@
 			"title": "Paramètres",
 			"sections": "Sections",
 			"mcpTooltip": "Laisser un assistant MCP lire et modifier le classeur ouvert",
-			"mcp": "Serveur MCP (assistants)…"
+			"mcp": "Serveur MCP (assistants)…",
+			"reset": "Réinitialiser les paramètres par défaut…",
+			"resetConfirm": "Remettre tous les paramètres à leur valeur par défaut ?",
+			"resetDetail": "Vos thèmes, serveurs et clés d'API sont gardés.",
+			"resetOk": "Réinitialiser"
 		}
 	},
 	"shortcuts": {

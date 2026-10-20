@@ -2,6 +2,8 @@ package bridge
 
 import (
 	"context"
+	"slices"
+	"strings"
 
 	"github.com/lalamefine/lattis/internal/config"
 )
@@ -28,6 +30,21 @@ func (s *DocumentService) SetSetting(ctx context.Context, path string, value any
 		return nil, err
 	}
 	if path == "ai.enabled" {
+		s.syncMCP()
+	}
+	return config.UserSettings(c), nil
+}
+
+// ResetSettings remet les réglages paths (ceux de Fichier › Paramètres) à
+// leur valeur par défaut et rend les réglages à jour. Les réglages imposés
+// par une stratégie restent tels quels ; serveurs Lattis, fichiers récents,
+// clés d'API et thèmes créés ne sont pas touchés.
+func (s *DocumentService) ResetSettings(ctx context.Context, paths []string) ([]Setting, error) {
+	c, err := config.ResetUserValues(ctx, paths)
+	if err != nil {
+		return nil, err
+	}
+	if slices.ContainsFunc(paths, func(p string) bool { return strings.EqualFold(p, "ai.enabled") }) {
 		s.syncMCP()
 	}
 	return config.UserSettings(c), nil

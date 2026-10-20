@@ -279,6 +279,16 @@ export function visibleSections(list: readonly SettingState[], web = isWeb): Set
 		.map((s) => ({ ...s, settings: s.settings.filter((d) => on(d.requires)).map((d) => (d.choicesOf ? { ...d, choices: d.choicesOf(list) } : d)) }));
 }
 
+/**
+ * Réglages remis à leur valeur par défaut par « Réinitialiser » : tous ceux
+ * de la fenêtre (sections cachées comprises), pas ceux propres au bureau en
+ * web. Le reste du config.json (thèmes créés, serveurs Lattis, fournisseur
+ * de l'IA…) n'est pas un réglage de la fenêtre et reste.
+ */
+export function resetPaths(web = isWeb): string[] {
+	return settingSections.filter((s) => !(web && s.desktopOnly)).flatMap((s) => s.settings.map((d) => d.path));
+}
+
 /** L'état d'un réglage (sans tenir compte de la casse du chemin). */
 export function findSetting(list: readonly SettingState[], path: string): SettingState | undefined {
 	const p = path.toLowerCase();

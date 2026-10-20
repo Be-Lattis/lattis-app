@@ -74,7 +74,11 @@
 			"title": "Configuración",
 			"sections": "Secciones",
 			"mcpTooltip": "Permitir que un asistente MCP lea y modifique el libro abierto",
-			"mcp": "Servidor MCP (asistentes)…"
+			"mcp": "Servidor MCP (asistentes)…",
+			"reset": "Restablecer la configuración predeterminada…",
+			"resetConfirm": "¿Restablecer todos los ajustes a sus valores predeterminados?",
+			"resetDetail": "Se conservan sus temas, servidores y claves de API.",
+			"resetOk": "Restablecer"
 		}
 	},
 	"shortcuts": {

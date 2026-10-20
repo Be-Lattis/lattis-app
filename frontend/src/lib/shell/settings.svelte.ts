@@ -5,7 +5,7 @@
 import { DocumentService } from '#bindings/internal/bridge/index.js';
 import { isWeb } from '#lib/web/platform.js';
 import { languageFor, setLang, setSystemLocale } from '#lib/i18n/index.js';
-import { boolSetting, findSetting, type SettingState } from './settings';
+import { boolSetting, findSetting, resetPaths, type SettingState } from './settings';
 
 export const userSettings = $state<{ list: SettingState[] }>({ list: [] });
 
@@ -36,6 +36,15 @@ export async function loadSettings() {
 export async function setSetting(path: string, value: unknown) {
 	userSettings.list = (await DocumentService.SetSetting(path, value)) ?? [];
 	if (path === 'ui.language') await applyLanguage();
+}
+
+/**
+ * Remet les réglages de la fenêtre à leur valeur par défaut (ceux imposés
+ * par l'organisation restent) ; langue et thème suivent sans redémarrer.
+ */
+export async function resetSettings() {
+	userSettings.list = (await DocumentService.ResetSettings(resetPaths())) ?? [];
+	await applyLanguage();
 }
 
 /**

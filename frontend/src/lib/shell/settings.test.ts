@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boolSetting, findSetting, parseNumberSetting, settingNote, settingSections, visibleSections } from './settings';
+import { boolSetting, findSetting, parseNumberSetting, resetPaths, settingNote, settingSections, visibleSections } from './settings';
 
 describe('paramètres', () => {
 	it('Pages web coupés sans réglage', () => {
@@ -67,5 +67,24 @@ describe('limites (audit 6, M14)', () => {
 		expect(parseNumberSetting(d, '5')).toContain('de 10 à 10000');
 		expect(parseNumberSetting(d, '12,5')).toContain('entier');
 		expect(parseNumberSetting(d, '')).toContain('entier');
+	});
+});
+
+describe('réinitialiser les paramètres', () => {
+	it('tous les réglages de la fenêtre, sections cachées comprises', () => {
+		const p = resetPaths(false);
+		expect(p).toEqual(settingSections.flatMap((s) => s.settings.map((d) => d.path)));
+		expect(p).toContain('ai.dataSharing');
+		expect(p).toContain('ui.language');
+		expect(p).toContain('updates.check');
+	});
+	it("rien de ce qui n'est pas un réglage de la fenêtre", () => {
+		const p = resetPaths(false);
+		for (const kept of ['ui.themes', 'ai.provider', 'ai.model', 'mcp.confirmWrites', 'connections']) expect(p).not.toContain(kept);
+		expect(new Set(p).size).toBe(p.length);
+	});
+	it('en web, pas les réglages propres au bureau', () => {
+		expect(resetPaths(true)).not.toContain('updates.check');
+		expect(resetPaths(true)).toContain('ui.theme');
 	});
 });

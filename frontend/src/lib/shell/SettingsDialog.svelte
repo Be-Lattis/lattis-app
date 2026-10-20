@@ -7,7 +7,7 @@
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import { onMount } from 'svelte';
 	import { findSetting, parseNumberSetting, settingNote, settingSections, visibleSections } from './settings';
-	import { loadSettings, mcpAvailable, setSetting, userSettings } from './settings.svelte.js';
+	import { loadSettings, mcpAvailable, resetSettings, setSetting, userSettings } from './settings.svelte.js';
 	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
@@ -41,6 +41,22 @@
 		}
 	}
 
+	// « Réinitialiser » : demande d'abord confirmation, dans le pied de la fenêtre.
+	let confirmReset = $state(false);
+	async function reset() {
+		busy = '*';
+		error = '';
+		try {
+			await resetSettings();
+			confirmReset = false;
+		} catch (e) {
+			error = errorText(e);
+			await loadSettings();
+		} finally {
+			busy = '';
+		}
+	}
+
 	// Fermeture (Échap compris) : le champ texte en cours de saisie s'écrit d'abord (évènement change).
 	function close() {
 		const a = document.activeElement;
@@ -60,7 +76,10 @@
 		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
-			if (e.key === 'Escape') close();
+			if (e.key === 'Escape') {
+				if (confirmReset) confirmReset = false;
+				else close();
+			}
 		}}
 	>
 		<header>{t('shell.settings.dialog.title')}</header>
@@ -143,10 +162,22 @@
 				{#if error}<p class="error">{error}</p>{/if}
 			</section>
 		</div>
-		<footer>
-			{#if onmcp && mcpAvailable()}<button class="mcp" title={t('shell.settings.dialog.mcpTooltip')} onclick={onmcp}>{t('shell.settings.dialog.mcp')}</button>{/if}
-			<button class="primary" onclick={close}>{t('common.close')}</button>
-		</footer>
+		{#if confirmReset}
+			<footer class="confirm">
+				<div class="ask" role="status">
+					<strong>{t('shell.settings.dialog.resetConfirm')}</strong>
+					<span class="muted">{t('shell.settings.dialog.resetDetail')}</span>
+				</div>
+				<button class="primary" disabled={busy !== ''} onclick={reset}>{t('shell.settings.dialog.resetOk')}</button>
+				<button disabled={busy !== ''} onclick={() => (confirmReset = false)}>{t('common.cancel')}</button>
+			</footer>
+		{:else}
+			<footer>
+				<button class="link" onclick={() => (confirmReset = true)}>{t('shell.settings.dialog.reset')}</button>
+				{#if onmcp && mcpAvailable()}<button class="mcp" title={t('shell.settings.dialog.mcpTooltip')} onclick={onmcp}>{t('shell.settings.dialog.mcp')}</button>{/if}
+				<button class="primary" onclick={close}>{t('common.close')}</button>
+			</footer>
+		{/if}
 	</div>
 </div>
 
@@ -298,11 +329,29 @@
 	footer {
 		display: flex;
 		justify-content: flex-end;
+		align-items: center;
+		gap: 8px;
 		padding: 10px 16px;
 		border-top: 1px solid #e3e5e8;
 	}
-	.mcp {
+	/* Réinitialiser : discret, à gauche du pied. */
+	button.link {
 		margin-right: auto;
+		border: none;
+		background: none;
+		padding: 3px 0;
+		color: #6b7280;
+		font-size: 12px;
+	}
+	button.link:hover {
+		color: #c0392b;
+		text-decoration: underline;
+	}
+	.ask {
+		display: flex;
+		flex-direction: column;
+		margin-right: auto;
+		min-width: 0;
 	}
 	button {
 		font: inherit;

@@ -74,7 +74,11 @@
 			"title": "设置",
 			"sections": "分区",
 			"mcpTooltip": "允许 MCP 助手读取和修改打开的工作簿",
-			"mcp": "MCP 服务器（助手）…"
+			"mcp": "MCP 服务器（助手）…",
+			"reset": "恢复默认设置…",
+			"resetConfirm": "将所有设置恢复为默认值？",
+			"resetDetail": "您的主题、服务器和 API 密钥将保留。",
+			"resetOk": "恢复"
 		}
 	},
 	"shortcuts": {

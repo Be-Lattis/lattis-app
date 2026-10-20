@@ -74,7 +74,11 @@
 			"title": "Settings",
 			"sections": "Sections",
 			"mcpTooltip": "Let an MCP assistant read and change the open workbook",
-			"mcp": "MCP server (assistants)…"
+			"mcp": "MCP server (assistants)…",
+			"reset": "Reset to default settings…",
+			"resetConfirm": "Reset all settings to their default values?",
+			"resetDetail": "Your themes, servers and API keys are kept.",
+			"resetOk": "Reset"
 		}
 	},
 	"shortcuts": {
