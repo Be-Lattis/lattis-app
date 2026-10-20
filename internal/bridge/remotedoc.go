@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/internal/trace"
@@ -79,7 +80,7 @@ func keepCollabQueue(d *doc.Document) error {
 	}
 	if err := saveDoc(ctx, d, ""); err != nil {
 		trace.Logf(1, trace.Doc, "cache de « %s » non enregistré (%d étape(s) en attente) : %v", r.Title, pending, err)
-		return fmt.Errorf("La copie locale de « %s » n'a pas pu être enregistrée : ses modifications pas encore envoyées sont gardées et proposées en récupération (Fichier › Ouvrir, ou au prochain lancement de Lattis)", r.Title)
+		return msg.New("share.localCopyNotSaved", msg.Args{"title": r.Title})
 	}
 	return nil
 }

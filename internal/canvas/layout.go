@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -107,9 +108,9 @@ func (t *tx) tableByName(name string) (Table, error) {
 	var id int64
 	if err := t.row(`SELECT id FROM _lattis_tables WHERE name = ?`, name).Scan(&id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return Table{}, fmt.Errorf("tableau « %s » introuvable", name)
+			return Table{}, msg.New("table.notFound", msg.Args{"table": name})
 		}
-		return Table{}, fmt.Errorf("tableau %q : %w", name, err)
+		return Table{}, msg.Wrap(err, "table.error", msg.Args{"table": fmt.Sprintf("%q", name), "err": err})
 	}
 	return t.table(id)
 }
@@ -546,7 +547,7 @@ func (t *tx) settle(sheet, keep int64) error {
 	}
 	for changed, n := true, 0; changed; n++ {
 		if n > 10*len(tables) {
-			return fmt.Errorf("%w : impossible d'écarter les tableaux de la feuille", ErrTable)
+			return msg.Wrap(ErrTable, "table.spreadFailed", nil)
 		}
 		changed = false
 		for i := range tables {

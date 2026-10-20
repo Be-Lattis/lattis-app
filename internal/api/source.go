@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/trust"
 )
@@ -90,10 +91,10 @@ func (c *Call) allowFile(path string) error {
 			return true, nil
 		}
 		if known {
-			return false, fmt.Errorf("%w : la lecture de « %s » a été refusée pour cette session (rouvrez le classeur pour qu'elle soit redemandée)", query.ErrDenied, path)
+			return false, msg.Wrap(query.ErrDenied, "query.readRefusedSession", msg.Args{"path": path})
 		}
 		if !CanPrompt(c) {
-			return false, fmt.Errorf("%w : « %s » n'est pas autorisé pour ce classeur ; seul l'utilisateur peut l'autoriser dans Lattis (en actualisant la requête)", query.ErrDenied, path)
+			return false, msg.Wrap(query.ErrDenied, "query.readNotAllowed", msg.Args{"path": path})
 		}
 		return false, nil
 	}
@@ -127,7 +128,7 @@ func (c *Call) allowFile(path string) error {
 	fileSession[sess][key] = vals != nil
 	fileMu.Unlock()
 	if vals == nil {
-		return fmt.Errorf("%w : lecture de « %s » refusée par l'utilisateur", query.ErrDenied, path)
+		return msg.Wrap(query.ErrDenied, "query.readRefusedByUser", msg.Args{"path": path})
 	}
 	if remember {
 		return trust.Default().AllowFiles(scope, path)

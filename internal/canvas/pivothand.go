@@ -11,6 +11,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Colonnes saisies à droite d'un tableau croisé (docs/decisions/0008, partie
@@ -593,7 +594,7 @@ func pivotHandNameTaken(p pivotPlace, name string, skip int) bool {
 }
 
 func errHandName(p pivotPlace, name string) error {
-	return fmt.Errorf("%w : « %s » est déjà le nom d'une colonne de « %s »", ErrPivot, name, p.cfg.Name)
+	return msg.Wrap(ErrPivot, "pivot.nameIsColumn", msg.Args{"name": name, "pivot": p.cfg.Name})
 }
 
 // savePivotHand enregistre les colonnes saisies d'un TCD (annulable) ; le
@@ -700,7 +701,7 @@ func (t *tx) renamePivotHand(p pivotPlace, j int, raw string) error {
 		return t.savePivotHand(p.id, slices.Delete(hand, j, j+1))
 	}
 	if isFormula(raw) {
-		return fmt.Errorf("%w : le nom d'une colonne ne commence pas par = (la formule se tape dans une de ses cellules)", ErrPivot)
+		return msg.Wrap(ErrPivot, "pivot.columnNameNoEquals", nil)
 	}
 	if name == hand[j].Name {
 		return nil
@@ -746,7 +747,7 @@ func (t *tx) setPivotHandCell(sheet int64, p pivotPlace, j, i int, raw string) e
 		if len(p.cells[i]) > 0 {
 			label = p.cells[i][0]
 		}
-		return fmt.Errorf("%w : « %s » est une ligne de total ; on n'y saisit pas de valeur (une formule de colonne s'y calcule aussi)", ErrPivot, label)
+		return msg.Wrap(ErrPivot, "pivot.totalRowReadOnly", msg.Args{"label": label})
 	}
 	if empty {
 		raw = ""

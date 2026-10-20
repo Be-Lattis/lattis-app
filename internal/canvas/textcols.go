@@ -2,7 +2,6 @@ package canvas
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Convertir le texte en colonnes, comme l'assistant d'Excel (Données ›
@@ -76,7 +76,7 @@ type TextColumnsPreview struct {
 const previewLines = 200
 
 // ErrNoText signale une sélection sans texte à convertir.
-var ErrNoText = errors.New("aucune donnée à convertir : sélectionnez des cellules d'une seule colonne")
+var ErrNoText = msg.New("textCols.noData", nil)
 
 // textSource est la colonne à convertir.
 type textSource struct {
@@ -116,7 +116,7 @@ func (t *tx) textSource(sheet int64, r0, r1, col int) (textSource, error) {
 			return src, err
 		}
 		if k > 0 {
-			return src, fmt.Errorf("la sélection déborde du tableau « %s » : convertissez le tableau et les cellules libres séparément", tb.Name)
+			return src, msg.New("textCols.selectionOverflows", msg.Args{"table": tb.Name})
 		}
 		return src, t.tableSource(&src, tb, max(r0, tb.Row), min(r1, tb.Bottom()))
 	}
@@ -470,7 +470,7 @@ func (o TextColumnsOptions) dest(src textSource) (int, int, error) {
 	}
 	sheet, row, col, ok := formula.A1Address(s)
 	if !ok || sheet != "" {
-		return 0, 0, fmt.Errorf("destination « %s » : une cellule de la feuille, comme B2", o.Dest)
+		return 0, 0, msg.New("textCols.invalidDest", msg.Args{"dest": o.Dest})
 	}
 	return row, col, nil
 }
@@ -517,7 +517,7 @@ func (t *tx) textOverwrite(src textSource, parts [][]string, o TextColumnsOption
 	off := dr - src.r0
 	lo, hi := src.rows[0]+off, src.rows[len(src.rows)-1]+off
 	if lo < 0 {
-		return false, errors.New("la destination sort de la feuille")
+		return false, msg.New("textCols.destOutOfSheet", nil)
 	}
 	sheet := src.sheet
 	tables, err := t.tables(sheet)
@@ -526,7 +526,7 @@ func (t *tx) textOverwrite(src textSource, parts [][]string, o TextColumnsOption
 	}
 	for _, tb := range tables {
 		if tb.spansCols(dc, dc+k-1) && tb.spansRows(lo, hi) {
-			return false, fmt.Errorf("la destination recouvre le tableau « %s »", tb.Name)
+			return false, msg.New("textCols.destOverlaps", msg.Args{"table": tb.Name})
 		}
 	}
 	source := map[int]bool{}
@@ -570,7 +570,7 @@ func (m *Model) TextToColumns(ctx context.Context, sheet int64, r0, r1, col int,
 		parts, count := o.split(src.texts)
 		imp := o.imported(count)
 		if len(imp) == 0 {
-			return errors.New("aucune colonne à importer")
+			return msg.New("textCols.noColumns", nil)
 		}
 		n = len(imp)
 		if src.tb != nil {
@@ -712,7 +712,7 @@ func (t *tx) textToTable(src textSource, parts [][]string, imp []int, o TextColu
 	}
 	if name := headName(imp[0]); src.header && name != "" && name != c.Name {
 		if used[strings.ToLower(name)] {
-			return fmt.Errorf("la colonne « %s » existe déjà", name)
+			return msg.New("column.nameTaken", msg.Args{"column": name})
 		}
 		delete(used, strings.ToLower(c.Name))
 		used[strings.ToLower(name)] = true

@@ -30,6 +30,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/script"
 )
 
@@ -97,7 +98,7 @@ func Commands() []*Command {
 func Lookup(name string) *Command { return registry[name] }
 
 // ErrUnknown signale une commande inconnue.
-var ErrUnknown = errors.New("commande inconnue")
+var ErrUnknown = msg.New("api.unknownCommand", nil)
 
 // Invoke exécute une commande pour host. Une commande qui modifie le
 // classeur forme une étape d'annulation, sauf si ctx porte déjà un groupe
@@ -114,12 +115,12 @@ func Invoke(ctx context.Context, host Host, name string, args map[string]any) (a
 	for _, p := range cmd.Params {
 		known[p.Name] = true
 		if v, ok := args[p.Name]; (!ok || v == nil) && !p.Optional {
-			return nil, fmt.Errorf("paramètre %s manquant", p.Name)
+			return nil, msg.New("api.missingParam", msg.Args{"param": p.Name})
 		}
 	}
 	for k := range args {
 		if !known[k] {
-			return nil, fmt.Errorf("paramètre %s inconnu", k)
+			return nil, msg.New("api.unknownParam", msg.Args{"param": k})
 		}
 	}
 	if cmd.Write && !command.InGroup(ctx) {
@@ -182,7 +183,7 @@ func (c *Call) Str(name string) (string, error) {
 		}
 		return "faux", nil
 	}
-	return "", fmt.Errorf("%s : texte attendu", name)
+	return "", msg.New("api.textExpected", msg.Args{"name": name})
 }
 
 // Int lit un entier (def s'il est absent).
@@ -193,7 +194,7 @@ func (c *Call) Int(name string, def int) (int, error) {
 	}
 	f, ok := number(v)
 	if !ok || f != math.Trunc(f) {
-		return 0, fmt.Errorf("%s : nombre entier attendu", name)
+		return 0, msg.New("api.integerExpected", msg.Args{"name": name})
 	}
 	return int(f), nil
 }
@@ -205,7 +206,7 @@ func (c *Call) Pos(name string, def int) (int, error) {
 		return 0, err
 	}
 	if n < 1 {
-		return 0, fmt.Errorf("%s : les lignes et colonnes se comptent à partir de 1", name)
+		return 0, msg.New("api.countFromOne", msg.Args{"name": name})
 	}
 	return n - 1, nil
 }
@@ -218,7 +219,7 @@ func (c *Call) Bool(name string) (bool, error) {
 	case bool:
 		return v, nil
 	}
-	return false, fmt.Errorf("%s : booléen attendu", name)
+	return false, msg.New("api.booleanExpected", msg.Args{"name": name})
 }
 
 // Decode convertit un paramètre (objet, liste) dans v, comme du JSON.

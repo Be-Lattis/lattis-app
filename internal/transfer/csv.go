@@ -19,6 +19,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 func isLetter(r rune) bool { return unicode.IsLetter(r) }
@@ -108,7 +109,7 @@ func ReadCSV(ctx context.Context, path string, opt CSVOptions) (canvas.ImportShe
 		}
 	}
 	if headers == nil {
-		return canvas.ImportSheet{}, fmt.Errorf("%s : fichier vide", filepath.Base(path))
+		return canvas.ImportSheet{}, msg.New("transfer.emptyFile", msg.Args{"file": filepath.Base(path)})
 	}
 	width := max(len(headers), len(types))
 	for len(types) < width {
@@ -171,7 +172,7 @@ func castTo(v value, to grid.Type) any {
 func csvError(path string, err error) error {
 	var pe *csv.ParseError
 	if errors.As(err, &pe) {
-		return fmt.Errorf("%s, ligne %d : %v", filepath.Base(path), pe.Line, pe.Err)
+		return msg.New("transfer.csvLineError", msg.Args{"file": filepath.Base(path), "line": pe.Line, "err": pe.Err})
 	}
 	return err
 }

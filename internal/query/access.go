@@ -2,7 +2,7 @@ package query
 
 import (
 	"context"
-	"errors"
+	"github.com/lalamefine/lattis/internal/msg"
 	"net"
 	"net/url"
 	"strconv"
@@ -25,7 +25,7 @@ type Access struct {
 }
 
 // ErrDenied refuse un accès.
-var ErrDenied = errors.New("accès refusé")
+var ErrDenied = msg.New("query.accessDenied", nil)
 
 // AllowFunc vérifie un accès avant qu'il ait lieu.
 type AllowFunc func(ctx context.Context, a Access) error

@@ -2,8 +2,6 @@ package bridge
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +10,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/mcp"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 type mcpState struct {
@@ -194,7 +193,7 @@ func (s *DocumentService) MCPConfigureDesktop() (MCPClients, error) {
 	}
 	exe := mcpExecutable()
 	if exe == "" {
-		return MCPClients{}, errors.New("chemin de Lattis introuvable")
+		return MCPClients{}, msg.New("mcp.lattisPathNotFound", nil)
 	}
 	if _, err := s.SetMCPEnabled(true); err != nil {
 		return MCPClients{}, err
@@ -217,7 +216,7 @@ func (s *DocumentService) MCPConfigureCode(ctx context.Context) (MCPClients, err
 	}
 	bin := mcp.FindClaude()
 	if bin == "" {
-		return MCPClients{}, errors.New("Claude Code introuvable sur ce poste : installez-le, ou lancez vous-même la commande proposée dans un terminal")
+		return MCPClients{}, msg.New("mcp.claudeCodeNotFound", nil)
 	}
 	if _, err := s.SetMCPEnabled(true); err != nil {
 		return MCPClients{}, err
@@ -236,11 +235,11 @@ func (s *DocumentService) MCPConfigureCode(ctx context.Context) (MCPClients, err
 	// Absente, l'entrée donne une erreur sans conséquence.
 	run("mcp", "remove", "--scope", "user", mcp.ServerName)
 	if out, err := run(mcp.CodeArgs(s.mcpURL(st), st.Token)...); err != nil {
-		msg := strings.TrimSpace(string(out))
-		if msg == "" {
-			msg = err.Error()
+		text := strings.TrimSpace(string(out))
+		if text == "" {
+			text = err.Error()
 		}
-		return MCPClients{}, fmt.Errorf("Claude Code a refusé la configuration : %s", shortError(msg))
+		return MCPClients{}, msg.New("mcp.configRefused", msg.Args{"err": shortError(text)})
 	}
 	return s.MCPClients()
 }

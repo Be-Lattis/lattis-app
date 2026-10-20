@@ -3,7 +3,7 @@ package transfer
 import (
 	"bufio"
 	"bytes"
-	"errors"
+	"github.com/lalamefine/lattis/internal/msg"
 	"io"
 	"strconv"
 	"unicode/utf8"
@@ -31,7 +31,7 @@ const (
 	xmlText
 )
 
-var errXML = errors.New("XML mal formé")
+var errXML = msg.New("transfer.badXml", nil)
 
 func newXMLScanner(r io.Reader) *xmlScanner {
 	return &xmlScanner{r: bufio.NewReaderSize(r, 256<<10)}

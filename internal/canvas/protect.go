@@ -64,6 +64,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ErrProtected refuse une modification d'une feuille protégée (Sheet) ou du
@@ -103,7 +104,7 @@ func (e ErrStructureProtected) Error() string {
 }
 
 // ErrPassword signale un mot de passe de protection incorrect.
-var ErrPassword = errors.New("mot de passe incorrect")
+var ErrPassword = msg.New("protect.wrongPassword", nil)
 
 // workbookScope désigne la structure du classeur dans _lattis_protection.
 const workbookScope = 0
@@ -301,7 +302,7 @@ func (t *tx) layoutLock() error {
 // ErrScriptsShared : scripts d'un classeur collaboratif modifiés par qui
 // n'en est ni propriétaire ni concepteur (ils se partagent avec tous les
 // membres ; audit du mode en ligne, constat 20).
-var ErrScriptsShared = errors.New("Seuls les propriétaires et concepteurs modifient les scripts de ce classeur partagé")
+var ErrScriptsShared = msg.New("protect.scriptsShared", nil)
 
 // scriptsLock refuse de changer les scripts d'un classeur collaboratif à
 // qui n'en est ni propriétaire ni concepteur (même règle que la mise en
@@ -458,7 +459,7 @@ func (m *Model) setProtection(ctx context.Context, table string, scope int64, on
 		if scope != workbookScope {
 			if err := sqlTx.QueryRowContext(ctx, `SELECT name FROM _lattis_sheets WHERE id = ?`, scope).Scan(&name); err != nil {
 				if errors.Is(err, sql.ErrNoRows) {
-					return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+					return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 				}
 				return err
 			}
@@ -478,7 +479,7 @@ func (m *Model) setProtection(ctx context.Context, table string, scope int64, on
 		}
 		if on {
 			if protected {
-				return fmt.Errorf("%s est déjà protégée", what)
+				return msg.New("protect.alreadyProtected", msg.Args{"what": what})
 			}
 			if _, err := sqlTx.ExecContext(ctx, `INSERT INTO `+table+` (sheet, hash) VALUES (?, ?)`, scope, h); err != nil {
 				return err
@@ -499,7 +500,7 @@ func (m *Model) setProtection(ctx context.Context, table string, scope int64, on
 			return nil
 		}
 		if !protected {
-			return fmt.Errorf("%s n'est pas protégée", what)
+			return msg.New("protect.notProtected", msg.Args{"what": what})
 		}
 		if !checkPassword(stored, pw) {
 			return ErrPassword

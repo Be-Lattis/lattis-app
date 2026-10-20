@@ -9,6 +9,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Insertion et suppression de lignes ou de colonnes entières de la feuille,
@@ -85,7 +86,7 @@ func plural(n int, one, many string) string {
 
 func (t *tx) insertLines(sheet int64, a axis, at, n int) error {
 	if at < 0 || n < 1 || n > 10000 {
-		return fmt.Errorf("%w : insertion hors de la feuille", ErrTable)
+		return msg.Wrap(ErrTable, "table.insertOutOfSheet", nil)
 	}
 	tables, err := t.tables(sheet)
 	if err != nil {
@@ -123,7 +124,7 @@ func (t *tx) insertLines(sheet int64, a axis, at, n int) error {
 
 func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 	if lo < 0 || hi < lo {
-		return fmt.Errorf("%w : suppression hors de la feuille", ErrTable)
+		return msg.Wrap(ErrTable, "table.deleteOutOfSheet", nil)
 	}
 	n := hi - lo + 1
 	tables, err := t.tables(sheet)

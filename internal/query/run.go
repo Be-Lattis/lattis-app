@@ -9,6 +9,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Bornes de l'aperçu : lignes lues par source, lignes affichées.
@@ -202,7 +203,7 @@ func (s *Session) result(ctx context.Context, env Env, q Query) (*Result, error)
 	}
 	table := s.name("res")
 	if _, err := s.db.ExecContext(ctx, `CREATE TABLE `+qi(table)+` AS `+p.sql()); err != nil {
-		return nil, fmt.Errorf("requête « %s » : %s", q.Name, sqlMessage(err))
+		return nil, msg.New("query.failed", msg.Args{"query": q.Name, "err": sqlMessage(err)})
 	}
 	drop := func() { s.db.Exec(`DROP TABLE IF EXISTS ` + qi(table)) }
 	var count int
@@ -291,7 +292,7 @@ func (s *Session) Refresh(ctx context.Context, env Env, id int64) (canvas.QueryL
 	if err != nil {
 		var se *StepError
 		if errors.As(err, &se) && needPassword(err) == nil {
-			return canvas.QueryLoad{}, fmt.Errorf("requête « %s », %w", q.Name, se)
+			return canvas.QueryLoad{}, msg.Wrap(se, "query.failedAt", msg.Args{"query": q.Name, "err": se})
 		}
 		return canvas.QueryLoad{}, err
 	}

@@ -3,7 +3,7 @@ package bridge
 import (
 	"context"
 	"errors"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"sync"
 	"time"
 )
@@ -29,7 +29,7 @@ func sqlWriteTimeout() time.Duration {
 	return limitSeconds("limits.sqlWriteSeconds")
 }
 
-var errSQLStopped = errors.New("requête arrêtée par l'utilisateur")
+var errSQLStopped = msg.New("sql.stopped", nil)
 
 // sqlRuns : requêtes en cours de l'onglet SQL, que StopSQL annule.
 type sqlRuns struct {
@@ -45,7 +45,7 @@ func (s *DocumentService) sqlContext(ctx context.Context, timeout time.Duration)
 	stopTimer := func() bool { return false }
 	if timeout > 0 {
 		t := time.AfterFunc(timeout, func() {
-			cancel(fmt.Errorf("requête arrêtée : durée maximale (%v) dépassée ; aucune ligne n'a été modifiée", timeout))
+			cancel(msg.New("sql.timeout", msg.Args{"timeout": timeout}))
 		})
 		stopTimer = t.Stop
 	}

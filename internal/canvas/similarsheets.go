@@ -14,6 +14,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/series"
 )
 
@@ -825,7 +826,7 @@ func (t *tx) dismissedGroups() (map[string]bool, error) {
 func (m *Model) DismissSimilar(ctx context.Context, id string) error {
 	id = strings.TrimSpace(id)
 	if id == "" {
-		return errors.New("groupe d'onglets non précisé")
+		return msg.New("sheet.groupUnspecified", nil)
 	}
 	changed := false
 	err := m.db.Write(ctx, func(sqlTx *sql.Tx) error {

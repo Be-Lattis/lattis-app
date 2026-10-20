@@ -190,7 +190,7 @@ func (t *tx) place(tb Table) (Table, error) {
 	}
 	for _, c := range cells {
 		if c.Row >= tb.Top() && c.Row <= tb.Bottom()+1 && c.Col >= tb.Col && c.Col <= tb.Right()+1 {
-			return tb, fmt.Errorf("%w : la place recouvre des cellules remplies", ErrTable)
+			return tb, msg.Wrap(ErrTable, "table.placeOverlaps", nil)
 		}
 	}
 	if left != nil {
@@ -222,7 +222,7 @@ func (t *tx) place(tb Table) (Table, error) {
 // d'un autre tableau, en-têtes sur la même ligne, il fusionne avec lui.
 func (m *Model) MoveTable(ctx context.Context, name string, row, col int) error {
 	if row < 0 || col < 0 {
-		return fmt.Errorf("%w : hors de la feuille", ErrTable)
+		return msg.Wrap(ErrTable, "table.outOfSheet", nil)
 	}
 	return m.Do(ctx, "Déplacer le tableau", func(t *tx) error {
 		tb, err := t.editTable(name)
@@ -254,13 +254,13 @@ func (m *Model) MoveTable(ctx context.Context, name string, row, col int) error 
 // a si a n'en a pas.
 func (t *tx) mergeRight(a, b Table) (Table, error) {
 	if a.Filtered() || b.Filtered() {
-		return a, fmt.Errorf("%w : effacez le filtre avant de fusionner « %s » et « %s »", ErrTable, a.Name, b.Name)
+		return a, msg.Wrap(ErrTable, "table.mergeClearFilter", msg.Args{"table": a.Name, "other": b.Name})
 	}
 	if a.Row != b.Row {
-		return a, fmt.Errorf("%w : les en-têtes de « %s » et « %s » ne sont pas sur la même ligne", ErrTable, a.Name, b.Name)
+		return a, msg.Wrap(ErrTable, "table.mergeHeadersMisaligned", msg.Args{"table": a.Name, "other": b.Name})
 	}
 	if a.TwoLevel != b.TwoLevel {
-		return a, fmt.Errorf("%w : « %s » et « %s » n'ont pas tous deux leurs en-têtes sur deux lignes", ErrTable, a.Name, b.Name)
+		return a, msg.Wrap(ErrTable, "table.mergeTwoLevelMismatch", msg.Args{"table": a.Name, "other": b.Name})
 	}
 	// Noms des colonnes de b dans a.
 	names := map[string]bool{}
@@ -377,7 +377,7 @@ func (t *tx) mergeRight(a, b Table) (Table, error) {
 // tableau se déplace. Posé côte à côte d'un autre tableau, il fusionne.
 func (m *Model) ExtractColumns(ctx context.Context, name string, i0, i1, row, col int) error {
 	if row < 0 || col < 0 {
-		return fmt.Errorf("%w : hors de la feuille", ErrTable)
+		return msg.Wrap(ErrTable, "table.outOfSheet", nil)
 	}
 	var whole bool
 	err := m.read(ctx, func(t *tx) error {
@@ -386,7 +386,7 @@ func (m *Model) ExtractColumns(ctx context.Context, name string, i0, i1, row, co
 			return err
 		}
 		if i0 < 0 || i1 >= len(tb.Cols) || i0 > i1 {
-			return fmt.Errorf("%w : colonnes hors du tableau", ErrTable)
+			return msg.Wrap(ErrTable, "table.columnsOutOfRange", nil)
 		}
 		whole = i0 == 0 && i1 == len(tb.Cols)-1
 		return nil
@@ -411,12 +411,12 @@ func (m *Model) ExtractColumns(ctx context.Context, name string, i0, i1, row, co
 // côte à côte, écartement des voisins).
 func (t *tx) extractColumns(tb Table, i0, i1 int, sheet int64, row, col int) error {
 	if tb.Filtered() {
-		return fmt.Errorf("%w : effacez le filtre avant de déplacer des colonnes", ErrTable)
+		return msg.Wrap(ErrTable, "table.moveColumnsClearFilter", nil)
 	}
 	cols := tb.Cols[i0 : i1+1]
 	for _, c := range cols {
 		if c.Formula != "" {
-			return fmt.Errorf("%w : la colonne calculée « %s » ne se déplace pas", ErrTable, c.Name)
+			return msg.Wrap(ErrTable, "table.computedNotMovable", msg.Args{"column": c.Name})
 		}
 	}
 	var id int64

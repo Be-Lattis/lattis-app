@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/lalamefine/lattis/internal/msg"
 	"slices"
 	"strings"
 )
@@ -14,7 +15,7 @@ import (
 // réception, les capacités sont relues (migration 0008 du serveur).
 const NoticeACL = "*acl"
 
-var errUnchanged = errors.New("droits inchangés")
+var errUnchanged = msg.New("workbook.rightsUnchanged", nil)
 
 // writeCapabilities note les droits (_lattis_capabilities) : tbl 0 pour le
 // classeur (niveau, rôles fournis, rôles personnalisés en JSON dans

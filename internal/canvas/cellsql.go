@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // cellRefRe trouve les adresses de cellules libres d'un texte (formule ou
@@ -109,7 +110,7 @@ func (m *Model) CellSQL(ctx context.Context, q string, sheet int64) (string, err
 				}
 			}
 			if strings.Contains(addr, ":") {
-				failed = fmt.Errorf("%s : une requête SQL lit une cellule à la fois, pas une plage", orig)
+				failed = msg.New("cellSql.rangeNotAllowed", msg.Args{"ref": orig})
 				return orig
 			}
 			r, c, _ := formula.CellRef("cell_" + addr)

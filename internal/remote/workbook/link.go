@@ -9,33 +9,34 @@ import (
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 	"github.com/lalamefine/lattis/protocol"
 )
 
 // Messages des refus d'écriture sur un tableau publié (§5.4, §10).
 var (
-	ErrReadOnly = errors.New("Classeur publié en lecture seule")
-	ErrOffline  = errors.New("Hors ligne, lecture seule")
+	ErrReadOnly = msg.New("workbook.readOnly", nil)
+	ErrOffline  = msg.New("workbook.offline", nil)
 	// ErrStructure refuse un changement de structure d'un tableau publié
 	// d'un classeur collaboratif quand la synchronisation avec le serveur
 	// n'est pas en place (§6.4 : la structure passe par le serveur,
 	// internal/remote/collab, Engine.Structure).
-	ErrStructure = errors.New("La structure d'un tableau partagé (colonnes, types, suppression) se modifie sur le serveur : attendez que le classeur soit connecté")
+	ErrStructure = msg.New("workbook.structureOffline", nil)
 	// ErrDesign : seuls les propriétaires et les concepteurs changent la
 	// structure d'un tableau partagé (§6.4, §8.4 du serveur).
-	ErrDesign = errors.New("Seuls le propriétaire et les concepteurs du classeur modifient la structure d'un tableau partagé (colonnes, types, clé, nom, suppression)")
+	ErrDesign = msg.New("workbook.designOnly", nil)
 	// Droits d'un classeur collaboratif (§8.1).
-	ErrReader   = errors.New("Tableau en lecture seule : vos droits ne permettent pas de le modifier")
+	ErrReader   = msg.New("workbook.reader", nil)
 	ErrNoAccess = errors.New("Tableau inaccessible avec vos droits")
 	// ErrLayout : cellules libres et mise en page d'un classeur
 	// collaboratif, réservées aux propriétaires et concepteurs (décision
 	// 0018 ; LayoutLock).
-	ErrLayout   = errors.New("Seuls les propriétaires et concepteurs modifient les cellules libres et la mise en page de ce classeur partagé")
-	ErrNotYours = errors.New("Ligne d'un autre membre : en tant que participant, vous ne modifiez que vos propres lignes")
+	ErrLayout   = msg.New("workbook.layoutDesignOnly", nil)
+	ErrNotYours = msg.New("workbook.notYours", nil)
 	// ErrCannotCreate : publication refusée, le compte n'a pas le droit de
 	// créer de classeur sur ce serveur (Server.CanCreateWorkbooks).
-	ErrCannotCreate = errors.New("Votre compte ne peut pas créer de classeur sur ce serveur : demandez à son propriétaire le rôle « créateur de classeurs »")
+	ErrCannotCreate = msg.New("workbook.cannotCreate", nil)
 )
 
 // Link est l'état d'un classeur partagé ouvert : ce qui vient du serveur

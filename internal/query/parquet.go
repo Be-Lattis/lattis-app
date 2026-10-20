@@ -1,7 +1,6 @@
 package query
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -16,6 +15,7 @@ import (
 	"github.com/parquet-go/parquet-go/format"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Fichiers Parquet : lecteur parquet-go (Go pur). Chaque colonne feuille
@@ -192,7 +192,7 @@ func parquetLeaf(path []string, leaf parquet.LeafColumn) pqLeaf {
 
 func (r *run) loadParquet(src Source) (loaded, error) {
 	if src.Path == "" {
-		return loaded{}, errors.New("fichier Parquet non choisi")
+		return loaded{}, msg.New("parquet.noFile", nil)
 	}
 	f, err := os.Open(src.Path)
 	if err != nil {
@@ -205,7 +205,7 @@ func (r *run) loadParquet(src Source) (loaded, error) {
 	}
 	pf, err := parquet.OpenFile(f, st.Size())
 	if err != nil {
-		return loaded{}, fmt.Errorf("%s : fichier Parquet illisible : %w", baseName(src.Path), err)
+		return loaded{}, msg.Wrap(err, "parquet.unreadableFile", msg.Args{"file": baseName(src.Path), "err": err})
 	}
 	schema := pf.Schema()
 	paths := schema.Columns()
@@ -214,7 +214,7 @@ func (r *run) loadParquet(src Source) (loaded, error) {
 	for i, p := range paths {
 		leaf, ok := schema.Lookup(p...)
 		if !ok {
-			return loaded{}, fmt.Errorf("colonne %s introuvable dans le schéma", strings.Join(p, "."))
+			return loaded{}, msg.New("parquet.columnNotFound", msg.Args{"column": strings.Join(p, ".")})
 		}
 		leaves[i] = parquetLeaf(p, leaf)
 		cols[i] = Column{Name: leaves[i].name, Type: leaves[i].typ}
@@ -233,7 +233,7 @@ func readParquetRows(pf *parquet.File, leaves []pqLeaf, each func([]any) error) 
 	defer func() {
 		// Un fichier corrompu peut faire paniquer le décodeur.
 		if p := recover(); p != nil {
-			err = fmt.Errorf("fichier Parquet illisible : %v", p)
+			err = msg.New("parquet.unreadable", msg.Args{"err": p})
 		}
 	}()
 	rd := parquet.NewReader(pf)

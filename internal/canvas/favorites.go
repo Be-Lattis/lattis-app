@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"strings"
 )
 
@@ -51,7 +51,7 @@ func sameSQL(a, b string) bool {
 // et renvoie son identifiant ; une requête déjà favorite garde le sien.
 func (m *Model) AddFavorite(ctx context.Context, name, q string) (int64, error) {
 	if strings.TrimSpace(q) == "" {
-		return 0, errors.New("favori : requête vide")
+		return 0, msg.New("favorite.emptyQuery", nil)
 	}
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -102,7 +102,7 @@ func (t *tx) favorite(id int64) (Favorite, error) {
 	f := Favorite{ID: id}
 	err := t.row(`SELECT name, sql FROM _lattis_favorites WHERE id = ?`, id).Scan(&f.Name, &f.SQL)
 	if errors.Is(err, sql.ErrNoRows) {
-		return f, fmt.Errorf("favori %d introuvable", id)
+		return f, msg.New("favorite.notFound", msg.Args{"id": id})
 	}
 	return f, err
 }
@@ -111,7 +111,7 @@ func (t *tx) favorite(id int64) (Favorite, error) {
 func (m *Model) RenameFavorite(ctx context.Context, id int64, name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return errors.New("favori : nom vide")
+		return msg.New("favorite.emptyName", nil)
 	}
 	return m.Do(ctx, "Renommer le favori", func(t *tx) error {
 		f, err := t.favorite(id)

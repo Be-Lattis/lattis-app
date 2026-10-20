@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Genres de connexion. Une connexion est enregistrée dans le classeur sans
@@ -130,10 +130,10 @@ func (c Connection) Account() string {
 func DecodeConnection(d canvas.ConnectionDef) (Connection, error) {
 	c := Connection{ID: d.ID, Name: d.Name, Kind: d.Kind}
 	if !knownKind(d.Kind) {
-		return c, fmt.Errorf("connexion « %s » : type %q non pris en charge", d.Name, d.Kind)
+		return c, msg.New("connection.unsupportedKind", msg.Args{"connection": d.Name, "kind": fmt.Sprintf("%q", d.Kind)})
 	}
 	if err := json.Unmarshal([]byte(d.Config), &c.Config); err != nil {
-		return c, fmt.Errorf("connexion « %s » : configuration illisible : %w", d.Name, err)
+		return c, msg.Wrap(err, "connection.unreadableConfig", msg.Args{"connection": d.Name, "err": err})
 	}
 	return c, nil
 }
@@ -169,21 +169,21 @@ func checkConfig(kind string, c DBConfig) error {
 	switch kind {
 	case KindPostgres:
 		if blank(c.Host) || blank(c.Database) {
-			return errors.New("connexion PostgreSQL : hôte et base sont obligatoires")
+			return msg.New("connection.postgresRequired", nil)
 		}
 	case KindMySQL, KindSQLServer:
 		if blank(c.Host) {
-			return fmt.Errorf("connexion %s : le serveur est obligatoire", KindLabel(kind))
+			return msg.New("connection.serverRequired", msg.Args{"kind": KindLabel(kind)})
 		}
 	case KindWeb:
 		u, err := url.Parse(strings.TrimSpace(c.URL))
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-			return errors.New("connexion Web : l'adresse doit commencer par http:// ou https://")
+			return msg.New("connection.webUrl", nil)
 		}
 	case KindLattis:
 		return checkLattis(c)
 	default:
-		return fmt.Errorf("type de connexion %q non pris en charge", kind)
+		return msg.New("connection.unsupportedType", msg.Args{"kind": fmt.Sprintf("%q", kind)})
 	}
 	return nil
 }
@@ -251,7 +251,7 @@ var dialects = map[string]*dialect{}
 func dialectOf(kind string) (*dialect, error) {
 	d, ok := dialects[kind]
 	if !ok {
-		return nil, fmt.Errorf("type de base %q non pris en charge", kind)
+		return nil, msg.New("connection.unsupportedDb", msg.Args{"kind": fmt.Sprintf("%q", kind)})
 	}
 	return d, nil
 }
@@ -292,7 +292,7 @@ func infoSchemaTables(q string) func(ctx context.Context, db *sql.DB) ([]DBTable
 func connectDB(ctx context.Context, sec *Secrets, c Connection) (*sql.DB, *dialect, error) {
 	if g := GuardOf(ctx); g != nil {
 		if err := g.Check(ctx, Access{Host: ConnectionHost(c)}); err != nil {
-			return nil, nil, fmt.Errorf("connexion « %s » : %w", c.Name, err)
+			return nil, nil, msg.Wrap(err, "connection.error", msg.Args{"connection": c.Name, "err": err})
 		}
 	}
 	if c.Kind == KindLattis {
@@ -300,7 +300,7 @@ func connectDB(ctx context.Context, sec *Secrets, c Connection) (*sql.DB, *diale
 	}
 	d, err := dialectOf(c.Kind)
 	if err != nil || d.open == nil {
-		return nil, nil, fmt.Errorf("connexion « %s » : type %q non pris en charge", c.Name, c.Kind)
+		return nil, nil, msg.New("connection.unsupportedKind", msg.Args{"connection": c.Name, "kind": fmt.Sprintf("%q", c.Kind)})
 	}
 	pw, _ := sec.Get(c.Account())
 	if pw == "" && sec.Pending(c.Account()) {
@@ -309,7 +309,7 @@ func connectDB(ctx context.Context, sec *Secrets, c Connection) (*sql.DB, *diale
 	}
 	db, err := d.open(c.Config, pw)
 	if err != nil {
-		return nil, nil, fmt.Errorf("connexion « %s » : %w", c.Name, err)
+		return nil, nil, msg.Wrap(err, "connection.error", msg.Args{"connection": c.Name, "err": err})
 	}
 	if err := db.PingContext(ctx); err != nil {
 		db.Close()
@@ -320,7 +320,7 @@ func connectDB(ctx context.Context, sec *Secrets, c Connection) (*sql.DB, *diale
 			}
 			return nil, nil, &ErrPassword{Connection: c.Name, Account: c.Account(), Message: msg}
 		}
-		return nil, nil, fmt.Errorf("connexion « %s » : %w", c.Name, driverFrench(err))
+		return nil, nil, msg.Wrap(driverFrench(err), "connection.error", msg.Args{"connection": c.Name, "err": driverFrench(err)})
 	}
 	return db, d, nil
 }
@@ -358,14 +358,14 @@ func TestConnection(ctx context.Context, sec *Secrets, c Connection, password st
 	}
 	db, err := d.open(c.Config, password)
 	if err != nil {
-		return fmt.Errorf("connexion « %s » : %w", c.Name, err)
+		return msg.Wrap(err, "connection.error", msg.Args{"connection": c.Name, "err": err})
 	}
 	defer db.Close()
 	if err := db.PingContext(ctx); err != nil {
 		if d.authFailed(err) {
 			return &ErrPassword{Connection: c.Name, Account: c.Account(), Message: "mot de passe refusé"}
 		}
-		return fmt.Errorf("connexion « %s » : %w", c.Name, driverFrench(err))
+		return msg.Wrap(driverFrench(err), "connection.error", msg.Args{"connection": c.Name, "err": driverFrench(err)})
 	}
 	return sec.Set(c.Account(), password, remember)
 }
@@ -546,10 +546,10 @@ func firstKeyword(q string) string {
 func readDB(ctx context.Context, db *sql.DB, d *dialect, q string, limit int, header func([]Column) error, each func([]any) error) error {
 	q = trimSQL(q)
 	if q == "" {
-		return errors.New("requête SQL vide")
+		return msg.New("sql.empty", nil)
 	}
 	if !d.readOnly && !readKeywords[firstKeyword(q)] {
-		return fmt.Errorf("seules les requêtes de lecture (SELECT, WITH…) sont acceptées ici, pas %s", firstKeyword(q))
+		return msg.New("query.readOnly", msg.Args{"keyword": firstKeyword(q)})
 	}
 	if limit > 0 && d.limit != nil {
 		q = d.limit(q, limit)
@@ -654,10 +654,10 @@ func FileTables(ctx context.Context, kind, path string) ([]DBTable, error) {
 func openFileDB(kind, path string) (*sql.DB, *dialect, error) {
 	d, err := dialectOf(kind)
 	if err != nil || d.openFile == nil {
-		return nil, nil, fmt.Errorf("type de fichier de base %q non pris en charge", kind)
+		return nil, nil, msg.New("connection.unsupportedFileDb", msg.Args{"kind": fmt.Sprintf("%q", kind)})
 	}
 	if strings.TrimSpace(path) == "" {
-		return nil, nil, errors.New("fichier de base non choisi")
+		return nil, nil, msg.New("connection.noFileDb", nil)
 	}
 	db, err := d.openFile(path)
 	if err != nil {

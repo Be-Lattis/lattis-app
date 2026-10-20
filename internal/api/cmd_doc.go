@@ -9,6 +9,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/script"
 	"github.com/lalamefine/lattis/internal/transfer"
 )
@@ -316,7 +317,7 @@ func init() {
 					return nil, err
 				}
 				if id == 0 {
-					return nil, fmt.Errorf("script « %s » introuvable", name)
+					return nil, msg.New("api.scriptNotFound", msg.Args{"script": name})
 				}
 				d, _ := c.Doc()
 				return nil, d.DeleteScript(c, id)
@@ -368,7 +369,7 @@ func init() {
 						}
 					}
 					if !found {
-						return nil, fmt.Errorf("script « %s » introuvable", name)
+						return nil, msg.New("api.scriptNotFound", msg.Args{"script": name})
 					}
 				}
 				return RunScriptFrom(c, c.Host, name, src, fn)
@@ -405,7 +406,7 @@ func exportBook(c *Call, ext string, export func(context.Context, *canvas.Model,
 	}
 	p, _ := c.Str("path")
 	if strings.TrimSpace(p) == "" {
-		return nil, fmt.Errorf("path : chemin du fichier %s attendu", ext)
+		return nil, msg.New("api.pathExpected", msg.Args{"ext": ext})
 	}
 	if !strings.EqualFold(filepath.Ext(p), ext) {
 		p += ext

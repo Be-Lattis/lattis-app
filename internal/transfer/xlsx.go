@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"context"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Lecture d'un classeur .xlsx (Office Open XML) avec la seule bibliothèque
@@ -52,7 +52,7 @@ const (
 )
 
 // ErrNotXLSX signale un fichier qui n'est pas un classeur .xlsx lisible.
-var ErrNotXLSX = errors.New("ce fichier n'est pas un classeur Excel .xlsx")
+var ErrNotXLSX = msg.New("transfer.notXlsx", nil)
 
 func openXLSX(name string) (*xlsxFile, error) {
 	zr, err := zip.OpenReader(name)
@@ -383,7 +383,7 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 				x.mu.Unlock()
 				return nil
 			}
-			return fmt.Errorf("feuille %s : %w", sh.name, err)
+			return msg.Wrap(err, "transfer.sheetError", msg.Args{"sheet": sh.name, "err": err})
 		}
 		switch d.kind {
 		case xmlStart:

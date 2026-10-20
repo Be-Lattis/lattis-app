@@ -2,13 +2,12 @@ package bridge
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
@@ -19,7 +18,7 @@ func (s *DocumentService) AddPage(ctx context.Context, before int64) (int64, err
 		return 0, err
 	}
 	if !config.Current().Bool("features.htmlTabs", false) {
-		return 0, errors.New("les pages web sont désactivés : activez-les dans Fichier › Paramètres › Fonctionnalités")
+		return 0, msg.New("pages.disabled", nil)
 	}
 	d, err := s.current()
 	if err != nil {
@@ -118,7 +117,7 @@ func (s *DocumentService) RunFunction(ctx context.Context, name, entry string) (
 			return api.RunLibraryScript(host{s}, sc.Name, sc.Source, entry)
 		}
 	}
-	return ScriptResult{}, fmt.Errorf("script « %s » introuvable (onglet Script)", name)
+	return ScriptResult{}, msg.New("pages.scriptNotFound", msg.Args{"script": name})
 }
 
 // Page donne le contenu d'un onglet page HTML.

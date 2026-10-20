@@ -3,8 +3,8 @@ package auth
 import (
 	"context"
 	"crypto/subtle"
-	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"html"
 	"net"
 	"net/http"
@@ -58,7 +58,7 @@ func startLoopback(state, issuer, server string) (*loopback, error) {
 		var res callbackResult
 		switch {
 		case q.Get("iss") != "" && issuer != "" && strings.TrimRight(q.Get("iss"), "/") != strings.TrimRight(issuer, "/"):
-			res.err = fmt.Errorf("réponse d'un autre émetteur (%s au lieu de %s) : connexion refusée", q.Get("iss"), issuer)
+			res.err = msg.New("auth.otherIssuer", msg.Args{"got": q.Get("iss"), "issuer": issuer})
 			page(w, http.StatusBadRequest, "Connexion refusée", res.err.Error())
 		case q.Get("error") != "":
 			res.err = newLoginError(q.Get("error"), q.Get("error_description"), q.Get("reason"), server)
@@ -105,7 +105,7 @@ main{max-width:460px;border:1px solid #d4d7db;border-radius:8px;padding:24px 28p
 }
 
 // ErrBrowser : le navigateur du système n'a pas pu être ouvert.
-var ErrBrowser = errors.New("impossible d'ouvrir le navigateur du système")
+var ErrBrowser = msg.New("auth.browserFailed", nil)
 
 // OpenBrowser ouvre une adresse http(s) dans le navigateur du système.
 func OpenBrowser(u string) error {

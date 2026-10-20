@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/protocol"
 )
 
@@ -213,7 +214,7 @@ func newLoginError(code, desc, reason, server string) *LoginError {
 
 // ErrSessionExpired : le jeton de rafraîchissement est refusé (révoqué,
 // expiré, compte désactivé) : il faut se reconnecter.
-var ErrSessionExpired = errors.New("session expirée : reconnectez-vous")
+var ErrSessionExpired = msg.New("auth.sessionExpired", nil)
 
 type oauthError struct {
 	Error       string `json:"error"`
@@ -260,13 +261,13 @@ func (c *client) post(ctx context.Context, endpoint string, form url.Values, out
 		if json.Unmarshal(body, &oe) == nil && oe.Error != "" {
 			return newLoginError(oe.Error, oe.Description, oe.Reason, c.name)
 		}
-		return fmt.Errorf("%s : réponse inattendue de %s (%s)", c.label(), path, resp.Status)
+		return msg.New("auth.unexpectedResponse", msg.Args{"server": c.label(), "path": path, "status": resp.Status})
 	}
 	if out == nil {
 		return nil
 	}
 	if err := json.Unmarshal(body, out); err != nil {
-		return fmt.Errorf("%s : réponse illisible de %s : %w", c.label(), path, err)
+		return msg.Wrap(err, "auth.unreadableResponse", msg.Args{"server": c.label(), "path": path, "err": err})
 	}
 	return nil
 }
@@ -286,10 +287,10 @@ func (c *client) token(ctx context.Context, form url.Values) (*Tokens, error) {
 		return nil, err
 	}
 	if t.AccessToken == "" {
-		return nil, fmt.Errorf("%s : jeton d'accès absent de la réponse", c.label())
+		return nil, msg.New("auth.noAccessToken", msg.Args{"server": c.label()})
 	}
 	if !strings.EqualFold(t.TokenType, "bearer") && t.TokenType != "" {
-		return nil, fmt.Errorf("%s : type de jeton %q non pris en charge", c.label(), t.TokenType)
+		return nil, msg.New("auth.unsupportedTokenType", msg.Args{"server": c.label(), "type": fmt.Sprintf("%q", t.TokenType)})
 	}
 	ttl := time.Duration(t.ExpiresIn) * time.Second
 	if ttl <= 0 {
@@ -381,7 +382,7 @@ func (c *client) device(ctx context.Context, provider string) (*DeviceCode, erro
 		return nil, err
 	}
 	if r.DeviceCode == "" || r.UserCode == "" || r.VerificationURI == "" {
-		return nil, fmt.Errorf("%s : réponse incomplète de %s", c.label(), PathDevice)
+		return nil, msg.New("auth.incompleteResponse", msg.Args{"server": c.label(), "path": PathDevice})
 	}
 	if r.ExpiresIn <= 0 {
 		r.ExpiresIn = 600

@@ -82,7 +82,7 @@ func errorCause(l msg.Lang, err error) (ErrorCause, bool) {
 	if !errors.As(err, &e) {
 		return ErrorCause{}, false
 	}
-	return ErrorCause{ID: e.ID, Args: e.Args, Message: msg.Text(l, err)}, true
+	return ErrorCause{ID: e.ID, Args: e.Args.In(l), Message: msg.Text(l, err)}, true
 }
 
 // MarshalError traduit les erreurs rendues à l'interface du bureau (option

@@ -12,6 +12,7 @@ import (
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/query"
 )
 
@@ -77,7 +78,7 @@ func grantSources(ctx context.Context, d *doc.Document, q query.Query) {
 				return query.DecodeConnection(c)
 			}
 		}
-		return query.Connection{}, fmt.Errorf("connexion « %s » introuvable", name)
+		return query.Connection{}, msg.New("connection.notFound", msg.Args{"connection": name})
 	}
 	if a, ok, err := query.SourceAccess(q.Source, conns); err == nil && ok {
 		api.GrantSource(ctx, d, a)
@@ -281,7 +282,7 @@ func (s *DocumentService) connection(ctx context.Context, name string) (query.Co
 			return c, nil
 		}
 	}
-	return query.Connection{}, fmt.Errorf("connexion « %s » introuvable", name)
+	return query.Connection{}, msg.New("connection.notFound", msg.Args{"connection": name})
 }
 
 // SaveConnection crée ou modifie une connexion ; password (facultatif) est
@@ -305,7 +306,7 @@ func (s *DocumentService) SaveConnection(ctx context.Context, c query.Connection
 	}
 	if password != "" {
 		if err := secretsOf(d).Set(c.Account(), password, remember); err != nil {
-			return id, fmt.Errorf("connexion enregistrée, mais le trousseau du système a refusé le mot de passe (gardé pour cette session) : %w", err)
+			return id, msg.Wrap(err, "connection.keyringRefused", msg.Args{"err": err})
 		}
 	}
 	_, err = s.changed(ctx)
@@ -484,7 +485,7 @@ func (s *DocumentService) ReferenceQuery(ctx context.Context, q, name string, co
 		return QueryRefresh{}, err
 	}
 	if strings.TrimSpace(q) == "" {
-		return QueryRefresh{}, errors.New("requête SQL vide")
+		return QueryRefresh{}, msg.New("sql.empty", nil)
 	}
 	home := ""
 	if l, err := d.Layout(ctx, 0); err == nil {

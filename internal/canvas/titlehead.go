@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"strings"
 )
 
@@ -19,9 +20,9 @@ import (
 // Refus clair si elle ne peut pas devenir l'en-tête.
 func (t *tx) titleAbove(tb Table) (names []string, beside [][2]int, err error) {
 	if tb.TwoLevel {
-		return nil, nil, fmt.Errorf("%w : « %s » a des en-têtes sur deux lignes, la ligne du dessus est sa bande de groupes (clic droit › Tableau › Retirer les groupes d'en-têtes d'abord)", ErrTable, tb.Name)
+		return nil, nil, msg.Wrap(ErrTable, "table.headerTwoLevels", msg.Args{"table": tb.Name})
 	}
-	none := fmt.Errorf("%w : rien à prendre comme en-têtes au-dessus de « %s » (tapez les noms dans la ligne juste au-dessus de ses colonnes)", ErrTable, tb.Name)
+	none := msg.Wrap(ErrTable, "table.nothingAboveForHeaders", msg.Args{"table": tb.Name})
 	if tb.Row == 0 {
 		return nil, nil, none
 	}
@@ -32,7 +33,7 @@ func (t *tx) titleAbove(tb Table) (names []string, beside [][2]int, err error) {
 	}
 	for _, o := range tables {
 		if o.ID != tb.ID && r >= o.Top() && r <= o.Bottom() && o.spansCols(tb.Col, tb.Right()) {
-			return nil, nil, fmt.Errorf("%w : la ligne au-dessus de « %s » appartient au tableau « %s »", ErrTable, tb.Name, o.Name)
+			return nil, nil, msg.Wrap(ErrTable, "table.rowAboveInTable", msg.Args{"table": tb.Name, "other": o.Name})
 		}
 	}
 	pivots, err := t.pivots(tb.Sheet)
@@ -41,7 +42,7 @@ func (t *tx) titleAbove(tb Table) (names []string, beside [][2]int, err error) {
 	}
 	for _, p := range pivots {
 		if z := pivotRect(p); r >= z.R0 && r <= z.R1 && z.C0 <= tb.Right() && z.C1 >= tb.Col {
-			return nil, nil, fmt.Errorf("%w : la ligne au-dessus de « %s » touche un tableau croisé", ErrTable, tb.Name)
+			return nil, nil, msg.Wrap(ErrTable, "table.rowAboveTouchesPivot", msg.Args{"table": tb.Name})
 		}
 	}
 	merges, err := t.merges(tb.Sheet)
@@ -50,7 +51,7 @@ func (t *tx) titleAbove(tb Table) (names []string, beside [][2]int, err error) {
 	}
 	for _, g := range merges {
 		if g.overlaps(r, tb.Col, r, tb.Right()) {
-			return nil, nil, fmt.Errorf("%w : la ligne au-dessus de « %s » a des cellules fusionnées (clic droit › Tableau › En-têtes sur 2 lignes pour en faire des groupes)", ErrTable, tb.Name)
+			return nil, nil, msg.Wrap(ErrTable, "table.rowAboveMerged", msg.Args{"table": tb.Name})
 		}
 	}
 	cells, err := t.cells(tb.Sheet)
@@ -63,7 +64,7 @@ func (t *tx) titleAbove(tb Table) (names []string, beside [][2]int, err error) {
 	}
 	for c := tb.Col; c <= tb.Right(); c++ {
 		if marks[[2]int{r, c}] {
-			return nil, nil, fmt.Errorf("%w : la ligne au-dessus de « %s » fait partie d'une plage (tableau converti)", ErrTable, tb.Name)
+			return nil, nil, msg.Wrap(ErrTable, "table.rowAboveInRange", msg.Args{"table": tb.Name})
 		}
 	}
 	names = make([]string, len(tb.Cols))
@@ -78,7 +79,7 @@ func (t *tx) titleAbove(tb Table) (names []string, beside [][2]int, err error) {
 			beside = append(beside, [2]int{c.Row, c.Col})
 		case c.Col >= tb.Col && c.Col <= tb.Right():
 			if isFormula(v) {
-				return nil, nil, fmt.Errorf("%w : « %s », au-dessus de « %s », est une formule : tapez le nom de la colonne", ErrTable, clip(v), tb.Name)
+				return nil, nil, msg.Wrap(ErrTable, "table.rowAboveFormula", msg.Args{"value": clip(v), "table": tb.Name})
 			}
 			if len(v) > 1 && v[0] == '\'' {
 				v = strings.TrimSpace(v[1:])
@@ -111,7 +112,7 @@ func (m *Model) TitleToHeader(ctx context.Context, table string) error {
 		}
 		if q, err := t.queryLoaded(tb.ID); err != nil || q {
 			if err == nil {
-				err = fmt.Errorf("%w : « %s » est chargé par une requête : renommez ses colonnes dans la requête (Données › Requêtes)", ErrTable, tb.Name)
+				err = msg.Wrap(ErrTable, "table.queryLoadedRename", msg.Args{"table": tb.Name})
 			}
 			return err
 		}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/series"
 )
 
@@ -197,7 +198,7 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 	switch plan.Old {
 	case "", MergeOldDelete, MergeOldHide:
 	default:
-		return nil, fmt.Errorf("%w : anciens onglets « %s » : delete ou hide attendu", ErrMergeSheets, plan.Old)
+		return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.oldSheets", msg.Args{"old": plan.Old})
 	}
 	excluded, err := t.excludedTables()
 	if err != nil {
@@ -222,7 +223,7 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 			return nil, err
 		}
 		if seen[tb.ID] {
-			return nil, fmt.Errorf("%w : le tableau « %s » est cité deux fois", ErrMergeSheets, tb.Name)
+			return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.tableTwice", msg.Args{"table": tb.Name})
 		}
 		seen[tb.ID] = true
 		tables[i] = tb
@@ -251,10 +252,10 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 		for _, c := range plan.Columns {
 			c.Name = strings.TrimSpace(c.Name)
 			if c.Name == "" {
-				return nil, fmt.Errorf("%w : colonne sans nom", ErrMergeSheets)
+				return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.unnamedColumn", nil)
 			}
 			if len(c.From) != len(tables) {
-				return nil, fmt.Errorf("%w : colonne « %s » : une source par tableau attendue (%d)", ErrMergeSheets, c.Name, len(tables))
+				return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.sourcePerTable", msg.Args{"column": c.Name, "n": len(tables)})
 			}
 			if len(c.Paired) != len(tables) {
 				c.Paired = make([]bool, len(tables))
@@ -267,7 +268,7 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 				}
 				k := colIndex(tables[ti], n)
 				if k < 0 {
-					return nil, fmt.Errorf("%w : « %s » n'a pas de colonne « %s »", ErrMergeSheets, tables[ti].Name, n)
+					return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.noColumn", msg.Args{"table": tables[ti].Name, "column": n})
 				}
 				c.From[ti] = tables[ti].Cols[k].Name
 				typ = Join(typ, tables[ti].Cols[k].Type)
@@ -287,13 +288,13 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 		}
 	}
 	if len(j.cols) == 0 {
-		return nil, fmt.Errorf("%w : aucune colonne à regrouper", ErrMergeSheets)
+		return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.noColumns", nil)
 	}
 	names := map[string]bool{}
 	for _, c := range j.cols {
 		low := strings.ToLower(c.Name)
 		if names[low] {
-			return nil, fmt.Errorf("%w : deux colonnes « %s »", ErrMergeSheets, c.Name)
+			return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.duplicateColumn", msg.Args{"column": c.Name})
 		}
 		names[low] = true
 	}
@@ -332,7 +333,7 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 		switch cat.Type {
 		case grid.Date, grid.Integer, grid.Text:
 		default:
-			return nil, fmt.Errorf("%w : catégorie de type « %s » : date, integer ou text attendu", ErrMergeSheets, cat.Type)
+			return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.categoryType", msg.Args{"type": cat.Type})
 		}
 		if len(cat.Values) == 0 {
 			cat.Values = rec.Labels
@@ -341,7 +342,7 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 			}
 		}
 		if len(cat.Values) != len(j.srcs) {
-			return nil, fmt.Errorf("%w : une valeur de catégorie par tableau attendue (%d)", ErrMergeSheets, len(j.srcs))
+			return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.categoryPerTable", msg.Args{"n": len(j.srcs)})
 		}
 		cat.Values = slices.Clone(cat.Values)
 		for i, v := range cat.Values {
@@ -349,7 +350,7 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 			cat.Values[i] = v
 			val, err := grid.Parse(cat.Type, v)
 			if err != nil || val == nil {
-				return nil, fmt.Errorf("%w : la valeur « %s » de « %s » ne convient pas à une colonne %s", ErrMergeSheets, v, j.srcs[i].sheet, typeName(cat.Type))
+				return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.categoryValueInvalid", msg.Args{"value": v, "sheet": j.srcs[i].sheet, "type": typeName(cat.Type)})
 			}
 			j.srcs[i].cat = val
 			j.catLabel = append(j.catLabel, dateLabel(val, cat.Type, v))

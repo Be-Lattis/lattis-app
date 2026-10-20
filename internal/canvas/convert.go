@@ -11,6 +11,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/ncruces/go-sqlite3"
 )
 
@@ -177,7 +178,7 @@ func (m *Model) ConvertPreview(ctx context.Context, table string, i int, to grid
 			return err
 		}
 		if i < 0 || i >= len(tb.Cols) {
-			return fmt.Errorf("colonne %d hors du tableau", i)
+			return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 		}
 		c := tb.Cols[i]
 		col := colSQL(c.ID)
@@ -205,7 +206,7 @@ func (m *Model) TypeMix(ctx context.Context, table string, i int) (Mix, error) {
 			return err
 		}
 		if i < 0 || i >= len(tb.Cols) {
-			return fmt.Errorf("colonne %d hors du tableau", i)
+			return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 		}
 		c := tb.Cols[i]
 		if c.Type != grid.Text || c.Fixed || c.Formula != "" {
@@ -290,7 +291,7 @@ func (m *Model) AcceptAsText(ctx context.Context, table string, i int) error {
 func (t *tx) setType(tb Table, i int, to grid.Type) error {
 	{
 		if i < 0 || i >= len(tb.Cols) {
-			return fmt.Errorf("colonne %d hors du tableau", i)
+			return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 		}
 		c := tb.Cols[i]
 		fix := `UPDATE _lattis_columns SET fixed = ? WHERE tbl = ? AND id = ?`

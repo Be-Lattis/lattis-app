@@ -12,6 +12,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Légende d'un tableau : ce qui l'accompagne sans en faire partie.
@@ -170,7 +171,7 @@ func (t *tx) outCells(sheet int64) (map[[2]int]bool, error) {
 // ErrQueryTable : un tableau chargé par une requête ne s'agrandit pas à la
 // main (ni ligne ni colonne) : l'actualisation le remplacerait. Même texte
 // que le refus de l'interface (QUERY_READONLY, Sheet.svelte).
-var ErrQueryTable = errors.New("Tableau chargé par une requête : ses cellules ne se modifient pas ; changez la requête (Données › Requêtes) puis actualisez (F5)")
+var ErrQueryTable = msg.New("table.queryLoaded", nil)
 
 // queryLoaded : le tableau id est chargé par une requête d'import.
 func (t *tx) queryLoaded(id int64) (bool, error) {
@@ -549,7 +550,7 @@ func (m *Model) HeaderToTitle(ctx context.Context, table string) error {
 }
 
 // ErrNotLastRow : seule la dernière ligne d'un tableau peut en sortir.
-var ErrNotLastRow = errors.New("seule la dernière ligne du tableau peut en sortir (déplacez-la en bas d'abord)")
+var ErrNotLastRow = msg.New("table.onlyLastRowLeaves", nil)
 
 // RowToNote : « Sortir cette ligne du tableau (total ou note) » ; la
 // dernière ligne de données devient des cellules libres juste dessous,

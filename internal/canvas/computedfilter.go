@@ -1,9 +1,8 @@
 package canvas
 
 import (
-	"fmt"
-
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Tri et filtre d'une colonne calculée : ses valeurs ne sont pas stockées
@@ -21,7 +20,7 @@ func (t *tx) computedView(tb Table, c Column) (string, Column, error) {
 		return "", c, err
 	}
 	if !ok {
-		return "", c, fmt.Errorf("colonne calculée « %s » introuvable", c.Name)
+		return "", c, msg.New("computed.notFound", msg.Args{"column": c.Name})
 	}
 	c.Type = t.computedResult(tb, c)
 	if c.Type == "" {

@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"context"
 	"encoding/csv"
-	"fmt"
 	"io"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ExportSheetCSV écrit une feuille entière en CSV pour Excel en français
@@ -27,7 +27,7 @@ func ExportSheetCSV(ctx context.Context, m *canvas.Model, sheet int64, w io.Writ
 		}
 	}
 	if info.ID == 0 {
-		return fmt.Errorf("feuille %d introuvable", sheet)
+		return msg.New("transfer.sheetNotFound", msg.Args{"sheet": sheet})
 	}
 	sh, err := collectSheet(ctx, m, info)
 	if err != nil {
@@ -80,10 +80,10 @@ const MaxReadCells = 100_000
 // et cellules libres confondus ("" : cellule vide).
 func SheetValues(ctx context.Context, m *canvas.Model, sheet int64, r0, c0, r1, c1 int) ([][]string, error) {
 	if r1 < r0 || c1 < c0 {
-		return nil, fmt.Errorf("plage vide")
+		return nil, msg.New("transfer.emptyRange", nil)
 	}
 	if n := (r1 - r0 + 1) * (c1 - c0 + 1); n > MaxReadCells {
-		return nil, fmt.Errorf("plage trop grande : %d cellules, %d au plus (lisez les tableaux avec tables.rows ou db.query)", n, MaxReadCells)
+		return nil, msg.New("transfer.rangeTooLarge", msg.Args{"n": n, "max": MaxReadCells})
 	}
 	l, err := m.Layout(ctx, sheet)
 	if err != nil {
@@ -96,7 +96,7 @@ func SheetValues(ctx context.Context, m *canvas.Model, sheet int64, r0, c0, r1, 
 		}
 	}
 	if info.ID == 0 {
-		return nil, fmt.Errorf("feuille %d introuvable", sheet)
+		return nil, msg.New("transfer.sheetNotFound", msg.Args{"sheet": sheet})
 	}
 	sh, err := collectSheet(ctx, m, info)
 	if err != nil {

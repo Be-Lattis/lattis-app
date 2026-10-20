@@ -9,6 +9,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Compilation des étapes en SQL (SQLite) : chaque étape devient un CTE qui
@@ -88,7 +89,7 @@ func literal(raw string, t grid.Type) (string, error) {
 	}
 	v, err := grid.Parse(t, raw)
 	if err != nil {
-		return "", fmt.Errorf("« %s » n'est pas une valeur de type %s", raw, TypeLabel(t))
+		return "", msg.New("query.notOfType", msg.Args{"value": raw, "type": TypeLabel(t)})
 	}
 	return lit(v), nil
 }
@@ -105,7 +106,7 @@ func find(cols []Column, name string) (int, error) {
 			return i, nil
 		}
 	}
-	return -1, fmt.Errorf("colonne « %s » introuvable", name)
+	return -1, msg.New("query.columnNotFound", msg.Args{"column": name})
 }
 
 // unique rend un nom de colonne unique parmi cols (« Nom », « Nom 2 »…).
@@ -169,10 +170,10 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 		}
 		name := strings.TrimSpace(s.Name)
 		if name == "" {
-			return "", nil, errors.New("nouveau nom vide")
+			return "", nil, msg.New("query.emptyNewName", nil)
 		}
 		if j, err := find(cols, name); err == nil && j != i {
-			return "", nil, fmt.Errorf("la colonne « %s » existe déjà", name)
+			return "", nil, msg.New("column.nameTaken", msg.Args{"column": name})
 		}
 		out := append([]Column{}, cols...)
 		out[i].Name = name
@@ -186,7 +187,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 		switch s.Type {
 		case grid.Integer, grid.Decimal, grid.Text, grid.Boolean, grid.Date:
 		default:
-			return "", nil, fmt.Errorf("type %q inconnu", s.Type)
+			return "", nil, msg.New("query.unknownType", msg.Args{"type": fmt.Sprintf("%q", s.Type)})
 		}
 		from := cols[i].Type
 		if from == "" {
@@ -202,7 +203,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 
 	case OpRemove, OpSelect:
 		if len(s.Columns) == 0 {
-			return "", nil, errors.New("aucune colonne choisie")
+			return "", nil, msg.New("query.noColumnChosen", nil)
 		}
 		idx := map[int]bool{}
 		var order []int
@@ -228,7 +229,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 				}
 			}
 			if len(out) == 0 {
-				return "", nil, errors.New("il faut garder au moins une colonne")
+				return "", nil, msg.New("query.keepOneColumn", nil)
 			}
 		}
 		return "SELECT " + selectAll(out) + " FROM " + prev, out, nil
@@ -239,7 +240,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 			return "", nil, err
 		}
 		if s.Delimiter == "" {
-			return "", nil, errors.New("délimiteur vide")
+			return "", nil, msg.New("query.emptyDelimiter", nil)
 		}
 		parts := s.Parts
 		if parts < 2 {
@@ -275,7 +276,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 		var expr string
 		if c.Type == grid.Text || c.Type == "" {
 			if s.Value == "" {
-				return "", nil, errors.New("valeur à rechercher vide")
+				return "", nil, msg.New("query.emptySearch", nil)
 			}
 			expr = fmt.Sprintf("replace(%s, %s, %s)", qi(c.Name), qs(s.Value), qs(s.With))
 		} else {
@@ -300,7 +301,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 		}
 		fn := map[string]string{"trim": "trim", "upper": "upper", "lower": "lower"}[s.Fn]
 		if fn == "" {
-			return "", nil, fmt.Errorf("transformation %q inconnue", s.Fn)
+			return "", nil, msg.New("query.unknownTransform", msg.Args{"transform": fmt.Sprintf("%q", s.Fn)})
 		}
 		out := append([]Column{}, cols...)
 		if out[i].Type != grid.Text {
@@ -311,10 +312,10 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 	case OpAddColumn:
 		name := strings.TrimSpace(s.Name)
 		if name == "" {
-			return "", nil, errors.New("nom de colonne vide")
+			return "", nil, msg.New("query.emptyColumnName", nil)
 		}
 		if _, err := find(cols, name); err == nil {
-			return "", nil, fmt.Errorf("la colonne « %s » existe déjà", name)
+			return "", nil, msg.New("column.nameTaken", msg.Args{"column": name})
 		}
 		expr, err := expression(cols, s.Expr)
 		if err != nil {
@@ -340,7 +341,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 
 	case OpAppend:
 		if s.Other == nil {
-			return "", nil, errors.New("requête à ajouter manquante")
+			return "", nil, msg.New("query.missingAppend", nil)
 		}
 		from, other, err := r.from(*s.Other)
 		if err != nil {
@@ -380,7 +381,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 			out = append(out, cols[i])
 		}
 		if len(s.Aggs) == 0 && len(keys) == 0 {
-			return "", nil, errors.New("regroupement sans colonne ni agrégat")
+			return "", nil, msg.New("query.groupEmpty", nil)
 		}
 		for _, a := range s.Aggs {
 			e, t, err := aggregate(cols, a.Op, a.Column)
@@ -392,7 +393,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 				name = aggName(a.Op, a.Column)
 			}
 			if _, err := find(out, name); err == nil {
-				return "", nil, fmt.Errorf("la colonne « %s » existe déjà", name)
+				return "", nil, msg.New("column.nameTaken", msg.Args{"column": name})
 			}
 			sel = append(sel, e+" AS "+qi(name))
 			out = append(out, Column{Name: name, Type: t})
@@ -405,7 +406,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 
 	case OpSort:
 		if len(s.Sort) == 0 {
-			return "", nil, errors.New("aucune clé de tri")
+			return "", nil, msg.New("query.noSortKey", nil)
 		}
 		var by []string
 		for _, k := range s.Sort {
@@ -451,7 +452,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 
 	case OpTop:
 		if s.Count < 0 {
-			return "", nil, errors.New("nombre de lignes négatif")
+			return "", nil, msg.New("query.negativeRows", nil)
 		}
 		return fmt.Sprintf("SELECT * FROM %s LIMIT %d", prev, s.Count), cols, nil
 
@@ -461,7 +462,7 @@ func (r *run) step(p *pipeline, s Step) (string, []Column, error) {
 	case OpPivot:
 		return r.pivot(p, s)
 	}
-	return "", nil, fmt.Errorf("étape %q inconnue", s.Op)
+	return "", nil, msg.New("query.unknownStep", msg.Args{"step": fmt.Sprintf("%q", s.Op)})
 }
 
 // project recopie les colonnes de cols sous les noms de out, avec des
@@ -504,24 +505,24 @@ func condition(cols []Column, c Cond) (string, error) {
 	case "=", "<>", "<", "<=", ">", ">=":
 		v, err := literal(c.Value, col.Type)
 		if err != nil {
-			return "", fmt.Errorf("filtre sur « %s » : %w", col.Name, err)
+			return "", msg.Wrap(err, "query.filterError", msg.Args{"column": col.Name, "err": err})
 		}
 		if c.Cmp == "<>" {
 			return "(" + x + " IS NULL OR " + x + " <> " + v + ")", nil
 		}
 		return x + " " + c.Cmp + " " + v, nil
 	}
-	return "", fmt.Errorf("comparaison %q inconnue", c.Cmp)
+	return "", msg.New("query.unknownComparison", msg.Args{"comparison": fmt.Sprintf("%q", c.Cmp)})
 }
 
 // expression traduit une expression de colonne personnalisée : SQLite, où
 // [Colonne] désigne une colonne (les chaînes '...' ne sont pas touchées).
 func expression(cols []Column, src string) (string, error) {
 	if strings.TrimSpace(src) == "" {
-		return "", errors.New("expression vide")
+		return "", msg.New("query.emptyExpression", nil)
 	}
 	if strings.Contains(src, ";") {
-		return "", errors.New("une expression ne contient pas de point-virgule")
+		return "", msg.New("query.expressionSemicolon", nil)
 	}
 	var b strings.Builder
 	rs := []rune(src)
@@ -533,7 +534,7 @@ func expression(cols []Column, src string) (string, error) {
 				j++
 			}
 			if j >= len(rs) {
-				return "", errors.New("chaîne non fermée dans l'expression")
+				return "", msg.New("query.unclosedString", nil)
 			}
 			b.WriteString(string(rs[i : j+1]))
 			i = j
@@ -575,7 +576,7 @@ func aggregate(cols []Column, op, column string) (string, grid.Type, error) {
 		return "count(DISTINCT " + x + ")", grid.Integer, nil
 	case "sum":
 		if !numeric {
-			return "", "", fmt.Errorf("somme de « %s » : colonne de type %s", c.Name, TypeLabel(c.Type))
+			return "", "", msg.New("query.sumType", msg.Args{"column": c.Name, "type": TypeLabel(c.Type)})
 		}
 		if c.Type == grid.Integer || c.Type == grid.Boolean {
 			return "sum(" + x + ")", grid.Integer, nil
@@ -583,13 +584,13 @@ func aggregate(cols []Column, op, column string) (string, grid.Type, error) {
 		return "total(" + x + ")", grid.Decimal, nil
 	case "avg":
 		if !numeric {
-			return "", "", fmt.Errorf("moyenne de « %s » : colonne de type %s", c.Name, TypeLabel(c.Type))
+			return "", "", msg.New("query.averageType", msg.Args{"column": c.Name, "type": TypeLabel(c.Type)})
 		}
 		return "avg(" + x + ")", grid.Decimal, nil
 	case "min", "max":
 		return op + "(" + x + ")", c.Type, nil
 	}
-	return "", "", fmt.Errorf("agrégat %q inconnu", op)
+	return "", "", msg.New("query.unknownAggregate", msg.Args{"aggregate": fmt.Sprintf("%q", op)})
 }
 
 // aggName nomme une colonne d'agrégat sans nom.
@@ -615,10 +616,10 @@ func aggName(op, column string) string {
 func (r *run) merge(p *pipeline, s Step) (string, []Column, error) {
 	prev, cols := p.last, p.cols
 	if s.Other == nil {
-		return "", nil, errors.New("requête à fusionner manquante")
+		return "", nil, msg.New("query.missingMerge", nil)
 	}
 	if len(s.Keys) == 0 || len(s.Keys) != len(s.OtherKeys) {
-		return "", nil, errors.New("choisissez autant de colonnes de correspondance de chaque côté")
+		return "", nil, msg.New("query.mergeColumnsCount", nil)
 	}
 	from, other, err := r.from(*s.Other)
 	if err != nil {
@@ -656,7 +657,7 @@ func (r *run) merge(p *pipeline, s Step) (string, []Column, error) {
 	}
 	kw := map[string]string{"left": "LEFT JOIN", "inner": "JOIN", "full": "FULL JOIN", "right": "RIGHT JOIN"}[join]
 	if kw == "" {
-		return "", nil, fmt.Errorf("jointure %q inconnue", join)
+		return "", nil, msg.New("query.unknownJoin", msg.Args{"join": fmt.Sprintf("%q", join)})
 	}
 	out := append([]Column{}, cols...)
 	var bring []int
@@ -701,7 +702,7 @@ func otherName(s Source) string {
 // (attribut, valeur) ; les valeurs vides sont omises, comme Power Query.
 func unpivot(prev string, cols []Column, s Step) (string, []Column, error) {
 	if len(s.Columns) == 0 {
-		return "", nil, errors.New("aucune colonne à dépivoter")
+		return "", nil, msg.New("query.nothingToUnpivot", nil)
 	}
 	chosen := map[int]bool{}
 	var vt grid.Type = "-"
@@ -788,7 +789,7 @@ func (r *run) pivot(p *pipeline, s Step) (string, []Column, error) {
 		return "", nil, err
 	}
 	if ai == vi {
-		return "", nil, errors.New("la colonne des valeurs doit différer de la colonne pivot")
+		return "", nil, msg.New("query.pivotValuesSame", nil)
 	}
 	op := s.Agg
 	if op == "" {
@@ -802,7 +803,7 @@ func (r *run) pivot(p *pipeline, s Step) (string, []Column, error) {
 		return "", nil, err
 	}
 	if len(values) > MaxPivotValues {
-		return "", nil, fmt.Errorf("plus de %d valeurs distinctes dans « %s » : filtrez d'abord", MaxPivotValues, cols[ai].Name)
+		return "", nil, msg.New("query.pivotTooManyValues", msg.Args{"max": MaxPivotValues, "column": cols[ai].Name})
 	}
 	var keep []Column
 	for i, c := range cols {

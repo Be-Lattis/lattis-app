@@ -3,7 +3,7 @@ package canvas
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"strings"
 )
 
@@ -60,19 +60,19 @@ func (th Theme) Clean() (Theme, error) {
 		th.Name = "Personnalisé"
 	}
 	if len([]rune(th.Name)) > 60 || len(th.ID) > 60 {
-		return th, fmt.Errorf("nom de thème trop long")
+		return th, msg.New("theme.nameTooLong", nil)
 	}
 	if !IsHexColor(th.Table) || !IsHexColor(th.Source) {
-		return th, fmt.Errorf("couleur de thème invalide (#rrggbb attendu)")
+		return th, msg.New("theme.invalidColor", nil)
 	}
 	if len(th.Accents) > 4 {
-		return th, fmt.Errorf("quatre accents au plus (Accent 3 à 6)")
+		return th, msg.New("theme.tooManyAccents", nil)
 	}
 	var acc []string
 	for _, a := range th.Accents {
 		a = strings.ToLower(strings.TrimSpace(a))
 		if !IsHexColor(a) {
-			return th, fmt.Errorf("accent de thème invalide (#rrggbb attendu)")
+			return th, msg.New("theme.invalidAccent", nil)
 		}
 		acc = append(acc, a)
 	}
@@ -80,7 +80,7 @@ func (th Theme) Clean() (Theme, error) {
 	th.Dark = strings.ToLower(strings.TrimSpace(th.Dark))
 	th.Light = strings.ToLower(strings.TrimSpace(th.Light))
 	if th.Dark != "" && !IsHexColor(th.Dark) || th.Light != "" && !IsHexColor(th.Light) {
-		return th, fmt.Errorf("Texte 2 ou Arrière-plan 2 du thème invalide (#rrggbb attendu)")
+		return th, msg.New("theme.invalidText2", nil)
 	}
 	return th, nil
 }

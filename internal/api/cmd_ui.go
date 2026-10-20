@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/script"
 )
 
@@ -119,7 +120,7 @@ print(s.sheet, s.row, s.col, s.table or "hors tableau")`,
 					}
 				}
 				if found == nil {
-					return nil, fmt.Errorf("aucun objet nommé « %s »", name)
+					return nil, msg.New("api.objectNotFoundNamed", msg.Args{"name": name})
 				}
 				sel, err := c.selectRange(found.s, found.r0, found.c0, found.r1, found.c1)
 				if err != nil {
@@ -173,7 +174,7 @@ ui.select_cells("Commandes", "Client", 2, "Montant", 3)`,
 					r0, r1 = -1, -1 // en-tête seul
 				}
 				if max(r0, r1) >= t.Rows {
-					return nil, fmt.Errorf("tableau « %s » : %d lignes seulement", t.Name, t.Rows)
+					return nil, msg.New("api.tableRowsOnly", msg.Args{"table": t.Name, "rows": t.Rows})
 				}
 				base := t.Row + 1
 				return c.selectRange(t.Sheet, base+r0, t.Col+k0, base+r1, t.Col+k1)
@@ -198,7 +199,7 @@ ui.select_cells("Commandes", "Client", 2, "Montant", 3)`,
 			Run: func(c *Call) (any, error) {
 				v, _ := c.Str("view")
 				if v != "grid" && v != "sql" && v != "script" {
-					return nil, fmt.Errorf("vue %q inconnue : grid, sql ou script", v)
+					return nil, msg.New("api.unknownView", msg.Args{"view": fmt.Sprintf("%q", v)})
 				}
 				return nil, c.Host.ShowView(c, v)
 			},
@@ -323,7 +324,7 @@ func (c *Call) dialog(d Dialog) (map[string]any, error) {
 	for i := range d.Fields {
 		f := &d.Fields[i]
 		if f.Name == "" {
-			return nil, fmt.Errorf("champ %d : name manquant", i+1)
+			return nil, msg.New("api.fieldNoName", msg.Args{"field": i + 1})
 		}
 		if seen[f.Name] {
 			return nil, fmt.Errorf("champ %q en double", f.Name)
@@ -333,7 +334,7 @@ func (c *Call) dialog(d Dialog) (map[string]any, error) {
 			f.Type = "text"
 		}
 		if !fieldTypes[f.Type] {
-			return nil, fmt.Errorf("champ %q : type %q inconnu", f.Name, f.Type)
+			return nil, msg.New("api.fieldUnknownType", msg.Args{"field": fmt.Sprintf("%q", f.Name), "type": fmt.Sprintf("%q", f.Type)})
 		}
 		if (f.Type == "select" || f.Type == "radio") && len(f.Options) == 0 {
 			return nil, fmt.Errorf("champ %q : options manquantes", f.Name)
@@ -363,7 +364,7 @@ func (c *Call) dialog(d Dialog) (map[string]any, error) {
 			}
 			n, ok := number(v)
 			if !ok {
-				return nil, fmt.Errorf("champ %q : nombre attendu", f.Name)
+				return nil, msg.New("api.fieldNumber", msg.Args{"field": fmt.Sprintf("%q", f.Name)})
 			}
 			out[f.Name] = n
 		default:

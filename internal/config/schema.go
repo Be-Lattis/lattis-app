@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"net/url"
 	"strconv"
 	"strings"
@@ -374,14 +375,14 @@ func validatorFor(path string) validator {
 
 // inLimitRange : réglage inconnu de limits (les connus ont leurs bornes,
 // voir validatorFor).
-func inLimitRange(any) error { return errors.New("réglage inconnu") }
+func inLimitRange(any) error { return msg.New("config.unknownSetting", nil) }
 
 // between : un entier de lo à hi.
 func between(lo, hi int) validator {
 	return func(v any) error {
 		f, ok := v.(float64)
 		if !ok || f != float64(int(f)) || int(f) < lo || int(f) > hi {
-			return fmt.Errorf("nombre entier de %d à %d attendu", lo, hi)
+			return msg.New("config.integerRange", msg.Args{"min": lo, "max": hi})
 		}
 		return nil
 	}
@@ -389,7 +390,7 @@ func between(lo, hi int) validator {
 
 func isBool(v any) error {
 	if _, ok := v.(bool); !ok {
-		return errors.New("booléen attendu (true ou false)")
+		return msg.New("config.booleanExpected", nil)
 	}
 	return nil
 }
@@ -399,11 +400,11 @@ func isBool(v any) error {
 func isIdent(v any) error {
 	s, ok := v.(string)
 	if !ok || s == "" || len(s) > 100 {
-		return errors.New("identifiant attendu")
+		return msg.New("config.idExpected", nil)
 	}
 	for _, r := range s {
 		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("-_.:/@", r)) {
-			return errors.New("identifiant attendu (lettres, chiffres, - _ . : / @)")
+			return msg.New("config.idChars", nil)
 		}
 	}
 	return nil
@@ -418,7 +419,7 @@ func isNumber(v any) error {
 
 func positive(v any) error {
 	if f, ok := v.(float64); !ok || f <= 0 {
-		return errors.New("nombre positif attendu")
+		return msg.New("config.positiveNumber", nil)
 	}
 	return nil
 }
@@ -426,11 +427,11 @@ func positive(v any) error {
 func isStringList(v any) error {
 	l, ok := v.([]any)
 	if !ok {
-		return errors.New("liste de textes attendue")
+		return msg.New("config.textList", nil)
 	}
 	for _, x := range l {
 		if _, ok := x.(string); !ok {
-			return errors.New("liste de textes attendue")
+			return msg.New("config.textList", nil)
 		}
 	}
 	return nil
@@ -473,7 +474,7 @@ func isLocalOrHTTPSURL(v any) error {
 func isPublicKey(v any) error {
 	s, ok := v.(string)
 	if !ok {
-		return errors.New("clé publique attendue")
+		return msg.New("config.publicKeyExpected", nil)
 	}
 	_, err := ParsePublicKey(s)
 	return err

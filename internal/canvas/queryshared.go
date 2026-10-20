@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Actualiser un tableau chargé par une requête et publié dans un classeur
@@ -42,7 +43,7 @@ func (t *tx) refreshShared(old Table, it ImportTable, res *QueryLoad) error {
 		used[c.ID] = true
 	}
 	if len(missing) > 0 {
-		return fmt.Errorf("%w : la requête rend %s, absente(s) du tableau partagé « %s » ; un concepteur doit d'abord l'ajouter au tableau", ErrQuery, strings.Join(missing, ", "), old.Name)
+		return msg.Wrap(ErrQuery, "query.sharedMissingColumns", msg.Args{"columns": strings.Join(missing, ", "), "table": old.Name})
 	}
 	for _, c := range old.Cols {
 		if c.Formula == "" && !used[c.ID] {
@@ -91,7 +92,7 @@ func (t *tx) refreshShared(old Table, it ImportTable, res *QueryLoad) error {
 		Undo:  []stmt{st(`DELETE FROM ` + old.sql() + ` WHERE id IN (SELECT id FROM ` + hold + `)`)},
 		Purge: []stmt{st(`DROP TABLE IF EXISTS ` + hold)},
 	}); err != nil {
-		return fmt.Errorf("%w : tableau partagé « %s » : %v", ErrQuery, old.Name, err)
+		return msg.Wrap(ErrQuery, "query.sharedTableError", msg.Args{"table": old.Name, "err": err})
 	}
 	res.Sheet, res.Table, res.Rows = old.Sheet, old.Name, it.Count
 	return nil

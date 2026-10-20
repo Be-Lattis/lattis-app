@@ -12,6 +12,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -85,7 +86,7 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 				covered, err = r.CoveredBy(ctx, t.since, probes[tbl])
 			}
 			if err != nil {
-				return fmt.Errorf("tableau « %s » : %w", t.remote.Name, err)
+				return msg.Wrap(err, "collab.tableError", msg.Args{"table": t.remote.Name, "err": err})
 			}
 			if full[tbl] {
 				covered = false // structure changée : tout est relu
@@ -109,7 +110,7 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 				})
 			}
 			if err != nil {
-				return fmt.Errorf("tableau « %s » : %w", t.remote.Name, err)
+				return msg.Wrap(err, "collab.tableError", msg.Args{"table": t.remote.Name, "err": err})
 			}
 			batches = append(batches, rt)
 			since[tbl] = sp
@@ -530,7 +531,7 @@ func (e *Engine) Resolve(ctx context.Context, id int64, mine bool) error {
 	var row, local, server string
 	err := e.db.Read().QueryRowContext(ctx, `SELECT tbl, row_id, col, coalesce(local, 'null'), coalesce(server, 'null') FROM _lattis_conflicts WHERE id = ?`, id).Scan(&tbl, &row, &col, &local, &server)
 	if errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("conflit %d introuvable (déjà réglé ?)", id)
+		return msg.New("collab.conflictNotFound", msg.Args{"id": id})
 	}
 	if err != nil {
 		return err

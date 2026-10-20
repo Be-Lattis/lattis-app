@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // En-têtes sur deux lignes (demande de Louis) : beaucoup de classeurs ont une
@@ -146,7 +147,9 @@ var labelAccents = strings.NewReplacer(
 
 // sameLabel : deux libellés égaux aux majuscules, accents et espaces près.
 func sameLabel(a, b string) bool {
-	f := func(s string) string { return labelAccents.Replace(strings.ToLower(strings.Join(strings.Fields(s), " "))) }
+	f := func(s string) string {
+		return labelAccents.Replace(strings.ToLower(strings.Join(strings.Fields(s), " ")))
+	}
 	return f(a) == f(b)
 }
 
@@ -356,10 +359,10 @@ func (t *tx) inputBand(tb Table, i int, raw string) error {
 	}
 	g := strings.TrimSpace(raw)
 	if isFormula(g) {
-		return fmt.Errorf("%w : un groupe d'en-têtes est un texte, pas une formule", ErrTable)
+		return msg.Wrap(ErrTable, "table.groupNotFormula", nil)
 	}
 	if strings.Contains(g, ".") {
-		return fmt.Errorf("%w : un groupe d'en-têtes ne contient pas de point (le point sépare le groupe du nom dans « Groupe.Nom »)", ErrTable)
+		return msg.Wrap(ErrTable, "table.groupNoDot", nil)
 	}
 	lo, hi := groupSpan(tb, i)
 	return t.setGroups(tb, lo, hi, cleanGroup(g))
@@ -452,11 +455,11 @@ func (t *tx) mergeBand(tables []Table, r0, c0, r1, c1 int) (bool, error) {
 		return false, nil
 	}
 	if len(hit) > 1 {
-		return true, fmt.Errorf("%w : la sélection mêle plusieurs tableaux ; fusionnez les groupes d'en-têtes d'un seul tableau à la fois", ErrMerge)
+		return true, msg.Wrap(ErrMerge, "merge.severalTables", nil)
 	}
 	tb := hit[0]
 	if c0 < tb.Col || c1 > tb.Right() || r0 < tb.Row-1 || r1 > tb.Row {
-		return true, fmt.Errorf("%w : dans le tableau « %s », seules la bande des groupes et l'en-tête se fusionnent : la bande et l'en-tête d'une colonne (colonne sur un niveau), ou des cellules voisines de la bande (un groupe sur plusieurs colonnes) ; pas avec les données ni avec des cellules hors du tableau", ErrMerge, tb.Name)
+		return true, msg.Wrap(ErrMerge, "merge.twoLevelOnly", msg.Args{"table": tb.Name})
 	}
 	if err := t.lockTable(tb.ID); err != nil {
 		return true, err

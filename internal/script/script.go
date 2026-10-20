@@ -105,7 +105,7 @@ var (
 	ErrTimeout  = msg.New("script.timeout", nil)
 	ErrStopped  = msg.New("script.stopped", nil)
 	ErrMemory   = msg.New("script.memory", nil)
-	ErrReadOnly = errors.New("ce script ne peut pas modifier le classeur")
+	ErrReadOnly = msg.New("script.readOnly", nil)
 )
 
 // Run exécute un script. Annuler ctx joue le rôle du bouton Arrêter.
@@ -142,7 +142,7 @@ func Run(ctx context.Context, env Env, src string, lim Limits) Result {
 	if err == nil && env.Entry != "" {
 		fn, ok := L.GetGlobal(env.Entry).(*lua.LFunction)
 		if !ok {
-			err = fmt.Errorf("le script ne définit pas de fonction %s", env.Entry)
+			err = msg.New("script.noFunction", msg.Args{"function": env.Entry})
 		} else {
 			L.Push(fn)
 			n := 0

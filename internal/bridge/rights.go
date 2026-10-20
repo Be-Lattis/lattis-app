@@ -14,6 +14,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
@@ -262,13 +263,13 @@ func (s *DocumentService) rightsDoAs(ctx context.Context, design bool, fn func(s
 	}
 	info := d.Share.Info()
 	if info == nil {
-		return RightsView{}, errors.New("ce classeur n'est pas partagé : Fichier › Publier sur un serveur…")
+		return RightsView{}, msg.New("rights.notShared", nil)
 	}
 	switch {
 	case design && !info.CanDesign():
-		return RightsView{}, errors.New("réservé aux propriétaires et concepteurs du classeur")
+		return RightsView{}, msg.New("rights.ownersDesigners", nil)
 	case !design && !info.CanManage():
-		return RightsView{}, errors.New("seuls les propriétaires du classeur gèrent ses droits")
+		return RightsView{}, msg.New("rights.ownersOnly", nil)
 	}
 	srv, _, _, err := remoteServer(ctx, info.Server)
 	if err != nil {
@@ -289,10 +290,10 @@ func (s *DocumentService) rightsDoAs(ctx context.Context, design bool, fn func(s
 func (s *DocumentService) ShareInvite(ctx context.Context, email string, roles []string) (RightsView, error) {
 	email = strings.TrimSpace(email)
 	if !strings.Contains(email, "@") {
-		return RightsView{}, fmt.Errorf("adresse invalide : %q", email)
+		return RightsView{}, msg.New("rights.invalidAddress", msg.Args{"address": fmt.Sprintf("%q", email)})
 	}
 	if len(roles) == 0 {
-		return RightsView{}, errors.New("choisir au moins un rôle")
+		return RightsView{}, msg.New("rights.chooseRole", nil)
 	}
 	return s.rightsDo(ctx, func(srv workbook.Server, info *workbook.Info) error {
 		_, err := srv.Invite(ctx, info.WorkbookID, email, roles)
@@ -309,7 +310,7 @@ func (s *DocumentService) ShareRevokeInvitation(ctx context.Context, id string) 
 // niveau n'est posé).
 func (s *DocumentService) ShareCreateRole(ctx context.Context, name string) (RightsView, error) {
 	if strings.TrimSpace(name) == "" {
-		return RightsView{}, errors.New("nom de rôle vide")
+		return RightsView{}, msg.New("rights.emptyRoleName", nil)
 	}
 	return s.rightsDo(ctx, func(srv workbook.Server, info *workbook.Info) error {
 		_, err := srv.CreateRole(ctx, info.WorkbookID, strings.TrimSpace(name))
@@ -389,7 +390,7 @@ func sheetLevels(levels []workbook.Level, tables []RightsTable) ([]workbook.Leve
 			}
 		}
 		if len(on) == 0 {
-			return nil, errors.New("aucun tableau publié sur cette feuille")
+			return nil, msg.New("rights.noPublishedTable", nil)
 		}
 		key := ""
 		if id, err := strconv.ParseInt(l.NodeID, 10, 64); err == nil {
@@ -473,7 +474,7 @@ func (s *DocumentService) SharePreview(ctx context.Context, userID string, table
 	}
 	info := d.Share.Info()
 	if info == nil || !info.CanDesign() {
-		return PreviewView{}, errors.New("« Voir en tant que… » est réservé aux propriétaires et concepteurs du classeur")
+		return PreviewView{}, msg.New("rights.viewAsReserved", nil)
 	}
 	local, err := localRights(ctx, d)
 	if err != nil {
@@ -486,7 +487,7 @@ func (s *DocumentService) SharePreview(ctx context.Context, userID string, table
 		}
 	}
 	if t == nil || t.RemoteID == "" {
-		return PreviewView{}, errors.New("tableau non publié")
+		return PreviewView{}, msg.New("rights.tableNotPublished", nil)
 	}
 	srv, _, _, err := remoteServer(ctx, info.Server)
 	if err != nil {

@@ -8,8 +8,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"io"
 	"os"
 	"strings"
@@ -41,7 +41,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		err = runShow(args, stdout)
 	case "check":
 		if len(args) != 1 {
-			err = errors.New("check : un fichier attendu")
+			err = msg.New("configCli.checkFile", nil)
 			break
 		}
 		return runCheck(args[0], stdout, stderr)
@@ -49,13 +49,13 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		err = runRefresh(stdout)
 	case "keygen":
 		if len(args) != 1 {
-			err = errors.New("keygen : chemin de la clé privée attendu")
+			err = msg.New("configCli.keygenPath", nil)
 			break
 		}
 		err = runKeygen(args[0], stdout)
 	case "sign":
 		if len(args) != 2 {
-			err = errors.New("sign : clé privée et fichier attendus")
+			err = msg.New("configCli.signArgs", nil)
 			break
 		}
 		err = runSign(args[0], args[1], stdout)
@@ -63,7 +63,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprint(stdout, usage)
 		return 0
 	default:
-		err = fmt.Errorf("commande inconnue %q", cmd)
+		err = msg.New("configCli.unknownCommand", msg.Args{"command": fmt.Sprintf("%q", cmd)})
 	}
 	if err != nil {
 		fmt.Fprintf(stderr, "lattis config : %v\n\n%s", err, usage)
@@ -80,7 +80,7 @@ func SplitSetFlags(args []string) (sets, rest []string, err error) {
 		switch {
 		case a == "--set" || a == "-set":
 			if i+1 >= len(args) {
-				return nil, nil, errors.New("--set : chemin=valeur attendu")
+				return nil, nil, msg.New("configCli.setFormat", nil)
 			}
 			sets = append(sets, args[i+1])
 			i++
@@ -101,7 +101,7 @@ func runShow(args []string, w io.Writer) error {
 	asJSON := false
 	for _, a := range rest {
 		if a != "--json" {
-			return fmt.Errorf("option inconnue %q", a)
+			return msg.New("configCli.unknownOption", msg.Args{"option": fmt.Sprintf("%q", a)})
 		}
 		asJSON = true
 	}
@@ -190,7 +190,7 @@ func runRefresh(w io.Writer) error {
 	l := &Loader{}
 	c := l.Load(ctx)
 	if c.Remote.URL == "" {
-		return errors.New("aucune configuration distante (configUrl) n'est configurée")
+		return msg.New("configCli.noRemote", nil)
 	}
 	changed, err := l.Refresh(ctx)
 	if err != nil {
@@ -235,7 +235,7 @@ func runSign(privPath, docPath string, w io.Writer) error {
 	}
 	blk, _ := pem.Decode(kb)
 	if blk == nil {
-		return errors.New("clé privée PEM illisible")
+		return msg.New("config.privateKeyPem", nil)
 	}
 	k, err := x509.ParsePKCS8PrivateKey(blk.Bytes)
 	if err != nil {
@@ -243,7 +243,7 @@ func runSign(privPath, docPath string, w io.Writer) error {
 	}
 	priv, ok := k.(ed25519.PrivateKey)
 	if !ok {
-		return errors.New("clé privée Ed25519 attendue")
+		return msg.New("config.privateKeyEd25519", nil)
 	}
 	doc, err := os.ReadFile(docPath)
 	if err != nil {

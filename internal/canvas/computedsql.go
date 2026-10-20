@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/sqltext"
 )
 
@@ -205,7 +206,7 @@ func inlineExpr(s string, args []any, inMain bool) (string, error) {
 			}
 			n, err := strconv.Atoi(s[i+1 : j])
 			if err != nil || n < 1 || n > len(args) {
-				return "", fmt.Errorf("colonne calculée : paramètre %q introuvable", s[i:j])
+				return "", msg.New("computed.paramNotFound", msg.Args{"param": fmt.Sprintf("%q", s[i:j])})
 			}
 			b.WriteString(sqlArgLiteral(args[n-1]))
 			i, prev = j, ""

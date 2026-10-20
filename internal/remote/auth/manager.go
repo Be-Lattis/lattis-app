@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -160,7 +161,7 @@ func (e *ErrLoginRequired) Error() string {
 func (e *ErrLoginRequired) Unwrap() error { return e.Cause }
 
 // ErrCanceled : connexion abandonnée par l'utilisateur.
-var ErrCanceled = errors.New("connexion annulée")
+var ErrCanceled = msg.New("auth.canceled", nil)
 
 func (m *Manager) policy() Policy {
 	if m.opts.Policy == nil {
@@ -186,7 +187,7 @@ func (m *Manager) Allowed(u string) error {
 	if _, ok := m.managed(p, u); ok || p.AllowUserServers {
 		return nil
 	}
-	return fmt.Errorf("votre organisation n'autorise que ses propres Serveurs Lattis : %s n'en fait pas partie", Host(u))
+	return msg.New("auth.orgServersOnly", msg.Args{"host": Host(u)})
 }
 
 // get donne (ou crée) l'entrée d'un serveur ; mu tenu.
@@ -330,13 +331,13 @@ func (m *Manager) prepare(ctx context.Context, raw, provider string, kind string
 		}
 	}
 	if pr == nil {
-		return nil, nil, fmt.Errorf("%s ne propose pas le fournisseur « %s »", disc.Name, provider)
+		return nil, nil, msg.New("auth.providerNotOffered", msg.Args{"server": disc.Name, "provider": provider})
 	}
 	if mg, ok := m.managed(m.policy(), u); ok && mg.Provider != "" && mg.Provider != provider {
-		return nil, nil, fmt.Errorf("votre organisation impose la connexion à %s par « %s »", disc.Name, mg.Provider)
+		return nil, nil, msg.New("auth.providerImposed", msg.Args{"server": disc.Name, "provider": mg.Provider})
 	}
 	if kind == ProviderPassword && pr.Kind != ProviderPassword {
-		return nil, nil, fmt.Errorf("« %s » ne se connecte pas par mot de passe", pr.Label)
+		return nil, nil, msg.New("auth.noPassword", msg.Args{"provider": pr.Label})
 	}
 	return s, m.client(s), nil
 }
@@ -389,7 +390,7 @@ func canceled(err error) error {
 	case errors.Is(err, context.Canceled):
 		return ErrCanceled
 	case errors.Is(err, context.DeadlineExceeded):
-		return errors.New("délai de connexion dépassé : recommencez")
+		return msg.New("auth.timeout", nil)
 	}
 	return err
 }
@@ -408,11 +409,11 @@ func (m *Manager) Login(ctx context.Context, raw, provider string) (ServerState,
 	p := NewPKCE()
 	lb, err := startLoopback(state, c.issuer, c.name)
 	if err != nil {
-		return ServerState{}, fmt.Errorf("écoute locale impossible (%v) : connectez-vous depuis un autre appareil", err)
+		return ServerState{}, msg.New("auth.loopbackFailed", msg.Args{"err": err})
 	}
 	defer lb.close()
 	if err := m.opts.OpenBrowser(c.authorizeURL(provider, lb.redirect, state, p)); err != nil {
-		return ServerState{}, fmt.Errorf("%v : connectez-vous depuis un autre appareil", err)
+		return ServerState{}, msg.New("auth.otherDevice", msg.Args{"err": err})
 	}
 	code, err := lb.wait(ctx)
 	if err != nil {
@@ -452,7 +453,7 @@ func (m *Manager) WaitDevice(ctx context.Context, raw string) (ServerState, erro
 	dc := s.device
 	m.mu.Unlock()
 	if dc == nil {
-		return ServerState{}, errors.New("aucun code de connexion en attente")
+		return ServerState{}, msg.New("auth.noPendingCode", nil)
 	}
 	ctx, done := m.begin(ctx, s, time.Until(dc.ExpiresAt)+time.Minute)
 	defer done()
@@ -489,7 +490,7 @@ func (m *Manager) establish(s *server, t *Tokens) (ServerState, error) {
 	st := m.state(p, s)
 	m.mu.Unlock()
 	if storeErr != nil {
-		return st, fmt.Errorf("connecté, mais le trousseau du système a refusé le jeton (session limitée à cette exécution) : %w", storeErr)
+		return st, msg.Wrap(storeErr, "auth.keyringRefused", msg.Args{"err": storeErr})
 	}
 	return st, nil
 }
@@ -535,7 +536,7 @@ func (m *Manager) Forget(ctx context.Context, raw string) error {
 		return err
 	}
 	if _, ok := m.managed(m.policy(), u); ok {
-		return fmt.Errorf("%s est déclaré par votre organisation : il ne peut pas être retiré de la liste", Host(u))
+		return msg.New("auth.orgServerLocked", msg.Args{"host": Host(u)})
 	}
 	m.Cancel(u)
 	if err := m.SignOut(ctx, u); err != nil {

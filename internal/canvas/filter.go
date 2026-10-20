@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ColumnFilter est le filtre d'une colonne de tableau, comme le filtre
@@ -215,7 +216,7 @@ func (m *Model) SetFilter(ctx context.Context, table string, i int, f *ColumnFil
 			return err
 		}
 		if i < 0 || i >= len(tb.Cols) {
-			return fmt.Errorf("colonne %d hors du tableau", i)
+			return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 		}
 		c := tb.Cols[i]
 		if f != nil && len(f.Conds) > 0 {
@@ -297,7 +298,7 @@ func (m *Model) FilterValues(ctx context.Context, table string, i int) ([]Filter
 			return err
 		}
 		if i < 0 || i >= len(tb.Cols) {
-			return fmt.Errorf("colonne %d hors du tableau", i)
+			return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 		}
 		c := tb.Cols[i]
 		src := tb.sql()

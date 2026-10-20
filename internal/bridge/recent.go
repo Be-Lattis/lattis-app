@@ -3,7 +3,6 @@ package bridge
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/archive"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/protocol"
 )
@@ -227,7 +227,7 @@ func (s *DocumentService) ShareForget(ctx context.Context) error {
 		return errNotShared
 	}
 	if st.Gone == "" {
-		return errors.New("ce classeur est toujours sur le serveur")
+		return msg.New("recent.stillOnServer", nil)
 	}
 	path := d.Path()
 	dropRecent(RecentFile{Path: path, Server: st.Server, WorkbookID: st.WorkbookID})

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"io"
 	"net/http"
 	"strings"
@@ -83,7 +83,7 @@ type Rights interface {
 
 // ErrUnsupported : le serveur ne propose pas cette fonction (migration
 // manquante) ; l'appelant garde l'ancien comportement.
-var ErrUnsupported = errors.New("fonction absente de ce serveur (mise à jour de lattisd nécessaire)")
+var ErrUnsupported = msg.New("workbook.unsupported", nil)
 
 // WorkbookMember est un membre du classeur (lattis.workbook_members) :
 // Roles nomme ses rôles, fournis (owner, reader…) ou personnalisés (nom),
@@ -222,15 +222,15 @@ func CheckLevel(l Level) error {
 	switch l.NodeKind {
 	case NodeWorkbook, NodeSheet, NodeTable:
 	default:
-		return fmt.Errorf("nœud inconnu : %q (workbook, sheet ou table)", l.NodeKind)
+		return msg.New("rights.unknownNode", msg.Args{"node": fmt.Sprintf("%q", l.NodeKind)})
 	}
 	switch l.Level {
 	case "", LevelNone, LevelReader, LevelParticipant, LevelEditor:
 	default:
-		return fmt.Errorf("niveau inconnu : %q (aucun, lecteur, participant ou éditeur)", l.Level)
+		return msg.New("rights.unknownLevel", msg.Args{"level": fmt.Sprintf("%q", l.Level)})
 	}
 	if l.NodeKind != NodeTable && (strings.TrimSpace(l.ReadFilter) != "" || strings.TrimSpace(l.WriteFilter) != "") {
-		return errors.New("les filtres se posent sur un tableau")
+		return msg.New("rights.filtersOnTable", nil)
 	}
 	return nil
 }
@@ -242,13 +242,13 @@ func CheckRestriction(r RestrictionRule) error {
 		ok = ok || c == r.Command
 	}
 	if !ok {
-		return fmt.Errorf("commande inconnue : %q (select, insert, update, delete ou all)", r.Command)
+		return msg.New("rights.unknownCommand", msg.Args{"command": fmt.Sprintf("%q", r.Command)})
 	}
 	if r.TableID == "" {
-		return errors.New("tableau manquant")
+		return msg.New("rights.missingTable", nil)
 	}
 	if strings.TrimSpace(r.Predicate) == "" {
-		return errors.New("condition manquante")
+		return msg.New("rights.missingCondition", nil)
 	}
 	return nil
 }
@@ -272,7 +272,7 @@ type Previewer interface {
 
 // ErrNoPreview : le serveur ne propose pas « Voir en tant que… » (pas de
 // preview_endpoint dans sa découverte).
-var ErrNoPreview = errors.New("ce serveur ne propose pas « Voir en tant que… »")
+var ErrNoPreview = msg.New("viewAs.unsupported", nil)
 
 // HTTPPreview est le Previewer de lattisd : POST endpoint avec le jeton
 // d'accès de l'utilisateur (le même que pour PostgreSQL).
@@ -320,22 +320,22 @@ func (p httpPreview) Preview(ctx context.Context, workbookID, userID, tableID st
 		_ = json.Unmarshal(raw, &e)
 		switch resp.StatusCode {
 		case http.StatusUnauthorized:
-			return Preview{}, errors.New("« Voir en tant que… » : jeton refusé, reconnectez-vous")
+			return Preview{}, msg.New("viewAs.tokenRefused", nil)
 		case http.StatusForbidden:
-			return Preview{}, errors.New("« Voir en tant que… » est réservé aux propriétaires et concepteurs du classeur")
+			return Preview{}, msg.New("rights.viewAsReserved", nil)
 		case http.StatusNotFound:
-			return Preview{}, errors.New("« Voir en tant que… » : classeur, tableau ou membre inconnu")
+			return Preview{}, msg.New("viewAs.unknown", nil)
 		}
 		if e.Description == "" {
 			e.Description = resp.Status
 		}
-		return Preview{}, fmt.Errorf("« Voir en tant que… » : %s", e.Description)
+		return Preview{}, msg.New("viewAs.error", msg.Args{"description": e.Description})
 	}
 	var out Preview
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
 	if err := d.Decode(&out); err != nil {
-		return Preview{}, fmt.Errorf("« Voir en tant que… » : réponse illisible : %w", err)
+		return Preview{}, msg.Wrap(err, "viewAs.unreadableResponse", msg.Args{"err": err})
 	}
 	if out.Rows == nil {
 		out.Rows = []map[string]any{}

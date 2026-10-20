@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"math"
 	"slices"
 	"strconv"
@@ -141,7 +142,7 @@ func (p PageSetup) IsZero() bool {
 func (p *PageSetup) Check() error {
 	if p.Paper != "" {
 		if _, ok := PaperSizes[p.Paper]; !ok {
-			return fmt.Errorf("format de papier inconnu : %s (A3, A4, A5, B5, Letter, Legal, Tabloid, Executive)", p.Paper)
+			return msg.New("pageSetup.unknownPaper", msg.Args{"paper": p.Paper})
 		}
 		if p.Paper == "A4" {
 			p.Paper = ""
@@ -151,13 +152,13 @@ func (p *PageSetup) Check() error {
 		p.Scale = 0
 	}
 	if p.Scale != 0 && (p.Scale < 10 || p.Scale > 400) {
-		return fmt.Errorf("échelle : entre 10 et 400 %%")
+		return msg.New("pageSetup.scaleRange", nil)
 	}
 	if p.FitWide < 0 || p.FitTall < 0 || p.FitWide > 999 || p.FitTall > 999 {
 		return fmt.Errorf("ajustement : entre 0 (automatique) et 999 pages")
 	}
 	if p.FirstPage < 0 {
-		return fmt.Errorf("numéro de la première page : positif attendu")
+		return msg.New("pageSetup.firstPagePositive", nil)
 	}
 	if m := p.Margins; m != nil {
 		for _, v := range []float64{m.Top, m.Bottom, m.Left, m.Right, m.Header, m.Footer} {
@@ -167,21 +168,21 @@ func (p *PageSetup) Check() error {
 		}
 		w, h := p.PaperMM()
 		if (m.Left+m.Right)*10 >= w-10 || (m.Top+m.Bottom)*10 >= h-10 {
-			return fmt.Errorf("marges trop grandes pour le format de papier")
+			return msg.New("pageSetup.marginsTooLarge", nil)
 		}
 	}
 	if a := p.Area; a != nil {
 		a.R0, a.R1 = min(a.R0, a.R1), max(a.R0, a.R1)
 		a.C0, a.C1 = min(a.C0, a.C1), max(a.C0, a.C1)
 		if a.R0 < 0 || a.C0 < 0 {
-			return fmt.Errorf("zone d'impression hors de la feuille")
+			return msg.New("pageSetup.printAreaOutOfSheet", nil)
 		}
 	}
 	for _, s := range []*Span{p.TitleRows, p.TitleCols} {
 		if s != nil {
 			s.From, s.To = min(s.From, s.To), max(s.From, s.To)
 			if s.From < 0 {
-				return fmt.Errorf("titres à imprimer hors de la feuille")
+				return msg.New("pageSetup.titlesOutOfSheet", nil)
 			}
 		}
 	}
@@ -244,7 +245,7 @@ func (m *Model) SetPageSetupAs(ctx context.Context, sheet int64, p PageSetup, la
 			return err
 		}
 		if n == 0 {
-			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 		}
 		return t.setPageSetup(sheet, p)
 	})
@@ -402,9 +403,9 @@ func ParseLineSpan(s string, rows bool) (Span, error) {
 	j, ok1 := one(b)
 	if !ok0 || !ok1 {
 		if rows {
-			return Span{}, fmt.Errorf("lignes %q : « 1:2 » attendu", s)
+			return Span{}, msg.New("pageSetup.rowsFormat", msg.Args{"value": fmt.Sprintf("%q", s)})
 		}
-		return Span{}, fmt.Errorf("colonnes %q : « A:B » attendu", s)
+		return Span{}, msg.New("pageSetup.columnsFormat", msg.Args{"value": fmt.Sprintf("%q", s)})
 	}
 	return Span{From: min(i, j), To: max(i, j)}, nil
 }

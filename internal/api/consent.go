@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/trust"
 )
 
@@ -25,7 +25,7 @@ import (
 // pas celui du classeur : il n'est pas soumis à l'accord.
 
 // ErrScriptNotAllowed refuse un script dont la version n'est pas autorisée.
-var ErrScriptNotAllowed = errors.New("script non autorisé")
+var ErrScriptNotAllowed = msg.New("script.notAllowed", nil)
 
 // TrustWarning est la mise en garde des accords d'exécution (scripts ici,
 // pages web dans l'interface : frontend/src/lib/page/consent.ts).
@@ -49,10 +49,10 @@ func allowScript(ctx context.Context, host Host, d *doc.Document, name, src stri
 			return true, nil
 		}
 		if st.ScriptRefused(h) {
-			return false, fmt.Errorf("%w : « %s » a été refusé pour cette session", ErrScriptNotAllowed, name)
+			return false, msg.Wrap(ErrScriptNotAllowed, "script.refusedSession", msg.Args{"name": name})
 		}
 		if !CanPrompt(ctx) {
-			return false, fmt.Errorf("%w : cette version de « %s » n'a pas encore été autorisée sur ce poste ; seul l'utilisateur peut l'autoriser dans Lattis (à sa première exécution, ou en le lançant depuis l'onglet Script)", ErrScriptNotAllowed, name)
+			return false, msg.Wrap(ErrScriptNotAllowed, "script.notYetAllowed", msg.Args{"name": name})
 		}
 		return false, nil
 	}
@@ -84,7 +84,7 @@ func allowScript(ctx context.Context, host Host, d *doc.Document, name, src stri
 	}
 	if !ok || vals == nil {
 		st.RefuseScript(h)
-		return fmt.Errorf("%w : « %s » refusé par l'utilisateur", ErrScriptNotAllowed, name)
+		return msg.Wrap(ErrScriptNotAllowed, "script.refusedByUser", msg.Args{"name": name})
 	}
 	if all, _ := vals["all"].(bool); all {
 		if err := d.AllowAllScripts(ctx); err != nil {

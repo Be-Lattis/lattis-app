@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Onglets « page HTML » (canvas/pages.go) : une page affichée dans un cadre
@@ -52,7 +53,7 @@ func PageCommand(name string) bool { return registry[name] != nil && pageAllowed
 func PageCall(ctx context.Context, host Host, name string, args map[string]any) (any, error) {
 	if !PageCommand(name) {
 		if registry[name] != nil {
-			return nil, fmt.Errorf("%s : commande non disponible dans une page HTML", name)
+			return nil, msg.New("api.notInPage", msg.Args{"command": name})
 		}
 		return nil, fmt.Errorf("%w : %s", ErrUnknown, name)
 	}
@@ -65,7 +66,7 @@ func (c *Call) page(name string) (sheetRef, error) {
 		return s, err
 	}
 	if s.Kind != "html" && s.Kind != "doc" {
-		return s, fmt.Errorf("« %s » n'est pas une page web ni un document", s.Name)
+		return s, msg.New("api.notPage", msg.Args{"sheet": s.Name})
 	}
 	return s, nil
 }
@@ -116,7 +117,7 @@ print(p.name, p.kind)`,
 				if k, _ := c.Str("kind"); k == "doc" {
 					add, kind = d.AddDoc, k
 				} else if k != "" && k != "html" {
-					return nil, fmt.Errorf("kind : \"html\" ou \"doc\", pas « %s »", k)
+					return nil, msg.New("api.pageKind", msg.Args{"kind": k})
 				}
 				id, err := add(c, before)
 				if err != nil {

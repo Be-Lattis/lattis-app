@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Structure d'un tableau d'un classeur collaboratif publié (spécification
@@ -47,7 +48,7 @@ func (w pgWriter) InsertColumn(ctx context.Context, workbookID, tableID, name, t
 	if code, ok := Rejected(err); ok {
 		if _, rerr := w.tx.Exec(ctx, `ROLLBACK TO SAVEPOINT `+sp); rerr != nil {
 			// La transaction n'est plus utilisable : une coupure, pas un refus.
-			return "", fmt.Errorf("retour au point de sauvegarde après « %v » : %s", err, rerr.Error())
+			return "", msg.New("workbook.rollbackFailed", msg.Args{"step": err, "err": rerr.Error()})
 		}
 		if code == "42883" {
 			return "", ErrUnsupported
@@ -138,7 +139,7 @@ func (w pgWriter) Fill(ctx context.Context, schema, table string, cols []RemoteC
 				if k < len(r.Vals) {
 					var err error
 					if v, err = ToRemote(c.Type, r.Vals[k]); err != nil {
-						return fmt.Errorf("colonne « %s » : %w", c.Name, err)
+						return msg.Wrap(err, "workbook.columnError", msg.Args{"column": c.Name, "err": err})
 					}
 				}
 				args = append(args, v)

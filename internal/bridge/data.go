@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -11,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 	"github.com/lalamefine/lattis/protocol"
@@ -85,7 +85,7 @@ func (s *DocumentService) InsertDataset(ctx context.Context, in DataInsert) (Que
 		}
 	}
 	if ds == nil || !ds.Readable || !ds.Available {
-		return QueryRefresh{}, errors.New("donnée du Data Lake introuvable ou indisponible")
+		return QueryRefresh{}, msg.New("data.notFound", nil)
 	}
 	conn, err := s.lattisConnection(ctx, d, server, name)
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Convertir en valeurs (demande de Louis) : une colonne calculée devient une
@@ -36,10 +37,10 @@ func (m *Model) ColumnsToValues(ctx context.Context, table string, cols []int) e
 		}
 		for _, i := range cols {
 			if i < 0 || i >= len(tb.Cols) {
-				return fmt.Errorf("colonne %d hors du tableau", i)
+				return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 			}
 			if tb.Cols[i].Formula == "" {
-				return fmt.Errorf("%w : « %s » n'est pas une colonne calculée", ErrTable, tb.Cols[i].Name)
+				return msg.Wrap(ErrTable, "table.notComputedColumn", msg.Args{"column": tb.Cols[i].Name})
 			}
 		}
 		n, err := t.columnsToValues(tb, cols)
@@ -96,7 +97,7 @@ func (m *Model) RangeToValues(ctx context.Context, sheet int64, r0, c0, r1, c1 i
 			if kept > 0 {
 				return errors.New(plural(kept, "La formule de la sélection déverse un tableau dynamique : elle est gardée", "Les formules de la sélection déversent des tableaux dynamiques : elles sont gardées"))
 			}
-			return errors.New("La sélection ne contient ni colonne calculée ni formule à convertir en valeurs")
+			return msg.New("toValues.nothing", nil)
 		}
 		if tabs == 1 && cells == 0 {
 			t.valuesNote(one, oneCols, len(oneCols), 0, kept)

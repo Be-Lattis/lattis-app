@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Colonnes saisies à côté d'un résultat chargé (docs/decisions/0008).
@@ -300,7 +301,7 @@ func (t *tx) checkHandKey(tb Table, hi handInfo, key string) (string, error) {
 	}
 	idx := hi.keyCols(tb, key)
 	if idx == nil {
-		return "", fmt.Errorf("« %s » n'est pas une colonne chargée du tableau « %s »", key, tb.Name)
+		return "", msg.New("hand.notLoadedColumn", msg.Args{"column": key, "table": tb.Name})
 	}
 	why, err := t.keyWhy(tb, idx)
 	if err != nil {
@@ -973,7 +974,7 @@ func (t *tx) handTable(table string) (Table, handInfo, error) {
 		return tb, handInfo{}, err
 	}
 	if q == 0 {
-		return tb, handInfo{}, fmt.Errorf("« %s » n'est pas chargé par une requête", tb.Name)
+		return tb, handInfo{}, msg.New("hand.notLoadedByQuery", msg.Args{"table": tb.Name})
 	}
 	hi, err := t.hand(queryOwner(q))
 	return tb, hi, err

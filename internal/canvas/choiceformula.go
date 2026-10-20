@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Catégorie calculée par une formule (docs/conception/
@@ -284,7 +285,7 @@ func (m *Model) SetSheetChoiceFormula(ctx context.Context, sheet int64, name, sr
 			return err
 		}
 		if name == "" {
-			return fmt.Errorf("%w : nommez la catégorie (Année, Mois, Taille…)", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.nameCategory", nil)
 		}
 		en, cols, err := t.prepareRowFormula(sheet, src)
 		if err != nil {
@@ -295,7 +296,7 @@ func (m *Model) SetSheetChoiceFormula(ctx context.Context, sheet int64, name, sr
 			return err
 		}
 		if !slices.ContainsFunc(tables, func(tb Table) bool { return len(missingColumns(tb, cols)) == 0 }) {
-			return fmt.Errorf("%w : aucun tableau de la feuille n'a les colonnes %s", ErrSheet, quoteList(cols))
+			return msg.Wrap(ErrSheet, "sheet.noTableWithColumns", msg.Args{"columns": quoteList(cols)})
 		}
 		return t.writeChoice(sheet, &choiceRaw{Name: name, Formula: en, Value: value, All: value == ""})
 	})
@@ -330,7 +331,7 @@ func (t *tx) setFormulaFollow(tb Table, ch *SheetChoice, follow bool, what strin
 			return "", err
 		}
 		if miss := missingColumns(tb, formulaColumns(n)); len(miss) > 0 {
-			return "", fmt.Errorf("%w : « %s » n'a pas les colonnes %s de la formule de l'onglet (%s)", ErrTable, tb.Name, quoteList(miss), ch.Formula)
+			return "", msg.Wrap(ErrTable, "table.missingChoiceColumns", msg.Args{"table": tb.Name, "columns": quoteList(miss), "formula": ch.Formula})
 		}
 		if err := t.setFollowFlag(tb, nil); err != nil {
 			return "", err

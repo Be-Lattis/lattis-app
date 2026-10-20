@@ -2,8 +2,8 @@ package api
 
 import (
 	"errors"
-	"fmt"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/query"
 )
 
@@ -30,7 +30,7 @@ func (c *Call) queryDef() (query.Query, error) {
 func refreshErr(err error) error {
 	var pe *query.ErrPassword
 	if errors.As(err, &pe) {
-		return fmt.Errorf("%w : saisissez-le une fois depuis l'interface (Données › Requêtes et connexions)", err)
+		return msg.Wrap(err, "api.passwordFromUI", msg.Args{"err": err})
 	}
 	return err
 }

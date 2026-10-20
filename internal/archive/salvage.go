@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/klauspost/compress/flate"
 	"github.com/klauspost/compress/zstd"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/ncruces/go-sqlite3"
 )
 
@@ -68,7 +68,7 @@ func Salvage(path string, schema func(db string) error, extra ...func(*sqliteCon
 	return d, rep, nil
 }
 
-var errNothing = errors.New("aucune donnée lisible dans ce fichier")
+var errNothing = msg.New("archive.nothingReadable", nil)
 
 // rawDB copie la base de l'archive dans dst, aussi loin qu'elle se lit.
 func rawDB(path, dst string) error {

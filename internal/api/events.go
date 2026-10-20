@@ -13,6 +13,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/script"
 	"github.com/lalamefine/lattis/internal/trace"
 )
@@ -72,7 +73,7 @@ func CheckWorkbookEvent(event string) error {
 		}
 		names = append(names, `"`+e.Name+`"`)
 	}
-	return fmt.Errorf("évènement « %s » inconnu ; les évènements du classeur : %s", event, strings.Join(names, ", "))
+	return msg.New("api.unknownEvent", msg.Args{"event": event, "events": strings.Join(names, ", ")})
 }
 
 // BeforeTimeout borne un écouteur before_save ou before_close (hors boîtes

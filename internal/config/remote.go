@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"io"
 	"net/http"
 	"os"
@@ -48,15 +49,15 @@ func ParsePublicKey(s string) (ed25519.PublicKey, error) {
 	if strings.HasPrefix(s, "-----BEGIN") {
 		blk, _ := pem.Decode([]byte(s))
 		if blk == nil {
-			return nil, errors.New("clé publique PEM illisible")
+			return nil, msg.New("config.publicKeyPem", nil)
 		}
 		k, err := x509.ParsePKIXPublicKey(blk.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("clé publique illisible : %w", err)
+			return nil, msg.Wrap(err, "config.publicKeyUnreadable", msg.Args{"err": err})
 		}
 		pk, ok := k.(ed25519.PublicKey)
 		if !ok {
-			return nil, errors.New("clé publique Ed25519 attendue")
+			return nil, msg.New("config.publicKeyEd25519", nil)
 		}
 		return pk, nil
 	}
@@ -65,7 +66,7 @@ func ParsePublicKey(s string) (ed25519.PublicKey, error) {
 			return ed25519.PublicKey(b), nil
 		}
 	}
-	return nil, errors.New("clé publique Ed25519 attendue (PEM ou 32 octets en base64)")
+	return nil, msg.New("config.publicKeyFormat", nil)
 }
 
 // ParseRemote lit un document distant. key peut être nil (pas de signature
@@ -81,7 +82,7 @@ func ParseRemote(body []byte, key ed25519.PublicKey, policyAllowed bool) (*Remot
 		}
 		payload, doc.Signed = p, true
 	} else if key != nil {
-		return nil, errors.New("configuration distante non signée alors qu'une clé publique est configurée")
+		return nil, msg.New("config.remoteUnsigned", nil)
 	}
 	t, err := parseTree(payload)
 	if err != nil {
@@ -107,22 +108,22 @@ func verifyJWS(s string, key ed25519.PublicKey) ([]byte, error) {
 		return nil, errors.New("configuration distante : ni JSON ni JWS compact")
 	}
 	if key == nil {
-		return nil, errors.New("configuration distante signée mais aucune clé publique configurée (remote.publicKey)")
+		return nil, msg.New("config.remoteNoPublicKey", nil)
 	}
 	hb, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return nil, errors.New("signature : en-tête illisible")
+		return nil, msg.New("config.signatureHeader", nil)
 	}
 	var h jwsHeader
 	if json.Unmarshal(hb, &h) != nil || h.Alg != "EdDSA" {
-		return nil, errors.New("signature : algorithme EdDSA attendu")
+		return nil, msg.New("config.signatureAlgorithm", nil)
 	}
 	sig, err := base64.RawURLEncoding.DecodeString(parts[2])
 	if err != nil {
 		return nil, errors.New("signature illisible")
 	}
 	if !ed25519.Verify(key, []byte(parts[0]+"."+parts[1]), sig) {
-		return nil, errors.New("signature invalide")
+		return nil, msg.New("config.signatureInvalid", nil)
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
@@ -204,7 +205,7 @@ func fetchRemote(ctx context.Context, client *http.Client, url, etag string) (bo
 		return nil, "", err
 	}
 	if len(body) > maxRemoteSize {
-		return nil, "", errors.New("configuration distante trop volumineuse")
+		return nil, "", msg.New("config.remoteTooLarge", nil)
 	}
 	return body, resp.Header.Get("ETag"), nil
 }
@@ -212,10 +213,10 @@ func fetchRemote(ctx context.Context, client *http.Client, url, etag string) (bo
 // httpsOnly refuse une redirection vers autre chose que https.
 func httpsOnly(req *http.Request, via []*http.Request) error {
 	if req.URL.Scheme != "https" {
-		return errors.New("redirection hors https refusée")
+		return msg.New("config.redirectNotHttps", nil)
 	}
 	if len(via) >= 5 {
-		return errors.New("trop de redirections")
+		return msg.New("json.tooManyRedirects", nil)
 	}
 	return nil
 }

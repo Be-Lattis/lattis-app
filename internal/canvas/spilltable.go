@@ -14,6 +14,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Résultat déversé converti en tableau (clic droit sur un déversement) :
@@ -188,7 +189,7 @@ type spillFormula struct {
 
 // compileSpillFormula compile une formule de cellule libre qui se déverse.
 func (t *tx) compileSpillFormula(sheet int64, raw string) (spillFormula, error) {
-	notSpill := fmt.Errorf("%w : la formule %s ne rend pas un tableau de valeurs", ErrSpill, raw)
+	notSpill := msg.Wrap(ErrSpill, "spill.notArray", msg.Args{"formula": raw})
 	n, err := formula.Parse(raw, formula.FR)
 	if err != nil {
 		return spillFormula{}, fmt.Errorf("%w : %v", ErrSpill, err)
@@ -227,7 +228,7 @@ func (t *tx) compileSpillFormula(sheet int64, raw string) (spillFormula, error) 
 	hoist, _ := t.hoister()
 	sp, e := formula.CompileSpillHoisted(n, schema, names, hoist)
 	if e.IsErr() {
-		return spillFormula{}, fmt.Errorf("%w : la formule %s rend %s", ErrSpill, raw, e)
+		return spillFormula{}, msg.Wrap(ErrSpill, "spill.formulaError", msg.Args{"formula": raw, "err": e})
 	}
 	f := spillFormula{sp: sp, cells: cells}
 	for _, d := range tableSQLName.FindAllString(sp.SQL, -1) {
@@ -242,10 +243,10 @@ func (t *tx) compileSpillFormula(sheet int64, raw string) (spillFormula, error) 
 func (f spillFormula) run(t *tx, raw string) ([]string, [][]formula.Value, error) {
 	heads, rows, e := t.runSpill(f.sp)
 	if e.IsErr() {
-		return nil, nil, fmt.Errorf("%w : la formule %s rend %s", ErrSpill, raw, e)
+		return nil, nil, msg.Wrap(ErrSpill, "spill.formulaError", msg.Args{"formula": raw, "err": e})
 	}
 	if len(heads) == 0 {
-		return nil, nil, fmt.Errorf("%w : la formule %s ne rend aucune colonne", ErrSpill, raw)
+		return nil, nil, msg.Wrap(ErrSpill, "spill.noColumns", msg.Args{"formula": raw})
 	}
 	return heads, rows, nil
 }
@@ -254,14 +255,14 @@ func (f spillFormula) run(t *tx, raw string) ([]string, [][]formula.Value, error
 func (t *tx) evalFormulaSource(src formulaSource) (FormulaResult, spillFormula, error) {
 	raw := strings.TrimSpace(src.Formula)
 	if !isFormula(raw) {
-		return FormulaResult{}, spillFormula{}, fmt.Errorf("%w : formule vide", ErrSpill)
+		return FormulaResult{}, spillFormula{}, msg.Wrap(ErrSpill, "spill.emptyFormula", nil)
 	}
 	var k int
 	if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE id = ?`, src.Sheet).Scan(&k); err != nil {
 		return FormulaResult{}, spillFormula{}, err
 	}
 	if k == 0 {
-		return FormulaResult{}, spillFormula{}, fmt.Errorf("%w : la feuille de la formule %s a été supprimée", ErrSpill, raw)
+		return FormulaResult{}, spillFormula{}, msg.Wrap(ErrSpill, "spill.sheetDeleted", msg.Args{"formula": raw})
 	}
 	f, err := t.compileSpillFormula(src.Sheet, raw)
 	if err != nil {
@@ -371,7 +372,7 @@ func (m *Model) ConvertSpill(ctx context.Context, sheet int64, row, col int, lin
 		}
 		raw = strings.TrimSpace(raw)
 		if !isFormula(raw) {
-			return fmt.Errorf("%w : la cellule ne contient pas de formule", ErrSpill)
+			return msg.Wrap(ErrSpill, "spill.noFormula", nil)
 		}
 		f, err := t.compileSpillFormula(sheet, raw)
 		if err != nil {
@@ -396,7 +397,7 @@ func (m *Model) ConvertSpill(ctx context.Context, sheet int64, row, col int, lin
 			shown[i] = make([]string, k)
 		}
 		if spillBlocked(row, col, shown, cells, tables) {
-			return fmt.Errorf("%w : la formule ne peut pas se déverser (%s) ; libérez la place d'abord", ErrSpill, ErrSpillText)
+			return msg.Wrap(ErrSpill, "spill.blocked", msg.Args{"reason": ErrSpillText})
 		}
 		header, labels, err := t.spillPlace(sheet, row, col, k)
 		if err != nil {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"errors"
+	"github.com/lalamefine/lattis/internal/msg"
 	"net/http"
 	"os"
 	"sync"
@@ -149,7 +150,7 @@ func (l *Loader) Refresh(ctx context.Context) (changed bool, err error) {
 	}
 	path := l.cacheFile()
 	if path == "" {
-		return false, errors.New("dossier de cache introuvable")
+		return false, msg.New("config.cacheDirNotFound", nil)
 	}
 	etag := ""
 	old, _ := readCache(path)

@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	"errors"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Mise en page publiée (§5.2 du serveur : lattis_meta_*, miroir des tables
@@ -253,7 +254,7 @@ func decodeLayout(raw []byte) (*Layout, error) {
 	d.UseNumber()
 	var l Layout
 	if err := d.Decode(&l); err != nil {
-		return nil, fmt.Errorf("mise en page du classeur illisible : %w", err)
+		return nil, msg.Wrap(err, "workbook.layoutUnreadable", msg.Args{"err": err})
 	}
 	if l.Tables == nil {
 		l.Tables = map[string]*LayoutRows{}

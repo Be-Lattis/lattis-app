@@ -7,6 +7,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // SortTable trie les lignes d'un tableau selon la colonne i, comme le tri
@@ -38,7 +39,7 @@ func (m *Model) SortTable(ctx context.Context, table string, i int, desc bool) e
 // croissant, les vides à la fin.
 func (t *tx) sortRows(tb Table, i int, desc bool, order []string) error {
 	if i < 0 || i >= len(tb.Cols) {
-		return fmt.Errorf("colonne %d hors du tableau", i)
+		return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 	}
 	c := tb.Cols[i]
 	src := tb.sql()

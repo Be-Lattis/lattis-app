@@ -2,13 +2,13 @@ package canvas
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Convertir en plage, comme dans Excel.
@@ -57,7 +57,7 @@ type rangeCell struct {
 
 func (t *tx) toRange(tb Table) error {
 	if n := (tb.Rows + 1) * len(tb.Cols); n > MaxRangeCells {
-		return fmt.Errorf("%w : « %s » est trop grand pour être converti en plage (%d cellules, %d au plus)", ErrTable, tb.Name, n, MaxRangeCells)
+		return msg.Wrap(ErrTable, "table.tooLargeForRange", msg.Args{"table": tb.Name, "n": n, "max": MaxRangeCells})
 	}
 	var sheetName string
 	if err := t.row(`SELECT name FROM _lattis_sheets WHERE id = ?`, tb.Sheet).Scan(&sheetName); err != nil {
@@ -702,7 +702,7 @@ func rangeRects(marks map[[2]int]bool) []Rect {
 // --- Mettre sous forme de tableau --------------------------------------------
 
 // ErrNotRange signale « Mettre sous forme de tableau » hors d'une plage.
-var ErrNotRange = errors.New("cette cellule n'est pas dans une plage convertie")
+var ErrNotRange = msg.New("range.notInRange", nil)
 
 // FormatAsTable refait un tableau de la plage qui contient la cellule (row,
 // col) : la zone n'est plus marquée « plage » ; sa première ligne donne les
@@ -725,7 +725,7 @@ func (m *Model) FormatAsTable(ctx context.Context, sheet int64, row, col int) (s
 			}
 			isl := island(cells, row, col)
 			if len(isl) < 2 {
-				return fmt.Errorf("%w : il faut au moins deux cellules remplies, l'une sous l'autre ou côte à côte", ErrTable)
+				return msg.Wrap(ErrTable, "range.needTwoCells", nil)
 			}
 			r0, c0, r1, c1 := isl[0].Row, isl[0].Col, isl[0].Row, isl[0].Col
 			for _, c := range isl {
@@ -813,7 +813,7 @@ func (t *tx) formatAsTable(sheet int64, row, col int) (string, error) {
 	}
 	for _, tb := range tables {
 		if tb.Row <= r1 && tb.Bottom() >= r0 && tb.Col <= c1 && tb.Right() >= c0 {
-			return "", fmt.Errorf("%w : la plage recouvre le tableau « %s »", ErrTable, tb.Name)
+			return "", msg.Wrap(ErrTable, "range.overlapsTable", msg.Args{"table": tb.Name})
 		}
 	}
 	text := func(r, c int) string {
@@ -1126,7 +1126,7 @@ func (m *Model) PasteRange(ctx context.Context, sheet int64, row, col int, block
 		}
 		for _, tb := range tables {
 			if tb.Row <= row+h-1 && tb.Bottom() >= row && tb.Col <= col+w-1 && tb.Right() >= col {
-				return fmt.Errorf("%w : la zone recouvre le tableau « %s »", ErrTable, tb.Name)
+				return msg.Wrap(ErrTable, "range.areaOverlapsTable", msg.Args{"table": tb.Name})
 			}
 		}
 		return t.markRange(sheet, row, col, row+h-1, col+w-1)

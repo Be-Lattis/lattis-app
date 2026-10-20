@@ -8,6 +8,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/order"
 )
 
@@ -292,17 +293,17 @@ func (t *tx) newSheet(name string) (int64, error) {
 // opération réversible.
 func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 	if len(it.Headers) == 0 || len(it.Types) != len(it.Headers) || len(it.Formulas) > len(it.Headers) {
-		return Table{}, fmt.Errorf("import du tableau %s : colonnes incohérentes", it.Name)
+		return Table{}, msg.New("import.inconsistentColumns", msg.Args{"table": it.Name})
 	}
 	if identifier(it.Name) != it.Name || it.Name == "" {
-		return Table{}, fmt.Errorf("import : %q n'est pas un nom de tableau valable", it.Name)
+		return Table{}, msg.New("import.invalidTableName", msg.Args{"table": fmt.Sprintf("%q", it.Name)})
 	}
 	var taken int
 	if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ?`, it.Name).Scan(&taken); err != nil {
 		return Table{}, err
 	}
 	if taken > 0 {
-		return Table{}, fmt.Errorf("import : le tableau %s existe déjà", it.Name)
+		return Table{}, msg.New("import.tableExists", msg.Args{"table": it.Name})
 	}
 	var id int64
 	if err := t.row(nextTableID).Scan(&id); err != nil {
@@ -318,7 +319,7 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		switch c.Type {
 		case grid.Integer, grid.Decimal, grid.Text, grid.Boolean, grid.Date:
 		default:
-			return Table{}, fmt.Errorf("import : type %q inconnu", c.Type)
+			return Table{}, msg.New("import.unknownType", msg.Args{"type": fmt.Sprintf("%q", c.Type)})
 		}
 		tb.Cols = append(tb.Cols, c)
 		defs = append(defs, colSQL(c.ID)+" "+sqlType(c.Type))
@@ -355,7 +356,7 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 			}
 			res, err := t.ExecContext(t.Ctx, `INSERT INTO `+staging+` (`+strings.Join(names, ", ")+`) SELECT q.n, `+keys+`, `+strings.Join(vs, ", ")+` FROM (`+sel+`) AS q`, it.SelectArgs...)
 			if err != nil {
-				return Table{}, fmt.Errorf("import du tableau %s : %w", it.Name, err)
+				return Table{}, msg.Wrap(err, "import.tableError", msg.Args{"table": it.Name, "err": err})
 			}
 			k, _ := res.RowsAffected()
 			n += int(k)
@@ -377,10 +378,10 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 	if it.Rows != nil && len(it.Selects) == 0 {
 		err = it.Rows(func(vals []any) error {
 			if n >= it.Count {
-				return fmt.Errorf("import du tableau %s : plus de %d lignes", it.Name, it.Count)
+				return msg.New("import.tooManyRows", msg.Args{"table": it.Name, "max": it.Count})
 			}
 			if len(vals) != len(it.Headers) {
-				return fmt.Errorf("import du tableau %s : ligne %d de %d valeurs au lieu de %d", it.Name, n+1, len(vals), len(it.Headers))
+				return msg.New("import.rowWidth", msg.Args{"table": it.Name, "row": n + 1, "n": len(vals), "expected": len(it.Headers)})
 			}
 			if n%4096 == 0 {
 				if err := t.Ctx.Err(); err != nil {
@@ -390,7 +391,7 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 			args[0], args[1] = int64(n+1), keys[n]
 			copy(args[2:], vals)
 			if _, err := ins.ExecContext(t.Ctx, args...); err != nil {
-				return fmt.Errorf("import du tableau %s, ligne %d : %w", it.Name, n+1, err)
+				return msg.Wrap(err, "import.rowError", msg.Args{"table": it.Name, "row": n + 1, "err": err})
 			}
 			n++
 			return nil
@@ -400,7 +401,7 @@ func (t *tx) importTable(sheet int64, it *ImportTable) (Table, error) {
 		}
 	}
 	if n != it.Count {
-		return Table{}, fmt.Errorf("import du tableau %s : %d lignes au lieu de %d", it.Name, n, it.Count)
+		return Table{}, msg.New("import.rowCount", msg.Args{"table": it.Name, "n": n, "expected": it.Count})
 	}
 	do := []stmt{st(`ALTER TABLE ` + staging + ` RENAME TO ` + tb.sql())}
 	if len(it.Selects) == 0 {

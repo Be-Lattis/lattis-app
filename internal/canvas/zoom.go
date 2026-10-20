@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Zoom de la feuille (Affichage › Zoom, Ctrl+molette), comme Excel : un
@@ -29,7 +30,7 @@ func (m *Model) SetZoom(ctx context.Context, sheet int64, pct int) error {
 		var old int
 		if err := sqlTx.QueryRowContext(ctx, `SELECT zoom FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+				return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 			}
 			return err
 		}

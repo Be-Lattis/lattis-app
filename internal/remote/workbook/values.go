@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // RemoteType donne le type du serveur d'un type local (lattis.create_table :
@@ -116,7 +117,7 @@ func ToRemote(typ string, v any) (any, error) {
 			return strconv.FormatFloat(x, 'g', -1, 64), nil
 		}
 	}
-	return nil, fmt.Errorf("valeur %v incompatible avec le type %s", v, typ)
+	return nil, msg.New("workbook.valueIncompatible", msg.Args{"value": fmt.Sprint(v), "type": typ})
 }
 
 // FromRemote convertit une valeur lue sur le serveur (voir selectExpr) en

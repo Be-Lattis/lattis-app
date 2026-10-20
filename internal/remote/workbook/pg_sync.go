@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Synchronisation d'un classeur collaboratif avec un vrai serveur (contrat
@@ -93,7 +94,7 @@ func (w pgWriter) write(ctx context.Context, q string, args []any, read func(pgx
 				return err
 			}
 			// La transaction n'est plus utilisable : une coupure, pas un refus.
-			return fmt.Errorf("retour au point de sauvegarde après « %v » : %s", err, rerr.Error())
+			return msg.New("workbook.rollbackFailed", msg.Args{"step": err, "err": rerr.Error()})
 		}
 	}
 	return err
@@ -155,7 +156,7 @@ func (w pgWriter) Insert(ctx context.Context, schema, table, id, pos string, col
 	for i, c := range cols {
 		v, err := ToRemote(c.Type, vals[i])
 		if err != nil {
-			return Wrote{}, fmt.Errorf("colonne « %s » : %w", c.Name, err)
+			return Wrote{}, msg.Wrap(err, "workbook.columnError", msg.Args{"column": c.Name, "err": err})
 		}
 		names = append(names, pgx.Identifier{c.Name}.Sanitize())
 		args = append(args, v)

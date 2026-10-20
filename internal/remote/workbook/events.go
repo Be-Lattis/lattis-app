@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"net/http"
 	"net/url"
 	"strings"
@@ -54,10 +54,10 @@ func WithEvents(srv Server, eventsURL, workbookID string, token func(ctx context
 // errEventsReset : lattisd a pu perdre des changements (reset) ou le jeton
 // du flux a expiré : le suivi reprend comme après une coupure (tout est
 // relu à la reconnexion).
-var errEventsReset = errors.New("relais des changements : reprise")
+var errEventsReset = msg.New("relay.reset", nil)
 
 // errNoRelay : pas de relais sur ce serveur (ou pas prêt) : LISTEN.
-var errNoRelay = errors.New("relais des changements indisponible")
+var errNoRelay = msg.New("relay.unavailable", nil)
 
 // Listen suit le flux du classeur ; channel n'est utilisé qu'en repli
 // (LISTEN sur PostgreSQL).
@@ -110,13 +110,13 @@ func (s *EventsServer) follow(ctx context.Context, ready func(), fn func(string)
 		if s.Invalidate != nil {
 			s.Invalidate()
 		}
-		return fmt.Errorf("relais des changements : jeton refusé (%s)", resp.Status)
+		return msg.New("relay.tokenRefused", msg.Args{"status": resp.Status})
 	case http.StatusForbidden:
 		// Classeur inconnu ou interdit : la relecture des droits le dira
 		// (GoneReason) ; l'écoute directe donne le même résultat.
 		return errNoRelay
 	default:
-		return fmt.Errorf("relais des changements : %s", resp.Status)
+		return msg.New("relay.error", msg.Args{"status": resp.Status})
 	}
 	sc := bufio.NewScanner(resp.Body)
 	sc.Buffer(make([]byte, 64<<10), 1<<20)
@@ -145,7 +145,7 @@ func (s *EventsServer) follow(ctx context.Context, ready func(), fn func(string)
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	return errors.New("relais des changements : flux fermé")
+	return msg.New("relay.closed", nil)
 }
 
 // event traite un événement du flux.

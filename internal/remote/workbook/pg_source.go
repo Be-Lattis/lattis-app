@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Sources poussées du Data Lake (contrat client de lattisd, §9.1 ;
@@ -305,7 +306,7 @@ func (c PushClient) Push(ctx context.Context, id string, csv []byte) (PushRun, e
 		return out, pushError(res)
 	}
 	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
-		return out, fmt.Errorf("bilan de l'envoi illisible : %w", err)
+		return out, msg.Wrap(err, "lake.reportUnreadable", msg.Args{"err": err})
 	}
 	if res.StatusCode == http.StatusAccepted {
 		out.Status = "running"
@@ -324,7 +325,7 @@ func (c PushClient) PushRun(ctx context.Context, id, run string) (PushRun, error
 		return out, pushError(res)
 	}
 	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
-		return out, fmt.Errorf("bilan de l'envoi illisible : %w", err)
+		return out, msg.Wrap(err, "lake.reportUnreadable", msg.Args{"err": err})
 	}
 	return out, nil
 }
@@ -340,7 +341,7 @@ func (c PushClient) PushStatus(ctx context.Context, id string) (PushedSource, er
 		return out, pushError(res)
 	}
 	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
-		return out, fmt.Errorf("état de la source illisible : %w", err)
+		return out, msg.Wrap(err, "lake.stateUnreadable", msg.Args{"err": err})
 	}
 	return out, nil
 }

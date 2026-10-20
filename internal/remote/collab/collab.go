@@ -22,7 +22,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/oplog"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/internal/store"
@@ -167,7 +167,7 @@ func remoteTables(ctx context.Context, q interface {
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(cols), &t.remote.Columns); err != nil {
-			return nil, fmt.Errorf("tableau %d : colonnes du serveur illisibles : %w", t.local, err)
+			return nil, msg.Wrap(err, "collab.serverColumnsUnreadable", msg.Args{"table": t.local, "err": err})
 		}
 		t.remote.LocalID = t.local
 		for _, c := range t.remote.Columns {
@@ -232,7 +232,7 @@ func (e *Engine) nextBatch(ctx context.Context) ([]entry, error) {
 			return nil, err
 		}
 		if en.ops, err = command.DecodeOps(data); err != nil {
-			return nil, fmt.Errorf("file d'envoi, entrée %d : %w", en.id, err)
+			return nil, msg.Wrap(err, "collab.queueEntry", msg.Args{"id": en.id, "err": err})
 		}
 		out = append(out, en)
 	}
@@ -496,4 +496,4 @@ func skippedNotice(n int, redo bool) string {
 }
 
 // ErrNotCollaborative : l'action ne vaut que pour un classeur collaboratif.
-var ErrNotCollaborative = errors.New("ce classeur n'est pas un classeur collaboratif ouvert depuis son serveur")
+var ErrNotCollaborative = msg.New("collab.notCollaborative", nil)

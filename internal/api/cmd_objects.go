@@ -3,10 +3,10 @@ package api
 import (
 	"cmp"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // object résout un objet flottant (tableau croisé, graphique, bouton) par
@@ -56,7 +56,7 @@ func (c *Call) object(table, key, kind, param string) (int64, error) {
 	if f, ok := number(v); ok {
 		return int64(f), nil
 	}
-	return 0, fmt.Errorf("%s « %s » introuvable", kind, name)
+	return 0, msg.New("api.objectNotFound", msg.Args{"kind": kind, "name": name})
 }
 
 var (

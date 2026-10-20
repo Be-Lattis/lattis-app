@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // PivotInfo est un tableau croisé posé sur une feuille, avec son résultat.
@@ -303,7 +304,7 @@ func (m *Model) PivotData(ctx context.Context, cfg PivotConfig) PivotInfo {
 // s'écartent vers la droite (makeRoom) ; une seule étape d'annulation.
 func (m *Model) MovePivot(ctx context.Context, id, sheet int64, row, col int) error {
 	if row < 0 || col < 0 {
-		return fmt.Errorf("%w : hors de la feuille", ErrPivot)
+		return msg.Wrap(ErrPivot, "pivot.outOfSheet", nil)
 	}
 	return m.Do(ctx, "Déplacer le tableau croisé", func(t *tx) error {
 		if err := t.guardObject(`_lattis_pivots`, id); err != nil {
@@ -318,7 +319,7 @@ func (m *Model) MovePivot(ctx context.Context, id, sheet int64, row, col int) er
 		var s0 int64
 		var r0, c0 int
 		if err := t.row(`SELECT sheet, row, col FROM _lattis_pivots WHERE id = ?`, id).Scan(&s0, &r0, &c0); err != nil {
-			return fmt.Errorf("%w : tableau croisé introuvable", ErrPivot)
+			return msg.Wrap(ErrPivot, "pivot.notFound", nil)
 		}
 		if s0 == sheet && r0 == row && c0 == col {
 			return nil
@@ -338,7 +339,7 @@ func (t *tx) sheetExists(sheet int64) error {
 		return err
 	}
 	if n == 0 {
-		return fmt.Errorf("%w : feuille introuvable", ErrPivot)
+		return msg.Wrap(ErrPivot, "pivot.sheetNotFound", nil)
 	}
 	return nil
 }
@@ -348,7 +349,7 @@ func (t *tx) sheetExists(sheet int64) error {
 // son identifiant.
 func (m *Model) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (int64, error) {
 	if row < 0 || col < 0 {
-		return 0, fmt.Errorf("%w : hors de la feuille", ErrPivot)
+		return 0, msg.Wrap(ErrPivot, "pivot.outOfSheet", nil)
 	}
 	var nid int64
 	err := m.Do(ctx, "Coller le tableau croisé", func(t *tx) error {
@@ -357,7 +358,7 @@ func (m *Model) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (i
 		}
 		var raw string
 		if err := t.row(`SELECT config FROM _lattis_pivots WHERE id = ?`, id).Scan(&raw); err != nil {
-			return fmt.Errorf("%w : tableau croisé introuvable", ErrPivot)
+			return msg.Wrap(ErrPivot, "pivot.notFound", nil)
 		}
 		var cfg PivotConfig
 		if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
@@ -378,7 +379,7 @@ func (m *Model) CopyPivot(ctx context.Context, id, sheet int64, row, col int) (i
 // renvoie son identifiant.
 func (m *Model) PlacePivot(ctx context.Context, sheet int64, row, col int, cfg PivotConfig) (int64, error) {
 	if row < 0 || col < 0 {
-		return 0, fmt.Errorf("%w : hors de la feuille", ErrPivot)
+		return 0, msg.Wrap(ErrPivot, "pivot.outOfSheet", nil)
 	}
 	var nid int64
 	err := m.Do(ctx, "Coller le tableau croisé", func(t *tx) error {
@@ -404,7 +405,7 @@ func (m *Model) PlacePivot(ctx context.Context, sheet int64, row, col int, cfg P
 // Renvoie son identifiant.
 func (m *Model) CreatePivotAt(ctx context.Context, sheet int64, row, col int, cfg PivotConfig) (int64, error) {
 	if row < 0 || col < 0 {
-		return 0, fmt.Errorf("%w : hors de la feuille", ErrPivot)
+		return 0, msg.Wrap(ErrPivot, "pivot.outOfSheet", nil)
 	}
 	var nid int64
 	err := m.Do(ctx, "Tableau croisé dynamique", func(t *tx) error {
@@ -536,7 +537,7 @@ func (t *tx) makeRoom(sheet, keep int64) error {
 	pushed := map[int]bool{k: true}
 	for changed, n := true, 0; changed; n++ {
 		if n > 10*len(objs) {
-			return fmt.Errorf("%w : impossible de faire de la place au tableau croisé", ErrPivot)
+			return msg.Wrap(ErrPivot, "pivot.noRoom", nil)
 		}
 		changed = false
 		for i := range objs {

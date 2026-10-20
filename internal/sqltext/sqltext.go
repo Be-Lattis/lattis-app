@@ -5,7 +5,7 @@
 package sqltext
 
 import (
-	"errors"
+	"github.com/lalamefine/lattis/internal/msg"
 	"regexp"
 	"strings"
 )
@@ -13,7 +13,7 @@ import (
 // ErrStructure signale une requête qui changerait la structure de la base :
 // les tableaux et leurs colonnes se créent, se renomment et se suppriment
 // depuis la grille (ou par les commandes tables.* et columns.*).
-var ErrStructure = errors.New("Les changements de structure (DROP, ALTER, CREATE…) se font depuis la grille : seules les requêtes SELECT, INSERT, UPDATE et DELETE s'exécutent ici")
+var ErrStructure = msg.New("sql.structure", nil)
 
 // structureWords : premiers mots d'une instruction qui change la structure.
 var structureWords = map[string]bool{"create": true, "drop": true, "alter": true, "reindex": true}

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // CopySheet copie un onglet (Déplacer ou copier… › Créer une copie) et place
@@ -37,7 +38,7 @@ func (t *tx) copySheet(sheet int64, to int) (int64, error) {
 	}
 	var name string
 	if err := t.row(`SELECT name FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&name); err != nil {
-		return 0, fmt.Errorf("%w : feuille introuvable", ErrSheet)
+		return 0, msg.Wrap(ErrSheet, "sheet.notFound", nil)
 	}
 	var id int64
 	var pos int
@@ -313,7 +314,7 @@ func (t *tx) copyTable(tb Table, sheet int64) (string, error) {
 		return "", err
 	}
 	if len(defs) == 0 {
-		return "", fmt.Errorf("%w : table de %s introuvable", ErrTable, tb.Name)
+		return "", msg.Wrap(ErrTable, "table.storageNotFound", msg.Args{"table": tb.Name})
 	}
 	re := regexp.MustCompile(`\b` + regexp.QuoteMeta(tb.sql()) + `(\D|$)`)
 	newSQL := tableSQL(id)
@@ -366,7 +367,7 @@ func (t *tx) copyTableName(name string) (string, error) {
 func (m *Model) SetSheetColor(ctx context.Context, sheet int64, color string) error {
 	color = strings.TrimSpace(color)
 	if color != "" && !regexp.MustCompile(`^#[0-9a-fA-F]{6}$`).MatchString(color) {
-		return fmt.Errorf("%w : couleur « %s » invalide (#rrggbb attendu)", ErrSheet, color)
+		return msg.Wrap(ErrSheet, "sheet.invalidColor", msg.Args{"color": color})
 	}
 	return m.Do(ctx, "Couleur d'onglet", func(t *tx) error {
 		if err := t.guardTab(sheet); err != nil {
@@ -374,7 +375,7 @@ func (m *Model) SetSheetColor(ctx context.Context, sheet int64, color string) er
 		}
 		var old string
 		if err := t.row(`SELECT color FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
-			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 		}
 		if old == color {
 			return nil
@@ -397,7 +398,7 @@ func (m *Model) SetSheetHidden(ctx context.Context, sheet int64, hidden bool) er
 		}
 		var old bool
 		if err := t.row(`SELECT hidden <> 0 FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
-			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 		}
 		if old == hidden {
 			return nil
@@ -408,7 +409,7 @@ func (m *Model) SetSheetHidden(ctx context.Context, sheet int64, hidden bool) er
 				return err
 			}
 			if visible <= 1 {
-				return fmt.Errorf("%w : un classeur garde au moins une feuille visible", ErrSheet)
+				return msg.Wrap(ErrSheet, "sheet.keepOneVisible", nil)
 			}
 		}
 		q := `UPDATE _lattis_sheets SET hidden = ? WHERE id = ?`

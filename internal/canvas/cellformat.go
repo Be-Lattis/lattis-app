@@ -3,7 +3,7 @@ package canvas
 import (
 	"context"
 	"errors"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"strings"
 )
 
@@ -82,7 +82,7 @@ func (m *Model) notePatch(ctx context.Context, label string, sheet int64, row, c
 				return err
 			}
 			if len(ids) == 0 {
-				return fmt.Errorf("%w : ligne masquée par le filtre du tableau « %s »", ErrTable, tb.Name)
+				return msg.Wrap(ErrTable, "table.rowHiddenByFilter", msg.Args{"table": tb.Name})
 			}
 			return t.styleTable(tb.ID, ids[0], colID, patch, nil)
 		}
@@ -153,13 +153,13 @@ func (m *Model) MergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int)
 		c0, c1 = c1, c0
 	}
 	if r0 < 0 || c0 < 0 {
-		return 0, fmt.Errorf("%w : plage hors de la feuille", ErrMerge)
+		return 0, msg.Wrap(ErrMerge, "merge.outOfSheet", nil)
 	}
 	if r0 == r1 && c0 == c1 {
-		return 0, fmt.Errorf("%w : sélectionnez au moins deux cellules à fusionner", ErrMerge)
+		return 0, msg.Wrap(ErrMerge, "merge.selectTwoCells", nil)
 	}
 	if (r1-r0+1)*(c1-c0+1) > MaxMerge {
-		return 0, fmt.Errorf("%w : fusion limitée à %d cellules", ErrMerge, MaxMerge)
+		return 0, msg.Wrap(ErrMerge, "merge.tooLarge", msg.Args{"max": MaxMerge})
 	}
 	dropped := 0
 	err := m.Do(ctx, "Fusionner et centrer", func(t *tx) error {
@@ -177,7 +177,7 @@ func (m *Model) MergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int)
 		}
 		for _, tb := range tables {
 			if tb.Top() <= r1 && tb.Bottom() >= r0 && tb.Col <= c1 && tb.Right() >= c0 {
-				return fmt.Errorf("%w : impossible dans le tableau « %s » (un tableau garde une cellule par valeur) ; fusionnez des cellules libres, hors des tableaux", ErrMerge, tb.Name)
+				return msg.Wrap(ErrMerge, "merge.notInTable", msg.Args{"table": tb.Name})
 			}
 		}
 		pivots, err := t.pivots(sheet)
@@ -191,7 +191,7 @@ func (m *Model) MergeCells(ctx context.Context, sheet int64, r0, c0, r1, c1 int)
 			}
 			rows = max(rows, 1)
 			if p.Row <= r1 && p.Row+rows-1 >= r0 && p.Col <= c1 && p.Col+cols-1 >= c0 {
-				return fmt.Errorf("%w : impossible dans un tableau croisé dynamique", ErrMerge)
+				return msg.Wrap(ErrMerge, "merge.notInPivot", nil)
 			}
 		}
 		old, err := t.merges(sheet)
@@ -273,7 +273,7 @@ func (m *Model) SetLinesHidden(ctx context.Context, sheet int64, rows bool, i0, 
 		what = "les lignes"
 	}
 	if i0 < 0 || (hide && i1-i0+1 > MaxStyleLines) {
-		return fmt.Errorf("masquage limité à %d lignes ou colonnes", MaxStyleLines)
+		return msg.New("sheet.hideTooMany", msg.Args{"max": MaxStyleLines})
 	}
 	label := "Masquer " + what
 	if !hide {
@@ -324,7 +324,7 @@ func (m *Model) SetLinesHidden(ctx context.Context, sheet int64, rows bool, i0, 
 // feuille protégée (comme le quadrillage).
 func (m *Model) SetFreeze(ctx context.Context, sheet int64, rows, cols int) error {
 	if rows < 0 || cols < 0 || rows > 1000 || cols > 1000 {
-		return fmt.Errorf("volets figés : 1 000 lignes ou colonnes au plus")
+		return msg.New("sheet.freezeTooMany", nil)
 	}
 	label := "Figer les volets"
 	if rows == 0 && cols == 0 {

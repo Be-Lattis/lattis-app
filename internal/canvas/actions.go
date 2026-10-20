@@ -2,7 +2,6 @@ package canvas
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // MinRows est le nombre de lignes (en-tête compris) à partir duquel une zone
@@ -456,7 +456,7 @@ func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table
 
 // errForcedText : saisie forcée en texte par une apostrophe, dans une colonne
 // d'un autre type.
-var errForcedText = errors.New("texte forcé par une apostrophe")
+var errForcedText = msg.New("cell.forcedText", nil)
 
 // appendRows ajoute n lignes vides en fin de tableau et décale ce qui est dessous.
 func (t *tx) appendRows(tb Table, n int) error {
@@ -747,7 +747,7 @@ func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 			return tb.errFiltered(false)
 		}
 		if n < 0 || n > tb.Shown {
-			return errors.New("canvas: ligne hors du tableau")
+			return msg.New("table.rowOutOfRange", nil)
 		}
 		var before, after string
 		if n > 0 {
@@ -817,7 +817,7 @@ func (m *Model) InsertColumn(ctx context.Context, table string, i int, name stri
 			return err
 		}
 		if i < 0 || i > len(tb.Cols) {
-			return errors.New("canvas: colonne hors du tableau")
+			return msg.New("table.columnOutOfRange", nil)
 		}
 		if name = strings.TrimSpace(name); name != "" && columnNameTaken(tb, 0, name) {
 			return errColumnTaken(tb, name)
@@ -835,7 +835,7 @@ func (m *Model) DeleteColumn(ctx context.Context, table string, i int) error {
 			return err
 		}
 		if i < 0 || i >= len(tb.Cols) || len(tb.Cols) == 1 {
-			return errors.New("canvas: colonne impossible à supprimer")
+			return msg.New("table.columnNotDeletable", nil)
 		}
 		if err := t.dropColumn(tb, tb.Cols[i], i); err != nil {
 			return err
@@ -878,7 +878,7 @@ func (m *Model) SuppressColumns(ctx context.Context, table string, i, j int) err
 			return err
 		}
 		if i < 0 || j < i || j >= len(tb.Cols) || j-i+1 >= len(tb.Cols) {
-			return errors.New("canvas: colonne impossible à supprimer")
+			return msg.New("table.columnNotDeletable", nil)
 		}
 		if i > 0 && j < len(tb.Cols)-1 && !tb.Filtered() {
 			empty, err := t.columnsEmpty(tb, i, j)
@@ -943,7 +943,7 @@ func (m *Model) DeleteColumnSpans(ctx context.Context, spans []ColumnSpan) error
 				return err
 			}
 			if s.From < 0 || s.To < s.From || s.To >= len(tb.Cols) || s.To-s.From+1 >= len(tb.Cols) {
-				return fmt.Errorf("%w : le tableau « %s » garde au moins une colonne", ErrTable, tb.Name)
+				return msg.Wrap(ErrTable, "table.keepsOneColumn", msg.Args{"table": tb.Name})
 			}
 			if err := t.deleteColumnsAt(tb, s.From, s.To); err != nil {
 				return err

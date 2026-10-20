@@ -50,6 +50,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 	"github.com/lalamefine/lattis/internal/trace"
 	"github.com/ncruces/go-sqlite3"
@@ -78,13 +79,13 @@ const (
 
 var (
 	// ErrAlreadyOpen signale une archive déjà ouverte (par ce processus ou un autre).
-	ErrAlreadyOpen = errors.New("ce classeur est déjà ouvert")
+	ErrAlreadyOpen = msg.New("archive.alreadyOpen", nil)
 	// ErrFormat signale un fichier qui n'est pas un classeur Lattis, ou d'un
 	// format trop récent.
-	ErrFormat = errors.New("archive .lattis invalide")
+	ErrFormat = msg.New("archive.invalid", nil)
 	// ErrCorrupt signale un classeur endommagé (archive tronquée, base
 	// altérée) : Salvage peut en tirer les données lisibles.
-	ErrCorrupt = errors.New("classeur endommagé")
+	ErrCorrupt = msg.New("archive.corrupt", nil)
 )
 
 // OpenError est un fichier que Lattis refuse d'ouvrir. Reason est le message
@@ -452,7 +453,7 @@ func openDir(dir, path string, lock *os.File, extra []func(*sqliteConn) error) (
 func sniff(path string) error {
 	f, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("fichier introuvable : %s", path)
+		return msg.New("archive.fileNotFound", msg.Args{"path": path})
 	}
 	if err != nil {
 		return err
@@ -622,7 +623,7 @@ func copyZipFile(f *zip.File, dst string) error {
 	if c, err := io.Copy(w, io.LimitReader(tagReader{r}, rest+1)); err != nil || c > rest {
 		w.Close()
 		if err == nil {
-			err = readErr{errors.New("base plus grande que la taille annoncée")}
+			err = readErr{msg.New("archive.dbTooLarge", nil)}
 		}
 		return err
 	}
@@ -701,7 +702,7 @@ func (d *Doc) saveTo(ctx context.Context, path string, force bool) error {
 		path = d.Path
 	}
 	if path == "" {
-		return errors.New("aucun chemin d'enregistrement")
+		return msg.New("archive.noSavePath", nil)
 	}
 	if d.Path != "" && samePath(path, d.Path) {
 		if d.ReadOnly {
@@ -717,9 +718,9 @@ func (d *Doc) saveTo(ctx context.Context, path string, force bool) error {
 	}
 	if err := d.save(ctx, path); err != nil {
 		if _, serr := os.Stat(path); serr == nil {
-			return fmt.Errorf("enregistrement impossible, « %s » n'a pas été modifié : %w", filepath.Base(path), err)
+			return msg.Wrap(err, "archive.saveFailedUnchanged", msg.Args{"file": filepath.Base(path), "err": err})
 		}
-		return fmt.Errorf("enregistrement impossible : %w", err)
+		return msg.Wrap(err, "archive.saveFailed", msg.Args{"err": err})
 	}
 	if path != d.Path {
 		moved := d.Path == "" || !samePath(path, d.Path)
@@ -799,7 +800,7 @@ func (d *Doc) save(ctx context.Context, path string) error {
 	// Ni historique d'annulation ni corbeilles dans le fichier.
 	d.prog.phase.Store(phaseScrub)
 	if err := scrub(snap, d.extra); err != nil {
-		return fmt.Errorf("historique non retiré de l'instantané : %w", err)
+		return msg.Wrap(err, "archive.historyNotRemoved", msg.Args{"err": err})
 	}
 	st, err := os.Stat(snap)
 	if err != nil {
@@ -884,7 +885,7 @@ func (d *Doc) markPristine(ctx context.Context, since int64) (bool, error) {
 			}
 			time.Sleep(time.Duration(i+1) * 25 * time.Millisecond)
 		}
-		return fmt.Errorf("modification impossible (marque de récupération) : %w", err)
+		return msg.Wrap(err, "archive.recoveryMarkFailed", msg.Args{"err": err})
 	})
 }
 
@@ -927,7 +928,7 @@ func cleanTemps(dir string) {
 func verifyZip(path string, size int64) error {
 	zr, err := OpenZip(path)
 	if err != nil {
-		return fmt.Errorf("archive écrite illisible : %w", err)
+		return msg.Wrap(err, "archive.writtenUnreadable", msg.Args{"err": err})
 	}
 	defer zr.Close()
 	var man, db bool
@@ -940,7 +941,7 @@ func verifyZip(path string, size int64) error {
 		}
 	}
 	if !man || !db {
-		return errors.New("archive écrite incomplète")
+		return msg.New("archive.writtenIncomplete", nil)
 	}
 	return nil
 }
@@ -1243,7 +1244,7 @@ func workbookID(dir string) string {
 func Recover(o Orphan, extra ...func(*sqliteConn) error) (*Doc, error) {
 	d, err := openDir(o.Dir, o.Source, nil, extra)
 	if err != nil {
-		return nil, fmt.Errorf("récupération impossible : %w", err)
+		return nil, msg.Wrap(err, "doc.recoverFailed", msg.Args{"err": err})
 	}
 	// Fichier tel qu'au début de la session (session d'une version
 	// précédente : inconnu, pas de contrôle).

@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -40,7 +41,7 @@ type GridService struct {
 	cancel  context.CancelFunc
 }
 
-var errNotReady = errors.New("tableau en cours de préparation")
+var errNotReady = msg.New("grid.notReady", nil)
 
 // startup ouvre la base de travail et prépare le tableau en tâche de
 // fond : la fenêtre s'affiche tout de suite et suit l'avancement par Status.

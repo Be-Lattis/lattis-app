@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Validation des données tirée d'une plage (comme la source « =$A$1:$A$10 »
@@ -74,7 +75,7 @@ func normalizeDV(patch Style) error {
 	case map[string]any:
 		s, _ := x["src"].(string)
 		if strings.TrimSpace(s) == "" {
-			return fmt.Errorf("validation : source vide")
+			return msg.New("validation.emptySource", nil)
 		}
 		src = s
 	default:
@@ -94,11 +95,11 @@ func normalizeDV(patch Style) error {
 func NormalizeDVSource(src string) (string, error) {
 	s := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(src), "="))
 	if s == "" {
-		return "", fmt.Errorf("validation : source vide")
+		return "", msg.New("validation.emptySource", nil)
 	}
 	n, err := formula.Parse(s, formula.FR)
 	if err != nil {
-		return "", fmt.Errorf("validation : « %s » n'est pas une référence", s)
+		return "", msg.New("validation.notReference", msg.Args{"value": s})
 	}
 	switch v := n.(type) {
 	case formula.Ref:
@@ -117,7 +118,7 @@ func NormalizeDVSource(src string) (string, error) {
 			return r.String(), nil
 		}
 	}
-	return "", fmt.Errorf("validation : « %s » n'est pas une plage (Tableau[Colonne], Cell[A1:A10], Feuille2!Cell[A1:A10] ou une cellule nommée)", s)
+	return "", msg.New("validation.notRange", msg.Args{"value": s})
 }
 
 // excelRange lit « A1:B3 » ou « Feuille!A1:B3 » (sans $).

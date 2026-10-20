@@ -144,6 +144,42 @@ func (e *Error) Is(target error) bool {
 	return ok && t.ID == e.ID
 }
 
+// Message : un message montré à l'utilisateur qui n'est pas une erreur
+// (note de la barre d'état, morceau d'un autre message). String() est le
+// texte français.
+type Message struct {
+	ID   ID
+	Args Args
+}
+
+// M crée un message.
+func M(id ID, args Args) Message { return Message{ID: id, Args: args} }
+
+// Text : le texte dans la langue l.
+func (m Message) Text(l Lang) string { return Format(l, m.ID, m.Args) }
+
+// String : le texte français.
+func (m Message) String() string { return Format(FR, m.ID, m.Args) }
+
+// In rend les paramètres dans la langue l, prêts pour JSON : les messages,
+// les erreurs et les valeurs qui s'écrivent (fmt.Stringer) deviennent leur
+// texte, le reste ne change pas.
+func (a Args) In(l Lang) Args {
+	if a == nil {
+		return nil
+	}
+	out := make(Args, len(a))
+	for k, v := range a {
+		switch v.(type) {
+		case texter, error, fmt.Stringer:
+			out[k] = value(l, v)
+		default:
+			out[k] = v
+		}
+	}
+	return out
+}
+
 // Text rend err dans la langue l : traduite si c'est un *Error, ou si elle
 // en enveloppe un (fmt.Errorf("…: %w", e) : seul le texte de e change) ;
 // err.Error() sinon.
@@ -294,9 +330,19 @@ func number(v any) (float64, bool) {
 	return 0, false
 }
 
-// value écrit un paramètre : un nombre avec la décimale de la langue (sans
-// séparateur de milliers), le reste tel que fmt l'écrit.
+// texter : une valeur qui s'écrit dans une langue (*Error, Message).
+type texter interface{ Text(Lang) string }
+
+// value écrit un paramètre : un message (*Error, Message) ou une erreur qui
+// en enveloppe un dans la langue l, un nombre avec la décimale de la langue
+// (sans séparateur de milliers), le reste tel que fmt l'écrit.
 func value(l Lang, v any) string {
+	switch x := v.(type) {
+	case texter:
+		return x.Text(l)
+	case error:
+		return Text(l, x)
+	}
 	n, ok := number(v)
 	if !ok {
 		return fmt.Sprint(v)

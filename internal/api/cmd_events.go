@@ -1,10 +1,10 @@
 package api
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Commandes des évènements du classeur (events.go).
@@ -69,13 +69,13 @@ events.on("before_close", "avant_fermeture", "Évènements")`,
 					return nil, err
 				}
 				if l.Function == "" {
-					return nil, fmt.Errorf("handler : précisez la fonction")
+					return nil, msg.New("api.handlerFunction", nil)
 				}
 				if l.Script == "" {
 					l.Script = currentScript(c)
 				}
 				if l.Script == "" {
-					return nil, fmt.Errorf("script : précisez le script de la fonction %s", l.Function)
+					return nil, msg.New("api.chooseScript", msg.Args{"function": l.Function})
 				}
 				d, err := c.Doc()
 				if err != nil {
@@ -92,7 +92,7 @@ events.on("before_close", "avant_fermeture", "Évènements")`,
 					}
 				}
 				if !found {
-					return nil, fmt.Errorf("script « %s » introuvable : enregistrez-le dans la bibliothèque (onglet Script)", l.Script)
+					return nil, msg.New("api.scriptNotSaved", msg.Args{"script": l.Script})
 				}
 				ls, err := d.WorkbookListeners(c)
 				if err != nil {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"strings"
 )
 
@@ -41,7 +41,7 @@ func (m *Model) Scripts(ctx context.Context) ([]ScriptInfo, error) {
 func (m *Model) SaveScript(ctx context.Context, id int64, name, source string) (int64, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return 0, errors.New("script : nom vide")
+		return 0, msg.New("script.emptyName", nil)
 	}
 	err := m.Do(ctx, "Enregistrer le script", func(t *tx) error {
 		if err := t.scriptsLock(); err != nil {
@@ -52,7 +52,7 @@ func (m *Model) SaveScript(ctx context.Context, id int64, name, source string) (
 			return err
 		}
 		if k > 0 {
-			return fmt.Errorf("script : « %s » existe déjà", name)
+			return msg.New("script.nameTaken", msg.Args{"name": name})
 		}
 		if id == 0 {
 			if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_scripts`).Scan(&id); err != nil {
@@ -66,7 +66,7 @@ func (m *Model) SaveScript(ctx context.Context, id int64, name, source string) (
 		var oldName, oldSource string
 		err := t.row(`SELECT name, source FROM _lattis_scripts WHERE id = ?`, id).Scan(&oldName, &oldSource)
 		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("script %d introuvable", id)
+			return msg.New("script.notFound", msg.Args{"id": id})
 		}
 		if err != nil {
 			return err

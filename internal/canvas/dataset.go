@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Tableaux liés à une donnée du Data Lake (requête sur une vue donnees.*
@@ -22,7 +22,7 @@ var datasetIDs = rowIDs{table: "_lattis_data_rows"}
 // ErrDataGap : après un relevé, la copie locale n'a pas autant de lignes
 // que la vue du serveur (ligne sortie de l'audience, relevé manqué, ligne
 // refusée) ; rien n'est appliqué, il faut tout relire.
-var ErrDataGap = errors.New("copie locale de la donnée du Data Lake incomplète : relecture complète")
+var ErrDataGap = msg.New("dataset.localCopyIncomplete", nil)
 
 // DatasetTable décrit le tableau chargé par une requête liée à une donnée.
 type DatasetTable struct {
@@ -45,7 +45,7 @@ func (m *Model) DatasetTable(ctx context.Context, query int64) (out DatasetTable
 		var target sql.NullInt64
 		if err := t.row(`SELECT target FROM _lattis_queries WHERE id = ?`, query).Scan(&target); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("%w introuvable", ErrQuery)
+				return msg.Wrap(ErrQuery, "query.notFound", nil)
 			}
 			return err
 		}

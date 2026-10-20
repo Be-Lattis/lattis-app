@@ -3,12 +3,12 @@ package bridge
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/config"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 	"github.com/lalamefine/lattis/internal/remote/pgpool"
@@ -48,7 +48,7 @@ func lattisPolicy() auth.Policy {
 	return p
 }
 
-var errSharedOff = errors.New("classeurs partagés désactivés : Fichier › Paramètres › Fonctionnalités › Classeurs partagés (Serveur Lattis)")
+var errSharedOff = msg.New("share.disabled", nil)
 
 func lattisOn() (*auth.Manager, error) {
 	if !config.SharedWorkbooks(config.Current()) {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/oplog"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
@@ -582,7 +583,7 @@ var SendTimeout = 30 * time.Second
 
 // errStale : une écriture vise une colonne ou un tableau que le serveur ne
 // connaît plus sous ce nom (structure changée pendant l'envoi).
-var errStale = errors.New("structure du tableau changée sur le serveur")
+var errStale = msg.New("collab.structureChanged", nil)
 
 // staleStructure : colonne, table ou schéma inconnu (42703, 42P01, 3F000 :
 // classeur supprimé pendant l'envoi, vu par la relecture des droits au

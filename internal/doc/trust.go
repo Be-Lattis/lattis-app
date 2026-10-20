@@ -2,10 +2,10 @@ package doc
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/trust"
 )
 
@@ -113,7 +113,7 @@ func (d *Document) HTTPHostAllowed(ctx context.Context, host string) (allowed, k
 func (d *Document) AllowHTTPHost(ctx context.Context, host string) error {
 	host = canvas.NormalizeHost(host)
 	if host == "" || strings.ContainsAny(host, "/ \t") {
-		return errors.New("hôte invalide : nom de domaine (et port éventuel) attendu")
+		return msg.New("doc.invalidHost", nil)
 	}
 	d.SetSessionHost(host, true)
 	return trust.Default().AllowHosts(d.SecretScope(), host)

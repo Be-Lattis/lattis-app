@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"io/fs"
 	"os"
 	"sort"
@@ -56,9 +57,9 @@ func (s *FileSource) Load(context.Context) (Tree, error) {
 		secure, err := secureFile(s.Path)
 		switch {
 		case err != nil:
-			return nil, fmt.Errorf("droits du fichier illisibles : %w", err)
+			return nil, msg.Wrap(err, "config.fileRightsUnreadable", msg.Args{"err": err})
 		case !secure && s.R == RankPolicy:
-			return nil, errors.New("fichier modifiable par des non-administrateurs : stratégie ignorée")
+			return nil, msg.New("config.fileWritableByUsers", nil)
 		}
 		s.trusted = secure
 	}
@@ -68,7 +69,7 @@ func (s *FileSource) Load(context.Context) (Tree, error) {
 func parseTree(b []byte) (Tree, error) {
 	var t Tree
 	if err := json.Unmarshal(b, &t); err != nil {
-		return nil, fmt.Errorf("JSON invalide : %w", err)
+		return nil, msg.Wrap(err, "config.invalidJson", msg.Args{"err": err})
 	}
 	if t == nil {
 		t = Tree{}

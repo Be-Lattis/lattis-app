@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"regexp"
 	"slices"
 	"strconv"
@@ -106,7 +107,7 @@ type partialCell struct {
 func (m *Model) Transfer(ctx context.Context, from int64, src Rect, to int64, dst Rect, move bool, values [][]string) (Event, error) {
 	var ev Event
 	if src.R0 > src.R1 || src.C0 > src.C1 || dst.R0 < 0 || dst.C0 < 0 {
-		return ev, fmt.Errorf("%w : zone hors de la feuille", ErrTable)
+		return ev, msg.Wrap(ErrTable, "table.areaOutOfSheet", nil)
 	}
 	dr, dc := dst.R0-src.R0, dst.C0-src.C0
 	if move && from == to && dr == 0 && dc == 0 {
@@ -720,7 +721,7 @@ func (t *tx) placeTables(p payload, to int64, dr, dc int, move bool) error {
 			return err
 		}
 		if tb.Row < 0 || tb.Col < 0 {
-			return fmt.Errorf("%w : hors de la feuille", ErrTable)
+			return msg.Wrap(ErrTable, "table.outOfSheet", nil)
 		}
 		if _, err := t.place(tb); err != nil {
 			return err

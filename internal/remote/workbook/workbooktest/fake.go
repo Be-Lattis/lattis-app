@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -991,7 +992,7 @@ func (r *reader) Rows(ctx context.Context, name string, t workbook.RemoteTable, 
 		}
 		return nil
 	}
-	return fmt.Errorf("tableau %s introuvable", t.Name)
+	return msg.New("workbook.tableNotFound", msg.Args{"table": t.Name})
 }
 
 func (s *session) CanCreateWorkbooks(ctx context.Context) (bool, error) {

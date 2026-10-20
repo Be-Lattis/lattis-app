@@ -2,6 +2,7 @@ package formula
 
 import (
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"regexp"
 	"strconv"
 	"strings"
@@ -366,7 +367,7 @@ func bracket(rs []rune) (string, int, error) {
 			}
 		}
 	}
-	return "", 0, fmt.Errorf("crochet non fermé")
+	return "", 0, msg.New("formula.unclosedBracket", nil)
 }
 
 // --- Parseur ----------------------------------------------------------------
@@ -802,7 +803,7 @@ func parseInner(src string, loc Locale) (Node, error) {
 		return nil, err
 	}
 	if p.peek().kind != tEOF {
-		return nil, fmt.Errorf("ligne attendue entre crochets")
+		return nil, msg.New("formula.rowInBrackets", nil)
 	}
 	return n, nil
 }

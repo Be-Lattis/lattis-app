@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 var pSheet = Param{Name: "sheet", Type: Ref, Desc: "feuille (nom ou identifiant) ; absente : la feuille affichée", Optional: true}
@@ -133,7 +134,7 @@ ui.show_sheet(f.name)`,
 					}
 					for _, s := range list {
 						if strings.EqualFold(s.Name, strings.TrimSpace(name)) {
-							return nil, fmt.Errorf("%w : « %s » existe déjà (les noms de feuilles ne tiennent pas compte des majuscules)", canvas.ErrSheet, strings.TrimSpace(name))
+							return nil, msg.Wrap(canvas.ErrSheet, "sheet.nameTaken", msg.Args{"name": strings.TrimSpace(name)})
 						}
 					}
 				}
@@ -482,7 +483,7 @@ sheets.unprotect_workbook("secret")`,
 					return nil, err
 				}
 				if axis != "rows" && axis != "cols" {
-					return nil, fmt.Errorf(`axis : "rows" ou "cols" attendu`)
+					return nil, msg.New("api.axisExpected", nil)
 				}
 				i0, err := c.Pos("from", 0)
 				if err != nil {

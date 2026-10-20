@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Tableau tapé sans en-têtes (demande de Louis, décision 0005) : quand la
@@ -134,17 +135,17 @@ func (m *Model) PromoteHeader(ctx context.Context, table string) error {
 			return err
 		}
 		if tb.Rows < 1 {
-			return fmt.Errorf("%w : « %s » n'a pas de ligne de données", ErrTable, tb.Name)
+			return msg.Wrap(ErrTable, "table.noDataRow", msg.Args{"table": tb.Name})
 		}
 		if tb.Filtered() {
 			return tb.errFiltered(false)
 		}
 		if tb.TwoLevel {
-			return fmt.Errorf("%w : « %s » a des en-têtes sur deux lignes (clic droit › Tableau › Retirer les groupes d'en-têtes d'abord)", ErrTable, tb.Name)
+			return msg.Wrap(ErrTable, "table.twoLevelHeaders", msg.Args{"table": tb.Name})
 		}
 		if q, err := t.queryLoaded(tb.ID); err != nil || q {
 			if err == nil {
-				err = fmt.Errorf("%w : « %s » est chargé par une requête : renommez ses colonnes dans la requête (Données › Requêtes)", ErrTable, tb.Name)
+				err = msg.Wrap(ErrTable, "table.queryLoadedRename", msg.Args{"table": tb.Name})
 			}
 			return err
 		}

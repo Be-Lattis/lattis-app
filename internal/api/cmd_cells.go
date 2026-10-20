@@ -6,6 +6,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/transfer"
 )
 
@@ -285,7 +286,7 @@ end`,
 					return nil, err
 				}
 				if (r1-r0+1)*(c1-c0+1) > MaxClearCells {
-					return nil, fmt.Errorf("plage trop grande (%d cellules au plus)", MaxClearCells)
+					return nil, msg.New("api.rangeTooLarge", msg.Args{"max": MaxClearCells})
 				}
 				d, _ := c.Doc()
 				l, err := d.Layout(c, s.ID)
@@ -370,7 +371,7 @@ end`,
 					return nil, err
 				}
 				if axis != "rows" && axis != "cols" {
-					return nil, fmt.Errorf(`axis : "rows" ou "cols" attendu`)
+					return nil, msg.New("api.axisExpected", nil)
 				}
 				i0, err := c.Pos("from", 0)
 				if err != nil {
@@ -389,8 +390,8 @@ end`,
 			},
 		},
 		&Command{
-			Name:    "cells.merge",
-			Label:   "Fusionner et centrer",
+			Name:  "cells.merge",
+			Label: "Fusionner et centrer",
 			Summary: "Fusionne des cellules libres en une seule, au contenu centré (refusé dans un tableau ou un tableau croisé). Comme Excel, seule la valeur en haut à gauche est gardée. " +
 				"Dans un tableau aux groupes d'en-têtes (tables.two_level_headers), seule la bande des groupes se fusionne : sa case et l'en-tête d'une colonne mettent la colonne sur un niveau (nom simple : son sous-en-tête, ou le groupe si l'en-tête était automatique) ; plusieurs cases voisines de la bande forment un seul groupe (le premier qu'elles portent, « Groupe » sinon). Les colonnes sont renommées, les formules suivent.",
 			Returns: "nombre de valeurs effacées",
@@ -537,7 +538,7 @@ func toStyle(m map[string]any) (canvas.Style, error) {
 		if key, ok := styleKeys[k]; ok {
 			k = key
 		} else if !styleRaw[k] {
-			return nil, fmt.Errorf("propriété de style %q inconnue", k)
+			return nil, msg.New("api.unknownStyleProperty", msg.Args{"property": fmt.Sprintf("%q", k)})
 		}
 		st[k] = v
 	}

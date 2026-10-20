@@ -3,10 +3,10 @@ package query
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"os"
 	"strings"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -40,7 +40,7 @@ func sqliteFileDSN(path string) string {
 
 func openSQLiteFile(path string) (*sql.DB, error) {
 	if _, err := os.Stat(path); err != nil {
-		return nil, fmt.Errorf("fichier introuvable : %w", err)
+		return nil, msg.Wrap(err, "query.fileNotFound", msg.Args{"err": err})
 	}
 	db, err := store.OpenDB(sqliteFileDSN(path), "fichier SQLite", nil)
 	if err != nil {

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"slices"
 )
 
@@ -94,7 +94,7 @@ func (m *Model) addPage(ctx context.Context, before int64, kind string) (int64, 
 		}
 		at := slices.Index(ids, before)
 		if at < 0 {
-			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 		}
 		return t.moveSheet(id, at)
 	})
@@ -113,7 +113,7 @@ func (m *Model) Page(ctx context.Context, sheet int64) (string, error) {
 	var src string
 	err := m.db.Read().QueryRowContext(ctx, `SELECT source FROM _lattis_pages WHERE sheet = ?`, sheet).Scan(&src)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", fmt.Errorf("%w : cette feuille n'est pas une page HTML", ErrSheet)
+		return "", msg.Wrap(ErrSheet, "sheet.notHtmlPage", nil)
 	}
 	return src, err
 }
@@ -159,7 +159,7 @@ func (m *Model) SetPage(ctx context.Context, sheet int64, source string) error {
 		var old string
 		err := t.row(`SELECT source FROM _lattis_pages WHERE sheet = ?`, sheet).Scan(&old)
 		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("%w : cette feuille n'est pas une page HTML", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.notHtmlPage", nil)
 		}
 		if err != nil {
 			return err

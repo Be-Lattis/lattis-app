@@ -19,6 +19,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Genres de source.
@@ -191,11 +192,11 @@ type Query struct {
 func Decode(d canvas.QueryDef) (Query, error) {
 	q := Query{ID: d.ID, Name: d.Name, Table: d.Table, Sheet: d.Sheet, Refreshed: d.Refreshed, Steps: []Step{}}
 	if err := json.Unmarshal([]byte(d.Source), &q.Source); err != nil {
-		return q, fmt.Errorf("requête « %s » : source illisible : %w", d.Name, err)
+		return q, msg.Wrap(err, "query.unreadableSource", msg.Args{"query": d.Name, "err": err})
 	}
 	if strings.TrimSpace(d.Steps) != "" {
 		if err := json.Unmarshal([]byte(d.Steps), &q.Steps); err != nil {
-			return q, fmt.Errorf("requête « %s » : étapes illisibles : %w", d.Name, err)
+			return q, msg.Wrap(err, "query.unreadableSteps", msg.Args{"query": d.Name, "err": err})
 		}
 	}
 	return q, nil

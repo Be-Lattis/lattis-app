@@ -2,7 +2,7 @@ package canvas
 
 import (
 	"context"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // MoveCells déplace les cellules libres du rectangle [r0, r1] × [c0, c1]
@@ -15,7 +15,7 @@ func (m *Model) MoveCells(ctx context.Context, sheet int64, r0, c0, r1, c1, dr, 
 		return nil
 	}
 	if r0 > r1 || c0 > c1 || r0+dr < 0 || c0+dc < 0 {
-		return fmt.Errorf("%w : déplacement hors de la feuille", ErrTable)
+		return msg.Wrap(ErrTable, "table.moveOutOfSheet", nil)
 	}
 	return m.Do(ctx, "Déplacer les cellules", func(t *tx) error {
 		if err := t.guard(sheet); err != nil {
@@ -34,12 +34,12 @@ func (t *tx) moveFree(sheet int64, r0, c0, r1, c1, dr, dc int) error {
 	tr0, tr1, tc0, tc1 := r0+dr, r1+dr, c0+dc, c1+dc
 	for _, tb := range tables {
 		if tb.Row <= r1 && tb.Bottom() >= r0 && tb.Col <= c1 && tb.Right() >= c0 {
-			return fmt.Errorf("%w : la sélection contient une partie du tableau « %s » ; sélectionnez le tableau entier pour le déplacer", ErrTable, tb.Name)
+			return msg.Wrap(ErrTable, "table.movePartial", msg.Args{"table": tb.Name})
 		}
 		// Juste à côté d'un tableau, les cellules le rejoignent à la fin de
 		// l'action (joinAdjacent) ; dessus, c'est refusé.
 		if tb.Row <= tr1 && tb.Bottom() >= tr0 && tb.Col <= tc1 && tb.Right() >= tc0 {
-			return fmt.Errorf("%w : la destination recouvre le tableau « %s »", ErrTable, tb.Name)
+			return msg.Wrap(ErrTable, "table.moveOverlaps", msg.Args{"table": tb.Name})
 		}
 	}
 	inSource := `row BETWEEN ? AND ? AND col BETWEEN ? AND ?`

@@ -10,6 +10,7 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // sheetRef est une feuille du classeur.
@@ -56,7 +57,7 @@ func (c *Call) sheet(name string) (sheetRef, error) {
 		return sheetRef{}, err
 	}
 	if len(list) == 0 {
-		return sheetRef{}, fmt.Errorf("le classeur n'a pas de feuille")
+		return sheetRef{}, msg.New("api.noSheet", nil)
 	}
 	v := c.args[name]
 	if v == nil {
@@ -79,7 +80,7 @@ func (c *Call) sheet(name string) (sheetRef, error) {
 				return x, nil
 			}
 		}
-		return sheetRef{}, fmt.Errorf("feuille « %s » introuvable", s)
+		return sheetRef{}, msg.New("sheet.notFoundNamed", msg.Args{"sheet": s})
 	}
 	if f, ok := number(v); ok {
 		for _, x := range list {
@@ -87,9 +88,9 @@ func (c *Call) sheet(name string) (sheetRef, error) {
 				return x, nil
 			}
 		}
-		return sheetRef{}, fmt.Errorf("feuille %v introuvable", v)
+		return sheetRef{}, msg.New("transfer.sheetNotFound", msg.Args{"sheet": v})
 	}
-	return sheetRef{}, fmt.Errorf("%s : nom de feuille attendu", name)
+	return sheetRef{}, msg.New("api.sheetNameExpected", msg.Args{"name": name})
 }
 
 // tableRef est un tableau et sa feuille.
@@ -132,7 +133,7 @@ func findTable(ctx context.Context, c *Call, name string) (tableRef, error) {
 		}
 	}
 	if hit == nil {
-		return tableRef{}, fmt.Errorf("tableau « %s » introuvable", name)
+		return tableRef{}, msg.New("table.notFound", msg.Args{"table": name})
 	}
 	l, err := d.Layout(ctx, hit.Sheet)
 	if err != nil {
@@ -149,7 +150,7 @@ func findTable(ctx context.Context, c *Call, name string) (tableRef, error) {
 			return ref, nil
 		}
 	}
-	return tableRef{}, fmt.Errorf("tableau « %s » introuvable", name)
+	return tableRef{}, msg.New("table.notFound", msg.Args{"table": name})
 }
 
 // column résout une colonne du tableau t : nom ou rang (à partir de 1).
@@ -170,15 +171,15 @@ func (c *Call) column(t tableRef, name string) (int, error) {
 					return i, nil
 				}
 			}
-			return 0, fmt.Errorf("tableau « %s » : pas de colonne « %s »", t.Name, s)
+			return 0, msg.New("api.noColumn", msg.Args{"table": t.Name, "column": s})
 		}
 	}
 	f, ok := number(v)
 	if !ok {
-		return 0, fmt.Errorf("%s : nom ou rang de colonne attendu", name)
+		return 0, msg.New("api.columnExpected", msg.Args{"name": name})
 	}
 	if f < 1 || int(f) > len(t.Columns) {
-		return 0, fmt.Errorf("tableau « %s » : colonne %v hors du tableau (1 à %d)", t.Name, v, len(t.Columns))
+		return 0, msg.New("api.columnOutOfRange", msg.Args{"table": t.Name, "column": fmt.Sprint(v), "n": len(t.Columns)})
 	}
 	return int(f) - 1, nil
 }

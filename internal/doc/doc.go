@@ -21,6 +21,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/meta"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/oplog"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/internal/store"
@@ -71,7 +72,7 @@ type Indexer interface {
 }
 
 // ErrNoIndexer : pas de classeur collaboratif suivi.
-var ErrNoIndexer = errors.New("Les index se posent sur les tableaux partagés d'un classeur collaboratif ouvert depuis son serveur")
+var ErrNoIndexer = msg.New("doc.noIndexer", nil)
 
 // SetIndexer branche les index du serveur (nil : aucun).
 func (d *Document) SetIndexer(x Indexer) {
@@ -323,7 +324,7 @@ func Recover(ctx context.Context, o archive.Orphan) (_ *Document, err error) {
 	}
 	d, err := wrap(ctx, a, true)
 	if err != nil {
-		return nil, fmt.Errorf("récupération impossible : %w", err)
+		return nil, msg.Wrap(err, "doc.recoverFailed", msg.Args{"err": err})
 	}
 	d.saved = -1 // les modifications récupérées ne sont pas enregistrées
 	// Même contrôle qu'à l'ouverture : verrou d'un autre poste, fichier
@@ -405,7 +406,7 @@ func (d *Document) Overwrite(ctx context.Context) error {
 func (d *Document) save(ctx context.Context, path string, force bool) (err error) {
 	defer trace.Since(1, trace.Doc, time.Now(), &err, "enregistrement dans %s", cmp.Or(path, d.arc.Path))
 	if path == "" && d.arc.Path == "" {
-		return errors.New("choisir un fichier pour enregistrer")
+		return msg.New("doc.chooseFile", nil)
 	}
 	top, err := d.top(ctx)
 	if err != nil {
@@ -424,7 +425,7 @@ func (d *Document) save(ctx context.Context, path string, force bool) (err error
 	// de Lattis ne pourra plus lire le fichier réécrit).
 	if d.backup != "" && (path == "" || samePath(path, d.arc.Path)) {
 		if err := backupFile(d.arc.Path, d.backup); err != nil {
-			return fmt.Errorf("copie de sauvegarde de l'ancien format impossible, rien n'a été enregistré : %w", err)
+			return msg.Wrap(err, "doc.backupFailed", msg.Args{"err": err})
 		}
 		d.backup = ""
 	}

@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"slices"
 	"strings"
 )
@@ -71,7 +72,7 @@ func hexColor(v any) bool {
 func isTheme(v any) error {
 	t, ok := v.(Tree)
 	if !ok {
-		return errors.New(`thème attendu : {"name": "…", "table": "#rrggbb", "source": "#rrggbb"}`)
+		return msg.New("config.themeExpected", nil)
 	}
 	get := func(k string) any {
 		if key, ok := findKey(t, k); ok {
@@ -81,7 +82,7 @@ func isTheme(v any) error {
 	}
 	name, _ := get("name").(string)
 	if strings.TrimSpace(name) == "" || len([]rune(name)) > 60 {
-		return errors.New("nom de thème attendu (60 caractères au plus)")
+		return msg.New("config.themeName", nil)
 	}
 	if !hexColor(get("table")) || !hexColor(get("source")) {
 		return errors.New("couleurs table et source attendues (#rrggbb)")
@@ -89,7 +90,7 @@ func isTheme(v any) error {
 	if a := get("accents"); a != nil {
 		list, ok := a.([]any)
 		if !ok || len(list) > 4 {
-			return errors.New("accents : quatre couleurs #rrggbb au plus (Accent 3 à 6)")
+			return msg.New("config.themeAccents", nil)
 		}
 		for _, c := range list {
 			if !hexColor(c) {
@@ -108,7 +109,7 @@ func isTheme(v any) error {
 // isThemes : un objet de thèmes (chacun vérifié à part, ui.themes.*).
 func isThemes(v any) error {
 	if _, ok := v.(Tree); !ok {
-		return errors.New("objet de thèmes attendu, par identifiant")
+		return msg.New("config.themesObject", nil)
 	}
 	return nil
 }

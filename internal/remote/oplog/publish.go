@@ -3,10 +3,10 @@ package oplog
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/google/uuid"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -22,7 +22,7 @@ func Publish(ctx context.Context, db *store.Store, tbl int64) error {
 			return err
 		}
 		if n == 0 {
-			return fmt.Errorf("pas de tableau %d", tbl)
+			return msg.New("oplog.noTable", msg.Args{"table": tbl})
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO _lattis_remote_tables (tbl, published) VALUES (?, 1) ON CONFLICT (tbl) DO UPDATE SET published = 1`, tbl); err != nil {
 			return err

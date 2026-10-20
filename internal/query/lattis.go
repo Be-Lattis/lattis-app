@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 )
 
@@ -57,11 +58,11 @@ func checkLattis(c DBConfig) error {
 // Lattis) quand il faut se connecter.
 func connectLattis(ctx context.Context, c Connection) (*sql.DB, *dialect, error) {
 	if LattisOpen == nil {
-		return nil, nil, fmt.Errorf("connexion « %s » : classeurs partagés désactivés (Fichier › Paramètres › Fonctionnalités)", c.Name)
+		return nil, nil, msg.New("connection.sharedDisabled", msg.Args{"connection": c.Name})
 	}
 	server, err := auth.NormalizeURL(c.Config.URL)
 	if err != nil {
-		return nil, nil, fmt.Errorf("connexion « %s » : %w", c.Name, err)
+		return nil, nil, msg.Wrap(err, "connection.error", msg.Args{"connection": c.Name, "err": err})
 	}
 	login := func(err error) error {
 		return &ErrPassword{Connection: c.Name, Account: c.Account(), Message: err.Error(), Lattis: server}
@@ -72,7 +73,7 @@ func connectLattis(ctx context.Context, c Connection) (*sql.DB, *dialect, error)
 		return nil, nil, login(err)
 	}
 	if err != nil {
-		return nil, nil, fmt.Errorf("connexion « %s » : %w", c.Name, err)
+		return nil, nil, msg.Wrap(err, "connection.error", msg.Args{"connection": c.Name, "err": err})
 	}
 	d := dialects[KindLattis]
 	if err := db.PingContext(ctx); err != nil {
@@ -80,7 +81,7 @@ func connectLattis(ctx context.Context, c Connection) (*sql.DB, *dialect, error)
 		if errors.As(err, &lr) || d.authFailed(err) {
 			return nil, nil, login(err)
 		}
-		return nil, nil, fmt.Errorf("connexion « %s » : %w", c.Name, err)
+		return nil, nil, msg.Wrap(err, "connection.error", msg.Args{"connection": c.Name, "err": err})
 	}
 	return db, d, nil
 }

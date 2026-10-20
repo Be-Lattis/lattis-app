@@ -15,6 +15,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -185,7 +186,7 @@ func (e *StepError) Unwrap() error { return e.Err }
 func (r *run) compile(q Query, upto int) (*pipeline, error) {
 	for _, n := range r.stack {
 		if strings.EqualFold(n, q.Name) {
-			return nil, &StepError{-1, fmt.Errorf("la requête « %s » se cite elle-même", q.Name)}
+			return nil, &StepError{-1, msg.New("query.selfReference", msg.Args{"query": q.Name})}
 		}
 	}
 	r.stack = append(r.stack, q.Name)
@@ -234,7 +235,7 @@ func (r *run) from(src Source) (string, []Column, error) {
 		if err != nil {
 			var se *StepError
 			if errors.As(err, &se) {
-				return "", nil, fmt.Errorf("requête « %s », %w", q.Name, se)
+				return "", nil, msg.Wrap(se, "query.failedAt", msg.Args{"query": q.Name, "err": se})
 			}
 			return "", nil, err
 		}
@@ -290,9 +291,9 @@ func (r *run) load(src Source) (loaded, error) {
 	case SourceFormula:
 		l, err = r.loadFormula(src)
 	case "":
-		err = errors.New("source manquante")
+		err = msg.New("query.missingSource", nil)
 	default:
-		err = fmt.Errorf("source %q inconnue", src.Kind)
+		err = msg.New("query.unknownSource", msg.Args{"kind": fmt.Sprintf("%q", src.Kind)})
 	}
 	if err != nil {
 		return l, err

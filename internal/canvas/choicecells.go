@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Feuilles à plusieurs tableaux sous un onglet à choix (docs/conception/
@@ -339,7 +340,7 @@ func (t *tx) setTableFollow(tb Table, follow bool) (string, error) {
 		return "", err
 	}
 	if r == nil || ch == nil {
-		return "", fmt.Errorf("%w : la feuille n'a pas d'onglet à choix (clic droit sur l'onglet › Choisir par…)", ErrSheet)
+		return "", msg.Wrap(ErrSheet, "sheet.noChoiceTabHint", nil)
 	}
 	what := FollowLabel(ch.Name)
 	if r.Formula != "" {
@@ -369,7 +370,7 @@ func (t *tx) setTableFollow(tb Table, follow bool) (string, error) {
 		return "", t.setFollowFlag(tb, nil)
 	}
 	if r.Tbl == tb.ID && r.Col == col.ID {
-		return "", fmt.Errorf("%w : « %s » porte la colonne de l'onglet à choix ; retirez plutôt le choix (clic droit sur l'onglet › Ne plus choisir)", ErrTable, tb.Name)
+		return "", msg.Wrap(ErrTable, "table.holdsChoiceColumn", msg.Args{"table": tb.Name})
 	}
 	var n int
 	if err := t.row(`SELECT count(DISTINCT ` + textExpr(col) + `) FROM ` + tb.sql() + ` WHERE ` + colSQL(col.ID) + ` IS NOT NULL`).Scan(&n); err != nil {
@@ -420,7 +421,7 @@ func (t *tx) addChoiceColumn(tb Table, ch *SheetChoice, r *choiceRaw, value stri
 	if value != "" {
 		v, err := grid.Parse(typ, value)
 		if err != nil {
-			return fmt.Errorf("%w : « %s » ne convient pas à la colonne « %s » (%v)", ErrTable, value, ch.Name, err)
+			return msg.Wrap(ErrTable, "table.choiceValueInvalid", msg.Args{"value": value, "column": ch.Name, "err": err})
 		}
 		if err := t.apply([]stmt{st(`UPDATE `+tb.sql()+` SET `+colSQL(id)+` = ?`, v)}, []stmt{st(`UPDATE ` + tb.sql() + ` SET ` + colSQL(id) + ` = NULL`)}); err != nil {
 			return err

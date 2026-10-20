@@ -2,7 +2,6 @@ package canvas
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"github.com/lalamefine/lattis/internal/grid"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/sqltext"
 )
 
@@ -126,7 +126,7 @@ func (t *tx) widenFor(err error) (bool, error) {
 
 func (t *tx) execSQLOnce(q string, args []any) (int64, error) {
 	if strings.TrimSpace(q) == "" {
-		return 0, errors.New("requête vide")
+		return 0, msg.New("query.empty", nil)
 	}
 	if err := sqltext.CheckStructure(q); err != nil {
 		return 0, err

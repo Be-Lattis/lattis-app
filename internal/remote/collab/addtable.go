@@ -3,9 +3,9 @@ package collab
 import (
 	"context"
 	"database/sql"
-	"errors"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -16,7 +16,7 @@ import (
 // autres. Voir docs/collaboration/synchronisation.md §2.10.
 
 // ErrAddOffline : l'ajout passe par le serveur.
-var ErrAddOffline = errors.New("Hors ligne : un tableau s'ajoute au classeur partagé quand le serveur répond")
+var ErrAddOffline = msg.New("collab.addTableOffline", nil)
 
 // AddedNotice : message de la barre d'état après l'ajout.
 func AddedNotice(name string) string {

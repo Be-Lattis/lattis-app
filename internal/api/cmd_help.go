@@ -1,9 +1,8 @@
 package api
 
 import (
-	"fmt"
-
 	"github.com/lalamefine/lattis/internal/helpdoc"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Aide de l'application, cherchable : la même que le volet d'aide, pour les
@@ -29,7 +28,7 @@ end`,
 			if page != "" {
 				p, ok := helpdoc.Get(page)
 				if !ok {
-					return nil, fmt.Errorf("page d'aide inconnue : %s (help.search sans paramètre donne la liste)", page)
+					return nil, msg.New("api.unknownHelpPage", msg.Args{"page": page})
 				}
 				return p, nil
 			}

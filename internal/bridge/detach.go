@@ -3,12 +3,12 @@ package bridge
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -28,7 +28,7 @@ import (
 // (elles ne partent pas). Voir workbook.Detach.
 
 // errNotShared : l'action ne vaut que pour un classeur partagé.
-var errNotShared = errors.New("ce classeur n'est pas partagé sur un serveur")
+var errNotShared = msg.New("share.notShared", nil)
 
 // ShareLocalCopy enregistre une copie locale du classeur partagé ouvert,
 // détachée du serveur (boîte Enregistrer sous), puis l'ouvre.
@@ -67,10 +67,10 @@ func (s *DocumentService) ShareDetach(ctx context.Context) (OpenResult, error) {
 		return OpenResult{}, errNotShared
 	}
 	if !info.CanManage() {
-		return OpenResult{}, errors.New("seul le propriétaire du classeur peut le détacher du serveur : « Travailler sur une copie locale » en fait une copie à vous")
+		return OpenResult{}, msg.New("share.detachOwnerOnly", nil)
 	}
 	if d.ReadOnly() {
-		return OpenResult{}, errors.New("classeur ouvert en lecture seule : « Travailler sur une copie locale » à la place")
+		return OpenResult{}, msg.New("share.detachReadOnly", nil)
 	}
 	if inShareCache(d.Path()) || d.Path() == "" {
 		return s.detachAs(ctx, d, "Détacher du serveur : enregistrer le classeur", docBaseName(d)+".lattis", true)
@@ -96,7 +96,7 @@ func (s *DocumentService) detachAs(ctx context.Context, d *doc.Document, title, 
 		Ext:       ".lattis",
 	}, func(p string) error {
 		if inShareCache(p) {
-			werr = errors.New("choisissez un dossier à vous : ce dossier est le cache des classeurs du serveur")
+			werr = msg.New("share.detachChooseFolder", nil)
 			return werr
 		}
 		unsent, werr = s.detachTo(ctx, d, p, dropCache)
@@ -130,7 +130,7 @@ func (s *DocumentService) detachTo(ctx context.Context, d *doc.Document, path st
 		if !dropCache {
 			if dirty, _ := d.Dirty(ctx); dirty {
 				if err := saveDoc(ctx, d, ""); err != nil {
-					return 0, fmt.Errorf("cache du classeur partagé non enregistré, rien n'a changé : %w", err)
+					return 0, msg.Wrap(err, "share.detachCacheNotSaved", msg.Args{"err": err})
 				}
 			}
 		}
@@ -167,7 +167,7 @@ func (s *DocumentService) reopenDetached(ctx context.Context, d *doc.Document, n
 	s.replace(nil)
 	r, err := s.open(ctx, path, doc.OpenNormal)
 	if err != nil {
-		return OpenResult{}, fmt.Errorf("classeur détaché enregistré dans %s, mais sa réouverture a échoué : %w", path, err)
+		return OpenResult{}, msg.Wrap(err, "share.detachReopenFailed", msg.Args{"path": path, "err": err})
 	}
 	if r.State.Open {
 		if r.State.Notice != "" {

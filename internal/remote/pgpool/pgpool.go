@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Usages des connexions (étiquette kind de lattis_query_duration_seconds).
@@ -103,18 +104,18 @@ func hostsPorts(eps []string, def int) (string, string, error) {
 		if h, p, err := net.SplitHostPort(ep); err == nil {
 			n, err := strconv.Atoi(p)
 			if err != nil {
-				return "", "", fmt.Errorf("point de connexion %q invalide", ep)
+				return "", "", msg.New("pgpool.invalidEndpoint", msg.Args{"endpoint": fmt.Sprintf("%q", ep)})
 			}
 			host, port = h, n
 		}
 		if strings.ContainsAny(host, ", '\\") {
-			return "", "", fmt.Errorf("point de connexion %q invalide", ep)
+			return "", "", msg.New("pgpool.invalidEndpoint", msg.Args{"endpoint": fmt.Sprintf("%q", ep)})
 		}
 		hs = append(hs, host)
 		ps = append(ps, strconv.Itoa(port))
 	}
 	if len(hs) == 0 {
-		return "", "", errors.New("aucun point de connexion PostgreSQL annoncé")
+		return "", "", msg.New("pgpool.noEndpoint", nil)
 	}
 	return strings.Join(hs, ","), strings.Join(ps, ","), nil
 }
@@ -127,10 +128,10 @@ func quote(s string) string {
 // l'ordre : pgx passe au suivant si l'un ne répond pas).
 func (t Target) dsn(eps []string, usage string) (string, error) {
 	if t.User == "" {
-		return "", errors.New("rôle PostgreSQL de l'utilisateur inconnu (revendication pg_role absente du jeton)")
+		return "", msg.New("pgpool.unknownRole", nil)
 	}
 	if t.Token == nil {
-		return "", errors.New("aucun jeton d'accès")
+		return "", msg.New("pgpool.noToken", nil)
 	}
 	hosts, ports, err := hostsPorts(eps, t.Port)
 	if err != nil {

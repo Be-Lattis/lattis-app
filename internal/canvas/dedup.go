@@ -8,6 +8,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // RemoveDuplicates supprime les lignes dont les colonnes cols (toutes si
@@ -75,7 +76,7 @@ func (m *Model) RemoveDuplicates(ctx context.Context, table string, cols []int) 
 }
 
 // errNoDuplicates abandonne une suppression des doublons qui n'en trouve pas.
-var errNoDuplicates = errors.New("aucun doublon")
+var errNoDuplicates = msg.New("dedup.none", nil)
 
 // DuplicatesPreview compte les lignes que RemoveDuplicates retirerait.
 func (m *Model) DuplicatesPreview(ctx context.Context, table string, cols []int) (int, error) {
@@ -105,7 +106,7 @@ func dupQuery(tb Table, cols []int) (string, error) {
 	var key []string
 	for _, i := range cols {
 		if i < 0 || i >= len(tb.Cols) {
-			return "", fmt.Errorf("colonne %d hors du tableau", i)
+			return "", msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 		}
 		c := tb.Cols[i]
 		if c.Formula != "" {

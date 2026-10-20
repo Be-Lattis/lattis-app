@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ButtonConfig est un contrôle posé sur une feuille, comme les contrôles de
@@ -126,12 +126,12 @@ func (c *ButtonConfig) check() error {
 		c.Link = sheetPart + "!" + c.Link
 	}
 	if len([]rune(c.Name)) > 64 {
-		return fmt.Errorf("%w : nom trop long (64 caractères au plus)", ErrButton)
+		return msg.Wrap(ErrButton, "button.nameTooLong", nil)
 	}
 	switch c.Kind {
 	case "", "checkbox":
 		if c.Label == "" {
-			return fmt.Errorf("%w : libellé vide", ErrButton)
+			return msg.Wrap(ErrButton, "button.emptyLabel", nil)
 		}
 	case "input", "textarea", "file":
 	case "select":
@@ -145,13 +145,13 @@ func (c *ButtonConfig) check() error {
 		c.OptionsFrom = strings.TrimSpace(c.OptionsFrom)
 		if c.OptionsFrom != "" {
 			if _, _, ok := SplitColumnRef(c.OptionsFrom); !ok {
-				return fmt.Errorf("%w : colonne des choix invalide (« Clients[Ville] » par exemple)", ErrButton)
+				return msg.Wrap(ErrButton, "button.invalidChoiceColumn", nil)
 			}
 		} else if len(opts) == 0 {
-			return fmt.Errorf("%w : la liste n'a aucun choix", ErrButton)
+			return msg.Wrap(ErrButton, "button.noChoices", nil)
 		}
 	default:
-		return fmt.Errorf("%w : type « %s » inconnu", ErrButton, c.Kind)
+		return msg.Wrap(ErrButton, "button.unknownKind", msg.Args{"kind": c.Kind})
 	}
 	if c.Kind == "select" && c.OptionsFrom == "" {
 		c.OptionsFrom = ""
@@ -161,11 +161,11 @@ func (c *ButtonConfig) check() error {
 	}
 	if c.Kind != "" && c.Link != "" {
 		if _, cell := SplitLink(c.Link); cell == "" || !validCell(cell) {
-			return fmt.Errorf("%w : cellule liée invalide (« B3 » ou « Feuille1!B3 » par exemple)", ErrButton)
+			return msg.Wrap(ErrButton, "button.invalidLinkedCell", nil)
 		}
 	}
 	if c.Script == "" && c.Function != "" {
-		return fmt.Errorf("%w : choisissez le script de la fonction %s", ErrButton, c.Function)
+		return msg.Wrap(ErrButton, "button.chooseScript", msg.Args{"function": c.Function})
 	}
 	for i := range c.Listeners {
 		l := &c.Listeners[i]
@@ -174,11 +174,11 @@ func (c *ButtonConfig) check() error {
 			return err
 		}
 		if l.Script == "" || !isIdent(l.Function) {
-			return fmt.Errorf("%w : écouteur sans script ou sans fonction", ErrButton)
+			return msg.Wrap(ErrButton, "button.listenerIncomplete", nil)
 		}
 	}
 	if c.Width < 0 || c.Height < 0 || (c.Width > 0 && c.Width < 24) || (c.Height > 0 && c.Height < 16) {
-		return fmt.Errorf("%w : taille invalide", ErrButton)
+		return msg.Wrap(ErrButton, "button.invalidSize", nil)
 	}
 	return nil
 }
@@ -187,9 +187,9 @@ func (c *ButtonConfig) check() error {
 func CheckEvent(kind, event string) error {
 	if event != DefaultEvent(kind) {
 		if kind == "" {
-			return fmt.Errorf("%w : un bouton produit l'évènement « click », pas « %s »", ErrButton, event)
+			return msg.Wrap(ErrButton, "button.clickEventOnly", msg.Args{"event": event})
 		}
-		return fmt.Errorf("%w : ce contrôle produit l'évènement « change », pas « %s »", ErrButton, event)
+		return msg.Wrap(ErrButton, "button.changeEventOnly", msg.Args{"event": event})
 	}
 	return nil
 }
@@ -276,7 +276,7 @@ func (t *tx) nameControl(id int64, cfg *ButtonConfig) error {
 	}
 	for _, n := range taken {
 		if strings.EqualFold(n, cfg.Name) {
-			return fmt.Errorf("%w : le nom « %s » est déjà pris", ErrButton, cfg.Name)
+			return msg.Wrap(ErrButton, "button.nameTaken", msg.Args{"name": cfg.Name})
 		}
 	}
 	return nil
@@ -285,7 +285,7 @@ func (t *tx) nameControl(id int64, cfg *ButtonConfig) error {
 // CreateButton pose un bouton sur une feuille, coin haut gauche en (row, col).
 func (m *Model) CreateButton(ctx context.Context, sheet int64, row, col int, cfg ButtonConfig) (int64, error) {
 	if row < 0 || col < 0 {
-		return 0, fmt.Errorf("%w : hors de la feuille", ErrButton)
+		return 0, msg.Wrap(ErrButton, "button.outOfSheet", nil)
 	}
 	if err := cfg.check(); err != nil {
 		return 0, err
@@ -300,7 +300,7 @@ func (m *Model) CreateButton(ctx context.Context, sheet int64, row, col int, cfg
 			return err
 		}
 		if n == 0 {
-			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 		}
 		if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_buttons`).Scan(&id); err != nil {
 			return err
@@ -346,7 +346,7 @@ func (m *Model) SetButton(ctx context.Context, id int64, cfg ButtonConfig) error
 // height à 0 : taille par défaut).
 func (m *Model) PlaceButton(ctx context.Context, id int64, row, col, offX, offY, width, height int) error {
 	if row < 0 || col < 0 {
-		return fmt.Errorf("%w : hors de la feuille", ErrButton)
+		return msg.Wrap(ErrButton, "button.outOfSheet", nil)
 	}
 	return m.Do(ctx, "Déplacer le bouton", func(t *tx) error {
 		if err := t.guardObject(`_lattis_buttons`, id); err != nil {
@@ -375,7 +375,7 @@ func (m *Model) DeleteButton(ctx context.Context, id int64) error {
 		var row, col int
 		var cfg string
 		if err := t.row(`SELECT sheet, row, col, config FROM _lattis_buttons WHERE id = ?`, id).Scan(&sheet, &row, &col, &cfg); err != nil {
-			return fmt.Errorf("%w : bouton %d introuvable", ErrButton, id)
+			return msg.Wrap(ErrButton, "button.notFound", msg.Args{"id": id})
 		}
 		return t.apply(
 			[]stmt{st(`DELETE FROM _lattis_buttons WHERE id = ?`, id)},
@@ -399,7 +399,7 @@ func (t *tx) button(id int64) (ButtonInfo, error) {
 	b := ButtonInfo{ID: id}
 	var cfg string
 	if err := t.row(`SELECT sheet, row, col, config FROM _lattis_buttons WHERE id = ?`, id).Scan(&b.Sheet, &b.Row, &b.Col, &cfg); err != nil {
-		return b, fmt.Errorf("%w : bouton %d introuvable", ErrButton, id)
+		return b, msg.Wrap(ErrButton, "button.notFound", msg.Args{"id": id})
 	}
 	err := json.Unmarshal([]byte(cfg), &b.Config)
 	b.Config.Name = controlName(id, b.Config)

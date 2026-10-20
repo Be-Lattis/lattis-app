@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // PageSetupView est la mise en page d'une feuille (Affichage › Mise en page),
@@ -117,7 +118,7 @@ func (x pageSetupPatch) apply(p *canvas.PageSetup) error {
 		case "landscape", "paysage":
 			p.Landscape = true
 		default:
-			return fmt.Errorf(`orientation : "portrait" ou "landscape" attendu`)
+			return msg.New("api.orientation", nil)
 		}
 	}
 	if x.Margins != nil {
@@ -207,7 +208,7 @@ func (x pageSetupPatch) apply(p *canvas.PageSetup) error {
 		case "across":
 			p.AcrossFirst = true
 		default:
-			return fmt.Errorf(`order : "down" ou "across" attendu`)
+			return msg.New("api.pageOrder", nil)
 		}
 	}
 	if x.Header != nil {

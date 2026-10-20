@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Style est la mise en forme d'une cellule (JSON compact) : b, i, u, x
@@ -217,7 +217,7 @@ func (t *tx) ridsAt(tb *Table, first, last int) ([]int64, error) {
 // étape d'annulation.
 func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int, patch Style) error {
 	if (r1-r0+1)*(c1-c0+1) > MaxStyleCells*4 {
-		return fmt.Errorf("mise en forme limitée à %d cellules", MaxStyleCells)
+		return msg.New("style.tooManyCells", msg.Args{"max": MaxStyleCells})
 	}
 	if err := normalizeDV(patch); err != nil {
 		return err
@@ -248,7 +248,7 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 					continue // traité avec le tableau
 				}
 				if cells++; cells > MaxStyleCells {
-					return fmt.Errorf("mise en forme limitée à %d cellules", MaxStyleCells)
+					return msg.New("style.tooManyCells", msg.Args{"max": MaxStyleCells})
 				}
 				if err := t.styleFree(sheet, r, c, patch, lines.at(r, c)); err != nil {
 					return err
@@ -285,7 +285,7 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 			}
 			for i, id := range ids {
 				if cells++; cells > MaxStyleCells {
-					return fmt.Errorf("mise en forme limitée à %d cellules", MaxStyleCells)
+					return msg.New("style.tooManyCells", msg.Args{"max": MaxStyleCells})
 				}
 				if err := t.styleTable(tb.ID, id, colID, patch, over(lines.at(first+i, c), colStyle)); err != nil {
 					return err
@@ -317,7 +317,7 @@ func (m *Model) ApplyLineStyle(ctx context.Context, sheet int64, rows bool, i0, 
 		i0, i1 = i1, i0
 	}
 	if i0 < 0 || i1-i0+1 > MaxStyleLines {
-		return fmt.Errorf("mise en forme limitée à %d lignes ou colonnes", MaxStyleLines)
+		return msg.New("style.tooManyLines", msg.Args{"max": MaxStyleLines})
 	}
 	if err := normalizeDV(patch); err != nil {
 		return err
@@ -341,7 +341,7 @@ func (m *Model) ApplyLineStyle(ctx context.Context, sheet int64, rows bool, i0, 
 		cells := 0
 		count := func() error {
 			if cells++; cells > MaxStyleCells {
-				return fmt.Errorf("mise en forme limitée à %d cellules", MaxStyleCells)
+				return msg.New("style.tooManyCells", msg.Args{"max": MaxStyleCells})
 			}
 			return nil
 		}

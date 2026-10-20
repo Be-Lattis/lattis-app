@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Contrôles de feuille (bouton, case à cocher, liste déroulante, zone de
@@ -70,7 +70,7 @@ func kindOf(s string) (string, error) {
 		s = ""
 	}
 	if _, ok := canvas.ControlKinds[s]; !ok {
-		return "", fmt.Errorf("type « %s » inconnu : button, checkbox, select, input, textarea ou file", s)
+		return "", msg.New("api.unknownControlKind", msg.Args{"kind": s})
 	}
 	return s, nil
 }
@@ -113,7 +113,7 @@ func linkedCell(ctx context.Context, d *doc.Document, b canvas.ButtonInfo) (shee
 			}
 		}
 		if sheet == 0 {
-			return 0, 0, 0, false, fmt.Errorf("cellule liée « %s » : feuille « %s » introuvable", b.Config.Link, name)
+			return 0, 0, 0, false, msg.New("api.linkedCellSheetNotFound", msg.Args{"link": b.Config.Link, "sheet": name})
 		}
 	}
 	return sheet, row, col, true, nil
@@ -216,7 +216,7 @@ func (c *Call) control(param string) (canvas.ButtonInfo, error) {
 					return b, nil
 				}
 			}
-			return canvas.ButtonInfo{}, fmt.Errorf("contrôle %d introuvable", int64(f))
+			return canvas.ButtonInfo{}, msg.New("api.controlNotFound", msg.Args{"id": int64(f)})
 		}
 	}
 	name, _ := c.Str(param)
@@ -242,7 +242,7 @@ func (c *Call) control(param string) (canvas.ButtonInfo, error) {
 			}
 		}
 	}
-	return canvas.ButtonInfo{}, fmt.Errorf("contrôle « %s » introuvable", name)
+	return canvas.ButtonInfo{}, msg.New("api.controlNotFoundNamed", msg.Args{"name": name})
 }
 
 // controlID résout un contrôle et donne son identifiant.
@@ -274,19 +274,19 @@ func controlProps(cfg *canvas.ButtonConfig, props map[string]any) (controlEdit, 
 		case float64, int64, int:
 			return raw(v), nil
 		}
-		return "", fmt.Errorf("%s : texte attendu", k)
+		return "", msg.New("api.textExpected", msg.Args{"name": k})
 	}
 	integer := func(k string, v any) (int, error) {
 		f, ok := number(v)
 		if !ok || f != float64(int(f)) {
-			return 0, fmt.Errorf("%s : nombre entier attendu", k)
+			return 0, msg.New("api.integerExpected", msg.Args{"name": k})
 		}
 		return int(f), nil
 	}
 	boolean := func(k string, v any) (bool, error) {
 		b, ok := v.(bool)
 		if !ok {
-			return false, fmt.Errorf("%s : booléen attendu", k)
+			return false, msg.New("api.booleanExpected", msg.Args{"name": k})
 		}
 		return b, nil
 	}
@@ -336,7 +336,7 @@ func controlProps(cfg *canvas.ButtonConfig, props map[string]any) (controlEdit, 
 		case "options":
 			list, ok := v.([]any)
 			if !ok {
-				return e, fmt.Errorf("options : liste de textes attendue")
+				return e, msg.New("api.optionsList", nil)
 			}
 			cfg.Options = cfg.Options[:0:0]
 			for _, o := range list {
@@ -351,7 +351,7 @@ func controlProps(cfg *canvas.ButtonConfig, props map[string]any) (controlEdit, 
 		case "row", "col":
 			var n int
 			if n, err = integer(k, v); err == nil && n < 1 {
-				err = fmt.Errorf("%s : les lignes et colonnes se comptent à partir de 1", k)
+				err = msg.New("api.countFromOne", msg.Args{"name": k})
 			}
 			if k == "row" {
 				e.row = n - 1
@@ -363,7 +363,7 @@ func controlProps(cfg *canvas.ButtonConfig, props map[string]any) (controlEdit, 
 		case "height":
 			e.h, err = integer(k, v)
 		default:
-			return e, fmt.Errorf("propriété « %s » inconnue (%s)", k, controlKeys)
+			return e, msg.New("api.unknownControlProperty", msg.Args{"property": k, "keys": controlKeys})
 		}
 		if err != nil {
 			return e, err
@@ -393,7 +393,7 @@ func cellInput(kind string, v any) string {
 // valeur affichée change, déclenche son évènement change.
 func (c *Call) setControlValue(b canvas.ButtonInfo, v any) error {
 	if b.Config.Kind == "" {
-		return fmt.Errorf("un bouton n'a pas de valeur")
+		return msg.New("api.buttonNoValue", nil)
 	}
 	d, _ := c.Doc()
 	old, now, err := writeControl(c, d, b, cellInput(b.Config.Kind, v))
@@ -402,7 +402,7 @@ func (c *Call) setControlValue(b canvas.ButtonInfo, v any) error {
 	}
 	res, err := dispatch(c, c.Host, controlEvent{id: b.ID, event: canvas.EventChange, value: now, old: old, hasOld: true})
 	if err == nil && res.Error != "" {
-		err = fmt.Errorf("écouteur de « %s » : %s", b.Config.Name, res.Error)
+		err = msg.New("api.listenerError", msg.Args{"name": b.Config.Name, "err": res.Error})
 	}
 	return err
 }
@@ -532,7 +532,7 @@ func fire(ctx context.Context, host Host, ev controlEvent) (ScriptResult, error)
 			}
 		}
 		if !found {
-			return res, fmt.Errorf("contrôle « %s » : script « %s » introuvable", b.Config.Name, h.Script)
+			return res, msg.New("api.controlScriptNotFound", msg.Args{"name": b.Config.Name, "script": h.Script})
 		}
 		r, err := runOne(ctx, host, h.Script, src, h.Function, arg)
 		res.add(r)
@@ -807,7 +807,7 @@ print(l.name, l.value)`,
 					return nil, err
 				}
 				if e.row >= 0 || e.col >= 0 {
-					return nil, fmt.Errorf("props : la position se donne avec row et col")
+					return nil, msg.New("api.propsPosition", nil)
 				}
 				if e.w >= 0 {
 					cfg.Width = e.w
@@ -940,7 +940,7 @@ controls.set("Statut", {value = "Payés"}) -- filtrer s'exécute à la fin du sc
 					l.Script = currentScript(c)
 				}
 				if l.Script == "" {
-					return nil, fmt.Errorf("script : précisez le script de la fonction %s", l.Function)
+					return nil, msg.New("api.chooseScript", msg.Args{"function": l.Function})
 				}
 				if err := canvas.CheckEvent(b.Config.Kind, l.Event); err != nil {
 					return nil, err
@@ -955,7 +955,7 @@ controls.set("Statut", {value = "Payés"}) -- filtrer s'exécute à la fin du sc
 					found = found || s.Name == l.Script
 				}
 				if !found {
-					return nil, fmt.Errorf("script « %s » introuvable : enregistrez-le dans la bibliothèque (onglet Script)", l.Script)
+					return nil, msg.New("api.scriptNotSaved", msg.Args{"script": l.Script})
 				}
 				cfg := b.Config
 				for _, x := range cfg.Listeners {

@@ -2,12 +2,12 @@ package canvas
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ErrComputed signale une saisie de valeur dans une colonne calculée.
@@ -451,7 +451,7 @@ func (t *tx) columnSQL(tb Table) (exprs []string, args []any, computed []bool, e
 		}
 		ft, ok := schema.Table(tb.Name)
 		if !ok {
-			return errors.New("tableau introuvable")
+			return msg.New("table.notFoundPlain", nil)
 		}
 		names, err := t.nameValues(schema)
 		if err != nil {

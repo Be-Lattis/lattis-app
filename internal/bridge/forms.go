@@ -16,6 +16,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/protocol"
@@ -597,14 +598,14 @@ func (s *DocumentService) FormImage(ctx context.Context, server, id, kind, name,
 	case ".svg":
 		ctype = "image/svg+xml"
 	default:
-		return "", errors.New("image refusée : PNG, JPEG ou SVG seulement")
+		return "", msg.New("forms.imageType", nil)
 	}
 	limit, what := workbook.MaxFormBanner, "1 Mo pour une bannière"
 	if kind == "logo" {
 		limit, what = workbook.MaxFormLogo, "200 Ko pour un logo"
 	}
 	if len(raw) > limit {
-		return "", fmt.Errorf("image trop lourde : %s au plus", what)
+		return "", msg.New("forms.imageTooLarge", msg.Args{"max": what})
 	}
 	srv, _, _, err := remoteServer(ctx, server)
 	if err != nil {
@@ -665,7 +666,7 @@ func (s *DocumentService) FormSaveQR(ctx context.Context, name, ext, data string
 		}
 		raw = b
 	default:
-		return "", fmt.Errorf("format inconnu : %s", ext)
+		return "", msg.New("forms.unknownFormat", msg.Args{"ext": ext})
 	}
 	dir := ""
 	if d, err := s.current(); err == nil {

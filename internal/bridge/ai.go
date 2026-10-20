@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"slices"
 	"strings"
 	"sync"
@@ -15,6 +14,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/collab"
 )
 
@@ -207,11 +207,11 @@ func (s *DocumentService) refreshModels(id, endpoint string) {
 func (s *DocumentService) AISetKey(ctx context.Context, provider, key string) (AIStatus, error) {
 	p := ai.Lookup(provider)
 	if p == nil {
-		return s.AIState(), errors.New("fournisseur pas encore disponible")
+		return s.AIState(), msg.New("ai.providerUnavailable", nil)
 	}
 	key = strings.TrimSpace(key)
 	if key == "" {
-		return s.AIState(), errors.New("clé vide : collez la clé d'API")
+		return s.AIState(), msg.New("ai.emptyKey", nil)
 	}
 	var warn string
 	// À travers une passerelle, la clé est celle de l'organisation : la
@@ -268,7 +268,7 @@ func (s *DocumentService) AIResume(ctx context.Context, run int) error {
 func (s *DocumentService) aiTurn() (ai.Turn, string, error) {
 	c := config.Current()
 	if !c.Bool("ai.enabled", false) {
-		return ai.Turn{}, "", errors.New("l'assistant est désactivé (Fichier › Paramètres › Fonctionnalités)")
+		return ai.Turn{}, "", msg.New("ai.disabled", nil)
 	}
 	id := c.String("ai.provider", "anthropic")
 	p := ai.Lookup(id)
@@ -606,7 +606,7 @@ func (s *DocumentService) AIUndoRun(ctx context.Context, run int) (DocState, err
 	r := s.ai.runs[run]
 	if r == nil || r.undone || len(r.seqs) == 0 {
 		s.ai.mu.Unlock()
-		return DocState{}, errors.New("cette réponse n'a rien modifié à annuler")
+		return DocState{}, msg.New("ai.nothingToUndo", nil)
 	}
 	seqs := append([]int64(nil), r.seqs...)
 	s.ai.mu.Unlock()
@@ -734,7 +734,7 @@ func loadConversation(ctx context.Context, d *doc.Document) (aiSaved, error) {
 		return aiSaved{}, err
 	}
 	if out.Version != 1 {
-		return aiSaved{}, fmt.Errorf("conversation enregistrée en version %d", out.Version)
+		return aiSaved{}, msg.New("ai.conversationVersion", msg.Args{"version": out.Version})
 	}
 	return out, nil
 }
@@ -873,7 +873,7 @@ func (s *DocumentService) AIOpenConversation(id int) error {
 	}
 	i := slices.IndexFunc(s.ai.others, func(c aiConv) bool { return c.ID == id })
 	if i < 0 {
-		return errors.New("conversation introuvable")
+		return msg.New("ai.conversationNotFound", nil)
 	}
 	c := s.ai.others[i]
 	s.ai.others = slices.Delete(s.ai.others, i, i+1)

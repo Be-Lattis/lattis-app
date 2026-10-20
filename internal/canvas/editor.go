@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Editor écrit dans les tableaux pour un script. Chaque appel est une courte
@@ -107,7 +108,7 @@ func colIndexes(tb Table, vals map[string]string) (map[string]int, error) {
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("tableau %q : pas de colonne %q", tb.Name, name)
+			return nil, msg.New("table.noSuchColumn", msg.Args{"table": fmt.Sprintf("%q", tb.Name), "column": fmt.Sprintf("%q", name)})
 		}
 	}
 	return idx, nil
@@ -120,7 +121,7 @@ func (t *tx) hasRow(tb Table, id int64) error {
 		return err
 	}
 	if ok == 0 {
-		return fmt.Errorf("tableau %q : pas de ligne %d", tb.Name, id)
+		return msg.New("table.noSuchRow", msg.Args{"table": fmt.Sprintf("%q", tb.Name), "row": id})
 	}
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/order"
 	"github.com/lalamefine/lattis/internal/series"
 )
@@ -179,20 +180,20 @@ func (t *tx) categoryLabels(from string, srcs []*mergeSource) ([]string, error) 
 				return nil, err
 			}
 			if labels[i] = titleAbove(s.tb, cells); labels[i] == "" {
-				return nil, fmt.Errorf("%w : « %s » n'a pas de titre au-dessus de lui (cellule de texte juste au-dessus de sa première colonne)", ErrMergeSheets, s.tb.Name)
+				return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.noTitle", msg.Args{"table": s.tb.Name})
 			}
 		}
 	default:
 		r, c, ok := parseCellSource(from)
 		if !ok {
-			return nil, fmt.Errorf("%w : source de catégorie « %s » : sheet, title ou cell:A1 attendu", ErrMergeSheets, from)
+			return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.categorySource", msg.Args{"source": from})
 		}
 		a1 := formula.ColumnLetters(c) + fmt.Sprint(r+1)
 		for i, s := range srcs {
 			var raw string
 			err := t.row(`SELECT raw FROM _lattis_cells WHERE sheet = ? AND row = ? AND col = ?`, s.tb.Sheet, r, c).Scan(&raw)
 			if errors.Is(err, sql.ErrNoRows) || err == nil && strings.TrimSpace(raw) == "" {
-				return nil, fmt.Errorf("%w : la cellule %s de « %s » est vide", ErrMergeSheets, a1, s.sheet)
+				return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.emptyCell", msg.Args{"cell": a1, "sheet": s.sheet})
 			}
 			if err != nil {
 				return nil, err
@@ -250,7 +251,7 @@ func (t *tx) prepareSheetsMerge(plan MergePlan) (*sheetsMerge, error) {
 		sm.jobs[0].at[s.tb.Sheet] = s.tb
 	}
 	if sm.stacked && len(plan.Families) > 0 {
-		return nil, fmt.Errorf("%w : des tableaux d'une même feuille se regroupent seuls (sans autres familles)", ErrMergeSheets)
+		return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.sameSheetAlone", nil)
 	}
 	cat := main.plan.Category
 	for _, s := range main.srcs {
@@ -321,10 +322,10 @@ func (t *tx) prepareSheetsMerge(plan MergePlan) (*sheetsMerge, error) {
 			}
 			if mode != FamilyLeave {
 				if _, ok := sheetAt[tb.Sheet]; !ok {
-					return nil, fmt.Errorf("%w : « %s » n'est pas sur un des onglets regroupés", ErrMergeSheets, tb.Name)
+					return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.notOnMergedSheets", msg.Args{"table": tb.Name})
 				}
 				if used[tb.ID] {
-					return nil, fmt.Errorf("%w : le tableau « %s » est cité deux fois", ErrMergeSheets, tb.Name)
+					return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.tableTwice", msg.Args{"table": tb.Name})
 				}
 				used[tb.ID] = true
 			}
@@ -342,7 +343,7 @@ func (t *tx) prepareSheetsMerge(plan MergePlan) (*sheetsMerge, error) {
 			continue
 		case FamilyMerge, FamilyOnce:
 		default:
-			return nil, fmt.Errorf("%w : famille %d : mode « %s » : merge, once ou leave attendu", ErrMergeSheets, fi+1, mode)
+			return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.familyMode", msg.Args{"family": fi + 1, "mode": mode})
 		}
 		if len(tables) == 0 {
 			continue
@@ -368,7 +369,7 @@ func (t *tx) prepareSheetsMerge(plan MergePlan) (*sheetsMerge, error) {
 			}
 			for _, tb := range tables {
 				if tb.ID != keep.ID && !slices.Equal(names(tb), names(keep)) {
-					return nil, fmt.Errorf("%w : « %s » et « %s » n'ont pas les mêmes colonnes : ils ne se gardent pas en un seul exemplaire (choisissez « regrouper »)", ErrMergeSheets, tb.Name, keep.Name)
+					return nil, msg.Wrap(ErrMergeSheets, "mergeSheets.columnsDiffer", msg.Args{"table": tb.Name, "other": keep.Name})
 				}
 				if tb.ID != keep.ID {
 					fj.drop = append(fj.drop, tb)
@@ -896,7 +897,7 @@ func (t *tx) stageJob(fj *famJob) error {
 		}
 		q := `INSERT INTO ` + fj.staging + ` (` + strings.Join(names, ", ") + `) SELECT ` + strings.Join(outs, ", ") + ` FROM (` + sel + `) AS q`
 		if _, err := t.ExecContext(t.Ctx, q, selArgs...); err != nil {
-			return fmt.Errorf("regroupement de « %s » : %w", s.tb.Name, err)
+			return msg.Wrap(err, "mergeSheets.tableError", msg.Args{"table": s.tb.Name, "err": err})
 		}
 	}
 	// Saisies invalides d'une colonne passée en texte : la saisie devient la

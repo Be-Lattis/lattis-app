@@ -129,7 +129,7 @@ type DocumentService struct {
 
 var (
 	errNoDoc  = msg.New("doc.none", nil)
-	errNoDemo = errors.New("aucune démonstration demandée au lancement (--demo)")
+	errNoDemo = msg.New("doc.noDemo", nil)
 )
 
 func (s *DocumentService) current() (*doc.Document, error) {
@@ -301,7 +301,7 @@ func (s *DocumentService) open(ctx context.Context, path string, mode doc.OpenMo
 func (s *DocumentService) Salvage(ctx context.Context, path string) (SalvageResult, error) {
 	d, rep, err := doc.Salvage(ctx, path)
 	if err != nil {
-		return SalvageResult{}, fmt.Errorf("récupération impossible : %w", err)
+		return SalvageResult{}, msg.Wrap(err, "doc.recoverFailed", msg.Args{"err": err})
 	}
 	s.replace(d)
 	msg := fmt.Sprintf("Données récupérées : %d ligne(s) dans %d table(s)", rep.Rows, rep.Tables)
@@ -332,7 +332,7 @@ func (s *DocumentService) Recover(ctx context.Context, dir string) (DocState, er
 			return st, err
 		}
 	}
-	return DocState{}, errors.New("session introuvable")
+	return DocState{}, msg.New("session.notFound", nil)
 }
 
 // Discard abandonne une session interrompue.
@@ -357,7 +357,7 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 	}
 	// Conversation de l'assistant gardée avec le classeur, si demandé.
 	if err := s.storeConversation(ctx, d); err != nil {
-		return DocState{}, fmt.Errorf("conversation de l'assistant non enregistrée : %w", err)
+		return DocState{}, msg.Wrap(err, "ai.conversationNotSaved", msg.Args{"err": err})
 	}
 	if s.listening(api.EventBeforeSave) {
 		r := s.fireSync(api.EventBeforeSave, map[string]any{"path": d.Path(), "as": as || d.Path() == ""})

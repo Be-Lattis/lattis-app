@@ -7,6 +7,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/query"
 )
 
@@ -79,7 +80,7 @@ func (h host) ShowView(_ context.Context, view string) error {
 	return nil
 }
 
-var errNoUI = errors.New("aucune fenêtre pour afficher la boîte de dialogue")
+var errNoUI = msg.New("host.noWindowDialog", nil)
 
 func (h host) Dialog(ctx context.Context, d api.Dialog) (map[string]any, bool, error) {
 	u := &h.s.ui
@@ -134,14 +135,14 @@ func (h host) NewDoc(ctx context.Context) error {
 
 func (h host) OpenDoc(ctx context.Context, path string) error {
 	if path == "" {
-		return errors.New("chemin du classeur manquant")
+		return msg.New("host.missingPath", nil)
 	}
 	res, err := h.s.Open(ctx, path)
 	if err != nil {
 		return err
 	}
 	if res.Recoverable != nil {
-		return errors.New("une session interrompue de ce classeur attend d'être récupérée : ouvrez-le dans Lattis")
+		return msg.New("host.sessionPending", nil)
 	}
 	if res.Damaged != nil {
 		return errors.New(res.Damaged.Message + " ; ouvrez-le dans Lattis pour en récupérer les données")

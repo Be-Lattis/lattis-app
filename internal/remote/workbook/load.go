@@ -15,6 +15,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/meta"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -67,7 +68,7 @@ func Load(ctx context.Context, srv Server, db *store.Store, src Source, fresh bo
 			}
 		}
 		if layout.Format > meta.Version {
-			return fmt.Errorf("ce classeur a été publié par une version plus récente de Lattis (format %d, cette version lit jusqu'au format %d) : mettre Lattis à jour pour l'ouvrir", layout.Format, meta.Version)
+			return msg.New("workbook.newerFormat", msg.Args{"format": layout.Format, "version": meta.Version})
 		}
 		scripts, err := r.Scripts(ctx, caps.Schema)
 		if err != nil {
@@ -584,7 +585,7 @@ func (l *loader) loadTables() error {
 		}
 		for _, q := range canvas.TableSchema(t.LocalID, cols, key) {
 			if err := l.exec(q); err != nil {
-				return fmt.Errorf("tableau « %s » : %w", t.Name, err)
+				return msg.Wrap(err, "collab.tableError", msg.Args{"table": t.Name, "err": err})
 			}
 		}
 		name := "t_" + strconv.FormatInt(t.LocalID, 10)
@@ -629,7 +630,7 @@ func (l *loader) loadTables() error {
 		ins.Close()
 		idIns.Close()
 		if err != nil {
-			return fmt.Errorf("tableau « %s » : %w", t.Name, err)
+			return msg.Wrap(err, "collab.tableError", msg.Args{"table": t.Name, "err": err})
 		}
 		l.rids[t.LocalID] = rids
 		for i := range t.Columns {

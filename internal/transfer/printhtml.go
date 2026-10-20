@@ -10,6 +10,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // MaxPrintRows borne les lignes d'une impression : au-delà, la page dit ce
@@ -75,7 +76,7 @@ func printSheet(ctx context.Context, m *canvas.Model, sheet int64, rows bool) (x
 		}
 	}
 	if info.ID == 0 {
-		return xsheet{}, fmt.Errorf("feuille %d introuvable", sheet)
+		return xsheet{}, msg.New("transfer.sheetNotFound", msg.Args{"sheet": sheet})
 	}
 	sh, err := collectLayout(ctx, m, info, l, nil, nil)
 	if err != nil {
@@ -308,7 +309,9 @@ func (pg *pager) pages() [][2]int {
 	return out
 }
 
-func mm(v float64) string { return strconv.FormatFloat(float64(int(v*100+0.5))/100, 'f', -1, 64) + "mm" }
+func mm(v float64) string {
+	return strconv.FormatFloat(float64(int(v*100+0.5))/100, 'f', -1, 64) + "mm"
+}
 
 func renderPrint(sh xsheet, info PrintInfo) string {
 	var b strings.Builder

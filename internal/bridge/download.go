@@ -2,7 +2,7 @@ package bridge
 
 import (
 	"context"
-	"errors"
+	"github.com/lalamefine/lattis/internal/msg"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,7 +15,7 @@ import (
 
 // errNotWeb : Télécharger n'existe que dans l'édition web (au bureau, le
 // fichier est déjà sur le poste).
-var errNotWeb = errors.New("Télécharger une copie n'existe que dans l'édition web : le classeur est déjà un fichier de ce poste")
+var errNotWeb = msg.New("doc.downloadWebOnly", nil)
 
 // Download enregistre le classeur (dans la session) puis en fait télécharger
 // le fichier par le navigateur.
@@ -28,7 +28,7 @@ func (s *DocumentService) Download(ctx context.Context) (DocState, error) {
 		return DocState{}, err
 	}
 	if remoteDoc(d) != nil {
-		return DocState{}, errors.New("Ce classeur est sur le serveur : il n'y a rien à télécharger pour le garder (Enregistrer sous en fait une copie à part)")
+		return DocState{}, msg.New("doc.downloadServer", nil)
 	}
 	first := d.Path() == ""
 	if dirty, _ := d.Dirty(ctx); dirty || first {

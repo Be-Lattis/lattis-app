@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Formulaires d'un tableau publié (docs/conception/partager-comme-formulaire.md,
@@ -248,10 +248,10 @@ type FormsSettings struct {
 
 // ErrNoForms : le serveur ne propose pas les formulaires (42883, ou forms
 // absent de la découverte).
-var ErrNoForms = errors.New("Ce serveur ne propose pas encore les formulaires.")
+var ErrNoForms = msg.New("forms.unsupported", nil)
 
 // ErrFormModified : le formulaire a changé depuis sa lecture (40001).
-var ErrFormModified = errors.New("Ce formulaire a été modifié entre-temps : rouvrez-le pour repartir de sa dernière version.")
+var ErrFormModified = msg.New("forms.modified", nil)
 
 // FormInvalid est une définition refusée par le serveur (22023) : Fields
 // donne la raison par column_id (DETAIL {"fields": {…}}).
@@ -294,23 +294,23 @@ func FormError(err error) error {
 	if !ok {
 		return err
 	}
-	msg := ServerMessage(err)
+	text := ServerMessage(err)
 	switch code {
 	case "42883":
 		return ErrNoForms
 	case "40001":
 		return ErrFormModified
 	case "42501":
-		if strings.Contains(strings.ToLower(msg), "public") {
-			return errors.New("Le lien public n'est pas autorisé par ce serveur : choisissez un autre mode d'accès.")
+		if strings.Contains(strings.ToLower(text), "public") {
+			return msg.New("forms.publicLinkRefused", nil)
 		}
-		return errors.New("Réservé aux propriétaires et concepteurs du classeur.")
+		return msg.New("forms.ownersDesigners", nil)
 	case "55000":
-		return fmt.Errorf("Un formulaire demande un tableau publié d'un classeur collaboratif (%s).", msg)
+		return msg.New("forms.needsPublishedTable", msg.Args{"detail": text})
 	case "P0002":
-		return fmt.Errorf("Introuvable sur le serveur : %s.", strings.TrimSuffix(msg, "."))
+		return msg.New("forms.notFoundOnServer", msg.Args{"detail": strings.TrimSuffix(text, ".")})
 	case "22023":
-		inv := &FormInvalid{Message: msg}
+		inv := &FormInvalid{Message: text}
 		var d struct {
 			Fields map[string]string `json:"fields"`
 		}
@@ -319,7 +319,7 @@ func FormError(err error) error {
 		}
 		return inv
 	}
-	return errors.New(msg)
+	return errors.New(text)
 }
 
 // --- pgx ----------------------------------------------------------------
@@ -450,20 +450,20 @@ func (c FormImageClient) UploadFormImage(ctx context.Context, formID, kind, cont
 				ID string `json:"id"`
 			}
 			if err := json.Unmarshal(raw, &out); err != nil || out.ID == "" {
-				return "", fmt.Errorf("image : réponse illisible du serveur")
+				return "", msg.New("forms.imageUnreadableResponse", nil)
 			}
 			return out.ID, nil
 		case http.StatusUnauthorized:
-			return "", errors.New("image : session expirée sur ce serveur, reconnectez-vous")
+			return "", msg.New("forms.imageSessionExpired", nil)
 		case http.StatusForbidden:
-			return "", errors.New("image : réservé aux propriétaires et concepteurs du classeur")
+			return "", msg.New("forms.imageOwnersDesigners", nil)
 		case http.StatusNotFound:
 			return "", ErrNoForms
 		case http.StatusRequestEntityTooLarge:
-			return "", errors.New("image trop lourde : 200 Ko au plus pour un logo, 1 Mo pour une bannière")
+			return "", msg.New("forms.imageTooHeavy", nil)
 		case http.StatusUnsupportedMediaType:
-			return "", errors.New("image refusée : PNG, JPEG ou SVG seulement")
+			return "", msg.New("forms.imageType", nil)
 		}
-		return "", fmt.Errorf("image : le serveur a répondu %d", res.StatusCode)
+		return "", msg.New("forms.imageServerStatus", msg.Args{"status": res.StatusCode})
 	}
 }

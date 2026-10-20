@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"io"
 	"os"
 	"os/user"
@@ -210,7 +211,7 @@ func takePeer(path string) (*peerLock, error) {
 		go l.refresh()
 		return l, nil
 	}
-	return nil, fmt.Errorf("verrou %s impossible à poser", lp)
+	return nil, msg.New("archive.lockFailed", msg.Args{"lock": lp})
 }
 
 // refresh garde le verrou à jour tant que le document est ouvert (recréé
@@ -333,4 +334,4 @@ func (e *ChangedError) Error() string {
 
 // ErrReadOnly : classeur ouvert en lecture seule, à enregistrer sous un
 // autre nom.
-var ErrReadOnly = errors.New("classeur ouvert en lecture seule : l'enregistrer sous un autre nom")
+var ErrReadOnly = msg.New("archive.readOnly", nil)

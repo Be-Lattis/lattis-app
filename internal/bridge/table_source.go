@@ -19,6 +19,7 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/protocol"
 )
@@ -116,7 +117,7 @@ func readSources(ctx context.Context, d *doc.Document) ([]TableSourceLink, error
 	}
 	var v tableSourcesDoc
 	if err := json.Unmarshal([]byte(raw), &v); err != nil {
-		return nil, fmt.Errorf("sources du Data Lake du classeur illisibles : %w", err)
+		return nil, msg.Wrap(err, "lake.sourcesUnreadable", msg.Args{"err": err})
 	}
 	out := v.Links
 	if out == nil {
@@ -164,7 +165,7 @@ func updateSource(ctx context.Context, d *doc.Document, tbl int64, mark bool, fn
 	}
 	i := slices.IndexFunc(links, func(l TableSourceLink) bool { return l.Tbl == tbl })
 	if i < 0 {
-		return TableSourceLink{}, errors.New("ce tableau n'est plus une source du Data Lake")
+		return TableSourceLink{}, msg.New("lake.noLongerSource", nil)
 	}
 	fn(&links[i])
 	links[i].Columns = []string{}
@@ -192,7 +193,7 @@ func sourceOf(ctx context.Context, d *doc.Document, tbl int64) (*TableSourceLink
 func tableID(ctx context.Context, d *doc.Document, table string) (int64, error) {
 	var tbl int64
 	if err := d.DB().Read().QueryRowContext(ctx, `SELECT id FROM _lattis_tables WHERE name = ?`, table).Scan(&tbl); err != nil {
-		return 0, fmt.Errorf("tableau « %s » introuvable", table)
+		return 0, msg.New("table.notFound", msg.Args{"table": table})
 	}
 	return tbl, nil
 }
@@ -436,11 +437,11 @@ func sourceColumns(fields []localColumn, cols []string, mode string, keys []stri
 		}
 	}
 	if len(out) == 0 {
-		return nil, "", nil, errors.New("cochez au moins une colonne à envoyer")
+		return nil, "", nil, msg.New("lake.chooseColumn", nil)
 	}
 	for _, c := range cols {
 		if !slices.ContainsFunc(out, func(f localColumn) bool { return f.Name == c }) {
-			return nil, "", nil, fmt.Errorf("colonne « %s » inconnue", c)
+			return nil, "", nil, msg.New("lake.unknownColumn", msg.Args{"column": c})
 		}
 	}
 	mode = cmp.Or(mode, workbook.PushReplace)
@@ -449,14 +450,14 @@ func sourceColumns(fields []localColumn, cols []string, mode string, keys []stri
 		return out, mode, []string{}, nil
 	case workbook.PushUpsert:
 	default:
-		return nil, "", nil, fmt.Errorf("mode « %s » inconnu", mode)
+		return nil, "", nil, msg.New("lake.unknownMode", msg.Args{"mode": mode})
 	}
 	if len(keys) == 0 {
-		return nil, "", nil, errors.New("la mise à jour par clé demande une colonne clé")
+		return nil, "", nil, msg.New("lake.keyNeeded", nil)
 	}
 	for _, c := range keys {
 		if !slices.ContainsFunc(out, func(f localColumn) bool { return f.Name == c }) {
-			return nil, "", nil, fmt.Errorf("la clé « %s » doit être une colonne envoyée", c)
+			return nil, "", nil, msg.New("lake.keyNotSent", msg.Args{"column": c})
 		}
 	}
 	return out, mode, slices.Clone(keys), nil
@@ -491,7 +492,7 @@ func (s *DocumentService) CreateTableSource(ctx context.Context, req TableSource
 		return TableSourceLink{}, err
 	}
 	if info.Link != nil {
-		return TableSourceLink{}, errors.New("ce tableau est déjà une source du Data Lake")
+		return TableSourceLink{}, msg.New("lake.alreadySource", nil)
 	}
 	if info.Reason != "" {
 		return TableSourceLink{}, errors.New(info.Reason)
@@ -571,7 +572,7 @@ func sourceAudience(ctx context.Context, srv workbook.Server, dataset string, re
 		}
 	}
 	if len(refused) > 0 {
-		return fmt.Errorf("source enregistrée, mais une partie de l'audience est refusée : %s", strings.Join(refused, " ; "))
+		return msg.New("lake.audienceRefused", msg.Args{"refused": strings.Join(refused, " ; ")})
 	}
 	return nil
 }
@@ -592,7 +593,7 @@ func (s *DocumentService) UpdateTableSource(ctx context.Context, req TableSource
 	}
 	link := info.Link
 	if link == nil {
-		return TableSourceLink{}, errors.New("ce tableau n'est pas une source du Data Lake")
+		return TableSourceLink{}, msg.New("lake.notSource", nil)
 	}
 	all, err := localColumns(ctx, d, link.Tbl)
 	if err != nil {
@@ -636,7 +637,7 @@ func (s *DocumentService) UpdateTableSource(ctx context.Context, req TableSource
 		}
 		if err := srv.UpdatePushedSource(ctx, link.Pipeline, change); err != nil {
 			if workbook.Unsupported(err) {
-				return *link, errors.New("ce serveur ne permet pas encore de changer le mode, la clé ni de suspendre une source : retirez la source puis publiez-la de nouveau, ou faites mettre à jour le serveur")
+				return *link, msg.New("lake.serverTooOld", nil)
 			}
 			return *link, sourceError(err)
 		}
@@ -730,7 +731,7 @@ func (s *DocumentService) dropSource(ctx context.Context, d *doc.Document, tbl i
 		return err
 	}
 	if link == nil {
-		return errors.New("ce tableau n'est pas une source du Data Lake")
+		return msg.New("lake.notSource", nil)
 	}
 	srv, _, _, err := remoteServer(ctx, link.Server)
 	if err != nil {
@@ -802,7 +803,7 @@ func syncColumns(ctx context.Context, srv workbook.Server, link TableSourceLink,
 		}
 	}
 	if len(next) == 0 {
-		return nil, errors.New("aucune des colonnes envoyées par la source n'existe plus : modifiez la source ou retirez-la")
+		return nil, msg.New("lake.noColumnsLeft", nil)
 	}
 	if len(ops) == 0 {
 		return link.Cols, nil
@@ -827,7 +828,7 @@ func syncColumns(ctx context.Context, srv workbook.Server, link TableSourceLink,
 		return nil, sourceError(err)
 	}
 	if remote == nil {
-		return nil, errors.New("le tableau de la source est introuvable sur le serveur")
+		return nil, msg.New("lake.tableNotFoundOnServer", nil)
 	}
 	colID := func(name string) string {
 		for _, c := range remote.Columns {
@@ -861,7 +862,7 @@ func syncColumns(ctx context.Context, srv workbook.Server, link TableSourceLink,
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("colonnes de la source non mises à jour : %w", sourceError(err))
+		return nil, msg.Wrap(sourceError(err), "lake.columnsNotUpdated", msg.Args{"err": sourceError(err)})
 	}
 	return next, nil
 }
@@ -881,7 +882,7 @@ func sourceCSV(ctx context.Context, m *canvas.Model, table string, cols []Source
 		for i, c := range cols {
 			j := slices.IndexFunc(h, func(x canvas.ExportColumn) bool { return x.Name == c.Name })
 			if j < 0 {
-				return fmt.Errorf("la colonne « %s » envoyée par la source n'existe plus : modifiez la source", c.Name)
+				return msg.New("lake.columnGone", msg.Args{"column": c.Name})
 			}
 			idx = append(idx, j)
 			head[i] = c.Name
@@ -997,7 +998,7 @@ func waitRun(ctx context.Context, p workbook.Pusher, id, run string) (workbook.P
 		}
 		select {
 		case <-ctx.Done():
-			return workbook.PushRun{Status: "running"}, errors.New("l'écriture de l'envoi dure encore sur le serveur : son bilan s'affichera à la prochaine mise à jour")
+			return workbook.PushRun{Status: "running"}, msg.New("lake.stillWriting", nil)
 		case <-time.After(sourcePoll):
 		}
 	}
@@ -1049,7 +1050,7 @@ func (s *DocumentService) pushSource(ctx context.Context, d *doc.Document, tbl i
 		return TableSourceLink{}, err
 	}
 	if link == nil {
-		return TableSourceLink{}, errors.New("ce tableau n'est pas une source du Data Lake")
+		return TableSourceLink{}, msg.New("lake.notSource", nil)
 	}
 	fail := func(err error, run *workbook.PushRun) (TableSourceLink, error) {
 		l, werr := updateSource(ctx, d, tbl, false, func(l *TableSourceLink) {
@@ -1064,10 +1065,10 @@ func (s *DocumentService) pushSource(ctx context.Context, d *doc.Document, tbl i
 		return l, err
 	}
 	if link.TableName == "" {
-		return fail(errors.New("le tableau de cette source a été supprimé du classeur"), nil)
+		return fail(msg.New("lake.tableDeleted", nil), nil)
 	}
 	if link.Suspended {
-		return fail(errors.New("source suspendue : reprenez-la dans Partager au Data Lake Lattis… pour la mettre à jour"), nil)
+		return fail(msg.New("lake.suspended", nil), nil)
 	}
 	cols, err := alignSource(ctx, d, *link, want)
 	if err != nil {

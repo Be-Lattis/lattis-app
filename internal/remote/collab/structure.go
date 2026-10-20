@@ -14,6 +14,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/oplog"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
@@ -70,7 +71,7 @@ func serverError(kind string, err error) error {
 	if _, ok := workbook.Rejected(err); ok {
 		return &RefusedError{Kind: kind, Msg: workbook.ServerMessage(err)}
 	}
-	return fmt.Errorf("Serveur injoignable, modification de structure annulée : %s", errText(err))
+	return msg.New("collab.structureOffline", msg.Args{"errText": errText(err)})
 }
 
 func cloneTables(in map[int64]*rtable) map[int64]*rtable {
@@ -129,7 +130,7 @@ func (en entry) structureChanges() ([]oplog.Change, error) {
 		}
 		ch, err := oplog.DecodeStructure(op)
 		if err != nil {
-			return nil, fmt.Errorf("file d'envoi, entrée %d : %w", en.id, err)
+			return nil, msg.Wrap(err, "collab.queueEntry", msg.Args{"id": en.id, "err": err})
 		}
 		out = append(out, ch)
 	}
@@ -965,7 +966,7 @@ func (e *Engine) indexTable(ctx context.Context, tbl int64) (*workbook.Info, wor
 	}
 	t := tables[tbl]
 	if t == nil {
-		return nil, nil, nil, errors.New("ce tableau n'est pas partagé sur le serveur : ses index se posent sur le serveur seulement")
+		return nil, nil, nil, msg.New("collab.indexNotShared", nil)
 	}
 	return info, srv, t, nil
 }
@@ -1000,7 +1001,7 @@ func (e *Engine) CreateIndex(ctx context.Context, tbl int64, cols []int64, uniqu
 	for _, c := range cols {
 		rc, ok := t.byLocal[c]
 		if !ok {
-			return "", errors.New("colonne non partagée : un index ne porte que sur les colonnes publiées")
+			return "", msg.New("collab.indexColumnNotShared", nil)
 		}
 		ids = append(ids, rc.ID)
 	}

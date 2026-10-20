@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/protocol"
 )
 
@@ -138,7 +139,7 @@ func (s pgServer) Read(ctx context.Context, fn func(Reader) error) error {
 
 func (s pgServer) Listen(ctx context.Context, channel string, ready func(), fn func(string)) error {
 	if channel == "" {
-		return errors.New("canal de notification inconnu")
+		return msg.New("workbook.unknownChannel", nil)
 	}
 	return s.with(ctx, usageListen, func(c *pgx.Conn) error {
 		if _, err := c.Exec(ctx, "LISTEN "+pgx.Identifier{channel}.Sanitize()); err != nil {

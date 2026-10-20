@@ -1,9 +1,8 @@
 package api
 
 import (
-	"errors"
-
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Regrouper les onglets aux mêmes colonnes
@@ -96,7 +95,7 @@ print(r.notice)`,
 						return nil, err
 					}
 					if len(gs) == 0 {
-						return nil, errors.New("aucun groupe d'onglets semblables : précisez les tableaux à regrouper")
+						return nil, msg.New("api.noSimilarSheets", nil)
 					}
 					for _, t := range gs[0].Tables {
 						plan.Tables = append(plan.Tables, t.Table)

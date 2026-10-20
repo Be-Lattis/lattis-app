@@ -11,6 +11,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // MapGuess : colonnes de coordonnées repérées dans un tableau, proposées à
@@ -51,7 +52,7 @@ func (t *tx) mapData(cfg ChartConfig, tb Table) (chartResult, error) {
 				return i, nil
 			}
 		}
-		return 0, fmt.Errorf("%w : colonne « %s » introuvable dans %s", ErrChart, name, tb.Name)
+		return 0, msg.Wrap(ErrChart, "chart.columnNotFound", msg.Args{"column": name, "table": tb.Name})
 	}
 	single := cfg.MapCoords == "single"
 	nc := 2
@@ -418,7 +419,7 @@ func (m *Model) LocateRow(ctx context.Context, table string, id int64) (RowSpot,
 		var pos string
 		if err := t.row(`SELECT _pos FROM `+tb.sql()+` WHERE id = ?`, id).Scan(&pos); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("ligne introuvable dans %s (supprimée ?)", tb.Name)
+				return msg.New("chart.rowNotFound", msg.Args{"table": tb.Name})
 			}
 			return err
 		}

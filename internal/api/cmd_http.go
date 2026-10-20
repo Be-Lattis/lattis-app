@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/script"
 )
@@ -60,7 +61,7 @@ func WithoutPrompt(ctx context.Context) context.Context {
 func CanPrompt(ctx context.Context) bool { return ctx.Value(noPromptKey{}) == nil }
 
 // ErrHostNotAllowed refuse une requête vers un hôte non autorisé.
-var ErrHostNotAllowed = errors.New("hôte non autorisé")
+var ErrHostNotAllowed = msg.New("http.hostNotAllowed", nil)
 
 // HTTPResponse est la réponse d'une requête.
 type HTTPResponse struct {
@@ -101,7 +102,7 @@ func (c *Call) allowHostFor(host, message string) error {
 	}
 	h := canvas.NormalizeHost(host)
 	if h == "" {
-		return errors.New("adresse sans nom d'hôte")
+		return msg.New("http.noHost", nil)
 	}
 	check := func() (bool, error) {
 		ok, known, err := d.HTTPHostAllowed(c, h)
@@ -112,10 +113,10 @@ func (c *Call) allowHostFor(host, message string) error {
 			return true, nil
 		}
 		if known {
-			return false, fmt.Errorf("%w : l'accès à « %s » a été refusé pour cette session (onglet Script › Accès réseau pour l'autoriser)", ErrHostNotAllowed, h)
+			return false, msg.Wrap(ErrHostNotAllowed, "http.hostRefusedSession", msg.Args{"host": h})
 		}
 		if !CanPrompt(c) {
-			return false, fmt.Errorf("%w : « %s » n'est pas autorisé pour ce classeur ; seul l'utilisateur peut l'autoriser dans Lattis (en répondant à la demande d'un script, ou onglet Script › Accès réseau)", ErrHostNotAllowed, h)
+			return false, msg.Wrap(ErrHostNotAllowed, "http.hostNotAllowedWorkbook", msg.Args{"host": h})
 		}
 		return false, nil
 	}
@@ -143,7 +144,7 @@ func (c *Call) allowHostFor(host, message string) error {
 	}
 	if vals == nil {
 		d.SetSessionHost(h, false)
-		return fmt.Errorf("%w : accès à « %s » refusé par l'utilisateur", ErrHostNotAllowed, h)
+		return msg.Wrap(ErrHostNotAllowed, "http.hostRefusedByUser", msg.Args{"host": h})
 	}
 	if remember, _ := vals["remember"].(bool); remember {
 		return d.AllowHTTPHost(c, h)
@@ -156,10 +157,10 @@ func (c *Call) allowHostFor(host, message string) error {
 func (c *Call) doHTTP(r httpRequest) (HTTPResponse, error) {
 	u, err := url.Parse(strings.TrimSpace(r.url))
 	if err != nil {
-		return HTTPResponse{}, fmt.Errorf("adresse invalide : %v", err)
+		return HTTPResponse{}, msg.New("rights.invalidAddress", msg.Args{"address": err})
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return HTTPResponse{}, fmt.Errorf("adresse %q : http:// ou https:// attendu", r.url)
+		return HTTPResponse{}, msg.New("http.schemeExpected", msg.Args{"url": fmt.Sprintf("%q", r.url)})
 	}
 	if err := c.allowHost(u.Host); err != nil {
 		return HTTPResponse{}, err
@@ -174,10 +175,10 @@ func (c *Call) doHTTP(r httpRequest) (HTTPResponse, error) {
 		Timeout:   timeout,
 		CheckRedirect: func(next *http.Request, via []*http.Request) error {
 			if len(via) >= httpMaxRedirects {
-				return fmt.Errorf("plus de %d redirections", httpMaxRedirects)
+				return msg.New("http.tooManyRedirects", msg.Args{"max": httpMaxRedirects})
 			}
 			if next.URL.Scheme != "http" && next.URL.Scheme != "https" {
-				return fmt.Errorf("redirection vers %q refusée", next.URL.String())
+				return msg.New("http.redirectRefused", msg.Args{"url": fmt.Sprintf("%q", next.URL.String())})
 			}
 			return c.allowHost(next.URL.Host)
 		},
@@ -215,7 +216,7 @@ func (c *Call) doHTTP(r httpRequest) (HTTPResponse, error) {
 		var ue *url.Error
 		if errors.As(err, &ue) {
 			if ue.Timeout() {
-				return HTTPResponse{}, fmt.Errorf("pas de réponse de %s en %v", u.Host, timeout)
+				return HTTPResponse{}, msg.New("http.timeout", msg.Args{"host": u.Host, "timeout": timeout})
 			}
 			err = ue.Err
 		}
@@ -227,10 +228,10 @@ func (c *Call) doHTTP(r httpRequest) (HTTPResponse, error) {
 		if cause := context.Cause(c); cause != nil {
 			return HTTPResponse{}, cause
 		}
-		return HTTPResponse{}, fmt.Errorf("lecture de la réponse : %v", err)
+		return HTTPResponse{}, msg.New("http.readError", msg.Args{"err": err})
 	}
 	if len(data) > httpMaxBody {
-		return HTTPResponse{}, fmt.Errorf("réponse trop grande (plus de %d Mo)", httpMaxBody>>20)
+		return HTTPResponse{}, msg.New("http.tooLarge", msg.Args{"max": httpMaxBody >> 20})
 	}
 	out := HTTPResponse{
 		Status:  resp.StatusCode,
@@ -270,7 +271,7 @@ func (c *Call) httpOptions(r *httpRequest, opts map[string]any) error {
 		case "headers":
 			h, ok := v.(map[string]any)
 			if !ok {
-				return errors.New("headers : table { nom = valeur } attendue")
+				return msg.New("http.headersTable", nil)
 			}
 			r.headers = map[string]string{}
 			names := make([]string, 0, len(h))
@@ -284,7 +285,7 @@ func (c *Call) httpOptions(r *httpRequest, opts map[string]any) error {
 		case "timeout":
 			f, ok := number(v)
 			if !ok || f <= 0 {
-				return errors.New("timeout : durée en secondes attendue")
+				return msg.New("http.timeoutSeconds", nil)
 			}
 			r.timeout = time.Duration(f * float64(time.Second))
 		case "body":
@@ -300,11 +301,11 @@ func (c *Call) httpOptions(r *httpRequest, opts map[string]any) error {
 		case "method":
 			s, ok := v.(string)
 			if !ok {
-				return errors.New("method : texte attendu (GET, POST…)")
+				return msg.New("http.methodText", nil)
 			}
 			r.method = s
 		default:
-			return fmt.Errorf("option %q inconnue : headers, timeout, body ou json", k)
+			return msg.New("http.unknownOption", msg.Args{"option": fmt.Sprintf("%q", k)})
 		}
 	}
 	return nil
@@ -433,7 +434,7 @@ print(r.status, r.headers["content-type"])`,
 					}
 				}
 				if c.Has("body") && c.Has("json") {
-					return nil, errors.New("donner body ou json, pas les deux")
+					return nil, msg.New("http.bodyOrJson", nil)
 				}
 				if err := c.httpOptions(&r, opts); err != nil {
 					return nil, err

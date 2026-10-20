@@ -10,6 +10,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/protocol"
@@ -77,7 +78,7 @@ func (s *DocumentService) syncDataset(ctx context.Context, d *doc.Document, srv 
 
 // errDataShape : les colonnes de la donnée ne correspondent plus à celles
 // du tableau lié.
-var errDataShape = errors.New("colonnes de la donnée changées")
+var errDataShape = msg.New("data.columnsChanged", nil)
 
 func (s *DocumentService) applyDelta(ctx context.Context, d *doc.Document, srv workbook.Data, tt canvas.DatasetTable, ds protocol.Dataset, since string) (canvas.RemoteApplied, error) {
 	delta, err := srv.DatasetDelta(ctx, ds.ID, ds.SQLName, since)

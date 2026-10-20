@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Mise en forme conditionnelle, comme dans Excel. Les règles se posent à
@@ -69,34 +70,34 @@ var dateWhens = map[string]bool{"yesterday": true, "today": true, "tomorrow": tr
 func checkRules(rules []Rule) error {
 	for _, r := range rules {
 		if !ruleOps[r.Op] {
-			return fmt.Errorf("règle : condition %q inconnue", r.Op)
+			return msg.New("rule.unknownCondition", msg.Args{"op": fmt.Sprintf("%q", r.Op)})
 		}
 		switch r.Op {
 		case "date":
 			if !dateWhens[r.Value] {
-				return fmt.Errorf("règle : période %q inconnue", r.Value)
+				return msg.New("rule.unknownPeriod", msg.Args{"period": fmt.Sprintf("%q", r.Value)})
 			}
 		case "top", "bottom":
 			n, err := strconv.Atoi(strings.TrimSpace(r.Value))
 			if err != nil || n < 1 || n > 1000 || (r.Pct && n > 100) {
-				return fmt.Errorf("règle : rang %q invalide (1 à %d)", r.Value, map[bool]int{false: 1000, true: 100}[r.Pct])
+				return msg.New("rule.invalidRank", msg.Args{"rank": fmt.Sprintf("%q", r.Value), "max": map[bool]int{false: 1000, true: 100}[r.Pct]})
 			}
 		case "scale":
 			if len(r.Scale) < 2 || len(r.Scale) > 3 {
-				return errors.New("règle : une nuance de couleurs a deux ou trois couleurs")
+				return msg.New("rule.colorScaleStops", nil)
 			}
 		case "bar":
 			if r.Bar == nil {
-				return errors.New("règle : barre de données sans réglages")
+				return msg.New("rule.dataBarNoSettings", nil)
 			}
 		case "icons":
 			if r.Icons == nil {
-				return errors.New("règle : jeu d'icônes sans réglages")
+				return msg.New("rule.iconSetNoSettings", nil)
 			}
 		case "formula":
 			src := strings.TrimSpace(r.Value)
 			if src == "" {
-				return errors.New("règle : formule vide")
+				return msg.New("rule.emptyFormula", nil)
 			}
 			if !strings.HasPrefix(src, "=") {
 				src = "=" + src
@@ -204,7 +205,7 @@ func (m *Model) SetSheetRules(ctx context.Context, sheet int64, ch RuleChanges) 
 				return err
 			}
 			if tb.Sheet != sheet {
-				return fmt.Errorf("%w : le tableau « %s » n'est pas sur cette feuille", ErrTable, tb.Name)
+				return msg.Wrap(ErrTable, "table.notOnSheet", msg.Args{"table": tb.Name})
 			}
 			if err := t.setColumnRules(tb, c.Col, c.Rules); err != nil {
 				return err
@@ -226,10 +227,10 @@ func (m *Model) SetSheetRules(ctx context.Context, sheet int64, ch RuleChanges) 
 		for _, c := range ch.Cells {
 			r0, r1, c0, c1 := min(c.R0, c.R1), max(c.R0, c.R1), min(c.C0, c.C1), max(c.C0, c.C1)
 			if r0 < 0 || c0 < 0 {
-				return errors.New("règles hors de la feuille")
+				return msg.New("rule.outOfSheet", nil)
 			}
 			if cells += (r1 - r0 + 1) * (c1 - c0 + 1); cells > MaxStyleCells {
-				return fmt.Errorf("mise en forme conditionnelle limitée à %d cellules : sélectionnez des lignes ou des colonnes entières", MaxStyleCells)
+				return msg.New("rule.tooManyCells", msg.Args{"max": MaxStyleCells})
 			}
 			var v any // nil : retire la propriété
 			if len(c.Rules) > 0 {
@@ -261,7 +262,7 @@ func (m *Model) SetSheetRules(ctx context.Context, sheet int64, ch RuleChanges) 
 // formules sont analysées pour le calcul par ligne (F).
 func (t *tx) setColumnRules(tb Table, i int, rules []Rule) error {
 	if i < 0 || i >= len(tb.Cols) {
-		return fmt.Errorf("colonne %d hors du tableau", i)
+		return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 	}
 	rules = append([]Rule{}, rules...)
 	for k := range rules {
@@ -473,7 +474,7 @@ func (m *Model) RuleExprs(ctx context.Context, table int64, base int) (exprs []s
 					}
 					var ok bool
 					if ft, ok = schema.Table(tb.Name); !ok {
-						return errors.New("tableau introuvable")
+						return msg.New("table.notFoundPlain", nil)
 					}
 					if names, err = t.nameValuesWith(schema, true); err != nil {
 						return err

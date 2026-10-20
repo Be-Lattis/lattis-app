@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Filtres par condition (« Filtres textuels », « Filtres numériques », dates),
@@ -42,11 +43,11 @@ func ordered(t grid.Type) bool {
 func condValue(c Column, s string) (string, error) {
 	v, err := grid.Parse(c.Type, s)
 	if err != nil {
-		return "", fmt.Errorf("filtre de « %s » : %w", c.Name, err)
+		return "", msg.Wrap(err, "filter.columnError", msg.Args{"column": c.Name, "err": err})
 	}
 	switch x := v.(type) {
 	case nil:
-		return "", fmt.Errorf("filtre de « %s » : valeur manquante", c.Name)
+		return "", msg.New("filter.missingValue", msg.Args{"column": c.Name})
 	case int64:
 		return strconv.FormatInt(x, 10), nil
 	case float64:
@@ -99,7 +100,7 @@ func condSQL(tb Table, c Column, fc FilterCond) (string, error) {
 			return col + " " + op + " " + v, nil
 		}
 		if strings.TrimSpace(s) == "" {
-			return "", fmt.Errorf("filtre de « %s » : valeur manquante", c.Name)
+			return "", msg.New("filter.missingValue", msg.Args{"column": c.Name})
 		}
 		return fmt.Sprintf("%s <> '' AND lower(%s) %s lower(%s)", txt, txt, op, sqlLiteral(s)), nil
 	}
@@ -154,11 +155,11 @@ func condSQL(tb Table, c Column, fc FilterCond) (string, error) {
 		return a + " AND " + b, nil
 	case "top", "bottom":
 		if !ordered(c.Type) {
-			return "", fmt.Errorf("« %s » n'est pas une colonne de nombres ou de dates", c.Name)
+			return "", msg.New("filter.notNumberOrDate", msg.Args{"column": c.Name})
 		}
 		n, err := strconv.Atoi(strings.TrimSpace(fc.Value))
 		if err != nil || n < 1 {
-			return "", fmt.Errorf("filtre de « %s » : nombre d'éléments invalide (%q)", c.Name, fc.Value)
+			return "", msg.New("filter.invalidCount", msg.Args{"column": c.Name, "value": fmt.Sprintf("%q", fc.Value)})
 		}
 		op, order, edge := ">=", "DESC", "min"
 		if fc.Op == "bottom" {
@@ -171,7 +172,7 @@ func condSQL(tb Table, c Column, fc FilterCond) (string, error) {
 			col, op, col, src, col, col, order, n-1, edge, col, src), nil
 	case "above", "below":
 		if c.Type != grid.Integer && c.Type != grid.Decimal {
-			return "", fmt.Errorf("« %s » n'est pas une colonne de nombres", c.Name)
+			return "", msg.New("filter.notNumber", msg.Args{"column": c.Name})
 		}
 		op := ">"
 		if fc.Op == "below" {
@@ -179,5 +180,5 @@ func condSQL(tb Table, c Column, fc FilterCond) (string, error) {
 		}
 		return fmt.Sprintf("%s %s (SELECT avg(%s) FROM %s)", col, op, col, tb.sql()), nil
 	}
-	return "", fmt.Errorf("filtre : condition %q inconnue", fc.Op)
+	return "", msg.New("filter.unknownCondition", msg.Args{"op": fmt.Sprintf("%q", fc.Op)})
 }

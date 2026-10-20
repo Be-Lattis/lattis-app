@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -247,7 +248,9 @@ func (s *session) ACL(ctx context.Context, workbookID string) (workbook.ACL, err
 					role.Teams = append(role.Teams, workbook.RoleTeam{TeamID: t.id, Name: t.name})
 				}
 			}
-			slices.SortFunc(role.Teams, func(x, y workbook.RoleTeam) int { return strings.Compare(strings.ToLower(x.Name), strings.ToLower(y.Name)) })
+			slices.SortFunc(role.Teams, func(x, y workbook.RoleTeam) int {
+				return strings.Compare(strings.ToLower(x.Name), strings.ToLower(y.Name))
+			})
 		}
 		for _, g := range r.grants {
 			role.Grants = append(role.Grants, g)
@@ -678,7 +681,7 @@ func (s *session) Preview(ctx context.Context, workbookID, userID, tableID strin
 		return workbook.Preview{}, err
 	}
 	if !s.has(b, "owner", "designer") {
-		return workbook.Preview{}, errors.New("« Voir en tant que… » est réservé aux propriétaires et concepteurs du classeur")
+		return workbook.Preview{}, msg.New("rights.viewAsReserved", nil)
 	}
 	var t *table
 	for _, x := range b.schemas[b.schema].tables {
@@ -687,7 +690,7 @@ func (s *session) Preview(ctx context.Context, workbookID, userID, tableID strin
 		}
 	}
 	if t == nil || !s.f.known(userID) {
-		return workbook.Preview{}, errors.New("« Voir en tant que… » : classeur, tableau ou membre inconnu")
+		return workbook.Preview{}, msg.New("viewAs.unknown", nil)
 	}
 	out := workbook.Preview{Rows: []map[string]any{}}
 	if lv, _ := (&session{f: s.f, user: userID}).levelOf(b, t); lv == workbook.LevelNone {

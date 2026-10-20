@@ -2,8 +2,8 @@ package api
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"net/url"
 	"strings"
 	"sync"
@@ -51,7 +51,7 @@ func tilePut(k, v string) {
 // mapTile renvoie la tuile z/x/y en data URL.
 func (c *Call) mapTile(z, x, y int) (string, error) {
 	if z < 0 || z > 19 || x < 0 || y < 0 || x >= 1<<z || y >= 1<<z {
-		return "", errors.New("tuile hors de la carte")
+		return "", msg.New("api.tileOutOfMap", nil)
 	}
 	raw := fmt.Sprintf(tileURL, z, x, y)
 	u, err := url.Parse(raw)

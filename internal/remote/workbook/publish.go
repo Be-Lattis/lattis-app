@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/meta"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/order"
 	"github.com/lalamefine/lattis/internal/store"
 )
@@ -74,13 +74,13 @@ func Publish(ctx context.Context, srv Server, db *store.Store, req Request) (*In
 	if old, err := ReadInfo(ctx, db.Read()); err != nil {
 		return nil, err
 	} else if old != nil {
-		return nil, fmt.Errorf("ce classeur est déjà publié sur %s : Fichier › Republier", old.Server)
+		return nil, msg.New("publish.alreadyPublished", msg.Args{"server": old.Server})
 	}
 	if req.Mode != Frozen && req.Mode != Collaborative {
-		return nil, fmt.Errorf("mode de partage inconnu : %q", req.Mode)
+		return nil, msg.New("publish.unknownMode", msg.Args{"mode": fmt.Sprintf("%q", req.Mode)})
 	}
 	if strings.TrimSpace(req.Title) == "" {
-		return nil, errors.New("titre du classeur manquant")
+		return nil, msg.New("publish.missingTitle", nil)
 	}
 	info := &Info{Server: req.Server, ServerName: req.ServerName, Title: strings.TrimSpace(req.Title), Mode: req.Mode, User: req.User}
 	return publish(ctx, srv, db, info, req.Tables, false)
@@ -95,13 +95,13 @@ func Republish(ctx context.Context, srv Server, db *store.Store, tables []int64)
 		return nil, err
 	}
 	if info == nil {
-		return nil, errors.New("ce classeur n'est pas publié : Fichier › Publier sur un serveur…")
+		return nil, msg.New("share.notPublished", nil)
 	}
 	if info.Mode != Frozen {
-		return nil, errors.New("seul un classeur figé se republie (un classeur collaboratif se synchronise)")
+		return nil, msg.New("publish.republishFrozenOnly", nil)
 	}
 	if !info.CanDesign() {
-		return nil, errors.New("seuls les propriétaires et concepteurs du classeur le republient")
+		return nil, msg.New("publish.republishOwnersDesigners", nil)
 	}
 	if tables == nil {
 		rs, err := db.Read().QueryContext(ctx, `SELECT tbl FROM _lattis_remote_tables WHERE published = 1 AND tbl IN (SELECT id FROM _lattis_tables) ORDER BY tbl`)
@@ -123,14 +123,14 @@ func Republish(ctx context.Context, srv Server, db *store.Store, tables []int64)
 
 func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids []int64, again bool) (*Info, error) {
 	if len(ids) == 0 {
-		return nil, errors.New("aucun tableau à publier : cochez au moins un tableau")
+		return nil, msg.New("publish.noTable", nil)
 	}
 	check, err := Inspect(ctx, db)
 	if err != nil {
 		return nil, err
 	}
 	if b := check.Blocking(ids); len(b) > 0 {
-		return nil, fmt.Errorf("publication impossible :\n%s", strings.Join(b, "\n"))
+		return nil, msg.New("publish.impossible", msg.Args{"reasons": strings.Join(b, "\n")})
 	}
 	if err := spread(ctx, db, ids); err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 		for _, t := range tables {
 			tid, rcols, err := p.CreateTable(ctx, info.WorkbookID, schema, t.name, t.id, SheetKey(t.sheet), t.specs())
 			if err != nil {
-				return fmt.Errorf("tableau « %s » : %w", t.name, err)
+				return msg.Wrap(err, "collab.tableError", msg.Args{"table": t.name, "err": err})
 			}
 			out.remote[t.id], out.columns[t.id] = tid, rcols
 			src := &copySource{ctx: ctx, q: rtx, t: t, ids: ids0[t.id], added: map[int64]string{}}
@@ -183,7 +183,7 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 				names = append(names, c.name)
 			}
 			if _, err := p.Copy(ctx, schema, t.name, names, src); err != nil {
-				return fmt.Errorf("tableau « %s » : %w", t.name, err)
+				return msg.Wrap(err, "collab.tableError", msg.Args{"table": t.name, "err": err})
 			}
 			out.newIDs[t.id] = src.added
 		}
@@ -218,7 +218,7 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 		}
 		for _, s := range scripts {
 			if _, err := p.PublishScript(ctx, info.WorkbookID, s[0], s[1]); err != nil {
-				return fmt.Errorf("script « %s » : %w", s[0], err)
+				return msg.Wrap(err, "publish.scriptError", msg.Args{"script": s[0], "err": err})
 			}
 		}
 		if info.Version, err = p.FinishPublish(ctx, info.WorkbookID); err != nil {
@@ -240,7 +240,7 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 	rtx.Rollback()
 	info.Synced = time.Now().UTC()
 	if err := db.Write(ctx, func(tx *sql.Tx) error { return out.record(ctx, tx) }); err != nil {
-		return nil, fmt.Errorf("le classeur est publié sur le serveur (version %d), mais ce poste n'a pas pu le noter : %w", info.Version, err)
+		return nil, msg.Wrap(err, "publish.notRecorded", msg.Args{"version": info.Version, "err": err})
 	}
 	return info, nil
 }
@@ -291,7 +291,7 @@ func readTables(ctx context.Context, q txOrDB, ids []int64) ([]localTable, error
 	for _, id := range ids {
 		t := localTable{id: id}
 		if err := q.QueryRowContext(ctx, `SELECT name, coalesce(sheet, 0) FROM _lattis_tables WHERE id = ?`, id).Scan(&t.name, &t.sheet); err != nil {
-			return nil, fmt.Errorf("tableau %d : %w", id, err)
+			return nil, msg.Wrap(err, "table.error", msg.Args{"table": id, "err": err})
 		}
 		rs, err := q.QueryContext(ctx, `SELECT id, name, type FROM _lattis_columns WHERE tbl = ? AND coalesce(formula, '') = '' ORDER BY pos`, id)
 		if err != nil {
@@ -416,7 +416,7 @@ func (c *copySource) Next() bool {
 	for i, col := range c.t.cols {
 		v, err := ToRemote(col.remote, raw[2+i])
 		if err != nil {
-			c.err = fmt.Errorf("colonne « %s » : %w", col.name, err)
+			c.err = msg.Wrap(err, "workbook.columnError", msg.Args{"column": col.name, "err": err})
 			c.rs.Close()
 			return false
 		}

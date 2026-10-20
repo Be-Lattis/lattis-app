@@ -36,7 +36,7 @@ func (m *Model) InsertSheet(ctx context.Context, before int64) (int64, error) {
 		}
 		at := slices.Index(ids, before)
 		if at < 0 {
-			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 		}
 		if id, err = t.addSheet(); err != nil {
 			return err
@@ -137,7 +137,7 @@ func (t *tx) moveSheet(sheet int64, to int) error {
 	}
 	from := slices.Index(ids, sheet)
 	if from < 0 {
-		return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+		return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 	}
 	to = max(0, min(to, len(ids)-1))
 	if from == to {
@@ -185,7 +185,7 @@ func (m *Model) RenameSheetLinked(ctx context.Context, sheet int64, name string)
 func (m *Model) renameSheetAs(ctx context.Context, sheet int64, name string, linked bool) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("%w : nom vide", ErrSheet)
+		return msg.Wrap(ErrSheet, "sheet.emptyName", nil)
 	}
 	return m.Do(ctx, "Renommer la feuille", func(t *tx) error {
 		if err := t.guardTab(sheet); err != nil {
@@ -238,14 +238,14 @@ func (m *Model) DeleteSheet(ctx context.Context, sheet int64) error {
 			return err
 		}
 		if n <= 1 {
-			return fmt.Errorf("%w : un classeur garde au moins une feuille", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.keepOne", nil)
 		}
 		var others int
 		if err := t.row(`SELECT count(*) FROM _lattis_sheets WHERE hidden = 0 AND id <> ?`, sheet).Scan(&others); err != nil {
 			return err
 		}
 		if others == 0 {
-			return fmt.Errorf("%w : un classeur garde au moins une feuille visible", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.keepOneVisible", nil)
 		}
 		return t.deleteSheet(sheet)
 	})

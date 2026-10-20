@@ -5,6 +5,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 var (
@@ -465,7 +466,7 @@ tables.sort_custom("Commandes", "Client", nil, "Jours", true) -- liste nommée, 
 			func(c *Call, t tableRef) (any, error) {
 				d, _ := c.Doc()
 				if t.Total < 1 {
-					return nil, fmt.Errorf("le tableau « %s » n'a pas de ligne de données", t.Name)
+					return nil, msg.New("api.tableNoDataRow", msg.Args{"table": t.Name})
 				}
 				return nil, d.RowToNote(c, t.Name, t.Total-1)
 			}),
@@ -534,7 +535,7 @@ tables.sort_custom("Commandes", "Client", nil, "Jours", true) -- liste nommée, 
 					return nil, err
 				}
 				if !c.Has("columns") {
-					return nil, fmt.Errorf("columns : au moins une colonne")
+					return nil, msg.New("api.columnsAtLeastOne", nil)
 				}
 				idx, err := c.columns(t, "columns")
 				if err != nil {
@@ -651,7 +652,7 @@ tables.sort_custom("Commandes", "Client", nil, "Jours", true) -- liste nommée, 
 			func(c *Call, t tableRef, i int) (any, error) {
 				name, _ := c.Str("name")
 				if name == "" {
-					return nil, fmt.Errorf("nom de colonne vide")
+					return nil, msg.New("query.emptyColumnName", nil)
 				}
 				d, _ := c.Doc()
 				_, err := d.SetCell(c, t.Sheet.ID, t.Row, t.Col+i, name)
@@ -782,5 +783,5 @@ func (c *Call) gridType() (grid.Type, error) {
 	case grid.Integer, grid.Decimal, grid.Text, grid.Boolean, grid.Date:
 		return grid.Type(s), nil
 	}
-	return "", fmt.Errorf("type %q inconnu : integer, decimal, text, boolean ou date", s)
+	return "", msg.New("api.unknownColumnType", msg.Args{"type": fmt.Sprintf("%q", s)})
 }

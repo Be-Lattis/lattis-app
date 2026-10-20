@@ -10,6 +10,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/transfer"
 )
 
@@ -30,7 +31,7 @@ type storer struct {
 // vides : une requête SQL peut rendre deux « id »).
 func (r *run) begin(cols []Column) (*storer, error) {
 	if len(cols) == 0 {
-		return nil, errors.New("la source n'a aucune colonne")
+		return nil, msg.New("query.sourceNoColumns", nil)
 	}
 	var named []Column
 	for i, c := range cols {
@@ -115,7 +116,7 @@ func (s *storer) finish(err error) (loaded, error) {
 
 func (r *run) loadCSV(src Source) (loaded, error) {
 	if src.Path == "" {
-		return loaded{}, errors.New("fichier CSV non choisi")
+		return loaded{}, msg.New("csv.noFile", nil)
 	}
 	var opt transfer.CSVOptions
 	if d := src.Delimiter; d != "" {
@@ -189,16 +190,16 @@ func (r *run) loadXLSX(src Source) (loaded, error) {
 			continue
 		}
 		if src.Index < 0 || src.Index >= len(s.Tables) {
-			return loaded{}, fmt.Errorf("la feuille « %s » n'a pas de tableau n° %d", s.Name, src.Index+1)
+			return loaded{}, msg.New("query.sheetNoTable", msg.Args{"sheet": s.Name, "n": src.Index + 1})
 		}
 		return r.storeImport(s.Tables[src.Index])
 	}
-	return loaded{}, fmt.Errorf("feuille « %s » introuvable dans le classeur", src.Sheet)
+	return loaded{}, msg.New("query.sheetNotFound", msg.Args{"sheet": src.Sheet})
 }
 
 func (r *run) loadTable(src Source) (loaded, error) {
 	if src.Table == "" {
-		return loaded{}, errors.New("tableau non choisi")
+		return loaded{}, msg.New("query.noTable", nil)
 	}
 	var s *storer
 	row := []any{}
@@ -222,7 +223,7 @@ func (r *run) loadTable(src Source) (loaded, error) {
 	})
 	if s == nil {
 		if err == nil {
-			err = fmt.Errorf("tableau « %s » illisible", src.Table)
+			err = msg.New("query.tableUnreadable", msg.Args{"table": src.Table})
 		}
 		return loaded{}, err
 	}
@@ -240,21 +241,21 @@ func (r *run) connection(name string) (Connection, error) {
 			return DecodeConnection(c)
 		}
 	}
-	return Connection{}, fmt.Errorf("connexion « %s » introuvable", name)
+	return Connection{}, msg.New("connection.notFound", msg.Args{"connection": name})
 }
 
 // loadDB lit une source SGBD : connexion du classeur, requête SQL en
 // lecture seule.
 func (r *run) loadDB(src Source) (loaded, error) {
 	if trimSQL(src.SQL) == "" {
-		return loaded{}, errors.New("requête SQL vide")
+		return loaded{}, msg.New("sql.empty", nil)
 	}
 	conn, err := r.connection(src.Connection)
 	if err != nil {
 		return loaded{}, err
 	}
 	if conn.Kind != src.Kind {
-		return loaded{}, fmt.Errorf("la connexion « %s » est de type %s, pas %s", conn.Name, KindLabel(conn.Kind), KindLabel(src.Kind))
+		return loaded{}, msg.New("connection.wrongKind", msg.Args{"connection": conn.Name, "kind": KindLabel(conn.Kind), "expected": KindLabel(src.Kind)})
 	}
 	db, d, err := connectDB(r.ctx, r.env.secrets(), conn)
 	if err != nil {
@@ -267,7 +268,7 @@ func (r *run) loadDB(src Source) (loaded, error) {
 // loadFileDB lit une source fichier de base (SQLite).
 func (r *run) loadFileDB(src Source) (loaded, error) {
 	if trimSQL(src.SQL) == "" {
-		return loaded{}, errors.New("requête SQL vide")
+		return loaded{}, msg.New("sql.empty", nil)
 	}
 	db, d, err := openFileDB(src.Kind, src.Path)
 	if err != nil {
@@ -288,7 +289,7 @@ func (r *run) readInto(db *sql.DB, d *dialect, q, label string) (loaded, error) 
 	}, func(row []any) error { return s.insert(row) })
 	if s == nil {
 		if err == nil {
-			err = errors.New("la requête ne rend aucune colonne")
+			err = msg.New("query.noColumns", nil)
 		}
 		return loaded{}, fmt.Errorf("%s : %w", label, err)
 	}
@@ -317,7 +318,7 @@ func (r *run) loadSQL(src Source) (loaded, error) {
 	err := r.env.Model.ReadSQL(r.ctx, src.SQL, src.Sheet, func(names []string) error {
 		idx = grid.Visible(names)
 		if len(idx) == 0 {
-			return errors.New("la requête ne rend que des colonnes techniques")
+			return msg.New("query.onlyTechnicalColumns", nil)
 		}
 		shown, err := r.env.Model.SQLHeaders(r.ctx, src.SQL, names)
 		if err != nil {
@@ -342,7 +343,7 @@ func (r *run) loadSQL(src Source) (loaded, error) {
 	})
 	if s == nil {
 		if err == nil {
-			err = errors.New("la requête ne rend aucune colonne")
+			err = msg.New("query.noColumns", nil)
 		}
 		return loaded{}, err
 	}

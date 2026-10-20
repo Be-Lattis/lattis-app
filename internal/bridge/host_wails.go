@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/zalando/go-keyring"
@@ -51,7 +52,7 @@ func addFilters[T interface{ AddFilter(string, string) T }](d T, fs []FileFilter
 func (wailsHost) OpenFile(o FileDialog) (string, error) {
 	app := application.Get()
 	if app == nil {
-		return "", errors.New("aucune fenêtre pour choisir un fichier")
+		return "", msg.New("host.noWindowFile", nil)
 	}
 	d := app.Dialog.OpenFile().SetTitle(o.Title)
 	if o.Directory != "" {
@@ -63,7 +64,7 @@ func (wailsHost) OpenFile(o FileDialog) (string, error) {
 func (wailsHost) SaveFile(o FileDialog, write func(string) error) (string, error) {
 	app := application.Get()
 	if app == nil {
-		return "", errors.New("aucune fenêtre pour choisir un fichier")
+		return "", msg.New("host.noWindowFile", nil)
 	}
 	d := app.Dialog.SaveFile().SetMessage(o.Title).SetFilename(o.Filename)
 	if o.Directory != "" {

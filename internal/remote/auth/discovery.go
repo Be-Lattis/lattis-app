@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -29,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/protocol"
 )
 
@@ -81,27 +81,27 @@ func (e *ErrClientTooOld) Error() string {
 func NormalizeURL(raw string) (string, error) {
 	s := strings.TrimSpace(raw)
 	if s == "" {
-		return "", errors.New("adresse du serveur vide")
+		return "", msg.New("server.emptyAddress", nil)
 	}
 	if !strings.Contains(s, "://") {
 		s = "https://" + s
 	}
 	u, err := url.Parse(s)
 	if err != nil || u.Host == "" {
-		return "", fmt.Errorf("adresse de serveur invalide : %s", raw)
+		return "", msg.New("server.invalidAddress", msg.Args{"address": raw})
 	}
 	u.Scheme = strings.ToLower(u.Scheme)
 	switch u.Scheme {
 	case "https":
 	case "http":
 		if !loopbackHost(u.Hostname()) {
-			return "", errors.New("un Serveur Lattis s'adresse en https://")
+			return "", msg.New("server.httpsOnly", nil)
 		}
 	default:
-		return "", errors.New("un Serveur Lattis s'adresse en https://")
+		return "", msg.New("server.httpsOnly", nil)
 	}
 	if u.User != nil {
-		return "", errors.New("l'adresse du serveur ne doit pas contenir d'identifiants")
+		return "", msg.New("server.noCredentialsInUrl", nil)
 	}
 	u.Host = strings.ToLower(u.Host)
 	u.RawQuery, u.Fragment, u.RawPath = "", "", ""
@@ -144,15 +144,15 @@ func Discover(ctx context.Context, hc *http.Client, server, clientVersion string
 	req.Header.Set("Accept", "application/json")
 	resp, err := hc.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("serveur %s injoignable : %w", Host(server), err)
+		return nil, msg.Wrap(err, "server.unreachable", msg.Args{"host": Host(server), "err": err})
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s ne répond pas comme un Serveur Lattis (%s sur %s)", Host(server), resp.Status, PathDiscovery)
+		return nil, msg.New("server.notLattis", msg.Args{"host": Host(server), "status": resp.Status, "path": PathDiscovery})
 	}
 	var d Discovery
 	if err := json.NewDecoder(io.LimitReader(resp.Body, maxDiscovery)).Decode(&d); err != nil {
-		return nil, fmt.Errorf("%s ne répond pas comme un Serveur Lattis (découverte illisible : %v)", Host(server), err)
+		return nil, msg.New("server.notLattisDiscovery", msg.Args{"host": Host(server), "err": err})
 	}
 	if strings.TrimSpace(d.Name) == "" {
 		d.Name = Host(server)
@@ -174,7 +174,7 @@ func Discover(ctx context.Context, hc *http.Client, server, clientVersion string
 			*ep.v = server + ep.path
 		} else if !sameOrigin(server, *ep.v) {
 			// Le navigateur et les jetons ne vont qu'au serveur choisi.
-			return nil, fmt.Errorf("%s annonce un point OAuth sur un autre hôte (%s) : refusé", Host(server), *ep.v)
+			return nil, msg.New("server.oauthOtherHost", msg.Args{"host": Host(server), "other": *ep.v})
 		}
 	}
 	if d.MinClientVersion != "" && !VersionAtLeast(clientVersion, d.MinClientVersion) {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // PivotValue est un champ de la zone Valeurs : la colonne agrégée (vide :
@@ -180,9 +181,9 @@ func (t *tx) calcColumn(p *pivotPlan, name, en string) (*Column, error) {
 			miss = missingColumns(p.tb, formulaColumns(n))
 		}
 		if len(miss) == 0 {
-			return nil, fmt.Errorf("%w : le champ calculé « %s » ne se calcule pas", ErrPivot, name)
+			return nil, msg.Wrap(ErrPivot, "pivot.fieldNotComputable", msg.Args{"field": name})
 		}
-		return nil, fmt.Errorf("%w : le champ calculé « %s » cite %s, absente de %s", ErrPivot, name, quoteList(miss), p.tb.Name)
+		return nil, msg.Wrap(ErrPivot, "pivot.fieldMissingColumns", msg.Args{"field": name, "columns": quoteList(miss), "table": p.tb.Name})
 	}
 	id := int64(pivotCalcBase + len(p.extra))
 	p.extra = append(p.extra, e+" AS "+colSQL(id))
@@ -198,7 +199,7 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 	p := pivotPlan{cfg: cfg}
 	tb, err := t.tableByName(cfg.Source)
 	if err != nil {
-		return p, fmt.Errorf("%w : tableau « %s » introuvable", ErrPivot, cfg.Source)
+		return p, msg.Wrap(ErrPivot, "pivot.tableNotFound", msg.Args{"table": cfg.Source})
 	}
 	p.tb = tb
 	calc := map[string]*Column{}
@@ -220,12 +221,12 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		for i := range tb.Cols {
 			if strings.EqualFold(tb.Cols[i].Name, name) {
 				if tb.Cols[i].Formula != "" {
-					return nil, fmt.Errorf("%w : la colonne calculée « %s » ne sert pas encore de champ", ErrPivot, name)
+					return nil, msg.Wrap(ErrPivot, "pivot.computedNotField", msg.Args{"column": name})
 				}
 				return &tb.Cols[i], nil
 			}
 		}
-		return nil, fmt.Errorf("%w : colonne « %s » introuvable dans %s", ErrPivot, name, tb.Name)
+		return nil, msg.Wrap(ErrPivot, "pivot.columnNotFound", msg.Args{"column": name, "table": tb.Name})
 	}
 	for _, f := range cfg.RowFields {
 		c, err := find(f)
@@ -241,10 +242,10 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 	}
 	for _, v := range cfg.Values {
 		if _, ok := pivotAggs[v.Agg]; !ok {
-			return p, fmt.Errorf("%w : fonction %q inconnue", ErrPivot, v.Agg)
+			return p, msg.Wrap(ErrPivot, "pivot.unknownFunction", msg.Args{"function": fmt.Sprintf("%q", v.Agg)})
 		}
 		if _, ok := pivotShows[v.Show]; !ok {
-			return p, fmt.Errorf("%w : affichage %q inconnu", ErrPivot, v.Show)
+			return p, msg.Wrap(ErrPivot, "pivot.unknownShow", msg.Args{"show": fmt.Sprintf("%q", v.Show)})
 		}
 		var c *Column
 		if v.Field != "" {
@@ -252,7 +253,7 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 				return p, err
 			}
 		} else if v.Agg != "count" {
-			return p, fmt.Errorf("%w : choisissez la colonne des valeurs", ErrPivot)
+			return p, msg.Wrap(ErrPivot, "pivot.chooseValues", nil)
 		}
 		p.vals = append(p.vals, c)
 	}
@@ -380,7 +381,7 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 		}
 		rs.Close()
 		if len(keys) > MaxPivotCols {
-			return nil, fmt.Errorf("%w : plus de %d valeurs dans « %s »", ErrPivot, MaxPivotCols, p.cols.Name)
+			return nil, msg.Wrap(ErrPivot, "pivot.tooManyColumns", msg.Args{"max": MaxPivotCols, "column": p.cols.Name})
 		}
 	}
 	// Colonnes de mesure : (clé de colonne, valeur), puis les totaux.
@@ -582,7 +583,7 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 			return nil, err
 		}
 		if len(lines) > MaxPivotRows {
-			return nil, fmt.Errorf("%w : plus de %d lignes", ErrPivot, MaxPivotRows)
+			return nil, msg.Wrap(ErrPivot, "pivot.tooManyRows", msg.Args{"max": MaxPivotRows})
 		}
 	}
 	var total *line

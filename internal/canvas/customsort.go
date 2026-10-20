@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"slices"
 	"strings"
 )
@@ -184,15 +185,15 @@ func (m *Model) SetCustomLists(ctx context.Context, lists []CustomList) error {
 		}
 		l.Name = strings.TrimSpace(l.Name)
 		if l.Name == "" {
-			return fmt.Errorf("liste personnalisée sans nom")
+			return msg.New("customSort.unnamedList", nil)
 		}
 		if seen[strings.ToLower(l.Name)] {
-			return fmt.Errorf("la liste « %s » existe déjà", l.Name)
+			return msg.New("customSort.listExists", msg.Args{"name": l.Name})
 		}
 		seen[strings.ToLower(l.Name)] = true
 		l.Values = cleanValues(l.Values)
 		if len(l.Values) == 0 {
-			return fmt.Errorf("la liste « %s » est vide", l.Name)
+			return msg.New("customSort.listEmpty", msg.Args{"name": l.Name})
 		}
 		clean = append(clean, l)
 	}
@@ -217,13 +218,13 @@ func (t *tx) resolveOrder(o CustomOrder) (CustomOrder, error) {
 		}
 		i := slices.IndexFunc(lists, func(l CustomList) bool { return strings.EqualFold(l.Name, o.List) })
 		if i < 0 {
-			return o, fmt.Errorf("liste personnalisée « %s » introuvable", o.List)
+			return o, msg.New("customSort.listNotFound", msg.Args{"list": o.List})
 		}
 		o.List, o.Values = lists[i].Name, lists[i].Values
 	}
 	o.Values = cleanValues(o.Values)
 	if len(o.Values) == 0 {
-		return o, fmt.Errorf("ordre personnalisé vide : donnez des valeurs ou une liste")
+		return o, msg.New("customSort.emptyOrder", nil)
 	}
 	return o, nil
 }
@@ -324,7 +325,7 @@ func (m *Model) ColumnOrder(ctx context.Context, table string, i int) (o CustomO
 			return err
 		}
 		if i < 0 || i >= len(tb.Cols) {
-			return fmt.Errorf("colonne %d hors du tableau", i)
+			return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 		}
 		if o, ok, err = t.columnOrder(tb.Name, tb.Cols[i].Name); err != nil || !ok {
 			return err
@@ -351,7 +352,7 @@ func (m *Model) SortTableCustom(ctx context.Context, table string, i int, o Cust
 			return err
 		}
 		if i < 0 || i >= len(tb.Cols) {
-			return fmt.Errorf("colonne %d hors du tableau", i)
+			return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 		}
 		if o, err = t.resolveOrder(o); err != nil {
 			return err

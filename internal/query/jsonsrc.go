@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Sources JSON : fichier (.json, ou une valeur par ligne : NDJSON) et API
@@ -66,7 +67,7 @@ func parseJSON(r io.Reader) (any, error) {
 	}
 	switch len(all) {
 	case 0:
-		return nil, errors.New("JSON vide")
+		return nil, msg.New("json.empty", nil)
 	case 1:
 		return all[0], nil
 	}
@@ -116,7 +117,7 @@ func readJSON(dec *json.Decoder) (any, error) {
 			}
 			return a, nil
 		}
-		return nil, fmt.Errorf("délimiteur inattendu %q", x)
+		return nil, msg.New("json.unexpectedDelimiter", msg.Args{"delimiter": fmt.Sprintf("%q", x)})
 	}
 	return t, nil
 }
@@ -144,10 +145,10 @@ func selectRecords(root any, path string) ([]any, error) {
 			i, _ := strconv.Atoi(m[1])
 			a, ok := cur.([]any)
 			if !ok {
-				return nil, fmt.Errorf("chemin %s : %s n'est pas un tableau", path, where)
+				return nil, msg.New("json.notArray", msg.Args{"path": path, "where": where})
 			}
 			if i >= len(a) {
-				return nil, fmt.Errorf("chemin %s : %s n'a que %d élément(s)", path, where, len(a))
+				return nil, msg.New("json.tooFewItems", msg.Args{"path": path, "where": where, "n": len(a)})
 			}
 			cur = a[i]
 			where += "[" + m[1] + "]"
@@ -158,11 +159,11 @@ func selectRecords(root any, path string) ([]any, error) {
 			}
 			o, ok := cur.(*jsonObject)
 			if !ok {
-				return nil, fmt.Errorf("chemin %s : %s n'est pas un objet", path, where)
+				return nil, msg.New("json.notObject", msg.Args{"path": path, "where": where})
 			}
 			v, ok := o.vals[k]
 			if !ok {
-				return nil, fmt.Errorf("chemin %s : clé « %s » introuvable dans %s (clés : %s)", path, k, where, keyList(o))
+				return nil, msg.New("json.keyNotFound", msg.Args{"path": path, "key": k, "where": where, "keys": keyList(o)})
 			}
 			cur = v
 			where += "." + k
@@ -191,7 +192,7 @@ func selectRecords(root any, path string) ([]any, error) {
 	case nil:
 		return []any{}, nil
 	}
-	return nil, fmt.Errorf("chemin %s : %s n'est ni un tableau ni un objet", path, where)
+	return nil, msg.New("json.notArrayOrObject", msg.Args{"path": path, "where": where})
 }
 
 func keyList(o *jsonObject) string {
@@ -398,7 +399,7 @@ func (r *run) storeRecords(records []any) (loaded, error) {
 	}
 	f := flatten(records)
 	if len(f.cols) == 0 {
-		return loaded{}, errors.New("aucun enregistrement (vérifiez le chemin des enregistrements)")
+		return loaded{}, msg.New("json.noRecords", nil)
 	}
 	cols := make([]Column, len(f.cols))
 	for i, name := range f.cols {
@@ -425,7 +426,7 @@ func (r *run) storeRecords(records []any) (loaded, error) {
 
 func (r *run) loadJSON(src Source) (loaded, error) {
 	if src.Path == "" {
-		return loaded{}, errors.New("fichier JSON non choisi")
+		return loaded{}, msg.New("json.noFile", nil)
 	}
 	f, err := os.Open(src.Path)
 	if err != nil {
@@ -459,7 +460,7 @@ func (r *run) loadWeb(src Source) (loaded, error) {
 	}
 	root, err := parseJSON(bytes.NewReader(body))
 	if err != nil {
-		return loaded{}, fmt.Errorf("réponse de %s : %w", hostOf(src.URL), err)
+		return loaded{}, msg.Wrap(err, "json.responseError", msg.Args{"host": hostOf(src.URL), "err": err})
 	}
 	recs, err := selectRecords(root, src.RecordPath)
 	if err != nil {
@@ -479,7 +480,7 @@ func hostOf(u string) string {
 func webURL(raw string) (*url.URL, error) {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return nil, errors.New("adresse web invalide : elle doit commencer par http:// ou https://")
+		return nil, msg.New("json.invalidUrl", nil)
 	}
 	return u, nil
 }
@@ -548,7 +549,7 @@ func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, h
 	authHeader, secret := "", password
 	if conn != nil {
 		if !underPrefix(u, conn.Config.URL) {
-			return nil, fmt.Errorf("l'adresse %s n'est pas couverte par la connexion « %s » (%s) : son secret n'y est pas envoyé", u.Redacted(), conn.Name, conn.Config.URL)
+			return nil, msg.New("json.urlNotCovered", msg.Args{"url": u.Redacted(), "connection": conn.Name, "base": conn.Config.URL})
 		}
 		if secret == "" {
 			secret, _ = sec.Get(conn.Account())
@@ -564,7 +565,7 @@ func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, h
 		Timeout: webTimeout,
 		CheckRedirect: func(next *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
-				return errors.New("trop de redirections")
+				return msg.New("json.tooManyRedirects", nil)
 			}
 			if !strings.EqualFold(next.URL.Host, via[len(via)-1].URL.Host) && allow != nil {
 				if err := allow(next.URL.Host); err != nil {
@@ -594,7 +595,7 @@ func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, h
 			}
 			return nil, &ErrPassword{Connection: conn.Name, Account: conn.Account(), Message: msg}
 		}
-		return nil, fmt.Errorf("%s : HTTP %d, authentification requise (choisissez une connexion Web qui porte le jeton)", u.Host, resp.StatusCode)
+		return nil, msg.New("json.authRequired", msg.Args{"host": u.Host, "status": resp.StatusCode})
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, 300))
@@ -609,7 +610,7 @@ func fetchWeb(ctx context.Context, sec *Secrets, conn *Connection, raw string, h
 		return nil, fmt.Errorf("%s : %w", u.Host, err)
 	}
 	if len(body) > maxJSONBytes {
-		return nil, fmt.Errorf("%s : réponse de plus de %d Mo", u.Host, maxJSONBytes>>20)
+		return nil, msg.New("json.tooLarge", msg.Args{"host": u.Host, "max": maxJSONBytes >> 20})
 	}
 	return body, nil
 }

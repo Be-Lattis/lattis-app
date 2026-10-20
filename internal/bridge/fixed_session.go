@@ -3,13 +3,13 @@ package bridge
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 )
 
@@ -59,7 +59,7 @@ type FixedSession struct {
 }
 
 // ErrOtherServer : un moteur de session ne se connecte qu'à son serveur.
-var ErrOtherServer = errors.New("cette session ne se connecte qu'au serveur qui l'a ouverte")
+var ErrOtherServer = msg.New("session.otherServer", nil)
 
 func (f *FixedSession) check(server string) error {
 	u, err := auth.NormalizeURL(server)
@@ -116,7 +116,7 @@ func (f *FixedSession) Token(ctx context.Context, server string) (string, error)
 	}
 	tok, role, ttl, err := f.Fetch(ctx)
 	if err != nil {
-		return "", fmt.Errorf("jeton de la session refusé par le serveur : %w", err)
+		return "", msg.Wrap(err, "session.tokenRefused", msg.Args{"err": err})
 	}
 	f.token, f.role, f.expiry = tok, role, time.Now().Add(ttl)
 	return tok, nil
@@ -176,10 +176,10 @@ func TokenURL(url, secret string, hc *http.Client) func(ctx context.Context) (st
 			ExpiresIn   int64  `json:"expires_in"`
 		}
 		if err := json.Unmarshal(body, &t); err != nil {
-			return "", "", 0, fmt.Errorf("%s : réponse illisible : %w", url, err)
+			return "", "", 0, msg.Wrap(err, "session.unreadableResponse", msg.Args{"url": url, "err": err})
 		}
 		if t.AccessToken == "" || t.PGRole == "" {
-			return "", "", 0, fmt.Errorf("%s : jeton ou rôle absent", url)
+			return "", "", 0, msg.New("session.missingTokenOrRole", msg.Args{"url": url})
 		}
 		ttl := time.Duration(t.ExpiresIn) * time.Second
 		if ttl <= 0 {

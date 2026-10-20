@@ -12,6 +12,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Tableaux jointifs.
@@ -294,7 +295,7 @@ func (t *tx) joinSheet(sheet int64) error {
 			return err
 		}
 	}
-	return fmt.Errorf("%w : impossible de rattacher les cellules voisines des tableaux", ErrTable)
+	return msg.Wrap(ErrTable, "table.attachNeighboursFailed", nil)
 }
 
 // joinStep rattache (ou écarte) une seule chose collée à un tableau de la

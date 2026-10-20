@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"sync"
 
@@ -68,7 +67,7 @@ type SecretStore interface {
 }
 
 // ErrSecretNotFound : aucun secret pour ce compte.
-var ErrSecretNotFound = errors.New("secret introuvable")
+var ErrSecretNotFound = msg.New("secret.notFound", nil)
 
 // WindowControl agit sur la fenêtre de l'application (sans effet en web).
 type WindowControl interface {
@@ -140,11 +139,11 @@ func withExt(p, ext string) string {
 type NoHost struct{}
 
 func (NoHost) OpenFile(FileDialog) (string, error) {
-	return "", errors.New("aucune interface pour choisir un fichier")
+	return "", msg.New("host.noUI", nil)
 }
 
 func (NoHost) SaveFile(FileDialog, func(string) error) (string, error) {
-	return "", errors.New("aucune interface pour choisir un fichier")
+	return "", msg.New("host.noUI", nil)
 }
 
 func (NoHost) Emit(string, any) bool { return false }
@@ -239,9 +238,9 @@ func (s *DocumentService) Platform() Platform {
 	return p
 }
 
-var errNoMCPWeb = errors.New("le serveur MCP local n'existe pas dans la version web")
+var errNoMCPWeb = msg.New("mcp.notInWeb", nil)
 
-var errNoMCPAI = errors.New("le serveur MCP est coupé avec l'assistant IA : activez-le dans Fichier › Paramètres › Fonctionnalités")
+var errNoMCPAI = msg.New("mcp.offWithAI", nil)
 
 // mcpRefused refuse le serveur MCP en web, sans scripting, et quand
 // l'assistant IA est désactivé (choix de Louis : couper les assistants

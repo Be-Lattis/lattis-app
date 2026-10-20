@@ -12,6 +12,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -44,7 +45,7 @@ func (m *Model) QueryToSheet(ctx context.Context, q, name string, headers []stri
 	}
 	if len(cols) == 0 {
 		rs.Close()
-		return ImportResult{}, fmt.Errorf("la requête ne rend aucune colonne")
+		return ImportResult{}, msg.New("query.noColumns", nil)
 	}
 	var rows [][]any
 	vals := make([]any, len(cols))
@@ -55,7 +56,7 @@ func (m *Model) QueryToSheet(ctx context.Context, q, name string, headers []stri
 	for rs.Next() {
 		if len(rows) == MaxResultRows {
 			rs.Close()
-			return ImportResult{}, fmt.Errorf("plus de %d lignes : ajoutez une condition ou LIMIT", MaxResultRows)
+			return ImportResult{}, msg.New("query.tooManyRows", msg.Args{"max": MaxResultRows})
 		}
 		if err := rs.Scan(ptrs...); err != nil {
 			rs.Close()
@@ -74,7 +75,7 @@ func (m *Model) QueryToSheet(ctx context.Context, q, name string, headers []stri
 	// (aperçu de l'onglet SQL).
 	idx := grid.Visible(cols)
 	if len(idx) == 0 {
-		return ImportResult{}, fmt.Errorf("la requête ne rend que des colonnes techniques")
+		return ImportResult{}, msg.New("query.onlyTechnicalColumns", nil)
 	}
 	if len(headers) == len(cols) {
 		var hs []string
@@ -376,7 +377,7 @@ func (m *Model) ReadSQL(ctx context.Context, q, home string, cols func([]string)
 	if err := m.read(ctx, func(t *tx) error {
 		return t.row(`SELECT id FROM _lattis_sheets WHERE ? = '' OR lower(name) = lower(?) ORDER BY ? = '' AND pos, id LIMIT 1`, home, home, home).Scan(&sheet)
 	}); err != nil {
-		return fmt.Errorf("feuille « %s » introuvable", home)
+		return msg.New("sheet.notFoundNamed", msg.Args{"sheet": home})
 	}
 	q, err := m.CellSQL(ctx, q, sheet)
 	if err != nil {
@@ -401,7 +402,7 @@ func (m *Model) ReadSQL(ctx context.Context, q, home string, cols func([]string)
 		return err
 	}
 	if len(names) == 0 {
-		return fmt.Errorf("la requête ne rend aucune colonne")
+		return msg.New("query.noColumns", nil)
 	}
 	if err := cols(names); err != nil {
 		return err

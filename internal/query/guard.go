@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -84,7 +85,7 @@ func (g *Guard) Check(ctx context.Context, a Access) error {
 
 // CheckPath vérifie qu'un fichier est sous Dir.
 func (g *Guard) CheckPath(p string) error {
-	deny := fmt.Errorf("%w : sur ce serveur, une requête ne lit que les fichiers envoyés depuis le navigateur (%s)", ErrDenied, baseName(p))
+	deny := msg.Wrap(ErrDenied, "query.accessUploadsOnly", msg.Args{"file": baseName(p)})
 	if g.Dir == "" || !filepath.IsAbs(p) {
 		return deny
 	}
@@ -138,7 +139,7 @@ func (g *Guard) lookup(ctx context.Context, host string) ([]net.IP, error) {
 func checkIPs(host string, ips []net.IP) error {
 	for _, ip := range ips {
 		if InternalIP(ip) {
-			return fmt.Errorf("%w : « %s » désigne une adresse interne du serveur (%s)", ErrDenied, host, ip)
+			return msg.Wrap(ErrDenied, "query.accessInternalAddress", msg.Args{"host": host, "ip": ip})
 		}
 	}
 	return nil
@@ -176,7 +177,7 @@ func (g *Guard) DialContext(ctx context.Context, network, addr string) (net.Conn
 	if err := checkIPs(host, ips); err != nil {
 		return nil, err
 	}
-	err = fmt.Errorf("%s : aucune adresse", host)
+	err = msg.New("query.noAddress", msg.Args{"host": host})
 	for _, ip := range ips {
 		c, derr := d.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
 		if derr == nil {

@@ -3,6 +3,7 @@ package canvas
 import (
 	"context"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Mise en forme conditionnelle de lignes ou de colonnes entières de la
@@ -42,7 +43,7 @@ func (t *tx) setLineRules(sheet int64, rows bool, i0, i1 int, rules []Rule) erro
 		i0, i1 = i1, i0
 	}
 	if i0 < 0 || i1-i0+1 > MaxStyleLines {
-		return fmt.Errorf("mise en forme limitée à %d lignes ou colonnes", MaxStyleLines)
+		return msg.New("style.tooManyLines", msg.Args{"max": MaxStyleLines})
 	}
 	a := colsAxis
 	if rows {

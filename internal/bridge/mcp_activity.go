@@ -10,6 +10,7 @@ import (
 	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/mcp"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/sharing"
 )
@@ -85,9 +86,9 @@ var mcpSharing = func() string { return config.Current().String("ai.dataSharing"
 
 // Erreurs rendues au client MCP (résultat d'outil en erreur).
 var (
-	errMCPRefused = errors.New("refusé par l'utilisateur dans Lattis")
-	errMCPTimeout = errors.New("refusé : l'utilisateur n'a pas répondu dans Lattis (2 minutes)")
-	errMCPNoUI    = errors.New("refusé : aucune fenêtre de Lattis pour demander l'accord de l'utilisateur")
+	errMCPRefused = msg.New("mcp.refused", nil)
+	errMCPTimeout = msg.New("mcp.timeout", nil)
+	errMCPNoUI    = msg.New("mcp.noWindow", nil)
 )
 
 // mcpSeries est une suite d'appels d'un client sans pause de plus de
@@ -364,7 +365,7 @@ func (s *DocumentService) MCPUndoSeries(ctx context.Context, series int) (DocSta
 	ser := s.mcp.w.series[series]
 	s.mcp.mu.Unlock()
 	if ser == nil {
-		return DocState{}, errors.New("série d'actions inconnue")
+		return DocState{}, msg.New("mcp.unknownBatch", nil)
 	}
 	s.mcp.mu.Lock()
 	n, why := seriesUndo(ctx, ser, d)

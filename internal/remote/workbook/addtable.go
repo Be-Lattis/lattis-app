@@ -16,6 +16,7 @@ import (
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/meta"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -36,11 +37,11 @@ import (
 
 // ErrAddDesign : seuls les propriétaires et concepteurs ajoutent un tableau
 // au classeur partagé (lattis.create_table).
-var ErrAddDesign = errors.New("Seuls le propriétaire et les concepteurs du classeur y ajoutent un tableau")
+var ErrAddDesign = msg.New("workbook.addDesignOnly", nil)
 
 // ErrAddBusy : un autre concepteur a ajouté un tableau au même moment, sous
 // le même identifiant de mise en page.
-var ErrAddBusy = errors.New("Un autre concepteur vient d'ajouter un tableau à ce classeur : réessayez")
+var ErrAddBusy = msg.New("workbook.addBusy", nil)
 
 // Added décrit un tableau ajouté au classeur partagé.
 type Added struct {
@@ -57,7 +58,7 @@ type Added struct {
 func AddTable(ctx context.Context, srv Server, db *store.Store, info *Info, tbl int64, after func(tx *sql.Tx, xid string) error) (Added, error) {
 	var out Added
 	if info == nil || info.Mode != Collaborative {
-		return out, errors.New("ce classeur n'est pas un classeur collaboratif ouvert depuis son serveur")
+		return out, msg.New("workbook.notCollaborative", nil)
 	}
 	if !info.CanDesign() {
 		return out, ErrAddDesign
@@ -68,17 +69,17 @@ func AddTable(ctx context.Context, srv Server, db *store.Store, info *Info, tbl 
 	}
 	i := slices.IndexFunc(check.Tables, func(t TableCheck) bool { return t.ID == tbl })
 	if i < 0 {
-		return out, fmt.Errorf("tableau %d introuvable", tbl)
+		return out, msg.New("workbook.tableNotFound", msg.Args{"table": tbl})
 	}
 	tc := check.Tables[i]
 	if tc.Published {
-		return out, fmt.Errorf("Le tableau « %s » est déjà dans le classeur partagé", tc.Name)
+		return out, msg.New("workbook.tableAlreadyShared", msg.Args{"table": tc.Name})
 	}
 	if b := check.Blocking([]int64{tbl}); len(b) > 0 {
-		return out, fmt.Errorf("Ajout impossible :\n%s", strings.Join(b, "\n"))
+		return out, msg.New("workbook.addImpossible", msg.Args{"reasons": strings.Join(b, "\n")})
 	}
 	if !slices.ContainsFunc(tc.Columns, func(c ColumnCheck) bool { return !c.Computed }) {
-		return out, fmt.Errorf("Le tableau « %s » n'a que des colonnes calculées : il lui faut au moins une colonne saisie pour être partagé", tc.Name)
+		return out, msg.New("workbook.onlyComputedColumns", msg.Args{"table": tc.Name})
 	}
 	err = db.Write(ctx, func(tx *sql.Tx) error {
 		var pub int
@@ -86,7 +87,7 @@ func AddTable(ctx context.Context, srv Server, db *store.Store, info *Info, tbl 
 			return err
 		}
 		if pub > 0 {
-			return fmt.Errorf("Le tableau « %s » est déjà dans le classeur partagé", tc.Name)
+			return msg.New("workbook.tableAlreadyShared", msg.Args{"table": tc.Name})
 		}
 		if err := spreadTx(ctx, tx, []int64{tbl}); err != nil {
 			return err
@@ -159,7 +160,7 @@ func AddTable(ctx context.Context, srv Server, db *store.Store, info *Info, tbl 
 					j = k
 				}
 				if j < 0 {
-					return fmt.Errorf("colonne « %s » absente du tableau créé sur le serveur", c.name)
+					return msg.New("workbook.columnMissingOnServer", msg.Args{"column": c.name})
 				}
 				order[k] = rcols[j]
 			}
@@ -431,7 +432,7 @@ func ReadArrivals(ctx context.Context, r Reader, schema string, known map[string
 			if Privilege(err) {
 				continue // tableau illisible avec ses droits : à la prochaine lecture
 			}
-			return nil, fmt.Errorf("tableau « %s » : %w", t.Name, err)
+			return nil, msg.Wrap(err, "collab.tableError", msg.Args{"table": t.Name, "err": err})
 		}
 		out.Tables = append(out.Tables, a)
 	}
@@ -485,7 +486,7 @@ func InstallArrivals(ctx context.Context, tx *sql.Tx, a *Arrivals) ([]Installed,
 		}
 		in, err := installOne(ctx, tx, l, baseSheets, a.Since, ar)
 		if err != nil {
-			return nil, fmt.Errorf("tableau « %s » reçu du serveur : %w", ar.Table.Name, err)
+			return nil, msg.Wrap(err, "workbook.receivedTableError", msg.Args{"table": ar.Table.Name, "err": err})
 		}
 		out = append(out, in)
 	}

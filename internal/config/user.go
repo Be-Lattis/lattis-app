@@ -103,7 +103,7 @@ func (l *Loader) userFile() string {
 // UserEditable, une valeur invalide ou une clé imposée par une stratégie.
 func (l *Loader) SetUser(ctx context.Context, path string, v any) (*Config, error) {
 	if !Editable(path) {
-		return nil, fmt.Errorf("%s : réglage non modifiable depuis l'interface", path)
+		return nil, msg.New("config.notEditable", msg.Args{"path": path})
 	}
 	if cv, ok := coerce(path, v); ok {
 		v = cv
@@ -124,7 +124,7 @@ func (l *Loader) SetUser(ctx context.Context, path string, v any) (*Config, erro
 	}
 	file := l.userFile()
 	if file == "" {
-		return nil, errors.New("dossier de configuration de l'utilisateur introuvable")
+		return nil, msg.New("config.userDirNotFound", nil)
 	}
 	t := Tree{}
 	b, err := os.ReadFile(file)

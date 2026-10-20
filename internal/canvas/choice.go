@@ -12,6 +12,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Onglet à choix (docs/conception/regrouper-onglets-semblables.md §6.3,
@@ -210,7 +211,7 @@ func (t *tx) writeChoice(sheet int64, r *choiceRaw) error {
 	var old sql.NullString
 	if err := t.row(`SELECT choice FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&old); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 		}
 		return err
 	}
@@ -270,10 +271,10 @@ func (t *tx) setSheetChoice(sheet int64, table string, column string, value stri
 		}
 	}
 	if col == nil {
-		return fmt.Errorf("%w : colonne « %s » introuvable dans %s", ErrSheet, column, tb.Name)
+		return msg.Wrap(ErrSheet, "sheet.choiceColumnNotFound", msg.Args{"column": column, "table": tb.Name})
 	}
 	if col.Formula != "" {
-		return fmt.Errorf("%w : la colonne calculée « %s » ne sert pas de choix d'onglet", ErrSheet, col.Name)
+		return msg.Wrap(ErrSheet, "sheet.choiceComputedColumn", msg.Args{"column": col.Name})
 	}
 	return t.writeChoice(sheet, &choiceRaw{Tbl: tb.ID, Col: col.ID, Name: col.Name, Value: value, All: value == ""})
 }
@@ -324,13 +325,13 @@ func (m *Model) ChooseSheetValue(ctx context.Context, sheet int64, value string,
 		var raw sql.NullString
 		if err := sqlTx.QueryRowContext(ctx, `SELECT choice FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&raw); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("%w : feuille introuvable", ErrSheet)
+				return msg.Wrap(ErrSheet, "sheet.notFound", nil)
 			}
 			return err
 		}
 		var r choiceRaw
 		if !raw.Valid || raw.String == "" || json.Unmarshal([]byte(raw.String), &r) != nil {
-			return fmt.Errorf("%w : la feuille n'a pas d'onglet à choix (clic droit sur l'onglet › Choisir par…)", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.noChoiceTabHint", nil)
 		}
 		if all {
 			value = ""
@@ -570,7 +571,7 @@ func (t *tx) choiceValues(sheet int64) ([]FilterValue, error) {
 func (m *Model) NewSheetChoiceValue(ctx context.Context, sheet int64, value string) error {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return fmt.Errorf("%w : valeur vide", ErrSheet)
+		return msg.Wrap(ErrSheet, "sheet.emptyChoiceValue", nil)
 	}
 	return m.Do(ctx, "Nouvelle valeur de l'onglet", func(t *tx) error {
 		if err := t.guard(sheet); err != nil {
@@ -581,10 +582,10 @@ func (m *Model) NewSheetChoiceValue(ctx context.Context, sheet int64, value stri
 			return err
 		}
 		if r == nil {
-			return fmt.Errorf("%w : la feuille n'a pas d'onglet à choix", ErrSheet)
+			return msg.Wrap(ErrSheet, "sheet.noChoiceTab", nil)
 		}
 		if r.Formula != "" {
-			return fmt.Errorf("%w : « %s » est calculée par une formule, ses valeurs viennent des lignes : saisissez une ligne de la nouvelle valeur", ErrSheet, r.Name)
+			return msg.Wrap(ErrSheet, "sheet.choiceComputedValue", msg.Args{"column": r.Name})
 		}
 		vals, err := t.choiceValues(sheet)
 		if err != nil {
@@ -604,7 +605,7 @@ func (m *Model) NewSheetChoiceValue(ctx context.Context, sheet int64, value stri
 		// colonne Année entière).
 		for _, tb := range tables {
 			if _, err := grid.Parse(tb.choice.Col.Type, value); err != nil && (r.Tbl == 0 || tb.ID == r.Tbl) {
-				return fmt.Errorf("%w : « %s » ne convient pas à la colonne « %s » (%v)", ErrSheet, value, tb.choice.Col.Name, err)
+				return msg.Wrap(ErrSheet, "sheet.choiceValueInvalid", msg.Args{"value": value, "column": tb.choice.Col.Name, "err": err})
 			}
 		}
 		list := make([]any, 0, len(vals)+1)

@@ -16,6 +16,7 @@ import (
 	"github.com/lalamefine/lattis/internal/coedit"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/pgpool"
@@ -586,7 +587,7 @@ func (s *DocumentService) ShareAddTable(ctx context.Context, table string) (DocS
 func tableIDByName(ctx context.Context, d *doc.Document, table string) (int64, error) {
 	var tbl int64
 	if err := d.DB().Read().QueryRowContext(ctx, `SELECT id FROM _lattis_tables WHERE name = ?`, table).Scan(&tbl); err != nil {
-		return 0, fmt.Errorf("tableau « %s » introuvable", table)
+		return 0, msg.New("table.notFound", msg.Args{"table": table})
 	}
 	return tbl, nil
 }
@@ -726,7 +727,7 @@ func (s *DocumentService) ShareRepublish(ctx context.Context, tables []int64) (w
 	}
 	info := d.Share.Info()
 	if info == nil {
-		return workbook.State{}, errors.New("ce classeur n'est pas publié : Fichier › Publier sur un serveur…")
+		return workbook.State{}, msg.New("share.notPublished", nil)
 	}
 	srv, _, _, err := remoteServer(ctx, info.Server)
 	if err != nil {
@@ -806,7 +807,7 @@ func shareCachePath(server, id string) (string, error) {
 	}, auth.Host(server))
 	for _, r := range id {
 		if !(r == '-' || r >= '0' && r <= '9' || r >= 'a' && r <= 'f' || r >= 'A' && r <= 'F') {
-			return "", fmt.Errorf("identifiant de classeur invalide : %q", id)
+			return "", msg.New("share.invalidWorkbookId", msg.Args{"id": fmt.Sprintf("%q", id)})
 		}
 	}
 	return filepath.Join(dir, host, id+".lattis"), nil
@@ -934,9 +935,9 @@ func goneError(gone, name, server string) error {
 		where = auth.Host(server)
 	}
 	if gone == workbook.GoneRevoked {
-		return fmt.Errorf("Vous n'avez plus accès à ce classeur sur %s.", where)
+		return msg.New("share.accessLost", msg.Args{"server": where})
 	}
-	return fmt.Errorf("Ce classeur a été supprimé de %s.", where)
+	return msg.New("share.deleted", msg.Args{"server": where})
 }
 
 // keepCollabCache dit si le cache local d'un classeur collaboratif se
@@ -959,7 +960,7 @@ func (s *DocumentService) ShareReload(ctx context.Context) (DocState, error) {
 	}
 	info := d.Share.Info()
 	if info == nil {
-		return DocState{}, errors.New("ce classeur n'est pas partagé")
+		return DocState{}, msg.New("share.notSharedPlain", nil)
 	}
 	srv, user, name, err := remoteServer(ctx, info.Server)
 	if err != nil {

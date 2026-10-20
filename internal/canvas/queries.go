@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"strconv"
 	"strings"
 	"time"
@@ -88,7 +89,7 @@ func (m *Model) QueryByName(ctx context.Context, name string) (QueryDef, error) 
 			}
 		}
 	}
-	return QueryDef{}, fmt.Errorf("%w « %s » introuvable", ErrQuery, name)
+	return QueryDef{}, msg.Wrap(ErrQuery, "query.notFoundNamed", msg.Args{"query": name})
 }
 
 // QueryByID trouve une requête par son identifiant.
@@ -102,7 +103,7 @@ func (m *Model) QueryByID(ctx context.Context, id int64) (QueryDef, error) {
 			return q, nil
 		}
 	}
-	return QueryDef{}, fmt.Errorf("%w introuvable", ErrQuery)
+	return QueryDef{}, msg.Wrap(ErrQuery, "query.notFound", nil)
 }
 
 // SaveQuery crée (ID nul) ou modifie une requête : nom, source et étapes. Le
@@ -110,7 +111,7 @@ func (m *Model) QueryByID(ctx context.Context, id int64) (QueryDef, error) {
 func (m *Model) SaveQuery(ctx context.Context, q QueryDef) (int64, error) {
 	q.Name = strings.TrimSpace(q.Name)
 	if q.Name == "" {
-		return 0, fmt.Errorf("%w : nom vide", ErrQuery)
+		return 0, msg.Wrap(ErrQuery, "query.emptyName", nil)
 	}
 	if q.Steps == "" {
 		q.Steps = "[]"
@@ -126,7 +127,7 @@ func (m *Model) SaveQuery(ctx context.Context, q QueryDef) (int64, error) {
 			return err
 		}
 		if k > 0 {
-			return fmt.Errorf("%w : « %s » existe déjà", ErrQuery, q.Name)
+			return msg.Wrap(ErrQuery, "query.nameTaken", msg.Args{"query": q.Name})
 		}
 		if q.ID == 0 {
 			if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_queries`).Scan(&id); err != nil {
@@ -140,7 +141,7 @@ func (m *Model) SaveQuery(ctx context.Context, q QueryDef) (int64, error) {
 		var name, source, steps string
 		if err := t.row(`SELECT name, source, steps FROM _lattis_queries WHERE id = ?`, q.ID).Scan(&name, &source, &steps); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("%w introuvable", ErrQuery)
+				return msg.Wrap(ErrQuery, "query.notFound", nil)
 			}
 			return err
 		}
@@ -162,7 +163,7 @@ func (m *Model) DeleteQuery(ctx context.Context, id int64) error {
 		var refreshed sql.NullString
 		if err := t.row(`SELECT name, source, steps, target, refreshed FROM _lattis_queries WHERE id = ?`, id).Scan(&name, &source, &steps, &target, &refreshed); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("%w introuvable", ErrQuery)
+				return msg.Wrap(ErrQuery, "query.notFound", nil)
 			}
 			return err
 		}
@@ -210,7 +211,7 @@ func (m *Model) LoadQuery(ctx context.Context, id int64, it ImportTable) (QueryL
 		return t.row(`SELECT name FROM _lattis_queries WHERE id = ?`, id).Scan(&qname)
 	}); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return res, fmt.Errorf("%w introuvable", ErrQuery)
+			return res, msg.Wrap(ErrQuery, "query.notFound", nil)
 		}
 		return res, err
 	}
@@ -455,10 +456,10 @@ func (m *Model) Connections(ctx context.Context) ([]ConnectionDef, error) {
 func (m *Model) SaveConnection(ctx context.Context, c ConnectionDef) (int64, error) {
 	c.Name = strings.TrimSpace(c.Name)
 	if c.Name == "" {
-		return 0, fmt.Errorf("%w : nom de connexion vide", ErrQuery)
+		return 0, msg.Wrap(ErrQuery, "query.emptyConnectionName", nil)
 	}
 	if c.Kind == "" {
-		return 0, fmt.Errorf("%w : type de connexion manquant", ErrQuery)
+		return 0, msg.Wrap(ErrQuery, "query.missingConnectionType", nil)
 	}
 	label := "Nouvelle connexion"
 	if c.ID != 0 {
@@ -471,7 +472,7 @@ func (m *Model) SaveConnection(ctx context.Context, c ConnectionDef) (int64, err
 			return err
 		}
 		if k > 0 {
-			return fmt.Errorf("%w : la connexion « %s » existe déjà", ErrQuery, c.Name)
+			return msg.Wrap(ErrQuery, "query.connectionExists", msg.Args{"connection": c.Name})
 		}
 		if c.ID == 0 {
 			if err := t.row(`SELECT coalesce(max(id), 0) + 1 FROM _lattis_connections`).Scan(&id); err != nil {
@@ -485,14 +486,14 @@ func (m *Model) SaveConnection(ctx context.Context, c ConnectionDef) (int64, err
 		var old ConnectionDef
 		if err := t.row(`SELECT name, kind, config FROM _lattis_connections WHERE id = ?`, c.ID).Scan(&old.Name, &old.Kind, &old.Config); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("%w : connexion introuvable", ErrQuery)
+				return msg.Wrap(ErrQuery, "query.connectionNotFound", nil)
 			}
 			return err
 		}
 		if !strings.EqualFold(old.Name, c.Name) {
 			if used, err := t.connectionUsed(old.Name); err != nil || used != "" {
 				if err == nil {
-					err = fmt.Errorf("%w : la connexion « %s » sert à la requête « %s », elle ne peut pas être renommée", ErrQuery, old.Name, used)
+					err = msg.Wrap(ErrQuery, "query.connectionInUseRename", msg.Args{"connection": old.Name, "query": used})
 				}
 				return err
 			}
@@ -525,7 +526,7 @@ func (m *Model) DeleteConnection(ctx context.Context, id int64) error {
 		var c ConnectionDef
 		if err := t.row(`SELECT name, kind, config FROM _lattis_connections WHERE id = ?`, id).Scan(&c.Name, &c.Kind, &c.Config); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("%w : connexion introuvable", ErrQuery)
+				return msg.Wrap(ErrQuery, "query.connectionNotFound", nil)
 			}
 			return err
 		}
@@ -534,7 +535,7 @@ func (m *Model) DeleteConnection(ctx context.Context, id int64) error {
 			return err
 		}
 		if used != "" {
-			return fmt.Errorf("%w : la connexion « %s » sert à la requête « %s »", ErrQuery, c.Name, used)
+			return msg.Wrap(ErrQuery, "query.connectionInUse", msg.Args{"connection": c.Name, "query": used})
 		}
 		return t.apply(
 			[]stmt{st(`DELETE FROM _lattis_connections WHERE id = ?`, id)},

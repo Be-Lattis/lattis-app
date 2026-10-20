@@ -2,9 +2,9 @@ package bridge
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/protocol"
 )
@@ -60,7 +60,7 @@ func (s *DocumentService) DataShareInfo(ctx context.Context, table string) (Data
 	err = d.DB().Read().QueryRowContext(ctx, `SELECT t.id, coalesce(r.remote_id, '') FROM _lattis_tables t
 		LEFT JOIN _lattis_remote_tables r ON r.tbl = t.id AND r.published = 1 WHERE t.name = ?`, table).Scan(&tbl, &out.TableID)
 	if err != nil {
-		return out, fmt.Errorf("tableau « %s » introuvable : %w", table, err)
+		return out, msg.Wrap(err, "data.tableNotFound", msg.Args{"table": table, "err": err})
 	}
 	// Déjà une source du Data Lake sans le classeur : on la gère.
 	if out.Source, err = sourceOf(ctx, d, tbl); err != nil || out.Source != nil {
@@ -206,7 +206,7 @@ func (s *DocumentService) ShareDataset(ctx context.Context, req DataShare) (stri
 		}
 	}
 	if len(refused) > 0 {
-		return id, fmt.Errorf("donnée enregistrée, mais une partie de l'audience est refusée : %s", strings.Join(refused, " ; "))
+		return id, msg.New("data.audienceRefused", msg.Args{"refused": strings.Join(refused, " ; ")})
 	}
 	return id, nil
 }

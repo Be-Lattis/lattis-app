@@ -10,6 +10,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ChartConfig décrit un graphique alimenté par un tableau : l'axe des
@@ -186,31 +187,31 @@ var chartSeriesKinds = map[string]bool{"": true, "bar": true, "line": true, "are
 // checkChart vérifie ce qui ne dépend pas des données.
 func checkChart(cfg ChartConfig) error {
 	if !chartKinds[cfg.Kind] {
-		return fmt.Errorf("%w : type %q inconnu", ErrChart, cfg.Kind)
+		return msg.Wrap(ErrChart, "chart.unknownKind", msg.Args{"kind": fmt.Sprintf("%q", cfg.Kind)})
 	}
 	draft := cfg.Kind == "map" && cfg.MapDraft
 	if len(cfg.Series) == 0 && !draft {
-		return fmt.Errorf("%w : choisissez au moins une série", ErrChart)
+		return msg.Wrap(ErrChart, "chart.chooseSeries", nil)
 	}
 	for _, k := range cfg.SeriesKinds {
 		if !chartSeriesKinds[k] {
-			return fmt.Errorf("%w : forme de série %q inconnue (bar, line ou area)", ErrChart, k)
+			return msg.Wrap(ErrChart, "chart.unknownSeriesKind", msg.Args{"kind": fmt.Sprintf("%q", k)})
 		}
 	}
 	if cfg.MapCoords != "" && cfg.MapCoords != "pair" && cfg.MapCoords != "single" {
-		return fmt.Errorf("%w : coordonnées %q inconnues (pair ou single)", ErrChart, cfg.MapCoords)
+		return msg.Wrap(ErrChart, "chart.unknownMapCoords", msg.Args{"coords": fmt.Sprintf("%q", cfg.MapCoords)})
 	}
 	if cfg.Kind == "map" && !draft && cfg.MapCoords != "single" && len(cfg.Series) < 2 {
-		return fmt.Errorf("%w : une carte demande deux séries, latitude puis longitude (et une valeur facultative)", ErrChart)
+		return msg.Wrap(ErrChart, "chart.mapNeedsTwoSeries", nil)
 	}
 	if cfg.MapMode != "" && cfg.MapMode != "points" && cfg.MapMode != "heat" {
-		return fmt.Errorf("%w : mode de carte %q inconnu (points ou heat)", ErrChart, cfg.MapMode)
+		return msg.Wrap(ErrChart, "chart.unknownMapMode", msg.Args{"mode": fmt.Sprintf("%q", cfg.MapMode)})
 	}
 	if cfg.Blanks != "" && cfg.Blanks != "gap" && cfg.Blanks != "zero" && cfg.Blanks != "span" {
 		return fmt.Errorf("%w : cellules vides %q inconnues (gap, zero ou span)", ErrChart, cfg.Blanks)
 	}
 	if cfg.Bins < 0 || cfg.Bins > 200 {
-		return fmt.Errorf("%w : nombre de classes entre 1 et 200", ErrChart)
+		return msg.Wrap(ErrChart, "chart.binsRange", nil)
 	}
 	return nil
 }
@@ -265,7 +266,7 @@ func (m *Model) SetChart(ctx context.Context, id int64, cfg ChartConfig) error {
 // MoveChart déplace un graphique.
 func (m *Model) MoveChart(ctx context.Context, id int64, row, col int) error {
 	if row < 0 || col < 0 {
-		return fmt.Errorf("%w : hors de la feuille", ErrChart)
+		return msg.Wrap(ErrChart, "chart.outOfSheet", nil)
 	}
 	return m.Do(ctx, "Déplacer le graphique", func(t *tx) error {
 		if err := t.guardObject(`_lattis_charts`, id); err != nil {
@@ -317,11 +318,11 @@ func (t *tx) chartDataRaw(cfg ChartConfig) (chartResult, error) {
 				return chartResult{labels: []string{}, series: []ChartSeries{}, guess: &MapGuess{}}, nil
 			}
 			if cfg.Kind == "map" && cfg.MapCoords == "single" {
-				return chartResult{}, fmt.Errorf("%w : coordonnées en une colonne : choisissez un tableau", ErrChart)
+				return chartResult{}, msg.Wrap(ErrChart, "chart.singleColumnNeedsTable", nil)
 			}
 			return t.chartFromPivot(cfg, pc)
 		}
-		return chartResult{}, fmt.Errorf("%w : tableau « %s » introuvable", ErrChart, cfg.Source)
+		return chartResult{}, msg.Wrap(ErrChart, "chart.tableNotFound", msg.Args{"table": cfg.Source})
 	}
 	if cfg.Kind == "map" {
 		return t.mapData(cfg, tb)
@@ -397,7 +398,7 @@ func (t *tx) chartTable(cfg ChartConfig, tb Table) (chartResult, error) {
 				return i, nil
 			}
 		}
-		return 0, fmt.Errorf("%w : colonne « %s » introuvable dans %s", ErrChart, name, tb.Name)
+		return 0, msg.Wrap(ErrChart, "chart.columnNotFound", msg.Args{"column": name, "table": tb.Name})
 	}
 	xi, err := find(cfg.X)
 	if err != nil {
@@ -662,7 +663,7 @@ func (t *tx) chartFromPivot(cfg ChartConfig, pc PivotConfig) (chartResult, error
 				return i, nil
 			}
 		}
-		return 0, fmt.Errorf("%w : colonne « %s » introuvable dans %s", ErrChart, name, pc.Name)
+		return 0, msg.Wrap(ErrChart, "chart.columnNotFound", msg.Args{"column": name, "table": pc.Name})
 	}
 	xi, err := find(cfg.X)
 	if err != nil {
@@ -714,7 +715,7 @@ func (t *tx) chartFromPivot(cfg ChartConfig, pc PivotConfig) (chartResult, error
 // n'importe quel bord ne fait qu'une étape d'annulation.
 func (m *Model) PlaceChart(ctx context.Context, id int64, row, col, offX, offY, width, height int) error {
 	if row < 0 || col < 0 {
-		return fmt.Errorf("%w : position hors de la feuille", ErrChart)
+		return msg.Wrap(ErrChart, "chart.positionOutOfSheet", nil)
 	}
 	if width < MinChartWidth || height < MinChartHeight {
 		return fmt.Errorf("%w : taille minimale %d × %d pixels", ErrChart, MinChartWidth, MinChartHeight)
@@ -748,7 +749,7 @@ func (m *Model) ChartPlace(ctx context.Context, id int64) (row, col int, cfg Cha
 		var raw string
 		if err := t.row(`SELECT row, col, config FROM _lattis_charts WHERE id = ?`, id).Scan(&row, &col, &raw); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("%w : graphique %d introuvable", ErrChart, id)
+				return msg.Wrap(ErrChart, "chart.notFound", msg.Args{"id": id})
 			}
 			return err
 		}

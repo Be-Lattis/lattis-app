@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/script"
 	"github.com/lalamefine/lattis/internal/trace"
 	"github.com/lalamefine/lattis/internal/trust"
@@ -40,7 +41,7 @@ var running struct {
 }
 
 // ErrBusy refuse un script pendant qu'un autre tourne.
-var ErrBusy = errors.New("un script est déjà en cours")
+var ErrBusy = msg.New("api.busy", nil)
 
 type ctxKey int
 

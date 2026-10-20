@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/lalamefine/lattis/internal/msg"
 	"slices"
 	"strings"
 )
@@ -22,34 +23,34 @@ func (t *tx) prepareCalc(cfg *PivotConfig) error {
 	}
 	tb, err := t.tableByName(cfg.Source)
 	if err != nil {
-		return fmt.Errorf("%w : tableau « %s » introuvable", ErrPivot, cfg.Source)
+		return msg.Wrap(ErrPivot, "pivot.tableNotFound", msg.Args{"table": cfg.Source})
 	}
 	calc := make([]PivotCalcField, len(cfg.Calc))
 	seen := map[string]bool{}
 	for i, f := range cfg.Calc {
 		f.Name = strings.TrimSpace(f.Name)
 		if f.Name == "" {
-			return fmt.Errorf("%w : nommez le champ calculé", ErrPivot)
+			return msg.Wrap(ErrPivot, "pivot.nameField", nil)
 		}
 		if seen[Fold(f.Name)] {
-			return fmt.Errorf("%w : deux champs calculés s'appellent « %s »", ErrPivot, f.Name)
+			return msg.Wrap(ErrPivot, "pivot.duplicateField", msg.Args{"field": f.Name})
 		}
 		seen[Fold(f.Name)] = true
 		if colIndex(tb, f.Name) >= 0 {
-			return fmt.Errorf("%w : « %s » est déjà une colonne de %s : choisissez un autre nom pour le champ calculé", ErrPivot, f.Name, tb.Name)
+			return msg.Wrap(ErrPivot, "pivot.fieldIsColumn", msg.Args{"field": f.Name, "table": tb.Name})
 		}
 		if strings.TrimSpace(f.Text) != "" {
 			en, cols, err := t.prepareRowFormula(tb.Sheet, f.Text)
 			if err != nil {
-				return fmt.Errorf("%w : champ calculé « %s » : %s", ErrPivot, f.Name, formulaError(err))
+				return msg.Wrap(ErrPivot, "pivot.fieldError", msg.Args{"field": f.Name, "err": formulaError(err)})
 			}
 			if miss := missingColumns(tb, cols); len(miss) > 0 {
-				return fmt.Errorf("%w : le champ calculé « %s » cite %s, absente de %s", ErrPivot, f.Name, quoteList(miss), tb.Name)
+				return msg.Wrap(ErrPivot, "pivot.fieldMissingColumns", msg.Args{"field": f.Name, "columns": quoteList(miss), "table": tb.Name})
 			}
 			f.Formula = en
 		}
 		if f.Formula == "" {
-			return fmt.Errorf("%w : le champ calculé « %s » n'a pas de formule", ErrPivot, f.Name)
+			return msg.Wrap(ErrPivot, "pivot.fieldNoFormula", msg.Args{"field": f.Name})
 		}
 		f.Text = ""
 		calc[i] = f
@@ -143,7 +144,7 @@ func (m *Model) SetPivotCalcField(ctx context.Context, id int64, old, name, src 
 		calc := slices.Clone(cfg.Calc)
 		at := slices.IndexFunc(calc, func(f PivotCalcField) bool { return old != "" && strings.EqualFold(f.Name, old) })
 		if old != "" && at < 0 {
-			return fmt.Errorf("%w : champ calculé « %s » introuvable", ErrPivot, old)
+			return msg.Wrap(ErrPivot, "pivot.fieldNotFound", msg.Args{"field": old})
 		}
 		switch {
 		case strings.TrimSpace(src) == "":

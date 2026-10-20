@@ -10,6 +10,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/order"
 )
 
@@ -249,7 +250,7 @@ func freeColumnNameExcept(tb Table, except int64, name string) string {
 
 // errColumnTaken : message d'une colonne renommée en doublon.
 func errColumnTaken(tb Table, name string) error {
-	return fmt.Errorf("la colonne « %s » existe déjà dans le tableau %s (les noms de colonnes ne tiennent pas compte des majuscules) : choisissez un autre nom", name, tb.Name)
+	return msg.New("table.columnExists", msg.Args{"column": name, "table": tb.Name})
 }
 
 // uniqueColumnNames complète (« Colonne n ») et rend uniques des en-têtes

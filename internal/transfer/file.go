@@ -2,11 +2,11 @@ package transfer
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ImportFile importe un fichier d'après son extension : .csv, .tsv, .txt
@@ -18,7 +18,7 @@ func ImportFile(ctx context.Context, m *canvas.Model, path string) (canvas.Impor
 	case ".xlsx", ".xlsm":
 		return ImportXLSX(ctx, m, path)
 	case ".xls":
-		return canvas.ImportResult{}, fmt.Errorf("%s : l'ancien format .xls n'est pas lu ; enregistrez-le en .xlsx depuis Excel", filepath.Base(path))
+		return canvas.ImportResult{}, msg.New("transfer.xlsNotRead", msg.Args{"file": filepath.Base(path)})
 	}
-	return canvas.ImportResult{}, fmt.Errorf("%s : format non reconnu (CSV ou .xlsx attendu)", filepath.Base(path))
+	return canvas.ImportResult{}, msg.New("transfer.unknownFormat", msg.Args{"file": filepath.Base(path)})
 }

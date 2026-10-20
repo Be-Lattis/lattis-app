@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -247,7 +248,7 @@ func (e *Engine) DropHeld(ctx context.Context, tbl int64) (Report, error) {
 	e.run.Lock()
 	defer e.run.Unlock()
 	if info, _ := e.active(); info == nil || !e.link.Online() {
-		return Report{}, errors.New("Abandonner relit le tableau sur le serveur : réessayez une fois en ligne")
+		return Report{}, msg.New("collab.discardOffline", nil)
 	}
 	err := e.db.Write(ctx, func(tx *sql.Tx) error {
 		ids, err := e.heldEntries(ctx, tx, tbl)
