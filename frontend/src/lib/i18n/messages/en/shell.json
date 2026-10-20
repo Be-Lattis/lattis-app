@@ -1,1 +1,1078 @@
-{}
+{
+	"settings": {
+		"language": {
+			"label": "Display language",
+			"auto": "System language ({name})",
+			"help": "Applies right away. Translations are in progress: text not yet translated stays in French. The language also sets how numbers and dates are displayed; the saved workbook does not depend on it."
+		},
+		"sections": {
+			"features": "Features",
+			"ai": "AI assistant",
+			"view": "View",
+			"limits": "Limits"
+		},
+		"htmlTabs": {
+			"label": "Web pages",
+			"help": "Lets you add web pages: an HTML, CSS and JavaScript page that reads and changes the workbook, or a page from a website. Workbooks that already contain some open and work normally."
+		},
+		"sharedWorkbooks": {
+			"label": "Shared workbooks (Lattis Server)",
+			"help": "Lets you sign in to your organization's Lattis Server (Account menu in the title bar) and add it as a data source. Shared workbooks live there; you sign in with your account (Google, Microsoft, Keycloak…) or a Lattis password."
+		},
+		"coEditing": {
+			"label": "Work together on a shared folder",
+			"help": "A workbook stored on a NAS or a network share and already open on another computer offers “Work together”: everyone edits the table data and sees the others' changes live (one log per computer next to the file). When turned off, it opens read-only or “anyway”, as before."
+		},
+		"aiEnabled": {
+			"label": "AI assistant",
+			"help": "The “Assistant ✦” button, at the top right of the ribbon (Alt+I), opens a pane to the right of the grid: an assistant that helps build an analysis and acts on the workbook, each answer undone in one step. It needs an API key from a provider (Anthropic, Mistral, OpenAI…), kept in the system keychain, a model installed on this computer, or Claude Desktop with a Claude subscription."
+		},
+		"aiDataSharing": {
+			"label": "Data sent to the assistant",
+			"schemaOnly": "Structure only (names, types, number of rows and distinct values)",
+			"sample": "Structure and a few sample rows (20 at most per read)",
+			"full": "The whole workbook (the assistant can read every value)",
+			"help": "Also applies to Claude Desktop and Claude Code through the MCP server. The provider also receives your messages, the active sheet and the selection; with a local model, nothing leaves this computer."
+		},
+		"aiKeepConversation": {
+			"label": "Keep the conversation in the workbook",
+			"help": "The conversation is saved with the workbook and comes back the next time it opens: it travels with the file, including the query results shown and the rows read by the assistant. It is only saved if the workbook was also changed. Otherwise, it is cleared when you close the workbook or open another one."
+		},
+		"aiLocalUrl": {
+			"label": "Local model address",
+			"help": "“Local model” provider: the address of Ollama, LM Studio or another OpenAI-compatible server on this computer. No data leaves the computer."
+		},
+		"theme": {
+			"label": "Default color theme",
+			"help": "Colors of regular tables and of tables from an external source in a workbook that has not chosen its theme: new workbooks and those from before themes. The theme chosen in a workbook (View › Theme) is saved with it and looks the same on other computers."
+		},
+		"undoDepth": {
+			"label": "Undo depth",
+			"unit": "commands",
+			"help": "Number of commands Ctrl+Z can undo (200 by default). The history is never saved in the file."
+		},
+		"scriptSeconds": {
+			"label": "Maximum script duration",
+			"help": "Beyond this, the script is stopped and its changes are undone (30 s by default)."
+		},
+		"sqlReadSeconds": {
+			"label": "Maximum SQL read duration",
+			"help": "Queries in the SQL tab and reads from scripts (30 s by default)."
+		},
+		"sqlWriteSeconds": {
+			"label": "Maximum SQL write duration",
+			"help": "A write from the SQL tab blocks data entry while it runs; beyond this, it is canceled without changing anything (120 s by default)."
+		},
+		"numberRange": "{label}: a whole number from {min} to {max}",
+		"locked": "🔒 Set by your organization's policy.",
+		"fixed": "Set by {source}: changing it here has no effect.",
+		"fixedOther": "another configuration",
+		"dialog": {
+			"title": "Settings",
+			"sections": "Sections",
+			"mcpTooltip": "Let an MCP-compatible assistant (Claude Desktop, Claude Code…) read and change the open workbook",
+			"mcp": "MCP server (assistants)…"
+		}
+	},
+	"shortcuts": {
+		"fichier": {
+			"title": "Workbook",
+			"new": "New workbook",
+			"open": "Open a workbook",
+			"save": "Save",
+			"saveAs": "Save as",
+			"print": "Print the sheet",
+			"close": "Close the workbook",
+			"undo": "Undo",
+			"redo": "Redo",
+			"help": "Help (in a formula: the page of the function under the cursor)"
+		},
+		"clavier": {
+			"title": "Ribbon, menus and windows",
+			"keyTips": "Ribbon access keys (KeyTips); Esc goes back",
+			"fold": "Collapse or pin the ribbon (also: double-click a ribbon tab)",
+			"fileMenu": "File menu",
+			"tab": "{tab} tab of the ribbon (or Alt+{key})",
+			"arrows": "In the ribbon: neighboring tab or command; Down goes to the commands, Up goes back to the tab",
+			"regions": "Next, previous region: ribbon, formula bar, grid, pane, tabs, status bar",
+			"contextMenu": "Shortcut menu of the active cell (or of the selected chart)",
+			"menuUpDown": "In a menu: previous, next item (Home, End: the first, the last)",
+			"menuLetter": "In a menu: next item that starts with this letter",
+			"menuChoose": "In a menu: choose the item",
+			"dialogFields": "In a dialog box: next, previous field",
+			"escape": "Close the menu, dialog box or pane; focus returns to where it was"
+		},
+		"feuilles": {
+			"title": "Sheets",
+			"next": "Next sheet",
+			"previous": "Previous sheet",
+			"insert": "Insert a sheet",
+			"tabArrows": "On a sheet tab (F6): neighboring tab; Enter shows it",
+			"choiceList": "On a choice tab (“Sales · 2025 ▾”): open the list of values",
+			"choiceNext": "Choice tab: next value (the following year)",
+			"choicePrevious": "Choice tab: previous value"
+		},
+		"deplacement": {
+			"title": "Navigation and selection",
+			"arrows": "Neighboring cell",
+			"edge": "Edge of the data region",
+			"endArrow": "Same as Ctrl+Arrow",
+			"extend": "Extend the selection",
+			"page": "Next, previous page",
+			"home": "Start of the row",
+			"a1": "Cell A1",
+			"lastCell": "Last used cell",
+			"tab": "Next, previous cell",
+			"selectTable": "Select the table",
+			"selectColumn": "Select the table column",
+			"selectRow": "Select the row"
+		},
+		"saisie": {
+			"title": "Data entry",
+			"edit": "Edit the cell",
+			"enter": "Confirm and move down",
+			"enterAll": "Confirm in the whole selection",
+			"lineBreak": "Line break in the cell",
+			"cancel": "Cancel the entry",
+			"delete": "Clear the selection",
+			"today": "Today's date",
+			"now": "Current time",
+			"autoSum": "AutoSum",
+			"dropDown": "Open the cell's drop-down list",
+			"fillDown": "Fill down",
+			"fillRight": "Fill right",
+			"repeat": "Repeat the last action"
+		},
+		"edition": {
+			"title": "Editing and formatting",
+			"copy": "Copy",
+			"cut": "Cut",
+			"paste": "Paste",
+			"find": "Find",
+			"replace": "Replace",
+			"bold": "Bold, italic, underline",
+			"format": "Format cells",
+			"insertDelete": "Insert, delete rows or columns",
+			"strike": "Strikethrough",
+			"hide": "Hide the rows, the columns of the selection",
+			"table": "Format as table",
+			"filter": "Column filter (clears the filters if there are any)",
+			"note": "New note (or edit the note)",
+			"chart": "Chart (column chart) of the active table"
+		},
+		"calcul": {
+			"title": "Calculation and data",
+			"refresh": "Refresh the table's query, otherwise recalculate",
+			"refreshAll": "Refresh all: queries and formulas",
+			"insertFunction": "Insert function",
+			"recalc": "Recalculate"
+		},
+		"editeurs": {
+			"title": "SQL, Script and HTML tabs",
+			"sqlRun": "SQL: run the selection, otherwise the statement under the cursor",
+			"sqlNames": "SQL: table and column names",
+			"sqlHistory": "SQL: query history",
+			"scriptRun": "Script: run the script",
+			"save": "Script, HTML: save",
+			"htmlPreview": "HTML: update the preview"
+		}
+	},
+	"pageSetup": {
+		"margins": {
+			"normal": "Normal",
+			"wide": "Wide",
+			"narrow": "Narrow"
+		},
+		"papers": {
+			"B5": "B5 (ISO)",
+			"Letter": "Letter",
+			"Legal": "Legal",
+			"Tabloid": "Tabloid",
+			"Executive": "Executive"
+		},
+		"paperSize": "{w} cm × {h} cm",
+		"fit": {
+			"pages": "{n, plural, one {# page} other {# pages}}",
+			"auto": "Automatic"
+		},
+		"scale": {
+			"auto": "auto",
+			"fitted": "Fit: {wide} wide, {tall} tall",
+			"percent": "{n}%"
+		},
+		"hf": {
+			"codes": {
+				"page": "Page number",
+				"pages": "Number of pages",
+				"date": "Date",
+				"time": "Time",
+				"path": "File path",
+				"file": "File name",
+				"sheet": "Sheet name"
+			},
+			"presets": {
+				"page": "Page &[Page]",
+				"pageOf": "Page &[Page] of &[Pages]",
+				"confidential": "Confidential"
+			},
+			"separator": "; ",
+			"none": "(none)"
+		},
+		"undo": {
+			"margins": "Margins",
+			"orientation": "Orientation",
+			"paper": "Size",
+			"printArea": "Print area",
+			"resetBreaks": "Reset page breaks",
+			"break": "Page break",
+			"scale": "Scaling",
+			"printGridlines": "Print gridlines",
+			"printHeadings": "Print headings"
+		},
+		"notice": {
+			"breakA1": "At A1, nothing to split: place the active cell below the row or to the right of the column where the new page starts",
+			"noBreakHere": "No manual page break above or to the left of the active cell",
+			"noBreaks": "No manual page breaks"
+		},
+		"error": {
+			"fit": "Fit to: between 1 and 999 pages",
+			"scale": "Scaling: between 10 and 400%",
+			"firstPage": "First page number: a number or “Auto”",
+			"margins": "Margins: between 0 and 50 cm",
+			"area": "Print area: a range such as $A$1:$F$40",
+			"titleRows": "Rows to repeat at top: such as $1:$2",
+			"titleCols": "Columns to repeat at left: such as $A:$B"
+		},
+		"dialog": {
+			"title": "Page setup",
+			"tabs": {
+				"page": "Page",
+				"margins": "Margins",
+				"hf": "Header/Footer",
+				"sheet": "Sheet"
+			},
+			"header": "Header",
+			"footer": "Footer",
+			"customHF": "(custom)",
+			"left": "Left",
+			"center": "Center",
+			"right": "Right",
+			"top": "Top",
+			"bottom": "Bottom",
+			"preview": "Preview",
+			"fromSelection": "Selection",
+			"fromSelectionTooltip": "Use the sheet's selection",
+			"orientation": "Orientation",
+			"portrait": "Portrait",
+			"landscape": "Landscape",
+			"scale": "Scaling",
+			"scaleBefore": "Adjust to:",
+			"scaleAfter": "% normal size",
+			"fitBefore": "Fit to:",
+			"fitWide": "page(s) wide by",
+			"fitTall": "tall",
+			"fitNote": "An empty box: as many pages as needed in that direction.",
+			"paper": "Paper size:",
+			"firstPage": "First page number:",
+			"marginsNote": "In centimeters. The header and footer print at their distance from the edge, within the top and bottom margins.",
+			"centerOnPage": "Center on page",
+			"horizontally": "Horizontally",
+			"vertically": "Vertically",
+			"insertCode": "Insert into the chosen field:",
+			"printArea": "Print area:",
+			"printAreaPlaceholder": "the whole used range",
+			"printTitles": "Print titles",
+			"titleRows": "Rows to repeat at top:",
+			"titleCols": "Columns to repeat at left:",
+			"print": "Print",
+			"gridlines": "Gridlines",
+			"headings": "Row and column headings",
+			"blackWhite": "Black and white",
+			"pageOrder": "Page order",
+			"downThenOver": "Down, then over",
+			"overThenDown": "Over, then down",
+			"printButton": "Print…"
+		}
+	},
+	"busy": {
+		"aria": "Processing",
+		"label": "Processing…"
+	},
+	"sync": {
+		"busyTooltip": "Your changes are made; they are being sent to the server",
+		"offline": "Offline — {n} pending",
+		"sendingCount": "Syncing… ({n})",
+		"sending": "Syncing…",
+		"done": "Synced"
+	},
+	"report": {
+		"issueBody": "Lattis version: {version}\n\nWhat happened:\n\nWhat was expected:\n\nSteps to reproduce:\n1. "
+	},
+	"panel": {
+		"help": "Help",
+		"closeTooltip": "Close the pane (Esc)",
+		"closeAria": "Close the pane"
+	},
+	"crash": {
+		"title": "Lattis ran into an error",
+		"status": "Error {status}",
+		"logged": "Details saved in {path}",
+		"reload": "Reload",
+		"uiTitle": "Interface error",
+		"uiDetail": "The details (stack, last actions) are in the error log. The workbook is not lost.",
+		"retry": "Try again",
+		"reloadUi": "Reload the interface"
+	},
+	"titleBar": {
+		"comingSoon": "{action}: coming soon",
+		"unsaved": "Unsaved changes",
+		"minimize": "Minimize",
+		"restore": "Restore down",
+		"maximize": "Maximize",
+		"close": "Close",
+		"save": "Save (Ctrl+S)",
+		"undo": "Undo (Ctrl+Z)",
+		"redo": "Redo (Ctrl+Y)"
+	},
+	"untitled": "Untitled workbook",
+	"about": {
+		"title": "About Lattis",
+		"tagline": "Local-first relational spreadsheet · version {version}",
+		"licensePrefix": "Free software under the license",
+		"source": "Source code",
+		"server": "This session is served by a Lattis Server ({server}), under the AGPL-3.0 license:",
+		"serverSource": "server source code",
+		"trademarks": "“Lattis”, “Be-Lattis” and the logo are reserved trademarks, outside the code license. Maps: Licence Ouverte / Etalab 2.0."
+	},
+	"zoom": {
+		"out": "Zoom out",
+		"in": "Zoom in",
+		"slider": "Zoom",
+		"level": "Zoom level"
+	},
+	"recovery": {
+		"older": "{n, plural, one {+ # older version} other {+ # older versions}}",
+		"recovered": "Changes recovered: remember to save.",
+		"title": "Recovery",
+		"intro": "Lattis closed without saving. These workbooks have recoverable changes:",
+		"modified": "modified {date}",
+		"recover": "Recover",
+		"discardAllTooltip": "Discard this session and its older versions",
+		"discardAll": "Discard all",
+		"discard": "Discard",
+		"showOlder": "Show the {n} older ones"
+	},
+	"saveProgress": {
+		"snapshot": "Saving: copying the database…",
+		"scrub": "Saving: removing the undo history…",
+		"write": "Saving: writing the file {pct}%",
+		"verify": "Saving: checking the file…"
+	},
+	"mcp": {
+		"title": "MCP server",
+		"intro": "An MCP-compatible assistant (Claude Desktop, Claude Code…) can read and change the open workbook: sheets, tables, cells, selection, SQL, scripts, buttons. What it changes during a series of actions is undone in one step (Ctrl+Z). The server only listens on this computer and requires a token.",
+		"enable": "Turn on the MCP server",
+		"enableRunning": "Turn on the MCP server (running)",
+		"enableStopped": "Turn on the MCP server (stopped)",
+		"address": "Address",
+		"token": "Token",
+		"hide": "Hide",
+		"show": "Show",
+		"copied": "Copied",
+		"copy": "Copy",
+		"configs": {
+			"desktop": {
+				"label": "Claude Desktop (and stdio clients)",
+				"hint": "Add to claude_desktop_config.json: the client launches Lattis as a relay to the open application."
+			},
+			"code": {
+				"hint": "Command to run in a terminal (user scope: Lattis is offered in all your projects)."
+			},
+			"http": {
+				"label": "HTTP clients (Streamable HTTP)",
+				"hint": "For clients that connect to an address."
+			}
+		},
+		"confirm": {
+			"title": "{client} wants to change the workbook",
+			"toolBefore": "Tool",
+			"toolAfter": ". With no answer within two minutes, the request is denied.",
+			"others": "{n, plural, one {# other request pending.} other {# other requests pending.}}",
+			"allow": "Allow",
+			"deny": "Deny"
+		}
+	},
+	"exportReport": {
+		"lost": {
+			"charts": "{n, plural, one {# chart} other {# charts}}",
+			"pivots": "{n, plural, one {# PivotTable as values} other {# PivotTables as values}}",
+			"formulas": "{n, plural, one {# formula as a value} other {# formulas as values}}",
+			"rules": "{n, plural, one {# conditional formatting rule} other {# conditional formatting rules}}",
+			"notes": "{n, plural, one {# note} other {# notes}}",
+			"lists": "{n, plural, one {# validation list} other {# validation lists}}",
+			"buttons": "{n, plural, one {# button} other {# buttons}}",
+			"queries": "{n, plural, one {# query (table as values)} other {# queries (tables as values)}}",
+			"pages": "{n, plural, one {# page or document tab} other {# page or document tabs}}",
+			"scripts": "{n, plural, one {# script} other {# scripts}}",
+			"protections": "{n, plural, one {# sheet protection} other {# sheet protections}}",
+			"twoLevel": "{n, plural, one {# header group (in the names)} other {# header groups (in the names)}}",
+			"clipped": "{n, plural, one {# cell out of bounds} other {# cells out of bounds}}"
+		},
+		"withFunctions": "{text} ({functions})",
+		"noticeAll": "Workbook exported: {path}; everything was exported",
+		"noticeLost": "Workbook exported: {path}; not exported: {lost}",
+		"detail": {
+			"docTab": "Document tab: exported as an empty sheet",
+			"htmlTab": "HTML page: exported as an empty sheet",
+			"tables": "{n, plural, one {# table} other {# tables}}",
+			"translated": "{n, plural, one {# formula exported as a formula} other {# formulas exported as formulas}}",
+			"charts": "{n, plural, one {# chart not exported} other {# charts not exported}}",
+			"pivots": "{n, plural, one {# PivotTable exported as values, with no link to its source} other {# PivotTables exported as values, with no link to their source}}",
+			"noEquivalent": "{text} (no equivalent: {functions})",
+			"formulas": "{n, plural, one {# formula exported as its value} other {# formulas exported as their values}}",
+			"columns": "{n, plural, one {# calculated column exported as its values} other {# calculated columns exported as their values}}",
+			"rules": "{n, plural, one {# conditional formatting rule not exported} other {# conditional formatting rules not exported}}",
+			"notes": "{n, plural, one {# note not exported} other {# notes not exported}}",
+			"lists": "{n, plural, one {# validation list not exported} other {# validation lists not exported}}",
+			"buttons": "{n, plural, one {# button not exported} other {# buttons not exported}}",
+			"queries": "{n, plural, one {# table loaded by a query: values exported, without the query} other {# tables loaded by a query: values exported, without the query}}",
+			"twoLevel": "{n, plural, one {# table with header groups: groups exported in the names (“Group.Sub”)} other {# tables with header groups: groups exported in the names (“Group.Sub”)}}",
+			"protected": "Sheet protection not exported",
+			"clipped": "{n, plural, one {# cell beyond 1,048,576 rows × 16,384 columns not exported} other {# cells beyond 1,048,576 rows × 16,384 columns not exported}}"
+		},
+		"printCharts": "{n, plural, one {# chart not printed} other {# charts not printed}}: printing a sheet only includes its cells",
+		"dialog": {
+			"aria": "Export details",
+			"title": "{format} export: details",
+			"kept": "Exported: {list}.",
+			"lost": "Not exported as is:",
+			"all": "Everything was exported.",
+			"workbook": "Workbook",
+			"scripts": "{n, plural, one {# script not exported} other {# scripts not exported}} (Excel and LibreOffice do not read Lattis scripts)",
+			"note": "Values, cell formatting, tables and formulas that have an equivalent are exported."
+		}
+	},
+	"notice": {
+		"importCreatesSheet": "Importing creates a sheet: {reason}",
+		"refreshedAll": "All refreshed: {n, plural, one {# query} other {# queries}}, formulas recalculated",
+		"recalcNoQuery": "Formulas recalculated (no loaded query to refresh)",
+		"tableRecalculated": "Table “{table}” recalculated, along with what depends on it",
+		"recalculated": "Formulas recalculated",
+		"insertSheetLocked": "The workbook structure is protected: unprotect it to insert a sheet",
+		"importedOne": "Table “{table}” imported",
+		"importedMany": "{n, plural, one {# table imported} other {# tables imported}}",
+		"importWarnings": "{what}; {n, plural, one {# point to check} other {# points to check}}: {list}",
+		"noTableToExport": "No table to export on this sheet",
+		"tableExported": "Table “{table}” exported: {path}",
+		"sheetExported": "Sheet “{name}” exported: {path}",
+		"autoKey": ", key set on {column}",
+		"keyed": "Key set on “{column}” for REFERENCE",
+		"undoBirth": " (Ctrl+Z: undo it, the cells stay free)",
+		"undoHint": " (Ctrl+Z to undo)",
+		"createdUnnamed": "Table “{table}” created without headers (the 1st row looks like the next ones): right-click › Use first row as headers{more}",
+		"createdHeadless": "Table “{table}” created without headers (“Column n”): type the names in its header row{more}",
+		"created": "Table “{table}” created{more}",
+		"widened": "Column {column} changed from {from} to {to} (Ctrl+Z to undo)",
+		"invalidValue": "Value does not match the type: cell marked as an error",
+		"pastedHeadless": "Table “{table}” created without headers{more}: right-click › Table › “Move header out” if needed",
+		"pasted": "Table “{table}” created{more} ({n, plural, one {# row} other {# rows}})",
+		"pastedSplit": "Table “{table}” created{more} ({n, plural, one {# row} other {# rows}}; Ctrl+Z: undo it, the cells stay free)",
+		"defaultColumn": "Column {n}",
+		"scriptError": "Script error: {error}",
+		"notFound": "“{name}” cannot be found in the workbook",
+		"theme": "Theme “{name}” (Ctrl+Z to undo)",
+		"tableRenamed": "Table “{from}” renamed to “{to}” (Ctrl+Z to undo)",
+		"resultCopied": "Result copied to table “{table}” (Ctrl+Z to undo)",
+		"tableLinked": "Table “{table}” linked to the query: right-click › Refresh to reload it",
+		"scriptsNeedWorkbook": "Scripts run on a workbook: File › New."
+	},
+	"welcome": {
+		"progressStart": "{label}…",
+		"progress": "{label}: {done} / {total} rows",
+		"progressCells": "{label}: {done} / {total} rows · {cells} / {totalCells} cells",
+		"steps": {
+			"table": {
+				"title": "Type a table",
+				"text": "a few rows with headers: Lattis recognizes it and turns it into a real typed table."
+			},
+			"formula": {
+				"title": "Calculate by column name",
+				"text": "=[Quantity]*[Price] applies to the whole column, without copying the formula down."
+			},
+			"sql": {
+				"title": "Query in SQL",
+				"text": "the SQL tab reads your tables like a database."
+			}
+		},
+		"noWorkbook": "No workbook open.",
+		"new": "New workbook",
+		"importTooltip": "Creates a workbook with the imported sheets",
+		"firstSteps": "Getting started",
+		"openHelp": "Open help",
+		"openSample": "Open the sample workbook",
+		"hide": "Don't show again",
+		"recent": "Recent"
+	},
+	"doc": {
+		"online": "online on {server}",
+		"offline": "offline — {server}",
+		"savedRemote": "Saved on {server}: {title}",
+		"savedWeb": "Saved in your online session: {path}. File › Download a copy to keep it on your device, or Publish to a server to share it and find it again",
+		"saved": "Saved: {path}",
+		"sharedUntitled": "Shared workbook",
+		"recentOnline": "Online on {server}",
+		"recentOnlineLink": "Online on {server}: {link}"
+	},
+	"choice": {
+		"empty": "(blank)",
+		"allValues": "All values of “{name}”",
+		"newValue": "New value…",
+		"status": "{name}: {value} (tab choice)",
+		"statusHidden": "{status} · {n, plural, one {# row of other values hidden} other {# rows of other values hidden}}",
+		"byColumn": "Choice tab by “{column}”: the tab's ▾ arrow chooses the value shown (Alt+↓)",
+		"byFormula": "Choice tab by “{name}” ({formula}): the tab's ▾ arrow chooses the value shown (Alt+↓)",
+		"none": "This sheet has no choice tab (right-click the tab › Choose by)"
+	},
+	"rowFormula": {
+		"names": {
+			"year": "Year",
+			"month": "Month",
+			"day": "Day",
+			"week": "Week",
+			"category": "Category"
+		},
+		"noValues": "No values: the formula only gives empty cells",
+		"more": "{list}… ({n, plural, one {# value} other {# values}})",
+		"name": "Name:",
+		"formula": "Formula:",
+		"suggestions": "Suggestions",
+		"hint": "Columns are written in square brackets: [Date], [Amount]. The formula is calculated for each row.",
+		"count": "{n, plural, =0 {Values} one {# value} other {# values}}",
+		"follow": "{label}: {list}",
+		"others": " · without these columns, they do not follow: {list}",
+		"previewEmpty": "The preview of the values appears here."
+	},
+	"names": {
+		"fault": {
+			"digit": "it starts with a digit",
+			"start": "it starts with “{char}”",
+			"space": "it contains a space",
+			"char": "the character “{char}” is not allowed",
+			"message": "“{name}”: {fault}.\n\n{rule}"
+		},
+		"table": {
+			"invalid": "Invalid table name",
+			"rule": "A table name starts with a letter (or _) and contains only letters, digits and _, with no spaces: it is written as is in formulas (example: Sales_2024).",
+			"empty": "The table name cannot be empty.\n\n{rule}",
+			"address": "“{name}” is a cell address: the Name Box and formulas would not know which of the two you mean.\n\nTry for example “{name}_” or “T_{name}”.",
+			"taken": "Table name already in use",
+			"takenMessage": "Another table is already named “{name}” (case does not matter).\n\nChoose a name that is not yet used in the workbook."
+		},
+		"sheet": {
+			"invalid": "Invalid sheet name",
+			"empty": "The sheet name cannot be empty.\n\nType a name, or Esc to keep the old one.",
+			"taken": "Sheet name already in use",
+			"takenMessage": "Another sheet is already named “{name}” (case does not matter).\n\nChoose a name that is not yet used in the workbook."
+		},
+		"cell": {
+			"invalid": "Invalid cell name",
+			"rule": "A cell name starts with a letter (or _) and contains only letters, digits, _ and periods, with no spaces (example: VAT_Rate).",
+			"reserved": "“{name}” is a reserved word in formulas.\n\n{rule}",
+			"address": "“{name}” is a cell address.\n\n{rule}"
+		},
+		"column": {
+			"taken": "Column name already in use",
+			"takenMessage": "Table {table} already has a column “{name}” (case does not matter): {ref} would be ambiguous in formulas.\n\nChoose another name.",
+			"takenMessageNoTable": "The table already has a column “{name}” (case does not matter): {ref} would be ambiguous in formulas.\n\nChoose another name.",
+			"tableWord": "Table"
+		},
+		"script": {
+			"invalid": "Invalid script name",
+			"empty": "The script name cannot be empty.\n\nType a name, or Esc to keep the old one.",
+			"taken": "Script name already in use",
+			"takenMessage": "Another script is already named “{name}”.\n\nChoose another name."
+		},
+		"favorite": {
+			"invalid": "Invalid favorite name",
+			"empty": "The favorite query name cannot be empty.\n\nType a name, or Esc to keep the old one."
+		},
+		"refused": "The name was rejected.",
+		"takenAdvice": ".\n\nChoose a name that is not yet used in the workbook."
+	},
+	"theme": {
+		"title": "Customize theme",
+		"custom": "Custom",
+		"customOf": "{name} (custom)",
+		"tables": "Tables",
+		"sources": "External sources",
+		"otherColors": "Other palette colors (font, fill)",
+		"accent": "Accent {n}",
+		"text2": "Text 2",
+		"background2": "Background 2",
+		"derive": "Derive from the first two colors",
+		"sample": {
+			"sales": "Sales",
+			"product": "Product",
+			"quantity": "Quantity",
+			"customers": "Customers (query)",
+			"customer": "Customer",
+			"city": "City"
+		},
+		"name": "Name",
+		"save": "Add to my themes (offered in all workbooks)",
+		"mine": "My themes",
+		"removeTooltip": "Remove “{name}” from my themes (workbooks that use it keep their colors)",
+		"remove": "Remove",
+		"note": "The theme is saved with the workbook: it looks the same on other computers. The shades (header, text, border) are derived from the two colors; cells colored with a theme color change with it.",
+		"apply": "Apply"
+	},
+	"select": {
+		"aria": "{label}: {value}"
+	},
+	"merge": {
+		"chipTables": "{n, plural, one {# similar table} other {# similar tables}}",
+		"chipSheets": "{n, plural, one {# similar tab} other {# similar tabs}}",
+		"rangeTwo": "{first} and {last}",
+		"range": "{first} to {last}",
+		"defaultName": "Combined",
+		"offerStacked": "{n} tables in “{sheet}” ({range}) have the same columns. Combine them into a single table “{tab}”?",
+		"offerColumns": "{n} tabs ({range}) have the same columns. Combine them into a single tab “{tab}”?",
+		"offerTables": "{n} tabs ({range}) have the same tables. Combine them into a single tab “{tab}”?",
+		"quoted": "“{name}”",
+		"mode": {
+			"onceOne": "Put it on the combined sheet",
+			"once": "Keep a single copy (the last one)",
+			"leaveOne": "Leave it on its tab",
+			"leave": "Leave them on their tabs",
+			"followOne": "Combine it: follows {category}",
+			"follow": "Combine them: follows {category}",
+			"merge": "Combine them"
+		},
+		"family": {
+			"only": "only in {sheet}",
+			"sheets": "{n} tabs",
+			"same": " · same data everywhere"
+		},
+		"source": {
+			"sheet": "tab name",
+			"title": "title above each table",
+			"cell": "cell {cell}"
+		},
+		"layout": {
+			"table": "{name} at {at} · {n, plural, =0 {# rows} one {# row} other {# rows}}",
+			"tableFollows": "{name} at {at} · {n, plural, =0 {# rows} one {# row} other {# rows}} · follows the choice",
+			"cells": "{n, plural, =1 {One free cell carried over} other {# free cells carried over}}",
+			"perValue": "{cells}, including {n} per {category}",
+			"value": "value",
+			"lost": "{n, plural, =1 {One free cell falls on a combined table: not carried over} other {# free cells fall on a combined table: not carried over}}"
+		},
+		"refused": "Cannot combine: {reason}",
+		"pending": "{n, plural, =1 {One formula or object refers} other {# formulas or objects refer}} to the old tables with no exact equivalent: to be fixed by hand",
+		"pendingHidden": "{n, plural, =1 {One formula or object refers} other {# formulas or objects refer}} to the old tables with no exact equivalent: to be fixed by hand (the old tabs are kept hidden)",
+		"refs": {
+			"done": "{n, plural, =1 {one formula rewritten} other {# formulas rewritten}}",
+			"leftAfter": "{n, plural, =1 {one to fix by hand} other {# to fix by hand}}",
+			"left": "{n, plural, =1 {one formula to fix by hand} other {# formulas to fix by hand}}",
+			"separator": ", ",
+			"line": "{where}: {formula} → {after}",
+			"lineWhy": "{where}: {formula} ({why})",
+			"lineLeft": "{where}: {formula}"
+		},
+		"old": {
+			"deleted": "Deleted anyway: {n, plural, =1 {a formula or object still refers to them and will no longer find its table} other {# formulas or objects still refer to them and will no longer find their table}}",
+			"hidden": "Kept hidden: {n, plural, =1 {a formula or object still refers to them} other {# formulas or objects still refer to them}}",
+			"hide": "Keep a hidden copy (tables renamed …_old)",
+			"delete": "Delete the tabs (Ctrl+Z brings them back)"
+		},
+		"panel": {
+			"title": "Combine tabs",
+			"subtitle": "A single table, with a category column",
+			"sheets": "1. Tabs",
+			"tableRows": " · {n, plural, =0 {# rows} one {# row} other {# rows}}",
+			"addTableAria": "Add a table",
+			"addTablePlaceholder": "Add a table…",
+			"add": "Add",
+			"category": "2. Category column",
+			"noCategoryData": "Don't add a column: the “{column}” column is enough (its dates fall in each tab's month)",
+			"noCategory": "Don't add a column (the category is already in the data)",
+			"name": "Name",
+			"categoryNameAria": "Category column name",
+			"type": "Type",
+			"categoryTypeAria": "Category column type",
+			"types": {
+				"text": "Text",
+				"integer": "Whole number",
+				"date": "Date"
+			},
+			"from": "Taken from",
+			"sourceAria": "Category source",
+			"valueFromSheet": "Value taken from each tab's name, correct it if needed:",
+			"valueFrom": "Value taken from: {source}, correct it if needed:",
+			"valueAria": "Value for {sheet}",
+			"columns": "3. Columns",
+			"column": "Column",
+			"otherTables": "Other tables in the tabs",
+			"modeAria": "What happens to {name}",
+			"after": "4. Afterward",
+			"table": "Table",
+			"tableAria": "Name of the combined table",
+			"sheet": "Sheet",
+			"sheetAria": "Name of the new sheet",
+			"oldSheets": "Old tabs",
+			"keepCells": "Carry over the tabs' free cells (titles, totals, targets; one per {category} when they differ)",
+			"layout": "On the combined sheet (layout of the last tab):",
+			"left": "Stay on their tab: {list}",
+			"rewritten": "Formulas rewritten ({n})",
+			"pending": "To fix by hand ({n})",
+			"why": ": {why}",
+			"preview": "5. Preview",
+			"total": "{n, plural, =0 {# rows} one {# row} other {# rows}} in total",
+			"totalKey": "{n, plural, =0 {# rows} one {# row} other {# rows}} in total · key: {key}",
+			"merge": "Combine",
+			"checkTwo": "Check at least two tabs"
+		},
+		"notice": {
+			"none": "No similar tabs found: select the tabs (Ctrl+click), then right-click › Combine tabs…",
+			"noTables": "These tabs have no tables to combine (at least two are needed, with the same columns)",
+			"dismissed": "These tabs will no longer be offered for combining (choice kept in the workbook)"
+		}
+	},
+	"tabs": {
+		"locked": "The workbook structure is protected: unprotect it (Review › Unprotect workbook) to add, delete, rename or move sheets",
+		"renameRefused": "Sheet name rejected",
+		"one": "One sheet at a time: select a single tab",
+		"previous": "Previous sheet",
+		"previousTooltip": "Previous sheet (Ctrl+Page Up)",
+		"next": "Next sheet",
+		"nextTooltip": "Next sheet (Ctrl+Page Down)",
+		"renameAria": "New sheet name",
+		"tip": {
+			"choiceKeys": " — Alt+↓: choose. ",
+			"end": ". ",
+			"sheetProtected": "Sheet protected. ",
+			"bookProtected": "Workbook protected",
+			"renameMove": "Double-click to rename, drag to move",
+			"rename": "Double-click to rename"
+		},
+		"sheetProtected": "Sheet protected",
+		"bookProtected": "Workbook protected",
+		"htmlPage": "Web page",
+		"document": "Document",
+		"chipTooltip": "{label}: combine them into a single table (right-click: Don't offer again)",
+		"chipTooltipOut": "{label}: combine them into a single table (right-click: Don't offer again) — {n} out of view",
+		"mergeShort": "Combine…",
+		"dismiss": "Don't offer again",
+		"moreTooltip": "{n, plural, one {# sheet not shown} other {# sheets not shown}}: all sheets",
+		"add": {
+			"locked": "Workbook structure protected",
+			"tooltipPage": "New sheet (right-click: Web page or Document)",
+			"tooltip": "New sheet (right-click: Document)",
+			"sheet": "New sheet",
+			"page": "New web page",
+			"doc": "New document"
+		},
+		"menu": {
+			"selected": "{n} sheets selected",
+			"title": "Sheet “{name}”",
+			"mergeTooltip": "Combine the tables of these tabs (same columns) into one, with a category column",
+			"merge": "Combine tabs…",
+			"insert": "Insert",
+			"sheet": "Sheet",
+			"rename": "Rename",
+			"move": "Move or copy…",
+			"color": "Tab color",
+			"colorAria": "Color {color}",
+			"noColor": "No color",
+			"chooseBy": "Choose by",
+			"chooseByTooltip": "An arrow on the tab chooses the value shown (year, month, city…)",
+			"readingColumns": "Reading the columns…",
+			"noColumns": "No table column on this sheet has few distinct values",
+			"columnTooltip": "“{column}” in table {table} — {n, plural, one {# distinct value} other {# distinct values}}",
+			"formulaTooltip": "A formula on each row's columns gives the value to choose: =ANNEE([Date]), =TEXTE([Date];\"mmmm\"), =SI([Montant]>1000;\"Gros\";\"Petit\")",
+			"formula": "A formula…",
+			"stopChoosing": "Stop choosing by “{name}”",
+			"unprotect": "Unprotect sheet…",
+			"protect": "Protect sheet…",
+			"keepOne": "The workbook keeps at least one visible sheet",
+			"hideMany": "Hide the {n} sheets",
+			"hide": "Hide",
+			"unhide": "Unhide…",
+			"deleteMany": "Delete the {n} sheets",
+			"delete": "Delete"
+		},
+		"choice": {
+			"aria": "Choice for tab “{name}”",
+			"reading": "Reading the values…",
+			"rows": "{n, plural, one {# row} other {# rows}}",
+			"noRows": "No rows yet",
+			"empty": "blank",
+			"computed": "Values calculated by {formula}"
+		},
+		"byFormula": {
+			"title": "Choose by a formula",
+			"intro": "The tab's arrow will choose among the formula's values; the sheet's tables that have its columns show only the rows for the chosen value.",
+			"name": "Category name:",
+			"follow": "Follow the tab"
+		},
+		"adding": {
+			"intro": "The value is added to the list of “{name}” and the tab shows it: the sheet looks empty, ready to be filled. Ctrl+Z undoes it.",
+			"label": "{name}:"
+		},
+		"move": {
+			"title": "Move or copy",
+			"sheet": "Move sheet “{name}”",
+			"before": "Before sheet:",
+			"hidden": "{name} (hidden)",
+			"last": "(move to end)",
+			"copy": "Create a copy"
+		},
+		"all": {
+			"title": "All sheets"
+		},
+		"unhide": {
+			"title": "Unhide",
+			"label": "Unhide sheet:"
+		}
+	},
+	"share": {
+		"addTableConfirm": "Add table “{table}” to shared workbook “{workbook}”?\n\nIt is created on the server with its rows; all members receive it and edit it according to their rights.\n\nThis addition cannot be undone with Ctrl+Z: to remove the table, “Delete table” deletes it for everyone.",
+		"addingTable": "Adding “{table}” to the shared workbook…",
+		"tableAdded": "Table “{table}” added to the shared workbook",
+		"sourceUpdating": "Updating source “{table}”…",
+		"sourceFailed": "Source “{table}” not updated: {error}",
+		"connected": "Connected to {server}",
+		"stillDown": "{server} is still not responding: Lattis will retry on its own",
+		"forgetConfirm": "{n, plural, one {# unsent change will be lost.} other {# unsent changes will be lost.}}\n\n“Save a local copy…” keeps them. Remove this workbook from the recent list anyway?",
+		"versionLoaded": "Version {version} loaded",
+		"removeRecent": "{error}\n\nRemove it from recent workbooks?",
+		"localCopyOpened": "{reason}: local copy opened",
+		"openedOnline": "“{title}” is shared on {server}: opened online",
+		"readOnlyRole": "{reason} (role: {roles})",
+		"formNeedsTable": "Place the cursor in a table to turn it into a form.",
+		"scriptsLocked": "Only owners and designers can edit the scripts of this shared workbook",
+		"versionPublished": "Version {version} published",
+		"publishedFrozen": "Workbook published on {server} (frozen)",
+		"publishedLive": "Workbook published on {server} (collaborative)",
+		"detach": {
+			"title": "Detach from server",
+			"question": "Detach this workbook from the server?",
+			"ok": "Detach"
+		},
+		"link": {
+			"title": "Open a Lattis link",
+			"question": "Open a workbook from “{name}”?",
+			"warning": "Lattis has never connected to {host}. Only accept if you know this server and were expecting this link.",
+			"ok": "Sign in and open"
+		}
+	},
+	"conflicts": {
+		"mineAll": "Your value is restored for all computers",
+		"mineServer": "Your value is sent back to the server",
+		"theirs": "Colleague's value kept",
+		"heldRetried": "Changes to “{table}” sent back to the server",
+		"heldDropped": "Changes to “{table}” discarded: the table goes back to the server version",
+		"mineAllCount": "{n, plural, one {# value restored} other {# values restored}} for all computers",
+		"mineServerCount": "{n, plural, one {# value sent back} other {# values sent back}} to the server",
+		"theirsCount": "{n, plural, one {# colleague value kept} other {# colleague values kept}}"
+	},
+	"ref": {
+		"hiddenRow": "Row hidden by the filter on {table}",
+		"filtered": "{table} filtered on {column} = {value} (Alt+← to go back)",
+		"back": "Alt+← to go back to {label}"
+	},
+	"coedit": {
+		"requestSent": "Request sent to the other computers…"
+	},
+	"demo": {
+		"preset": "“{name}” demo",
+		"sample": "Sample workbook",
+		"error": "error",
+		"generating": "Creating the demo: {done} / {total} rows",
+		"opening": "Opening the demo…",
+		"openingShort": "Opening…",
+		"readOnly": "Demo: only the table cells can be edited"
+	},
+	"web": {
+		"reconnected": "Connection to the server restored",
+		"expired": "Your session has expired: sign in again to continue (the changes you already made are kept on the server).",
+		"reconnect": "Sign in again",
+		"lost": "Connection to the server lost: retrying… What you do now waits for the connection to come back."
+	},
+	"protect": {
+		"sheetLocked": "Sheet “{name}” is protected: unprotect it (Review › Unprotect sheet) to change it",
+		"bookLocked": "The workbook is protected: unprotect it (Review › Unprotect workbook) to change it",
+		"notice": {
+			"sheetOff": "Sheet “{name}” unprotected",
+			"sheetOn": "Sheet “{name}” protected",
+			"structureOff": "Structure of “{name}” unprotected",
+			"structureOn": "Structure of sheet “{name}” protected: only data entry in tables is still allowed",
+			"bookOff": "Workbook unprotected",
+			"bookSheets": "Workbook protected: tabs and content of all sheets",
+			"bookStructure": "Workbook protected: tabs and structure of all sheets (data entry in tables only)",
+			"bookTabs": "Workbook structure protected"
+		},
+		"mismatch": "The two passwords do not match",
+		"aria": "Protection",
+		"title": {
+			"sheetOff": "Unprotect sheet “{name}”",
+			"sheetOn": "Protect sheet “{name}”",
+			"structureOff": "Unprotect the structure of “{name}”",
+			"structureOn": "Protect the structure of sheet “{name}”",
+			"bookOff": "Unprotect workbook",
+			"bookOn": "Protect workbook structure"
+		},
+		"explain": {
+			"sheet": "Data entry, pasting, formatting, rows and columns, sorting, objects and SQL write queries will be refused on this sheet. Reading, copying and filters remain allowed.",
+			"structure": "Everything will be locked except data entry in tables: free cells, formatting, columns and headers, tables, objects, the sheet's rows and columns, page layout and tab. You will still be able to type, paste (values only) and clear values in tables, add or delete rows in them, sort and filter.",
+			"bookSheets": "Adding, deleting, renaming, moving or hiding sheets will be refused, as will any change to the content of the sheets.",
+			"bookStructure": "Adding, deleting, renaming, moving or hiding sheets will be refused; on each sheet, only data entry in tables will remain allowed.",
+			"bookTabs": "Adding, deleting, renaming, moving or hiding sheets will be refused. The content of unprotected sheets can still be changed."
+		},
+		"notSecurity": "This protection prevents accidental changes; it is not security: the file is not encrypted, its data remains readable and the protection can be removed by someone with the right tools.",
+		"lock": "Lock",
+		"lockTabs": "Tabs only",
+		"lockStructure": "Tabs and structure of all sheets (data entry in tables only)",
+		"lockSheets": "Tabs and content of all sheets",
+		"password": "Password",
+		"passwordOptional": "Password (optional)",
+		"confirm": "Confirm password",
+		"noteIt": "Without the password, the protection can no longer be removed: write it down."
+	},
+	"deleteSheet": {
+		"items": {
+			"tables": "{n, plural, one {# table} other {# tables}}",
+			"pivots": "{n, plural, one {# PivotTable} other {# PivotTables}}",
+			"charts": "{n, plural, one {# chart} other {# charts}}",
+			"buttons": "{n, plural, one {# button} other {# buttons}}",
+			"cells": "{n, plural, one {# filled cell} other {# filled cells}}"
+		},
+		"withNames": "{what} ({names})",
+		"tableRows": "{name}: {n, plural, one {# row} other {# rows}}",
+		"manyTitle": "Delete sheets",
+		"manyQuestion": "Delete these {n} sheets and everything they contain?",
+		"manyHint": "Ctrl+Z brings them all back, with their content.",
+		"ok": "Delete",
+		"title": "Delete sheet",
+		"question": "Delete sheet “{name}” and everything it contains?",
+		"hint": "Ctrl+Z brings back the sheet and all its content."
+	},
+	"unsent": {
+		"title": "Changes not yet sent",
+		"question": "{n, plural, one {One change to “{title}” has not yet been sent} other {# changes to “{title}” have not yet been sent}} to {server}.",
+		"theServer": "the server",
+		"hint": "{n, plural, one {It is kept on this computer and will be sent} other {They are kept on this computer and will be sent}} the next time the workbook opens, once the server can be reached."
+	},
+	"close": {
+		"quit": "Quit",
+		"title": "Save changes",
+		"question": "Save the changes to “{title}” before closing it?",
+		"questionQuit": "Save the changes to “{title}” before quitting Lattis?",
+		"save": "Save",
+		"dontSave": "Don't save"
+	},
+	"damaged": {
+		"title": "Damaged workbook",
+		"explain": "Lattis can recover its readable data into a new untitled workbook. The damaged file is not changed.",
+		"recover": "Recover the data"
+	},
+	"locked": {
+		"title": "Workbook already open",
+		"coEditHint": "When working together, everyone edits the table data and sees the others' changes live; formatting, columns and sheets wait until you are alone. In read-only mode, your changes are saved under another name.",
+		"together": "Work together",
+		"readOnly": "Open read-only",
+		"hint": "In read-only mode, your changes are saved under another name. Opening it anyway may overwrite the other computer's changes (Lattis checks the file before saving).",
+		"anyway": "Open anyway"
+	},
+	"conflictFile": {
+		"title": "Workbook changed elsewhere",
+		"hint": "“Save a copy” keeps both versions; “Overwrite” replaces the file with yours.",
+		"copy": "Save a copy",
+		"overwrite": "Overwrite"
+	},
+	"status": {
+		"aria": "Status bar",
+		"newSheetTooltip": "Create the PivotTable on a new sheet, at A1",
+		"details": "Details",
+		"backTooltip": "Go back to the cell you jumped from (Alt+←)",
+		"back": "← Back to {label}",
+		"useHeaderTooltip": "The cells typed above the table become its headers; the current header becomes the 1st data row (Ctrl+Z to undo)",
+		"useHeader": "Use as headers",
+		"keepTitleTooltip": "Keep the row as free cells (a title)",
+		"no": "No",
+		"later": "Later",
+		"present": "Also have this workbook open: {names}",
+		"ready": "Ready"
+	},
+	"sqlView": {
+		"tableRenameRefused": "Table name rejected",
+		"favoriteRenameRefused": "Favorite name rejected",
+		"renamed": "Table renamed",
+		"renamedHeader": "Table renamed (Ctrl+Z to undo)",
+		"changed": "Rows affected",
+		"changedHeader": "Rows affected (Ctrl+Z to undo)",
+		"objects": "Objects",
+		"favorites": "Favorites",
+		"favoritesCount": "Favorites ({n})",
+		"history": "History",
+		"historyCount": "History ({n})",
+		"renameAria": "New table name",
+		"objectTooltipRename": "Double-click or F2: rename; right-click: SELECT, INSERT, UPDATE, DELETE examples, show on the sheet",
+		"objectTooltip": "Right-click: SELECT, INSERT, UPDATE, DELETE examples, show on the sheet",
+		"pivot": "PivotTable",
+		"table": "Table",
+		"rows": "{n, plural, one {# row} other {# rows}}",
+		"insertColumn": "Insert into the query",
+		"dataLake": "Lattis Data Lake · {label}",
+		"dataViewTooltip": "{view}: read-only server view, limited to the rows of your audience (double-click: SELECT example)",
+		"dataView": "Data Lake view (read-only)",
+		"rights": "Rights (server)",
+		"rightsEditTooltip": "Share screen: members, roles, restrictions",
+		"rightsEdit": "Edit…",
+		"rightsTooltip": "Generated by the server: read-only",
+		"menuPivot": "PivotTable “{name}”",
+		"menuTable": "Table “{name}”",
+		"example": "Example query",
+		"exampleSelect": "Replaces the query with an example read",
+		"exampleInsert": "Replaces the query with an example of adding a row",
+		"exampleUpdate": "Replaces the query with an example update",
+		"exampleDelete": "Replaces the query with an example delete",
+		"exampleSelectItem": "SELECT example",
+		"goto": "Show on the sheet",
+		"renameItem": "Rename…",
+		"favoriteNameAria": "Favorite name",
+		"reuse": "Load into the editor (double-click: run)",
+		"rename": "Rename",
+		"remove": "Remove",
+		"run": "Run",
+		"noFavorites": "No favorite queries. Use ☆ in the editor bar or in the history to add one; they are saved in the workbook.",
+		"search": "Search",
+		"clear": "Clear",
+		"error": "error",
+		"alreadyFavorite": "Already in favorites",
+		"addFavorite": "Add to favorites",
+		"noMatch": "No query matches.",
+		"noHistory": "Queries you run will appear here.",
+		"runTooltip": "Runs the selection, otherwise the statement under the cursor (Ctrl+Enter)",
+		"stopTooltip": "Stops the running query; a stopped write changes nothing",
+		"stop": "Stop",
+		"starredTooltip": "In favorites: “{name}” (click to remove it)",
+		"starTooltip": "Add the query (or the selection) to the workbook's favorites",
+		"favorite": "Favorite",
+		"hintTooltip": "Statements are separated by “;” or a blank line. 1,000 rows at most.",
+		"hint": "Ctrl+Enter: run the selection, otherwise the statement under the cursor · Ctrl+Space: names · Alt+↑↓: history",
+		"splitAria": "Editor height",
+		"splitTooltip": "Drag to share the space between the query and the result (double-click: original size)",
+		"result": "{n, plural, one {# row} other {# rows}} · {ms} ms",
+		"resultTruncated": "{n, plural, one {# row} other {# rows}} (truncated) · {ms} ms",
+		"sent": "· SQL run",
+		"copyTruncated": "Copies the rows shown (truncated), to paste into Excel",
+		"copyTooltip": "Copies the result (headers included), to paste into Excel",
+		"copied": "Copied ✓",
+		"clipboard": "Clipboard",
+		"toSheet": "To a sheet:",
+		"copyToSheetTooltip": "Copies the result's values into a new table, on a new sheet (Ctrl+Z to undo)",
+		"copyToSheet": "Copy",
+		"linkToSheetTooltip": "Creates a table linked to the query, on a new sheet: external source color (light blue by default), refreshable with right-click like an external source",
+		"linkToSheet": "Reference"
+	}
+}

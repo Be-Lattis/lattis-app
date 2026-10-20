@@ -1,1 +1,1318 @@
-{}
+{
+	"share": {
+		"mode": {
+			"frozen": "Frozen",
+			"collaborative": "Collaborative"
+		},
+		"role": {
+			"owner": "owner",
+			"designer": "designer",
+			"editor": "editor",
+			"participant": "participant",
+			"reader": "viewer"
+		},
+		"roleDetail": {
+			"owner": "everything, including managing access",
+			"designer": "everything except access: structure, page layout, free cells, scripts",
+			"editor": "read, add, edit and delete rows; not the structure or page layout",
+			"participant": "read everything, add rows, edit and delete your own",
+			"reader": "read only"
+		},
+		"roleChip": {
+			"custom": "Custom access",
+			"customDetail": "Custom access: your rights depend on the tables (role defined by the owner)",
+			"detail": "You are {role} of this workbook: {detail}{frozen}{more}",
+			"frozen": " (frozen workbook: read-only)",
+			"more": "; roles: {roles}"
+		},
+		"type": {
+			"text": "Text",
+			"integer": "Integer",
+			"decimal": "Decimal",
+			"date": "Date",
+			"datetime": "Date and time",
+			"boolean": "Boolean"
+		},
+		"blocking": {
+			"none": "Check at least one table to publish.",
+			"problem": "“{table}”: {problem}",
+			"invalid": "“{table}”: {n} invalid entry(ies) to fix, or a column to accept as text",
+			"sameName": "“{first}” and “{second}”: same name on the server (case does not matter there)"
+		},
+		"offline": {
+			"pending": " ({n, plural, one {# change} other {# changes}} pending)",
+			"loginRequired": "Sign-in to {server} required",
+			"collaborative": "{why}. Offline: your changes will be sent when the server is back{pending}.",
+			"readOnly": "{why}: this shared workbook is read-only."
+		},
+		"serverDown": {
+			"named": "{server} is not responding",
+			"host": "The server {server} is not responding"
+		},
+		"gone": {
+			"revoked": "You no longer have access to this workbook on {server}.",
+			"deleted": "This workbook was deleted from {server}.",
+			"pending": "{what} {n, plural, one {# unsent change remains} other {# unsent changes remain}} in the local copy."
+		},
+		"banner": {
+			"saveCopy": "Save a local copy…",
+			"forget": "Remove from recent",
+			"login": "Sign in…",
+			"retry": "Retry",
+			"workOnCopy": "Work on a local copy",
+			"detach": "Detach from server…",
+			"newVersion": "New version available (version {version})",
+			"reload": "Reload",
+			"held": "{n, plural, one {One change is not reaching the server} other {# changes are not reaching the server}}",
+			"conflicts": "{n, plural, one {# conflict: cell changed} other {# conflicts: cells changed}} by a colleague in the meantime",
+			"view": "View",
+			"readOnly": "{reason} — version {version}",
+			"readOnlyOn": "{reason} — version {version} on {server}"
+		},
+		"detach": {
+			"local": "“{title}” will become a regular local workbook: it will no longer sync with {server}.",
+			"serverKept": "The workbook on the server is not changed: other members keep it as is, and you can reopen it from the server.",
+			"pending": "{n, plural, one {# change not yet sent to the server will stay} other {# changes not yet sent to the server will stay}} in this local workbook, without being sent.",
+			"cached": "You will choose where to save the local workbook (its current copy is only a Lattis cache).",
+			"final": "Detaching cannot be undone."
+		},
+		"retryNotice": "Trying to connect again…",
+		"when": {
+			"today": "at {time}",
+			"date": "on {date} at {time}"
+		},
+		"conflict": {
+			"empty": "(blank)",
+			"text": "{change}: {theirs} (you: {mine})",
+			"modified": "Changed",
+			"modifiedBy": "Changed by {author}",
+			"modifiedWhen": "Changed {when}",
+			"modifiedByWhen": "Changed by {author} {when}"
+		},
+		"refused": "{n, plural, one {# value not matching the fixed type not pasted} other {# values not matching the fixed type not pasted}} (shared table): {list}{more}"
+	},
+	"data": {
+		"root": "Data Lake root",
+		"unknownFolder": "Unknown folder",
+		"type": {
+			"text": "Text",
+			"integer": "Whole number",
+			"number": "Number",
+			"date": "Date",
+			"timestamp": "Date and time",
+			"boolean": "True / false",
+			"unknown": "Unknown type"
+		}
+	},
+	"coedit": {
+		"otherUser": "another user",
+		"alone": "Working together: just you for now",
+		"with": "Working together with {names}",
+		"withMore": "Working together with {names} and {n} others",
+		"title": "Working together on this workbook (shared folder): table data is edited together, everything else waits until you are alone.",
+		"since": " since {time}",
+		"joining": " (joining)",
+		"conflicts": "{n, plural, one {# conflict} other {# conflicts}}"
+	},
+	"lattis": {
+		"continuePassword": "Continue with a password",
+		"continueWith": "Continue with {provider}",
+		"notConnected": "not signed in",
+		"account": {
+			"none": "Account: not signed in to a Lattis Server",
+			"title": "Account: {servers}",
+			"on": "{user} on {server}"
+		},
+		"remaining": {
+			"minutes": "{m} min {s} s",
+			"seconds": "{s} s"
+		}
+	},
+	"banner": {
+		"reloading": "Reloading…",
+		"connecting": "Connecting…",
+		"hideDetails": "Hide details",
+		"details": "Details"
+	},
+	"serverPicker": {
+		"empty": "No server connected",
+		"aria": "Server",
+		"manage": {
+			"label": "Manage servers…",
+			"tooltip": "Add a server, sign in to one or remove one from the list"
+		}
+	},
+	"tableSources": {
+		"title": "Data Lake sources (tables without the workbook)",
+		"pipeline": {
+			"label": "pipeline",
+			"tooltip": "Fed by a pipeline whose source is this workbook"
+		},
+		"onSave": " · on every save",
+		"sending": "Sending…",
+		"update": "Update",
+		"help": "Only the chosen columns of these tables are sent; the rest of the workbook does not leave this computer. Right-click the table › Share to Lattis Data Lake… to change or remove them."
+	},
+	"cap": {
+		"yes": "yes",
+		"some": "partly",
+		"no": "no",
+		"label": "{label}: {word}"
+	},
+	"formQR": {
+		"copied": "Form link copied",
+		"saved": "QR code saved: {path}",
+		"aria": "QR code of the link",
+		"copy": "Copy link",
+		"png": {
+			"label": "QR code as PNG…",
+			"tooltip": "PNG image, for a document or a poster"
+		},
+		"svg": {
+			"label": "QR code as SVG…",
+			"tooltip": "Vector image, sharp at any size"
+		}
+	},
+	"columnPicker": {
+		"count": "{n} of {total}",
+		"all": "All",
+		"none": "None",
+		"search": {
+			"placeholder": "Search",
+			"aria": "Search for a column"
+		},
+		"aria": "Columns",
+		"key": "key",
+		"noMatch": "No column matches.",
+		"noColumn": "This table has no columns."
+	},
+	"account": {
+		"aria": "Account",
+		"head": "Lattis Servers",
+		"managed": "Set up by your organization",
+		"signOut": "Sign out",
+		"notConnected": "Not signed in · {host}",
+		"signIn": "Sign in…",
+		"noServer": "No server.",
+		"noServerManaged": "No server. Your organization has not set up any.",
+		"rights": {
+			"label": "Manage access to “{title}”…",
+			"tooltip": "Members, roles, restrictions, “View as…”"
+		},
+		"connectServer": "Connect to a server…"
+	},
+	"closeEsc": "Close (Esc)",
+	"prefill": {
+		"title": "Prefilled links · “{title}”",
+		"noParam": "No field has a short name: give one in the Fields tab (“Short name in the link”).",
+		"help": "Choose the fields the link fills in, then one row per link (one QR code per site, for example). The respondent can change the value, except for a field locked by the link.",
+		"locked": "locked",
+		"hide": "Hide",
+		"show": "Link and QR code",
+		"remove": "Remove this link",
+		"add": "+ Add a link"
+	},
+	"preview": {
+		"membersReserved": "This server restricts the member list to the workbook's owners: ask them to use “View as…”.",
+		"noTable": "No published table.",
+		"intro": "Check what a member sees and can do: rows are shown as the server gives them to that member, including filters and advanced rules.",
+		"member": "Member",
+		"choose": "Choose…",
+		"table": "Table",
+		"tableAria": "Table to view",
+		"reload": "Reload",
+		"verdict": {
+			"in": " in “{table}”: "
+		},
+		"rows": "{n, plural, one {# visible row} other {# visible rows}}, read-only.",
+		"rowsTruncated": "{n, plural, one {# visible row} other {# visible rows}} (the first 1,000), read-only.",
+		"noRow": "No rows visible to this member.",
+		"chooseMember": "Choose a member, or use “View as…” on their row in Members or on a role."
+	},
+	"open": {
+		"title": "Open from a server",
+		"signIn": "Sign in to a Lattis Server to see its workbooks.",
+		"reading": "Reading workbooks…",
+		"empty": "No workbook shared with you on this server.",
+		"version": "version {version}",
+		"republishing": "new version being prepared",
+		"loading": "Loading the workbook…",
+		"cached": "The workbook is kept on this computer: it remains available offline."
+	},
+	"audience": {
+		"inherit": "Inherit the folder's audience",
+		"current": "Current audience",
+		"rowsWhere": "Rows where {predicate}",
+		"allRows": "All rows",
+		"filtered": "filtered",
+		"keepName": "Keep {name}",
+		"removeName": "Remove {name}",
+		"keep": "Keep",
+		"remove": "Remove",
+		"email": {
+			"placeholder": "name@example.com",
+			"aria": "Person's email address"
+		},
+		"or": "or",
+		"team": "Team",
+		"aTeam": "a team…",
+		"dontAdd": "Don't add",
+		"visibleIf": "Rows visible if…",
+		"assist": "the rows of table “{table}” that {who} sees",
+		"someone": "this person or team",
+		"add": "Add a person or a team"
+	},
+	"folder": {
+		"rootName": "the root",
+		"aria": "Folder: {path}",
+		"search": "Search for a folder",
+		"tree": "Data Lake folders",
+		"collapse": "Collapse",
+		"expand": "Expand",
+		"noMatch": "No folder matches.",
+		"name": {
+			"placeholder": "Folder name",
+			"aria": "Name of the new folder in {parent}"
+		},
+		"create": "Create",
+		"in": "In “{parent}”",
+		"new": "New folder in “{parent}”"
+	},
+	"conflicts": {
+		"aria": "Conflicts",
+		"title": "Conflicts ({n})",
+		"held": {
+			"table": "Table",
+			"title": "“{table}”: {n, plural, one {one change is not going through} other {# changes are not going through}}",
+			"text": "The server receives it but fails on every attempt: {error}. Your values stay displayed on this computer; other changes go through normally.",
+			"abandon": {
+				"label": "Discard",
+				"tooltip": "The table goes back to the server version"
+			}
+		},
+		"layout": "Page layout: {n, plural, one {# item changed} other {# items changed}} on both sides since opening (width, formatting, free cell…). The last saved version wins; after more than 24 hours offline, your colleagues' version wins.",
+		"none": "No pending conflicts.",
+		"local": "These cells were changed by a colleague at the same time as you: their value, the most recent, is shown everywhere. “Keep mine” restores yours for all computers.",
+		"remote": "These cells were changed by a colleague while you were changing them. Your value stays displayed until you choose.",
+		"keepAllMine": "Keep all mine",
+		"keepAllTheirs": "Keep all theirs",
+		"goto": "Go to cell",
+		"rowGone": "Row deleted or hidden by a filter",
+		"row": "row {row}",
+		"keepMine": "Keep mine",
+		"keepTheirs": "Keep theirs"
+	},
+	"login": {
+		"badUrl": "Enter the server address, for example https://lattis.acme.com.",
+		"noProvider": "This server does not offer any sign-in method.",
+		"title": "Sign in to a Lattis Server",
+		"titleOn": "Sign in to {server}",
+		"address": "Server address",
+		"continue": "Continue",
+		"device": {
+			"help": "On another device (phone, another computer), open the address below and enter the code, then sign in with {provider}.",
+			"copy": "Copy code",
+			"valid": "Code valid for another {time}.",
+			"expired": "Code expired.",
+			"waiting": "Lattis is waiting for confirmation…"
+		},
+		"browser": {
+			"help": "Finish signing in with {provider} in your browser, then come back to Lattis.",
+			"note": "The page opened in the system browser. Nothing opened? Cancel and choose “from another device”."
+		},
+		"invitation": "by invitation",
+		"otherDevice": "Sign in from another device (enter a code)",
+		"imposed": "Sign-in method required by your organization.",
+		"otherServer": "Other server",
+		"cancel": "Cancel sign-in"
+	},
+	"forms": {
+		"reason": {
+			"publish": "Publish to a server…",
+			"addShared": "Add to the shared workbook…"
+		},
+		"widget": {
+			"text": "Single-line text",
+			"textarea": "Long text",
+			"number": "Number",
+			"date": "Date",
+			"datetime": "Date and time",
+			"checkbox": "Check box",
+			"yesno": "Yes / No",
+			"radio": "Option buttons",
+			"list": "Searchable list"
+		},
+		"copiedOn": "List copied on {date}",
+		"copied": "List copied",
+		"accent": {
+			"green": "Green",
+			"teal": "Teal",
+			"blue": "Blue",
+			"indigo": "Indigo",
+			"purple": "Purple",
+			"red": "Red",
+			"orange": "Orange",
+			"slate": "Slate"
+		},
+		"position": "Location",
+		"check": {
+			"noTitle": "The form has no title.",
+			"titleLength": "Title: 120 characters at most.",
+			"introLength": "Introduction: 2,000 characters at most.",
+			"submitLength": "Button: 40 characters at most.",
+			"privacyLength": "Data protection notice: 1,000 characters at most.",
+			"closedLength": "Closed message: 500 characters at most.",
+			"thanksLink": "Thank-you message: no links or redirects.",
+			"noField": "No fields: check at least one column.",
+			"sections": "{n} sections at most.",
+			"paramShared": "The short name “{param}” is used by several fields.",
+			"emptySection": "A section heading has no text.",
+			"labelLength": "{label}: label of 200 characters at most.",
+			"helpLength": "{label}: help of 500 characters at most.",
+			"emptyList": "{label}: empty list.",
+			"defaultNotInList": "{label}: default value not in the list.",
+			"defaultOutOfBounds": "{label}: default value out of bounds.",
+			"minMax": "{label}: the minimum is greater than the maximum.",
+			"listVisible": "{label}: the list values will be visible to all respondents.",
+			"requiredRestricted": "{label} is required, but a restriction forbids adding rows to this table: the form will be blocked too.",
+			"lockedNoParam": "{label}: a field locked by the link needs a short name.",
+			"publicOpen": "Public link with no closing date or response limit."
+		},
+		"state": {
+			"draft": "Draft",
+			"open": "Open",
+			"paused": "Paused",
+			"closed": "Closed"
+		}
+	},
+	"formDialog": {
+		"receivedColumn": "Received on",
+		"refused": "Form saved, but part of the audience was rejected: {list}",
+		"draftSaved": "Draft of form “{title}” saved",
+		"opened": "Form “{title}” opened",
+		"token": {
+			"receivedAt": "Received on (date and time)",
+			"respondent": "Respondent (email address)",
+			"formTitle": "Form (its title)",
+			"nextNumber": "Next number",
+			"fixed": "Fixed value"
+		},
+		"receivedAdded": "Column “{name}” added to the table",
+		"image": {
+			"logoTooBig": "Image too large: 200 KB at most for a logo.",
+			"bannerTooBig": "Image too large: 1 MB at most for a banner.",
+			"unreadable": "unreadable image"
+		},
+		"thisServer": "this server",
+		"access": {
+			"aria": "Who responds",
+			"members": {
+				"label": "Workbook members",
+				"detail": "Anyone who has a role on the workbook, viewers included. Lattis sign-in."
+			},
+			"audience": {
+				"label": "Chosen people and teams",
+				"detail": "They respond without becoming members of the workbook. Lattis sign-in."
+			},
+			"serverAccounts": {
+				"label": "Anyone with an account on {server}",
+				"detail": "Useful for a form internal to the whole organization. Lattis sign-in."
+			},
+			"public": {
+				"label": "Public link",
+				"detail": "Anyone who has the link, without signing in: coming soon to Lattis.",
+				"disabled": "Turned off on this server (setting by its owner)."
+			}
+		},
+		"titleForm": "Form “{title}”",
+		"titleShare": "Share “{table}” as a form",
+		"help": "Help: share as a form",
+		"reading": "Reading the table…",
+		"openToYou": "Forms of this table open to you:",
+		"already": "This table already has {n, plural, one {a form} other {# forms}}. Several forms can fill the same table.",
+		"responses": "{n, plural, one {# response} other {# responses}}",
+		"edit": "Edit…",
+		"newForm": "New form…",
+		"done": "Form “{title}” is open. Responses arrive as new rows of the table, live.",
+		"prefill": {
+			"label": "Prefilled link…",
+			"tooltip": "Links that fill in fields, and their QR codes",
+			"saveFirst": "Save the draft first"
+		},
+		"tab": {
+			"fields": "Fields",
+			"appearance": "Appearance",
+			"access": "Access"
+		},
+		"field": {
+			"move": {
+				"aria": "Move (Alt+↑ / Alt+↓)",
+				"tooltip": "Drag to move (Alt+↑ / Alt+↓)"
+			},
+			"include": "In the form",
+			"position": "Respondent's location",
+			"column": "Column “{name}”",
+			"label": "Label",
+			"widget": "Field type",
+			"required": "Required",
+			"settings": "Field settings",
+			"help": "Help",
+			"positionHelp": "Filled in by the respondent's browser when they tap “My location” (never automatically), with the accuracy shown.",
+			"positionColumn": "Column “{name}”: “lat, lon”.",
+			"positionColumns": "Columns “{lat}” and “{lon}”.",
+			"placeholder": "Placeholder text",
+			"default": {
+				"label": "Default value",
+				"none": "None",
+				"today": "Today",
+				"now": "Now",
+				"year": "Current year",
+				"respondent": "Respondent's email address"
+			},
+			"value": "Value",
+			"hidden": "Hidden: the default value is set without being shown",
+			"min": "Minimum",
+			"max": "Maximum",
+			"step": "Step",
+			"unit": "Unit",
+			"maxLength": "Maximum length",
+			"format": {
+				"label": "Format",
+				"free": "Free",
+				"email": "Email address",
+				"tel": "Phone",
+				"url": "Web address"
+			},
+			"listFrom": "List taken from “{source}”, reread by the server on every display ({n} values today).",
+			"listValues": "List values (one per line)",
+			"copiedFrom": "{copied} from “{source}”",
+			"param": "Short name in the link",
+			"locked": "Locked by the link"
+		},
+		"section": {
+			"label": "Section heading",
+			"remove": "Remove the section heading",
+			"description": {
+				"placeholder": "Short description (optional)",
+				"aria": "Section description"
+			},
+			"add": "+ Section heading"
+		},
+		"choice": {
+			"title": "Choice tab · “{name}”",
+			"aria": "Category value",
+			"field": "A field",
+			"fixedAria": "Fixed category value"
+		},
+		"serverValues": {
+			"title": "Values set by the server",
+			"help": "With no visible field, each one in a chosen column.",
+			"auto": "The numbered key receives the next number, set by the server.",
+			"column": "Column",
+			"add": "+ Value set by the server",
+			"addReceived": {
+				"label": "Add a column {name}",
+				"tooltip": "Adds a column to the table, for all members"
+			}
+		},
+		"look": {
+			"title": "Title",
+			"intro": "Introduction",
+			"markdown": "**bold**, *italic*, [link](https://…), lists with “-”.",
+			"logo": "Logo",
+			"serverLogo": "The server's",
+			"logoHint": "PNG, JPEG or SVG, 200 KB at most",
+			"banner": "Banner",
+			"bannerHint": "1 MB at most; the server removes the GPS location from the photo",
+			"color": "Color",
+			"accent": "Accent color",
+			"pages": "Pages",
+			"paged": "One section per page (Next, Previous, progress bar)",
+			"button": "Button",
+			"thanks": "Thank-you message",
+			"another": "“Submit another response” button",
+			"thanksHint": "Bold and italic only: no links or redirects.",
+			"closed": {
+				"label": "Closed",
+				"placeholder": "Message when the form is closed, full or not yet open"
+			},
+			"privacy": {
+				"label": "Data",
+				"placeholder": "Data protection notice, above the button",
+				"template": "Start from the template"
+			},
+			"lang": {
+				"label": "Language",
+				"fr": "French",
+				"en": "English"
+			}
+		},
+		"audience": {
+			"title": "People and teams",
+			"team": "Team {name}",
+			"toAdd": "(to add)",
+			"address": "Email address",
+			"add": "Add",
+			"teamChoose": "Team…",
+			"identity": "Responses are written under the form's identity “Form: {title}”: the respondent has no rights on the workbook."
+		},
+		"preview": {
+			"aria": "Preview width",
+			"phone": "Phone",
+			"desktop": "Computer",
+			"browser": {
+				"label": "Open the preview in the browser",
+				"tooltip": "Saves the draft and opens the real server page (link valid for 10 minutes, responses not saved)"
+			}
+		},
+		"saving": "Saving…",
+		"saveDraft": "Save draft",
+		"save": "Save",
+		"open": "Open the form"
+	},
+	"source": {
+		"mode": {
+			"replace": {
+				"label": "Replace all",
+				"detail": "The data becomes the table sent."
+			},
+			"append": {
+				"label": "Append",
+				"detail": "Rows are added to those already received (log, readings)."
+			},
+			"upsert": {
+				"label": "Update by key",
+				"detail": "Same key: row updated; otherwise added. Nothing is deleted."
+			}
+		},
+		"way": {
+			"republish": {
+				"title": "Republish the workbook with this table",
+				"detail": "The workbook is republished with this table; its roles and filters apply."
+			},
+			"publish": {
+				"title": "Publish the workbook with access management",
+				"detail": "The whole workbook goes to the server, with roles and filters; the table is shared afterward."
+			},
+			"table": {
+				"title": "Publish only this table",
+				"detail": "Only the chosen columns are sent; the workbook stays on your computer, without being made available."
+			},
+			"shared": {
+				"title": "Add this table to the shared workbook",
+				"detail": "Recommended. It is created on the server with its rows; members receive it and edit it according to their rights. It can then be shared to the Data Lake from this same menu."
+			},
+			"tableAlone": "Publish this table alone to the Data Lake"
+		},
+		"chooser": {
+			"localTitle": "This table is only on your computer",
+			"notInCollab": "The workbook is shared live, but this table is not part of it.",
+			"howTitle": "How do you want to share this table?",
+			"notPublished": "This table is not in a published workbook.",
+			"whyCollab": "A workbook shared live is not republished: its list of tables is set when it is published, and a table created afterward stays on your computer."
+		},
+		"push": {
+			"done": "Source “{table}” updated",
+			"read": "Source “{table}” updated: {n, plural, one {# row read} other {# rows read}}",
+			"inserted": "{n, plural, one {# added} other {# added}}",
+			"updated": "{n, plural, one {# updated} other {# updated}}",
+			"deleted": "{n, plural, one {# deleted} other {# deleted}}",
+			"rejected": "{n, plural, one {# rejected} other {# rejected}}",
+			"unchanged": ", nothing changed",
+			"reject": "; row {row}, {column} “{value}”: {error}",
+			"blanked": "; {n, plural, one {# value sent blank} other {# values sent blank}} (error or entry not matching the type)"
+		},
+		"status": {
+			"tableGone": "Table deleted from the workbook: the source no longer receives anything",
+			"suspended": "Source suspended: nothing is sent anymore",
+			"failed": "Last update failed: {error}",
+			"never": "Never updated",
+			"today": "today at {time}",
+			"on": "on {date}",
+			"updated": "Updated {when} · {n, plural, one {# row} other {# rows}}"
+		},
+		"localWorkbook": "local workbook",
+		"suspended": "suspended",
+		"pending": "sending pending",
+		"failedOn": "failed on {date}",
+		"updatedOn": "updated on {date}",
+		"never": "never updated",
+		"sqlName": {
+			"length": "63 characters at most",
+			"start": "Starts with a lowercase letter",
+			"chars": "Unaccented lowercase letters, digits and _ only"
+		},
+		"problem": {
+			"server": "Sign in to a Lattis Server",
+			"name": "Give the data a name",
+			"columns": "Check at least one column",
+			"key": "Choose the column that identifies a row",
+			"filter": "A row filter needs to be fixed"
+		},
+		"onSave": "on every save",
+		"onDemand": "on demand"
+	},
+	"rights": {
+		"level": {
+			"none": "None",
+			"reader": "Viewer",
+			"participant": "Participant",
+			"editor": "Editor"
+		},
+		"builtin": {
+			"owner": "Owner",
+			"designer": "Designer",
+			"editor": "Editor",
+			"participant": "Participant",
+			"reader": "Viewer"
+		},
+		"members": "{n, plural, one {# member} other {# members}}",
+		"op": {
+			"eq": "equals",
+			"ne": "does not equal",
+			"lt": "is less than",
+			"le": "is less than or equal to",
+			"gt": "is greater than",
+			"ge": "is greater than or equal to",
+			"contains": "contains",
+			"starts": "begins with",
+			"empty": "is empty",
+			"filled": "is not empty"
+		},
+		"me": "the signed-in person",
+		"team": "one of their teams",
+		"sentence": {
+			"none": "All rows are visible",
+			"prefix": "Visible if",
+			"team": "{column} is {team}",
+			"notTeam": "{column} is not {team}",
+			"and": " and "
+		},
+		"prompt": {
+			"write": "Write a Lattis row filter for {subject}.",
+			"columns": "It is a Boolean SQL expression (PostgreSQL) on these columns: {columns}.",
+			"noColumn": "(no columns)",
+			"reader": "The person reading is written current_user (their email address).",
+			"readerTeams": "The person reading is written current_user (their email address); their teams: {teams}.",
+			"answer": "No semicolon or comment. Answer with the expression only, to paste into “Free SQL”, then one sentence saying what it does.",
+			"rule": "My rule: "
+		},
+		"literal": {
+			"notNumber": "“{value}” is not a number",
+			"notInteger": "“{value}” is not a whole number",
+			"notBoolean": "“{value}” is not true or false",
+			"notDate": "“{value}” is not a date (dd/mm/yyyy)"
+		},
+		"condition": {
+			"unknownColumn": "unknown column: {column}",
+			"teamUnsupported": "“my team”: this server does not know about teams (lattisd update required)",
+			"teamText": "“my team” is compared with a text column (team name)",
+			"teamOp": "“my team”: equals or does not equal only",
+			"meText": "“me” is compared with a text column (the person's email address)",
+			"meOp": "“me”: equals or does not equal only"
+		},
+		"free": {
+			"forbidden": "“{char}” is not allowed outside a string",
+			"parens": "unbalanced parentheses",
+			"unclosed": "unclosed string or name"
+		},
+		"command": {
+			"all": "All",
+			"select": "Read",
+			"insert": "Add",
+			"update": "Edit",
+			"delete": "Delete"
+		},
+		"sql": {
+			"ownRows": "of their own rows",
+			"noRight": "no rights",
+			"filtered": "filtered view",
+			"restriction": "restriction “{label}”",
+			"yours": "Your rights",
+			"noRole": "no role",
+			"allRights": "All rights (structure, page layout, scripts)",
+			"allRightsOwner": "All rights (structure, page layout, scripts, rights)",
+			"builtinRole": "built-in role",
+			"customRole": "custom role",
+			"teams": "{n, plural, one {team} other {teams}} {names}",
+			"allRoles": "all roles",
+			"restrictionName": "Restriction",
+			"restrictionKind": "restriction"
+		}
+	},
+	"filter": {
+		"theseRows": "these rows",
+		"column": "Column",
+		"condition": "Condition",
+		"value": "Value",
+		"theValue": "the value…",
+		"and": "and",
+		"snippet": {
+			"value": "value",
+			"equal": "Equal to a value (text in single quotes)",
+			"me": "current_user: email address of the person reading",
+			"teamLabel": "is {team}",
+			"team": "lattis.my_teams(): teams of the person reading",
+			"and": {
+				"label": "and",
+				"tooltip": "Both conditions"
+			},
+			"or": {
+				"label": "or",
+				"tooltip": "Either condition"
+			},
+			"empty": {
+				"label": "is empty",
+				"tooltip": "Empty cell"
+			}
+		},
+		"mode": {
+			"aria": "Filter form",
+			"form": {
+				"label": "Form",
+				"tooltip": "Conditions in plain language",
+				"disabled": "This SQL filter cannot be converted into a form"
+			},
+			"sql": "Free SQL"
+		},
+		"assist": {
+			"label": "Write with the assistant",
+			"tooltip": "Opens the assistant with a request to complete; it only receives the column names and types"
+		},
+		"noTeams": "“one of their teams”: this server does not know about teams",
+		"placeholder": {
+			"date": "dd/mm/yyyy",
+			"boolean": "true or false",
+			"number": "number"
+		},
+		"remove": "Remove the condition",
+		"add": "+ Condition",
+		"insertColumns": "Columns to insert",
+		"inserts": "{what}: inserts {sql}",
+		"sqlAria": "SQL filter",
+		"insertSnippets": "Snippets to insert"
+	},
+	"access": {
+		"cap": {
+			"read": {
+				"label": "View",
+				"hint": "Read the table's rows"
+			},
+			"add": {
+				"label": "Add rows",
+				"hint": "Add new rows"
+			},
+			"editOwn": {
+				"label": "Edit own rows",
+				"hint": "Edit or delete the rows the person added"
+			},
+			"editAll": {
+				"label": "Edit all rows",
+				"hint": "Edit or delete everyone's rows"
+			},
+			"manage": {
+				"label": "Structure and rights",
+				"hint": "Columns, tables, page layout, scripts; rights: owners only"
+			}
+		},
+		"designerManage": "Structure, not rights",
+		"frozen": "Frozen workbook: data changes by republishing",
+		"allows": {
+			"none": "No access",
+			"reader": "View",
+			"participant": "View, add, edit own rows",
+			"editor": "View and edit everything"
+		},
+		"word": {
+			"none": "none",
+			"reader": "viewer",
+			"participant": "participant",
+			"editor": "editor"
+		},
+		"mixed": "Differs by table",
+		"likeSheet": "Same as the sheet: {allows}",
+		"likeWorkbook": "Same as the workbook: {allows}",
+		"readFilter": "Sees only the rows where {text}",
+		"writeFilter": "Edits only the rows where {text}",
+		"rule": {
+			"cannot": "Cannot {verb} (advanced rule)",
+			"onlyWhere": "Can {verb} only the rows where {text} (advanced rule)"
+		},
+		"onlyIn": "Only in {tables}",
+		"inTable": "“{table}”: {why}",
+		"summary": {
+			"allWithRights": "Everything, including rights",
+			"seeStructureRights": "View, structure and rights",
+			"allWithStructure": "Edit everything, including the structure",
+			"seeStructure": "View and change the structure",
+			"seeEditAll": "View and edit everything",
+			"seeEditAllNoAdd": "View and edit all rows, without adding",
+			"seeAddOwn": "View, add, edit own rows",
+			"seeOwnNoAdd": "View and edit own rows, without adding",
+			"seeAdd": "View and add rows",
+			"seeOnly": "View only",
+			"none": "No access",
+			"partly": "{summary} (partly)"
+		},
+		"verb": {
+			"select": "view",
+			"insert": "add",
+			"update": "edit",
+			"delete": "delete",
+			"all": "view or edit"
+		},
+		"action": {
+			"select": "View",
+			"insert": "Add",
+			"update": "Edit",
+			"delete": "Delete",
+			"all": "All"
+		},
+		"nor": " or ",
+		"or": " or ",
+		"ofRole": "of the {role} role",
+		"ofRoles": "of the {roles} and {last} roles",
+		"sentence": {
+			"nobody": "Nobody can {verbs} rows in “{table}”, except owners and designers.",
+			"nobodyExcept": "Nobody can {verbs} rows in “{table}” except those where {cond} (owners and designers excepted).",
+			"membersNever": "Members {who} cannot {verbs} rows in “{table}”.",
+			"membersOnly": "Members {who} can only {verbs}, in “{table}”, the rows where {cond}."
+		},
+		"preset": {
+			"noDelete": {
+				"label": "Forbid deleting",
+				"hint": "Nobody deletes rows, except owners and designers",
+				"rule": "No deleting"
+			},
+			"appendOnly": {
+				"label": "Add only",
+				"hint": "Rows can be added, without editing or deleting existing ones",
+				"rule": "Add only"
+			},
+			"status": {
+				"label": "Edit only rows with the status…",
+				"hint": "Rows can be edited and deleted as long as they have this status",
+				"rule": "Depending on status"
+			},
+			"ownNoCreate": {
+				"label": "Edit own rows without creating any",
+				"hint": "For a “View, add, edit own rows” role: it can no longer add rows",
+				"rule": "No adding"
+			}
+		},
+		"problem": {
+			"table": "Choose a table.",
+			"who": "Choose at least one role.",
+			"commands": "Choose at least one action.",
+			"predicate": "Add a condition, or choose “None” as the exception.",
+			"missingValue": "A condition has no value."
+		},
+		"email": {
+			"empty": "Enter the person's email address.",
+			"invalid": "“{email}” is not an email address."
+		}
+	},
+	"members": {
+		"invited": "Invitation sent to {email}",
+		"roleGiven": "Role {role} given to {who}",
+		"roleRemoved": "Role {role} removed from {who}",
+		"removeAll": {
+			"confirm": "Remove access for {who}? {n, plural, one {Their role is removed} other {Their # roles are removed}}.",
+			"done": "Access removed for {who}",
+			"teamKept": "Removes their personal roles; those of their team remain",
+			"tooltip": "Remove all their roles",
+			"aria": "Remove access for {who}",
+			"team": "Remove all the team's roles"
+		},
+		"addRole": "+ Role",
+		"theTeam": "the {name} team",
+		"invite": {
+			"title": "Invite a person",
+			"email": "Email address to invite",
+			"roles": "Roles to give",
+			"submit": "Invite",
+			"gives": "Will be able to:",
+			"help": "A person already known to the server receives their roles right away, otherwise at their first sign-in.",
+			"custom": "Custom roles can be given once the person is a member."
+		},
+		"people": "People",
+		"search": "Search for a member",
+		"tag": {
+			"pipeline": {
+				"tooltip": "Technical member of an ingestion pipeline: it disappears with the pipeline, on the server side"
+			},
+			"team": {
+				"label": "team {names}",
+				"tooltip": "Member of the workbook through their team: their team roles are changed in “Teams”"
+			},
+			"lastOwner": {
+				"label": "last owner",
+				"tooltip": "A workbook always keeps at least one owner: first give this role to someone else"
+			}
+		},
+		"rolesOf": "Roles of {who}",
+		"removeRole": {
+			"aria": "Remove role {role} from {who}",
+			"tooltip": "Remove this role"
+		},
+		"via": "Received through team {names}: removed in “Teams”",
+		"giveRole": "Give a role to {who}",
+		"viewAs": {
+			"label": "View as…",
+			"tooltip": "See the tables as {who} sees them"
+		},
+		"noMatch": "No member matches.",
+		"none": "No members.",
+		"pending": "Pending invitations",
+		"until": "until {date}",
+		"revoked": "Invitation for {email} canceled",
+		"revoke": "Cancel invitation",
+		"teams": "Teams",
+		"teamsUnsupported": "Teams and directory groups: not yet offered by this server.",
+		"noMember": "No members",
+		"noTeamRole": "No team has a role on this workbook.",
+		"teamGive": {
+			"label": "Give a role to a team:",
+			"role": "Team role",
+			"submit": "Give the role",
+			"help": "Team members have its roles as long as they belong to it. Teams are created in the server's administration; directory groups: later."
+		},
+		"noTeam": "No teams on this server: the server's owners create them in its administration (“Teams”)."
+	},
+	"roles": {
+		"teamCount": "{n, plural, one {# team} other {# teams}}",
+		"kind": {
+			"owner": "all rights",
+			"designer": "structure, not rights"
+		},
+		"filtersSaved": "Filters of “{table}” saved for {role}",
+		"intro": "Each member has one or more roles; a role gives access per table, which filters can limit to certain rows. Role rights add up.",
+		"learnMore": "Learn more",
+		"matrix": {
+			"aria": "What each role allows",
+			"role": "Role",
+			"members": "Members",
+			"select": "Set this role's rights, table by table"
+		},
+		"viewAs": {
+			"tooltip": "See the tables as a member of this role sees them",
+			"nobody": "Nobody has this role",
+			"aria": "View as a member of the {role} role"
+		},
+		"legend": {
+			"some": "partly (some rows or some tables)"
+		},
+		"created": "Role “{name}” created: it gives nothing until access is set below",
+		"new": {
+			"placeholder": "New role",
+			"aria": "Name of the new role"
+		},
+		"detail": {
+			"title": "{role}: access table by table",
+			"owner": "Owner: sees and edits all rows, changes the structure (columns, tables, page layout, scripts) and manages members, roles and rules. Nothing to set here.",
+			"designer": "Designer: sees and edits all rows and changes the structure (columns, tables, page layout, scripts), but does not manage rights. Nothing to set here.",
+			"frozen": "Frozen workbook: all members see everything, without changing anything. Per-table access and filters are those of a workbook shared live."
+		},
+		"drop": {
+			"confirm": "Delete role “{name}”? Its members lose the rights it gave.",
+			"done": "Role “{name}” deleted",
+			"label": "Delete role"
+		},
+		"tree": {
+			"workbook": "Whole workbook",
+			"workbookAccess": "Workbook access",
+			"level": "Level “{word}”",
+			"sheet": "Sheet",
+			"sheetAccess": "Access to sheet {name}",
+			"mixed": "differs by table",
+			"fromWorkbook": "inherited from the workbook",
+			"fromSheet": "inherited from the sheet",
+			"tableAccess": "Access to table {name}"
+		},
+		"filter": {
+			"seesAll": "Sees all rows",
+			"editRead": "Edit the visible rows of {table}",
+			"limitRead": "Limit the visible rows of {table}",
+			"edit": "Edit",
+			"limit": "Limit…",
+			"writesOwn": "Adds rows, edits and deletes their own",
+			"writesAll": "Adds, edits and deletes all rows",
+			"editWrite": "Edit the editable rows of {table}",
+			"limitWrite": "Limit the editable rows of {table}"
+		},
+		"advancedRules": "Advanced rules",
+		"editor": {
+			"aria": "Filters of {table} for {role}",
+			"read": {
+				"label": "Sees only the rows where…",
+				"prefix": "Sees the rows where",
+				"assist": "the rows of table “{table}” that members of the {role} role see"
+			},
+			"write": {
+				"label": "Adds and edits only the rows where…",
+				"prefix": "Adds and edits the rows where",
+				"assist": "the rows of table “{table}” that members of the {role} role can add or edit"
+			},
+			"fixes": "Saving sets this table's access to “{level}”.",
+			"noCondition": "No condition: all rows.",
+			"save": "Save filters"
+		},
+		"oldSheet": "Sheet published before the server knew about sheets: its access is set on each of its tables.",
+		"noTable": "No published table: the workbook access will apply to tables that are added.",
+		"teams": "Teams with this role:",
+		"noTeams": "No team has this role (Members › Teams).",
+		"local": {
+			"title": "On your computer only",
+			"help": "These tables are not in the shared workbook: nobody else sees them.",
+			"add": {
+				"label": "Add “{table}” to the shared workbook",
+				"tooltip": "Create “{table}” in the shared workbook, with its rows, for all members"
+			},
+			"offline": "Offline"
+		}
+	},
+	"rules": {
+		"added": "{n, plural, one {Rule added} other {# rules added}}",
+		"removed": "Rule removed",
+		"collabOnly": "Advanced rules: workbooks shared live only (a frozen workbook is read-only for everyone).",
+		"intro": "An advanced rule removes a right on a table, whatever the role's access: no more deleting, no more adding, editing only certain rows. Owners and designers are not subject to it, unless they are named.",
+		"current": "Rules in place",
+		"remove": {
+			"tooltip": "Remove this rule",
+			"aria": "Remove rule {label}"
+		},
+		"none": "No rules: only the roles' access and filters apply.",
+		"new": "New rule",
+		"presets": "Presets",
+		"for": "For",
+		"forWhom": "For whom",
+		"allRoles": "All roles",
+		"someRoles": "Some roles",
+		"targetRoles": "Roles concerned",
+		"exceptOwners": "Except owners and designers.",
+		"forbid": "Forbid",
+		"actions": "Limited actions",
+		"exception": "Exception",
+		"exceptWhere": "Except rows where…",
+		"allowed": {
+			"label": "Allowed only for rows where…",
+			"prefix": "Allowed for rows where",
+			"none": "Add a condition",
+			"assist": "the rows of table “{table}” on which the action remains allowed"
+		},
+		"name": "Name",
+		"optional": "(optional)",
+		"perAction": "Adds {n} restrictions on the server, one per action.",
+		"add": "Add rule"
+	},
+	"rightsDialog": {
+		"tab": {
+			"members": "Members",
+			"roles": "Roles and rights",
+			"rules": "Advanced rules",
+			"preview": "View as…",
+			"drift": "Drift"
+		},
+		"title": "Manage access to “{title}”",
+		"frozen": "frozen workbook: read-only for everyone",
+		"reload": {
+			"tooltip": "Reload the rights from the server",
+			"aria": "Refresh"
+		},
+		"help": "Help: manage access",
+		"link": {
+			"aria": "Workbook link",
+			"tooltip": "The link opens the workbook in Lattis (or the browser) for anyone who has access",
+			"copied": "Copied"
+		},
+		"tabs": "Manage access",
+		"reading": "Reading rights…",
+		"drift": {
+			"count": "{n, plural, one {# difference} other {# differences}}",
+			"warning": "{n, plural, one {One table has} other {# tables have}} rules changed outside Lattis, on the server.",
+			"show": "Show differences",
+			"frozen": "Frozen workbook: no difference possible (read-only for everyone).",
+			"none": "No differences: the server's rules and rights are those Lattis generated.",
+			"intro": "Rules or rights changed outside Lattis (by hand, in PostgreSQL):",
+			"policies": "Rules added:",
+			"grants": "Rights given to:",
+			"changed": "Generated rules removed or changed",
+			"recompileHelp": "Recompiling restores the rules generated by Lattis. Rules and rights added by hand remain flagged here until they are removed in PostgreSQL.",
+			"recompiled": "Rights recompiled",
+			"recompile": "Recompile rights"
+		},
+		"sending": "Sending to the server…",
+		"designerOnly": "Designer: view and check only"
+	},
+	"shareDialog": {
+		"checking": "Checking the workbook…",
+		"why": {
+			"noTables": "Nothing to publish: first create a table (Insert › Table, or Ctrl+L on your data), then reopen this dialog box.",
+			"blocked": "{n, plural, one {# issue to resolve} other {# issues to resolve}} before publishing (above).",
+			"server": "Choose a server, or connect to a server (Manage servers…).",
+			"title": "Give the published workbook a title.",
+			"cannotCreate": "Your account cannot create workbooks on this server."
+		},
+		"republishTitle": "Republish the workbook",
+		"publishTitle": "Publish to a server",
+		"republishHelp": "“{title}” on {server} · {mode} · version {version}: the new version will replace the published version in one go.",
+		"cannotCreate": "Your account cannot create workbooks on this server: ask its owner for the “workbook creator” role.",
+		"mode": "Mode",
+		"frozenHelp": ": read-only for everyone; you republish new versions",
+		"collaborativeHelp": ": everyone edits according to their rights, others' changes arrive live",
+		"tables": "Tables",
+		"noTables": {
+			"before": "This workbook has no tables to publish. Only tables are published: close this dialog box, select your data, then",
+			"menu": "Insert › Table",
+			"or": "(or",
+			"after": "), and come back to publish."
+		},
+		"rows": "{n, plural, one {# row} other {# rows}}",
+		"private": {
+			"label": "private",
+			"tooltip": "Private table: stays on this computer, never sent to the server"
+		},
+		"rename": "{problem} — rename it in the workbook",
+		"frozenTypes": "Types fixed at publication: {columns}",
+		"invalid": "Column “{name}” ({type}): {n, plural, one {# invalid entry} other {# invalid entries}}",
+		"fixOr": "— fix them, or",
+		"acceptText": "accept the column as text",
+		"computed": "Calculated columns are published with their formula, not their values.",
+		"refresh": {
+			"legend": "Loaded by the query “{query}”: refresh",
+			"local": "From this computer, with your connections: your refreshes replace the rows for all members",
+			"lake": "Data Lake source: the table is also sent to the server's Data Lake, which other workbooks can link to (set up right after publishing)"
+		},
+		"uncheckedPrivate": "Unchecked tables stay private: on this computer only.",
+		"publishing": "Publishing…",
+		"republish": "Republish",
+		"publish": "Publish"
+	},
+	"dataShare": {
+		"title": {
+			"source": "Data Lake source · “{table}”",
+			"dataset": "Lattis Data Lake · “{name}”",
+			"share": "Share “{table}” to Lattis Data Lake"
+		},
+		"help": "Help: share to the Data Lake",
+		"whyNotWorkbook": "Why not the whole workbook?",
+		"ways": "Way to share",
+		"go": {
+			"republish": "Republish the workbook…",
+			"publish": "Publish the workbook…",
+			"shared": "Add to the workbook…"
+		},
+		"reading": "Reading the catalog…",
+		"folder": "Folder",
+		"columns": "Exposed columns",
+		"audience": "Audience",
+		"usedBy": "Used by",
+		"readBy": "read by {email} on {date}",
+		"advanced": "Advanced options",
+		"sqlProposed": "SQL name proposed by the server",
+		"withDescription": "with description",
+		"description": {
+			"label": "Description",
+			"placeholder": "What the data contains, for people looking for it"
+		},
+		"sqlName": {
+			"label": "SQL name",
+			"fixed": "set at creation",
+			"placeholder": "proposed by the server",
+			"help": "The name of the view for SQL queries: lowercase letters, digits, _."
+		},
+		"withdraw": {
+			"label": "Stop sharing",
+			"tooltip": "The view disappears; workbooks that use it keep their last copy"
+		},
+		"share": "Share"
+	},
+	"catalog": {
+		"pushedTooltip": "Table published alone from the local workbook “{workbook}” (pushed source)",
+		"aria": "Insert from Lattis Data Lake",
+		"title": "Lattis Data Lake",
+		"search": {
+			"placeholder": "Search for data…",
+			"aria": "Search"
+		},
+		"tree": "Catalog",
+		"signIn": "Sign in to a server to see its data.",
+		"noMatch": "No data matches.",
+		"empty": "No data shared with you on this server.",
+		"dropRoot": "Drop here: at the root",
+		"pushed": {
+			"before": "Source pushed from the local workbook",
+			"after": ": updated by its author, without the workbook being published."
+		},
+		"view": "View",
+		"modified": "modified on {date}",
+		"readOnly": "The inserted table is read-only and updates when the data changes.",
+		"choose": "Choose data to see its columns.",
+		"yourSources": "Your pushed sources",
+		"yourSourcesHelp": "Tables published alone from your local workbooks, on this server; each is managed from its workbook (right-click the table › Share to Lattis Data Lake…).",
+		"inserting": "Inserting…",
+		"insert": "Insert"
+	},
+	"servers": {
+		"badUrl": "Enter the server address, for example https://lattis.acme.com (http only for local).",
+		"title": "Manage servers",
+		"disabled": "Shared workbooks are turned off: File › Settings › Features.",
+		"managed": "set up by your organization",
+		"connected": "Signed in: {user}",
+		"notConnected": "Not signed in",
+		"remove": {
+			"managed": "Server set up by your organization: it stays in the list",
+			"tooltip": "Remove this server from this computer's list",
+			"confirm": "Remove “{name}” from the list?",
+			"signedOut": "You will be signed out of this server on this computer.",
+			"nothingDeleted": "Nothing is deleted on the server: its workbooks, its data and your rights remain there, and you can add it again at any time.",
+			"inUse": "The open workbook “{title}” is published on this server: it stays open from its copy on this computer, but will no longer sync until you add this server again and sign in to it.",
+			"queries": "Queries and workbooks that use this server will ask you to sign in to it."
+		},
+		"emptyAdd": "No server. Add one below.",
+		"add": {
+			"title": "Add a server",
+			"submit": "Add and sign in…",
+			"help": "The address is checked with the server, then its sign-in page opens.",
+			"locked": "Your organization sets the list of servers: you cannot add any."
+		}
+	},
+	"sourceForm": {
+		"suspended": "Source “{table}” suspended: nothing is sent anymore",
+		"savedNotUpdated": "Source “{table}” saved, but not updated: {error}",
+		"withdrawn": "Source “{name}” removed from the Data Lake",
+		"reading": "Reading from the server…",
+		"banner": "The workbook stays on your computer: only the checked columns are sent.",
+		"columns": "Columns sent",
+		"computed": "A calculated column is sent with its values, not its formula.",
+		"sqlPlaceholder": "proposed from the name",
+		"mode": "Update",
+		"key": {
+			"label": "Key",
+			"aria": "Key column",
+			"choose": "Choose the column…"
+		},
+		"modeChanged": "Applies to the next updates (an older server rejects it: then remove the source and publish it again).",
+		"sending": {
+			"label": "Sending",
+			"onSave": "On every workbook save (Ctrl+S)",
+			"suspend": {
+				"label": "Suspend the source (nothing is sent anymore)",
+				"tooltip": "The data stays in the catalog with its last rows"
+			},
+			"refused": "Values rejected by the server are counted in the status bar; the rest is written."
+		},
+		"withdraw": {
+			"label": "Remove the source",
+			"tooltip": "The data leaves the catalog; workbooks that use it keep their last copy"
+		},
+		"push": {
+			"label": "Update now",
+			"tooltip": "Sends the table's rows now",
+			"suspended": "Source suspended"
+		},
+		"back": "Back",
+		"saveUpdate": "Save and update",
+		"publish": "Publish the source"
+	}
+}
