@@ -2,6 +2,7 @@
 // 0009) : textes de l'indicateur de présence, sans composant (testés par
 // vitest). L'état vient de DocumentService.CoEditState (internal/coedit.State).
 import type { Peer, State } from '#bindings/internal/coedit/models.js';
+import { fmtTime } from '#lib/i18n/index.js';
 
 /** Nom d'une session : « Alice (PC-COMPTA) ». */
 export function peerName(p: Peer): string {
@@ -25,7 +26,7 @@ export function presenceTitle(st: State | null | undefined): string {
 	const lines = ["Travail à plusieurs sur ce classeur (dossier partagé) : les données des tableaux se modifient ensemble, le reste attend que vous soyez seul."];
 	for (const p of st.peers ?? []) {
 		const since = p.since ? new Date(p.since) : null;
-		const at = since && !isNaN(since.getTime()) ? ` depuis ${since.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : '';
+		const at = since && !isNaN(since.getTime()) ? ` depuis ${fmtTime(since, { hour: '2-digit', minute: '2-digit' })}` : '';
 		lines.push(`• ${peerName(p)}${p.joining ? ' (en train de rejoindre)' : at}`);
 	}
 	return lines.join('\n');

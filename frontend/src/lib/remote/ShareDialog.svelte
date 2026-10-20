@@ -15,6 +15,7 @@
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import TableSourcesList from './TableSourcesList.svelte';
 	import { COLLABORATIVE, FROZEN, blocking, defaultSelection, inferredColumns, modeLabel, remoteTypeLabel } from './share';
+	import { fmtNumber } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Republier (classeur figé déjà publié) plutôt que publier. */
@@ -186,7 +187,7 @@
 							<label class="tname">
 								<input type="checkbox" checked={on} disabled={busy} onchange={(e) => toggle(t.id, (e.currentTarget as HTMLInputElement).checked)} />
 								<strong>{t.name}</strong>
-								<span class="muted">{t.sheet} · {t.rows.toLocaleString('fr-FR')} ligne(s)</span>
+								<span class="muted">{t.sheet} · {fmtNumber(t.rows)} ligne(s)</span>
 								{#if !on}<span class="private" title="Tableau privé : reste sur ce poste, jamais envoyé au serveur"><Icon name="local" size={12} /> privé</span>{/if}
 							</label>
 							{#if on}

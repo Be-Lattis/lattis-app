@@ -19,6 +19,7 @@
 	import SourceForm from './SourceForm.svelte';
 	import type { ConnKind } from './sources';
 	import { OPS, TYPES, clickColumns, clone, defaultStep, insertStep, moveStep, newQuery, otherSource, quickSteps, sourceCancel, typeName, withColumns, type Op, type QuickAction } from './steps';
+	import { fmtNumber } from '#lib/i18n/index.js';
 
 	interface Props {
 		query: Query;
@@ -436,7 +437,7 @@
 			</div>
 			<footer class="status">
 				{#if preview}
-					{(preview.columns ?? []).length} colonne(s), {preview.count.toLocaleString('fr-FR')} ligne(s){preview.sample ? ' — aperçu calculé sur les 1 000 premières lignes de chaque source' : ''}{preview.count > (preview.rows ?? []).length ? ` (${(preview.rows ?? []).length} affichées)` : ''}
+					{(preview.columns ?? []).length} colonne(s), {fmtNumber(preview.count)} ligne(s){preview.sample ? ' — aperçu calculé sur les 1 000 premières lignes de chaque source' : ''}{preview.count > (preview.rows ?? []).length ? ` (${(preview.rows ?? []).length} affichées)` : ''}
 					<button class="link" onclick={() => (showSQL = !showSQL)}>{showSQL ? 'Masquer' : 'Voir'} le SQL</button>
 				{/if}
 			</footer>

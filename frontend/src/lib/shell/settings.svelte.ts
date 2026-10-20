@@ -4,7 +4,8 @@
 // fenêtre des paramètres s'applique tout de suite, sans redémarrer.
 import { DocumentService } from '#bindings/internal/bridge/index.js';
 import { isWeb } from '#lib/web/platform.js';
-import { boolSetting, type SettingState } from './settings';
+import { languageFor, setLang, setSystemLocale } from '#lib/i18n/index.js';
+import { boolSetting, findSetting, type SettingState } from './settings';
 
 export const userSettings = $state<{ list: SettingState[] }>({ list: [] });
 
@@ -13,7 +14,7 @@ export const userSettings = $state<{ list: SettingState[] }>({ list: [] });
  * web, le scripting (Lua, boutons, pages web) est coupé tant que le serveur
  * ne l'a pas autorisé (web_scripting) ; le serveur MCP local n'existe pas.
  */
-export const platform = $state({ web: isWeb, scripting: !isWeb });
+export const platform = $state<{ web: boolean; scripting: boolean; locale?: string }>({ web: isWeb, scripting: !isWeb });
 
 /** Charge les réglages (silencieux en cas d'échec : valeurs par défaut). */
 export async function loadSettings() {
@@ -28,11 +29,30 @@ export async function loadSettings() {
 	} catch {
 		// Pas de pont (tests) : les valeurs par défaut s'appliquent.
 	}
+	await applyLanguage();
 }
 
 /** Écrit un réglage ; lève l'erreur du serveur (verrouillé, invalide…). */
 export async function setSetting(path: string, value: unknown) {
 	userSettings.list = (await DocumentService.SetSetting(path, value)) ?? [];
+	if (path === 'ui.language') await applyLanguage();
+}
+
+/**
+ * Applique la langue de l'interface (réglage ui.language, auto : celle du
+ * système sur le bureau, du navigateur en web) : textes et formats changent
+ * sans redémarrer, et le moteur la reçoit pour ses messages et la locale des
+ * formules (DocumentService.SetLanguage).
+ */
+async function applyLanguage() {
+	setSystemLocale(platform.locale);
+	const l = languageFor(findSetting(userSettings.list, 'ui.language')?.value);
+	await setLang(l);
+	try {
+		await DocumentService.SetLanguage(l);
+	} catch {
+		// Pas de pont (tests).
+	}
 }
 
 /** Les pages web sont proposés (ajout, « Site web… »). */

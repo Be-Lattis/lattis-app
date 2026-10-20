@@ -2,6 +2,7 @@
 // ruban et le dessin). Le classeur accepte les mêmes (internal/canvas/chart.go).
 
 import type { IconName } from '#lib/icons/icons.js';
+import { fmtNumber } from '#lib/i18n/index.js';
 
 // Attention, les clés bar et column sont l'inverse du vocabulaire anglais
 // d'Excel : « bar » est l'histogramme (barres verticales, c:barChart
@@ -139,7 +140,7 @@ export function reorderSeries(
 /** Points lus au plus par graphique (canvas.MaxChartPoints). */
 export const MAX_POINTS = 2000;
 
-const int = (v: number) => v.toLocaleString('fr-FR');
+const int = (v: number) => fmtNumber(v);
 
 /** Coupure des données d'un graphique, à signaler sous le dessin et dans le volet (vide : aucune). */
 export function chartNote(info?: { total?: number; truncated?: boolean; sampled?: boolean } | null): string {
@@ -176,7 +177,7 @@ export function chartSummary(kind: string, labels: string[], series: { name: str
 	if (labels.length) parts.push(`${int(total && total > labels.length ? total : labels.length)} points, de « ${labels[0]} » à « ${labels[labels.length - 1]} »`);
 	for (const s of series.slice(0, 6)) {
 		const vs = s.values.filter((v): v is number => v !== null);
-		if (vs.length) parts.push(`${s.name} : de ${Math.min(...vs).toLocaleString('fr-FR')} à ${Math.max(...vs).toLocaleString('fr-FR')}`);
+		if (vs.length) parts.push(`${s.name} : de ${fmtNumber(Math.min(...vs))} à ${fmtNumber(Math.max(...vs))}`);
 	}
 	return parts.join(' ; ') + '.';
 }

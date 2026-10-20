@@ -1,0 +1,9 @@
+{
+	"settings": {
+		"language": {
+			"label": "Langue de l'interface",
+			"auto": "Langue du système ({name})",
+			"help": "S'applique tout de suite. Les traductions sont en cours : les textes pas encore traduits restent en français. La langue règle aussi l'affichage des nombres et des dates ; le classeur enregistré n'en dépend pas."
+		}
+	}
+}

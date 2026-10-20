@@ -5,6 +5,7 @@
 // Regrouper. Sans composant, testé par vitest.
 
 import type { CategorySource, FamilyOutcome, MergeFamily, MergePlan, MergePreview, PendingRef, SheetGroup, TableFamily } from '#bindings/internal/canvas/models.js';
+import { fmtNumber } from '#lib/i18n/index.js';
 
 /** Couleurs des traits sous les onglets semblables : un groupe, une couleur (la première est l'accent). */
 export const GROUP_COLORS = ['#217346', '#0f6cbd', '#b4009e', '#ca5010', '#5c2e91', '#038387'];
@@ -12,7 +13,7 @@ export const GROUP_COLORS = ['#217346', '#0f6cbd', '#b4009e', '#ca5010', '#5c2e9
 /** Moments où la proposition se fait d'elle-même (§4) ; « menu » : à la demande. */
 export type OfferMoment = 'import' | 'open' | 'copy';
 
-const nf = (n: number) => n.toLocaleString('fr-FR');
+const nf = (n: number) => fmtNumber(n);
 
 /**
  * Onglets d'un groupe (lot 4 : on regroupe des feuilles entières, sheets ;
@@ -295,7 +296,7 @@ export function oldLabel(old: string): string {
 /** Valeur d'une case de l'aperçu. */
 export function cellText(v: unknown): string {
 	if (v === null || v === undefined) return '';
-	if (typeof v === 'number') return v.toLocaleString('fr-FR', { maximumFractionDigits: 10 });
+	if (typeof v === 'number') return fmtNumber(v, { maximumFractionDigits: 10 });
 	if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return `${v.slice(8, 10)}/${v.slice(5, 7)}/${v.slice(0, 4)}`;
 	return String(v);
 }

@@ -27,6 +27,7 @@
 	import { chooser, shareProblems, type ShareWay, type SourceLink } from './source';
 	import type { RightsColumn } from '#bindings/internal/bridge/models.js';
 	import './shareForm.css';
+	import { fmtDateTime } from '#lib/i18n/index.js';
 
 	interface Props {
 		table: string;
@@ -312,7 +313,7 @@
 								{#each ds.used_by as u (u.workbook_id)}
 									<li>
 										{u.title}
-										{#if u.last_read}<span class="sf-hint"> · lu par {u.last_read.email} le {new Date(u.last_read.at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span>{/if}
+										{#if u.last_read}<span class="sf-hint"> · lu par {u.last_read.email} le {fmtDateTime(new Date(u.last_read.at), { dateStyle: 'short', timeStyle: 'short' })}</span>{/if}
 									</li>
 								{/each}
 							</ul>

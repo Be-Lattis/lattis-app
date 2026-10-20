@@ -1,6 +1,7 @@
 // Partager au Data Lake Lattis : choix entre publier le classeur (avec ses
 // droits) et publier le tableau seul comme source poussée liée au classeur
 // (pipeline « push » alimenté par le poste, internal/bridge/table_source.go).
+import { fmtDateTime, fmtTime } from '#lib/i18n/index.js';
 
 /** Valeur refusée par le pipeline (workbook.PushReject). */
 export interface PushReject {
@@ -173,8 +174,8 @@ export function sourceStatus(l: Pick<SourceLink, 'lastPush' | 'lastResult' | 'la
 	const at = new Date(l.lastPush);
 	const sameDay = at.toDateString() === now.toDateString();
 	const when = sameDay
-		? `aujourd’hui à ${at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
-		: `le ${at.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}`;
+		? `aujourd’hui à ${fmtTime(at, { hour: '2-digit', minute: '2-digit' })}`
+		: `le ${fmtDateTime(at, { dateStyle: 'short', timeStyle: 'short' })}`;
 	const n = l.lastResult?.rows_read ?? 0;
 	const rej = l.lastResult?.rejected ?? 0;
 	return `Mise à jour ${when} · ${n} ligne${plural(n)}${rej ? ` · ${rej} refusée${plural(rej)}` : ''}`;
@@ -222,7 +223,7 @@ export function pushedLine(p: PushedSource): string {
 	else if (p.pending) parts.push('envoi en attente');
 	const r = p.last_run;
 	if (r?.finished_at) {
-		const when = new Date(r.finished_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+		const when = fmtDateTime(new Date(r.finished_at), { dateStyle: 'short', timeStyle: 'short' });
 		parts.push(r.status === 'error' ? `échec le ${when}` : `mise à jour le ${when}`);
 	} else if (!r) parts.push('jamais mise à jour');
 	return parts.join(' · ');

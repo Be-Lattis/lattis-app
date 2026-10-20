@@ -3,6 +3,7 @@
 // l'utilisateur) que le serveur accepte d'écrire (config.UserEditable).
 // Ajouter un réglage : une entrée ici, et sa clé dans UserEditable.
 import { themeCatalog } from '#lib/grid/theme.js';
+import { LANG_NAMES, LANGS, systemLang, t } from '#lib/i18n/index.js';
 
 /** État d'un réglage rendu par DocumentService.Settings. */
 export interface SettingState {
@@ -110,6 +111,22 @@ export const settingSections: SettingSection[] = [
 		id: 'view',
 		title: 'Affichage',
 		settings: [
+			{
+				path: 'ui.language',
+				kind: 'choice',
+				// Getters : textes lus dans la langue courante à chaque affichage.
+				get label() {
+					return t('shell.settings.language.label');
+				},
+				// Chaque langue dans sa propre langue ; « auto » nomme celle qu'il prend.
+				choicesOf: () => [
+					{ value: 'auto', label: t('shell.settings.language.auto', { name: LANG_NAMES[systemLang()] }) },
+					...LANGS.map((l) => ({ value: l, label: LANG_NAMES[l] }))
+				],
+				get help() {
+					return t('shell.settings.language.help');
+				}
+			},
 			{
 				path: 'ui.theme',
 				kind: 'choice',

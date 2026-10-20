@@ -14,6 +14,7 @@
 	import MapChart from './MapChart.svelte';
 	import type { MapCam } from './mapview';
 	import { ease, lerpSeries, progress, reducedMotion, sameSeries } from '../grid/anim';
+	import { fmtNumber, numberFormat } from '#lib/i18n/index.js';
 
 	export interface Series {
 		name: string;
@@ -483,7 +484,7 @@
 		if (!r) return `M ${x} ${y} L ${p(R, from)} A ${R} ${R} 0 ${large} 1 ${p(R, to)} Z`;
 		return `M ${p(R, from)} A ${R} ${R} 0 ${large} 1 ${p(R, to)} L ${p(r, to)} A ${r} ${r} 0 ${large} 0 ${p(r, from)} Z`;
 	}
-	const pct = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 1 });
+	const pct = $derived(numberFormat({ style: 'percent', maximumFractionDigits: 1 }));
 </script>
 
 {#if kind === 'map'}
@@ -570,7 +571,7 @@
 					<line x1={b.cx - b.w / 4} x2={b.cx + b.w / 4} y1={vy(b.b.max)} y2={vy(b.b.max)} stroke="#4b5563" />
 					<line x1={b.cx - b.w / 4} x2={b.cx + b.w / 4} y1={vy(b.b.min)} y2={vy(b.b.min)} stroke="#4b5563" />
 					<rect x={b.cx - b.w / 2} y={vy(b.b.q3)} width={b.w} height={Math.max(1, vy(b.b.q1) - vy(b.b.q3))} fill={shade(c, 0.35)} stroke={c}>
-						<title>{series[b.k]?.name} — min {f(b.b.min)}, Q1 {f(b.b.q1)}, médiane {f(b.b.median)}, Q3 {f(b.b.q3)}, max {f(b.b.max)}, moyenne {f(b.b.mean)} ({b.b.n.toLocaleString('fr-FR')} valeurs{b.b.out ? `, ${b.b.out.toLocaleString('fr-FR')} extrêmes` : ''})</title>
+						<title>{series[b.k]?.name} — min {f(b.b.min)}, Q1 {f(b.b.q1)}, médiane {f(b.b.median)}, Q3 {f(b.b.q3)}, max {f(b.b.max)}, moyenne {f(b.b.mean)} ({fmtNumber(b.b.n)} valeurs{b.b.out ? `, ${fmtNumber(b.b.out)} extrêmes` : ''})</title>
 					</rect>
 					<line x1={b.cx - b.w / 2} x2={b.cx + b.w / 2} y1={vy(b.b.median)} y2={vy(b.b.median)} stroke={shade(c, -0.4)} stroke-width="2" />
 					<path d="M {b.cx - 3} {vy(b.b.mean) - 3} l 6 6 m 0 -6 l -6 6" stroke={shade(c, -0.4)} />

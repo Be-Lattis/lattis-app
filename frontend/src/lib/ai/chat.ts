@@ -5,6 +5,7 @@
 // reconstruit à partir de DocumentService.AITranscript (replay) quand
 // l'interface est rechargée ou qu'un autre classeur s'ouvre.
 import type { Block, Inline } from '#lib/help/markdown.js';
+import { fmtNumber } from '#lib/i18n/index.js';
 
 /** Usage d'un tour ou d'une conversation (ai.Usage). */
 export interface ChatUsage {
@@ -54,7 +55,7 @@ export interface ChatResult {
 export function resultFoot(r: ChatResult): string {
 	if (!r.total) return 'Aucune ligne';
 	if (!r.truncated) return '';
-	return `${r.rows?.length ?? 0} premières lignes sur ${r.more ? 'plus de ' : ''}${r.total.toLocaleString('fr-FR')}`;
+	return `${r.rows?.length ?? 0} premières lignes sur ${r.more ? 'plus de ' : ''}${fmtNumber(r.total)}`;
 }
 
 export type ToolPart = { kind: 'tool'; id: string; label: string; state: 'run' | 'ok' | 'error'; detail?: string; write?: boolean; target?: string };
@@ -285,7 +286,7 @@ export const changesLabel = (n: number) => `${n} modification${n > 1 ? 's' : ''}
 export function costLabel(cost: number | undefined): string {
 	if (!cost || cost <= 0) return '';
 	if (cost < 0.01) return '< 0,01 $ cette conversation';
-	return `≈ ${cost.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $ cette conversation`;
+	return `≈ ${fmtNumber(cost, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $ cette conversation`;
 }
 
 /** Ce que l'utilisateur regarde (bridge.AIContext). */
@@ -336,7 +337,7 @@ const DEFAULT_SUGGESTIONS = [
 export function suggestionsFor(tables: readonly TableInfo[], context?: ChatContext | null, sharing = 'schema-only'): string[] {
 	const list = tables.filter((t) => t.kind !== 'pivot').toSorted((a, b) => b.rows - a.rows);
 	if (!list.length) return DEFAULT_SUGGESTIONS;
-	const fmt = (n: number) => `${n.toLocaleString('fr-FR')} ligne${n > 1 ? 's' : ''}`;
+	const fmt = (n: number) => `${fmtNumber(n)} ligne${n > 1 ? 's' : ''}`;
 	const blind = sharing !== 'sample' && sharing !== 'full';
 	const out: string[] = [];
 	if (context?.table && context.selection && !blind) out.push(`Explique la sélection ${contextLabel(context).replace(/^.*, sélection /, '')} de ${context.table}`);

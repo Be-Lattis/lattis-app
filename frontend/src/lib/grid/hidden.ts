@@ -3,6 +3,7 @@
 // sans filtre) : une bande grisée « N lignes masquées » les représente sous
 // les lignes affichées et refuse la saisie ; les cellules libres commencent
 // sous la dernière ligne réelle du tableau.
+import { fmtNumber } from '#lib/i18n/index.js';
 
 export interface FilteredTable {
 	name: string;
@@ -35,8 +36,8 @@ export function bandAt<T extends FilteredTable>(tables: T[], r: number, c: numbe
  */
 export function bandLabel(n: number, category?: string): string {
 	const s = n > 1 ? 's' : '';
-	if (category) return `⧩ ${n.toLocaleString('fr-FR')} ligne${s} d'autres valeurs de « ${category} » (choix de l'onglet) : saisir ici ajoute une ligne`;
-	return `⧩ ${n.toLocaleString('fr-FR')} ligne${s} masquée${s} par le filtre`;
+	if (category) return `⧩ ${fmtNumber(n)} ligne${s} d'autres valeurs de « ${category} » (choix de l'onglet) : saisir ici ajoute une ligne`;
+	return `⧩ ${fmtNumber(n)} ligne${s} masquée${s} par le filtre`;
 }
 
 /**

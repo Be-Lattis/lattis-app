@@ -21,6 +21,7 @@
 	import { CONN_LABELS, describe, isDbKind, type ConnKind } from './sources';
 	import { requestLogin } from '#lib/remote/lattis.svelte.js';
 	import { sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
+	import { fmtNumber } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Le classeur a changé ; sheet : feuille à afficher (tableau chargé). */
@@ -230,7 +231,7 @@
 			}
 			const warn = loads.flatMap((l) => l.warnings ?? []);
 			if (id === null) onnotice(loads.length ? `${loads.length} requête(s) actualisée(s)` : 'Aucune requête chargée à actualiser');
-			else if (loads.length) onnotice(`Tableau « ${loads[0].table} » : ${loads[0].rows.toLocaleString('fr-FR')} ligne(s) chargée(s)${warn.length ? ' ; ' + warn.join(' · ') : ''}`);
+			else if (loads.length) onnotice(`Tableau « ${loads[0].table} » : ${fmtNumber(loads[0].rows)} ligne(s) chargée(s)${warn.length ? ' ; ' + warn.join(' · ') : ''}`);
 			return '';
 		} catch (e) {
 			onnotice(err(e));

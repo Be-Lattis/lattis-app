@@ -18,6 +18,7 @@
 	import { TAB_COLORS, moveTarget, tabWindow, textOn, visibleSheets, type SimilarMark, type TabSheet } from './sheets.js';
 	import { allLabel, choiceLabel, choiceStatus, newLabel, nextChoice, type ChoiceActions } from './choice.js';
 	import RowFormulaDialog from '#lib/ui/RowFormulaDialog.svelte';
+	import { fmtNumber } from '#lib/i18n/index.js';
 
 	type Sheet = TabSheet;
 	interface Props {
@@ -829,7 +830,7 @@
 							<button
 								role="menuitemradio"
 								aria-checked={!ch.all && ch.value === v.text}
-								title={v.count ? `${v.count.toLocaleString('fr-FR')} ligne${v.count > 1 ? 's' : ''}` : 'Aucune ligne encore'}
+								title={v.count ? `${fmtNumber(v.count)} ligne${v.count > 1 ? 's' : ''}` : 'Aucune ligne encore'}
 								onclick={() => choose(cm.id, v.text, false)}
 								><span class="ic">{!ch.all && ch.value === v.text ? '●' : ''}</span>{v.text}{#if !v.count}<span class="menu-hint">vide</span>{/if}</button
 							>

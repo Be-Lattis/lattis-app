@@ -24,6 +24,7 @@ import connexions from './pages/connexions.md?raw';
 import assistant from './pages/assistant.md?raw';
 import raccourcis from './pages/raccourcis.md?raw';
 import parametres from './pages/parametres.md?raw';
+import { compareText } from '#lib/i18n/index.js';
 
 export interface HelpPage {
 	id: string;
@@ -225,6 +226,6 @@ export function searchHelp(index: readonly HelpEntry[], query: string, max = 50)
 		if (title === q || fold(e.keys.split(' ')[0]) === q) score += 100;
 		hits.push({ ...e, score, snippet: snippet(e.text, words) });
 	}
-	hits.sort((a, b) => b.score - a.score || a.title.length - b.title.length || a.title.localeCompare(b.title, 'fr'));
+	hits.sort((a, b) => b.score - a.score || a.title.length - b.title.length || compareText(a.title, b.title));
 	return hits.slice(0, max);
 }

@@ -3,6 +3,7 @@
 	// Chart.svelte : secteurs 3D, compartimentage, radar, entonnoir, jauge.
 	import { axisFormat, shortLabel, textOn, tickLabel, ticks } from './scale';
 	import { gaugeValue, pie3d, radarPoint, ringPath, shade, squarify } from './shapes';
+	import { numberFormat } from '#lib/i18n/index.js';
 
 	interface Props {
 		kind: string;
@@ -21,7 +22,7 @@
 	let { kind, labels, series, x, y, w, h, color, style, fmt = tickLabel }: Props = $props();
 
 	const first = $derived(series[0]?.values ?? []);
-	const pct = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 1 });
+	const pct = $derived(numberFormat({ style: 'percent', maximumFractionDigits: 1 }));
 
 	// Secteurs 3D : ellipse inclinée, épaisseur d'un dixième de la largeur.
 	const pie = $derived.by(() => {

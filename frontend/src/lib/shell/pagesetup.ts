@@ -3,6 +3,7 @@
 // classeur ; le ruban et la boîte « Mise en page » s'en servent.
 
 import type { HeaderFooter, Margins, PageSetup, Rect, Span } from '#bindings/internal/canvas/models.js';
+import { fmtNumber } from '#lib/i18n/index.js';
 
 export type { HeaderFooter, Margins, PageSetup };
 
@@ -41,7 +42,7 @@ export function marginPreset(p: PageSetup): keyof typeof MARGINS | 'custom' {
 export const presetMargins = (k: keyof typeof MARGINS): Margins | null => (k === 'normal' ? null : { ...MARGINS[k] });
 
 /** Centimètres à la française : « 1,91 cm ». */
-export const cm = (v: number) => `${(Math.round(v * 100) / 100).toLocaleString('fr-FR')} cm`;
+export const cm = (v: number) => `${fmtNumber(Math.round(v * 100) / 100)} cm`;
 
 /** Formats de papier : identifiant (classeur), libellé, dimensions. */
 export const PAPERS: { id: string; label: string; size: string }[] = [

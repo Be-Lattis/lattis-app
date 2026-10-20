@@ -107,7 +107,7 @@ export class RuntimeError extends Error {
 interface RpcError {
 	code: number;
 	message: string;
-	data?: { kind?: string };
+	data?: { kind?: string; cause?: unknown };
 }
 
 interface Pending {
@@ -130,7 +130,9 @@ const OPEN = 1;
 
 function toError(e: RpcError): Error {
 	const kind = e.data?.kind;
-	const err = kind === 'TypeError' ? new TypeError(e.message) : kind === 'ReferenceError' ? new ReferenceError(e.message) : new RuntimeError(e.message);
+	// cause : message traduit du moteur (internal/msg), lu par errorText.
+	const opts = e.data?.cause === undefined ? undefined : { cause: e.data.cause };
+	const err = kind === 'TypeError' ? new TypeError(e.message, opts) : kind === 'ReferenceError' ? new ReferenceError(e.message, opts) : new RuntimeError(e.message, opts);
 	(err as Error & { code?: number }).code = e.code;
 	return err;
 }

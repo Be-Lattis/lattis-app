@@ -2,6 +2,7 @@
 // les couches de style (voir internal/canvas/cellformat.go).
 
 import type { StyleLayer } from './style';
+import { lower } from '#lib/i18n/index.js';
 
 /** Cellules fusionnées : cellule en haut à gauche, lignes et colonnes couvertes. */
 export interface MergeRange {
@@ -58,8 +59,8 @@ export function skipHidden(i: number, d: number, hidden: Set<number>, count: num
  */
 export function validate(list: string[] | undefined, text: string): { ok: true; value: string } | { ok: false; message: string } {
 	if (!list?.length || text.trim() === '') return { ok: true, value: text };
-	const t = text.trim().toLocaleLowerCase('fr');
-	const hit = list.find((v) => v.trim().toLocaleLowerCase('fr') === t);
+	const t = lower(text.trim());
+	const hit = list.find((v) => lower(v.trim()) === t);
 	if (hit !== undefined) return { ok: true, value: hit };
 	const shown = list.length > 8 ? list.slice(0, 8).join(', ') + '…' : list.join(', ');
 	return { ok: false, message: `« ${text.trim()} » n'est pas permis ici : choisissez dans la liste (${shown}), Alt+↓ pour l'ouvrir` };
@@ -71,8 +72,8 @@ export function parseList(text: string): string[] {
 	const out: string[] = [];
 	for (const v of text.split(/[;\n]/)) {
 		const t = v.trim();
-		if (t && !seen.has(t.toLocaleLowerCase('fr'))) {
-			seen.add(t.toLocaleLowerCase('fr'));
+		if (t && !seen.has(lower(t))) {
+			seen.add(lower(t));
 			out.push(t);
 		}
 	}

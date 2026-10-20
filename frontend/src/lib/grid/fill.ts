@@ -1,6 +1,7 @@
 // Poignée de recopie : prolonge une série à partir des cellules sources, comme
 // Excel. Nombres (pas constant), dates (pas en jours), texte terminé par un
 // nombre (« Article 1 »), mois et jours de la semaine ; sinon recopie.
+import { numberFormat } from '#lib/i18n/index.js';
 
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const MONTHS_SHORT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -8,7 +9,7 @@ const DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dima
 const DAYS_SHORT = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
 const LISTS = [MONTHS, MONTHS_SHORT, DAYS, DAYS_SHORT];
 
-const fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 10, useGrouping: false });
+const fmt = () => numberFormat({ maximumFractionDigits: 10, useGrouping: false });
 
 function num(s: string): number | null {
 	const t = s.trim().replace(/[\s  ]/g, '').replace(',', '.');
@@ -53,7 +54,7 @@ export function fillSeries(src: string[], n: number): string[] {
 		if (xs.every((x) => x !== null)) {
 			const d = step(xs as number[]) ?? 0;
 			const last = xs[xs.length - 1]!;
-			for (let k = 1; k <= n; k++) out.push(fmt.format(last + d * k));
+			for (let k = 1; k <= n; k++) out.push(fmt().format(last + d * k));
 			return out;
 		}
 		// Dates : pas en jours (une seule date : jour suivant).

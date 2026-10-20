@@ -4,6 +4,7 @@
 // Fonctions pures : chacune rend une nouvelle configuration.
 
 import type { PivotConfig, PivotValue } from './Sheet.svelte';
+import { lower } from '#lib/i18n/index.js';
 
 export type Zone = 'filters' | 'cols' | 'rows' | 'values';
 
@@ -301,7 +302,7 @@ export function filterSummary(values: string[]): string {
 
 /** Recherche dans la liste des champs : sans casse ni accents. */
 export function matchField(name: string, search: string): boolean {
-	const norm = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr');
+	const norm = (s: string) => lower(s.normalize('NFD').replace(/\p{M}/gu, ''));
 	const q = norm(search.trim());
 	return !q || norm(name).includes(q);
 }

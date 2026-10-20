@@ -22,6 +22,7 @@
 	import { panelKeys } from '#lib/ui/focus.js';
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	import { cellText, familyLine, familyPlan, layoutLines, leftTables, modeLabel, oldHint, oldLabel, previewWarnings, refCounts, sourceLabel, withTables } from './mergesheets';
+	import { fmtNumber } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Plan de départ (groupe détecté, ou sélection d'onglets). */
@@ -369,7 +370,7 @@
 					</tbody>
 				</table>
 			</div>
-			<p class="muted">{view.total.toLocaleString('fr-FR')} ligne{view.total === 1 ? '' : 's'} au total{view.key ? (view.keyKept ? ` · clé : ${view.key}` : '') : ''}</p>
+			<p class="muted">{fmtNumber(view.total)} ligne{view.total === 1 ? '' : 's'} au total{view.key ? (view.keyKept ? ` · clé : ${view.key}` : '') : ''}</p>
 		</section>
 	{/if}
 

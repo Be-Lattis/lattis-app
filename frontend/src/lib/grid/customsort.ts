@@ -3,6 +3,7 @@
 // valeurs se comparent sans tenir compte de la casse, comme le backend
 // (canvas/customsort.go) ; les vides ne s'y rangent pas : ils restent
 // toujours à la fin.
+import { lower } from '#lib/i18n/index.js';
 
 /** Ordre personnalisé (canvas.CustomOrder). */
 export interface CustomOrder {
@@ -26,7 +27,7 @@ export interface OrderItem {
 	absent?: boolean;
 }
 
-export const fold = (s: string) => s.toLocaleLowerCase('fr');
+export const fold = (s: string) => lower(s);
 
 /** Retire les vides et les doublons (sans casse), dans l'ordre. */
 export function cleanValues(values: string[]): string[] {

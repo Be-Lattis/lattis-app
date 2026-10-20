@@ -2,13 +2,14 @@
 // ReportError : console et erreurs.log du poste) avec la pile et les
 // dernières actions de l'utilisateur, au lieu d'un écran 500 sans trace.
 import { DocumentService } from '#bindings/internal/bridge/index.js';
+import { fmtTime } from '#lib/i18n/index.js';
 
 const MAX_TRAIL = 15;
 const trail: string[] = [];
 
 /** Note une action de l'utilisateur (clic sur un bouton, touche, commande). */
 export function noteAction(what: string) {
-	trail.push(`${new Date().toLocaleTimeString('fr-FR')} ${what}`);
+	trail.push(`${fmtTime(new Date())} ${what}`);
 	if (trail.length > MAX_TRAIL) trail.shift();
 }
 

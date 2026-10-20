@@ -27,6 +27,7 @@
 	// Onglet Script : bibliothèque de scripts Lua du classeur, éditeur,
 	// exécution avec sortie en direct et bouton Arrêter. Les écritures d'un
 	// script forment une seule étape d'annulation. Référence : docs/scripting.md.
+	import { fmtNumber } from '#lib/i18n/index.js';
 	import { onMount } from 'svelte';
 	import { EditorState } from '@codemirror/state';
 	import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
@@ -248,7 +249,7 @@ end
 			const r = await run(current.name, view?.state.doc.toString() ?? '');
 			output = r.output ?? output;
 			error = r.error;
-			status = `${r.error ? 'Arrêté' : 'Terminé'} en ${(r.durationMs / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} s · ${r.writes} ligne(s) écrite(s)${r.writes ? ' (Ctrl+Z pour tout annuler)' : ''}`;
+			status = `${r.error ? 'Arrêté' : 'Terminé'} en ${fmtNumber(r.durationMs / 1000, { maximumFractionDigits: 2 })} s · ${r.writes} ligne(s) écrite(s)${r.writes ? ' (Ctrl+Z pour tout annuler)' : ''}`;
 		} catch (e) {
 			error = String(e instanceof Error ? e.message : e);
 			status = '';

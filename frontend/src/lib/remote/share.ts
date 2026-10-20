@@ -5,6 +5,7 @@
 import type { Check, State, TableCheck } from '#bindings/internal/remote/workbook/models.js';
 import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 import { formatValue, type ColumnType } from '#lib/grid/format.js';
+import { fmtDate, fmtTime } from '#lib/i18n/index.js';
 
 export const FROZEN = 'frozen';
 export const COLLABORATIVE = 'collaborative';
@@ -225,9 +226,9 @@ export function whenLabel(at: string, now = new Date()): string {
 	if (!at) return '';
 	const d = new Date(at);
 	if (Number.isNaN(d.getTime())) return '';
-	const hm = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+	const hm = fmtTime(d, { hour: '2-digit', minute: '2-digit' });
 	if (d.toDateString() === now.toDateString()) return `à ${hm}`;
-	return `le ${d.toLocaleDateString('fr-FR')} à ${hm}`;
+	return `le ${fmtDate(d)} à ${hm}`;
 }
 
 /** Valeur d'un conflit telle que la grille l'afficherait (« (vide) » si vide). */

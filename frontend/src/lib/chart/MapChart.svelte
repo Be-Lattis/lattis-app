@@ -34,6 +34,7 @@
 	import { colorCategories, groupColor } from './categories';
 	import { ZOOM_STEP, camView, fallbackTiles, heatRadius, hitPoint, panBy, parseCam, roundCam, viewCam, wheelZoom, zoomAt, MAX_ZOOM, MIN_ZOOM, type MapCam } from './mapview';
 	import { loadTile, tileNow } from './tiles';
+	import { fmtNumber } from '#lib/i18n/index.js';
 
 	interface Props {
 		labels: string[];
@@ -129,7 +130,7 @@
 	const canGo = $derived(!!onpoint && !!rows?.length && !heat);
 	const hotPt = $derived(hot >= 0 && hot < placed.length && !heat ? placed[hot] : null);
 	const pick = (x: number, y: number) => (heat ? -1 : hitPoint(placed.map((p) => ({ x: p.x, y: p.y - top, r: p.r })), x, y));
-	const fmtTip = (v: number) => v.toLocaleString('fr-FR', { maximumFractionDigits: 6 });
+	const fmtTip = (v: number) => fmtNumber(v, { maximumFractionDigits: 6 });
 
 	// Densité : grille lissée, pondérée par la valeur (positive) s'il y en a
 	// une. Le rayon suit l'échelle de la carte (borné).

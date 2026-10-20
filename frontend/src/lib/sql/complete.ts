@@ -4,6 +4,7 @@
 import { typeLabel } from '#lib/grid/format.js';
 import { count } from './result';
 import { analyze, quote, statementAt, tokenize, KEYWORDS, type Catalog } from './names';
+import { lower } from '#lib/i18n/index.js';
 
 export interface Suggestion {
 	label: string;
@@ -76,7 +77,7 @@ function completeIn(src: string, pos: number, catalog: Catalog, explicit: boolea
 
 	if (afterDot) {
 		const q = sig[sig.length - (partial ? 3 : 2)];
-		const o = q && (q.kind === 'word' || q.kind === 'quoted') ? (a.aliases.get(q.value.toLocaleLowerCase('fr-FR')) ?? catalog.table(q.value)) : undefined;
+		const o = q && (q.kind === 'word' || q.kind === 'quoted') ? (a.aliases.get(lower(q.value)) ?? catalog.table(q.value)) : undefined;
 		if (!o) return null;
 		columns(o, 10, false);
 		return { from, options };

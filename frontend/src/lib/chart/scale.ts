@@ -1,4 +1,5 @@
 // Échelles des graphiques : graduations « rondes » comme Excel.
+import { numberFormat } from '#lib/i18n/index.js';
 
 export const PALETTE = ['#4472c4', '#ed7d31', '#a5a5a5', '#ffc000', '#5b9bd5', '#70ad47', '#264478', '#9e480e'];
 
@@ -78,12 +79,12 @@ export function dateTicks(lo: number, hi: number, n = 5): number[] {
 	}
 }
 
-const fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
-const compact = new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 });
+const fmt = () => numberFormat({ maximumFractionDigits: 2 });
+const compact = () => numberFormat({ notation: 'compact', maximumFractionDigits: 1 });
 
 /** Libellé d'une valeur isolée (étiquette de données). */
 export function tickLabel(v: number): string {
-	return Math.abs(v) >= 10000 ? compact.format(v) : fmt.format(v);
+	return Math.abs(v) >= 10000 ? compact().format(v) : fmt().format(v);
 }
 
 /**
@@ -98,7 +99,7 @@ export function axisFormat(values: number[]): (v: number) => string {
 	const [unit, suffix] = top >= 1e10 ? [1e9, ' Md'] : top >= 1e7 ? [1e6, ' M'] : top >= 1e4 ? [1e3, ' k'] : [1, ''];
 	const scaled = values.map((v) => v / unit);
 	const decimals = Math.min(unit === 1 ? 6 : 2, Math.max(0, ...scaled.map(decimalsOf)));
-	const f = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+	const f = numberFormat({ minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 	return (v) => (unit === 1 ? f.format(v) : v === 0 ? '0' : f.format(v / unit) + suffix);
 }
 

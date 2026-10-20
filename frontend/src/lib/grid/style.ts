@@ -6,6 +6,7 @@
 // colonne d'un tableau, cellule (de tableau, libre ou de tableau croisé),
 // puis mise en forme conditionnelle. Une propriété à null dans une couche
 // la retire explicitement (elle masque les couches au-dessous).
+import { numberFormat } from '#lib/i18n/index.js';
 
 export interface CellStyle {
 	b?: boolean; // gras
@@ -139,10 +140,10 @@ export function styledNumber(text: string, st: CellStyle | undefined): string {
 	return formatNumber(st.nf, n, st.dp, st.ng) ?? text;
 }
 
-const fixed0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
-const fixed2 = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const percent = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 2 });
-const euro = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+const fixed0 = () => numberFormat({ maximumFractionDigits: 0 });
+const fixed2 = () => numberFormat({ minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const percent = () => numberFormat({ style: 'percent', maximumFractionDigits: 2 });
+const euro = () => numberFormat({ style: 'currency', currency: 'EUR' });
 
 /**
  * Moyenne ou somme de la barre d'état, comme Excel : au format de la
@@ -155,7 +156,7 @@ export function formatStat(v: number, st?: CellStyle): string {
 	if (f !== null) return f;
 	const a = Math.abs(v);
 	const digits = a === 0 || a >= 0.01 ? 4 : Math.min(10, 3 - Math.floor(Math.log10(a)));
-	return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: digits }).format(v);
+	return numberFormat({ maximumFractionDigits: digits }).format(v);
 }
 
 /** Texte d'un nombre selon le format choisi (null : pas de format). */
@@ -164,23 +165,23 @@ export function formatNumber(nf: CellStyle['nf'], v: number, dp?: number, ng = f
 	if (ng && nf !== '%' && nf !== '€') {
 		const d = dp ?? (nf === '0' ? 0 : nf === '0,00' ? 2 : undefined);
 		if (d === undefined) return null;
-		return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false }).format(v);
+		return numberFormat({ minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false }).format(v);
 	}
 	if (dp !== undefined) {
 		const opts: Intl.NumberFormatOptions = { minimumFractionDigits: dp, maximumFractionDigits: dp };
-		if (nf === '%') return new Intl.NumberFormat('fr-FR', { ...opts, style: 'percent' }).format(v);
-		if (nf === '€') return new Intl.NumberFormat('fr-FR', { ...opts, style: 'currency', currency: 'EUR' }).format(v);
-		return new Intl.NumberFormat('fr-FR', opts).format(v);
+		if (nf === '%') return numberFormat({ ...opts, style: 'percent' }).format(v);
+		if (nf === '€') return numberFormat({ ...opts, style: 'currency', currency: 'EUR' }).format(v);
+		return numberFormat(opts).format(v);
 	}
 	switch (nf) {
 		case '0':
-			return fixed0.format(v);
+			return fixed0().format(v);
 		case '0,00':
-			return fixed2.format(v);
+			return fixed2().format(v);
 		case '%':
-			return percent.format(v);
+			return percent().format(v);
 		case '€':
-			return euro.format(v);
+			return euro().format(v);
 	}
 	return null;
 }

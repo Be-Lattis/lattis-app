@@ -101,6 +101,7 @@
 	import HelpPanel from '#lib/help/HelpPanel.svelte';
 	import { functionAt, viewTarget } from '#lib/help/help.js';
 	import { helpState, openHelp } from '#lib/help/state.svelte.js';
+	import { fmtDateTime, fmtNumber } from '#lib/i18n/index.js';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -1083,7 +1084,7 @@
 			} else if (s.state === 'error') {
 				failure = s.error ?? 'erreur';
 			} else {
-				demoProgress = s.state === 'generating' ? `Création de la démo : ${s.done.toLocaleString('fr-FR')} / ${s.total.toLocaleString('fr-FR')} lignes` : 'Ouverture de la démo…';
+				demoProgress = s.state === 'generating' ? `Création de la démo : ${fmtNumber(s.done)} / ${fmtNumber(s.total)} lignes` : 'Ouverture de la démo…';
 				setTimeout(poll, 250);
 			}
 		};
@@ -2212,10 +2213,10 @@
 			const count = (n: number, one: string, many: string, names?: string[]) => {
 				if (!n) return;
 				const list = names?.length ? ` (${names.slice(0, 5).join(', ')}${names.length > 5 ? '…' : ''})` : '';
-				items.push((n > 1 ? `${n.toLocaleString('fr-FR')} ${many}` : `1 ${one}`) + list);
+				items.push((n > 1 ? `${fmtNumber(n)} ${many}` : `1 ${one}`) + list);
 			};
 			const tables = l.tables ?? [];
-			count(tables.length, 'tableau', 'tableaux', tables.map((t) => `${t.name} : ${t.total.toLocaleString('fr-FR')} ligne${t.total > 1 ? 's' : ''}`));
+			count(tables.length, 'tableau', 'tableaux', tables.map((t) => `${t.name} : ${fmtNumber(t.total)} ligne${t.total > 1 ? 's' : ''}`));
 			count(l.pivots?.length ?? 0, 'tableau croisé', 'tableaux croisés', l.pivots?.map((x) => x.config.name ?? ''));
 			count(l.charts?.length ?? 0, 'graphique', 'graphiques');
 			count(l.buttons?.length ?? 0, 'bouton', 'boutons');
@@ -2395,7 +2396,7 @@
 					<div class="orphan">
 						<div>
 							<strong>{sessionName(o)}</strong>
-							<span class="muted">modifié le {new Date(o.modified).toLocaleString('fr-FR')}</span>
+							<span class="muted">modifié le {fmtDateTime(new Date(o.modified))}</span>
 							{#if g.older.length}
 								<button class="link older-toggle" aria-expanded={!!olderShown[g.key]} onclick={() => (olderShown[g.key] = !olderShown[g.key])}>{olderLabel(g.older.length)}</button>
 							{/if}
@@ -2408,7 +2409,7 @@
 							<div class="orphan older">
 								<div>
 									<span>{sessionName(v)}</span>
-									<span class="muted">modifié le {new Date(v.modified).toLocaleString('fr-FR')}</span>
+									<span class="muted">modifié le {fmtDateTime(new Date(v.modified))}</span>
 								</div>
 								<button class="ico" onclick={() => recover(v, true)}><Icon name="undo" size={14} />Récupérer</button>
 								<button class="ico discard" onclick={() => recover(v, false)}><Icon name="trash" size={14} />Abandonner</button>

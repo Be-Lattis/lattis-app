@@ -3,6 +3,7 @@
 // textuels », « Filtres numériques », « Filtres chronologiques »).
 
 import type { ColumnType } from './format';
+import { lower } from '#lib/i18n/index.js';
 
 /** Condition d'un filtre (voir canvas.FilterCond). */
 export interface FilterCond {
@@ -109,8 +110,8 @@ export interface PanelValue {
 
 /** Valeurs affichées par la recherche (sans casse). */
 export function searchValues<T extends { text: string }>(values: T[], search: string): T[] {
-	const q = search.trim().toLocaleLowerCase('fr');
-	return q ? values.filter((v) => v.text.toLocaleLowerCase('fr').includes(q)) : values;
+	const q = lower(search.trim());
+	return q ? values.filter((v) => lower(v.text).includes(q)) : values;
 }
 
 /**

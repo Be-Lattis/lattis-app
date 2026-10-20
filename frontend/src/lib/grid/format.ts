@@ -1,12 +1,14 @@
-// Affichage des valeurs selon le type logique de la colonne (locale française).
+// Affichage des valeurs selon le type logique de la colonne, dans la langue de
+// l'interface (#lib/i18n) ; la valeur stockée ne change pas.
+import { decimalSep, numberFormat } from '#lib/i18n/index.js';
 
 export type ColumnType = 'integer' | 'decimal' | 'text' | 'boolean' | 'date' | 'formula';
 
-const general = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 10, useGrouping: false });
+const general = () => numberFormat({ maximumFractionDigits: 10, useGrouping: false });
 
 /** Affichage « Standard » d'Excel pour une valeur calculée. */
 function generalValue(v: unknown): string {
-	if (typeof v === 'number') return general.format(v);
+	if (typeof v === 'number') return general().format(v);
 	if (typeof v === 'boolean') return v ? 'VRAI' : 'FAUX';
 	return String(v);
 }
@@ -23,7 +25,7 @@ export function valueAlignment(v: unknown): 'left' | 'right' | 'center' {
 	return 'left';
 }
 
-const decimal = new Intl.NumberFormat('fr-FR', {
+const decimal = () => numberFormat({
 	minimumFractionDigits: 2,
 	maximumFractionDigits: 6
 });
@@ -37,7 +39,7 @@ export function formatValue(type: ColumnType, v: unknown): string {
 		case 'integer':
 			return String(v);
 		case 'decimal':
-			return typeof v === 'number' ? decimal.format(v) : String(v);
+			return typeof v === 'number' ? decimal().format(v) : String(v);
 		case 'boolean':
 			return v ? 'VRAI' : 'FAUX';
 		case 'date': {
@@ -61,7 +63,7 @@ export function formatColumnValue(col: { type: ColumnType; result?: string } | u
 
 /** Texte proposé à l'édition (sans séparateur de milliers). */
 export function editValue(type: ColumnType, v: unknown): string {
-	if (type === 'decimal' && typeof v === 'number') return String(v).replace('.', ',');
+	if (type === 'decimal' && typeof v === 'number') return String(v).replace('.', decimalSep());
 	return formatValue(type, v);
 }
 

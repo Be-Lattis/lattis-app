@@ -9,6 +9,7 @@
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { BY_CATEGORY, CARTESIAN, KINDS, SECONDARY, SINGLE_SERIES, STACKABLE, chartFields, chartNotes, mapChoice, mapComplete, mapPatch, reorderSeries, seriesShape, type MapChoice, type MapGuess } from './kinds';
+	import { fmtNumber } from '#lib/i18n/index.js';
 
 	/** Une source possible du graphique (tableau ou TCD) et ses colonnes. */
 	export interface ChartSource {
@@ -230,7 +231,7 @@
 			<label class="line" title="Multiplie la taille des points ; la colonne Valeur règle déjà leur taille relative">Taille des points
 				<span class="ptscale">
 					<input type="range" min="0.25" max="4" step="0.25" value={config.mapScale ?? 1} onchange={(e) => { const v = Number((e.currentTarget as HTMLInputElement).value); set({ mapScale: v === 1 ? undefined : v }); }} />
-					<span>×{(config.mapScale ?? 1).toLocaleString('fr-FR')}</span>
+					<span>×{fmtNumber(config.mapScale ?? 1)}</span>
 				</span>
 			</label>
 		{/if}
@@ -238,7 +239,7 @@
 		<div class="line mapview">
 			<span>Vue</span>
 			{#if config.mapView}
-				<span class="vv">Enregistrée (zoom {config.mapView.zoom.toLocaleString('fr-FR', { maximumFractionDigits: 1 })})</span>
+				<span class="vv">Enregistrée (zoom {fmtNumber(config.mapView.zoom, { maximumFractionDigits: 1 })})</span>
 				<button type="button" title="Revenir à la vue ajustée aux points" onclick={() => set({ mapView: undefined })}>Recentrer</button>
 			{:else}
 				<span class="vv">Ajustée aux points</span>

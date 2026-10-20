@@ -3,6 +3,7 @@
 // texte. Le texte affiché d'une cellule passe par formatCell : la valeur
 // stockée ne change pas, seul son affichage.
 
+import { dateTimeFormat, lang } from '#lib/i18n/index.js';
 import { formatNumber, isNumericText, styledNumber, type CellStyle } from './style';
 
 /** Formats de date proposés (motifs d'Excel en français). */
@@ -27,6 +28,18 @@ const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet'
 const MONTHS_SHORT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 const DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const DAYS_SHORT = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+
+/**
+ * Nom d'un mois (0 à 11) ou d'un jour (0 : dimanche) dans la langue de
+ * l'interface : les listes ci-dessus en français, Intl ailleurs (le motif
+ * du format, lui, reste écrit à la française : jj/mm/aaaa).
+ */
+function dateName(kind: 'month' | 'weekday', width: 'long' | 'short', i: number): string {
+	if (lang() === 'fr') return (kind === 'month' ? (width === 'long' ? MONTHS : MONTHS_SHORT) : width === 'long' ? DAYS : DAYS_SHORT)[i];
+	// 2023-01-01 était un dimanche.
+	const d = kind === 'month' ? Date.UTC(2023, i, 1) : Date.UTC(2023, 0, 1 + i);
+	return dateTimeFormat({ [kind]: width, timeZone: 'UTC' }).format(d);
+}
 
 function valid(p: DateTime): DateTime | null {
 	if (p.m < 1 || p.m > 12 || p.d < 1 || p.h > 23 || p.mi > 59 || p.s > 59) return null;
@@ -89,15 +102,15 @@ export function formatDateTime(p: DateTime, pattern: string): string {
 				case 'aa':
 					return pad(p.y % 100);
 				case 'mmmm':
-					return MONTHS[p.m - 1];
+					return dateName('month', 'long', p.m - 1);
 				case 'mmm':
-					return MONTHS_SHORT[p.m - 1];
+					return dateName('month', 'short', p.m - 1);
 				case 'mm':
 					return prevField(k) === 'hh' || nextField(k) === 'ss' ? pad(p.mi) : pad(p.m);
 				case 'jjjj':
-					return DAYS[weekday];
+					return dateName('weekday', 'long', weekday);
 				case 'jjj':
-					return DAYS_SHORT[weekday];
+					return dateName('weekday', 'short', weekday);
 				case 'jj':
 					return pad(p.d);
 				case 'hh':

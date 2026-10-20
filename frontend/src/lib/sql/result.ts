@@ -1,12 +1,13 @@
 // Résultat d'une requête de l'onglet SQL : nombres de lignes accordés, copie
 // pour Excel (texte séparé par des tabulations).
+import { fmtNumber } from '#lib/i18n/index.js';
 
 /**
  * « 1 ligne », « 0 ligne », « 12 lignes » : en français, le pluriel commence
  * à 2. Le nombre s'écrit à la française (« 1 234 lignes »).
  */
 export function count(n: number, word = 'ligne', plural = word + 's'): string {
-	return `${n.toLocaleString('fr-FR')} ${Math.abs(n) >= 2 ? plural : word}`;
+	return `${fmtNumber(n)} ${Math.abs(n) >= 2 ? plural : word}`;
 }
 
 /** Valeur d'une cellule copiée : nombres à virgule décimale, comme Excel en français. */

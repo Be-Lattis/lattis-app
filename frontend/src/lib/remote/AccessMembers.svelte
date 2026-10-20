@@ -14,6 +14,7 @@
 	import TableSourcesList from './TableSourcesList.svelte';
 	import { BUILTIN_LABELS, INVITE_ROLES, isPipeline, memberCount, members, ownerCount, roleLabel, teamRows, type MemberRow } from './rights';
 	import { capsSummary, emailProblem, initial, memberCaps, NO_ACL, roleCaps, roleTone, type Run } from './access';
+	import { fmtDate } from '#lib/i18n/index.js';
 
 	interface Props {
 		view: RightsView;
@@ -218,7 +219,7 @@
 			{#each acl.invitations as i (i.id)}
 				<li class="ac-row">
 					<span class="ac-avatar" aria-hidden="true" style="background: #f1f3f5; color: #6b7280">{initial(i.email)}</span>
-					<div class="ac-who"><strong>{i.email}</strong><span class="ac-sub">jusqu’au {new Date(i.expires_at).toLocaleDateString('fr-FR')}</span></div>
+					<div class="ac-who"><strong>{i.email}</strong><span class="ac-sub">jusqu’au {fmtDate(new Date(i.expires_at))}</span></div>
 					<div class="ac-chips">
 						{#each i.roles ?? [] as r (r)}
 							{@const role = roles.find((x) => x.builtin === r || (!x.builtin && x.name.toLowerCase() === r.toLowerCase()))}

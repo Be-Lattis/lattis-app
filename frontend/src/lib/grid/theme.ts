@@ -8,6 +8,7 @@
 // prédéfinis (sauf ui.builtinThemes = false), ceux de l'organisation et
 // ceux de l'utilisateur (ui.themes, un objet par identifiant).
 import type { SettingState } from '#lib/shell/settings.js';
+import { compareText } from '#lib/i18n/index.js';
 
 // Comme findSetting (settings.ts, qui importe ce fichier).
 const findSetting = (list: readonly SettingState[], path: string) => list.find((s) => s.path.toLowerCase() === path.toLowerCase());
@@ -231,7 +232,7 @@ export function themeCatalog(list: readonly SettingState[]): ThemeDef[] {
 		added.push({ id, name: t.name.trim(), table: t.table.toLowerCase(), source: t.source.toLowerCase(), ...themeExtras(t), origin: managed.has(id) ? 'org' : 'user' });
 	}
 	const rank = (t: ThemeDef) => (t.origin === 'org' ? 0 : 1);
-	added.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'fr'));
+	added.sort((a, b) => rank(a) - rank(b) || compareText(a.name, b.name));
 	const out = [...(builtin ? BUILTIN_THEMES : []), ...added.filter((t) => !BUILTIN_THEMES.some((b) => b.id === t.id) || !builtin)];
 	return out.length ? out : BUILTIN_THEMES;
 }

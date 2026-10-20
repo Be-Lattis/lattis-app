@@ -1,9 +1,10 @@
 // Accueil sans classeur ouvert : premiers pas et classeur d'exemple
 // (audit 6, I8).
+import { fmtNumber } from '#lib/i18n/index.js';
 
 export type DemoProgress = { done: number; total: number; cells: number; totalCells: number };
 
-const fr = (n: number) => n.toLocaleString('fr-FR');
+const fr = (n: number) => fmtNumber(n);
 
 /** Avancement de la fabrication d'une démonstration ou de l'exemple. */
 export function demoProgressText(label: string, p: DemoProgress | null): string {

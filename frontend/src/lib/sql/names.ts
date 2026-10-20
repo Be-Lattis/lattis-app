@@ -6,6 +6,7 @@
 // Les colonnes du résultat reprennent le texte saisi comme en-tête.
 
 import type { ColumnType } from '#lib/grid/format.js';
+import { lower } from '#lib/i18n/index.js';
 
 export interface SqlColumn {
 	name: string;
@@ -111,7 +112,7 @@ const isKeyword = (t: Token) => t.kind === 'word' && KEYWORDS.has(t.text.toUpper
 const isName = (t: Token | undefined): t is Token => !!t && (t.kind === 'quoted' || (t.kind === 'word' && !isKeyword(t)));
 const named = (t: Token): boolean => isName(t);
 const kw = (t: Token | undefined, ...words: string[]) => !!t && t.kind === 'word' && words.includes(t.text.toUpperCase());
-const fold = (s: string) => s.toLocaleLowerCase('fr-FR');
+const fold = (s: string) => lower(s);
 
 /** Index des objets par nom (affiché ou interne), insensible à la casse. */
 export class Catalog {

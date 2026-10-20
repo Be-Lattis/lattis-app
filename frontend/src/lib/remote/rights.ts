@@ -5,6 +5,7 @@
 // (docs/collaboration/droits.md).
 import type { ACL, Grant, Member, Role, Team, WorkbookMember } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
+import { compareText } from '#lib/i18n/index.js';
 
 export const LEVELS = ['none', 'reader', 'participant', 'editor'] as const;
 export type Level = (typeof LEVELS)[number];
@@ -120,7 +121,7 @@ export function teamRows(acl: ACL | null | undefined, teams: readonly Team[] | n
 			row.roles.push(r.id);
 		}
 	}
-	return [...by.values()].sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+	return [...by.values()].sort((a, b) => compareText(a.name, b.name, { sensitivity: 'base' }));
 }
 
 /** « 3 membres », « 1 membre ». */

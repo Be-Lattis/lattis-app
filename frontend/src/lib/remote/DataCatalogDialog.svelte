@@ -14,6 +14,7 @@
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import { catalogTree, type CatalogNode, type DataCatalog, type Dataset } from './data';
 	import { pushedLine, pushedOrigin, type PushedSource } from './source';
+	import { fmtDateTime } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Feuille et cellule où insérer. */
@@ -202,7 +203,7 @@
 						<h3>{picked.name}</h3>
 						{#if picked.description}<p>{picked.description}</p>{/if}
 						{#if pushedOrigin(picked)}<p class="muted">Source poussée depuis le classeur local <strong>{pushedOrigin(picked)}</strong> : mise à jour par son auteur, sans que le classeur soit publié.</p>{/if}
-						<p class="muted">Vue <code>donnees.{picked.sql_name}</code>{picked.updated_at ? ` · modifiée le ${new Date(picked.updated_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}` : ''}</p>
+						<p class="muted">Vue <code>donnees.{picked.sql_name}</code>{picked.updated_at ? ` · modifiée le ${fmtDateTime(new Date(picked.updated_at), { dateStyle: 'short', timeStyle: 'short' })}` : ''}</p>
 						<h4>Colonnes</h4>
 						<ul class="cols">
 							{#each (picked.columns ?? []).filter((c) => !c.name.startsWith('lattis_')) as c (c.name)}<li>{c.name} <span class="muted">{c.type}</span></li>{/each}

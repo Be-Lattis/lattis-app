@@ -120,6 +120,7 @@
 		sortLabels,
 		type ColumnType
 	} from './format';
+	import { fmtNumber } from '#lib/i18n/index.js';
 
 	export interface Column {
 		name: string;
@@ -5210,7 +5211,7 @@
 		// Colonne décimale sans format : deux décimales, comme ses cellules.
 		if (col && st?.nf === undefined && st?.dp === undefined && (col.type === 'decimal' || (col.type === 'formula' && col.result === 'decimal'))) st = { ...st, dp: 2 };
 		if (nums) parts.push(`Moyenne : ${formatStat(sum / nums, st)}`);
-		parts.push(`Nb : ${count.toLocaleString('fr-FR')}`);
+		parts.push(`Nb : ${fmtNumber(count)}`);
 		if (nums) parts.push(`Somme : ${formatStat(sum, st)}`);
 		return parts.join('   ');
 	}
@@ -10837,7 +10838,7 @@
 		/>
 		{#if calcEdit}
 			<span class="fx-scope" title="La formule est celle de toute la colonne : elle s'applique à chacune de ses lignes."
-				>Colonne calculée : s'applique {calcEdit.e.t.rows > 1 ? `aux ${calcEdit.e.t.rows.toLocaleString('fr-FR')} lignes` : 'à la ligne'}</span
+				>Colonne calculée : s'applique {calcEdit.e.t.rows > 1 ? `aux ${fmtNumber(calcEdit.e.t.rows)} lignes` : 'à la ligne'}</span
 			>
 		{/if}
 		</div>
@@ -11134,7 +11135,7 @@
 				{#if m.confirmDelete}
 					<div class="menu-title" class:default-name={isDefaultTableName(m.e.t.name)} title={isDefaultTableName(m.e.t.name) ? DEFAULT_NAME_HINT : clipped(m.e.t.name) ? m.e.t.name : undefined}>Tableau « {clip(m.e.t.name)} »</div>
 					<p class="menu-note">
-						Supprimer ce tableau et ses {(m.e.t.rows + (m.e.t.hidden ?? 0)).toLocaleString('fr-FR')} lignes ? Ctrl+Z permettra de l’annuler.
+						Supprimer ce tableau et ses {fmtNumber(m.e.t.rows + (m.e.t.hidden ?? 0))} lignes ? Ctrl+Z permettra de l’annuler.
 					</p>
 					<button onclick={() => deleteTable(m.e.t)}>Supprimer le tableau</button>
 					<button onclick={() => (menu = { ...m, confirmDelete: false })}>Annuler</button>

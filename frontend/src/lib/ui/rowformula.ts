@@ -3,6 +3,7 @@
 // suggestions de fonctions et de colonnes à la saisie, résumé de l'aperçu.
 
 import { suggest, type Catalog, type Completion, type FunctionDoc } from '#lib/grid/autocomplete.js';
+import { fmtNumber } from '#lib/i18n/index.js';
 
 /** Fonctions et colonnes proposées à la saisie. */
 export interface RowFormulaHelp {
@@ -104,5 +105,5 @@ export function previewOf(p: { values?: { text: string; count: number }[] | null
 export function previewText(values: readonly { text: string }[], count: number): string {
 	if (count === 0) return 'Aucune valeur : la formule ne donne que des cellules vides';
 	const list = values.map((v) => v.text).join(', ');
-	return count > values.length ? `${list}… (${count.toLocaleString('fr-FR')} valeurs)` : list;
+	return count > values.length ? `${list}… (${fmtNumber(count)} valeurs)` : list;
 }

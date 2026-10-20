@@ -4,6 +4,7 @@
 
 import type { ColumnType } from '#lib/grid/format.js';
 import { tokenize } from '#lib/sql/names.js';
+import { compareText } from '#lib/i18n/index.js';
 
 export interface DataAudience {
 	id: string;
@@ -100,7 +101,7 @@ export function catalogTree(c: DataCatalog, query = '', keep: (d: Dataset) => bo
 	const build = (parent: string): CatalogNode[] => {
 		const subs = folders
 			.filter((f) => (f.parent_id ?? '') === parent)
-			.sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+			.sort((a, b) => compareText(a.name, b.name))
 			.map((f) => ({ key: 'f:' + f.id, folder: f, children: build(f.id) }))
 			.filter((n) => n.children.length > 0 || !q);
 		const data = (c.datasets ?? [])
@@ -108,7 +109,7 @@ export function catalogTree(c: DataCatalog, query = '', keep: (d: Dataset) => bo
 				const at = d.folder_id && known.has(d.folder_id) ? d.folder_id : '';
 				return at === parent && keep(d) && match(d);
 			})
-			.sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+			.sort((a, b) => compareText(a.name, b.name))
 			.map((d) => ({ key: 'd:' + d.id, dataset: d, children: [] }));
 		return [...subs, ...data];
 	};
@@ -143,7 +144,7 @@ export function folderTree(c: DataCatalog | null | undefined): FolderNode[] {
 	const build = (parent: string, seen: Set<string>): FolderNode[] =>
 		folders
 			.filter((f) => !seen.has(f.id) && (f.parent_id && known.has(f.parent_id) && f.parent_id !== f.id ? f.parent_id : '') === parent)
-			.sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+			.sort((a, b) => compareText(a.name, b.name))
 			.map((f) => ({ id: f.id, name: f.name, children: build(f.id, new Set([...seen, f.id])) }));
 	return build('', new Set());
 }
@@ -264,7 +265,7 @@ export function dataGroup(server: string, label: string, c: DataCatalog): DataGr
 			description: d.description || undefined,
 			columns: (d.columns ?? []).filter((x) => !x.name.startsWith('lattis_')).map((x) => ({ name: x.name, type: dataColumnType(x.type) }))
 		}))
-		.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+		.sort((a, b) => compareText(a.name, b.name));
 	return { server, label, views };
 }
 

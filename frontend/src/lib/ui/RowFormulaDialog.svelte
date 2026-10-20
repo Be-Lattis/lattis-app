@@ -9,6 +9,7 @@
 	import { modal } from './focus.js';
 	import { apply as applySuggestion, type Completion } from '#lib/grid/autocomplete.js';
 	import { guessCategoryName, previewText, rowSuggest, type RowFormulaHelp } from './rowformula.js';
+	import { fmtNumber } from '#lib/i18n/index.js';
 
 	interface Preview {
 		values: { text: string; count: number }[];
@@ -161,7 +162,7 @@
 			{#if failed || shown?.error}
 				<div class="error">{failed || shown?.error}</div>
 			{:else if shown}
-				<div><b>{shown.count > 1 ? `${shown.count.toLocaleString('fr-FR')} valeurs` : shown.count === 1 ? '1 valeur' : 'Valeurs'}</b> : {previewText(shown.values, shown.count)}</div>
+				<div><b>{shown.count > 1 ? `${fmtNumber(shown.count)} valeurs` : shown.count === 1 ? '1 valeur' : 'Valeurs'}</b> : {previewText(shown.values, shown.count)}</div>
 				{#if follow && shown.tables?.length}
 					<div class="tables">{follow} : {shown.tables.join(', ')}{#if shown.others?.length} · sans ces colonnes, ne suivent pas : {shown.others.join(', ')}{/if}</div>
 				{/if}

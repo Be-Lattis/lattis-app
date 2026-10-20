@@ -9,6 +9,7 @@
 
 import type { CellStyle } from './style';
 import { ICON_SETS, type IconSetId } from './cficons';
+import { compareText, lower } from '#lib/i18n/index.js';
 
 export type RuleOp =
 	| '>'
@@ -264,7 +265,7 @@ function cmp(v: unknown, w: string): number {
 	// Seuil numérique et valeur texte (colonne entière mêlant textes et
 	// nombres) : ni plus grand ni plus petit, seulement « différent ».
 	if (b !== null) return NaN;
-	return String(v ?? '').localeCompare(w, 'fr', { sensitivity: 'base' });
+	return compareText(String(v ?? ''), w, { sensitivity: 'base' });
 }
 
 /** Clé d'une valeur pour les doublons (texte sans casse ASCII, comme lower() de SQLite). */
@@ -617,7 +618,7 @@ export function matches(r: Rule, c: CellValue, env?: RuleEnv, k = 0): boolean {
 		case 'formula':
 			return !!env?.mark(r, k);
 		case 'notcontains':
-			return error ? false : !text.toLocaleLowerCase('fr').includes((r.value ?? '').toLocaleLowerCase('fr'));
+			return error ? false : !lower(text).includes(lower(r.value ?? ''));
 	}
 	if (empty || error) return false;
 	const w = r.value ?? '';
@@ -646,11 +647,11 @@ export function matches(r: Rule, c: CellValue, env?: RuleEnv, k = 0): boolean {
 			return !inside && !Number.isNaN(cmp(v, lo));
 		}
 		case 'contains':
-			return text.toLocaleLowerCase('fr').includes(w.toLocaleLowerCase('fr'));
+			return lower(text).includes(lower(w));
 		case 'begins':
-			return text.toLocaleLowerCase('fr').startsWith(w.toLocaleLowerCase('fr'));
+			return lower(text).startsWith(lower(w));
 		case 'ends':
-			return text.toLocaleLowerCase('fr').endsWith(w.toLocaleLowerCase('fr'));
+			return lower(text).endsWith(lower(w));
 		case 'date': {
 			const n = typeof v === 'string' ? dateSerial(v) : dateSerial(text);
 			if (n === null || !env) return false;

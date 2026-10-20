@@ -19,6 +19,7 @@
 	// noms internes t_1, c_0… avant l'exécution), historique des requêtes.
 	// Les requêtes d'écriture (INSERT, UPDATE, DELETE) partent telles quelles au
 	// backend, qui les rend annulables (Ctrl+Z).
+	import { fmtNumber } from '#lib/i18n/index.js';
 	import { formatValue, typeLabel } from '#lib/grid/format.js';
 	import { alterRename } from '#lib/sql/rename.js';
 	import SqlEditor from '#lib/sql/SqlEditor.svelte';
@@ -685,7 +686,7 @@
 			{:else if result}
 				<div class="result-bar">
 					<p class="muted">
-						{count((result.rows ?? []).length)}{result.truncated ? ' (tronqué)' : ''} · {(result.micros / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} ms
+						{count((result.rows ?? []).length)}{result.truncated ? ' (tronqué)' : ''} · {fmtNumber(result.micros / 1000, { maximumFractionDigits: 1 })} ms
 						<span class="sent" title={sent}>· SQL exécuté</span>
 					</p>
 					{#if ran}

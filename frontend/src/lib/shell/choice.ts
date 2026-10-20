@@ -6,6 +6,7 @@
 
 import { fillSeries } from '#lib/grid/fill.js';
 import type { RowFormulaHelp, RowFormulaPreview } from '#lib/ui/rowformula.js';
+import { fmtNumber } from '#lib/i18n/index.js';
 
 /** Onglet à choix d'une feuille (canvas.SheetChoice). */
 export interface TabChoice {
@@ -81,7 +82,7 @@ export function newLabel(name: string): string {
 /** Rappel pour la barre d'état et l'infobulle : « Année : 2025 (choix de l'onglet) ». */
 export function choiceStatus(c: TabChoice, hidden = 0): string {
 	const v = c.all ? allLabel(c.name) : c.value;
-	const more = hidden > 0 ? ` · ${hidden.toLocaleString('fr-FR')} ligne${hidden > 1 ? 's' : ''} d'autres valeurs masquée${hidden > 1 ? 's' : ''}` : '';
+	const more = hidden > 0 ? ` · ${fmtNumber(hidden)} ligne${hidden > 1 ? 's' : ''} d'autres valeurs masquée${hidden > 1 ? 's' : ''}` : '';
 	return `${c.name} : ${v} (choix de l'onglet)${more}`;
 }
 

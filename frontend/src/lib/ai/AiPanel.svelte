@@ -27,6 +27,7 @@
 	import { openOutside } from './links';
 	import { sharingLabel } from './sharing';
 	import { chat, conversations, deleteConversation, load, newConversation, openConversation, refreshStatus, resume, send, stop, undoRun, type Conversation } from './state.svelte.js';
+	import { fmtDateTime } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Un classeur est ouvert (sinon l'assistant n'a rien sur quoi agir). */
@@ -275,7 +276,7 @@
 				<div class="conv" class:current={c.current}>
 					<button class="conv-open" role="menuitem" disabled={c.current || chat.busy} title={c.current ? 'Conversation en cours' : 'Reprendre cette conversation'} onclick={() => pickConv(c.id)}>
 						<span class="conv-title">{c.title}</span>
-						<span class="muted">{c.current ? 'en cours' : new Date(c.updated).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+						<span class="muted">{c.current ? 'en cours' : fmtDateTime(new Date(c.updated), { dateStyle: 'short', timeStyle: 'short' })}</span>
 					</button>
 					{#if confirmDel === c.id}
 						<span class="conv-confirm">

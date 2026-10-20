@@ -4,6 +4,7 @@
 // (internal/canvas : RenameTable, RenameSheet, SetName, en-têtes de
 // colonnes, SaveScript, RenameFavorite) ; un refus du moteur (classeur
 // partagé, nom pris ailleurs…) s'affiche de la même façon (refusedName).
+import { lower, upper } from '#lib/i18n/index.js';
 
 /** Un nom refusé : titre de la boîte et explication (pourquoi, ce qui est permis). */
 export interface NameProblem {
@@ -11,7 +12,6 @@ export interface NameProblem {
 	message: string;
 }
 
-const lower = (s: string) => s.toLocaleLowerCase('fr');
 const taken = (name: string, others: Iterable<string>) => {
 	const k = lower(name);
 	for (const o of others) if (lower(o.trim()) === k) return o;
@@ -109,7 +109,7 @@ export function refusedName(title: string, e: unknown): NameProblem {
 	m = m.replace(/^(?:tableau|feuille|onglet|script|requête|favori)\s*:\s*/i, '');
 	m = m.replace(/^nom « (.*) » refusé : /s, '« $1 » : ');
 	if (!m) return { title, message: 'Le nom a été refusé.' };
-	m = m.charAt(0).toLocaleUpperCase('fr') + m.slice(1);
+	m = upper(m.charAt(0)) + m.slice(1);
 	if (/existe déjà|déjà utilisé/.test(m) && !/choisissez/i.test(m)) m += ".\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur.";
 	return { title, message: m };
 }

@@ -1,0 +1,7 @@
+{
+	"ok": "OK",
+	"cancel": "Annuler",
+	"close": "Fermer",
+	"rows": "{n, plural, =0 {aucune ligne} one {# ligne} other {# lignes}}",
+	"values": "{n, plural, =0 {aucune valeur} one {# valeur} other {# valeurs}}"
+}
