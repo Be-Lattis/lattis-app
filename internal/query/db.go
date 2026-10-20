@@ -642,10 +642,11 @@ func listTables(ctx context.Context, db *sql.DB, d *dialect) ([]DBTable, error) 
 
 // internalTable : table propre à Lattis, cachée des listes de tables d'une
 // source (un classeur .lattis ouvert comme base, un Serveur Lattis : ses
-// tables lattis_meta_* et son schéma interne lattis).
+// tables lattis_meta_* ; son schéma interne lattis est déjà caché par le
+// dialecte Serveur Lattis, et reste visible d'une base PostgreSQL quelconque).
 func internalTable(t DBTable) bool {
 	n := strings.ToLower(t.Name)
-	return strings.HasPrefix(n, "_lattis_") || strings.HasPrefix(n, "lattis_meta_") || strings.EqualFold(t.Schema, "lattis")
+	return strings.HasPrefix(n, "_lattis_") || strings.HasPrefix(n, "lattis_meta_")
 }
 
 // FileTables liste les tables et vues d'un fichier de base (SQLite).

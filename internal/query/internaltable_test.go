@@ -17,7 +17,7 @@ func TestInternalTablesHidden(t *testing.T) {
 	}{
 		{DBTable{Schema: "wb_test_2cc356", Name: "lattis_meta_columns"}, true},
 		{DBTable{Name: "_lattis_cells"}, true},
-		{DBTable{Schema: "lattis", Name: "workbooks"}, true},
+		{DBTable{Schema: "lattis", Name: "workbooks"}, false}, // caché par le dialecte Serveur Lattis
 		{DBTable{Schema: "wb_test_2cc356", Name: "Ventes"}, false},
 		{DBTable{Schema: "donnees", Name: "lattis"}, false},
 	} {
