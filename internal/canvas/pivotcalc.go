@@ -143,6 +143,8 @@ type pivotPlan struct {
 	// dans la source (from) sous les colonnes calc.
 	extra []string
 	calc  map[int64]bool
+	// source : colonne calculée du tableau derrière un champ de calc.
+	source map[int64]Column
 }
 
 // pivotCalcBase numérote les colonnes des champs calculés d'un TCD, au-delà
@@ -221,7 +223,23 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		for i := range tb.Cols {
 			if strings.EqualFold(tb.Cols[i].Name, name) {
 				if tb.Cols[i].Formula != "" {
-					return nil, msg.Wrap(ErrPivot, "pivot.computedNotField", msg.Args{"column": name})
+					// Colonne calculée : sa formule, ligne par ligne, comme un
+					// champ calculé du TCD ; sa mise en forme reste celle de la
+					// colonne (format €).
+					key := "=" + strings.ToLower(tb.Cols[i].Name)
+					if c, ok := calc[key]; ok {
+						return c, nil
+					}
+					c, err := t.calcColumn(&p, tb.Cols[i].Name, tb.Cols[i].Formula)
+					if err != nil {
+						return nil, msg.Wrap(ErrPivot, "pivot.computedNotField", msg.Args{"column": name})
+					}
+					if p.source == nil {
+						p.source = map[int64]Column{}
+					}
+					p.source[c.ID] = tb.Cols[i]
+					calc[key] = c
+					return c, nil
 				}
 				return &tb.Cols[i], nil
 			}

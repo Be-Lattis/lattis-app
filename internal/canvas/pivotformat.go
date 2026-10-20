@@ -29,7 +29,13 @@ func (t *tx) pivotFormats(cfg PivotConfig, cells [][]string) ([]string, error) {
 	out := make([]string, len(cells[0]))
 	byValue := make([]string, len(cfg.Values))
 	for vi, v := range cfg.Values {
-		if byValue[vi], err = t.pivotValueFormat(p.tb, v, p.vals[vi]); err != nil {
+		c := p.vals[vi]
+		if c != nil {
+			if src, ok := p.source[c.ID]; ok {
+				c = &src // colonne calculée : son format et son type de résultat
+			}
+		}
+		if byValue[vi], err = t.pivotValueFormat(p.tb, v, c); err != nil {
 			return nil, err
 		}
 	}

@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Corrections
+
+- Une colonne calculée (Montant = Prix × Quantité) sert de champ de tableau croisé dynamique, en valeurs comme en lignes, au lieu d'être refusée ; la somme garde le format de la colonne (€).
+
 ## 0.3.0-beta (20/10/2026)
 
 ### Changements
