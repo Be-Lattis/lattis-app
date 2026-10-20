@@ -117,5 +117,11 @@ func Manifest(ctx context.Context, db *sql.DB) (*archive.Remote, error) {
 		}
 		r.Since[strconv.FormatInt(tbl, 10)] = since
 	}
-	return r, rs.Err()
+	if err := rs.Err(); err != nil {
+		return nil, err
+	}
+	if p, c, err := Unsent(ctx, db); err == nil {
+		r.Unsent = p + c
+	}
+	return r, nil
 }

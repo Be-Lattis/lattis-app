@@ -156,6 +156,10 @@ type Remote struct {
 	// Since : dernier point de synchronisation (xid8) par tableau publié
 	// (identifiant local).
 	Since map[string]string
+	// Unsent : modifications pas encore envoyées au serveur (file d'envoi
+	// et conflits) au moment de l'enregistrement : lu sans ouvrir la base
+	// (fichier d'auteur à rouvrir tel quel pour qu'elles partent).
+	Unsent int
 }
 
 // Doc est un document ouvert.
@@ -994,6 +998,9 @@ func (r *Remote) yaml() string {
 	fmt.Fprintf(&b, "  schema: %s\n", strconv.Quote(r.Schema))
 	fmt.Fprintf(&b, "  mode: %s\n", strconv.Quote(r.Mode))
 	fmt.Fprintf(&b, "  version: %d\n", r.Version)
+	if r.Unsent > 0 {
+		fmt.Fprintf(&b, "  unsent: %d\n", r.Unsent)
+	}
 	if len(r.Since) > 0 {
 		b.WriteString("  since:\n")
 		keys := make([]string, 0, len(r.Since))
@@ -1098,6 +1105,8 @@ func readManifest(f *zip.File) (Manifest, error) {
 				m.Remote.Mode = unquote(v)
 			case "version":
 				fmt.Sscan(v, &m.Remote.Version)
+			case "unsent":
+				fmt.Sscan(v, &m.Remote.Unsent)
 			case "since":
 				m.Remote.Since = map[string]string{}
 			}

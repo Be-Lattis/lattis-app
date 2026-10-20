@@ -36,9 +36,13 @@
 		/** Infobulle du badge (adresse du classeur sur le serveur). */
 		badgeTitle?: string;
 		offline?: boolean;
+		/** Classeur partagé : rôle de l'utilisateur (« Éditeur ») et ce qu'il permet. */
+		role?: { label: string; detail: string } | null;
+		/** Clic sur la pastille du rôle (Gérer l'accès, ou le détail en barre d'état). */
+		onrole?: () => void;
 	}
 
-	let { title, dirty = false, actions = [], badge = '', badgeTitle = '', offline = false }: Props = $props();
+	let { title, dirty = false, actions = [], badge = '', badgeTitle = '', offline = false, role = null, onrole }: Props = $props();
 
 	// Titre de la fenêtre du système (barre des tâches, Alt+Tab) ; onglet du
 	// navigateur pour la version web.
@@ -92,6 +96,7 @@
 	<div class="caption title" role="presentation" ondblclick={dblclick}>
 		<span class="name">{title}</span>{#if dirty}<span class="muted" title="Modifications non enregistrées">&nbsp;•</span>{/if}
 		{#if badge}<span class="badge" class:offline title={badgeTitle || undefined}><Icon name={offline ? 'cloud-off' : 'cloud'} size={14} />{badge}</span>{/if}
+		{#if role}<button class="badge role" title={role.detail} onclick={onrole}>{role.label}</button>{/if}
 		<span class="muted">{title ? '\u00a0– Lattis' : 'Lattis'}</span>
 	</div>
 	<AccountMenu />
@@ -212,6 +217,19 @@
 		background: rgba(255, 255, 255, 0.16);
 		font-size: 11px;
 		--icon-accent: #fff;
+	}
+	.badge.role {
+		border: none;
+		color: inherit;
+		font: inherit;
+		font-size: 11px;
+		padding: 1px 7px;
+		cursor: pointer;
+		background: rgba(255, 255, 255, 0.1);
+		box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+	}
+	.badge.role:hover {
+		background: rgba(255, 255, 255, 0.22);
 	}
 	.badge.offline {
 		background: rgba(0, 0, 0, 0.22);

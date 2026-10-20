@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Check, State } from '#bindings/internal/remote/workbook/models.js';
 import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 import { syncAt } from '#lib/grid/cache.js';
-import { banner, blocking, detachQuestion, goneError, goneText, offlineText, serverDown, serverLabel, canRepublish, conflictText, defaultSelection, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, rolesLabel, whenLabel } from './share';
+import { banner, blocking, detachQuestion, goneError, goneText, offlineText, serverDown, serverLabel, canRepublish, conflictText, defaultSelection, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, roleChip, rolesLabel, whenLabel } from './share';
 
 const check: Check = {
 	tables: [
@@ -152,5 +152,23 @@ describe('partage', () => {
 		expect(canRepublish(state({}))).toBe(false);
 		expect(canRepublish(state({ canDesign: true, mode: 'collaborative' }))).toBe(false);
 		expect(canRepublish(null)).toBe(false);
+	});
+});
+
+describe('roleChip', () => {
+	const st = (s: Partial<State>) => ({ shared: true, mode: 'collaborative', roles: [], ...s }) as State;
+	it('montre le rôle le plus large et ce qu’il permet', () => {
+		expect(roleChip(st({ roles: ['reader', 'editor'] }))).toEqual({
+			label: 'Éditeur',
+			detail: 'Vous êtes éditeur de ce classeur : lire, ajouter, modifier et supprimer des lignes ; pas la structure ni la mise en page ; rôles : lecteur, éditeur'
+		});
+		expect(roleChip(st({ roles: ['participant'] }))?.label).toBe('Participant');
+		expect(roleChip(st({ roles: ['reader'], mode: 'frozen' }))?.detail).toContain('classeur figé : lecture seule');
+	});
+	it('rôle personnalisé seul, classeur local ou supprimé', () => {
+		expect(roleChip(st({ roles: [] }))?.label).toBe('Accès personnalisé');
+		expect(roleChip(null)).toBeNull();
+		expect(roleChip(st({ shared: false }))).toBeNull();
+		expect(roleChip(st({ roles: ['owner'], gone: 'deleted' }))).toBeNull();
 	});
 });

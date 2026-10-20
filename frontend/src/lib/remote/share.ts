@@ -16,6 +16,34 @@ export function modeLabel(mode: string): string {
 
 const ROLES: Record<string, string> = { owner: 'propriétaire', designer: 'concepteur', editor: 'éditeur', participant: 'participant', reader: 'lecteur' };
 
+/** Ce que permet chaque rôle fourni (pastille du rôle, spécification du serveur §8.1). */
+const ROLE_DETAILS: Record<string, string> = {
+	owner: 'tout, y compris gérer les accès',
+	designer: 'tout sauf les accès : structure, mise en page, cellules libres, scripts',
+	editor: 'lire, ajouter, modifier et supprimer des lignes ; pas la structure ni la mise en page',
+	participant: 'tout lire, ajouter des lignes, modifier et supprimer les vôtres',
+	reader: 'lire seulement'
+};
+
+/** Rôles du plus large au plus étroit (la pastille montre le plus large). */
+const ROLE_ORDER = ['owner', 'designer', 'editor', 'participant', 'reader'];
+
+/**
+ * Pastille du rôle dans la barre de titre : le rôle le plus large de
+ * l'utilisateur sur le classeur partagé ouvert, et ce qu'il permet (infobulle,
+ * et message au toucher). null : classeur local.
+ */
+export function roleChip(s: State | null | undefined): { label: string; detail: string } | null {
+	if (!s?.shared || s.gone) return null;
+	const roles = s.roles ?? [];
+	const top = ROLE_ORDER.find((r) => roles.includes(r));
+	if (!top) return { label: 'Accès personnalisé', detail: 'Accès personnalisé : vos droits dépendent des tableaux (rôle défini par le propriétaire)' };
+	const label = ROLES[top].charAt(0).toUpperCase() + ROLES[top].slice(1);
+	const frozen = s.mode === FROZEN && top !== 'owner' && top !== 'designer' ? ' (classeur figé : lecture seule)' : '';
+	const more = roles.length > 1 ? ` ; rôles : ${rolesLabel(roles)}` : '';
+	return { label, detail: `Vous êtes ${ROLES[top]} de ce classeur : ${ROLE_DETAILS[top]}${frozen}${more}` };
+}
+
 /** Rôles sur un classeur, en clair (« propriétaire, lecteur »). */
 export function rolesLabel(roles: readonly string[] | null | undefined): string {
 	return (roles ?? []).map((r) => ROLES[r] ?? r).join(', ');

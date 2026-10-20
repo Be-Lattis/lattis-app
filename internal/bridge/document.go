@@ -243,6 +243,12 @@ func sharedFile(path string) *RecentFile {
 	if err != nil || m.Remote == nil || m.Remote.Mode != workbook.Collaborative {
 		return nil
 	}
+	// Modifications faites dans ce fichier et pas encore envoyées (hors
+	// ligne, puis Ctrl+S) : le fichier s'ouvre tel quel, elles partent de
+	// lui-même au serveur (ouvert depuis le serveur, elles y resteraient).
+	if m.Remote.Unsent > 0 {
+		return nil
+	}
 	abs, _ := filepath.Abs(path)
 	return &RecentFile{Path: abs, Title: strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), Server: m.Remote.Server, WorkbookID: m.Remote.WorkbookID, Link: protocol.WorkbookLink(m.Remote.Server, m.Remote.WorkbookID)}
 }
@@ -455,6 +461,19 @@ func (s *DocumentService) saved(ctx context.Context, d *doc.Document) (DocState,
 	// cache (l'interface montre sinon « Enregistré : <chemin> »).
 	if st.Remote != nil && st.Notice == "" && !st.Dirty {
 		st.Notice = remoteSavedNotice(st.Remote)
+	}
+	// Fichier de l'auteur d'un classeur partagé en direct : enregistré sur
+	// le poste, et synchronisé avec le serveur comme un classeur ouvert
+	// depuis le serveur ; le message dit les deux.
+	if st.Remote == nil && st.Notice == "" && !st.Dirty && d.Share != nil {
+		if r := d.Share.State(); r.Shared && r.Mode == workbook.Collaborative && r.Gone == "" {
+			where := serverLabel(r.Server, r.ServerName)
+			if r.Online {
+				st.Notice = fmt.Sprintf("Enregistré : %s ; vos modifications partent aussi vers %s", st.Path, where)
+			} else {
+				st.Notice = fmt.Sprintf("Enregistré : %s ; hors ligne, vos modifications partiront vers %s à la reconnexion", st.Path, where)
+			}
+		}
 	}
 	return st, err
 }

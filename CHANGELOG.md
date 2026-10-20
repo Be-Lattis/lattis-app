@@ -13,6 +13,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Édition web sur téléphone : la feuille défile au doigt dans les deux sens, avec élan ; un appui choisit la cellule, un second appui ouvre la saisie, un appui long le menu contextuel, deux doigts zooment. Le ruban est réduit et s'ouvre par-dessus la feuille quand on touche un onglet ; ses onglets, ses commandes et les onglets des feuilles défilent au doigt. Onglets des feuilles et barre d'état restent en bas de l'écran (barres du navigateur, clavier à l'écran) et les menus tiennent dans l'écran.
 - Convertir en valeurs : une colonne calculée devient une colonne ordinaire qui garde ses valeurs actuelles, au type de ces valeurs (clic droit sur la colonne, ou Formules › Convertir en valeurs, aussi pour plusieurs colonnes ou des cellules libres avec formule). Elle garde son nom : les formules qui la citent continuent de la lire. Une seule annulation (Ctrl+Z). Convertir en valeurs marche aussi sur un tableau publié d'un classeur partagé (propriétaires et concepteurs, même hors ligne) : la colonne devient une colonne du tableau sur le serveur, avec ses valeurs, et remplace la colonne calculée chez les collègues ; Ctrl+Z la retire du serveur et la rend calculée.
 - Classeur partagé : une modification que le serveur reçoit mais qui échoue à chaque essai ne bloque plus la synchronisation ; au bout de cinq essais elle est mise de côté, avec les suivantes du même tableau, et le volet Conflits propose de la renvoyer (Réessayer) ou de l'abandonner (le tableau reprend la version du serveur). Vos valeurs restent affichées en attendant.
+- Classeur partagé : votre rôle (Propriétaire, Concepteur, Éditeur, Participant, Lecteur) s'affiche à côté de « en ligne sur … » dans la barre de titre ; son infobulle dit ce qu'il permet, et un clic ouvre Gérer l'accès (propriétaires et concepteurs) ou l'explique en barre d'état, au doigt compris.
 
 ### Changements
 
@@ -34,6 +35,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Classeur partagé, droits de lecture changés en cours de session (restriction posée ou retirée, filtre élargi) : les lignes devenues interdites disparaissent du poste et celles devenues visibles arrivent, sans rouvrir le classeur. Avec un Serveur Lattis à jour, une ligne qui sort de votre filtre parce qu'un collègue a changé sa valeur disparaît aussi.
 - Classeur partagé : deux concepteurs qui modifient la mise en page au même moment ne perdent plus les cellules libres de l'un ou de l'autre (Serveur Lattis à jour).
 - Classeur partagé : une ligne ajoutée juste avant une coupure, puis supprimée par un collègue, ne revient plus au retour de la connexion (Serveur Lattis à jour).
+- Fichier de l'auteur d'un classeur publié en direct : il affiche « en ligne sur … » comme un classeur ouvert depuis le serveur, et Ctrl+S dit que les modifications partent aussi au serveur. Rouvert avec des modifications faites hors ligne pas encore envoyées, il s'ouvre tel quel pour qu'elles partent, au lieu de la version du serveur.
 
 ## 0.1.0-beta.3.2 (20/10/2026)
 

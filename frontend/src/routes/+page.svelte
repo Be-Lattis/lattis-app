@@ -12,7 +12,7 @@
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, OpenResult, RecentFile } from '#bindings/internal/bridge/models.js';
-	import { docFile, docFileName, recentDetail, recentKey, recentLabel, recentRemote, remoteBadge, savedNotice } from '#lib/shell/doctitle.js';
+	import { docFile, docFileName, recentDetail, recentKey, recentLabel, recentRemote, remoteBadge, savedNotice, shareBadge } from '#lib/shell/doctitle.js';
 	import type { Layout, RuleChanges } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
@@ -77,7 +77,7 @@
 	import { refusedNotice } from '#lib/remote/share.js';
 	import { pushSummary, type SourceLink } from '#lib/remote/source.js';
 	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
-	import { canRepublish, detachQuestion, goneError, RETRY_NOTICE, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
+	import { canRepublish, detachQuestion, goneError, RETRY_NOTICE, roleChip, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
@@ -2210,9 +2210,15 @@
 <div class="app">
 	<TitleBar
 		{title}
-		badge={mode === 'doc' ? remoteBadge(docState) : ''}
-		badgeTitle={mode === 'doc' && docState.remote ? docState.remote.link : ''}
-		offline={mode === 'doc' && !!docState.remote && !docState.remote.online}
+		badge={mode === 'doc' ? shareBadge(share) || remoteBadge(docState) : ''}
+		badgeTitle={mode === 'doc' ? (share?.link ?? docState.remote?.link ?? '') : ''}
+		offline={mode === 'doc' && (share?.shared ? !share.online : !!docState.remote && !docState.remote.online)}
+		role={mode === 'doc' ? roleChip(share) : null}
+		onrole={() => {
+			const r = roleChip(share);
+			if (canRights) rightsOpen = true;
+			else if (r) notice = r.detail;
+		}}
 		dirty={mode === 'doc' && docState.dirty}
 		actions={[
 			{ label: 'Enregistrer (Ctrl+S)', icon: 'save', run: mode === 'doc' ? () => file('save') : undefined },

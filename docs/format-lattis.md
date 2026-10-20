@@ -8,7 +8,7 @@ Un classeur Lattis est un fichier ZIP qui contient une base SQLite. Tout ce que 
 
 | Entrée | Contenu |
 | --- | --- |
-| `manifest.yaml` | `format_version` (format d'archive, 1), `application` (`Lattis`), `saved` (date d'enregistrement, UTC, RFC 3339) ; pour un classeur partagé sur un Serveur Lattis, une section `remote` (serveur, identifiant, schéma, mode, version, points de reprise). |
+| `manifest.yaml` | `format_version` (format d'archive, 1), `application` (`Lattis`), `saved` (date d'enregistrement, UTC, RFC 3339) ; pour un classeur partagé sur un Serveur Lattis, une section `remote` (serveur, identifiant, schéma, mode, version, points de reprise ; `unsent` : modifications pas encore envoyées au serveur, absent quand il n'y en a pas : le fichier de l'auteur qui en a s'ouvre tel quel pour qu'elles partent). |
 | `database.sqlite` | la base, compressée en **Zstandard** (méthode ZIP 93), niveau le plus rapide (décision 0015). |
 
 - La base est un instantané complet et cohérent (`VACUUM INTO`), d'un seul fichier : pas de WAL à côté.

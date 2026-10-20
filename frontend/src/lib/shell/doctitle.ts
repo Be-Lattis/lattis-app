@@ -31,6 +31,17 @@ export function remoteBadge(st: DocState | null | undefined): string {
 	return r.online ? `en ligne sur ${where}` : `hors ligne — ${where}`;
 }
 
+/**
+ * Badge d'un classeur partagé, d'après son état de partage : aussi pour le
+ * fichier de l'auteur d'un classeur publié, qui n'est pas un cache mais se
+ * synchronise de même. Vide pour un classeur local.
+ */
+export function shareBadge(s: (ServerRef & { shared?: boolean; online?: boolean; gone?: string }) | null | undefined): string {
+	if (!s?.shared || s.gone === 'deleted') return '';
+	const where = serverLabel(s);
+	return s.online ? `en ligne sur ${where}` : `hors ligne — ${where}`;
+}
+
 /** Titre de la fenêtre du système (barre des tâches) : « Fichier nids — en ligne sur LPO – Lattis ». */
 export function windowTitle(title: string, badge = ''): string {
 	if (!title) return 'Lattis';

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DocState, RecentFile } from '#bindings/internal/bridge/models.js';
 import type { State } from '#bindings/internal/remote/workbook/models.js';
-import { docFile, docFileName, recentDetail, recentKey, recentLabel, remoteBadge, savedNotice, serverLabel, windowTitle } from './doctitle';
+import { docFile, docFileName, recentDetail, recentKey, recentLabel, remoteBadge, savedNotice, serverLabel, shareBadge, windowTitle } from './doctitle';
 
 const cache = 'C:\\Users\\a\\AppData\\Local\\Lattis\\partages\\srv.test\\480f6888-5ec4-45ee-801b-b0891115cf3f.lattis';
 
@@ -77,5 +77,14 @@ describe('récents', () => {
 		expect(recentLabel(local)).toBe('Ventes.lattis');
 		expect(recentDetail(local)).toBe('D:\\Docs\\Ventes.lattis');
 		expect(recentKey(local)).toBe('D:\\Docs\\Ventes.lattis');
+	});
+});
+
+describe('shareBadge', () => {
+	it('badge d’un classeur partagé, fichier de l’auteur compris', () => {
+		expect(shareBadge({ shared: true, online: true, server: 'https://lpo.example', serverName: 'LPO' })).toBe('en ligne sur LPO');
+		expect(shareBadge({ shared: true, online: false, server: 'https://lpo.example' })).toBe('hors ligne — lpo.example');
+		expect(shareBadge({ shared: false })).toBe('');
+		expect(shareBadge({ shared: true, gone: 'deleted', server: 'x' })).toBe('');
 	});
 });

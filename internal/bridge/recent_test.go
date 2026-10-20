@@ -167,4 +167,24 @@ func TestSharedFile(t *testing.T) {
 	if r := sharedFile(save("Notes", "")); r != nil {
 		t.Fatalf("fichier ordinaire : %+v", r)
 	}
+	// Modifications pas encore envoyées dans le fichier (hors ligne, puis
+	// Ctrl+S) : il s'ouvre tel quel, pour qu'elles partent.
+	a, err := archive.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	a.Remote = func(context.Context) (*archive.Remote, error) {
+		return &archive.Remote{Server: "https://srv.test", WorkbookID: "480f6888-5ec4-45ee-801b-b0891115cf3f", Mode: "collaborative", Unsent: 2}, nil
+	}
+	p := filepath.Join(dir, "Hors ligne.lattis")
+	if err := a.Save(ctx, p); err != nil {
+		t.Fatal(err)
+	}
+	if m, err := archive.ReadManifest(p); err != nil || m.Remote == nil || m.Remote.Unsent != 2 {
+		t.Fatalf("manifeste : %+v, %v", m.Remote, err)
+	}
+	if r := sharedFile(p); r != nil {
+		t.Fatalf("fichier avec des modifications en attente ouvert depuis le serveur : %+v", r)
+	}
 }
