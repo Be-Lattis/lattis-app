@@ -1,1 +1,1327 @@
-{}
+{
+	"share": {
+		"mode": {
+			"frozen": "Congelado",
+			"collaborative": "Colaborativo"
+		},
+		"role": {
+			"owner": "propietario",
+			"designer": "diseñador",
+			"editor": "editor",
+			"participant": "participante",
+			"reader": "lector"
+		},
+		"roleDetail": {
+			"owner": "todo, incluida la gestión del acceso",
+			"designer": "todo salvo el acceso: estructura, diseño de página, celdas libres, scripts",
+			"editor": "leer, añadir, modificar y eliminar filas; ni la estructura ni el diseño de página",
+			"participant": "leer todo, añadir filas, modificar y eliminar las propias",
+			"reader": "solo lectura"
+		},
+		"roleChip": {
+			"custom": "Acceso personalizado",
+			"customDetail": "Acceso personalizado: sus derechos dependen de las tablas (rol definido por el propietario)",
+			"detail": "Es {role} de este libro: {detail}{frozen}{more}",
+			"frozen": " (libro congelado: solo lectura)",
+			"more": "; roles: {roles}"
+		},
+		"type": {
+			"text": "Texto",
+			"integer": "Entero",
+			"decimal": "Decimal",
+			"date": "Fecha",
+			"datetime": "Fecha y hora",
+			"boolean": "Booleano"
+		},
+		"blocking": {
+			"none": "Marque al menos una tabla para publicar.",
+			"problem": "«{table}»: {problem}",
+			"invalid": "«{table}»: {n, plural, one {# entrada no válida} other {# entradas no válidas}} que corregir, o una columna que aceptar como texto",
+			"sameName": "«{first}» y «{second}»: mismo nombre en el servidor (allí no se distinguen mayúsculas y minúsculas)"
+		},
+		"offline": {
+			"pending": " ({n, plural, one {# cambio pendiente} other {# cambios pendientes}})",
+			"loginRequired": "Es necesario iniciar sesión en {server}",
+			"collaborative": "{why}. Sin conexión: sus cambios se enviarán cuando vuelva el servidor{pending}.",
+			"readOnly": "{why}: este libro compartido está en solo lectura."
+		},
+		"serverDown": {
+			"named": "{server} no responde",
+			"host": "El servidor {server} no responde"
+		},
+		"gone": {
+			"revoked": "Ya no tiene acceso a este libro en {server}.",
+			"deleted": "Este libro se ha eliminado de {server}.",
+			"pending": "{what} {n, plural, one {Queda # cambio no enviado} other {Quedan # cambios no enviados}} en la copia local."
+		},
+		"banner": {
+			"saveCopy": "Guardar una copia local…",
+			"forget": "Quitar de recientes",
+			"login": "Iniciar sesión…",
+			"retry": "Reintentar",
+			"workOnCopy": "Trabajar en una copia local",
+			"detach": "Desvincular del servidor…",
+			"newVersion": "Nueva versión disponible (versión {version})",
+			"reload": "Volver a cargar",
+			"held": "{n, plural, one {Un cambio no llega al servidor} other {# cambios no llegan al servidor}}",
+			"conflicts": "{n, plural, one {# conflicto: celda modificada} other {# conflictos: celdas modificadas}} por un compañero entretanto",
+			"view": "Ver",
+			"readOnly": "{reason} — versión {version}",
+			"readOnlyOn": "{reason} — versión {version} en {server}"
+		},
+		"detach": {
+			"local": "«{title}» pasará a ser un libro local normal: dejará de sincronizarse con {server}.",
+			"serverKept": "El libro del servidor no se modifica: los demás miembros lo conservan tal cual, y puede volver a abrirlo desde el servidor.",
+			"pending": "{n, plural, one {# cambio aún no enviado al servidor se quedará} other {# cambios aún no enviados al servidor se quedarán}} en este libro local, sin enviarse.",
+			"cached": "Elegirá dónde guardar el libro local (su copia actual es solo una caché de Lattis).",
+			"final": "La desvinculación no se puede deshacer."
+		},
+		"retryNotice": "Intentando conectar de nuevo…",
+		"when": {
+			"today": "a las {time}",
+			"date": "el {date} a las {time}"
+		},
+		"conflict": {
+			"empty": "(vacía)",
+			"text": "{change}: {theirs} (usted: {mine})",
+			"modified": "Modificado",
+			"modifiedBy": "Modificado por {author}",
+			"modifiedWhen": "Modificado {when}",
+			"modifiedByWhen": "Modificado por {author} {when}"
+		},
+		"refused": "{n, plural, one {# valor que no corresponde al tipo fijado no pegado} other {# valores que no corresponden al tipo fijado no pegados}} (tabla compartida): {list}{more}"
+	},
+	"data": {
+		"root": "Raíz del Data Lake",
+		"unknownFolder": "Carpeta desconocida",
+		"type": {
+			"text": "Texto",
+			"integer": "Número entero",
+			"number": "Número",
+			"date": "Fecha",
+			"timestamp": "Fecha y hora",
+			"boolean": "Verdadero / falso",
+			"unknown": "Tipo desconocido"
+		}
+	},
+	"coedit": {
+		"otherUser": "otro usuario",
+		"alone": "Trabajo conjunto: de momento solo usted",
+		"with": "Trabajando junto con {names}",
+		"withMore": "Trabajando junto con {names} y {n} más",
+		"title": "Trabajo conjunto en este libro (carpeta compartida): los datos de las tablas se editan entre todos, el resto espera a que esté solo.",
+		"since": " desde {time}",
+		"joining": " (uniéndose)",
+		"conflicts": "{n, plural, one {# conflicto} other {# conflictos}}"
+	},
+	"lattis": {
+		"continuePassword": "Continuar con una contraseña",
+		"continueWith": "Continuar con {provider}",
+		"notConnected": "sin sesión iniciada",
+		"account": {
+			"none": "Cuenta: sin sesión iniciada en un Servidor Lattis",
+			"title": "Cuenta: {servers}",
+			"on": "{user} en {server}"
+		},
+		"remaining": {
+			"minutes": "{m} min {s} s",
+			"seconds": "{s} s"
+		}
+	},
+	"banner": {
+		"reloading": "Volviendo a cargar…",
+		"connecting": "Conectando…",
+		"hideDetails": "Ocultar los detalles",
+		"details": "Detalles"
+	},
+	"serverPicker": {
+		"empty": "Ningún servidor conectado",
+		"aria": "Servidor",
+		"manage": {
+			"label": "Administrar servidores…",
+			"tooltip": "Añadir un servidor, iniciar sesión en uno o quitarlo de la lista"
+		}
+	},
+	"tableSources": {
+		"title": "Orígenes del Data Lake (tablas sin el libro)",
+		"pipeline": {
+			"label": "canalización",
+			"tooltip": "Alimentado por una canalización cuyo origen es este libro"
+		},
+		"onSave": " · en cada guardado",
+		"sending": "Enviando…",
+		"update": "Actualizar",
+		"help": "Solo se envían las columnas elegidas de estas tablas; el resto del libro no sale de este equipo. Clic derecho en la tabla › Compartir en el Data Lake de Lattis… para cambiarlas o quitarlas."
+	},
+	"cap": {
+		"yes": "sí",
+		"some": "en parte",
+		"no": "no",
+		"label": "{label}: {word}"
+	},
+	"formQR": {
+		"copied": "Enlace del formulario copiado",
+		"saved": "Código QR guardado: {path}",
+		"aria": "Código QR del enlace",
+		"copy": "Copiar el enlace",
+		"png": {
+			"label": "Código QR en PNG…",
+			"tooltip": "Imagen PNG, para un documento o un cartel"
+		},
+		"svg": {
+			"label": "Código QR en SVG…",
+			"tooltip": "Imagen vectorial, nítida a cualquier tamaño"
+		}
+	},
+	"columnPicker": {
+		"count": "{n} de {total}",
+		"all": "Todas",
+		"none": "Ninguna",
+		"search": {
+			"placeholder": "Buscar",
+			"aria": "Buscar una columna"
+		},
+		"aria": "Columnas",
+		"key": "clave",
+		"noMatch": "Ninguna columna coincide.",
+		"noColumn": "Esta tabla no tiene columnas."
+	},
+	"account": {
+		"aria": "Cuenta",
+		"head": "Servidores Lattis",
+		"managed": "Configurado por su organización",
+		"signOut": "Cerrar sesión",
+		"notConnected": "Sin sesión iniciada · {host}",
+		"signIn": "Iniciar sesión…",
+		"noServer": "Ningún servidor.",
+		"noServerManaged": "Ningún servidor. Su organización no ha configurado ninguno.",
+		"rights": {
+			"label": "Administrar el acceso a «{title}»…",
+			"tooltip": "Miembros, roles, restricciones, «Ver como…»"
+		},
+		"connectServer": "Conectarse a un servidor…"
+	},
+	"closeEsc": "Cerrar (Esc)",
+	"prefill": {
+		"title": "Enlaces rellenados previamente · «{title}»",
+		"noParam": "Ningún campo tiene nombre corto: asígnele uno en la pestaña Campos («Nombre corto en el enlace»).",
+		"help": "Elija los campos que rellena el enlace y luego una fila por enlace (un código QR por sede, por ejemplo). Quien responde puede cambiar el valor, salvo en un campo bloqueado por el enlace.",
+		"locked": "bloqueado",
+		"hide": "Ocultar",
+		"show": "Enlace y código QR",
+		"remove": "Quitar este enlace",
+		"add": "+ Añadir un enlace"
+	},
+	"preview": {
+		"membersReserved": "Este servidor reserva la lista de miembros a los propietarios del libro: pídales que usen «Ver como…».",
+		"noTable": "Ninguna tabla publicada.",
+		"intro": "Compruebe lo que un miembro ve y puede hacer: las filas se muestran como el servidor se las da a ese miembro, incluidos los filtros y las reglas avanzadas.",
+		"member": "Miembro",
+		"choose": "Elegir…",
+		"table": "Tabla",
+		"tableAria": "Tabla que ver",
+		"reload": "Volver a cargar",
+		"verdict": {
+			"in": " en «{table}»: "
+		},
+		"rows": "{n, plural, one {# fila visible} other {# filas visibles}}, en solo lectura.",
+		"rowsTruncated": "{n, plural, one {# fila visible} other {# filas visibles}} (las 1000 primeras), en solo lectura.",
+		"noRow": "Ninguna fila visible para este miembro.",
+		"chooseMember": "Elija un miembro, o use «Ver como…» en su fila de Miembros o en un rol."
+	},
+	"open": {
+		"title": "Abrir desde un servidor",
+		"signIn": "Inicie sesión en un Servidor Lattis para ver sus libros.",
+		"reading": "Leyendo los libros…",
+		"empty": "Ningún libro compartido con usted en este servidor.",
+		"version": "versión {version}",
+		"republishing": "nueva versión en preparación",
+		"loading": "Cargando el libro…",
+		"cached": "El libro se conserva en este equipo: sigue disponible sin conexión."
+	},
+	"audience": {
+		"inherit": "Heredar la audiencia de la carpeta",
+		"current": "Audiencia actual",
+		"rowsWhere": "Filas donde {predicate}",
+		"allRows": "Todas las filas",
+		"filtered": "filtrado",
+		"keepName": "Conservar {name}",
+		"removeName": "Quitar {name}",
+		"keep": "Conservar",
+		"remove": "Quitar",
+		"email": {
+			"placeholder": "nombre@ejemplo.com",
+			"aria": "Dirección de correo de la persona"
+		},
+		"or": "o",
+		"team": "Equipo",
+		"aTeam": "un equipo…",
+		"dontAdd": "No añadir",
+		"visibleIf": "Filas visibles si…",
+		"assist": "las filas de la tabla «{table}» que ve {who}",
+		"someone": "esta persona o este equipo",
+		"add": "Añadir una persona o un equipo"
+	},
+	"folder": {
+		"rootName": "la raíz",
+		"aria": "Carpeta: {path}",
+		"search": "Buscar una carpeta",
+		"tree": "Carpetas del Data Lake",
+		"collapse": "Contraer",
+		"expand": "Expandir",
+		"noMatch": "Ninguna carpeta coincide.",
+		"name": {
+			"placeholder": "Nombre de la carpeta",
+			"aria": "Nombre de la nueva carpeta en {parent}"
+		},
+		"create": "Crear",
+		"in": "En «{parent}»",
+		"new": "Nueva carpeta en «{parent}»"
+	},
+	"conflicts": {
+		"aria": "Conflictos",
+		"title": "Conflictos ({n})",
+		"held": {
+			"table": "Tabla",
+			"title": "«{table}»: {n, plural, one {un cambio no se aplica} other {# cambios no se aplican}}",
+			"text": "El servidor lo recibe pero falla en cada intento: {error}. Sus valores siguen mostrándose en este equipo; los demás cambios se aplican con normalidad.",
+			"abandon": {
+				"label": "Descartar",
+				"tooltip": "La tabla vuelve a la versión del servidor"
+			}
+		},
+		"layout": "Diseño de página: {n, plural, one {# elemento modificado} other {# elementos modificados}} en ambos lados desde la apertura (ancho, formato, celda libre…). Gana la última versión guardada; tras más de 24 horas sin conexión, gana la versión de sus compañeros.",
+		"none": "Ningún conflicto pendiente.",
+		"local": "Un compañero ha modificado estas celdas al mismo tiempo que usted: su valor, el más reciente, se muestra en todas partes. «Conservar el mío» restablece el suyo para todos los equipos.",
+		"remote": "Un compañero ha modificado estas celdas mientras usted las modificaba. Su valor sigue mostrándose hasta que elija.",
+		"keepAllMine": "Conservar todos los míos",
+		"keepAllTheirs": "Conservar todos los suyos",
+		"goto": "Ir a la celda",
+		"rowGone": "Fila eliminada u oculta por un filtro",
+		"row": "fila {row}",
+		"keepMine": "Conservar el mío",
+		"keepTheirs": "Conservar el suyo"
+	},
+	"login": {
+		"badUrl": "Escriba la dirección del servidor, por ejemplo https://lattis.acme.com.",
+		"noProvider": "Este servidor no ofrece ningún método de inicio de sesión.",
+		"title": "Iniciar sesión en un Servidor Lattis",
+		"titleOn": "Iniciar sesión en {server}",
+		"address": "Dirección del servidor",
+		"continue": "Continuar",
+		"device": {
+			"help": "En otro dispositivo (teléfono, otro equipo), abra la dirección de abajo y escriba el código; luego inicie sesión con {provider}.",
+			"copy": "Copiar el código",
+			"valid": "Código válido durante {time} más.",
+			"expired": "Código caducado.",
+			"waiting": "Lattis espera la confirmación…"
+		},
+		"browser": {
+			"help": "Termine de iniciar sesión con {provider} en su navegador y vuelva a Lattis.",
+			"note": "La página se ha abierto en el navegador del sistema. ¿No se ha abierto nada? Cancele y elija «desde otro dispositivo»."
+		},
+		"invitation": "por invitación",
+		"otherDevice": "Iniciar sesión desde otro dispositivo (escribir un código)",
+		"imposed": "Método de inicio de sesión exigido por su organización.",
+		"otherServer": "Otro servidor",
+		"cancel": "Cancelar el inicio de sesión"
+	},
+	"forms": {
+		"reason": {
+			"publish": "Publicar en un servidor…",
+			"addShared": "Añadir al libro compartido…"
+		},
+		"widget": {
+			"text": "Texto de una línea",
+			"textarea": "Texto largo",
+			"number": "Número",
+			"date": "Fecha",
+			"datetime": "Fecha y hora",
+			"checkbox": "Casilla",
+			"yesno": "Sí / No",
+			"radio": "Botones de opción",
+			"list": "Lista con búsqueda"
+		},
+		"copiedOn": "Lista copiada el {date}",
+		"copied": "Lista copiada",
+		"accent": {
+			"green": "Verde",
+			"teal": "Verde azulado",
+			"blue": "Azul",
+			"indigo": "Índigo",
+			"purple": "Morado",
+			"red": "Rojo",
+			"orange": "Naranja",
+			"slate": "Pizarra"
+		},
+		"position": "Ubicación",
+		"check": {
+			"noTitle": "El formulario no tiene título.",
+			"titleLength": "Título: 120 caracteres como máximo.",
+			"introLength": "Introducción: 2000 caracteres como máximo.",
+			"submitLength": "Botón: 40 caracteres como máximo.",
+			"privacyLength": "Aviso de protección de datos: 1000 caracteres como máximo.",
+			"closedLength": "Mensaje de cierre: 500 caracteres como máximo.",
+			"thanksLink": "Mensaje de agradecimiento: sin enlaces ni redirecciones.",
+			"noField": "Ningún campo: marque al menos una columna.",
+			"sections": "{n} secciones como máximo.",
+			"paramShared": "Varios campos usan el nombre corto «{param}».",
+			"emptySection": "Un encabezado de sección no tiene texto.",
+			"labelLength": "{label}: etiqueta de 200 caracteres como máximo.",
+			"helpLength": "{label}: ayuda de 500 caracteres como máximo.",
+			"emptyList": "{label}: lista vacía.",
+			"defaultNotInList": "{label}: valor predeterminado fuera de la lista.",
+			"defaultOutOfBounds": "{label}: valor predeterminado fuera de los límites.",
+			"minMax": "{label}: el mínimo es mayor que el máximo.",
+			"listVisible": "{label}: los valores de la lista serán visibles para todos los que respondan.",
+			"requiredRestricted": "{label} es obligatorio, pero una restricción prohíbe añadir filas a esta tabla: el formulario también quedará bloqueado.",
+			"lockedNoParam": "{label}: un campo bloqueado por el enlace necesita un nombre corto.",
+			"publicOpen": "Enlace público sin fecha de cierre ni límite de respuestas."
+		},
+		"state": {
+			"draft": "Borrador",
+			"open": "Abierto",
+			"paused": "En pausa",
+			"closed": "Cerrado"
+		}
+	},
+	"formDialog": {
+		"receivedColumn": "Recibido el",
+		"refused": "Formulario guardado, pero parte de la audiencia se ha rechazado: {list}",
+		"draftSaved": "Borrador del formulario «{title}» guardado",
+		"opened": "Formulario «{title}» abierto",
+		"token": {
+			"receivedAt": "Recibido el (fecha y hora)",
+			"respondent": "Quien responde (dirección de correo)",
+			"formTitle": "Formulario (su título)",
+			"nextNumber": "Número siguiente",
+			"fixed": "Valor fijo"
+		},
+		"receivedAdded": "Columna «{name}» añadida a la tabla",
+		"image": {
+			"logoTooBig": "Imagen demasiado grande: 200 KB como máximo para un logotipo.",
+			"bannerTooBig": "Imagen demasiado grande: 1 MB como máximo para un banner.",
+			"unreadable": "imagen ilegible"
+		},
+		"thisServer": "este servidor",
+		"access": {
+			"aria": "Quién responde",
+			"members": {
+				"label": "Miembros del libro",
+				"detail": "Cualquiera que tenga un rol en el libro, lectores incluidos. Inicio de sesión en Lattis."
+			},
+			"audience": {
+				"label": "Personas y equipos elegidos",
+				"detail": "Responden sin convertirse en miembros del libro. Inicio de sesión en Lattis."
+			},
+			"serverAccounts": {
+				"label": "Cualquiera con una cuenta en {server}",
+				"detail": "Útil para un formulario interno de toda la organización. Inicio de sesión en Lattis."
+			},
+			"public": {
+				"label": "Enlace público",
+				"detail": "Cualquiera que tenga el enlace, sin iniciar sesión: próximamente en Lattis.",
+				"disabled": "Desactivado en este servidor (configuración de su propietario)."
+			}
+		},
+		"titleForm": "Formulario «{title}»",
+		"titleShare": "Compartir «{table}» como formulario",
+		"help": "Ayuda: compartir como formulario",
+		"reading": "Leyendo la tabla…",
+		"openToYou": "Formularios de esta tabla abiertos para usted:",
+		"already": "Esta tabla ya tiene {n, plural, one {un formulario} other {# formularios}}. Varios formularios pueden rellenar la misma tabla.",
+		"responses": "{n, plural, one {# respuesta} other {# respuestas}}",
+		"edit": "Modificar…",
+		"newForm": "Nuevo formulario…",
+		"done": "El formulario «{title}» está abierto. Las respuestas llegan como nuevas filas de la tabla, en directo.",
+		"prefill": {
+			"label": "Enlace rellenado previamente…",
+			"tooltip": "Enlaces que rellenan campos, y sus códigos QR",
+			"saveFirst": "Guarde primero el borrador"
+		},
+		"tab": {
+			"fields": "Campos",
+			"appearance": "Apariencia",
+			"access": "Acceso"
+		},
+		"field": {
+			"move": {
+				"aria": "Mover (Alt+↑ / Alt+↓)",
+				"tooltip": "Arrastre para mover (Alt+↑ / Alt+↓)"
+			},
+			"include": "En el formulario",
+			"position": "Ubicación de quien responde",
+			"column": "Columna «{name}»",
+			"label": "Etiqueta",
+			"widget": "Tipo de campo",
+			"required": "Obligatorio",
+			"settings": "Configuración del campo",
+			"help": "Ayuda",
+			"positionHelp": "La rellena el navegador de quien responde cuando pulsa «Mi ubicación» (nunca automáticamente), con la precisión indicada.",
+			"positionColumn": "Columna «{name}»: «lat, lon».",
+			"positionColumns": "Columnas «{lat}» y «{lon}».",
+			"placeholder": "Texto de ejemplo",
+			"default": {
+				"label": "Valor predeterminado",
+				"none": "Ninguno",
+				"today": "Hoy",
+				"now": "Ahora",
+				"year": "Año actual",
+				"respondent": "Dirección de correo de quien responde"
+			},
+			"value": "Valor",
+			"hidden": "Oculto: el valor predeterminado se asigna sin mostrarse",
+			"min": "Mínimo",
+			"max": "Máximo",
+			"step": "Incremento",
+			"unit": "Unidad",
+			"maxLength": "Longitud máxima",
+			"format": {
+				"label": "Formato",
+				"free": "Libre",
+				"email": "Dirección de correo",
+				"tel": "Teléfono",
+				"url": "Dirección web"
+			},
+			"listFrom": "Lista tomada de «{source}», releída por el servidor en cada visualización ({n} valores hoy).",
+			"listValues": "Valores de la lista (uno por línea)",
+			"copiedFrom": "{copied} de «{source}»",
+			"param": "Nombre corto en el enlace",
+			"locked": "Bloqueado por el enlace"
+		},
+		"section": {
+			"label": "Encabezado de sección",
+			"remove": "Quitar el encabezado de sección",
+			"description": {
+				"placeholder": "Descripción breve (opcional)",
+				"aria": "Descripción de la sección"
+			},
+			"add": "+ Encabezado de sección"
+		},
+		"choice": {
+			"title": "Pestaña de elección · «{name}»",
+			"aria": "Valor de la categoría",
+			"field": "Un campo",
+			"fixedAria": "Valor fijo de la categoría"
+		},
+		"serverValues": {
+			"title": "Valores asignados por el servidor",
+			"help": "Sin campo visible, cada uno en una columna elegida.",
+			"auto": "La clave numerada recibe el número siguiente, asignado por el servidor.",
+			"column": "Columna",
+			"add": "+ Valor asignado por el servidor",
+			"addReceived": {
+				"label": "Añadir una columna {name}",
+				"tooltip": "Añade una columna a la tabla, para todos los miembros"
+			}
+		},
+		"look": {
+			"title": "Título",
+			"intro": "Introducción",
+			"markdown": "**negrita**, *cursiva*, [enlace](https://…), listas con «-».",
+			"logo": "Logotipo",
+			"serverLogo": "El del servidor",
+			"logoHint": "PNG, JPEG o SVG, 200 KB como máximo",
+			"banner": "Banner",
+			"bannerHint": "1 MB como máximo; el servidor quita la ubicación GPS de la foto",
+			"color": "Color",
+			"accent": "Color de énfasis",
+			"pages": "Páginas",
+			"paged": "Una sección por página (Siguiente, Anterior, barra de progreso)",
+			"button": "Botón",
+			"thanks": "Mensaje de agradecimiento",
+			"another": "Botón «Enviar otra respuesta»",
+			"thanksHint": "Solo negrita y cursiva: sin enlaces ni redirecciones.",
+			"closed": {
+				"label": "Cerrado",
+				"placeholder": "Mensaje cuando el formulario está cerrado, completo o aún no abierto"
+			},
+			"privacy": {
+				"label": "Datos",
+				"placeholder": "Aviso de protección de datos, encima del botón",
+				"template": "Partir de la plantilla"
+			},
+			"lang": {
+				"label": "Idioma",
+				"fr": "Francés",
+				"en": "Inglés"
+			}
+		},
+		"audience": {
+			"title": "Personas y equipos",
+			"team": "Equipo {name}",
+			"toAdd": "(por añadir)",
+			"address": "Dirección de correo",
+			"add": "Añadir",
+			"teamChoose": "Equipo…",
+			"identity": "Las respuestas se escriben bajo la identidad del formulario «Formulario: {title}»: quien responde no tiene derechos sobre el libro."
+		},
+		"preview": {
+			"aria": "Ancho de la vista previa",
+			"phone": "Teléfono",
+			"desktop": "Equipo",
+			"browser": {
+				"label": "Abrir la vista previa en el navegador",
+				"tooltip": "Guarda el borrador y abre la página real del servidor (enlace válido durante 10 minutos, respuestas no guardadas)"
+			}
+		},
+		"saving": "Guardando…",
+		"saveDraft": "Guardar el borrador",
+		"save": "Guardar",
+		"open": "Abrir el formulario"
+	},
+	"source": {
+		"mode": {
+			"replace": {
+				"label": "Reemplazar todo",
+				"detail": "Los datos pasan a ser la tabla enviada."
+			},
+			"append": {
+				"label": "Anexar",
+				"detail": "Las filas se añaden a las ya recibidas (registro, lecturas)."
+			},
+			"upsert": {
+				"label": "Actualizar por clave",
+				"detail": "Misma clave: fila actualizada; si no, añadida. No se elimina nada."
+			}
+		},
+		"way": {
+			"republish": {
+				"title": "Volver a publicar el libro con esta tabla",
+				"detail": "El libro se vuelve a publicar con esta tabla; se aplican sus roles y filtros."
+			},
+			"publish": {
+				"title": "Publicar el libro con gestión del acceso",
+				"detail": "Todo el libro va al servidor, con roles y filtros; la tabla se comparte después."
+			},
+			"table": {
+				"title": "Publicar solo esta tabla",
+				"detail": "Solo se envían las columnas elegidas; el libro se queda en su equipo, sin ponerse a disposición."
+			},
+			"shared": {
+				"title": "Añadir esta tabla al libro compartido",
+				"detail": "Recomendado. Se crea en el servidor con sus filas; los miembros la reciben y la modifican según sus derechos. Después se puede compartir en el Data Lake desde este mismo menú."
+			},
+			"tableAlone": "Publicar esta tabla sola en el Data Lake"
+		},
+		"chooser": {
+			"localTitle": "Esta tabla solo está en su equipo",
+			"notInCollab": "El libro está compartido en directo, pero esta tabla no forma parte de él.",
+			"howTitle": "¿Cómo quiere compartir esta tabla?",
+			"notPublished": "Esta tabla no está en un libro publicado.",
+			"whyCollab": "Un libro compartido en directo no se vuelve a publicar: su lista de tablas se fija al publicarlo, y una tabla creada después se queda en su equipo."
+		},
+		"push": {
+			"done": "Origen «{table}» actualizado",
+			"read": "Origen «{table}» actualizado: {n, plural, one {# fila leída} other {# filas leídas}}",
+			"inserted": "{n, plural, one {# añadida} other {# añadidas}}",
+			"updated": "{n, plural, one {# actualizada} other {# actualizadas}}",
+			"deleted": "{n, plural, one {# eliminada} other {# eliminadas}}",
+			"rejected": "{n, plural, one {# rechazada} other {# rechazadas}}",
+			"unchanged": ", sin cambios",
+			"reject": "; fila {row}, {column} «{value}»: {error}",
+			"blanked": "; {n, plural, one {# valor enviado vacío} other {# valores enviados vacíos}} (error o entrada que no corresponde al tipo)"
+		},
+		"status": {
+			"tableGone": "Tabla eliminada del libro: el origen ya no recibe nada",
+			"suspended": "Origen suspendido: ya no se envía nada",
+			"failed": "Error en la última actualización: {error}",
+			"never": "Nunca actualizado",
+			"today": "hoy a las {time}",
+			"on": "el {date}",
+			"updated": "Actualizado {when} · {n, plural, one {# fila} other {# filas}}"
+		},
+		"localWorkbook": "libro local",
+		"suspended": "suspendido",
+		"pending": "envío pendiente",
+		"failedOn": "error el {date}",
+		"updatedOn": "actualizado el {date}",
+		"never": "nunca actualizado",
+		"sqlName": {
+			"length": "63 caracteres como máximo",
+			"start": "Empieza por una letra minúscula",
+			"chars": "Solo letras minúsculas sin tilde, dígitos y _"
+		},
+		"problem": {
+			"server": "Inicie sesión en un Servidor Lattis",
+			"name": "Asigne un nombre a los datos",
+			"columns": "Marque al menos una columna",
+			"key": "Elija la columna que identifica una fila",
+			"filter": "Hay que corregir un filtro de filas"
+		},
+		"onSave": "en cada guardado",
+		"onDemand": "a petición"
+	},
+	"rights": {
+		"level": {
+			"none": "Ninguno",
+			"reader": "Lector",
+			"participant": "Participante",
+			"editor": "Editor"
+		},
+		"builtin": {
+			"owner": "Propietario",
+			"designer": "Diseñador",
+			"editor": "Editor",
+			"participant": "Participante",
+			"reader": "Lector"
+		},
+		"members": "{n, plural, one {# miembro} other {# miembros}}",
+		"op": {
+			"eq": "es igual a",
+			"ne": "no es igual a",
+			"lt": "es menor que",
+			"le": "es menor o igual que",
+			"gt": "es mayor que",
+			"ge": "es mayor o igual que",
+			"contains": "contiene",
+			"starts": "comienza por",
+			"empty": "está vacío",
+			"filled": "no está vacío"
+		},
+		"me": "la persona con sesión iniciada",
+		"team": "uno de sus equipos",
+		"sentence": {
+			"none": "Todas las filas son visibles",
+			"prefix": "Visible si",
+			"team": "{column} es {team}",
+			"notTeam": "{column} no es {team}",
+			"and": " y "
+		},
+		"prompt": {
+			"write": "Escribe un filtro de filas de Lattis para {subject}.",
+			"columns": "Es una expresión SQL booleana (PostgreSQL) sobre estas columnas: {columns}.",
+			"noColumn": "(sin columnas)",
+			"reader": "La persona que lee se escribe current_user (su dirección de correo).",
+			"readerTeams": "La persona que lee se escribe current_user (su dirección de correo); sus equipos: {teams}.",
+			"answer": "Sin punto y coma ni comentarios. Responde solo con la expresión, para pegarla en «SQL libre», y luego una frase que diga lo que hace.",
+			"rule": "Mi regla: "
+		},
+		"literal": {
+			"notNumber": "«{value}» no es un número",
+			"notInteger": "«{value}» no es un número entero",
+			"notBoolean": "«{value}» no es true ni false",
+			"notDate": "«{value}» no es una fecha (dd/mm/aaaa)"
+		},
+		"condition": {
+			"unknownColumn": "columna desconocida: {column}",
+			"teamUnsupported": "«mi equipo»: este servidor no conoce los equipos (hay que actualizar lattisd)",
+			"teamText": "«mi equipo» se compara con una columna de texto (nombre del equipo)",
+			"teamOp": "«mi equipo»: solo es igual a o no es igual a",
+			"meText": "«yo» se compara con una columna de texto (la dirección de correo de la persona)",
+			"meOp": "«yo»: solo es igual a o no es igual a"
+		},
+		"free": {
+			"forbidden": "«{char}» no está permitido fuera de una cadena",
+			"parens": "paréntesis desequilibrados",
+			"unclosed": "cadena o nombre sin cerrar"
+		},
+		"command": {
+			"all": "Todo",
+			"select": "Leer",
+			"insert": "Añadir",
+			"update": "Modificar",
+			"delete": "Eliminar"
+		},
+		"sql": {
+			"ownRows": "de sus propias filas",
+			"noRight": "sin derechos",
+			"filtered": "vista filtrada",
+			"restriction": "restricción «{label}»",
+			"yours": "Sus derechos",
+			"noRole": "sin rol",
+			"allRights": "Todos los derechos (estructura, diseño de página, scripts)",
+			"allRightsOwner": "Todos los derechos (estructura, diseño de página, scripts, derechos)",
+			"builtinRole": "rol integrado",
+			"customRole": "rol personalizado",
+			"teams": "{n, plural, one {equipo} other {equipos}} {names}",
+			"allRoles": "todos los roles",
+			"restrictionName": "Restricción",
+			"restrictionKind": "restricción"
+		}
+	},
+	"filter": {
+		"theseRows": "estas filas",
+		"column": "Columna",
+		"condition": "Condición",
+		"value": "Valor",
+		"theValue": "el valor…",
+		"and": "y",
+		"snippet": {
+			"value": "valor",
+			"equal": "Igual a un valor (texto entre comillas simples)",
+			"me": "current_user: dirección de correo de la persona que lee",
+			"teamLabel": "es {team}",
+			"team": "lattis.my_teams(): equipos de la persona que lee",
+			"and": {
+				"label": "y",
+				"tooltip": "Las dos condiciones"
+			},
+			"or": {
+				"label": "o",
+				"tooltip": "Una de las dos condiciones"
+			},
+			"empty": {
+				"label": "está vacío",
+				"tooltip": "Celda vacía"
+			}
+		},
+		"mode": {
+			"aria": "Forma del filtro",
+			"form": {
+				"label": "Formulario",
+				"tooltip": "Condiciones en lenguaje natural",
+				"disabled": "Este filtro SQL no se puede convertir en formulario"
+			},
+			"sql": "SQL libre"
+		},
+		"assist": {
+			"label": "Escribir con el asistente",
+			"tooltip": "Abre el asistente con una solicitud que completar; solo recibe los nombres y tipos de las columnas"
+		},
+		"noTeams": "«uno de sus equipos»: este servidor no conoce los equipos",
+		"placeholder": {
+			"date": "dd/mm/aaaa",
+			"boolean": "true o false",
+			"number": "número"
+		},
+		"remove": "Quitar la condición",
+		"add": "+ Condición",
+		"insertColumns": "Columnas que insertar",
+		"inserts": "{what}: inserta {sql}",
+		"sqlAria": "Filtro SQL",
+		"insertSnippets": "Fragmentos que insertar"
+	},
+	"access": {
+		"cap": {
+			"read": {
+				"label": "Ver",
+				"hint": "Leer las filas de la tabla"
+			},
+			"add": {
+				"label": "Añadir filas",
+				"hint": "Añadir filas nuevas"
+			},
+			"editOwn": {
+				"label": "Modificar sus filas",
+				"hint": "Modificar o eliminar las filas que la persona ha añadido"
+			},
+			"editAll": {
+				"label": "Modificar todas las filas",
+				"hint": "Modificar o eliminar las filas de todos"
+			},
+			"manage": {
+				"label": "Estructura y derechos",
+				"hint": "Columnas, tablas, diseño de página, scripts; derechos: solo los propietarios"
+			}
+		},
+		"designerManage": "Estructura, no los derechos",
+		"frozen": "Libro congelado: los datos cambian al volver a publicar",
+		"allows": {
+			"none": "Sin acceso",
+			"reader": "Ver",
+			"participant": "Ver, añadir, modificar sus filas",
+			"editor": "Ver y modificar todo"
+		},
+		"word": {
+			"none": "ninguno",
+			"reader": "lector",
+			"participant": "participante",
+			"editor": "editor"
+		},
+		"mixed": "Varía según la tabla",
+		"likeSheet": "Igual que la hoja: {allows}",
+		"likeWorkbook": "Igual que el libro: {allows}",
+		"readFilter": "Solo ve las filas donde {text}",
+		"writeFilter": "Solo modifica las filas donde {text}",
+		"rule": {
+			"cannot": "No puede {verb} (regla avanzada)",
+			"onlyWhere": "Solo puede {verb} las filas donde {text} (regla avanzada)"
+		},
+		"onlyIn": "Solo en {tables}",
+		"inTable": "«{table}»: {why}",
+		"summary": {
+			"allWithRights": "Todo, incluidos los derechos",
+			"seeStructureRights": "Ver, estructura y derechos",
+			"allWithStructure": "Modificar todo, incluida la estructura",
+			"seeStructure": "Ver y cambiar la estructura",
+			"seeEditAll": "Ver y modificar todo",
+			"seeEditAllNoAdd": "Ver y modificar todas las filas, sin añadir",
+			"seeAddOwn": "Ver, añadir, modificar sus filas",
+			"seeOwnNoAdd": "Ver y modificar sus filas, sin añadir",
+			"seeAdd": "Ver y añadir filas",
+			"seeOnly": "Solo ver",
+			"none": "Sin acceso",
+			"partly": "{summary} (en parte)"
+		},
+		"verb": {
+			"select": "ver",
+			"insert": "añadir",
+			"update": "modificar",
+			"delete": "eliminar",
+			"all": "ver o modificar"
+		},
+		"action": {
+			"select": "Ver",
+			"insert": "Añadir",
+			"update": "Modificar",
+			"delete": "Eliminar",
+			"all": "Todo"
+		},
+		"nor": " ni ",
+		"or": " o ",
+		"ofRole": "del rol {role}",
+		"ofRoles": "de los roles {roles} y {last}",
+		"sentence": {
+			"nobody": "Nadie puede {verbs} filas en «{table}», salvo los propietarios y diseñadores.",
+			"nobodyExcept": "Nadie puede {verbs} filas en «{table}» salvo aquellas donde {cond} (excepto propietarios y diseñadores).",
+			"membersNever": "Los miembros {who} no pueden {verbs} filas en «{table}».",
+			"membersOnly": "Los miembros {who} solo pueden {verbs}, en «{table}», las filas donde {cond}."
+		},
+		"preset": {
+			"noDelete": {
+				"label": "Prohibir la eliminación",
+				"hint": "Nadie elimina filas, salvo los propietarios y diseñadores",
+				"rule": "Sin eliminación"
+			},
+			"appendOnly": {
+				"label": "Solo añadir",
+				"hint": "Se pueden añadir filas, sin modificar ni eliminar las existentes",
+				"rule": "Solo añadir"
+			},
+			"status": {
+				"label": "Modificar solo las filas con el estado…",
+				"hint": "Las filas se pueden modificar y eliminar mientras tengan este estado",
+				"rule": "Según el estado"
+			},
+			"ownNoCreate": {
+				"label": "Modificar sus filas sin crear ninguna",
+				"hint": "Para un rol «Ver, añadir, modificar sus filas»: ya no puede añadir filas",
+				"rule": "Sin adición"
+			}
+		},
+		"problem": {
+			"table": "Elija una tabla.",
+			"who": "Elija al menos un rol.",
+			"commands": "Elija al menos una acción.",
+			"predicate": "Añada una condición, o elija «Ninguna» como excepción.",
+			"missingValue": "Una condición no tiene valor."
+		},
+		"email": {
+			"empty": "Escriba la dirección de correo de la persona.",
+			"invalid": "«{email}» no es una dirección de correo."
+		}
+	},
+	"members": {
+		"invited": "Invitación enviada a {email}",
+		"roleGiven": "Rol {role} asignado a {who}",
+		"roleRemoved": "Rol {role} retirado a {who}",
+		"removeAll": {
+			"confirm": "¿Retirar el acceso a {who}? {n, plural, one {Se retira su rol} other {Se retiran sus # roles}}.",
+			"done": "Acceso retirado a {who}",
+			"teamKept": "Retira sus roles personales; se mantienen los de su equipo",
+			"tooltip": "Retirar todos sus roles",
+			"aria": "Retirar el acceso a {who}",
+			"team": "Retirar todos los roles del equipo"
+		},
+		"addRole": "+ Rol",
+		"theTeam": "el equipo {name}",
+		"invite": {
+			"title": "Invitar a una persona",
+			"email": "Dirección de correo que invitar",
+			"roles": "Roles que asignar",
+			"submit": "Invitar",
+			"gives": "Podrá:",
+			"help": "Una persona ya conocida por el servidor recibe sus roles de inmediato; si no, en su primer inicio de sesión.",
+			"custom": "Los roles personalizados se pueden asignar una vez que la persona es miembro."
+		},
+		"people": "Personas",
+		"search": "Buscar un miembro",
+		"tag": {
+			"pipeline": {
+				"tooltip": "Miembro técnico de una canalización de ingesta: desaparece con la canalización, en el servidor"
+			},
+			"team": {
+				"label": "equipo {names}",
+				"tooltip": "Miembro del libro a través de su equipo: los roles de su equipo se cambian en «Equipos»"
+			},
+			"lastOwner": {
+				"label": "último propietario",
+				"tooltip": "Un libro conserva siempre al menos un propietario: asigne primero este rol a otra persona"
+			}
+		},
+		"rolesOf": "Roles de {who}",
+		"removeRole": {
+			"aria": "Retirar el rol {role} a {who}",
+			"tooltip": "Retirar este rol"
+		},
+		"via": "Recibido a través del equipo {names}: se retira en «Equipos»",
+		"giveRole": "Asignar un rol a {who}",
+		"viewAs": {
+			"label": "Ver como…",
+			"tooltip": "Ver las tablas como las ve {who}"
+		},
+		"noMatch": "Ningún miembro coincide.",
+		"none": "Ningún miembro.",
+		"pending": "Invitaciones pendientes",
+		"until": "hasta el {date}",
+		"revoked": "Invitación para {email} cancelada",
+		"revoke": "Cancelar la invitación",
+		"teams": "Equipos",
+		"teamsUnsupported": "Equipos y grupos del directorio: este servidor aún no los ofrece.",
+		"noMember": "Ningún miembro",
+		"noTeamRole": "Ningún equipo tiene un rol en este libro.",
+		"teamGive": {
+			"label": "Asignar un rol a un equipo:",
+			"role": "Rol del equipo",
+			"submit": "Asignar el rol",
+			"help": "Los miembros de un equipo tienen sus roles mientras pertenezcan a él. Los equipos se crean en la administración del servidor; grupos del directorio: más adelante."
+		},
+		"noTeam": "No hay equipos en este servidor: los propietarios del servidor los crean en su administración («Equipos»)."
+	},
+	"roles": {
+		"teamCount": "{n, plural, one {# equipo} other {# equipos}}",
+		"kind": {
+			"owner": "todos los derechos",
+			"designer": "estructura, no los derechos"
+		},
+		"filtersSaved": "Filtros de «{table}» guardados para {role}",
+		"intro": "Cada miembro tiene uno o varios roles; un rol da acceso tabla por tabla, que los filtros pueden limitar a ciertas filas. Los derechos de los roles se suman.",
+		"learnMore": "Más información",
+		"matrix": {
+			"aria": "Lo que permite cada rol",
+			"role": "Rol",
+			"members": "Miembros",
+			"select": "Definir los derechos de este rol, tabla por tabla"
+		},
+		"viewAs": {
+			"tooltip": "Ver las tablas como las ve un miembro de este rol",
+			"nobody": "Nadie tiene este rol",
+			"aria": "Ver como un miembro del rol {role}"
+		},
+		"legend": {
+			"some": "en parte (algunas filas o algunas tablas)"
+		},
+		"created": "Rol «{name}» creado: no da nada hasta que se defina el acceso abajo",
+		"new": {
+			"placeholder": "Nuevo rol",
+			"aria": "Nombre del nuevo rol"
+		},
+		"detail": {
+			"title": "{role}: acceso tabla por tabla",
+			"owner": "Propietario: ve y modifica todas las filas, cambia la estructura (columnas, tablas, diseño de página, scripts) y administra miembros, roles y reglas. Nada que definir aquí.",
+			"designer": "Diseñador: ve y modifica todas las filas y cambia la estructura (columnas, tablas, diseño de página, scripts), pero no administra los derechos. Nada que definir aquí.",
+			"frozen": "Libro congelado: todos los miembros lo ven todo, sin cambiar nada. El acceso por tabla y los filtros son los de un libro compartido en directo."
+		},
+		"drop": {
+			"confirm": "¿Eliminar el rol «{name}»? Sus miembros pierden los derechos que daba.",
+			"done": "Rol «{name}» eliminado",
+			"label": "Eliminar el rol"
+		},
+		"tree": {
+			"workbook": "Todo el libro",
+			"workbookAccess": "Acceso al libro",
+			"level": "Nivel «{word}»",
+			"sheet": "Hoja",
+			"sheetAccess": "Acceso a la hoja {name}",
+			"mixed": "varía según la tabla",
+			"fromWorkbook": "heredado del libro",
+			"fromSheet": "heredado de la hoja",
+			"tableAccess": "Acceso a la tabla {name}"
+		},
+		"filter": {
+			"seesAll": "Ve todas las filas",
+			"editRead": "Modificar las filas visibles de {table}",
+			"limitRead": "Limitar las filas visibles de {table}",
+			"edit": "Modificar",
+			"limit": "Limitar…",
+			"writesOwn": "Añade filas, modifica y elimina las suyas",
+			"writesAll": "Añade, modifica y elimina todas las filas",
+			"editWrite": "Modificar las filas editables de {table}",
+			"limitWrite": "Limitar las filas editables de {table}"
+		},
+		"advancedRules": "Reglas avanzadas",
+		"editor": {
+			"aria": "Filtros de {table} para {role}",
+			"read": {
+				"label": "Solo ve las filas donde…",
+				"prefix": "Ve las filas donde",
+				"assist": "las filas de la tabla «{table}» que ven los miembros del rol {role}"
+			},
+			"write": {
+				"label": "Solo añade y modifica las filas donde…",
+				"prefix": "Añade y modifica las filas donde",
+				"assist": "las filas de la tabla «{table}» que los miembros del rol {role} pueden añadir o modificar"
+			},
+			"fixes": "Al guardar, el acceso a esta tabla pasa a «{level}».",
+			"noCondition": "Sin condición: todas las filas.",
+			"save": "Guardar los filtros"
+		},
+		"oldSheet": "Hoja publicada antes de que el servidor conociera las hojas: su acceso se define en cada una de sus tablas.",
+		"noTable": "Ninguna tabla publicada: el acceso al libro se aplicará a las tablas que se añadan.",
+		"teams": "Equipos con este rol:",
+		"noTeams": "Ningún equipo tiene este rol (Miembros › Equipos).",
+		"local": {
+			"title": "Solo en su equipo",
+			"help": "Estas tablas no están en el libro compartido: nadie más las ve.",
+			"add": {
+				"label": "Añadir «{table}» al libro compartido",
+				"tooltip": "Crear «{table}» en el libro compartido, con sus filas, para todos los miembros"
+			},
+			"offline": "Sin conexión"
+		}
+	},
+	"rules": {
+		"added": "{n, plural, one {Regla añadida} other {# reglas añadidas}}",
+		"removed": "Regla quitada",
+		"collabOnly": "Reglas avanzadas: solo libros compartidos en directo (un libro congelado está en solo lectura para todos).",
+		"intro": "Una regla avanzada retira un derecho sobre una tabla, sea cual sea el acceso del rol: no más eliminaciones, no más adiciones, modificar solo ciertas filas. Los propietarios y diseñadores no están sujetos a ella, salvo que se les nombre.",
+		"current": "Reglas en vigor",
+		"remove": {
+			"tooltip": "Quitar esta regla",
+			"aria": "Quitar la regla {label}"
+		},
+		"none": "Ninguna regla: solo se aplican el acceso y los filtros de los roles.",
+		"new": "Nueva regla",
+		"presets": "Reglas predefinidas",
+		"for": "Para",
+		"forWhom": "Para quién",
+		"allRoles": "Todos los roles",
+		"someRoles": "Algunos roles",
+		"targetRoles": "Roles afectados",
+		"exceptOwners": "Excepto los propietarios y diseñadores.",
+		"forbid": "Prohibir",
+		"actions": "Acciones limitadas",
+		"exception": "Excepción",
+		"exceptWhere": "Salvo las filas donde…",
+		"allowed": {
+			"label": "Permitido solo para las filas donde…",
+			"prefix": "Permitido para las filas donde",
+			"none": "Añada una condición",
+			"assist": "las filas de la tabla «{table}» en las que la acción sigue permitida"
+		},
+		"name": "Nombre",
+		"optional": "(opcional)",
+		"perAction": "Añade {n} restricciones en el servidor, una por acción.",
+		"add": "Añadir la regla"
+	},
+	"rightsDialog": {
+		"tab": {
+			"members": "Miembros",
+			"roles": "Roles y derechos",
+			"rules": "Reglas avanzadas",
+			"preview": "Ver como…",
+			"drift": "Desviaciones"
+		},
+		"title": "Administrar el acceso a «{title}»",
+		"frozen": "libro congelado: solo lectura para todos",
+		"reload": {
+			"tooltip": "Volver a cargar los derechos desde el servidor",
+			"aria": "Actualizar"
+		},
+		"help": "Ayuda: administrar el acceso",
+		"link": {
+			"aria": "Enlace del libro",
+			"tooltip": "El enlace abre el libro en Lattis (o en el navegador) para cualquiera que tenga acceso",
+			"copied": "Copiado"
+		},
+		"tabs": "Administrar el acceso",
+		"reading": "Leyendo los derechos…",
+		"drift": {
+			"count": "{n, plural, one {# diferencia} other {# diferencias}}",
+			"warning": "{n, plural, one {Una tabla tiene} other {# tablas tienen}} reglas modificadas fuera de Lattis, en el servidor.",
+			"show": "Mostrar las diferencias",
+			"frozen": "Libro congelado: no es posible ninguna diferencia (solo lectura para todos).",
+			"none": "Ninguna diferencia: las reglas y los derechos del servidor son los que generó Lattis.",
+			"intro": "Reglas o derechos modificados fuera de Lattis (a mano, en PostgreSQL):",
+			"policies": "Reglas añadidas:",
+			"grants": "Derechos concedidos a:",
+			"changed": "Reglas generadas quitadas o modificadas",
+			"recompileHelp": "Recompilar restablece las reglas generadas por Lattis. Las reglas y derechos añadidos a mano siguen señalados aquí hasta que se quiten en PostgreSQL.",
+			"recompiled": "Derechos recompilados",
+			"recompile": "Recompilar los derechos"
+		},
+		"sending": "Enviando al servidor…",
+		"designerOnly": "Diseñador: solo ver y comprobar"
+	},
+	"shareDialog": {
+		"checking": "Comprobando el libro…",
+		"why": {
+			"noTables": "Nada que publicar: cree primero una tabla (Insertar › Tabla, o Ctrl+L sobre sus datos) y vuelva a abrir este cuadro de diálogo.",
+			"blocked": "{n, plural, one {# problema que resolver} other {# problemas que resolver}} antes de publicar (arriba).",
+			"server": "Elija un servidor, o conéctese a un servidor (Administrar servidores…).",
+			"title": "Asigne un título al libro publicado.",
+			"cannotCreate": "Su cuenta no puede crear libros en este servidor."
+		},
+		"republishTitle": "Volver a publicar el libro",
+		"publishTitle": "Publicar en un servidor",
+		"republishHelp": "«{title}» en {server} · {mode} · versión {version}: la nueva versión reemplazará la versión publicada de una sola vez.",
+		"cannotCreate": "Su cuenta no puede crear libros en este servidor: pida a su propietario el rol «creador de libros».",
+		"mode": "Modo",
+		"frozenHelp": ": solo lectura para todos; usted vuelve a publicar nuevas versiones",
+		"collaborativeHelp": ": cada uno modifica según sus derechos, los cambios de los demás llegan en directo",
+		"tables": "Tablas",
+		"noTables": {
+			"before": "Este libro no tiene tablas que publicar. Solo se publican las tablas: cierre este cuadro de diálogo, seleccione sus datos y luego",
+			"menu": "Insertar › Tabla",
+			"or": "(o",
+			"after": "), y vuelva para publicar."
+		},
+		"rows": "{n, plural, one {# fila} other {# filas}}",
+		"private": {
+			"label": "privada",
+			"tooltip": "Tabla privada: se queda en este equipo, nunca se envía al servidor"
+		},
+		"rename": "{problem} — cámbiele el nombre en el libro",
+		"frozenTypes": "Tipos fijados en la publicación: {columns}",
+		"invalid": "Columna «{name}» ({type}): {n, plural, one {# entrada no válida} other {# entradas no válidas}}",
+		"fixOr": "— corríjalas, o",
+		"acceptText": "acepte la columna como texto",
+		"computed": "Las columnas calculadas se publican con su fórmula, no con sus valores.",
+		"refresh": {
+			"legend": "Cargada por la consulta «{query}»: actualización",
+			"local": "Desde este equipo, con sus conexiones: sus actualizaciones reemplazan las filas para todos los miembros",
+			"lake": "Origen del Data Lake: la tabla también se envía al Data Lake del servidor, al que otros libros pueden vincularse (se configura justo después de publicar)"
+		},
+		"uncheckedPrivate": "Las tablas no marcadas siguen siendo privadas: solo en este equipo.",
+		"publishing": "Publicando…",
+		"republish": "Volver a publicar",
+		"publish": "Publicar"
+	},
+	"dataShare": {
+		"title": {
+			"source": "Origen del Data Lake · «{table}»",
+			"dataset": "Data Lake de Lattis · «{name}»",
+			"share": "Compartir «{table}» en el Data Lake de Lattis"
+		},
+		"help": "Ayuda: compartir en el Data Lake",
+		"whyNotWorkbook": "¿Por qué no todo el libro?",
+		"ways": "Forma de compartir",
+		"go": {
+			"republish": "Volver a publicar el libro…",
+			"publish": "Publicar el libro…",
+			"shared": "Añadir al libro…"
+		},
+		"reading": "Leyendo el catálogo…",
+		"folder": "Carpeta",
+		"columns": "Columnas expuestas",
+		"audience": "Audiencia",
+		"usedBy": "Usado por",
+		"readBy": "leído por {email} el {date}",
+		"advanced": "Opciones avanzadas",
+		"sqlProposed": "Nombre SQL propuesto por el servidor",
+		"withDescription": "con descripción",
+		"description": {
+			"label": "Descripción",
+			"placeholder": "Qué contienen los datos, para quienes los buscan"
+		},
+		"sqlName": {
+			"label": "Nombre SQL",
+			"fixed": "fijado al crearlo",
+			"placeholder": "propuesto por el servidor",
+			"help": "El nombre de la vista para las consultas SQL: letras minúsculas, dígitos, _."
+		},
+		"withdraw": {
+			"label": "Dejar de compartir",
+			"tooltip": "La vista desaparece; los libros que la usan conservan su última copia"
+		},
+		"share": "Compartir"
+	},
+	"catalog": {
+		"pushedTooltip": "Tabla publicada sola desde el libro local «{workbook}» (origen enviado)",
+		"aria": "Insertar desde el Data Lake de Lattis",
+		"title": "Data Lake de Lattis",
+		"search": {
+			"placeholder": "Buscar datos…",
+			"aria": "Buscar"
+		},
+		"tree": "Catálogo",
+		"signIn": "Inicie sesión en un servidor para ver sus datos.",
+		"noMatch": "Ningún dato coincide.",
+		"empty": "Ningún dato compartido con usted en este servidor.",
+		"dropRoot": "Suelte aquí: en la raíz",
+		"pushed": {
+			"before": "Origen enviado desde el libro local",
+			"after": ": actualizado por su autor, sin que el libro esté publicado."
+		},
+		"view": "Vista",
+		"modified": "modificado el {date}",
+		"readOnly": "La tabla insertada es de solo lectura y se actualiza cuando cambian los datos.",
+		"choose": "Elija unos datos para ver sus columnas.",
+		"yourSources": "Sus orígenes enviados",
+		"yourSourcesHelp": "Tablas publicadas solas desde sus libros locales, en este servidor; cada una se administra desde su libro (clic derecho en la tabla › Compartir en el Data Lake de Lattis…).",
+		"inserting": "Insertando…",
+		"insert": "Insertar"
+	},
+	"servers": {
+		"badUrl": "Escriba la dirección del servidor, por ejemplo https://lattis.acme.com (http solo en local).",
+		"title": "Administrar servidores",
+		"disabled": "Los libros compartidos están desactivados: Archivo › Configuración › Funciones.",
+		"managed": "configurado por su organización",
+		"connected": "Sesión iniciada: {user}",
+		"notConnected": "Sin sesión iniciada",
+		"remove": {
+			"managed": "Servidor configurado por su organización: se queda en la lista",
+			"tooltip": "Quitar este servidor de la lista de este equipo",
+			"confirm": "¿Quitar «{name}» de la lista?",
+			"signedOut": "Se cerrará su sesión en este servidor en este equipo.",
+			"nothingDeleted": "No se elimina nada en el servidor: sus libros, sus datos y sus derechos siguen allí, y puede volver a añadirlo en cualquier momento.",
+			"inUse": "El libro abierto «{title}» está publicado en este servidor: sigue abierto a partir de su copia en este equipo, pero dejará de sincronizarse hasta que vuelva a añadir este servidor e inicie sesión en él.",
+			"queries": "Las consultas y los libros que usan este servidor le pedirán que inicie sesión en él."
+		},
+		"rename": {
+			"label": "Cambiar nombre",
+			"tooltip": "Dar a este servidor otro nombre en este equipo (el servidor no se modifica)",
+			"aria": "Nombre del servidor en este equipo",
+			"empty": "Escriba un nombre para este servidor.",
+			"tooLong": "Nombre demasiado largo: {max} caracteres como máximo.",
+			"serverName": "Nombre en el servidor: {name}",
+			"reset": "Restablecer"
+		},
+		"emptyAdd": "Ningún servidor. Añada uno abajo.",
+		"add": {
+			"title": "Añadir un servidor",
+			"submit": "Añadir e iniciar sesión…",
+			"help": "La dirección se comprueba con el servidor y luego se abre su página de inicio de sesión.",
+			"locked": "Su organización define la lista de servidores: no puede añadir ninguno."
+		}
+	},
+	"sourceForm": {
+		"suspended": "Origen «{table}» suspendido: ya no se envía nada",
+		"savedNotUpdated": "Origen «{table}» guardado, pero no actualizado: {error}",
+		"withdrawn": "Origen «{name}» retirado del Data Lake",
+		"reading": "Leyendo desde el servidor…",
+		"banner": "El libro se queda en su equipo: solo se envían las columnas marcadas.",
+		"columns": "Columnas enviadas",
+		"computed": "Una columna calculada se envía con sus valores, no con su fórmula.",
+		"sqlPlaceholder": "propuesto a partir del nombre",
+		"mode": "Actualización",
+		"key": {
+			"label": "Clave",
+			"aria": "Columna clave",
+			"choose": "Elija la columna…"
+		},
+		"modeChanged": "Se aplica a las próximas actualizaciones (un servidor más antiguo lo rechaza: en ese caso, quite el origen y vuelva a publicarlo).",
+		"sending": {
+			"label": "Envío",
+			"onSave": "En cada guardado del libro (Ctrl+S)",
+			"suspend": {
+				"label": "Suspender el origen (ya no se envía nada)",
+				"tooltip": "Los datos se quedan en el catálogo con sus últimas filas"
+			},
+			"refused": "Los valores rechazados por el servidor se cuentan en la barra de estado; el resto se escribe."
+		},
+		"withdraw": {
+			"label": "Quitar el origen",
+			"tooltip": "Los datos salen del catálogo; los libros que los usan conservan su última copia"
+		},
+		"push": {
+			"label": "Actualizar ahora",
+			"tooltip": "Envía ahora las filas de la tabla",
+			"suspended": "Origen suspendido"
+		},
+		"back": "Atrás",
+		"saveUpdate": "Guardar y actualizar",
+		"publish": "Publicar el origen"
+	}
+}

@@ -1,1 +1,1078 @@
-{}
+{
+	"settings": {
+		"language": {
+			"label": "Idioma de la interfaz",
+			"auto": "Idioma del sistema ({name})",
+			"help": "Se aplica de inmediato. Las traducciones están en curso: el texto aún no traducido sigue en francés. El idioma también define cómo se muestran los números y las fechas; el libro guardado no depende de él."
+		},
+		"sections": {
+			"features": "Funciones",
+			"ai": "Asistente de IA",
+			"view": "Vista",
+			"limits": "Límites"
+		},
+		"htmlTabs": {
+			"label": "Páginas web",
+			"help": "Permite añadir páginas web: una página HTML, CSS y JavaScript que lee y modifica el libro, o una página de un sitio web. Los libros que ya contienen alguna se abren y funcionan con normalidad."
+		},
+		"sharedWorkbooks": {
+			"label": "Libros compartidos (Servidor Lattis)",
+			"help": "Permite iniciar sesión en el Servidor Lattis de su organización (menú Cuenta de la barra de título) y añadirlo como origen de datos. Los libros compartidos se alojan allí; se inicia sesión con su cuenta (Google, Microsoft, Keycloak…) o con una contraseña de Lattis."
+		},
+		"coEditing": {
+			"label": "Trabajar juntos en una carpeta compartida",
+			"help": "Un libro guardado en un NAS o en un recurso compartido de red y ya abierto en otro equipo ofrece «Trabajar juntos»: cada uno edita los datos de las tablas y ve los cambios de los demás en directo (un registro por equipo junto al archivo). Si se desactiva, se abre en solo lectura o «de todos modos», como antes."
+		},
+		"aiEnabled": {
+			"label": "Asistente de IA",
+			"help": "El botón «Asistente ✦», arriba a la derecha de la cinta (Alt+I), abre un panel a la derecha de la cuadrícula: un asistente que ayuda a crear un análisis y actúa sobre el libro; cada respuesta se deshace en un solo paso. Necesita una clave de API de un proveedor (Anthropic, Mistral, OpenAI…), guardada en el llavero del sistema, un modelo instalado en este equipo, o Claude Desktop con una suscripción a Claude."
+		},
+		"aiDataSharing": {
+			"label": "Datos enviados al asistente",
+			"schemaOnly": "Solo la estructura (nombres, tipos, número de filas y de valores distintos)",
+			"sample": "La estructura y algunas filas de ejemplo (20 como máximo por lectura)",
+			"full": "Todo el libro (el asistente puede leer todos los valores)",
+			"help": "También se aplica a Claude Desktop y Claude Code a través del servidor MCP. El proveedor también recibe sus mensajes, la hoja activa y la selección; con un modelo local, nada sale de este equipo."
+		},
+		"aiKeepConversation": {
+			"label": "Guardar la conversación en el libro",
+			"help": "La conversación se guarda con el libro y vuelve la próxima vez que se abre: viaja con el archivo, incluidos los resultados de consultas mostrados y las filas leídas por el asistente. Solo se guarda si el libro también se ha modificado. Si no, se borra al cerrar el libro o al abrir otro."
+		},
+		"aiLocalUrl": {
+			"label": "Dirección del modelo local",
+			"help": "Proveedor «Modelo local»: la dirección de Ollama, LM Studio u otro servidor compatible con OpenAI en este equipo. Ningún dato sale del equipo."
+		},
+		"theme": {
+			"label": "Tema de colores predeterminado",
+			"help": "Colores de las tablas normales y de las tablas de un origen externo en un libro que no ha elegido su tema: los libros nuevos y los anteriores a los temas. El tema elegido en un libro (Vista › Tema) se guarda con él y se ve igual en otros equipos."
+		},
+		"undoDepth": {
+			"label": "Niveles de deshacer",
+			"unit": "comandos",
+			"help": "Número de comandos que Ctrl+Z puede deshacer (200 de forma predeterminada). El historial nunca se guarda en el archivo."
+		},
+		"scriptSeconds": {
+			"label": "Duración máxima de un script",
+			"help": "Pasado este tiempo, el script se detiene y sus cambios se deshacen (30 s de forma predeterminada)."
+		},
+		"sqlReadSeconds": {
+			"label": "Duración máxima de una lectura SQL",
+			"help": "Consultas de la pestaña SQL y lecturas de los scripts (30 s de forma predeterminada)."
+		},
+		"sqlWriteSeconds": {
+			"label": "Duración máxima de una escritura SQL",
+			"help": "Una escritura desde la pestaña SQL bloquea la entrada de datos mientras se ejecuta; pasado este tiempo, se cancela sin cambiar nada (120 s de forma predeterminada)."
+		},
+		"numberRange": "{label}: un número entero de {min} a {max}",
+		"locked": "🔒 Definido por la directiva de su organización.",
+		"fixed": "Definido por {source}: cambiarlo aquí no tiene efecto.",
+		"fixedOther": "otra configuración",
+		"dialog": {
+			"title": "Configuración",
+			"sections": "Secciones",
+			"mcpTooltip": "Permitir que un asistente compatible con MCP (Claude Desktop, Claude Code…) lea y modifique el libro abierto",
+			"mcp": "Servidor MCP (asistentes)…"
+		}
+	},
+	"shortcuts": {
+		"fichier": {
+			"title": "Libro",
+			"new": "Nuevo libro",
+			"open": "Abrir un libro",
+			"save": "Guardar",
+			"saveAs": "Guardar como",
+			"print": "Imprimir la hoja",
+			"close": "Cerrar el libro",
+			"undo": "Deshacer",
+			"redo": "Rehacer",
+			"help": "Ayuda (en una fórmula: la página de la función bajo el cursor)"
+		},
+		"clavier": {
+			"title": "Cinta, menús y ventanas",
+			"keyTips": "Teclas de acceso de la cinta (KeyTips); Esc vuelve atrás",
+			"fold": "Contraer o anclar la cinta (también: doble clic en una pestaña de la cinta)",
+			"fileMenu": "Menú Archivo",
+			"tab": "Pestaña {tab} de la cinta (o Alt+{key})",
+			"arrows": "En la cinta: pestaña o comando vecino; Abajo va a los comandos, Arriba vuelve a la pestaña",
+			"regions": "Zona siguiente, anterior: cinta, barra de fórmulas, cuadrícula, panel, pestañas, barra de estado",
+			"contextMenu": "Menú contextual de la celda activa (o del gráfico seleccionado)",
+			"menuUpDown": "En un menú: elemento anterior, siguiente (Inicio, Fin: el primero, el último)",
+			"menuLetter": "En un menú: siguiente elemento que empieza por esta letra",
+			"menuChoose": "En un menú: elegir el elemento",
+			"dialogFields": "En un cuadro de diálogo: campo siguiente, anterior",
+			"escape": "Cerrar el menú, el cuadro de diálogo o el panel; el foco vuelve a donde estaba"
+		},
+		"feuilles": {
+			"title": "Hojas",
+			"next": "Hoja siguiente",
+			"previous": "Hoja anterior",
+			"insert": "Insertar una hoja",
+			"tabArrows": "En una pestaña de hoja (F6): pestaña vecina; Entrar la muestra",
+			"choiceList": "En una pestaña de elección («Ventas · 2025 ▾»): abrir la lista de valores",
+			"choiceNext": "Pestaña de elección: valor siguiente (el año siguiente)",
+			"choicePrevious": "Pestaña de elección: valor anterior"
+		},
+		"deplacement": {
+			"title": "Desplazamiento y selección",
+			"arrows": "Celda vecina",
+			"edge": "Borde de la región de datos",
+			"endArrow": "Igual que Ctrl+Flecha",
+			"extend": "Ampliar la selección",
+			"page": "Página siguiente, anterior",
+			"home": "Inicio de la fila",
+			"a1": "Celda A1",
+			"lastCell": "Última celda utilizada",
+			"tab": "Celda siguiente, anterior",
+			"selectTable": "Seleccionar la tabla",
+			"selectColumn": "Seleccionar la columna de la tabla",
+			"selectRow": "Seleccionar la fila"
+		},
+		"saisie": {
+			"title": "Entrada de datos",
+			"edit": "Modificar la celda",
+			"enter": "Confirmar y bajar",
+			"enterAll": "Confirmar en toda la selección",
+			"lineBreak": "Salto de línea en la celda",
+			"cancel": "Cancelar la entrada",
+			"delete": "Borrar la selección",
+			"today": "Fecha de hoy",
+			"now": "Hora actual",
+			"autoSum": "Autosuma",
+			"dropDown": "Abrir la lista desplegable de la celda",
+			"fillDown": "Rellenar hacia abajo",
+			"fillRight": "Rellenar hacia la derecha",
+			"repeat": "Repetir la última acción"
+		},
+		"edition": {
+			"title": "Edición y formato",
+			"copy": "Copiar",
+			"cut": "Cortar",
+			"paste": "Pegar",
+			"find": "Buscar",
+			"replace": "Reemplazar",
+			"bold": "Negrita, cursiva, subrayado",
+			"format": "Formato de celdas",
+			"insertDelete": "Insertar, eliminar filas o columnas",
+			"strike": "Tachado",
+			"hide": "Ocultar las filas, las columnas de la selección",
+			"table": "Dar formato como tabla",
+			"filter": "Filtro de columna (borra los filtros si los hay)",
+			"note": "Nueva nota (o modificar la nota)",
+			"chart": "Gráfico (columnas) de la tabla activa"
+		},
+		"calcul": {
+			"title": "Cálculo y datos",
+			"refresh": "Actualizar la consulta de la tabla; si no, volver a calcular",
+			"refreshAll": "Actualizar todo: consultas y fórmulas",
+			"insertFunction": "Insertar función",
+			"recalc": "Volver a calcular"
+		},
+		"editeurs": {
+			"title": "Pestañas SQL, Script y HTML",
+			"sqlRun": "SQL: ejecutar la selección; si no, la instrucción bajo el cursor",
+			"sqlNames": "SQL: nombres de tablas y columnas",
+			"sqlHistory": "SQL: historial de consultas",
+			"scriptRun": "Script: ejecutar el script",
+			"save": "Script, HTML: guardar",
+			"htmlPreview": "HTML: actualizar la vista previa"
+		}
+	},
+	"pageSetup": {
+		"margins": {
+			"normal": "Normal",
+			"wide": "Ancho",
+			"narrow": "Estrecho"
+		},
+		"papers": {
+			"B5": "B5 (ISO)",
+			"Letter": "Carta",
+			"Legal": "Legal",
+			"Tabloid": "Tabloide",
+			"Executive": "Ejecutivo"
+		},
+		"paperSize": "{w} cm × {h} cm",
+		"fit": {
+			"pages": "{n, plural, one {# página} other {# páginas}}",
+			"auto": "Automático"
+		},
+		"scale": {
+			"auto": "auto",
+			"fitted": "Ajuste: {wide} de ancho, {tall} de alto",
+			"percent": "{n} %"
+		},
+		"hf": {
+			"codes": {
+				"page": "Número de página",
+				"pages": "Número de páginas",
+				"date": "Fecha",
+				"time": "Hora",
+				"path": "Ruta del archivo",
+				"file": "Nombre del archivo",
+				"sheet": "Nombre de la hoja"
+			},
+			"presets": {
+				"page": "Página &[Page]",
+				"pageOf": "Página &[Page] de &[Pages]",
+				"confidential": "Confidencial"
+			},
+			"separator": "; ",
+			"none": "(ninguno)"
+		},
+		"undo": {
+			"margins": "Márgenes",
+			"orientation": "Orientación",
+			"paper": "Tamaño",
+			"printArea": "Área de impresión",
+			"resetBreaks": "Restablecer saltos de página",
+			"break": "Salto de página",
+			"scale": "Ajuste de escala",
+			"printGridlines": "Imprimir líneas de cuadrícula",
+			"printHeadings": "Imprimir encabezados"
+		},
+		"notice": {
+			"breakA1": "En A1 no hay nada que dividir: sitúe la celda activa debajo de la fila o a la derecha de la columna donde empieza la nueva página",
+			"noBreakHere": "No hay ningún salto de página manual encima ni a la izquierda de la celda activa",
+			"noBreaks": "No hay saltos de página manuales"
+		},
+		"error": {
+			"fit": "Ajustar a: entre 1 y 999 páginas",
+			"scale": "Ajuste de escala: entre 10 y 400 %",
+			"firstPage": "Primer número de página: un número o «Auto»",
+			"margins": "Márgenes: entre 0 y 50 cm",
+			"area": "Área de impresión: un rango como $A$1:$F$40",
+			"titleRows": "Repetir filas en extremo superior: como $1:$2",
+			"titleCols": "Repetir columnas a la izquierda: como $A:$B"
+		},
+		"dialog": {
+			"title": "Configurar página",
+			"tabs": {
+				"page": "Página",
+				"margins": "Márgenes",
+				"hf": "Encabezado y pie de página",
+				"sheet": "Hoja"
+			},
+			"header": "Encabezado",
+			"footer": "Pie de página",
+			"customHF": "(personalizado)",
+			"left": "Izquierda",
+			"center": "Centro",
+			"right": "Derecha",
+			"top": "Superior",
+			"bottom": "Inferior",
+			"preview": "Vista previa",
+			"fromSelection": "Selección",
+			"fromSelectionTooltip": "Usar la selección de la hoja",
+			"orientation": "Orientación",
+			"portrait": "Vertical",
+			"landscape": "Horizontal",
+			"scale": "Ajuste de escala",
+			"scaleBefore": "Ajustar al:",
+			"scaleAfter": "% del tamaño normal",
+			"fitBefore": "Ajustar a:",
+			"fitWide": "página(s) de ancho por",
+			"fitTall": "de alto",
+			"fitNote": "Un cuadro vacío: tantas páginas como sean necesarias en esa dirección.",
+			"paper": "Tamaño del papel:",
+			"firstPage": "Primer número de página:",
+			"marginsNote": "En centímetros. El encabezado y el pie de página se imprimen a su distancia del borde, dentro de los márgenes superior e inferior.",
+			"centerOnPage": "Centrar en la página",
+			"horizontally": "Horizontalmente",
+			"vertically": "Verticalmente",
+			"insertCode": "Insertar en el campo elegido:",
+			"printArea": "Área de impresión:",
+			"printAreaPlaceholder": "todo el rango utilizado",
+			"printTitles": "Imprimir títulos",
+			"titleRows": "Repetir filas en extremo superior:",
+			"titleCols": "Repetir columnas a la izquierda:",
+			"print": "Imprimir",
+			"gridlines": "Líneas de cuadrícula",
+			"headings": "Encabezados de filas y columnas",
+			"blackWhite": "Blanco y negro",
+			"pageOrder": "Orden de las páginas",
+			"downThenOver": "Hacia abajo, luego hacia la derecha",
+			"overThenDown": "Hacia la derecha, luego hacia abajo",
+			"printButton": "Imprimir…"
+		}
+	},
+	"busy": {
+		"aria": "Procesando",
+		"label": "Procesando…"
+	},
+	"sync": {
+		"busyTooltip": "Sus cambios están hechos; se están enviando al servidor",
+		"offline": "Sin conexión — {n} pendientes",
+		"sendingCount": "Sincronizando… ({n})",
+		"sending": "Sincronizando…",
+		"done": "Sincronizado"
+	},
+	"report": {
+		"issueBody": "Versión de Lattis: {version}\n\nQué ha pasado:\n\nQué se esperaba:\n\nPasos para reproducirlo:\n1. "
+	},
+	"panel": {
+		"help": "Ayuda",
+		"closeTooltip": "Cerrar el panel (Esc)",
+		"closeAria": "Cerrar el panel"
+	},
+	"crash": {
+		"title": "Lattis ha encontrado un error",
+		"status": "Error {status}",
+		"logged": "Detalles guardados en {path}",
+		"reload": "Volver a cargar",
+		"uiTitle": "Error de la interfaz",
+		"uiDetail": "Los detalles (pila, últimas acciones) están en el registro de errores. El libro no se ha perdido.",
+		"retry": "Reintentar",
+		"reloadUi": "Volver a cargar la interfaz"
+	},
+	"titleBar": {
+		"comingSoon": "{action}: próximamente",
+		"unsaved": "Cambios sin guardar",
+		"minimize": "Minimizar",
+		"restore": "Restaurar",
+		"maximize": "Maximizar",
+		"close": "Cerrar",
+		"save": "Guardar (Ctrl+S)",
+		"undo": "Deshacer (Ctrl+Z)",
+		"redo": "Rehacer (Ctrl+Y)"
+	},
+	"untitled": "Libro sin título",
+	"about": {
+		"title": "Acerca de Lattis",
+		"tagline": "Hoja de cálculo relacional local-first · versión {version}",
+		"licensePrefix": "Software libre bajo la licencia",
+		"source": "Código fuente",
+		"server": "Esta sesión la sirve un Servidor Lattis ({server}), bajo la licencia AGPL-3.0:",
+		"serverSource": "código fuente del servidor",
+		"trademarks": "«Lattis», «Be-Lattis» y el logotipo son marcas reservadas, fuera de la licencia del código. Mapas: Licence Ouverte / Etalab 2.0."
+	},
+	"zoom": {
+		"out": "Alejar",
+		"in": "Acercar",
+		"slider": "Zoom",
+		"level": "Nivel de zoom"
+	},
+	"recovery": {
+		"older": "{n, plural, one {+ # versión anterior} other {+ # versiones anteriores}}",
+		"recovered": "Cambios recuperados: no olvide guardar.",
+		"title": "Recuperación",
+		"intro": "Lattis se cerró sin guardar. Estos libros tienen cambios recuperables:",
+		"modified": "modificado {date}",
+		"recover": "Recuperar",
+		"discardAllTooltip": "Descartar esta sesión y sus versiones anteriores",
+		"discardAll": "Descartar todo",
+		"discard": "Descartar",
+		"showOlder": "Mostrar las {n} anteriores"
+	},
+	"saveProgress": {
+		"snapshot": "Guardando: copia de la base de datos…",
+		"scrub": "Guardando: eliminación del historial de deshacer…",
+		"write": "Guardando: escritura del archivo {pct} %",
+		"verify": "Guardando: comprobación del archivo…"
+	},
+	"mcp": {
+		"title": "Servidor MCP",
+		"intro": "Un asistente compatible con MCP (Claude Desktop, Claude Code…) puede leer y modificar el libro abierto: hojas, tablas, celdas, selección, SQL, scripts, botones. Lo que cambia durante una serie de acciones se deshace en un solo paso (Ctrl+Z). El servidor solo escucha en este equipo y requiere un token.",
+		"enable": "Activar el servidor MCP",
+		"enableRunning": "Activar el servidor MCP (en ejecución)",
+		"enableStopped": "Activar el servidor MCP (detenido)",
+		"address": "Dirección",
+		"token": "Token",
+		"hide": "Ocultar",
+		"show": "Mostrar",
+		"copied": "Copiado",
+		"copy": "Copiar",
+		"configs": {
+			"desktop": {
+				"label": "Claude Desktop (y clientes stdio)",
+				"hint": "Añadir a claude_desktop_config.json: el cliente inicia Lattis como relé hacia la aplicación abierta."
+			},
+			"code": {
+				"hint": "Comando que se ejecuta en un terminal (ámbito de usuario: Lattis se ofrece en todos sus proyectos)."
+			},
+			"http": {
+				"label": "Clientes HTTP (Streamable HTTP)",
+				"hint": "Para los clientes que se conectan a una dirección."
+			}
+		},
+		"confirm": {
+			"title": "{client} quiere modificar el libro",
+			"toolBefore": "Herramienta",
+			"toolAfter": ". Sin respuesta en dos minutos, la solicitud se rechaza.",
+			"others": "{n, plural, one {# solicitud más pendiente.} other {# solicitudes más pendientes.}}",
+			"allow": "Permitir",
+			"deny": "Rechazar"
+		}
+	},
+	"exportReport": {
+		"lost": {
+			"charts": "{n, plural, one {# gráfico} other {# gráficos}}",
+			"pivots": "{n, plural, one {# tabla dinámica como valores} other {# tablas dinámicas como valores}}",
+			"formulas": "{n, plural, one {# fórmula como valor} other {# fórmulas como valores}}",
+			"rules": "{n, plural, one {# regla de formato condicional} other {# reglas de formato condicional}}",
+			"notes": "{n, plural, one {# nota} other {# notas}}",
+			"lists": "{n, plural, one {# lista de validación} other {# listas de validación}}",
+			"buttons": "{n, plural, one {# botón} other {# botones}}",
+			"queries": "{n, plural, one {# consulta (tabla como valores)} other {# consultas (tablas como valores)}}",
+			"pages": "{n, plural, one {# pestaña de página o documento} other {# pestañas de página o documento}}",
+			"scripts": "{n, plural, one {# script} other {# scripts}}",
+			"protections": "{n, plural, one {# protección de hoja} other {# protecciones de hoja}}",
+			"twoLevel": "{n, plural, one {# grupo de encabezados (en los nombres)} other {# grupos de encabezados (en los nombres)}}",
+			"clipped": "{n, plural, one {# celda fuera de los límites} other {# celdas fuera de los límites}}"
+		},
+		"withFunctions": "{text} ({functions})",
+		"noticeAll": "Libro exportado: {path}; se ha exportado todo",
+		"noticeLost": "Libro exportado: {path}; no exportado: {lost}",
+		"detail": {
+			"docTab": "Pestaña de documento: exportada como hoja vacía",
+			"htmlTab": "Página HTML: exportada como hoja vacía",
+			"tables": "{n, plural, one {# tabla} other {# tablas}}",
+			"translated": "{n, plural, one {# fórmula exportada como fórmula} other {# fórmulas exportadas como fórmulas}}",
+			"charts": "{n, plural, one {# gráfico no exportado} other {# gráficos no exportados}}",
+			"pivots": "{n, plural, one {# tabla dinámica exportada como valores, sin vínculo con su origen} other {# tablas dinámicas exportadas como valores, sin vínculo con su origen}}",
+			"noEquivalent": "{text} (sin equivalente: {functions})",
+			"formulas": "{n, plural, one {# fórmula exportada como su valor} other {# fórmulas exportadas como sus valores}}",
+			"columns": "{n, plural, one {# columna calculada exportada como sus valores} other {# columnas calculadas exportadas como sus valores}}",
+			"rules": "{n, plural, one {# regla de formato condicional no exportada} other {# reglas de formato condicional no exportadas}}",
+			"notes": "{n, plural, one {# nota no exportada} other {# notas no exportadas}}",
+			"lists": "{n, plural, one {# lista de validación no exportada} other {# listas de validación no exportadas}}",
+			"buttons": "{n, plural, one {# botón no exportado} other {# botones no exportados}}",
+			"queries": "{n, plural, one {# tabla cargada por una consulta: valores exportados, sin la consulta} other {# tablas cargadas por una consulta: valores exportados, sin la consulta}}",
+			"twoLevel": "{n, plural, one {# tabla con grupos de encabezados: grupos exportados en los nombres («Grupo.Sub»)} other {# tablas con grupos de encabezados: grupos exportados en los nombres («Grupo.Sub»)}}",
+			"protected": "Protección de hoja no exportada",
+			"clipped": "{n, plural, one {# celda más allá de 1.048.576 filas × 16.384 columnas no exportada} other {# celdas más allá de 1.048.576 filas × 16.384 columnas no exportadas}}"
+		},
+		"printCharts": "{n, plural, one {# gráfico no impreso} other {# gráficos no impresos}}: al imprimir una hoja solo se incluyen sus celdas",
+		"dialog": {
+			"aria": "Detalles de la exportación",
+			"title": "Exportación {format}: detalles",
+			"kept": "Exportado: {list}.",
+			"lost": "No exportado tal cual:",
+			"all": "Se ha exportado todo.",
+			"workbook": "Libro",
+			"scripts": "{n, plural, one {# script no exportado} other {# scripts no exportados}} (Excel y LibreOffice no leen los scripts de Lattis)",
+			"note": "Se exportan los valores, el formato de las celdas, las tablas y las fórmulas que tienen un equivalente."
+		}
+	},
+	"notice": {
+		"importCreatesSheet": "La importación crea una hoja: {reason}",
+		"refreshedAll": "Todo actualizado: {n, plural, one {# consulta} other {# consultas}}, fórmulas recalculadas",
+		"recalcNoQuery": "Fórmulas recalculadas (ninguna consulta cargada que actualizar)",
+		"tableRecalculated": "Tabla «{table}» recalculada, junto con lo que depende de ella",
+		"recalculated": "Fórmulas recalculadas",
+		"insertSheetLocked": "La estructura del libro está protegida: desprotéjala para insertar una hoja",
+		"importedOne": "Tabla «{table}» importada",
+		"importedMany": "{n, plural, one {# tabla importada} other {# tablas importadas}}",
+		"importWarnings": "{what}; {n, plural, one {# punto que comprobar} other {# puntos que comprobar}}: {list}",
+		"noTableToExport": "No hay ninguna tabla que exportar en esta hoja",
+		"tableExported": "Tabla «{table}» exportada: {path}",
+		"sheetExported": "Hoja «{name}» exportada: {path}",
+		"autoKey": ", clave definida en {column}",
+		"keyed": "Clave definida en «{column}» para REFERENCE",
+		"undoBirth": " (Ctrl+Z: la deshace, las celdas quedan libres)",
+		"undoHint": " (Ctrl+Z para deshacer)",
+		"createdUnnamed": "Tabla «{table}» creada sin encabezados (la 1.ª fila se parece a las siguientes): clic derecho › Usar la primera fila como encabezados{more}",
+		"createdHeadless": "Tabla «{table}» creada sin encabezados («Columna n»): escriba los nombres en su fila de encabezado{more}",
+		"created": "Tabla «{table}» creada{more}",
+		"widened": "Columna {column} cambiada de {from} a {to} (Ctrl+Z para deshacer)",
+		"invalidValue": "El valor no corresponde al tipo: celda marcada como error",
+		"pastedHeadless": "Tabla «{table}» creada sin encabezados{more}: clic derecho › Tabla › «Sacar el encabezado» si es necesario",
+		"pasted": "Tabla «{table}» creada{more} ({n, plural, one {# fila} other {# filas}})",
+		"pastedSplit": "Tabla «{table}» creada{more} ({n, plural, one {# fila} other {# filas}}; Ctrl+Z: la deshace, las celdas quedan libres)",
+		"defaultColumn": "Columna {n}",
+		"scriptError": "Error de script: {error}",
+		"notFound": "«{name}» no se encuentra en el libro",
+		"theme": "Tema «{name}» (Ctrl+Z para deshacer)",
+		"tableRenamed": "Tabla «{from}» renombrada como «{to}» (Ctrl+Z para deshacer)",
+		"resultCopied": "Resultado copiado en la tabla «{table}» (Ctrl+Z para deshacer)",
+		"tableLinked": "Tabla «{table}» vinculada a la consulta: clic derecho › Actualizar para volver a cargarla",
+		"scriptsNeedWorkbook": "Los scripts se ejecutan sobre un libro: Archivo › Nuevo."
+	},
+	"welcome": {
+		"progressStart": "{label}…",
+		"progress": "{label}: {done} / {total} filas",
+		"progressCells": "{label}: {done} / {total} filas · {cells} / {totalCells} celdas",
+		"steps": {
+			"table": {
+				"title": "Escriba una tabla",
+				"text": "unas filas con encabezados: Lattis la reconoce y la convierte en una verdadera tabla con tipos."
+			},
+			"formula": {
+				"title": "Calcule por nombre de columna",
+				"text": "=[Cantidad]*[Precio] se aplica a toda la columna, sin copiar la fórmula hacia abajo."
+			},
+			"sql": {
+				"title": "Consulte en SQL",
+				"text": "la pestaña SQL lee sus tablas como una base de datos."
+			}
+		},
+		"noWorkbook": "Ningún libro abierto.",
+		"new": "Nuevo libro",
+		"importTooltip": "Crea un libro con las hojas importadas",
+		"firstSteps": "Primeros pasos",
+		"openHelp": "Abrir la ayuda",
+		"openSample": "Abrir el libro de ejemplo",
+		"hide": "No volver a mostrar",
+		"recent": "Recientes"
+	},
+	"doc": {
+		"online": "en línea en {server}",
+		"offline": "sin conexión — {server}",
+		"savedRemote": "Guardado en {server}: {title}",
+		"savedWeb": "Guardado en su sesión en línea: {path}. Archivo › Descargar una copia para conservarlo en su dispositivo, o Publicar en un servidor para compartirlo y encontrarlo de nuevo",
+		"saved": "Guardado: {path}",
+		"sharedUntitled": "Libro compartido",
+		"recentOnline": "En línea en {server}",
+		"recentOnlineLink": "En línea en {server}: {link}"
+	},
+	"choice": {
+		"empty": "(vacías)",
+		"allValues": "Todos los valores de «{name}»",
+		"newValue": "Nuevo valor…",
+		"status": "{name}: {value} (elección de la pestaña)",
+		"statusHidden": "{status} · {n, plural, one {# fila de otros valores oculta} other {# filas de otros valores ocultas}}",
+		"byColumn": "Pestaña de elección por «{column}»: la flecha ▾ de la pestaña elige el valor mostrado (Alt+↓)",
+		"byFormula": "Pestaña de elección por «{name}» ({formula}): la flecha ▾ de la pestaña elige el valor mostrado (Alt+↓)",
+		"none": "Esta hoja no tiene pestaña de elección (clic derecho en la pestaña › Elegir por)"
+	},
+	"rowFormula": {
+		"names": {
+			"year": "Año",
+			"month": "Mes",
+			"day": "Día",
+			"week": "Semana",
+			"category": "Categoría"
+		},
+		"noValues": "Sin valores: la fórmula solo da celdas vacías",
+		"more": "{list}… ({n, plural, one {# valor} other {# valores}})",
+		"name": "Nombre:",
+		"formula": "Fórmula:",
+		"suggestions": "Sugerencias",
+		"hint": "Las columnas se escriben entre corchetes: [Fecha], [Importe]. La fórmula se calcula para cada fila.",
+		"count": "{n, plural, =0 {Valores} one {# valor} other {# valores}}",
+		"follow": "{label}: {list}",
+		"others": " · sin estas columnas, no siguen: {list}",
+		"previewEmpty": "La vista previa de los valores aparece aquí."
+	},
+	"names": {
+		"fault": {
+			"digit": "empieza por un dígito",
+			"start": "empieza por «{char}»",
+			"space": "contiene un espacio",
+			"char": "el carácter «{char}» no está permitido",
+			"message": "«{name}»: {fault}.\n\n{rule}"
+		},
+		"table": {
+			"invalid": "Nombre de tabla no válido",
+			"rule": "Un nombre de tabla empieza por una letra (o _) y solo contiene letras, dígitos y _, sin espacios: se escribe tal cual en las fórmulas (ejemplo: Ventas_2024).",
+			"empty": "El nombre de la tabla no puede estar vacío.\n\n{rule}",
+			"address": "«{name}» es una dirección de celda: el Cuadro de nombres y las fórmulas no sabrían a cuál de los dos se refiere.\n\nPruebe por ejemplo «{name}_» o «T_{name}».",
+			"taken": "Nombre de tabla ya en uso",
+			"takenMessage": "Otra tabla ya se llama «{name}» (sin distinguir mayúsculas y minúsculas).\n\nElija un nombre que aún no se use en el libro."
+		},
+		"sheet": {
+			"invalid": "Nombre de hoja no válido",
+			"empty": "El nombre de la hoja no puede estar vacío.\n\nEscriba un nombre, o Esc para conservar el anterior.",
+			"taken": "Nombre de hoja ya en uso",
+			"takenMessage": "Otra hoja ya se llama «{name}» (sin distinguir mayúsculas y minúsculas).\n\nElija un nombre que aún no se use en el libro."
+		},
+		"cell": {
+			"invalid": "Nombre de celda no válido",
+			"rule": "Un nombre de celda empieza por una letra (o _) y solo contiene letras, dígitos, _ y puntos, sin espacios (ejemplo: Tipo_IVA).",
+			"reserved": "«{name}» es una palabra reservada en las fórmulas.\n\n{rule}",
+			"address": "«{name}» es una dirección de celda.\n\n{rule}"
+		},
+		"column": {
+			"taken": "Nombre de columna ya en uso",
+			"takenMessage": "La tabla {table} ya tiene una columna «{name}» (sin distinguir mayúsculas y minúsculas): {ref} sería ambiguo en las fórmulas.\n\nElija otro nombre.",
+			"takenMessageNoTable": "La tabla ya tiene una columna «{name}» (sin distinguir mayúsculas y minúsculas): {ref} sería ambiguo en las fórmulas.\n\nElija otro nombre.",
+			"tableWord": "Tabla"
+		},
+		"script": {
+			"invalid": "Nombre de script no válido",
+			"empty": "El nombre del script no puede estar vacío.\n\nEscriba un nombre, o Esc para conservar el anterior.",
+			"taken": "Nombre de script ya en uso",
+			"takenMessage": "Otro script ya se llama «{name}».\n\nElija otro nombre."
+		},
+		"favorite": {
+			"invalid": "Nombre de favorito no válido",
+			"empty": "El nombre de la consulta favorita no puede estar vacío.\n\nEscriba un nombre, o Esc para conservar el anterior."
+		},
+		"refused": "El nombre se ha rechazado.",
+		"takenAdvice": ".\n\nElija un nombre que aún no se use en el libro."
+	},
+	"theme": {
+		"title": "Personalizar el tema",
+		"custom": "Personalizado",
+		"customOf": "{name} (personalizado)",
+		"tables": "Tablas",
+		"sources": "Orígenes externos",
+		"otherColors": "Otros colores de la paleta (fuente, relleno)",
+		"accent": "Énfasis {n}",
+		"text2": "Texto 2",
+		"background2": "Fondo 2",
+		"derive": "Derivar de los dos primeros colores",
+		"sample": {
+			"sales": "Ventas",
+			"product": "Producto",
+			"quantity": "Cantidad",
+			"customers": "Clientes (consulta)",
+			"customer": "Cliente",
+			"city": "Ciudad"
+		},
+		"name": "Nombre",
+		"save": "Añadir a mis temas (ofrecido en todos los libros)",
+		"mine": "Mis temas",
+		"removeTooltip": "Quitar «{name}» de mis temas (los libros que lo usan conservan sus colores)",
+		"remove": "Quitar",
+		"note": "El tema se guarda con el libro: se ve igual en otros equipos. Los matices (encabezado, texto, borde) se derivan de los dos colores; las celdas coloreadas con un color del tema cambian con él.",
+		"apply": "Aplicar"
+	},
+	"select": {
+		"aria": "{label}: {value}"
+	},
+	"merge": {
+		"chipTables": "{n, plural, one {# tabla similar} other {# tablas similares}}",
+		"chipSheets": "{n, plural, one {# pestaña similar} other {# pestañas similares}}",
+		"rangeTwo": "{first} y {last}",
+		"range": "{first} a {last}",
+		"defaultName": "Combinado",
+		"offerStacked": "{n} tablas de «{sheet}» ({range}) tienen las mismas columnas. ¿Combinarlas en una sola tabla «{tab}»?",
+		"offerColumns": "{n} pestañas ({range}) tienen las mismas columnas. ¿Combinarlas en una sola pestaña «{tab}»?",
+		"offerTables": "{n} pestañas ({range}) tienen las mismas tablas. ¿Combinarlas en una sola pestaña «{tab}»?",
+		"quoted": "«{name}»",
+		"mode": {
+			"onceOne": "Ponerla en la hoja combinada",
+			"once": "Conservar una sola copia (la última)",
+			"leaveOne": "Dejarla en su pestaña",
+			"leave": "Dejarlas en sus pestañas",
+			"followOne": "Combinarla: sigue a {category}",
+			"follow": "Combinarlas: siguen a {category}",
+			"merge": "Combinarlas"
+		},
+		"family": {
+			"only": "solo en {sheet}",
+			"sheets": "{n} pestañas",
+			"same": " · mismos datos en todas"
+		},
+		"source": {
+			"sheet": "nombre de la pestaña",
+			"title": "título encima de cada tabla",
+			"cell": "celda {cell}"
+		},
+		"layout": {
+			"table": "{name} en {at} · {n, plural, =0 {# filas} one {# fila} other {# filas}}",
+			"tableFollows": "{name} en {at} · {n, plural, =0 {# filas} one {# fila} other {# filas}} · sigue la elección",
+			"cells": "{n, plural, =1 {Una celda libre trasladada} other {# celdas libres trasladadas}}",
+			"perValue": "{cells}, de ellas {n} por {category}",
+			"value": "valor",
+			"lost": "{n, plural, =1 {Una celda libre cae sobre una tabla combinada: no se traslada} other {# celdas libres caen sobre una tabla combinada: no se trasladan}}"
+		},
+		"refused": "No se puede combinar: {reason}",
+		"pending": "{n, plural, =1 {Una fórmula u objeto hace referencia} other {# fórmulas u objetos hacen referencia}} a las tablas antiguas sin equivalente exacto: hay que corregirlo a mano",
+		"pendingHidden": "{n, plural, =1 {Una fórmula u objeto hace referencia} other {# fórmulas u objetos hacen referencia}} a las tablas antiguas sin equivalente exacto: hay que corregirlo a mano (las pestañas antiguas se conservan ocultas)",
+		"refs": {
+			"done": "{n, plural, =1 {una fórmula reescrita} other {# fórmulas reescritas}}",
+			"leftAfter": "{n, plural, =1 {una que corregir a mano} other {# que corregir a mano}}",
+			"left": "{n, plural, =1 {una fórmula que corregir a mano} other {# fórmulas que corregir a mano}}",
+			"separator": ", ",
+			"line": "{where}: {formula} → {after}",
+			"lineWhy": "{where}: {formula} ({why})",
+			"lineLeft": "{where}: {formula}"
+		},
+		"old": {
+			"deleted": "Eliminadas de todos modos: {n, plural, =1 {una fórmula u objeto aún hace referencia a ellas y ya no encontrará su tabla} other {# fórmulas u objetos aún hacen referencia a ellas y ya no encontrarán su tabla}}",
+			"hidden": "Conservadas ocultas: {n, plural, =1 {una fórmula u objeto aún hace referencia a ellas} other {# fórmulas u objetos aún hacen referencia a ellas}}",
+			"hide": "Conservar una copia oculta (tablas renombradas …_old)",
+			"delete": "Eliminar las pestañas (Ctrl+Z las recupera)"
+		},
+		"panel": {
+			"title": "Combinar pestañas",
+			"subtitle": "Una sola tabla, con una columna de categoría",
+			"sheets": "1. Pestañas",
+			"tableRows": " · {n, plural, =0 {# filas} one {# fila} other {# filas}}",
+			"addTableAria": "Añadir una tabla",
+			"addTablePlaceholder": "Añadir una tabla…",
+			"add": "Añadir",
+			"category": "2. Columna de categoría",
+			"noCategoryData": "No añadir columna: basta con la columna «{column}» (sus fechas caen en el mes de cada pestaña)",
+			"noCategory": "No añadir columna (la categoría ya está en los datos)",
+			"name": "Nombre",
+			"categoryNameAria": "Nombre de la columna de categoría",
+			"type": "Tipo",
+			"categoryTypeAria": "Tipo de la columna de categoría",
+			"types": {
+				"text": "Texto",
+				"integer": "Número entero",
+				"date": "Fecha"
+			},
+			"from": "Tomado de",
+			"sourceAria": "Origen de la categoría",
+			"valueFromSheet": "Valor tomado del nombre de cada pestaña, corríjalo si es necesario:",
+			"valueFrom": "Valor tomado de: {source}, corríjalo si es necesario:",
+			"valueAria": "Valor para {sheet}",
+			"columns": "3. Columnas",
+			"column": "Columna",
+			"otherTables": "Otras tablas de las pestañas",
+			"modeAria": "Qué pasa con {name}",
+			"after": "4. Después",
+			"table": "Tabla",
+			"tableAria": "Nombre de la tabla combinada",
+			"sheet": "Hoja",
+			"sheetAria": "Nombre de la nueva hoja",
+			"oldSheets": "Pestañas antiguas",
+			"keepCells": "Trasladar las celdas libres de las pestañas (títulos, totales, objetivos; una por {category} cuando difieren)",
+			"layout": "En la hoja combinada (diseño de la última pestaña):",
+			"left": "Se quedan en su pestaña: {list}",
+			"rewritten": "Fórmulas reescritas ({n})",
+			"pending": "Que corregir a mano ({n})",
+			"why": ": {why}",
+			"preview": "5. Vista previa",
+			"total": "{n, plural, =0 {# filas} one {# fila} other {# filas}} en total",
+			"totalKey": "{n, plural, =0 {# filas} one {# fila} other {# filas}} en total · clave: {key}",
+			"merge": "Combinar",
+			"checkTwo": "Marque al menos dos pestañas"
+		},
+		"notice": {
+			"none": "No se han encontrado pestañas similares: seleccione las pestañas (Ctrl+clic) y luego clic derecho › Combinar pestañas…",
+			"noTables": "Estas pestañas no tienen tablas que combinar (se necesitan al menos dos, con las mismas columnas)",
+			"dismissed": "Estas pestañas ya no se propondrán para combinar (elección guardada en el libro)"
+		}
+	},
+	"tabs": {
+		"locked": "La estructura del libro está protegida: desprotéjala (Revisar › Desproteger libro) para añadir, eliminar, renombrar o mover hojas",
+		"renameRefused": "Nombre de hoja rechazado",
+		"one": "Una hoja cada vez: seleccione una sola pestaña",
+		"previous": "Hoja anterior",
+		"previousTooltip": "Hoja anterior (Ctrl+Re Pág)",
+		"next": "Hoja siguiente",
+		"nextTooltip": "Hoja siguiente (Ctrl+Av Pág)",
+		"renameAria": "Nuevo nombre de la hoja",
+		"tip": {
+			"choiceKeys": " — Alt+↓: elegir. ",
+			"end": ". ",
+			"sheetProtected": "Hoja protegida. ",
+			"bookProtected": "Libro protegido",
+			"renameMove": "Doble clic para renombrar, arrastrar para mover",
+			"rename": "Doble clic para renombrar"
+		},
+		"sheetProtected": "Hoja protegida",
+		"bookProtected": "Libro protegido",
+		"htmlPage": "Página web",
+		"document": "Documento",
+		"chipTooltip": "{label}: combinarlas en una sola tabla (clic derecho: No volver a proponer)",
+		"chipTooltipOut": "{label}: combinarlas en una sola tabla (clic derecho: No volver a proponer) — {n} fuera de la vista",
+		"mergeShort": "Combinar…",
+		"dismiss": "No volver a proponer",
+		"moreTooltip": "{n, plural, one {# hoja no mostrada} other {# hojas no mostradas}}: todas las hojas",
+		"add": {
+			"locked": "Estructura del libro protegida",
+			"tooltipPage": "Nueva hoja (clic derecho: Página web o Documento)",
+			"tooltip": "Nueva hoja (clic derecho: Documento)",
+			"sheet": "Nueva hoja",
+			"page": "Nueva página web",
+			"doc": "Nuevo documento"
+		},
+		"menu": {
+			"selected": "{n} hojas seleccionadas",
+			"title": "Hoja «{name}»",
+			"mergeTooltip": "Combinar las tablas de estas pestañas (mismas columnas) en una sola, con una columna de categoría",
+			"merge": "Combinar pestañas…",
+			"insert": "Insertar",
+			"sheet": "Hoja",
+			"rename": "Cambiar nombre",
+			"move": "Mover o copiar…",
+			"color": "Color de pestaña",
+			"colorAria": "Color {color}",
+			"noColor": "Sin color",
+			"chooseBy": "Elegir por",
+			"chooseByTooltip": "Una flecha en la pestaña elige el valor mostrado (año, mes, ciudad…)",
+			"readingColumns": "Leyendo las columnas…",
+			"noColumns": "Ninguna columna de tabla de esta hoja tiene pocos valores distintos",
+			"columnTooltip": "«{column}» de la tabla {table} — {n, plural, one {# valor distinto} other {# valores distintos}}",
+			"formulaTooltip": "Una fórmula sobre las columnas de cada fila da el valor que elegir: =ANNEE([Date]), =TEXTE([Date];\"mmmm\"), =SI([Montant]>1000;\"Gros\";\"Petit\")",
+			"formula": "Una fórmula…",
+			"stopChoosing": "Dejar de elegir por «{name}»",
+			"unprotect": "Desproteger hoja…",
+			"protect": "Proteger hoja…",
+			"keepOne": "El libro conserva al menos una hoja visible",
+			"hideMany": "Ocultar las {n} hojas",
+			"hide": "Ocultar",
+			"unhide": "Mostrar…",
+			"deleteMany": "Eliminar las {n} hojas",
+			"delete": "Eliminar"
+		},
+		"choice": {
+			"aria": "Elección de la pestaña «{name}»",
+			"reading": "Leyendo los valores…",
+			"rows": "{n, plural, one {# fila} other {# filas}}",
+			"noRows": "Aún no hay filas",
+			"empty": "vacías",
+			"computed": "Valores calculados por {formula}"
+		},
+		"byFormula": {
+			"title": "Elegir por una fórmula",
+			"intro": "La flecha de la pestaña elegirá entre los valores de la fórmula; las tablas de la hoja que tienen sus columnas solo muestran las filas del valor elegido.",
+			"name": "Nombre de la categoría:",
+			"follow": "Seguir la pestaña"
+		},
+		"adding": {
+			"intro": "El valor se añade a la lista de «{name}» y la pestaña lo muestra: la hoja parece vacía, lista para rellenar. Ctrl+Z lo deshace.",
+			"label": "{name}:"
+		},
+		"move": {
+			"title": "Mover o copiar",
+			"sheet": "Mover la hoja «{name}»",
+			"before": "Antes de la hoja:",
+			"hidden": "{name} (oculta)",
+			"last": "(mover al final)",
+			"copy": "Crear una copia"
+		},
+		"all": {
+			"title": "Todas las hojas"
+		},
+		"unhide": {
+			"title": "Mostrar",
+			"label": "Mostrar la hoja:"
+		}
+	},
+	"share": {
+		"addTableConfirm": "¿Añadir la tabla «{table}» al libro compartido «{workbook}»?\n\nSe crea en el servidor con sus filas; todos los miembros la reciben y la modifican según sus derechos.\n\nEsta adición no se puede deshacer con Ctrl+Z: para quitar la tabla, «Eliminar la tabla» la elimina para todos.",
+		"addingTable": "Añadiendo «{table}» al libro compartido…",
+		"tableAdded": "Tabla «{table}» añadida al libro compartido",
+		"sourceUpdating": "Actualizando el origen «{table}»…",
+		"sourceFailed": "Origen «{table}» no actualizado: {error}",
+		"connected": "Conectado a {server}",
+		"stillDown": "{server} sigue sin responder: Lattis volverá a intentarlo por sí solo",
+		"forgetConfirm": "{n, plural, one {Se perderá # cambio no enviado.} other {Se perderán # cambios no enviados.}}\n\n«Guardar una copia local…» los conserva. ¿Quitar de todos modos este libro de la lista de recientes?",
+		"versionLoaded": "Versión {version} cargada",
+		"removeRecent": "{error}\n\n¿Quitarlo de los libros recientes?",
+		"localCopyOpened": "{reason}: copia local abierta",
+		"openedOnline": "«{title}» está compartido en {server}: abierto en línea",
+		"readOnlyRole": "{reason} (rol: {roles})",
+		"formNeedsTable": "Sitúe el cursor en una tabla para convertirla en formulario.",
+		"scriptsLocked": "Solo los propietarios y diseñadores pueden modificar los scripts de este libro compartido",
+		"versionPublished": "Versión {version} publicada",
+		"publishedFrozen": "Libro publicado en {server} (congelado)",
+		"publishedLive": "Libro publicado en {server} (colaborativo)",
+		"detach": {
+			"title": "Desvincular del servidor",
+			"question": "¿Desvincular este libro del servidor?",
+			"ok": "Desvincular"
+		},
+		"link": {
+			"title": "Abrir un enlace de Lattis",
+			"question": "¿Abrir un libro de «{name}»?",
+			"warning": "Lattis nunca se ha conectado a {host}. Acepte solo si conoce este servidor y esperaba este enlace.",
+			"ok": "Iniciar sesión y abrir"
+		}
+	},
+	"conflicts": {
+		"mineAll": "Su valor se restablece para todos los equipos",
+		"mineServer": "Su valor se vuelve a enviar al servidor",
+		"theirs": "Valor del compañero conservado",
+		"heldRetried": "Cambios de «{table}» reenviados al servidor",
+		"heldDropped": "Cambios de «{table}» descartados: la tabla vuelve a la versión del servidor",
+		"mineAllCount": "{n, plural, one {# valor restablecido} other {# valores restablecidos}} para todos los equipos",
+		"mineServerCount": "{n, plural, one {# valor reenviado} other {# valores reenviados}} al servidor",
+		"theirsCount": "{n, plural, one {# valor del compañero conservado} other {# valores del compañero conservados}}"
+	},
+	"ref": {
+		"hiddenRow": "Fila oculta por el filtro de {table}",
+		"filtered": "{table} filtrada por {column} = {value} (Alt+← para volver)",
+		"back": "Alt+← para volver a {label}"
+	},
+	"coedit": {
+		"requestSent": "Solicitud enviada a los demás equipos…"
+	},
+	"demo": {
+		"preset": "Demo «{name}»",
+		"sample": "Libro de ejemplo",
+		"error": "error",
+		"generating": "Creando la demo: {done} / {total} filas",
+		"opening": "Abriendo la demo…",
+		"openingShort": "Abriendo…",
+		"readOnly": "Demo: solo se pueden modificar las celdas de las tablas"
+	},
+	"web": {
+		"reconnected": "Conexión con el servidor restablecida",
+		"expired": "Su sesión ha caducado: vuelva a iniciar sesión para continuar (los cambios ya realizados se conservan en el servidor).",
+		"reconnect": "Volver a iniciar sesión",
+		"lost": "Conexión con el servidor perdida: reintentando… Lo que haga ahora espera a que vuelva la conexión."
+	},
+	"protect": {
+		"sheetLocked": "La hoja «{name}» está protegida: desprotéjala (Revisar › Desproteger hoja) para modificarla",
+		"bookLocked": "El libro está protegido: desprotéjalo (Revisar › Desproteger libro) para modificarlo",
+		"notice": {
+			"sheetOff": "Hoja «{name}» desprotegida",
+			"sheetOn": "Hoja «{name}» protegida",
+			"structureOff": "Estructura de «{name}» desprotegida",
+			"structureOn": "Estructura de la hoja «{name}» protegida: solo se sigue permitiendo la entrada de datos en las tablas",
+			"bookOff": "Libro desprotegido",
+			"bookSheets": "Libro protegido: pestañas y contenido de todas las hojas",
+			"bookStructure": "Libro protegido: pestañas y estructura de todas las hojas (solo entrada de datos en las tablas)",
+			"bookTabs": "Estructura del libro protegida"
+		},
+		"mismatch": "Las dos contraseñas no coinciden",
+		"aria": "Protección",
+		"title": {
+			"sheetOff": "Desproteger la hoja «{name}»",
+			"sheetOn": "Proteger la hoja «{name}»",
+			"structureOff": "Desproteger la estructura de «{name}»",
+			"structureOn": "Proteger la estructura de la hoja «{name}»",
+			"bookOff": "Desproteger libro",
+			"bookOn": "Proteger la estructura del libro"
+		},
+		"explain": {
+			"sheet": "En esta hoja se rechazarán la entrada de datos, el pegado, el formato, las filas y columnas, la ordenación, los objetos y las consultas SQL de escritura. La lectura, la copia y los filtros siguen permitidos.",
+			"structure": "Todo quedará bloqueado salvo la entrada de datos en las tablas: celdas libres, formato, columnas y encabezados, tablas, objetos, filas y columnas de la hoja, diseño de página y pestaña. Podrá seguir escribiendo, pegando (solo valores) y borrando valores en las tablas, añadiendo o eliminando filas en ellas, ordenando y filtrando.",
+			"bookSheets": "Se rechazará añadir, eliminar, renombrar, mover u ocultar hojas, así como cualquier cambio en el contenido de las hojas.",
+			"bookStructure": "Se rechazará añadir, eliminar, renombrar, mover u ocultar hojas; en cada hoja, solo seguirá permitida la entrada de datos en las tablas.",
+			"bookTabs": "Se rechazará añadir, eliminar, renombrar, mover u ocultar hojas. El contenido de las hojas no protegidas se puede seguir modificando."
+		},
+		"notSecurity": "Esta protección evita los cambios accidentales; no es una medida de seguridad: el archivo no está cifrado, sus datos siguen siendo legibles y alguien con las herramientas adecuadas puede quitar la protección.",
+		"lock": "Bloquear",
+		"lockTabs": "Solo las pestañas",
+		"lockStructure": "Pestañas y estructura de todas las hojas (solo entrada de datos en las tablas)",
+		"lockSheets": "Pestañas y contenido de todas las hojas",
+		"password": "Contraseña",
+		"passwordOptional": "Contraseña (opcional)",
+		"confirm": "Confirmar la contraseña",
+		"noteIt": "Sin la contraseña, ya no se puede quitar la protección: anótela."
+	},
+	"deleteSheet": {
+		"items": {
+			"tables": "{n, plural, one {# tabla} other {# tablas}}",
+			"pivots": "{n, plural, one {# tabla dinámica} other {# tablas dinámicas}}",
+			"charts": "{n, plural, one {# gráfico} other {# gráficos}}",
+			"buttons": "{n, plural, one {# botón} other {# botones}}",
+			"cells": "{n, plural, one {# celda rellena} other {# celdas rellenas}}"
+		},
+		"withNames": "{what} ({names})",
+		"tableRows": "{name}: {n, plural, one {# fila} other {# filas}}",
+		"manyTitle": "Eliminar hojas",
+		"manyQuestion": "¿Eliminar estas {n} hojas y todo lo que contienen?",
+		"manyHint": "Ctrl+Z las recupera todas, con su contenido.",
+		"ok": "Eliminar",
+		"title": "Eliminar hoja",
+		"question": "¿Eliminar la hoja «{name}» y todo lo que contiene?",
+		"hint": "Ctrl+Z recupera la hoja y todo su contenido."
+	},
+	"unsent": {
+		"title": "Cambios aún no enviados",
+		"question": "{n, plural, one {Un cambio en «{title}» aún no se ha enviado} other {# cambios en «{title}» aún no se han enviado}} a {server}.",
+		"theServer": "el servidor",
+		"hint": "{n, plural, one {Se conserva en este equipo y se enviará} other {Se conservan en este equipo y se enviarán}} la próxima vez que se abra el libro, cuando se pueda acceder al servidor."
+	},
+	"close": {
+		"quit": "Salir",
+		"title": "Guardar los cambios",
+		"question": "¿Guardar los cambios de «{title}» antes de cerrarlo?",
+		"questionQuit": "¿Guardar los cambios de «{title}» antes de salir de Lattis?",
+		"save": "Guardar",
+		"dontSave": "No guardar"
+	},
+	"damaged": {
+		"title": "Libro dañado",
+		"explain": "Lattis puede recuperar sus datos legibles en un nuevo libro sin título. El archivo dañado no se modifica.",
+		"recover": "Recuperar los datos"
+	},
+	"locked": {
+		"title": "Libro ya abierto",
+		"coEditHint": "Al trabajar juntos, cada uno edita los datos de las tablas y ve los cambios de los demás en directo; el formato, las columnas y las hojas esperan a que esté solo. En solo lectura, sus cambios se guardan con otro nombre.",
+		"together": "Trabajar juntos",
+		"readOnly": "Abrir en solo lectura",
+		"hint": "En solo lectura, sus cambios se guardan con otro nombre. Abrirlo de todos modos puede sobrescribir los cambios del otro equipo (Lattis comprueba el archivo antes de guardar).",
+		"anyway": "Abrir de todos modos"
+	},
+	"conflictFile": {
+		"title": "Libro modificado en otro lugar",
+		"hint": "«Guardar una copia» conserva las dos versiones; «Sobrescribir» reemplaza el archivo por el suyo.",
+		"copy": "Guardar una copia",
+		"overwrite": "Sobrescribir"
+	},
+	"status": {
+		"aria": "Barra de estado",
+		"newSheetTooltip": "Crear la tabla dinámica en una hoja nueva, en A1",
+		"details": "Detalles",
+		"backTooltip": "Volver a la celda de la que partió (Alt+←)",
+		"back": "← Volver a {label}",
+		"useHeaderTooltip": "Las celdas escritas encima de la tabla pasan a ser sus encabezados; el encabezado actual pasa a ser la 1.ª fila de datos (Ctrl+Z para deshacer)",
+		"useHeader": "Usar como encabezados",
+		"keepTitleTooltip": "Conservar la fila como celdas libres (un título)",
+		"no": "No",
+		"later": "Más tarde",
+		"present": "También tienen este libro abierto: {names}",
+		"ready": "Listo"
+	},
+	"sqlView": {
+		"tableRenameRefused": "Nombre de tabla rechazado",
+		"favoriteRenameRefused": "Nombre de favorito rechazado",
+		"renamed": "Tabla renombrada",
+		"renamedHeader": "Tabla renombrada (Ctrl+Z para deshacer)",
+		"changed": "Filas afectadas",
+		"changedHeader": "Filas afectadas (Ctrl+Z para deshacer)",
+		"objects": "Objetos",
+		"favorites": "Favoritos",
+		"favoritesCount": "Favoritos ({n})",
+		"history": "Historial",
+		"historyCount": "Historial ({n})",
+		"renameAria": "Nuevo nombre de la tabla",
+		"objectTooltipRename": "Doble clic o F2: cambiar nombre; clic derecho: ejemplos SELECT, INSERT, UPDATE, DELETE, mostrar en la hoja",
+		"objectTooltip": "Clic derecho: ejemplos SELECT, INSERT, UPDATE, DELETE, mostrar en la hoja",
+		"pivot": "Tabla dinámica",
+		"table": "Tabla",
+		"rows": "{n, plural, one {# fila} other {# filas}}",
+		"insertColumn": "Insertar en la consulta",
+		"dataLake": "Data Lake de Lattis · {label}",
+		"dataViewTooltip": "{view}: vista de servidor de solo lectura, limitada a las filas de su audiencia (doble clic: ejemplo SELECT)",
+		"dataView": "Vista del Data Lake (solo lectura)",
+		"rights": "Derechos (servidor)",
+		"rightsEditTooltip": "Pantalla de uso compartido: miembros, roles, restricciones",
+		"rightsEdit": "Modificar…",
+		"rightsTooltip": "Generado por el servidor: solo lectura",
+		"menuPivot": "Tabla dinámica «{name}»",
+		"menuTable": "Tabla «{name}»",
+		"example": "Consulta de ejemplo",
+		"exampleSelect": "Reemplaza la consulta por un ejemplo de lectura",
+		"exampleInsert": "Reemplaza la consulta por un ejemplo de adición de una fila",
+		"exampleUpdate": "Reemplaza la consulta por un ejemplo de actualización",
+		"exampleDelete": "Reemplaza la consulta por un ejemplo de eliminación",
+		"exampleSelectItem": "Ejemplo SELECT",
+		"goto": "Mostrar en la hoja",
+		"renameItem": "Cambiar nombre…",
+		"favoriteNameAria": "Nombre del favorito",
+		"reuse": "Cargar en el editor (doble clic: ejecutar)",
+		"rename": "Cambiar nombre",
+		"remove": "Quitar",
+		"run": "Ejecutar",
+		"noFavorites": "No hay consultas favoritas. Use ☆ en la barra del editor o en el historial para añadir una; se guardan en el libro.",
+		"search": "Buscar",
+		"clear": "Borrar",
+		"error": "error",
+		"alreadyFavorite": "Ya está en favoritos",
+		"addFavorite": "Añadir a favoritos",
+		"noMatch": "Ninguna consulta coincide.",
+		"noHistory": "Las consultas que ejecute aparecerán aquí.",
+		"runTooltip": "Ejecuta la selección; si no, la instrucción bajo el cursor (Ctrl+Entrar)",
+		"stopTooltip": "Detiene la consulta en curso; una escritura detenida no cambia nada",
+		"stop": "Detener",
+		"starredTooltip": "En favoritos: «{name}» (clic para quitarla)",
+		"starTooltip": "Añadir la consulta (o la selección) a los favoritos del libro",
+		"favorite": "Favorito",
+		"hintTooltip": "Las instrucciones se separan con «;» o una línea en blanco. 1000 filas como máximo.",
+		"hint": "Ctrl+Entrar: ejecutar la selección; si no, la instrucción bajo el cursor · Ctrl+Barra espaciadora: nombres · Alt+↑↓: historial",
+		"splitAria": "Altura del editor",
+		"splitTooltip": "Arrastre para repartir el espacio entre la consulta y el resultado (doble clic: tamaño original)",
+		"result": "{n, plural, one {# fila} other {# filas}} · {ms} ms",
+		"resultTruncated": "{n, plural, one {# fila} other {# filas}} (truncado) · {ms} ms",
+		"sent": "· SQL ejecutado",
+		"copyTruncated": "Copia las filas mostradas (truncadas), para pegarlas en Excel",
+		"copyTooltip": "Copia el resultado (encabezados incluidos), para pegarlo en Excel",
+		"copied": "Copiado ✓",
+		"clipboard": "Portapapeles",
+		"toSheet": "A una hoja:",
+		"copyToSheetTooltip": "Copia los valores del resultado en una nueva tabla, en una hoja nueva (Ctrl+Z para deshacer)",
+		"copyToSheet": "Copiar",
+		"linkToSheetTooltip": "Crea una tabla vinculada a la consulta, en una hoja nueva: color de origen externo (azul claro de forma predeterminada), actualizable con clic derecho como un origen externo",
+		"linkToSheet": "Vincular"
+	}
+}
