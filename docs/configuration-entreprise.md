@@ -44,7 +44,8 @@ Les objets sont fusionnés clé par clé : une couche peut ne changer que `conne
   "ai": { "enabled": false, "endpoint": "https://ia-gateway.acme.com/v1", "dataSharing": "schema-only" },
   "features": { "mcp": { "enabled": false }, "allowUserConnections": true,
                 "luaHttp": { "allowedDomains": ["api.acme.com"] } },
-  "limits": { "undoDepth": 200, "scriptSeconds": 30, "sqlReadSeconds": 30, "sqlWriteSeconds": 120 }
+  "limits": { "undoDepth": 200, "scriptSeconds": 30, "sqlReadSeconds": 30, "sqlWriteSeconds": 120 },
+  "updates": { "check": true }
 }
 ```
 
@@ -95,6 +96,14 @@ Les thèmes de l'organisation s'ajoutent à ceux que l'utilisateur garde dans so
 | `ui.language` | langue de l'interface : `auto` (celle du système, ou du navigateur en version web ; l'anglais si elle n'est pas proposée), `fr`, `en`, `de`, `es` ou `zh` (chinois simplifié) | `auto` |
 
 L'utilisateur la choisit dans Fichier › Paramètres › Affichage ; posée dans la stratégie, elle est imposée. Elle règle aussi l'affichage des nombres et des dates, et la lecture des nombres écrits en texte par les fonctions (« 1,234 ») ; l'écriture des formules la suivra (séparateurs `;` et décimale `,` en français, allemand et espagnol ; `,` et `.` en anglais et en chinois). Le classeur enregistré n'en dépend pas (docs/i18n.md). Les traductions sont en cours : l'interface reste en français pour les textes pas encore traduits.
+
+### Mises à jour
+
+| Clé | Rôle | Défaut |
+|---|---|---|
+| `updates.check` | l'application de bureau cherche les nouvelles versions sur GitHub et propose de s'y mettre à jour (barre d'état) | `true` |
+
+Une recherche est un `GET` de l'API GitHub, 30 s après le démarrage puis au plus toutes les 12 heures, sans cookie ni identifiant (`User-Agent: Lattis/<version> (<système>)`) ; rien n'est téléchargé sans le clic de l'utilisateur, et rien n'est installé sans empreinte publiée (détail : [release/publier.md](release/publier.md#mise-à-jour-automatique)). L'utilisateur la coupe dans Fichier › Paramètres › Mises à jour ; un parc qui distribue lui-même les versions (Intune, winget, MSIX) pose `"updates": { "check": false }` dans la stratégie (`HKLM\SOFTWARE\Policies\Lattis`, valeur `updates.check` en `REG_DWORD` 0, ou `policy.json`) : plus aucune requête ni proposition, le réglage est grisé. Variable : `LATTIS_UPDATES__CHECK=0`. Sans objet en édition web ; un paquet MSIX ne cherche jamais (Windows le met à jour). Deux installeurs sont publiés : `Lattis-windows-x64-setup.exe` (pour l'utilisateur, sans droits d'administration) et `Lattis-windows-x64-setup-machine.exe` (pour la machine, Program Files) ; une installation pour la machine demande les droits d'administration à chaque mise à jour (invite UAC), un poste sans ces droits ne peut donc pas l'appliquer : couper la recherche, ou préférer l'installeur par utilisateur ou le MSIX.
 
 ### Registre et environnement
 

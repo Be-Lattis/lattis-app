@@ -136,3 +136,14 @@ Le lot 1 livre seul une vraie valeur (les testeurs de la bêta savent qu'une ver
    - après le clic, téléchargement et vérification ; une fois prête : « Redémarrez l'application pour appliquer la mise à jour » ;
    - première ouverture après un changement de version : « Mise à jour effectuée, consultez les notes de version » (lien vers la release GitHub de la version installée).
 3. Ordre : après la fin du multilingue (les textes ci-dessus passent par `t()`).
+
+## Réalisé (20/10/2026)
+
+Les décisions ci-dessus, sur Windows ; le détail d'exploitation est dans [docs/release/publier.md](../release/publier.md#mise-à-jour-automatique).
+
+- **Installeurs** : `project.nsi` produit l'installeur par utilisateur (`Lattis-windows-x64-setup.exe`, `%LOCALAPPDATA%\Programs\Lattis`, `HKCU`) et celui par machine (`Lattis-windows-x64-setup-machine.exe`, Program Files, `HKLM`) ; chacun prévient si l'autre est installé, écrit `InstallLocation`, attend que `lattis.exe` soit libre, et comprend `/UPDATE` et `/RELAUNCH` (relance sans élévation par l'Explorateur pour l'installeur par machine). `latest.json` décrit les deux (`windows-setup`, `windows-setup-machine`).
+- **`internal/update`** (bibliothèque standard et `golang.org/x/sys`, sans dépendance nouvelle ; ni `pkg/updater` de Wails, ni `minio/selfupdate`) : versions SemVer, choix de la version par l'API GitHub (le canal suit la version courante : une bêta reçoit les bêtas), genre d'installation (`HKCU`/`HKLM` ou portable, MSIX exclu), téléchargement vérifié (empreinte et taille de `latest.json`, sinon `SHA256SUMS.txt` ; Authenticode exigé si l'application est signée), état dans `update.json`, application à la fermeture (`PostShutdown`) : installeur silencieux, installeur élevé (UAC), ou remplacement de l'exécutable portable.
+- **Interface** : `UpdateStatus.svelte` dans la barre d'état (bureau seulement), les trois messages des décisions, plus « Téléchargement… », l'échec (clic : réessayer) et, hors installation automatique, « cliquez ici pour la télécharger » (page de la version).
+- **Réglage** `updates.check`, **activé par défaut** (la décision 0006 le prévoyait coupé : les décisions de Louis supposent que la barre d'état prévienne), verrouillable par stratégie, section Fichier › Paramètres › Mises à jour masquée en édition web.
+
+Pas encore fait, de l'étude : signature Ed25519 de `latest.json` (§ 5 : tant qu'elle manque, quiconque contrôle les releases GitHub peut publier un installeur et son empreinte ; l'Authenticode le couvre une fois les binaires signés), miroir d'entreprise `updates.url`, « Ignorer cette version », restauration automatique si la nouvelle version ne démarre pas, macOS et Linux (signalés seulement).

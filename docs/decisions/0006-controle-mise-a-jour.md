@@ -1,5 +1,7 @@
 # Contrôle de mise à jour et canal bêta (audit 6, Id4)
 
+*Mise en œuvre le 20/10/2026, étendue à la mise à jour automatique sous Windows et avec `updates.check` activé par défaut : voir « Réalisé » dans [conception/mise-a-jour-automatique.md](../conception/mise-a-jour-automatique.md). Texte d'origine ci-dessous.*
+
 *19/10/2026. Proposition, **non implémentée**. Elle complète I14 (« Prêt à publier ? ») : `latest.json` est publié par le workflow de version (`docs/release/publier.md`) mais l'application ne le lit pas.*
 
 ## Pourquoi ce n'est pas fait tout de suite
