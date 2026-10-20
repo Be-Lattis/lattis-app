@@ -1,1 +1,39 @@
-{}
+{
+	"title": "帮助",
+	"where": {
+		"function": "函数",
+		"shortcut": "快捷键",
+		"settings": "设置"
+	},
+	"back": "上一页",
+	"report": {
+		"label": "报告问题",
+		"tooltip": "打开 GitHub 上的问题创建页面（已预填版本）"
+	},
+	"close": {
+		"tooltip": "关闭帮助 (Esc)",
+		"aria": "关闭帮助"
+	},
+	"search": {
+		"placeholder": "搜索：SUMIF、键、图表、db.query…",
+		"aria": "搜索帮助"
+	},
+	"toc": "目录",
+	"results": {
+		"count": "{n, plural, other {# 个结果}}",
+		"first": "前 {n} 个结果",
+		"none": "没有匹配项。"
+	},
+	"fn": {
+		"english": "法语名称：",
+		"category": "类别：",
+		"arguments": "参数",
+		"optional": "可选",
+		"repeatable": "可重复",
+		"example": "示例",
+		"seeAlso": "另请参阅",
+		"loading": "正在加载函数目录…",
+		"unknown": "未知函数：{name}。",
+		"unavailable": "函数目录不可用。"
+	}
+}

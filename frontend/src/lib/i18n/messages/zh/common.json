@@ -1,1 +1,11 @@
-{}
+{
+	"ok": "确定",
+	"cancel": "取消",
+	"close": "关闭",
+	"rows": "{n, plural, =0 {没有行} other {# 行}}",
+	"values": "{n, plural, =0 {没有值} other {# 个值}}",
+	"cut": "剪切",
+	"copy": "复制",
+	"paste": "粘贴",
+	"delete": "删除"
+}

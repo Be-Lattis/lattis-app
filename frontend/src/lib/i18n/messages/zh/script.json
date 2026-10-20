@@ -1,1 +1,238 @@
-{}
+{
+	"lint": {
+		"longComment": "长注释未结束：缺少“]]”",
+		"accent": {
+			"index": "请写成 [{quoted}]，而不是 .{word}",
+			"plain": "请使用不带重音符号的名称",
+			"name": "Lua 名称不能包含重音字母（“{word}”）：{hint}"
+		},
+		"hex": "十六进制数不完整",
+		"exponent": "数字中的指数不完整",
+		"unterminated": {
+			"double": "字符串未结束：缺少右侧的 \"（多行文本请使用 [[ ... ]]）",
+			"single": "字符串未结束：缺少右侧的 '（多行文本请使用 [[ ... ]]）"
+		},
+		"longString": "长字符串未结束：缺少“]]”",
+		"char": {
+			"neq": "Lua 中“不等于”写作 ~=，而不是 !=",
+			"not": "Lua 中“非”写作 not，而不是 !",
+			"tilde": "单独的“~”不存在：“不等于”写作 ~=",
+			"and": "Lua 中“与”写作 and，而不是 &&",
+			"or": "Lua 中“或”写作 or，而不是 ||",
+			"typographic": "印刷体引号“{char}”：请使用 \" 或 '",
+			"backtick": "Lua 中没有“`”：请使用 \" 或 '",
+			"unexpected": "意外的字符“{char}”"
+		},
+		"eof": "脚本末尾",
+		"expected": "应为“{token}”，实际为 {found}",
+		"expectedWhat": "{what}应为“{token}”，实际为 {found}",
+		"compareHint": "（比较请使用 ==）",
+		"endExpected": "应为“end”以关闭第 {line} 行的 {opener}，实际为 {found}",
+		"noContinue": "Lua 没有“continue”：请将循环的其余部分放入 if 中",
+		"reserved": "“{word}”是 Lua 保留字：不能用作名称（{what}）",
+		"nameExpected": "应为名称（{what}），实际为 {found}",
+		"noLabel": "此 goto 找不到可见的标签“::{name}::”",
+		"labelDefined": "标签“::{name}::”已在第 {line} 行定义",
+		"gotoScope": "第 {line} 行的 goto 跳入了局部变量“{name}”的作用域：请在 goto 之前声明该变量",
+		"extraEnd": "多余的“end”：没有要关闭的块",
+		"withoutIf": "“{word}”缺少对应的“if”",
+		"untilWithoutRepeat": "“until”缺少对应的“repeat”",
+		"unexpectedStatement": "意外的语句：{found}",
+		"overridesGlobal": "此赋值会替换预定义的“{name}”",
+		"globalVar": "全局变量“{name}”：建议使用“local {name} = ...”",
+		"globalFunc": "全局函数“{name}”：建议使用“local function {name}”",
+		"breakOutside": "“break”位于循环之外",
+		"lastStatement": "“{word}”必须是其所在块的最后一条语句（位于“end”“else”或“until”之前）",
+		"what": {
+			"ifCond": "在 if 条件之后",
+			"elseifCond": "在 elseif 条件之后",
+			"whileCond": "在 while 条件之后",
+			"closeRepeat": "用于关闭 repeat",
+			"funcName": "函数名",
+			"localName": "局部变量名",
+			"gotoLabel": "goto 标签",
+			"label": "标签",
+			"closeLabel": "用于关闭标签",
+			"forVar": "for 循环变量",
+			"forBounds": "在 for 循环的起始值和结束值之间",
+			"forDo": "在 for 循环的边界之后",
+			"forInDo": "在“for ... in ...”之后",
+			"openParams": "用于开始函数参数",
+			"param": "函数参数",
+			"closeParams": "用于结束函数参数",
+			"assignment": "在赋值中",
+			"closeKey": "用于关闭键",
+			"afterKey": "在键 [ ... ] 之后",
+			"closeParen": "用于关闭括号",
+			"field": "点号后的字段名",
+			"closeIndex": "用于关闭索引",
+			"method": "“:”后的方法名"
+		},
+		"forIn": "for 循环变量之后应为“=”或“in”，实际为 {found}",
+		"assignCall": "不能给函数调用的结果赋值",
+		"assignExpr": "此表达式不能被赋值",
+		"compound": "Lua 没有“{op}=”运算符：请写成 x = x {bin} 值",
+		"concatAssign": "Lua 没有“..=”运算符：请写成 s = s .. 值",
+		"compareNotAssign": "“==”用于比较两个值；赋值请使用单个 =",
+		"incomplete": "语句不完整：应为函数调用或赋值 (=)",
+		"incompleteFound": "语句不完整：应为函数调用或赋值 (=)，实际为 {found}",
+		"floorDiv": "Lua 5.1 没有“//”运算符：请使用 math.floor(a / b)",
+		"vararg": "“...”只能在参数中声明了“...”的函数中使用",
+		"tableClose": "应为“}”以关闭第 {line} 行开始的表（各项之间用逗号分隔），实际为 {found}",
+		"unavailableName": "“{name}”不可用：{why}",
+		"undefinedHint": "“{name}”未定义：您是否指的是“{hint}”？",
+		"undefined": "“{name}”未定义（变量从未赋值，也未用 local 声明）",
+		"colonCall": "请用点号写成 {base}.{name}(...)：“:”会把 {base} 作为第一个参数传入",
+		"parenLine": "行首的“(”会延续上一行的调用；如果这不是您的本意，请在上一行末尾添加“;”",
+		"exprEof": "应为表达式，但脚本在此结束",
+		"exprEnd": "意外的“end”：前面缺少表达式，或者多了一个“end”",
+		"exprKeyword": "应为表达式，实际为保留字“{word}”",
+		"exprEquals": "意外的“=”：前面缺少值；如需比较请使用 ==",
+		"exprFound": "应为表达式，实际为 {found}",
+		"argsExpected": "“:name”之后应为参数，实际为 {found}",
+		"callClose": "应为“)”以关闭第 {line} 行开始的调用（各参数之间用逗号分隔），实际为 {found}",
+		"deprecated": "{name} 是旧名称：请使用 {use}",
+		"unavailableMember": "{name} 不可用：{why}",
+		"noMemberHint": "{name} 不存在：您是否指的是 {hint}？",
+		"noMember": "{name} 不存在",
+		"arity": {
+			"atLeast": "至少 {min} 个参数",
+			"exactly": "{n, plural, other {# 个参数}}",
+			"between": "{min} 到 {max} 个参数",
+			"given": "{n, plural, other {实际提供 # 个}}",
+			"message": "{path} 需要 {want}，{given}：{signature}"
+		}
+	},
+	"category": {
+		"syntaxe": "语言基础：条件、循环、函数",
+		"db": "SQL 数据 (db)",
+		"sheets": "工作表 (sheets)",
+		"cells": "单元格 (cells)",
+		"tables": "表格 (tables)",
+		"columns": "列 (columns)",
+		"ui": "选择和对话框 (ui)",
+		"controls": "控件和事件 (controls)",
+		"events": "工作簿事件 (events)",
+		"objects": "图表、数据透视表和按钮",
+		"workbook": "工作簿和脚本 (doc, scripts)",
+		"http": "HTTP 和 HTTPS 请求 (http)",
+		"base": "基本函数",
+		"string": "文本 (string)",
+		"table": "Lua 表 (table)",
+		"math": "数学 (math)",
+		"os": "日期和时间 (os)"
+	},
+	"unavailable": {
+		"files": "脚本中不能访问文件",
+		"modules": "脚本中不能加载模块",
+		"code": "脚本中不能加载代码",
+		"debug": "debug 库不可用",
+		"coroutine": "coroutine 库不可用",
+		"none": "在脚本中不可用",
+		"programs": "脚本中不能启动程序",
+		"env": "不能访问环境变量"
+	},
+	"editor": {
+		"noProblem": "未检测到问题",
+		"errors": "{n, plural, other {# 个错误}}",
+		"warnings": "{n, plural, other {# 个警告}}",
+		"next": "单击转到下一个 (F8)"
+	},
+	"controls": {
+		"label": "标签：{label}"
+	},
+	"pick": {
+		"banner": "单击控件（按钮、字段…）可将其名称插入脚本 — 按 Esc 取消。"
+	},
+	"picker": {
+		"filter": "按名称、类型或选项卡筛选",
+		"aria": "工作簿控件",
+		"noMatch": "没有匹配的控件。",
+		"none": "工作簿中没有控件：插入 › 按钮或字段。",
+		"onSheet": {
+			"label": "在工作表上选择",
+			"tooltip": "显示工作表：单击控件即可插入其名称；按 Esc 取消"
+		}
+	},
+	"network": {
+		"badHost": "应为主机名：api.example.com，或 https://… 地址",
+		"aria": "网络访问",
+		"title": "工作簿网络访问",
+		"help": "在首次向某个主机发送 HTTP 请求之前（脚本或 HTML 页面中的 http.get、http.post…），Lattis 会征求您的许可。以“为此工作簿记住”方式允许的主机列在此处：它们记录在这台计算机上，而不是文件中（收到的工作簿总会重新询问）。MCP 服务器只能访问这些主机。",
+		"remove": {
+			"label": "移除",
+			"tooltip": "移除：下次请求时将重新询问"
+		},
+		"none": "没有已记住的主机。",
+		"host": "要允许的主机",
+		"allow": "允许"
+	},
+	"ref": {
+		"title": "Lua 参考",
+		"help": "Lua 脚本帮助",
+		"search": "搜索：query、date、大写…",
+		"results": "{n, plural, other {# 个结果}}",
+		"deprecated": "旧名称：建议使用",
+		"insert": "插入示例",
+		"noMatch": "没有匹配的函数。"
+	},
+	"dialog": {
+		"hideCode": "隐藏代码",
+		"showCode": "查看代码（{n, plural, other {# 行}}）",
+		"required": "“{label}”为必填项",
+		"number": "“{label}”：应为数字",
+		"integer": "“{label}”：应为整数",
+		"min": "“{label}”：至少为 {min}",
+		"max": "“{label}”：最多为 {max}",
+		"warning": "注意。",
+		"code": "脚本代码"
+	},
+	"view": {
+		"example": {
+			"line1": "示例：工作簿中的表格及其列的列表。",
+			"line2": "db.query、db.rows、db.insert、db.execute…：请参阅“参考”按钮。",
+			"columns": "列"
+		},
+		"newName": "新脚本",
+		"saved": "脚本已保存到工作簿",
+		"nameRefused": "脚本名称被拒绝",
+		"running": "正在运行…",
+		"stopped": "已在 {secs} 秒后停止",
+		"done": "已完成，用时 {secs} 秒",
+		"writes": "{n, plural, other {已写入 # 行}}",
+		"undoAll": "（按 Ctrl+Z 可全部撤消）",
+		"renamed": "脚本已重命名为“{name}”",
+		"copy": "{name}（副本）",
+		"copyN": "{name}（副本 {n}）",
+		"duplicated": "脚本已复制：“{name}”",
+		"title": "工作簿脚本",
+		"locked": "{why}：您可以查看和运行这些脚本。",
+		"renameAria": "新脚本名称",
+		"empty": "此工作簿中没有保存的脚本。",
+		"menuTitle": "脚本“{name}”",
+		"rename": "重命名",
+		"duplicate": "创建副本",
+		"delete": "删除",
+		"orOpen": "或者从左侧打开工作簿中的脚本。",
+		"nameAria": "脚本名称",
+		"run": {
+			"label": "运行",
+			"tooltip": "运行 (Ctrl+Enter)"
+		},
+		"stop": "停止",
+		"save": {
+			"label": "保存",
+			"tooltip": "保存脚本 (Ctrl+S)"
+		},
+		"reference": "参考",
+		"pick": {
+			"label": "指向控件",
+			"tooltip": "在光标处插入工作簿中某个按钮、字段或其他控件的名称"
+		},
+		"network": {
+			"tooltip": "工作簿的脚本和 HTML 页面可以通过 HTTP 访问的主机"
+		},
+		"output": "输出",
+		"keys": "Ctrl+Enter：运行 · Ctrl+S：保存脚本"
+	}
+}

@@ -1,1 +1,39 @@
-{}
+{
+	"when": {
+		"now": "刚刚",
+		"minutes": "{n} 分钟前",
+		"yesterday": "昨天 {time}"
+	},
+	"rows": "{n, plural, other {# 行}}",
+	"example": {
+		"text": "文本",
+		"value": "值",
+		"column": "列",
+		"type": {
+			"integer": "整数",
+			"decimal": "小数",
+			"text": "文本",
+			"boolean": "布尔值：1 或 0",
+			"date": "日期 YYYY-MM-DD",
+			"formula": "计算列"
+		},
+		"select": "表格 {name} 的所有列（{rows}）",
+		"selectPivot": "数据透视表 {name} 的所有列（{rows}）",
+		"insert": "在 {name} 末尾添加一行",
+		"insertComputed": "在 {name} 末尾添加一行（计算列会自动填充）",
+		"insertUndo": "按 Ctrl+Z 可撤消添加。",
+		"update": "修改 {name} 中满足条件的行",
+		"updateWarn": "不带 WHERE 时，将修改所有行。按 Ctrl+Z 可撤消。",
+		"delete": "删除 {name} 中满足条件的行",
+		"deleteWarn": "不带 WHERE 时，将清空整个表格。按 Ctrl+Z 可撤消。"
+	},
+	"complete": {
+		"table": "表格 · {rows}"
+	},
+	"ambiguous": "列“{column}”有歧义：存在于 {tables} 中。请指定表格，例如 {example}。",
+	"and": "和",
+	"editor": {
+		"ambiguous": "该列存在于多个表格中：请指定表格",
+		"placeholder": "SELECT … FROM 表格 — 按 Ctrl+Space 显示名称"
+	}
+}

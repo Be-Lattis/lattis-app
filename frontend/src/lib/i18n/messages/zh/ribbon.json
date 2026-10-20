@@ -1,1 +1,682 @@
-{}
+{
+	"tabs": {
+		"file": "文件",
+		"home": "开始",
+		"insert": "插入",
+		"pageLayout": "页面布局",
+		"data": "数据",
+		"formulas": "公式",
+		"review": "审阅",
+		"view": "视图",
+		"ai": "助手 ✦",
+		"sql": "SQL",
+		"script": "脚本",
+		"help": "帮助"
+	},
+	"tabsAria": "功能区选项卡",
+	"aiButton": {
+		"label": "助手",
+		"open": "打开 AI 助手 (Alt+I)",
+		"close": "关闭 AI 助手 (Alt+I)"
+	},
+	"helpButton": {
+		"tooltip": "帮助 (F1)",
+		"aria": "帮助"
+	},
+	"fold": {
+		"pinTooltip": "固定功能区 (Ctrl+F1)",
+		"foldTooltip": "折叠功能区：仅保留选项卡 (Ctrl+F1)",
+		"pinAria": "固定功能区",
+		"foldAria": "折叠功能区"
+	},
+	"hideMenu": {
+		"aria": "功能区组",
+		"hide": "隐藏“{group}”组",
+		"show": "重新显示“{group}”",
+		"showAll": "全部重新显示",
+		"none": "此选项卡中没有隐藏的组"
+	},
+	"color": {
+		"choose": "选择颜色",
+		"chooseAria": "{command}：选择颜色",
+		"aria": "{command}：{color}",
+		"tooltip": "{tip}（{color}）",
+		"noFill": "无填充",
+		"auto": "自动"
+	},
+	"comboAria": "{command}：{value}",
+	"withKeys": "{label} ({keys})",
+	"fontSize": "字号（磅）",
+	"file": {
+		"new": "新建",
+		"open": "打开…",
+		"recent": "打开最近使用的文件",
+		"recentNone": "没有最近使用的文件",
+		"openRemote": "从服务器打开…",
+		"close": "关闭",
+		"save": "保存",
+		"saveAs": "另存为…",
+		"download": "下载副本",
+		"share": "发布到服务器…",
+		"rights": "管理访问权限…",
+		"republish": "重新发布…",
+		"reconnect": "重试连接",
+		"detach": "与服务器分离…",
+		"import": "导入（CSV、Excel）…",
+		"export": "导出",
+		"exportTable": "表格导出为 CSV…",
+		"exportSheet": "整个工作表导出为 CSV…",
+		"exportXlsx": "Excel 工作簿 (.xlsx)…",
+		"exportOds": "OpenDocument 工作簿 (.ods)…",
+		"print": "打印 / PDF…",
+		"settings": "设置…",
+		"help": "帮助",
+		"report": "报告问题…",
+		"about": "关于 Lattis…",
+		"demo": "演示：100 万行"
+	},
+	"numberFormat": {
+		"number": "数字",
+		"percent": "百分比",
+		"currency": "货币",
+		"date": "日期",
+		"time": "时间",
+		"text": "文本",
+		"general": "常规"
+	},
+	"group": {
+		"undo": "撤消",
+		"clipboard": "剪贴板",
+		"font": "字体",
+		"borders": "边框",
+		"alignment": "对齐方式",
+		"number": "数字",
+		"styles": "样式",
+		"cells": "单元格",
+		"editing": "编辑",
+		"tables": "表格",
+		"charts": "图表",
+		"controls": "控件",
+		"pageSetup": "页面设置",
+		"scale": "调整为合适大小",
+		"sheetOptions": "工作表选项",
+		"getData": "获取数据",
+		"queries": "查询和连接",
+		"sortFilter": "排序和筛选",
+		"dataTools": "数据工具",
+		"library": "函数库",
+		"audit": "公式审核",
+		"calculation": "计算",
+		"notes": "注释",
+		"protect": "保护",
+		"show": "显示",
+		"theme": "主题",
+		"bench": "性能测试（原型）",
+		"paragraph": "段落",
+		"print": "打印",
+		"links": "链接",
+		"printing": "打印"
+	},
+	"launch": {
+		"font": "设置单元格格式：字体 (Ctrl+1)",
+		"borders": "设置单元格格式：边框 (Ctrl+1)",
+		"alignment": "设置单元格格式：对齐 (Ctrl+1)",
+		"number": "设置单元格格式：数字、日期、时间… (Ctrl+1)",
+		"pageSetup": "页面设置…：页面、页边距、页眉/页脚、工作表",
+		"scale": "页面设置…：缩放",
+		"sheetOptions": "页面设置…：工作表"
+	},
+	"cmd": {
+		"undo": {
+			"label": "撤消",
+			"tooltip": "撤消：{action} (Ctrl+Z)",
+			"none": "没有可撤消的操作",
+			"docTooltip": "撤消对文本的上一次更改 (Ctrl+Z)"
+		},
+		"redo": {
+			"label": "恢复",
+			"tooltip": "恢复：{action} (Ctrl+Y)",
+			"none": "没有可恢复的操作",
+			"docTooltip": "恢复 (Ctrl+Y)"
+		},
+		"paste": {
+			"label": "粘贴",
+			"tooltip": "粘贴 (Ctrl+V)",
+			"docTooltip": "粘贴文本 (Ctrl+V)"
+		},
+		"cut": {
+			"label": "剪切",
+			"tooltip": "剪切 (Ctrl+X)"
+		},
+		"copy": {
+			"label": "复制",
+			"tooltip": "复制 (Ctrl+C)"
+		},
+		"painter": {
+			"label": "格式刷",
+			"tooltip": "复制活动单元格的格式"
+		},
+		"bold": {
+			"label": "加粗",
+			"tooltip": "加粗 (Ctrl+B)"
+		},
+		"italic": {
+			"label": "倾斜",
+			"tooltip": "倾斜 (Ctrl+I)"
+		},
+		"underline": {
+			"label": "下划线",
+			"tooltip": "下划线 (Ctrl+U)"
+		},
+		"strike": {
+			"label": "删除线",
+			"tooltip": "删除线"
+		},
+		"fontColor": {
+			"label": "字体颜色",
+			"tooltip": "字体颜色（▾：选择色调）"
+		},
+		"fillColor": {
+			"label": "填充颜色",
+			"tooltip": "填充颜色（▾：选择色调）"
+		},
+		"highlight": {
+			"label": "突出显示",
+			"tooltip": "突出显示颜色（▾：选择色调）"
+		},
+		"clearChars": {
+			"label": "清除",
+			"tooltip": "清除字符格式"
+		},
+		"bordersAll": {
+			"label": "所有",
+			"tooltip": "所有框线"
+		},
+		"bordersOutline": {
+			"label": "外侧",
+			"tooltip": "所选内容的外侧框线"
+		},
+		"bordersNone": {
+			"label": "无",
+			"tooltip": "删除框线"
+		},
+		"alignTop": {
+			"label": "顶端",
+			"tooltip": "顶端对齐"
+		},
+		"alignMiddle": {
+			"label": "居中",
+			"tooltip": "垂直居中"
+		},
+		"alignBottom": {
+			"label": "底端",
+			"tooltip": "底端对齐"
+		},
+		"alignLeft": {
+			"label": "左对齐",
+			"tooltip": "左对齐",
+			"tooltipOn": "左对齐（单击：恢复常规对齐）"
+		},
+		"alignCenter": {
+			"label": "居中",
+			"tooltip": "居中",
+			"tooltipOn": "居中（单击：恢复常规对齐）"
+		},
+		"alignRight": {
+			"label": "右对齐",
+			"tooltip": "右对齐",
+			"tooltipOn": "右对齐（单击：恢复常规对齐）"
+		},
+		"justify": {
+			"label": "两端对齐",
+			"tooltip": "两端对齐"
+		},
+		"wrap": {
+			"label": "自动换行",
+			"tooltip": "在单元格中以多行显示文本"
+		},
+		"merge": {
+			"label": "合并后居中",
+			"tooltip": "将所选的自由单元格合并为一个，内容居中",
+			"tooltipOn": "取消单元格合并"
+		},
+		"numberFormat": {
+			"label": "数字格式",
+			"tooltip": "所选内容的数字格式",
+			"number": "数字 (0.00)",
+			"date": "短日期",
+			"more": "其他数字格式…"
+		},
+		"currency": {
+			"label": "货币",
+			"tooltip": "货币格式 (€)"
+		},
+		"percent": {
+			"label": "百分比",
+			"tooltip": "百分比样式（0.25 显示为 25%）"
+		},
+		"date": {
+			"label": "日期",
+			"tooltip": "短日期；按 Ctrl+1 可使用其他日期和时间格式"
+		},
+		"fixed2": {
+			"label": "0.00",
+			"tooltip": "保留两位小数的数字"
+		},
+		"decimalMore": {
+			"label": "增加小数位数",
+			"tooltip": "多显示一位小数"
+		},
+		"decimalLess": {
+			"label": "减少小数位数",
+			"tooltip": "少显示一位小数"
+		},
+		"conditional": {
+			"label": "条件格式",
+			"tooltip": "突出显示单元格、数据条、色阶、图标集、规则管理器"
+		},
+		"formatAsTable": {
+			"label": "套用表格格式",
+			"tooltip": "以活动单元格所在的区域或单元格块创建表格，首行作为标题 (Ctrl+L)"
+		},
+		"insert": {
+			"label": "插入",
+			"tooltip": "插入行或列",
+			"row": "插入行（上方）",
+			"column": "插入列（左侧）"
+		},
+		"delete": {
+			"label": "删除",
+			"tooltip": "删除活动单元格所在的行或列",
+			"row": "删除行",
+			"column": "删除列"
+		},
+		"format": {
+			"label": "格式",
+			"tooltip": "设置单元格格式、隐藏和取消隐藏",
+			"cells": "设置单元格格式…",
+			"hideRows": "隐藏行",
+			"hideColumns": "隐藏列",
+			"showRows": "取消隐藏行",
+			"showColumns": "取消隐藏列"
+		},
+		"autoSum": {
+			"label": "自动求和",
+			"tooltip": "对上方表格列求和 SUM (Alt+=)"
+		},
+		"fill": {
+			"label": "填充",
+			"tooltip": "复制所选内容的第一行或第一列",
+			"down": "向下",
+			"right": "向右"
+		},
+		"clear": {
+			"label": "清除",
+			"tooltip": "清除所选内容的格式、内容或注释",
+			"formats": "清除格式",
+			"contents": "清除内容",
+			"note": "清除注释"
+		},
+		"sortFilter": {
+			"label": "排序和筛选",
+			"tooltip": "按活动列对表格排序或筛选",
+			"az": "升序 (A 到 Z)",
+			"za": "降序 (Z 到 A)",
+			"clearFilters": "清除筛选"
+		},
+		"sortCustom": {
+			"label": "自定义排序…",
+			"tooltip": "按所选顺序（星期、月份、自由顺序）对活动列排序表格"
+		},
+		"filter": {
+			"label": "筛选",
+			"tooltip": "按活动列筛选表格 (Ctrl+Shift+L)"
+		},
+		"find": {
+			"label": "查找",
+			"tooltip": "查找 (Ctrl+F)"
+		},
+		"replace": {
+			"label": "替换",
+			"tooltip": "替换 (Ctrl+H)"
+		},
+		"pivot": {
+			"label": "数据透视表",
+			"tooltip": "根据活动表格创建数据透视表：然后单击要放置它的单元格，可在任意工作表上（Esc：取消；状态栏中的“新工作表”）。双击数据透视表可编辑它",
+			"docTooltip": "根据工作簿中的表格创建数据透视表，插入到文本中并随之重新计算"
+		},
+		"table": {
+			"label": "表格",
+			"tooltip": "以活动单元格所在的区域或单元格块创建表格 (Ctrl+L)"
+		},
+		"dataLake": {
+			"label": "Lattis Data Lake",
+			"tooltip": "在活动单元格处插入 Lattis Data Lake 目录中的数据集：链接表格，只读，实时更新"
+		},
+		"form": {
+			"label": "表单",
+			"tooltip": "将活动表格作为表单共享（Lattis 服务器）"
+		},
+		"chart": {
+			"tooltip": "活动表格的{chart}",
+			"tooltipBar": "活动表格的{chart}：垂直条形 (Alt+F1)",
+			"docTooltip": "工作簿中某个表格的{chart}，插入到文本中"
+		},
+		"moreCharts": {
+			"label": "其他图表",
+			"tooltip": "其他图表：{list}"
+		},
+		"button": {
+			"label": "按钮",
+			"tooltip": "位于活动单元格的操作按钮：单击时运行“脚本”选项卡中的脚本（或不执行任何操作）",
+			"docTooltip": "文本中的按钮：单击时运行“脚本”选项卡中的脚本（或其中的某个函数）"
+		},
+		"field": {
+			"label": "字段",
+			"tooltip": "链接到单元格的控件：文本框、文本区域、复选框、下拉列表或文件（在对话框中选择类型）",
+			"tooltipScript": "链接到单元格的控件：文本框、文本区域、复选框、下拉列表或文件（在对话框中选择类型）；它还可以运行脚本",
+			"docTooltip": "链接到工作表单元格的控件：文本框、文本区域、复选框、下拉列表或文件",
+			"docTooltipScript": "链接到工作表单元格的控件：文本框、文本区域、复选框、下拉列表或文件，可由脚本控制 (controls.*)"
+		},
+		"margins": {
+			"label": "页边距",
+			"tooltip": "页边距：{preset}",
+			"customName": "自定义",
+			"custom": "自定义页边距…",
+			"preset": "{name} — 上下：{topBottom}，左右：{leftRight}"
+		},
+		"orientation": {
+			"label": "纸张方向",
+			"tooltipPortrait": "纸张方向：纵向",
+			"tooltipLandscape": "纸张方向：横向",
+			"portrait": "纵向",
+			"landscape": "横向"
+		},
+		"size": {
+			"label": "纸张大小",
+			"tooltip": "纸张大小：{paper}",
+			"item": "{name} ({size})",
+			"more": "其他纸张大小…"
+		},
+		"printArea": {
+			"label": "打印区域",
+			"tooltip": "仅打印工作表的一部分",
+			"tooltipOn": "已设置打印区域：仅打印该区域",
+			"set": "设置打印区域",
+			"clear": "取消打印区域"
+		},
+		"breaks": {
+			"label": "分隔符",
+			"tooltip": "在活动单元格的上方和左侧插入手动分页符（新页从此处开始）",
+			"insert": "插入分页符",
+			"remove": "删除分页符",
+			"reset": "重设所有分页符"
+		},
+		"printTitles": {
+			"label": "打印标题",
+			"tooltip": "在每个打印页顶端重复的行和左侧重复的列"
+		},
+		"width": {
+			"label": "宽度",
+			"tooltip": "宽度：{fit}（缩小工作表，使其适合该页数）"
+		},
+		"height": {
+			"label": "高度",
+			"tooltip": "高度：{fit}"
+		},
+		"scale": {
+			"label": "缩放比例",
+			"tooltip": "打印缩放比例：{scale}",
+			"tooltipFitted": "{scale}：选择缩放比例将停止自动调整",
+			"percent": "{n}%",
+			"custom": "自定义…"
+		},
+		"printPdf": {
+			"label": "打印 / PDF…",
+			"tooltip": "打印工作表或另存为 PDF (Ctrl+P)"
+		},
+		"showGridlines": {
+			"label": "查看网格线",
+			"tooltipOn": "在屏幕上隐藏工作表网格线",
+			"tooltipOff": "在屏幕上显示工作表网格线"
+		},
+		"printGridlines": {
+			"label": "打印网格线",
+			"tooltip": "打印所有单元格的网格线"
+		},
+		"showHeadings": {
+			"label": "查看标题",
+			"tooltipOn": "仅在输入公式时显示字母和数字",
+			"tooltipOff": "始终显示列字母和行号"
+		},
+		"printHeadings": {
+			"label": "打印标题",
+			"tooltip": "打印列字母和行号"
+		},
+		"fromTable": {
+			"label": "来自表格",
+			"tooltip": "根据工作簿中的表格新建查询"
+		},
+		"csv": {
+			"label": "从文本/CSV",
+			"tooltip": "根据 CSV 文件新建查询（转换步骤，可刷新）"
+		},
+		"xlsx": {
+			"label": "Excel 工作簿",
+			"tooltip": "根据 .xlsx 工作簿中的表格新建查询"
+		},
+		"otherFiles": {
+			"label": "其他文件",
+			"tooltip": "根据 JSON 或 Parquet 文件或 SQLite 数据库新建查询",
+			"sqlite": "SQLite 数据库"
+		},
+		"database": {
+			"label": "数据库",
+			"tooltip": "对数据库新建查询（只读）"
+		},
+		"lattisServer": {
+			"label": "Lattis 服务器",
+			"tooltip": "对 Lattis 服务器上的表或其 Data Lake 中的数据集新建查询（只读）"
+		},
+		"web": {
+			"label": "Web",
+			"tooltip": "根据以 JSON 响应的 Web API 新建查询（只读）"
+		},
+		"refreshAll": {
+			"label": "全部刷新",
+			"tooltip": "重新读取所有已加载查询的源，替换其表格并重新计算 (Ctrl+Alt+F5)"
+		},
+		"queries": {
+			"label": "查询和连接",
+			"tooltip": "工作簿的导入查询和连接窗格"
+		},
+		"sortAsc": {
+			"label": "排序 A → Z",
+			"tooltip": "按活动列升序排序表格"
+		},
+		"sortDesc": {
+			"label": "排序 Z → A",
+			"tooltip": "按活动列降序排序表格"
+		},
+		"clearFilter": {
+			"label": "清除",
+			"tooltipOn": "清除活动表格的筛选",
+			"tooltipOff": "清除：活动单元格所在的表格未筛选"
+		},
+		"errorsOnly": {
+			"label": "仅错误",
+			"tooltipOn": "重新显示活动列的所有行",
+			"tooltipOff": "仅显示活动列中与其类型不符的输入"
+		},
+		"textToColumns": {
+			"label": "分列",
+			"tooltip": "文本分列：将所选列的内容（按分隔符或固定宽度）拆分为多列"
+		},
+		"dedup": {
+			"label": "删除重复值",
+			"tooltip": "删除活动表格中的重复行"
+		},
+		"validation": {
+			"label": "数据验证",
+			"tooltip": "下拉列表：所选内容（或整个表格列）中允许的值，其他输入将被拒绝"
+		},
+		"mergeSheets": {
+			"label": "合并选项卡…",
+			"tooltip": "将多个具有相同列的选项卡中的表格（每月、每年、每个城市…一个）合并为一个表格，并添加类别列"
+		},
+		"insertFunction": {
+			"label": "插入函数",
+			"tooltip": "选择一个函数并在活动单元格中开始输入公式 (Shift+F3)"
+		},
+		"reference": {
+			"tooltip": "REFERENCE(Table[Column], key)：Lattis 中的 VLOOKUP"
+		},
+		"showLinks": {
+			"label": "显示链接",
+			"tooltip": "所有选定单元格的链接箭头：蓝色来自其公式读取的内容，红色指向读取它们的公式；在网格中单击（或按 Esc）可清除"
+		},
+		"calculate": {
+			"label": "计算",
+			"tooltip": "重新计算公式并刷新 TODAY、NOW 和 RAND（F9，或在导入表格之外按 F5）"
+		},
+		"toValues": {
+			"label": "转换为值",
+			"tooltip": "将所选内容的公式替换为其当前值：计算列（变为输入列，类型取自其值）和自由单元格（按 Ctrl+Z 撤消）"
+		},
+		"note": {
+			"new": "新建注释",
+			"edit": "编辑注释",
+			"tooltipNew": "活动单元格上的注释：红色角标，悬停时显示 (Shift+F2)",
+			"tooltipEdit": "编辑活动单元格的注释 (Shift+F2)"
+		},
+		"deleteNote": {
+			"label": "删除注释",
+			"tooltip": "删除活动单元格的注释",
+			"tooltipNone": "删除注释：活动单元格没有注释"
+		},
+		"protectSheet": {
+			"tooltip": "{action}：不能再更改其内容（密码可选）"
+		},
+		"protectStructure": {
+			"protect": "保护结构",
+			"unprotect": "撤消结构保护",
+			"tooltipUnprotect": "撤消工作表结构保护",
+			"tooltipByBook": "所有工作表的结构已随工作簿受保护（审阅 › 撤消工作簿保护）",
+			"tooltipSheet": "保护结构：无需执行，整个工作表已受保护",
+			"tooltip": "保护结构：除在表格中输入外，全部锁定（自由单元格、格式、列、表格、对象和选项卡）；密码可选"
+		},
+		"protectWorkbook": {
+			"protect": "保护工作簿",
+			"unprotect": "撤消工作簿保护",
+			"tooltipUnprotect": "撤消工作簿结构保护",
+			"tooltip": "保护工作簿结构：拒绝添加、删除、重命名或移动工作表"
+		},
+		"pageBreaks": {
+			"tooltipOn": "隐藏分页符（虚线）和打印区域",
+			"tooltipOff": "显示打印分页符（虚线）和打印区域"
+		},
+		"gridlines": {
+			"label": "网格线",
+			"tooltipOn": "隐藏工作表网格线",
+			"tooltipOff": "显示工作表网格线"
+		},
+		"headings": {
+			"label": "A1 标题"
+		},
+		"animate": {
+			"label": "动画",
+			"tooltipOn": "关闭选择框动画",
+			"tooltipOff": "为选择框添加动画（滑动到新单元格）"
+		},
+		"zoom": {
+			"label": "缩放",
+			"tooltip": "工作表缩放：{zoom}（Ctrl+鼠标滚轮，或状态栏中的滑块）"
+		},
+		"zoom100": {
+			"label": "100%",
+			"tooltip": "恢复为 100% 缩放"
+		},
+		"freeze": {
+			"label": "冻结窗格",
+			"tooltipOn": "已冻结窗格：{rows, plural, other {# 行}}，{cols, plural, other {# 列}}",
+			"tooltipOff": "滚动时保持行和列可见",
+			"unfreeze": "取消冻结窗格",
+			"cell": "冻结窗格（在活动单元格处）",
+			"row": "冻结首行",
+			"col": "冻结首列"
+		},
+		"theme": {
+			"label": "主题",
+			"tooltip": "工作簿中表格的颜色：普通表格和来自外部源的表格（主题：{theme}）",
+			"customName": "自定义",
+			"customize": "自定义…"
+		},
+		"bench": {
+			"label": "网格性能测试"
+		},
+		"bullets": {
+			"label": "项目符号",
+			"tooltip": "项目符号列表"
+		},
+		"numbered": {
+			"label": "编号",
+			"tooltip": "编号列表"
+		},
+		"quote": {
+			"label": "引用",
+			"tooltip": "引用（缩进并在左侧加竖线）"
+		},
+		"code": {
+			"label": "代码",
+			"tooltip": "代码块（等宽字体）"
+		},
+		"style": {
+			"label": "样式",
+			"tooltip": "段落样式：正文或标题",
+			"normal": "正文",
+			"h1": "标题 1",
+			"h2": "标题 2",
+			"h3": "标题 3"
+		},
+		"docPrint": {
+			"label": "打印 / PDF",
+			"tooltip": "打印文档或另存为 PDF（{printer}），包括图表和数据透视表"
+		},
+		"link": {
+			"label": "链接",
+			"tooltip": "指向网页的链接（按住 Ctrl 单击可打开）"
+		},
+		"image": {
+			"label": "图片",
+			"tooltip": "插入图片（保存在工作簿中）"
+		}
+	},
+	"protect": {
+		"sheet": {
+			"locked": "工作表受保护",
+			"protect": "保护工作表",
+			"unprotect": "撤消工作表保护"
+		},
+		"doc": {
+			"locked": "文档受保护",
+			"protect": "保护文档",
+			"unprotect": "撤消文档保护"
+		},
+		"html": {
+			"locked": "页面受保护",
+			"protect": "保护页面",
+			"unprotect": "撤消页面保护"
+		}
+	},
+	"gate": {
+		"hint": "{command}：{reason}",
+		"noWorkbook": "{command}：请打开或创建工作簿",
+		"workbookStructure": "工作簿结构受保护（此命令会创建工作表）",
+		"layoutShared": "只有所有者和设计者可以更改此共享工作簿的自由单元格和布局",
+		"layoutLocked": "只有所有者和设计者可以更改此共享工作簿的自由单元格和布局",
+		"ownProtected": "{locked}（审阅 › {unprotect}）",
+		"bookProtected": "工作簿受保护（审阅 › 撤消工作簿保护）",
+		"structureByBook": "工作表结构受保护（审阅 › 撤消工作簿保护）",
+		"structure": "结构受保护（审阅 › 撤消结构保护）"
+	}
+}

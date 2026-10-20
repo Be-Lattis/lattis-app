@@ -1,1 +1,1520 @@
-{}
+{
+	"a11y": {
+		"header": "列标题 {column}",
+		"table": "表格 {table}",
+		"empty": "空",
+		"computed": "计算列",
+		"error": "公式错误",
+		"selection": "选定区域 {range}，{rows, plural, other {# 行}} × {cols, plural, other {# 列}}",
+		"editing": "正在编辑 {addr}",
+		"enterTable": "表格 {table}"
+	},
+	"autocomplete": {
+		"rowValue": "行值",
+		"table": "表格",
+		"name": "命名单元格",
+		"letNameOrCalc": "{calc} 或 {name}",
+		"letNameOrCalc.help": "{desc} 或者再添加一个名称（{name}），后跟其值。"
+	},
+	"controls": {
+		"kind": {
+			"button": "按钮",
+			"input": "文本框",
+			"textarea": "文本区域",
+			"checkbox": "复选框",
+			"select": "下拉列表",
+			"file": "文件"
+		},
+		"title": {
+			"link": "链接单元格：{cell}",
+			"value": "值保存在控件中",
+			"noAction": "未链接操作",
+			"action": "操作（{event}）：{handler}",
+			"listener": "侦听器（{event}）：{handler}"
+		},
+		"noAction": "此按钮未链接任何操作：右键单击 › 编辑按钮… 以选择操作",
+		"file": {
+			"pick": "选择文件",
+			"choose": "选择文件…",
+			"none": "无文件"
+		},
+		"copied": "按钮已复制：右键单击单元格 › 粘贴按钮",
+		"pasted": "按钮已粘贴",
+		"editor": {
+			"label": "标签",
+			"placeholder": "占位符文本（可选）",
+			"buttonText": "按钮文本",
+			"aria": "控件",
+			"insert": "插入：{kind}",
+			"edit": "编辑：{kind}",
+			"help": "按钮和控件帮助",
+			"kind": "类型",
+			"name": "名称（供脚本使用）",
+			"name.placeholder": "自动",
+			"link": "链接单元格（可选）",
+			"link.placeholder": "无：值保存在控件中",
+			"source": "选项来源",
+			"source.list": "手动输入",
+			"source.column": "表格列",
+			"source.column.tooltip": "表格列的不同值，随该列保持更新",
+			"source.column.none": "工作簿中没有表格",
+			"column": "列（不同值）",
+			"notFound": "{name}（未找到）",
+			"options": "选项（每行一个）",
+			"pick": {
+				"address": "活动字段：在工作簿中单击会将单元格地址填入此处。",
+				"value": "活动字段：在工作簿中单击会将单元格的值填入此处。"
+			},
+			"script": "脚本",
+			"script.none": "（无操作）",
+			"action": "操作",
+			"action.all": "运行整个脚本",
+			"action.call": "调用 {fn}()",
+			"listeners": "脚本侦听器 (controls.on)",
+			"colors": "自定义颜色",
+			"colors.normal": "正常",
+			"colors.hover": "悬停",
+			"colors.active": "单击",
+			"colors.text": "文本",
+			"live": "设置会立即应用到控件。"
+		},
+		"error": {
+			"noLabel": "请为控件指定标签",
+			"badLink": "链接单元格无效（例如“B3”）；留空则将值保存在控件中",
+			"noColumn": "请选择提供选项的列"
+		},
+		"input": {
+			"aria": "输入框"
+		},
+		"menu": {
+			"title": "{kind}“{name}”",
+			"run": "运行操作",
+			"edit": "编辑…",
+			"resize": "调整大小",
+			"resize.hint": "拖动控点可调整按钮大小"
+		},
+		"note": {
+			"noScript": "库中没有脚本（“脚本”选项卡）：创建的控件不带操作，可稍后链接。",
+			"input": "离开字段或按 Enter 时，文本会写入链接单元格，然后运行操作。",
+			"textarea": "离开文本区域或按 Ctrl+Enter 时，文本会写入链接单元格，然后运行操作。",
+			"file": "所选文件的路径会写入链接单元格，然后运行操作。",
+			"value": "值会写入链接单元格，然后运行操作；所有更改可一次性撤消 (Ctrl+Z)。",
+			"button": "单击按钮会运行操作；它所做的所有更改可一次性撤消 (Ctrl+Z)。"
+		},
+		"running": "“{name}”：正在运行…",
+		"paste": "粘贴按钮"
+	},
+	"cf": {
+		"iconSet": {
+			"3arrows": "三向箭头（彩色）",
+			"3arrowsgray": "三向箭头（灰色）",
+			"3triangles": "3 个三角形",
+			"4arrows": "四向箭头（彩色）",
+			"4arrowsgray": "四向箭头（灰色）",
+			"5arrows": "五向箭头（彩色）",
+			"5arrowsgray": "五向箭头（灰色）",
+			"3traffic": "三色交通灯（无边框）",
+			"3trafficrim": "三色交通灯（有边框）",
+			"3signs": "三标志",
+			"4traffic": "四色交通灯",
+			"4redblack": "红-黑渐变",
+			"3symbols": "三个符号（有圆圈）",
+			"3symbols2": "三个符号（无圆圈）",
+			"3flags": "三色旗",
+			"3stars": "3 个星形",
+			"4rating": "四等级",
+			"5rating": "五等级",
+			"5quarters": "五象限图",
+			"5boxes": "5 个框"
+		},
+		"iconGroup": {
+			"directional": "方向",
+			"shapes": "形状",
+			"indicators": "标记",
+			"ratings": "等级"
+		},
+		"range": {
+			"tooBig": "区域过大（超过 {max} 个单元格）：请选择整行或整列",
+			"missing": "请输入区域",
+			"noColumn": "未找到列：{ref}",
+			"invalid": "区域无效：{ref}",
+			"unknown": "无法识别的引用：{ref}"
+		},
+		"date": {
+			"yesterday": "昨天",
+			"today": "今天",
+			"tomorrow": "明天",
+			"last7": "最近 7 天",
+			"lastweek": "上周",
+			"thisweek": "本周",
+			"nextweek": "下周",
+			"lastmonth": "上个月",
+			"thismonth": "本月",
+			"nextmonth": "下个月"
+		},
+		"op": {
+			"between": "介于",
+			"notbetween": "未介于",
+			"eq": "等于",
+			"ne": "不等于",
+			"gt": "大于",
+			"lt": "小于",
+			"ge": "大于或等于",
+			"le": "小于或等于"
+		},
+		"textOp": {
+			"contains": "包含",
+			"notcontains": "不包含",
+			"begins": "始于",
+			"ends": "止于"
+		},
+		"style": {
+			"lightRedDarkRed": "浅红填充色深红色文本",
+			"yellowDarkYellow": "黄填充色深黄色文本",
+			"greenDarkGreen": "绿填充色深绿色文本",
+			"lightRedFill": "浅红色填充",
+			"redText": "红色文本",
+			"redBorder": "红色边框",
+			"bold": "加粗"
+		},
+		"barColor": {
+			"blue": "蓝色",
+			"green": "绿色",
+			"red": "红色",
+			"orange": "橙色",
+			"lightBlue": "浅蓝色",
+			"purple": "紫色"
+		},
+		"scale": {
+			"greenYellowRed": "绿 - 黄 - 红",
+			"redYellowGreen": "红 - 黄 - 绿",
+			"greenWhiteRed": "绿 - 白 - 红",
+			"redWhiteGreen": "红 - 白 - 绿",
+			"blueWhiteRed": "蓝 - 白 - 红",
+			"redWhiteBlue": "红 - 白 - 蓝",
+			"whiteRed": "白 - 红",
+			"redWhite": "红 - 白",
+			"greenWhite": "绿 - 白",
+			"whiteGreen": "白 - 绿",
+			"greenYellow": "绿 - 黄",
+			"yellowGreen": "黄 - 绿",
+			"tooltip": "{colors}色阶"
+		},
+		"describe": {
+			"compare": "单元格值{op} {value}",
+			"between": "单元格值介于 {from} 和 {to} 之间",
+			"notBetween": "单元格值未介于 {from} 和 {to} 之间",
+			"contains": "包含“{value}”的文本",
+			"notContains": "不包含“{value}”的文本",
+			"begins": "始于“{value}”的文本",
+			"ends": "止于“{value}”的文本",
+			"empty": "空单元格",
+			"notEmpty": "非空单元格",
+			"error": "错误值",
+			"noError": "无错误",
+			"date": "日期：{when}",
+			"dup": "重复值",
+			"unique": "唯一值",
+			"top": "前 {n} 个值",
+			"topPct": "前 {n}%",
+			"bottom": "后 {n} 个值",
+			"bottomPct": "后 {n}%",
+			"stdDevAbove": "高于平均值 {n, plural, other {# 个标准偏差}}",
+			"stdDevBelow": "低于平均值 {n, plural, other {# 个标准偏差}}",
+			"aboveOrEqual": "等于或高于平均值",
+			"belowOrEqual": "等于或低于平均值",
+			"above": "高于平均值",
+			"below": "低于平均值",
+			"formula": "公式：{formula}",
+			"bar": "数据条",
+			"scale": "{n} 色刻度",
+			"icons": "图标集：{set}"
+		},
+		"error": {
+			"noSelection": "请选择要设置格式的单元格",
+			"notInTable": "活动单元格不在表格中",
+			"value": "请输入值",
+			"values": "请输入两个值",
+			"pct": "请输入 1 到 100 之间的百分比",
+			"count": "请输入 1 到 1000 之间的数字",
+			"text": "请输入文本",
+			"rank": "请输入 1 到 1000 之间的排名",
+			"formula": "请输入公式"
+		},
+		"quick": {
+			"gt": "大于",
+			"lt": "小于",
+			"between": "介于",
+			"eq": "等于",
+			"contains": "文本中包含",
+			"date": "发生日期",
+			"dup": "重复值",
+			"top": "前 10 项",
+			"bottom": "最后 10 项",
+			"above": "高于平均值",
+			"below": "低于平均值",
+			"forRange": "针对选定区域",
+			"with": "设置为"
+		},
+		"kind": {
+			"value": "基于各自值设置所有单元格的格式",
+			"contains": "只为包含以下内容的单元格设置格式",
+			"rank": "仅对排名靠前或靠后的数值设置格式",
+			"avg": "仅对高于或低于平均值的数值设置格式",
+			"dup": "仅对唯一值或重复值设置格式",
+			"formula": "使用公式确定要设置格式的单元格"
+		},
+		"cfvo": {
+			"auto": "自动",
+			"min": "最低值",
+			"max": "最高值",
+			"num": "数字",
+			"pct": "百分比",
+			"pctl": "百分点值"
+		},
+		"avg": {
+			"above": "高于",
+			"below": "低于",
+			"aboveOrEqual": "等于或高于",
+			"belowOrEqual": "等于或低于",
+			"above1": "标准偏差高于 1",
+			"below1": "标准偏差低于 1",
+			"above2": "标准偏差高于 2",
+			"below2": "标准偏差低于 2",
+			"above3": "标准偏差高于 3",
+			"below3": "标准偏差低于 3",
+			"ofRange": "选定范围的平均值"
+		},
+		"cond": {
+			"value": "单元格值",
+			"text": "特定文本",
+			"date": "发生日期",
+			"empty": "空值",
+			"notempty": "无空值",
+			"error": "错误",
+			"noerror": "无错误"
+		},
+		"scope": {
+			"selection": "当前选择",
+			"sheet": "此工作表",
+			"table": "此表格：{table}"
+		},
+		"menu": {
+			"highlight": "突出显示单元格规则",
+			"topBottom": "最前/最后规则",
+			"bars": "数据条",
+			"scales": "色阶",
+			"icons": "图标集",
+			"newRule": "新建规则…",
+			"clear": "清除规则",
+			"manage": "管理规则…",
+			"quick": {
+				"gt": "大于…",
+				"lt": "小于…",
+				"between": "介于…",
+				"eq": "等于…",
+				"contains": "文本包含…",
+				"date": "发生日期…",
+				"dup": "重复值…",
+				"top": "前 10 项…",
+				"topPct": "前 10%…",
+				"bottom": "最后 10 项…",
+				"bottomPct": "最后 10%…",
+				"above": "高于平均值…",
+				"below": "低于平均值…"
+			},
+			"more": "其他规则…",
+			"clear.selection": "清除所选单元格的规则",
+			"clear.sheet": "清除整个工作表的规则",
+			"clear.table": "清除此表格的规则"
+		},
+		"bar": {
+			"gradient": "渐变填充",
+			"solid": "实心填充",
+			"gradient.tooltip": "{color}数据条（渐变）",
+			"solid.tooltip": "{color}数据条（实心）",
+			"fill": "填充：",
+			"border": "实心边框",
+			"negative": "负值条形图：",
+			"only": "仅显示数据条"
+		},
+		"lead": {
+			"gt": "为大于以下值的单元格设置格式：",
+			"lt": "为小于以下值的单元格设置格式：",
+			"between": "为介于以下值之间的单元格设置格式：",
+			"eq": "为等于以下值的单元格设置格式：",
+			"contains": "为包含以下文本的单元格设置格式：",
+			"date": "为包含以下日期的单元格设置格式：",
+			"dup": "为包含以下类型值的单元格设置格式：",
+			"top": "为值最大的那些单元格设置格式：",
+			"topPct": "为值最大的那些单元格设置格式（%）：",
+			"bottom": "为值最小的那些单元格设置格式：",
+			"bottomPct": "为值最小的那些单元格设置格式（%）：",
+			"above": "为高于平均值的单元格设置格式：",
+			"below": "为低于平均值的单元格设置格式："
+		},
+		"placeholder": {
+			"text": "文本",
+			"valueOrDate": "值或日期",
+			"value": "值"
+		},
+		"and": "到",
+		"dup": {
+			"dup": "重复",
+			"unique": "唯一",
+			"values": "值",
+			"ofRange": "选定范围中的值"
+		},
+		"edit": {
+			"title": {
+				"edit": "编辑格式规则",
+				"new": "新建格式规则"
+			},
+			"kind": "选择规则类型：",
+			"desc": "编辑规则说明：",
+			"value": "基于各自值设置所有单元格的格式：",
+			"style": "格式样式：",
+			"contains": "只为满足以下条件的单元格设置格式：",
+			"rank": "为以下排名内的值设置格式：",
+			"avg": "为满足以下条件的值设置格式：",
+			"dup": "全部设置格式：",
+			"formula": "为符合此公式的值设置格式：",
+			"formula.help": "在表格中，[@列] 表示同一行中的单元格（第一个数据行中的地址，如 $C2，也会应用到每一行）。在表格之外，公式按区域左上角的单元格编写：其相对地址会随每个单元格变化。"
+		},
+		"vstyle": {
+			"scale2": "双色刻度",
+			"scale3": "三色刻度"
+		},
+		"grid": {
+			"min": "最小值",
+			"mid": "中间值",
+			"max": "最大值",
+			"kind": "类型：",
+			"value": "值：",
+			"color": "颜色：",
+			"lowest": "（最低值）",
+			"highest": "（最高值）",
+			"auto": "（自动）"
+		},
+		"preview": "预览：",
+		"icons": {
+			"style": "图标样式：",
+			"reverse": "反转图标次序",
+			"only": "仅显示图标",
+			"icon": "图标",
+			"value": "值",
+			"kind": "类型",
+			"when": "当值是",
+			"whenLast": "当 {op} {value}"
+		},
+		"rank": {
+			"top": "最高",
+			"bottom": "最低",
+			"pct": "% 所选范围"
+		},
+		"customFormat": "自定义格式",
+		"customFormat.more": "自定义格式…",
+		"letter": {
+			"bold": "B",
+			"italic": "I",
+			"underline": "U"
+		},
+		"font": "字体：",
+		"fontColor": "字体颜色",
+		"fillColor": "填充颜色",
+		"border": "边框",
+		"borderColor": "边框颜色",
+		"appliesTo": "应用于：",
+		"appliesTo.placeholder": "当前选择",
+		"stop": "如果为真则停止",
+		"stop.tooltip": "满足此规则的单元格将不再应用后续规则",
+		"manager": {
+			"title": "条件格式规则管理器",
+			"scope": "显示其格式规则：",
+			"edit": "编辑规则…",
+			"delete": "删除规则",
+			"duplicate": "复制规则",
+			"up": "上移（优先级更高）",
+			"down": "下移（优先级更低）",
+			"col": {
+				"rule": "规则（按所示顺序应用）",
+				"format": "格式",
+				"appliesTo": "应用于"
+			},
+			"none": {
+				"selection": "所选内容上没有规则。",
+				"sheet": "此工作表上没有规则。"
+			},
+			"apply": "应用"
+		},
+		"unavailable": "条件格式不可用"
+	},
+	"color": {
+		"standard": {
+			"darkRed": "深红",
+			"red": "红色",
+			"orange": "橙色",
+			"yellow": "黄色",
+			"lightGreen": "浅绿",
+			"green": "绿色",
+			"lightBlue": "浅蓝",
+			"blue": "蓝色",
+			"darkBlue": "深蓝",
+			"purple": "紫色"
+		},
+		"slot": {
+			"lt1": "背景 1",
+			"dk1": "文字 1",
+			"lt2": "背景 2",
+			"dk2": "文字 2",
+			"accent1": "着色 1",
+			"accent2": "着色 2",
+			"accent3": "着色 3",
+			"accent4": "着色 4",
+			"accent5": "着色 5",
+			"accent6": "着色 6"
+		},
+		"hue": {
+			"white": "白色",
+			"black": "黑色",
+			"gray": "灰色",
+			"red": "红色",
+			"orange": "橙色",
+			"yellow": "黄色",
+			"green": "绿色",
+			"teal": "青色",
+			"blue": "蓝色",
+			"purple": "紫色",
+			"pink": "粉色"
+		},
+		"lighter": "淡色 {pct}%",
+		"darker": "深色 {pct}%",
+		"button": {
+			"tooltip": "{label}：{color}",
+			"none": "无"
+		},
+		"palette": {
+			"theme": "主题颜色",
+			"standard": "标准色",
+			"recent": "最近使用的颜色",
+			"more": "其他颜色…"
+		}
+	},
+	"customSort": {
+		"summary": {
+			"list": "列表“{name}”",
+			"reversed": "{order}（反序）"
+		},
+		"error": {
+			"noValues": "没有要排序的值",
+			"noName": "请为要保存的列表命名",
+			"exists": "列表“{name}”已存在"
+		},
+		"title": "自定义排序",
+		"heading": "自定义排序 –“{field}”",
+		"loading": "正在加载值…",
+		"orderFrom": "排序依据：",
+		"orderFrom.values": "列中的值（自由顺序）",
+		"orderFrom.list": "列表“{name}”：{values}…",
+		"orderFrom.workbookList": "列表“{name}”（工作簿）：{values}…",
+		"hint": "拖动值以排列顺序，或选中一个值后使用按钮（键盘：Alt+↑ / Alt+↓，Alt+Home / Alt+End）。顺序中缺少的值按升序排在其后，空单元格保留在末尾。",
+		"items": {
+			"aria": "值的顺序"
+		},
+		"absent": "缺失",
+		"absent.tooltip": "顺序中的此值在数据中缺失：保留以备其出现",
+		"empty": "没有值（该列为空）。",
+		"move": {
+			"first": "移至首位",
+			"first.tooltip": "移至首位 (Alt+Home)",
+			"up": "上移",
+			"up.tooltip": "上移 (Alt+↑)",
+			"down": "下移",
+			"down.tooltip": "下移 (Alt+↓)",
+			"last": "移至末位",
+			"last.tooltip": "移至末位 (Alt+End)"
+		},
+		"direction": "方向",
+		"direction.forward": "按此顺序（从首到尾）",
+		"direction.reverse": "反序（从尾到首）",
+		"save": "将此顺序保存为工作簿的自定义序列，供其他列使用",
+		"save.name": "名称：",
+		"save.name.placeholder": "尺码、优先级…",
+		"applied": "已应用自定义排序（按 Ctrl+Z 撤消）"
+	},
+	"defaultName": {
+		"hint": "默认名称：请重命名表格"
+	},
+	"formulaError": {
+		"name": {
+			"ref": "#NAME?：{ref} 不存在。自由单元格请写 Cell[{cell}]，表格中该行的值请写 [列]，整列请写 表格[列]，单个值请写 表格[列][行]。",
+			"unknown": "#NAME?：未知名称。请检查函数、表格、列或命名单元格的名称。"
+		},
+		"value": {
+			"text": "#VALUE!：Cell[{cell}] 包含文本，而不是数字或日期。",
+			"column": "#VALUE!：在需要单个值的地方使用了整列 表格[列]。请写成 表格[列][行]，或在表格的某一行中写 [列]。",
+			"type": "#VALUE!：值类型不符合要求（需要数字的地方是文本，或参数无效）。"
+		},
+		"div0": "#DIV/0!：除数为零（或为空单元格）。",
+		"ref": "#REF!：引用无效，表格或列已被删除或重命名。",
+		"circ": "#CIRC!：循环引用，公式依赖于其自身的值（例如列 X 中的 SUM(表格[X])）。请让它读取其他单元格或列；如需累计总计，请读取上一行：[累计][-1]。",
+		"na": "#N/A：未找到值（REFERENCE、MATCH…）；请检查要查找的键。",
+		"num": "#NUM!：数字无效或超出范围。",
+		"spill": "#SPILL!：动态数组无法溢出，其路径上的单元格已有内容。",
+		"calc": "#CALC!：动态数组为空（没有匹配的行）。"
+	},
+	"filter": {
+		"cond": {
+			"kind": {
+				"number": "数字筛选",
+				"date": "日期筛选",
+				"text": "文本筛选"
+			},
+			"op": {
+				"eq": "等于",
+				"ne": "不等于",
+				"begins": "开头是",
+				"ends": "结尾是",
+				"contains": "包含",
+				"notcontains": "不包含",
+				"gt": "大于",
+				"ge": "大于或等于",
+				"lt": "小于",
+				"le": "小于或等于",
+				"between": "介于",
+				"top": "前 10 项",
+				"bottom": "后 10 项",
+				"above": "高于平均值",
+				"below": "低于平均值"
+			},
+			"date": {
+				"lt": "之前",
+				"gt": "之后",
+				"le": "在此日期或之前",
+				"ge": "在此日期或之后"
+			},
+			"topN": "前 {n} 项",
+			"bottomN": "后 {n} 项",
+			"between": "{op} {from} 和 {to}",
+			"one": "{op}“{value}”",
+			"joinOr": "{a} 或 {b}",
+			"joinAnd": "{a} 且 {b}",
+			"missingValue": "请输入条件的值"
+		},
+		"values": {
+			"noMatch": "没有与搜索匹配的值",
+			"noneChecked": "请至少勾选一个值"
+		},
+		"blanks": "（空白）",
+		"search": {
+			"placeholder": "搜索",
+			"aria": "搜索值"
+		},
+		"loading": "正在加载值…",
+		"selectAllResults": "（选择所有搜索结果）",
+		"selectAll": "（全选）",
+		"noMatch": "没有匹配的值。",
+		"notFiltered": "活动单元格所在的表格未筛选",
+		"chooseOne": "请至少选择一个值",
+		"placeActive": "请将活动单元格放在表格列中再筛选",
+		"clearOf": "从“{field}”中清除筛选",
+		"computed": "计算列：按其值排序和筛选；其类型取决于公式。",
+		"custom": "自定义筛选…",
+		"active": "当前筛选：{conds}",
+		"custom.heading": "显示“{column}”满足以下条件的行：",
+		"custom.and": "与",
+		"custom.or": "或",
+		"custom.cond": "条件 {n}",
+		"custom.none": "（无）",
+		"custom.number": "数字",
+		"custom.date": "dd/mm/yyyy",
+		"custom.wildcards": "* 代表任意多个字符，? 代表单个字符。",
+		"firstValues": "仅列出前 1,000 个值。",
+		"errorsOnly": "仅显示与类型不符的输入（{n}）",
+		"custom.back": "‹ 值列表"
+	},
+	"find": {
+		"count": "第 {k} 个，共 {total} 个",
+		"replaced": {
+			"all": "{n, plural, other {已替换 # 个单元格}}（按 Ctrl+Z 撤消）",
+			"selection": "在所选内容中{n, plural, other {已替换 # 个单元格}}（按 Ctrl+Z 撤消）"
+		},
+		"notFound": {
+			"all": "未找到单元格",
+			"selection": "在所选内容中未找到单元格"
+		},
+		"none": "无结果",
+		"aria": "查找和替换",
+		"replace": {
+			"hide": "隐藏替换",
+			"show": "显示替换",
+			"tooltip": "替换 (Ctrl+H)"
+		},
+		"placeholder": "查找",
+		"prev": "上一个",
+		"prev.tooltip": "上一个 (Shift+Enter 或 Shift+F3)",
+		"next": "下一个",
+		"next.tooltip": "下一个 (Enter 或 F3)",
+		"close": "关闭查找",
+		"close.tooltip": "关闭 (Esc)",
+		"replaceBy": "替换为",
+		"zone": "范围：{zone}",
+		"zone.selection.tooltip": "所选内容限定了搜索范围；选择单个单元格可搜索整个工作表",
+		"zone.selection.aria": "在所选内容 {range} 中",
+		"zone.sheet.tooltip": "整个工作表；选择多个单元格可限定搜索范围",
+		"zone.sheet.aria": "在整个工作表中",
+		"zone.sheet": "工作表",
+		"replaceOne": "替换",
+		"replaceOne.tooltip": "替换找到的单元格，然后移至下一个",
+		"replaceAll": "全部替换",
+		"replaceAll.tooltip": "替换所有匹配项（按 Ctrl+Z 撤消）"
+	},
+	"sort": {
+		"number": {
+			"asc": "升序（从小到大）",
+			"desc": "降序（从大到小）"
+		},
+		"date": {
+			"asc": "升序（从旧到新）",
+			"desc": "降序（从新到旧）"
+		},
+		"text": {
+			"asc": "升序 (A 到 Z)",
+			"desc": "降序 (Z 到 A)"
+		},
+		"placeActive": "请将活动单元格放在表格列中再排序"
+	},
+	"type": {
+		"integer": "整数",
+		"decimal": "小数",
+		"text": "文本",
+		"boolean": "布尔值",
+		"date": "日期",
+		"formula": "计算",
+		"title": {
+			"fixed": "数据类型 · 固定",
+			"inferred": "数据类型 · 推断"
+		},
+		"pending": "{n, plural, other {# 个值无法转换为“{type}”：它们将被保留并标记为错误。}}",
+		"convertAnyway": "仍然转换",
+		"aria": "数据类型",
+		"fixed": {
+			"tooltip": "固定类型"
+		},
+		"inferred": {
+			"tooltip": "推断类型：选择它即可固定"
+		},
+		"convert": {
+			"tooltip": "转换为{type}"
+		},
+		"revert": "恢复为{type}（{n, plural, other {# 个值被标记}}为错误）",
+		"errors": "{n, plural, other {# 个值}}与列类型不符",
+		"computed": "计算列",
+		"toValues": {
+			"tooltip": "将删除公式：该列保留其当前值，类型取自这些值（按 Ctrl+Z 撤消）"
+		}
+	},
+	"syntax": {
+		"unclosedQuote": "引号未闭合",
+		"badNumber": "数字无效",
+		"unknownError": "未知错误",
+		"unclosedBracket": "方括号未闭合",
+		"unexpectedChar": "意外的字符“{char}”",
+		"missingCloseParen": "缺少右括号“)”",
+		"missingOperatorOrParen": "“{word}”之前缺少运算符或“)”",
+		"badCellAddress": "单元格地址无效：Cell[{addr}]",
+		"rowFromOne": "表格行从 1 开始计数",
+		"rowExpected": "方括号中应为行号",
+		"missingCloseParenOf": "{name} 缺少右括号“)”",
+		"missingSepOrParen": "“{word}”之前缺少“{sep}”或“)”",
+		"missingValue": "缺少值",
+		"missingValueAfter": "“{word}”之后缺少值",
+		"missingValueBefore": "“{word}”之前缺少值",
+		"empty": "公式为空",
+		"unexpected": "意外的“{word}”",
+		"extraCloseParen": "多余的右括号“)”",
+		"sepOutside": "“{sep}”位于函数的括号之外",
+		"missingOperator": "“{word}”之前缺少运算符"
+	},
+	"hidden": {
+		"band": {
+			"choice": "⧩ {n, plural, other {# 行}}具有“{category}”的其他值（选项卡选择）：在此输入将添加一行",
+			"filter": "⧩ {n, plural, other {# 行已被筛选隐藏}}"
+		},
+		"refusal": "这些行已被表格“{table}”的筛选隐藏：请清除筛选后再更改"
+	},
+	"pivot": {
+		"zone": {
+			"filters": "筛选",
+			"filters.hint": "将字段拖到此处可筛选整个报表",
+			"cols": "列",
+			"cols.hint": "其值变为列（一个字段）",
+			"rows": "行",
+			"rows.hint": "将用于对行分组的字段拖到此处",
+			"values": "值",
+			"values.hint": "将要汇总的字段拖到此处"
+		},
+		"agg": {
+			"sum": "求和",
+			"count": "计数",
+			"countDistinct": "非重复计数",
+			"avg": "平均值",
+			"min": "最小值",
+			"max": "最大值"
+		},
+		"show": {
+			"none": "无计算",
+			"pctTotal": "总计的百分比",
+			"pctCol": "列汇总的百分比",
+			"pctRow": "行汇总的百分比"
+		},
+		"format": {
+			"auto": "自动（源格式）",
+			"number": "数字 (1,235)",
+			"number2": "数字，2 位小数 (1,234.50)",
+			"currency": "货币 (€1,235)",
+			"currency2": "货币，2 位小数 (€1,234.50)",
+			"percent": "百分比 (12.3%)"
+		},
+		"rowCount": "行数",
+		"valueLabel": "{field}的{agg}",
+		"move": {
+			"up": "上移",
+			"down": "下移",
+			"first": "移至开头",
+			"last": "移至末尾",
+			"to": "移动到{zone}"
+		},
+		"handKept": "{n, plural, other {在 # 行（已不在数据透视表中）上输入的值已被保留：它们会随其标签一起恢复。}}",
+		"place": {
+			"create": "单击要放置数据透视表的单元格（Esc：取消）",
+			"move": "单击要将数据透视表“{name}”移动到的单元格（Esc：取消）",
+			"created": "已创建数据透视表（按 Ctrl+Z 撤消）",
+			"moved": "已移动数据透视表（按 Ctrl+Z 撤消）",
+			"same": "数据透视表已在此位置",
+			"cancelled": "已取消放置数据透视表"
+		},
+		"filter": {
+			"all": "（全部）",
+			"count": "（{n} 个值）",
+			"aria": "{field} 的筛选",
+			"title": "筛选“{field}”",
+			"several": "（多项）",
+			"field": "字段：",
+			"reportField": "“{field}” · 报表筛选"
+		},
+		"summarizeBy": "值汇总依据",
+		"menu": {
+			"chooseValues": "选择值…",
+			"clearFilter": "清除筛选",
+			"customSort": "自定义排序…",
+			"sourceOrder": "源顺序",
+			"removeField": "删除字段",
+			"editCalc": "编辑计算字段…",
+			"removeCalc": "删除计算字段",
+			"addTo": "添加到{zone}",
+			"removeFromReport": "从报表中删除",
+			"title": "数据透视表“{name}”",
+			"titleOf": "“{source}”的数据透视表",
+			"source": "更改数据源…",
+			"source.tooltip": "将数据透视表关联到另一个表格：保留其中存在的字段",
+			"move": "移动",
+			"move.tooltip": "下次单击某个单元格（在此工作表或其他工作表上）时，数据透视表的左上角将放置在该处；按 Esc 取消"
+		},
+		"calc": {
+			"title": "计算字段",
+			"title.edit": "计算字段“{name}”",
+			"intro": "基于“{source}”每一行各列的公式：行按其结果分组，可放在“行”“列”或“筛选”中（或在“值”中汇总）。",
+			"name": "字段名称：",
+			"add": "添加",
+			"add.label": "计算字段…",
+			"add.tooltip": "其值针对源中每一行计算的字段：=YEAR([日期])、=LEFT([代码],2)… 它可以在“行”或“列”中对行分组、进行筛选，或像列一样被汇总。"
+		},
+		"panel": {
+			"title": "数据透视表字段",
+			"help": "数据透视表帮助",
+			"name": {
+				"tooltip": "在 SQL 选项卡中以此名称查询数据透视表，它也可作为图表的源"
+			},
+			"source": "{name} · 源："
+		},
+		"defaultName": "数据透视表",
+		"search": {
+			"field": "搜索字段",
+			"clear": "清除搜索"
+		},
+		"fields": {
+			"choose": "选择要添加到报表的字段：",
+			"aria": "表格 {table} 的字段",
+			"computed": "计算列：目前还不能用作数据透视表字段",
+			"add": "添加到区域",
+			"add.aria": "将“{name}”添加到区域",
+			"noMatch": "没有与“{search}”匹配的字段。"
+		},
+		"zones": {
+			"hint": "在以下区域间拖动字段："
+		},
+		"source": {
+			"change": "更改数据源：",
+			"choose": "选择表格…",
+			"tooltip": "数据透视表的源表格"
+		},
+		"empty": "报表为空：请勾选上方的字段，或将其拖到各区域中。数字放入“值”，其他内容放入“行”。",
+		"noValues": "将字段添加到“值”以计算总计（求和、计数、平均值…）。",
+		"handForget": "清除已保留的值",
+		"handForget.tooltip": "清除这些值（按 Ctrl+Z 撤消）",
+		"grandTotals": "总计",
+		"subtotals": "分类汇总",
+		"subtotals.top": "在组的顶部",
+		"subtotals.bottom": "在组的底部",
+		"subtotals.none": "无",
+		"defer": "推迟布局更新",
+		"update": "更新",
+		"update.tooltip": "将更改应用到数据透视表",
+		"pending": "有待应用的更改：数据透视表尚未更新（关闭窗格时也会应用）。",
+		"delete": "删除数据透视表",
+		"valueSettings": "值字段设置",
+		"valueSettings.menu": "值字段设置…",
+		"valueSettings.source": "源：{field}",
+		"valueSettings.rowCount": "行数",
+		"valueSettings.name": "自定义名称",
+		"valueSettings.show": "值显示方式",
+		"valueSettings.format": "数字格式",
+		"valueSettings.pctFormat": "百分比保留其自身格式。",
+		"error": "数据透视表：{error}",
+		"readOnly": "数据透视表不能逐个单元格编辑：双击它可更改其字段",
+		"partial": "无法清除数据透视表的一部分：请全选后删除，或右键单击 › 删除数据透视表",
+		"deleted": "数据透视表“{name}”已删除（按 Ctrl+Z 撤消）",
+		"placeActive": "请将活动单元格放在表格中以创建数据透视表",
+		"pasted": "已粘贴数据透视表（按 Ctrl+Z 撤消）",
+		"overlap": "该区域会与数据透视表“{name}”重叠：请单独移动它（选中它后拖动其边框，或右键单击 › 移动）",
+		"deletedMany": "已删除 {n} 个数据透视表（按 Ctrl+Z 撤消）",
+		"partialCut": "无法剪切数据透视表的一部分：请全选后移动，或复制其值 (Ctrl+C)",
+		"fold": "展开/折叠",
+		"fold.expand": "展开",
+		"fold.collapse": "折叠",
+		"fold.expandAll": "全部展开",
+		"fold.collapseAll": "全部折叠"
+	},
+	"readFail": "无法重新读取表格“{table}”；将重新加载它。",
+	"refLink": {
+		"becomes": "“{column}”变为对“{table}”的引用：按住 Ctrl 单击或右键单击 › 转到…",
+		"cites": "引用“{value}”的行（{n}）",
+		"noCites": "没有行引用“{value}”",
+		"missing": "{table} 中不存在“{value}”",
+		"go": "转到“{table}” › {value}",
+		"go.tooltip": "转到表格“{table}”中的行“{value}”（按 Alt+← 返回）",
+		"cite": {
+			"tooltip": "按 {column} = {value} 筛选“{table}”并转到第一行（按 Alt+← 返回）"
+		}
+	},
+	"validation": {
+		"notAllowed": "此处不允许输入“{value}”：请从列表（{list}）中选择，按 Alt+↓ 打开列表",
+		"missingSource": "请输入源区域：表格[列]、Cell[A1:A10] 或 Sheet2!Cell[A1:A10]（单击“选择”可选取）",
+		"missingValues": "请至少输入一个值（每行一个，或用“;”分隔）",
+		"preview": {
+			"notFound": "未找到源：{error}",
+			"empty": "该区域不包含任何值",
+			"values": "{n, plural, other {# 个值}}：{list}"
+		},
+		"sourceError": "无法检查“{value}”：无法读取列表的源（{src}）（{error}）",
+		"sourceEmpty": "此处不允许输入“{value}”：列表的区域（{src}）为空",
+		"target": {
+			"onSheet": "{what}（{sheet}）",
+			"col": "列 {col}",
+			"cols": "列 {range}",
+			"row": "行 {row}",
+			"rows": "行 {range}",
+			"tableCol": "表格 {table} 的列“{column}”",
+			"tableCols": "表格 {table} 的列“{from}”至“{to}”",
+			"cell": "单元格 {addr}",
+			"cells": "单元格 {range}",
+			"tableCells": "表格 {table} 的单元格 {range}"
+		},
+		"readImpossible": "无法在此处读取",
+		"removed": "已删除验证",
+		"list": {
+			"set": "下拉列表：{n, plural, other {# 个允许的值}}（按 Alt+↓ 打开）",
+			"source": "下拉列表取自 {src}，每次打开时重新读取（按 Alt+↓ 打开）",
+			"help": "所选内容中允许的值，每行一个（或用“;”分隔）。单元格中的 ▾ 箭头会提供该列表 (Alt+↓)；其他任何输入都会被拒绝。应用于整个表格列时，列表也适用于以后添加的行。",
+			"placeholder": "是\n否"
+		},
+		"pick": "选择源区域（在此工作表或其他工作表上），然后按 Enter（Esc：取消）",
+		"pick.oneColumn": "源区域只能覆盖单个表格列或自由单元格",
+		"range": {
+			"help": "每次打开列表和每次输入时，都会重新读取区域中的值（去重、不含空白、按顺序）：表格列 (客户[城市])、单元格 (Cell[A1:A10]、Sheet2!Cell[A1:A10]) 或命名单元格。引用会跟随重命名和移动。",
+			"aria": "源区域",
+			"placeholder": "客户[城市]"
+		},
+		"pick.source": "源区域：",
+		"title": "数据验证 — {target}",
+		"source": "列表的来源",
+		"mode": {
+			"list": "输入的值",
+			"range": "区域"
+		},
+		"pick.tooltip": "在工作表中选取区域（按 Enter 返回）",
+		"pick.button": "选择",
+		"reading": "正在读取区域…",
+		"clear": "清除验证",
+		"listMenu": {
+			"notFound": "未找到列表：{error}",
+			"reading": "正在读取列表…",
+			"empty": "列表的区域为空"
+		}
+	},
+	"spill": {
+		"tip": "{addr} 中公式的溢出结果 — 右键单击：转换为表格"
+	},
+	"tabChoice": {
+		"clear": "停止按选项卡筛选",
+		"clear.tooltip": "选项卡将失去其 ▾“{name}”：工作表中的表格和数据透视表将重新显示所有行（按 Ctrl+Z 撤消）",
+		"byField": "按此字段筛选选项卡",
+		"byColumn": "按此列筛选选项卡",
+		"computed": "计算列不能用作选项卡选择：请使用输入列（年份、月份、城市…）",
+		"tooMany": "“{column}”为空，或不同值超过 {max} 个：对选项卡列表而言太多；请使用年份、月份或城市等列",
+		"byField.tooltip": "工作表选项卡会增加一个 ▾，用于选择“{column}”的值：此数据透视表、工作表中基于含有“{column}”的表格构建的其他数据透视表，以及工作表中含有该列的表格，都只显示具有该值的行（如果源表格在其他工作表上，则不会被筛选）。初始为所有值。按 Ctrl+Z 撤消。",
+		"byColumn.tooltip": "工作表选项卡会增加一个 ▾，用于选择“{column}”的值：工作表中每个含有列“{column}”的表格，以及基于这些表格构建的数据透视表，都只显示具有该值的行。初始为所有值。按 Ctrl+Z 撤消。",
+		"replaces": "{text} 将替换按“{name}”的选择。",
+		"notice": {
+			"cleared": "选项卡不再按“{column}”筛选：重新显示所有行（按 Ctrl+Z 撤消）",
+			"set": "选项卡按“{column}”筛选：其 ▾ 箭头用于选择显示的值 (Alt+↓)；按 Ctrl+Z 撤消"
+		}
+	},
+	"textCols": {
+		"dateOrder": {
+			"DMY": "DMY",
+			"MDY": "MDY",
+			"YMD": "YMD",
+			"DYM": "DYM",
+			"MYD": "MYD",
+			"YDM": "YDM"
+		},
+		"format": {
+			"text": "文本",
+			"skip": "不导入此列（跳过）",
+			"general": "常规",
+			"date": "日期",
+			"notImported": "跳过列",
+			"legend": "第 {n} 列数据格式",
+			"hint": "“常规”会转换数字和日期，其他内容变为文本。单击预览中的某一列可选择其格式。"
+		},
+		"sep": {
+			"comma": ", (逗号)",
+			"period": ". (句点)",
+			"space": "空格",
+			"apostrophe": "' (撇号)",
+			"none": "无"
+		},
+		"step": {
+			"kind": "原始数据类型",
+			"separators": "分隔符号",
+			"formats": "列数据格式"
+		},
+		"title": "文本分列",
+		"heading": "文本分列向导 - 第 {step} 步，共 3 步：{name}",
+		"note": {
+			"table": "表格 {table}，列 {column}：第一部分保留在该列中，后续部分成为插入到右侧的新列。",
+			"tableWithHeader": "表格 {table}，列 {column}（包括标题）：第一部分保留在该列中，后续部分成为插入到右侧的新列。",
+			"cells": "{n, plural, other {# 个文本单元格}}待转换。"
+		},
+		"kind": {
+			"legend": "请选择最合适的文件类型",
+			"delimited": "分隔符号",
+			"delimited.help": "– 用分隔字符，如逗号或制表符分隔每个字段。",
+			"fixed": "固定宽度",
+			"fixed.help": "– 每列字段加空格对齐。"
+		},
+		"preview": "数据预览",
+		"preview.selection": "预览选定数据",
+		"delim": {
+			"tab": "Tab 键",
+			"semicolon": "分号",
+			"comma": "逗号",
+			"space": "空格",
+			"other": "其他：",
+			"other.aria": "其他分隔符"
+		},
+		"merge": "连续分隔符号视为单个处理",
+		"quote": "文本识别符号：",
+		"quote.none": "无",
+		"fixed": {
+			"hint": "有箭头的垂直线为分列线。要建立分列线，请在要建立分列处单击鼠标。要清除分列线，请双击分列线。要移动分列线位置，请按住分列线并拖至指定位置。"
+		},
+		"break": {
+			"tooltip": "拖动可移动，双击可删除"
+		},
+		"dest": "目标区域：",
+		"dest.table.tooltip": "在表格中，第一部分保留在该列中，后续部分插入到右侧",
+		"dest.tooltip": "写入各列的第一个单元格，例如 $B$2",
+		"advanced": "高级…",
+		"advanced.open": "高级 ▴",
+		"decimal": "小数分隔符：",
+		"thousands": "千位分隔符：",
+		"back": "< 上一步",
+		"next": "下一步 >",
+		"finish": "完成",
+		"confirm": "是否替换目标单元格内容？",
+		"confirm.title": "替换内容",
+		"oneColumn": "文本分列一次只能转换一列：请选择单列中的单元格",
+		"done": "文本已转换为 {n, plural, other {# 列}}（按 Ctrl+Z 撤消）",
+		"done.table": "文本已转换为 {n, plural, other {# 列}}（表格 {table}）（按 Ctrl+Z 撤消）"
+	},
+	"theme": {
+		"custom": "自定义",
+		"builtin": {
+			"vert-bleu": "绿和蓝",
+			"bleu-orange": "蓝和橙",
+			"violet-sarcelle": "紫和青",
+			"sarcelle-violet": "青和紫",
+			"gris-bleu": "灰和蓝",
+			"orange-bleu": "橙和蓝",
+			"bordeaux-gris": "酒红和灰"
+		}
+	},
+	"titleHead": {
+		"offer": "此行看起来像“{table}”的标题"
+	},
+	"format": {
+		"tab": {
+			"number": "数字",
+			"align": "对齐",
+			"font": "字体",
+			"border": "边框",
+			"fill": "填充"
+		},
+		"sampleText": "文本",
+		"title": "设置单元格格式",
+		"category": "分类",
+		"category.standard": "常规",
+		"category.standard.help": "无特定格式：按输入或计算时的样子显示值。",
+		"category.number": "数值",
+		"category.number.help": "小数位数和千位分隔符。",
+		"category.currency": "货币",
+		"category.currency.help": "以欧元表示的金额。",
+		"category.percent": "百分比",
+		"category.percent.help": "将值乘以 100，后跟 %。",
+		"category.date": "日期",
+		"category.date.help": "按所选格式显示的日期（或 Excel 序列号）。",
+		"category.time": "时间",
+		"category.time.help": "按所选格式显示的时间（或日期和时间）。",
+		"category.text": "文本",
+		"category.text.help": "按输入时的样子显示内容。",
+		"sample": "示例",
+		"decimals": "小数位数",
+		"thousands": "使用千位分隔符 (,)",
+		"dateType": "类型",
+		"align": {
+			"legend": "文本对齐方式",
+			"horizontal": "水平对齐",
+			"general": "常规",
+			"left": "靠左",
+			"center": "居中",
+			"right": "靠右",
+			"vertical": "垂直对齐",
+			"top": "靠上",
+			"bottom": "靠下"
+		},
+		"textControl": "文本控制",
+		"wrap": "自动换行",
+		"merge": "合并单元格",
+		"merge.tooltip": "选择多个自由单元格（表格之外）以合并它们",
+		"font": "字体",
+		"font.style": "字形",
+		"font.regular": "常规",
+		"font.italic": "倾斜",
+		"font.bold": "加粗",
+		"font.boldItalic": "加粗 倾斜",
+		"font.size": "字号",
+		"font.underline": "下划线",
+		"font.strike": "删除线",
+		"color": "颜色",
+		"color.auto": "自动",
+		"preview": "预览",
+		"border": {
+			"presets": "预置",
+			"none": "无",
+			"outline": "外边框",
+			"all": "全部",
+			"edges": "边框（单击边缘）",
+			"top": "上",
+			"bottom": "下",
+			"left": "左",
+			"right": "右",
+			"help": "所选边缘应用于所选内容的每个单元格；“外边框”沿所选内容的外围绘制。"
+		},
+		"fill": "背景色",
+		"fill.none": "无填充"
+	},
+	"readOnly": {
+		"notYours": "其他成员的行：作为参与者，您只能更改自己的行"
+	},
+	"formula": {
+		"pickHint": "正在输入公式：单击单元格或列可插入其引用；按 Enter 确认，按 Esc 取消",
+		"refPlace": "请将公式光标放在“(”“,”或运算符之后，以便在该处插入引用",
+		"refRange": "此区域不能成为引用：区域只能覆盖表格的单列",
+		"refOneColumn": "区域只能覆盖表格的单列：请在一列内拖动，或在自由单元格上拖动",
+		"error": "公式：{error}",
+		"validate": "输入",
+		"validate.tooltip": "确认公式 (Enter)",
+		"validate.error": "公式有错误：请修正后再确认"
+	},
+	"rights": {
+		"filtered": "视图已按您的权限筛选"
+	},
+	"key": {
+		"autoNumber": "自动编号：新添加的行获得下一个编号",
+		"hint": "此列似乎可以标识每一行：单击可将其设为表格的键",
+		"set": "“{name}”现在是表格 {table} 的键（按 Ctrl+Z 撤消）",
+		"lookupCancelled": "已取消查找：未保存公式",
+		"autoNumberKey": "键，{tip}",
+		"isKey": "表格键",
+		"accept": "设为表格的键",
+		"dismiss": "不再建议",
+		"note": "表格键：其值用于标识行。",
+		"note.auto": "表格键：其值用于标识行。新添加的行获得下一个编号。",
+		"remove": "删除键",
+		"checking": "正在检查键…",
+		"use": "用作键",
+		"use.replace": "用作键（替换当前键）",
+		"impossible": "无法设为键：{why}",
+		"sequence": "数字序列：在末尾添加的行获得下一个编号。"
+	},
+	"painter": {
+		"hint": "格式刷：选择要设置格式的单元格（按 Esc 取消）"
+	},
+	"merge": {
+		"selectSeveral": "请选择多个自由单元格以合并它们",
+		"inTable": "合并后居中不适用于表格：表格中每个值占一个单元格。请合并表格之外的自由单元格。",
+		"done": "单元格已合并并居中",
+		"done.cleared": "单元格已合并：仅保留左上角的值（{n, plural, other {已清除 # 个}}，按 Ctrl+Z 撤消）"
+	},
+	"quoted": "“{text}”",
+	"twoLevel": {
+		"split": "{names} 分两行显示：请在上方的带区中输入组（无组时，该列保持单层）"
+	},
+	"size": {
+		"range": "大小介于 4 到 1,000 像素之间",
+		"rowHeight": "行高（像素）",
+		"colWidth": "列宽（像素）"
+	},
+	"freeze": {
+		"place": "请将活动单元格放在要冻结的行的下方和列的右侧",
+		"tooBig": "要冻结的部分大于屏幕：请向上滚动工作表，或选择更靠上或更靠左的单元格"
+	},
+	"note": {
+		"pinEmpty": "请先填写注释再固定",
+		"none": "活动单元格没有注释",
+		"edit": "编辑注释",
+		"delete": "删除注释",
+		"insert": "插入注释",
+		"unpin": "取消固定（悬停时显示）",
+		"pin": "固定：始终显示注释",
+		"placeholder": "单元格注释"
+	},
+	"table": {
+		"alreadyIn": "活动单元格已在表格中",
+		"placeActive": "请将活动单元格放在表格中",
+		"deletedMany": "已删除 {n} 个表格（按 Ctrl+Z 撤消）",
+		"deleted": "表格“{name}”已删除（按 Ctrl+Z 撤消）",
+		"renamed": "表格已重命名为“{name}”"
+	},
+	"status": {
+		"group": "{table} · 标题组“{group}”（{n, plural, other {# 列}}）",
+		"groupEmpty": "{table} · 标题组（空）",
+		"errors": "{n, plural, other {# 个错误}}",
+		"type": {
+			"fixed": "{type}（固定）",
+			"inferred": "{type}（推断）"
+		},
+		"oneLevel": "单层",
+		"badType": "“{value}”不是{type}类型",
+		"perf": {
+			"fetch": "块 p50 {ms}",
+			"draw": "渲染 {ms}",
+			"fps": "{n} fps",
+			"edit": "输入 {ms}"
+		},
+		"average": "平均值：{value}",
+		"count": "计数：{n}",
+		"sum": "求和：{value}",
+		"computing": "正在计算总计…",
+		"tooBig": "所选内容过大，无法计算总计",
+		"loading": "（正在加载行）"
+	},
+	"chart": {
+		"copied": "图表已复制：按 Ctrl+V 可粘贴到活动单元格",
+		"copiedImage": "图表已复制为图片：可粘贴到电子邮件或文档中",
+		"copyImageFailed": "无法复制图片：{error}",
+		"pasted": "图表已粘贴",
+		"pivotInserted": "已插入数据透视表“{name}”的图表",
+		"placeActive": "请将活动单元格放在表格中以插入图表",
+		"mapInserted": "地图已插入：请在窗格中选择其坐标",
+		"noNumbers": "表格中没有可绘制的数字列",
+		"inserted": "图表已插入：单击可编辑，拖动可移动",
+		"nth": "图表 {n}/{total}",
+		"aria": "图表",
+		"aria.titled": "图表“{title}”",
+		"error": "图表：{error}",
+		"paste": "粘贴图表",
+		"copyImage": "复制为图片",
+		"pasteHere": "在活动单元格处粘贴图表",
+		"delete": "删除图表"
+	},
+	"query": {
+		"readOnly": "由查询加载的表格：其单元格不能编辑；请修改查询（数据 › 查询）后刷新 (F5)"
+	},
+	"dedup": {
+		"removed": "{n, plural, other {已删除 # 个重复行}}（按 Ctrl+Z 撤消）",
+		"none": "没有重复项",
+		"title": "从“{table}”中删除重复值",
+		"help": "勾选的列具有相同值的两行为重复行。保留第一行。",
+		"allColumns": "（所有列）",
+		"computing": "正在计算…",
+		"noneWith": "按这些列没有重复行。",
+		"willRemove": "{n, plural, other {将删除 # 个重复行。}}"
+	},
+	"rows": {
+		"headerNoDelete": "不能删除标题行：请删除表格或其列"
+	},
+	"audit": {
+		"none": "没有链接：所选内容既不包含公式，也不包含被公式读取的单元格",
+		"links": "{n, plural, other {# 个单元格}}的链接：{pre, plural, other {# 个引用单元格}}，{dep, plural, other {# 个从属单元格}}",
+		"away": "（{n} 个在其他工作表上）",
+		"cut": "仅前 {n} 个单元格",
+		"clear": "在网格中单击（或按 Esc）可清除"
+	},
+	"cells": {
+		"copied": "单元格已复制（按 Ctrl+Z 撤消）",
+		"moved": "单元格已移动（按 Ctrl+Z 撤消）",
+		"deleted": "单元格已删除（按 Ctrl+Z 撤消）"
+	},
+	"fill": {
+		"series": "已填充序列（按 Ctrl+Z 撤消）",
+		"limit": "填充限制为 10,000 个单元格",
+		"down": "已向下填充（按 Ctrl+Z 撤消）",
+		"right": "已向右填充（按 Ctrl+Z 撤消）"
+	},
+	"repeat": {
+		"nothing": "没有可重复的操作"
+	},
+	"endMode": "End：按方向键可移到区域边缘",
+	"recalculated": "已重新计算",
+	"protect": {
+		"structure": "工作表结构受保护（审阅 › 撤消结构保护）"
+	},
+	"names": {
+		"refused": {
+			"column": "列名被拒绝",
+			"table": "表格名称被拒绝",
+			"group": "标题组被拒绝",
+			"cell": "单元格名称被拒绝"
+		},
+		"column": {
+			"invalid": "列名无效",
+			"empty": "列名不能为空。\n\n请输入名称，或按 Esc 保留原名称。"
+		},
+		"cell": {
+			"inTable": "只能为自由单元格命名；表格通过其名称引用：{table}",
+			"set": "单元格已命名为“{name}”",
+			"removed": "名称已删除"
+		}
+	},
+	"edit": {
+		"multiLimit": "Ctrl+Enter：所选内容限制为 10,000 个单元格"
+	},
+	"clear": {
+		"limit": "目前清除操作限制为 1,000 个单元格"
+	},
+	"copy": {
+		"limit": "目前复制操作限制为 100,000 个单元格",
+		"reading": "正在读取要复制的行…",
+		"changed": "复制期间表格已更改：请重试"
+	},
+	"clipboard": {
+		"unavailable": "无法访问剪贴板",
+		"cut": "所选内容已剪切：按 Ctrl+V 粘贴（按 Esc 取消）",
+		"copied": "{n, plural, other {已复制 # 个单元格}}",
+		"unavailable.copy": "无法访问剪贴板：请使用 Ctrl+C",
+		"unavailable.paste": "无法访问剪贴板：请使用 Ctrl+V",
+		"pasted": "已粘贴（按 Ctrl+Z 撤消）",
+		"pastedRows": "{n, plural, other {已粘贴 # 行}}"
+	},
+	"typeMix": {
+		"date": "{total} 个值中有 {n, plural, other {# 个不是日期}}",
+		"boolean": "{total} 个值中有 {n, plural, other {# 个不是布尔值}}",
+		"number": "{total} 个值中有 {n, plural, other {# 个不是数字}}"
+	},
+	"nameBadge": {
+		"default": {
+			"tooltip": "“{name}”：默认名称：请重命名表格。单击可为其指定有意义的名称（该名称用于公式、SQL 和图表）"
+		},
+		"tooltip": "表格“{name}”：单击可重命名"
+	},
+	"follow": {
+		"tooltip": "此表格跟随选项卡选择：只显示 {name} = {value} 的行（其他行被隐藏而不是删除；您输入的行会获得该值）。选项卡的 ▾ 箭头可更改该值。单击标记：菜单“跟随{follow}”，取消勾选即可让此表格显示所有行",
+		"empty": "（空）"
+	},
+	"bench": {
+		"running": "正在进行性能测试…",
+		"result": "滚动：{fps} fps，帧 p95 {frame} ms，{janky} 帧 > 33 ms，{missing}/{drawn} 帧不完整 · 跳转：p50 {jump} ms · 输入：p50 {edit} ms"
+	},
+	"lines": {
+		"insertRows": "插入 {n, plural, other {# 行}}",
+		"deleteRows": "删除行",
+		"deleteRow": "删除行",
+		"insertCols": "插入 {n, plural, other {# 列}}",
+		"deleteCols": "删除列",
+		"deleteCol": "删除列",
+		"insert": "插入…",
+		"dialog": {
+			"rowAbove": "整行（上方）",
+			"row": "整行",
+			"colLeft": "整列（左侧）",
+			"col": "整列"
+		}
+	},
+	"menu": {
+		"clearAll": {
+			"tooltip": "清空单元格：值、格式、合并、注释和验证"
+		},
+		"clearContents": "清除内容",
+		"formatCells": "设置单元格格式…",
+		"conditionalFormat": "条件格式…",
+		"rowHeight": "行高…",
+		"autoFitRows": "自动调整行高",
+		"autoFitRows.tooltip": "根据内容调整高度（双击行号的边缘）",
+		"colWidth": "列宽…",
+		"autoFitCols": "自动调整列宽",
+		"autoFitCols.tooltip": "根据显示的内容调整宽度（双击标题的边缘）",
+		"hide": "隐藏",
+		"unhide": "取消隐藏",
+		"filterColumn": "筛选此列…",
+		"clearTableFilter": "清除表格筛选",
+		"table": "表格“{name}”",
+		"deleteTable": "删除表格",
+		"deleteTable.confirm": "删除此表格及其 {n} 行？按 Ctrl+Z 可撤消。",
+		"toValues": "转换为值",
+		"toValues.many.tooltip": "所选内容中的 {n} 个计算列将变为输入列：保留其当前值，不再有公式（按 Ctrl+Z 撤消）",
+		"toValues.tooltip": "该计算列将变为输入列：保留其当前值，不再有公式（按 Ctrl+Z 撤消）",
+		"promote": "将第一行用作标题",
+		"promote.tooltip": "第 1 个数据行提供列名并成为标题；当前标题将消失（按 Ctrl+Z 撤消）",
+		"rowToNote": "将此行移出表格（总计或注释）",
+		"rowToNote.tooltip": "该行保留在表格正下方，作为总计或注释单独保存（按 Ctrl+Z 撤消）",
+		"sortFilter": "排序和筛选",
+		"insert": "插入",
+		"rowAbove": "上方的行",
+		"rowBelow": "下方的行",
+		"column": "列“{name}”",
+		"renameColumn": "重命名列",
+		"typeAndKey": "数据类型和键…",
+		"validation": "数据验证…",
+		"insertColumn": "插入列",
+		"left": "在左侧",
+		"right": "在右侧",
+		"headerToTitle": "将标题移出",
+		"headerToTitle.tooltip": "第 1 个数据行成为标题；当前标题保留在表格上方，作为标题文字（“列 n”名称除外）",
+		"titleToHeader": "将上方的行用作标题",
+		"titleToHeader.tooltip": "表格正上方输入的单元格将成为其列名；当前标题变为第 1 个数据行（“列 n”名称除外）",
+		"twoLevel": {
+			"off": "删除标题组",
+			"off.tooltip": "各列恢复其完整名称“组.名称”并显示在单行上；组的带区将消失",
+			"on": "两行标题（上方为组）",
+			"on.tooltip": "表格正上方的行将成为组的带区：在“名称”和“状态”上方放置“林业”，会得到列“林业.名称”和“林业.状态”。单元格可合并也可不合并。"
+		},
+		"follow": "跟随{what}",
+		"follow.off.tooltip": "无论选项卡的值是什么，表格都显示所有行",
+		"follow.off.column.tooltip": "无论选项卡的值是什么，表格都显示所有行（如果列“{name}”只有一个值，则会被删除）",
+		"follow.on.formula.tooltip": "表格只显示其公式 {formula} 的结果等于所显示值的行（表格必须包含相应的列）",
+		"follow.on.tooltip": "表格将获得列“{name}”，以所显示的值填充，并只显示这些行",
+		"refresh": "刷新查询",
+		"refresh.tooltip": "重新运行查询“{name}”（在表格中按 F5）",
+		"handKey": "输入列的键…",
+		"handKey.tooltip": "结果中的这一列在每次刷新之间将输入的值与其行关联起来",
+		"handForget": "清除已保留的值（{n, plural, other {# 行}}）",
+		"handForget.tooltip": "在已从结果中消失的行上输入的值，保留以防这些行再次出现（按 Ctrl+Z 撤消）",
+		"addShared": "添加到共享工作簿…",
+		"addShared.tooltip": "此表格只在您的计算机上：在共享工作簿中创建它（包括其行），供所有成员使用",
+		"shareData": "共享到 Lattis Data Lake…",
+		"shareData.tooltip": "让服务器上的其他工作簿可以读取此表格（Lattis Data Lake 目录）",
+		"pushSource": "更新 Data Lake 源",
+		"pushSource.tooltip": "立即将此表格的行发送到其 Data Lake 源（仅所选列；不发布工作簿）",
+		"toRange": "转换为区域",
+		"toRange.tooltip": "表格在原位置变为自由单元格",
+		"ask": "询问助手…",
+		"asHeader": "用作“{table}”的标题",
+		"asHeader.tooltip": "此行中位于表格各列上方的单元格将成为其标题；当前标题变为第 1 个数据行（“列 n”名称除外）",
+		"join": "添加到表格",
+		"join.tooltip": "此单元格保留在相邻表格之外（注释、总计）；它将并入该表格",
+		"asTable": "套用表格格式",
+		"asTable.tooltip": "该区域重新变为表格（其第一行提供标题）",
+		"spillLinked": "转换为链接表格",
+		"spillLinked.tooltip": "由公式加载的表格将替换溢出结果：在其源更改时重新计算（各列只读，可在右侧添加输入列）",
+		"spillValues": "转换为表格（值）",
+		"spillValues.tooltip": "普通表格保留溢出结果的当前值，与公式不再关联",
+		"rangeToValues": {
+			"tooltip": "所选内容的公式将替换为其当前值（按 Ctrl+Z 撤消）"
+		},
+		"asGroups": "用作表格的标题组",
+		"asGroups.tooltip": "此行中的单元格（无论是否合并）将成为表格“{table}”的标题组"
+	},
+	"sig": {
+		"optional": "（可选）",
+		"example": "示例："
+	},
+	"nameBox": {
+		"table": "表格名称：编辑后按 Enter 可重命名",
+		"table.default": "默认名称：请重命名表格（编辑后按 Enter）",
+		"column": "列[行]：编辑名称后按 Enter 可重命名该列",
+		"cell": "单元格名称：输入名称后按 Enter 可为其命名，或输入单元格名称以转到该单元格",
+		"size": "{rows}R × {cols}C"
+	},
+	"formulaBar": {
+		"aria": "编辑栏",
+		"computed": "计算列：应用于{n, plural, =1 {该行} other {全部 # 行}}",
+		"computed.tooltip": "该公式属于整列：应用于其中的每一行。"
+	},
+	"sheet": {
+		"aria": "工作表 {name}"
+	},
+	"editor": {
+		"readOnly": "只读",
+		"freeCell": "自由单元格"
+	},
+	"keyDialog": {
+		"title": "查找键",
+		"heading": "在“{table}”中查找时使用：",
+		"index": "表格的当前行号（索引）",
+		"notKey": "“{column}”不能用作键：{why}",
+		"column": "列“{column}”，它将成为表格的键（重复值将被拒绝）",
+		"notKey.note": "“{column}”不能用作键：{why}。",
+		"index.note": "如果您对行排序或插入行，编号会改变。Lattis 将不再为此表格建议键。"
+	},
+	"handDialog": {
+		"title": "输入列的键",
+		"heading": "在“{table}”旁输入的值按以下方式跟随其行：",
+		"columns": "列“{name}”",
+		"column": "列“{name}”",
+		"rank": "行的位置（不推荐）",
+		"rank.note": "如果查询以其他顺序返回行，或者增删了某些行，输入的值将出现在其他行旁边。",
+		"change": {
+			"note": "已输入的值保留在其行上；已保留的值（已消失的行）将被清除。列中的重复值和空白将被拒绝。"
+		},
+		"key": {
+			"note": "每次刷新时，值会回到“{key}”相同的行；如果该行消失，值会被保留并随该行一起恢复。"
+		},
+		"none": {
+			"note": "结果中没有能标识其行的列（存在重复值或空白）：请在查询中添加一个（标识符），以实现可靠的关联。"
+		}
+	},
+	"functions": {
+		"title": "插入函数（{n} 个可用）",
+		"search": "搜索（SUM、VLOOKUP、日期、文本…）",
+		"repeat": "{n, plural, other {最后 # 个参数可以重复。}}",
+		"english": "法语：{name}"
+	},
+	"keys": {
+		"enter": "Enter",
+		"escape": "Esc"
+	}
+}
