@@ -142,7 +142,7 @@
 		"label": "Beschriftung: {label}"
 	},
 	"pick": {
-		"banner": "Klicken Sie auf ein Steuerelement (Schaltfläche, Feld…), um seinen Namen in das Skript einzufügen — Esc zum Abbrechen."
+		"banner": "Klicken Sie auf ein Steuerelement, um seinen Namen einzufügen (Esc zum Abbrechen)."
 	},
 	"picker": {
 		"filter": "Nach Name, Typ oder Register filtern",
@@ -158,7 +158,7 @@
 		"badHost": "Hostname erwartet: api.beispiel.de oder eine Adresse https://…",
 		"aria": "Netzwerkzugriff",
 		"title": "Netzwerkzugriff der Arbeitsmappe",
-		"help": "Vor der ersten HTTP-Anfrage an einen Host (http.get, http.post… in einem Skript oder einer HTML-Seite) bittet Lattis Sie um Erlaubnis. Mit „Für diese Arbeitsmappe speichern“ erlaubte Hosts werden hier aufgeführt: Sie werden auf diesem Computer gespeichert, nicht in der Datei (eine erhaltene Arbeitsmappe fragt immer erneut). Der MCP-Server erreicht nur diese Hosts.",
+		"help": "Mit „Für diese Arbeitsmappe speichern“ erlaubte Hosts, nur auf diesem Computer gespeichert.",
 		"remove": {
 			"label": "Entfernen",
 			"tooltip": "Entfernen: Die nächste Anfrage fragt erneut"
@@ -227,7 +227,7 @@
 		"reference": "Referenz",
 		"pick": {
 			"label": "Steuerelement auswählen",
-			"tooltip": "Am Cursor den Namen einer Schaltfläche, eines Felds oder eines anderen Steuerelements der Arbeitsmappe einfügen"
+			"tooltip": "Den Namen eines Steuerelements der Arbeitsmappe am Cursor einfügen"
 		},
 		"network": {
 			"tooltip": "Hosts, die die Skripts und HTML-Seiten der Arbeitsmappe per HTTP erreichen dürfen"

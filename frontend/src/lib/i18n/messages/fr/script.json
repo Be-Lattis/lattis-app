@@ -142,7 +142,7 @@
 		"label": "Libellé : {label}"
 	},
 	"pick": {
-		"banner": "Cliquez sur un contrôle (bouton, champ…) pour insérer son nom dans le script — Échap pour annuler."
+		"banner": "Cliquez sur un contrôle pour insérer son nom (Échap pour annuler)."
 	},
 	"picker": {
 		"filter": "Filtrer par nom, type ou onglet",
@@ -158,7 +158,7 @@
 		"badHost": "Nom d’hôte attendu : api.exemple.fr, ou une adresse https://…",
 		"aria": "Accès réseau",
 		"title": "Accès réseau du classeur",
-		"help": "Avant la première requête HTTP vers un hôte (http.get, http.post… dans un script ou une page HTML), Lattis vous demande l’autorisation. Les hôtes autorisés avec « Mémoriser pour ce classeur » sont listés ici : ils sont mémorisés sur ce poste, pas dans le fichier (un classeur reçu redemande toujours). Le serveur MCP n’atteint que ces hôtes.",
+		"help": "Hôtes autorisés avec « Mémoriser pour ce classeur », mémorisés sur ce poste seulement.",
 		"remove": {
 			"label": "Retirer",
 			"tooltip": "Retirer : la prochaine requête redemandera"
@@ -227,7 +227,7 @@
 		"reference": "Référence",
 		"pick": {
 			"label": "Pointer un contrôle",
-			"tooltip": "Insérer au curseur le nom d'un bouton, d'un champ ou d'un autre contrôle du classeur"
+			"tooltip": "Insérer au curseur le nom d'un contrôle du classeur"
 		},
 		"network": {
 			"tooltip": "Hôtes que les scripts et pages HTML du classeur peuvent joindre en HTTP"

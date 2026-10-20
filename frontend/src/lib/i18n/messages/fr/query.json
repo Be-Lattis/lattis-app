@@ -54,8 +54,8 @@
 			"remembered": "(mémorisé)",
 			"remember": "Mémoriser dans le trousseau du système",
 			"help": {
-				"lattis": "Aucun mot de passe n’est enregistré : la connexion utilise votre session sur le serveur (menu Compte de la barre de titre), et ce que vos droits vous permettent d’y lire. Comme source de requête, elle ne sert qu’à lire (sur un réplica quand le serveur en annonce).",
-				"web": "Le jeton n’est jamais enregistré dans le classeur ; il n’est envoyé qu’aux adresses qui commencent par celle de la connexion",
+				"lattis": "Aucun mot de passe enregistré : la connexion utilise votre session sur le serveur, en lecture seule.",
+				"web": "Le jeton n’est jamais enregistré dans le classeur et ne part qu’aux adresses de la connexion",
 				"bearer": " : Bearer ajouté à un jeton seul",
 				"db": "Le mot de passe n’est jamais enregistré dans le classeur. La connexion ne sert qu’à lire",
 				"readOnly": "transaction en lecture seule",
@@ -127,7 +127,7 @@
 		},
 		"addcolumn": {
 			"label": "Colonne personnalisée",
-			"hint": "Nouvelle colonne calculée par une expression SQLite ([Colonne] désigne une colonne)"
+			"hint": "Nouvelle colonne calculée par une expression SQLite"
 		},
 		"index": {
 			"label": "Colonne d'index",
@@ -202,7 +202,7 @@
 		"title": "Mot de passe",
 		"header": "Connexion « {name} »",
 		"stored": "Ce classeur veut se connecter avec votre mot de passe enregistré sur cet ordinateur.",
-		"storedHelp": "Autorisez-le si vous connaissez ce classeur : l'accord est retenu pour lui sur ce poste. Un classeur reçu d'une source inconnue ne devrait pas l'avoir.",
+		"storedHelp": "N’autorisez qu’un classeur que vous connaissez (accord retenu sur ce poste).",
 		"allow": "Autoriser",
 		"other": "Saisir un autre mot de passe",
 		"refuse": "Refuser",
@@ -298,14 +298,11 @@
 			"placeholder": "vide : la racine ou son seul tableau ; ex. data.items"
 		},
 		"json": {
-			"help": "Tableau d’objets, ou un objet JSON par ligne (NDJSON). Les objets imbriqués deviennent des colonnes « parent.enfant »."
-		},
-		"parquet": {
-			"help": "Chaque colonne du fichier donne une colonne (« parent.enfant » pour une structure ; une liste devient du texte)."
+			"help": "Tableau d’objets, ou un objet JSON par ligne (NDJSON)."
 		},
 		"table": "Tableau",
 		"query": "Requête",
-		"queryHelp": "La requête part du résultat de l'autre requête (référence) : modifier l'autre requête change aussi celle-ci.",
+		"queryHelp": "Modifier la requête de référence change aussi celle-ci.",
 		"newConn": "Nouvelle…",
 		"web": {
 			"url": "Adresse (GET)",
@@ -313,22 +310,20 @@
 			"headers": "En-têtes (un par ligne, « Nom: valeur »)",
 			"auth": "Authentification",
 			"public": "Aucune (API publique)",
-			"help": "Les en-têtes sont enregistrés dans le classeur : un jeton ou une clé d’API passe par une connexion Web (gardée dans le trousseau du système)."
+			"help": "Les en-têtes sont enregistrés dans le classeur : passez un jeton par une connexion Web."
 		},
 		"tables": "Tables et vues",
 		"search": "Rechercher",
 		"view": "(vue)",
 		"sql": {
 			"label": "Requête SQL (lecture seule)",
-			"dbHelp": "Filtrez de préférence ici : la requête est exécutée par le serveur, les étapes ensuite par Lattis.",
-			"fileHelp": "Le fichier est ouvert en lecture seule ; les étapes s’appliquent ensuite.",
+			"dbHelp": "Filtrez de préférence ici : cette requête est exécutée par le serveur.",
 			"workbook": "Requête SQL sur le classeur (lecture seule)",
-			"workbookHelp": "Comme dans l'onglet SQL : la requête est relue à chaque actualisation.",
 			"sheet": "Les adresses Cell[A1] sans feuille se lisent sur « {sheet} »."
 		},
 		"formula": {
 			"label": "Formule (tableau dynamique)",
-			"help": "Le tableau se recalcule quand ses sources changent (sans étapes ; avec des étapes, à l'actualisation, F5)."
+			"help": "Recalculé quand ses sources changent (avec des étapes : à l’actualisation, F5)."
 		}
 	},
 	"step": {
@@ -345,13 +340,13 @@
 		"remove": "Retirer",
 		"filter": {
 			"add": "Ajouter une condition",
-			"help": "Les nombres et les dates s'écrivent comme dans la grille (3,5 ; 31/12/2026). Contient, commence par et se termine par ne tiennent pas compte de la casse."
+			"help": "Nombres et dates comme dans la grille (3,5 ; 31/12/2026)."
 		},
 		"column": "Colonne",
 		"newName": "Nouveau nom",
 		"type": "Type",
 		"distinct": {
-			"help": "Aucune colonne cochée : une ligne est un doublon si toutes ses valeurs sont identiques."
+			"help": "Aucune colonne cochée : toutes les colonnes comptent."
 		},
 		"unpivot": {
 			"attribute": "Colonne des attributs"
@@ -380,7 +375,7 @@
 			"name": "Nom de la nouvelle colonne",
 			"expr": "Formule (SQLite)",
 			"placeholder": "[Quantité] * [Prix]",
-			"help": "Colonnes disponibles : {columns}. Exemples : [Prix] * 1.2, upper([Ville]), [Nom] || ' ' || [Prénom], CASE WHEN [Montant] > 100 THEN 'gros' ELSE 'petit' END."
+			"help": "Colonnes : {columns}. Exemple : [Prix] * 1.2"
 		},
 		"autoType": "Auto (déduit des valeurs)",
 		"name": "Nom",
@@ -392,7 +387,7 @@
 			"keys": "Colonnes de correspondance (première requête ↔ seconde) :",
 			"addKey": "Ajouter une colonne de correspondance",
 			"join": "Type de jointure",
-			"columns": "Colonnes à reprendre de la seconde (aucune cochée : toutes sauf les colonnes de correspondance) :"
+			"columns": "Colonnes à reprendre de la seconde (aucune cochée : toutes) :"
 		},
 		"append": {
 			"from": "Ajouter les lignes de",
@@ -451,7 +446,7 @@
 				"hint": "Enregistrer la requête sans la charger (connexion seulement)"
 			},
 			"cancel": {
-				"hint": "Fermer l’éditeur de requête sans enregistrer les changements (le classeur reste ouvert)"
+				"hint": "Fermer l’éditeur de requête sans enregistrer"
 			},
 			"refresh": {
 				"label": "Actualiser l’aperçu",
@@ -488,7 +483,7 @@
 		"title": "Éditeur de requête",
 		"tabs": "Onglets du ruban",
 		"close": {
-			"tooltip": "Annuler : fermer l’éditeur de requête sans enregistrer (le classeur reste ouvert)",
+			"tooltip": "Annuler : fermer sans enregistrer",
 			"aria": "Annuler et fermer l’éditeur de requête"
 		},
 		"errorStep": "Étape {n} ({label})",
@@ -511,7 +506,7 @@
 			"edit": "Modifier l'étape",
 			"delete": "Supprimer l'étape"
 		},
-		"help": "Une nouvelle étape s'insère après l'étape choisie. Cliquez un en-tête de colonne pour la choisir (Ctrl ou Maj : plusieurs) ; son ▾ ou un clic droit ouvre le menu de la colonne.",
+		"help": "Une nouvelle étape s'insère après l'étape choisie.",
 		"menu": {
 			"count": "({n} colonnes)",
 			"chosen": "{n} colonnes choisies",

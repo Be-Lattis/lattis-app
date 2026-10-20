@@ -54,8 +54,8 @@
 			"remembered": "(recordado)",
 			"remember": "Recordar en el llavero del sistema",
 			"help": {
-				"lattis": "No se guarda ninguna contraseña: la conexión usa su sesión en el servidor (menú Cuenta de la barra de título) y lo que sus permisos le dejan leer allí. Como origen de una consulta, solo se usa para leer (en una réplica si el servidor la anuncia).",
-				"web": "El token nunca se guarda en el libro; solo se envía a las direcciones que empiezan por la dirección de la conexión",
+				"lattis": "No se guarda ninguna contraseña: la conexión usa su sesión en el servidor, en solo lectura.",
+				"web": "El token nunca se guarda en el libro y solo se envía a las direcciones de la conexión",
 				"bearer": ": se agrega Bearer a un token solo",
 				"db": "La contraseña nunca se guarda en el libro. La conexión solo se usa para leer",
 				"readOnly": "transacción de solo lectura",
@@ -127,7 +127,7 @@
 		},
 		"addcolumn": {
 			"label": "Columna personalizada",
-			"hint": "Nueva columna calculada con una expresión SQLite ([Columna] designa una columna)"
+			"hint": "Nueva columna calculada por una expresión SQLite"
 		},
 		"index": {
 			"label": "Columna de índice",
@@ -202,7 +202,7 @@
 		"title": "Contraseña",
 		"header": "Conexión «{name}»",
 		"stored": "Este libro quiere conectarse con su contraseña guardada en este equipo.",
-		"storedHelp": "Permítalo si conoce este libro: el permiso se recuerda para él en este equipo. Un libro recibido de un origen desconocido no debería obtenerlo.",
+		"storedHelp": "Permita solo un libro que conozca (el permiso se recuerda en este equipo).",
 		"allow": "Permitir",
 		"other": "Escribir otra contraseña",
 		"refuse": "Denegar",
@@ -298,14 +298,11 @@
 			"placeholder": "vacío: la raíz o su única matriz; p. ej., data.items"
 		},
 		"json": {
-			"help": "Matriz de objetos, o un objeto JSON por línea (NDJSON). Los objetos anidados dan columnas «padre.hijo»."
-		},
-		"parquet": {
-			"help": "Cada columna del archivo da una columna («padre.hijo» para una estructura; una lista se convierte en texto)."
+			"help": "Matriz de objetos, o un objeto JSON por línea (NDJSON)."
 		},
 		"table": "Tabla",
 		"query": "Consulta",
-		"queryHelp": "La consulta parte del resultado de la otra consulta (referencia): si se modifica la otra consulta, también cambia esta.",
+		"queryHelp": "Modificar la consulta de referencia también cambia esta.",
 		"newConn": "Nueva…",
 		"web": {
 			"url": "Dirección (GET)",
@@ -313,22 +310,20 @@
 			"headers": "Encabezados (uno por línea, «Nombre: valor»)",
 			"auth": "Autenticación",
 			"public": "Ninguna (API pública)",
-			"help": "Los encabezados se guardan en el libro: un token o una clave de API pasa por una conexión Web (guardada en el llavero del sistema)."
+			"help": "Los encabezados se guardan en el libro: pase un token mediante una conexión Web."
 		},
 		"tables": "Tablas y vistas",
 		"search": "Buscar",
 		"view": "(vista)",
 		"sql": {
 			"label": "Consulta SQL (solo lectura)",
-			"dbHelp": "Filtre aquí si puede: la consulta se ejecuta en el servidor, los pasos siguientes en Lattis.",
-			"fileHelp": "El archivo se abre en solo lectura; los pasos se aplican después.",
+			"dbHelp": "Filtre aquí si puede: esta consulta la ejecuta el servidor.",
 			"workbook": "Consulta SQL sobre el libro (solo lectura)",
-			"workbookHelp": "Como en la pestaña SQL: la consulta se vuelve a leer en cada actualización.",
 			"sheet": "Las direcciones Cell[A1] sin hoja se leen en «{sheet}»."
 		},
 		"formula": {
 			"label": "Fórmula (tabla recalculada)",
-			"help": "La tabla se recalcula cuando cambian sus orígenes (sin pasos; con pasos, al actualizar, F5)."
+			"help": "Se recalcula cuando cambian sus orígenes (con pasos: al actualizar, F5)."
 		}
 	},
 	"step": {
@@ -345,13 +340,13 @@
 		"remove": "Quitar",
 		"filter": {
 			"add": "Agregar una condición",
-			"help": "Los números y las fechas se escriben como en la cuadrícula (3,5; 31/12/2026). Contiene, comienza por y termina en no distinguen mayúsculas de minúsculas."
+			"help": "Números y fechas como en la cuadrícula (3,5; 31/12/2026)."
 		},
 		"column": "Columna",
 		"newName": "Nuevo nombre",
 		"type": "Tipo",
 		"distinct": {
-			"help": "Ninguna columna activada: una fila es un duplicado si todos sus valores son idénticos."
+			"help": "Ninguna columna marcada: cuentan todas las columnas."
 		},
 		"unpivot": {
 			"attribute": "Columna de atributo"
@@ -380,7 +375,7 @@
 			"name": "Nombre de la nueva columna",
 			"expr": "Fórmula (SQLite)",
 			"placeholder": "[Cantidad] * [Precio]",
-			"help": "Columnas disponibles: {columns}. Ejemplos: [Precio] * 1.2, upper([Ciudad]), [Apellido] || ' ' || [Nombre], CASE WHEN [Importe] > 100 THEN 'grande' ELSE 'pequeño' END."
+			"help": "Columnas: {columns}. Ejemplo: [Precio] * 1.2"
 		},
 		"autoType": "Auto (deducido de los valores)",
 		"name": "Nombre",
@@ -392,7 +387,7 @@
 			"keys": "Columnas coincidentes (primera consulta ↔ segunda):",
 			"addKey": "Agregar una columna coincidente",
 			"join": "Tipo de combinación",
-			"columns": "Columnas que tomar de la segunda (ninguna activada: todas salvo las columnas coincidentes):"
+			"columns": "Columnas que tomar de la segunda (ninguna activada: todas):"
 		},
 		"append": {
 			"from": "Anexar las filas de",
@@ -451,7 +446,7 @@
 				"hint": "Guardar la consulta sin cargarla (solo conexión)"
 			},
 			"cancel": {
-				"hint": "Cerrar el editor de consultas sin guardar los cambios (el libro sigue abierto)"
+				"hint": "Cerrar el Editor de consultas sin guardar"
 			},
 			"refresh": {
 				"label": "Actualizar vista previa",
@@ -488,7 +483,7 @@
 		"title": "Editor de consultas",
 		"tabs": "Pestañas de la cinta de opciones",
 		"close": {
-			"tooltip": "Cancelar: cerrar el editor de consultas sin guardar (el libro sigue abierto)",
+			"tooltip": "Cancelar: cerrar sin guardar",
 			"aria": "Cancelar y cerrar el editor de consultas"
 		},
 		"errorStep": "Paso {n} ({label})",
@@ -511,7 +506,7 @@
 			"edit": "Modificar el paso",
 			"delete": "Eliminar el paso"
 		},
-		"help": "Un paso nuevo se inserta después del paso elegido. Haga clic en un encabezado de columna para elegirla (Ctrl o Mayús: varias); su ▾ o un clic derecho abre el menú de la columna.",
+		"help": "Un nuevo paso se inserta después del paso elegido.",
 		"menu": {
 			"count": "({n} columnas)",
 			"chosen": "{n} columnas elegidas",

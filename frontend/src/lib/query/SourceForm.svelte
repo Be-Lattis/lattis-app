@@ -208,8 +208,6 @@
 				{:else if s.kind === 'json'}
 					<label class="field">{t('query.source.recordPath.label')} <input bind:value={s.recordPath} placeholder={t('query.source.recordPath.placeholder')} /></label>
 					<p class="muted">{t('query.source.json.help')}</p>
-				{:else if s.kind === 'parquet'}
-					<p class="muted">{t('query.source.parquet.help')}</p>
 				{/if}
 			{:else if s.kind === 'table'}
 				<label class="field">{t('query.source.table')} <Select value={s.table ?? ''} options={tables.map((tb) => ({ value: tb, label: tb }))} width="100%" onchange={(v) => (s.table = v)} /></label>
@@ -256,12 +254,10 @@
 					</div>
 				{/if}
 				<label class="field">{t('query.source.sql.label')} <textarea rows="5" bind:value={s.sql} placeholder="SELECT * FROM ventes WHERE annee = 2026"></textarea></label>
-				<p class="muted">
-					{isDB ? t('query.source.sql.dbHelp') : t('query.source.sql.fileHelp')}
-				</p>
+				{#if isDB}<p class="muted">{t('query.source.sql.dbHelp')}</p>{/if}
 			{:else if s.kind === 'sql'}
 				<label class="field">{t('query.source.sql.workbook')} <textarea rows="6" bind:value={s.sql} placeholder="SELECT * FROM Ventes WHERE annee = 2026"></textarea></label>
-				<p class="muted">{t('query.source.sql.workbookHelp')}{s.sheet ? ` ${t('query.source.sql.sheet', { sheet: s.sheet })}` : ''}</p>
+				{#if s.sheet}<p class="muted">{t('query.source.sql.sheet', { sheet: s.sheet })}</p>{/if}
 			{:else if s.kind === 'formula'}
 				<label class="field">{t('query.source.formula.label')} <input bind:value={s.formula} placeholder="=UNIQUE(Ventes[Client])" /></label>
 				<p class="muted">{t('query.source.formula.help')}</p>

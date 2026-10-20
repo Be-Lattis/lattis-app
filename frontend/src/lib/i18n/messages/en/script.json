@@ -142,7 +142,7 @@
 		"label": "Label: {label}"
 	},
 	"pick": {
-		"banner": "Click a control (button, field…) to insert its name in the script — Esc to cancel."
+		"banner": "Click a control to insert its name (Esc to cancel)."
 	},
 	"picker": {
 		"filter": "Filter by name, type or tab",
@@ -158,7 +158,7 @@
 		"badHost": "Host name expected: api.example.com, or an https://… address",
 		"aria": "Network access",
 		"title": "Workbook network access",
-		"help": "Before the first HTTP request to a host (http.get, http.post… in a script or an HTML page), Lattis asks for your permission. Hosts allowed with “Remember for this workbook” are listed here: they are remembered on this computer, not in the file (a received workbook always asks again). The MCP server only reaches these hosts.",
+		"help": "Hosts allowed with “Remember for this workbook”, remembered on this computer only.",
 		"remove": {
 			"label": "Remove",
 			"tooltip": "Remove: the next request will ask again"
@@ -227,7 +227,7 @@
 		"reference": "Reference",
 		"pick": {
 			"label": "Point to a control",
-			"tooltip": "Insert at the cursor the name of a button, a field or another control of the workbook"
+			"tooltip": "Insert the name of a workbook control at the cursor"
 		},
 		"network": {
 			"tooltip": "Hosts that the workbook's scripts and HTML pages can reach over HTTP"

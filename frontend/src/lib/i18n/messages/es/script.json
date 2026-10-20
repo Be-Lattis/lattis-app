@@ -142,7 +142,7 @@
 		"label": "Etiqueta: {label}"
 	},
 	"pick": {
-		"banner": "Haga clic en un control (botón, campo…) para insertar su nombre en el script — Esc para cancelar."
+		"banner": "Haga clic en un control para insertar su nombre (Esc para cancelar)."
 	},
 	"picker": {
 		"filter": "Filtrar por nombre, tipo o pestaña",
@@ -158,7 +158,7 @@
 		"badHost": "Se espera un nombre de host: api.example.com, o una dirección https://…",
 		"aria": "Acceso a la red",
 		"title": "Acceso a la red del libro",
-		"help": "Antes de la primera solicitud HTTP a un host (http.get, http.post… en un script o una página HTML), Lattis le pide permiso. Aquí aparecen los hosts permitidos con «Recordar para este libro»: se recuerdan en este equipo, no en el archivo (un libro recibido siempre vuelve a preguntar). El servidor MCP solo accede a estos hosts.",
+		"help": "Hosts permitidos con «Recordar para este libro», recordados solo en este equipo.",
 		"remove": {
 			"label": "Quitar",
 			"tooltip": "Quitar: la próxima solicitud volverá a preguntar"
@@ -227,7 +227,7 @@
 		"reference": "Referencia",
 		"pick": {
 			"label": "Señalar un control",
-			"tooltip": "Insertar en el cursor el nombre de un botón, un campo u otro control del libro"
+			"tooltip": "Insertar en el cursor el nombre de un control del libro"
 		},
 		"network": {
 			"tooltip": "Hosts a los que los scripts y las páginas HTML del libro pueden acceder por HTTP"

@@ -54,8 +54,8 @@
 			"remembered": "(gespeichert)",
 			"remember": "Im Schlüsselbund des Systems speichern",
 			"help": {
-				"lattis": "Es wird kein Kennwort gespeichert: Die Verbindung nutzt Ihre Sitzung auf dem Server (Menü Konto in der Titelleiste) und das, was Ihre Rechte Ihnen dort zu lesen erlauben. Als Abfragequelle dient sie nur zum Lesen (auf einem Replikat, wenn der Server eines anbietet).",
-				"web": "Das Token wird nie in der Arbeitsmappe gespeichert; es wird nur an Adressen gesendet, die mit der Adresse der Verbindung beginnen",
+				"lattis": "Es wird kein Kennwort gespeichert: Die Verbindung nutzt Ihre Sitzung auf dem Server, schreibgeschützt.",
+				"web": "Das Token wird nie in der Arbeitsmappe gespeichert und nur an die Adressen der Verbindung gesendet",
 				"bearer": ": Bearer wird einem bloßen Token vorangestellt",
 				"db": "Das Kennwort wird nie in der Arbeitsmappe gespeichert. Die Verbindung dient nur zum Lesen",
 				"readOnly": "schreibgeschützte Transaktion",
@@ -127,7 +127,7 @@
 		},
 		"addcolumn": {
 			"label": "Benutzerdefinierte Spalte",
-			"hint": "Neue Spalte, berechnet durch einen SQLite-Ausdruck ([Spalte] bezeichnet eine Spalte)"
+			"hint": "Neue Spalte, berechnet durch einen SQLite-Ausdruck"
 		},
 		"index": {
 			"label": "Indexspalte",
@@ -202,7 +202,7 @@
 		"title": "Kennwort",
 		"header": "Verbindung „{name}“",
 		"stored": "Diese Arbeitsmappe möchte sich mit Ihrem auf diesem Computer gespeicherten Kennwort verbinden.",
-		"storedHelp": "Erlauben Sie es, wenn Sie diese Arbeitsmappe kennen: Die Zustimmung wird für sie auf diesem Computer gespeichert. Eine Arbeitsmappe aus unbekannter Quelle sollte sie nicht erhalten.",
+		"storedHelp": "Erlauben Sie nur eine Arbeitsmappe, die Sie kennen (Zustimmung wird auf diesem Computer gespeichert).",
 		"allow": "Erlauben",
 		"other": "Anderes Kennwort eingeben",
 		"refuse": "Ablehnen",
@@ -298,14 +298,11 @@
 			"placeholder": "leer: der Stamm oder sein einziges Array; z. B. data.items"
 		},
 		"json": {
-			"help": "Array von Objekten oder ein JSON-Objekt pro Zeile (NDJSON). Verschachtelte Objekte werden zu Spalten „parent.child“."
-		},
-		"parquet": {
-			"help": "Jede Spalte der Datei ergibt eine Spalte („parent.child“ für eine Struktur; eine Liste wird zu Text)."
+			"help": "Array von Objekten oder ein JSON-Objekt pro Zeile (NDJSON)."
 		},
 		"table": "Tabelle",
 		"query": "Abfrage",
-		"queryHelp": "Die Abfrage geht vom Ergebnis der anderen Abfrage aus (Verweis): Eine Änderung der anderen Abfrage ändert auch diese.",
+		"queryHelp": "Eine Änderung der referenzierten Abfrage ändert auch diese.",
 		"newConn": "Neu…",
 		"web": {
 			"url": "Adresse (GET)",
@@ -313,22 +310,20 @@
 			"headers": "Header (einer pro Zeile, „Name: Wert“)",
 			"auth": "Authentifizierung",
 			"public": "Keine (öffentliche API)",
-			"help": "Header werden in der Arbeitsmappe gespeichert: Ein Token oder API-Schlüssel läuft über eine Web-Verbindung (im Schlüsselbund des Systems aufbewahrt)."
+			"help": "Header werden in der Arbeitsmappe gespeichert: Übergeben Sie ein Token über eine Web-Verbindung."
 		},
 		"tables": "Tabellen und Sichten",
 		"search": "Suchen",
 		"view": "(Sicht)",
 		"sql": {
 			"label": "SQL-Abfrage (schreibgeschützt)",
-			"dbHelp": "Filtern Sie möglichst hier: Die Abfrage wird vom Server ausgeführt, die Schritte danach von Lattis.",
-			"fileHelp": "Die Datei wird schreibgeschützt geöffnet; die Schritte werden danach angewendet.",
+			"dbHelp": "Filtern Sie möglichst hier: Diese Abfrage wird vom Server ausgeführt.",
 			"workbook": "SQL-Abfrage auf die Arbeitsmappe (schreibgeschützt)",
-			"workbookHelp": "Wie auf der Registerkarte SQL: Die Abfrage wird bei jeder Aktualisierung neu gelesen.",
 			"sheet": "Adressen Cell[A1] ohne Blatt werden auf „{sheet}“ gelesen."
 		},
 		"formula": {
 			"label": "Formel (dynamische Tabelle)",
-			"help": "Die Tabelle wird neu berechnet, wenn sich ihre Quellen ändern (ohne Schritte; mit Schritten bei der Aktualisierung, F5)."
+			"help": "Wird neu berechnet, wenn sich die Quellen ändern (mit Schritten: bei Aktualisierung, F5)."
 		}
 	},
 	"step": {
@@ -345,13 +340,13 @@
 		"remove": "Entfernen",
 		"filter": {
 			"add": "Bedingung hinzufügen",
-			"help": "Zahlen und Datumswerte werden wie im Raster geschrieben (3,5; 31/12/2026). Enthält, beginnt mit und endet mit unterscheiden nicht zwischen Groß- und Kleinschreibung."
+			"help": "Zahlen und Datumswerte wie im Raster (3,5; 31/12/2026)."
 		},
 		"column": "Spalte",
 		"newName": "Neuer Name",
 		"type": "Typ",
 		"distinct": {
-			"help": "Keine Spalte aktiviert: Eine Zeile ist ein Duplikat, wenn alle ihre Werte identisch sind."
+			"help": "Keine Spalte aktiviert: Alle Spalten zählen."
 		},
 		"unpivot": {
 			"attribute": "Attributspalte"
@@ -380,7 +375,7 @@
 			"name": "Name der neuen Spalte",
 			"expr": "Formel (SQLite)",
 			"placeholder": "[Menge] * [Preis]",
-			"help": "Verfügbare Spalten: {columns}. Beispiele: [Preis] * 1.2, upper([Ort]), [Nachname] || ' ' || [Vorname], CASE WHEN [Betrag] > 100 THEN 'groß' ELSE 'klein' END."
+			"help": "Spalten: {columns}. Beispiel: [Preis] * 1.2"
 		},
 		"autoType": "Auto (aus den Werten abgeleitet)",
 		"name": "Name",
@@ -392,7 +387,7 @@
 			"keys": "Übereinstimmende Spalten (erste Abfrage ↔ zweite):",
 			"addKey": "Übereinstimmende Spalte hinzufügen",
 			"join": "Joinart",
-			"columns": "Aus der zweiten zu übernehmende Spalten (keine aktiviert: alle außer den übereinstimmenden Spalten):"
+			"columns": "Aus der zweiten zu übernehmende Spalten (keine aktiviert: alle):"
 		},
 		"append": {
 			"from": "Zeilen anfügen von",
@@ -451,7 +446,7 @@
 				"hint": "Abfrage speichern, ohne sie zu laden (nur Verbindung)"
 			},
 			"cancel": {
-				"hint": "Abfrage-Editor schließen, ohne die Änderungen zu speichern (die Arbeitsmappe bleibt geöffnet)"
+				"hint": "Abfrage-Editor ohne Speichern schließen"
 			},
 			"refresh": {
 				"label": "Vorschau aktualisieren",
@@ -488,7 +483,7 @@
 		"title": "Abfrage-Editor",
 		"tabs": "Registerkarten des Menübands",
 		"close": {
-			"tooltip": "Abbrechen: Abfrage-Editor schließen, ohne zu speichern (die Arbeitsmappe bleibt geöffnet)",
+			"tooltip": "Abbrechen: ohne Speichern schließen",
 			"aria": "Abbrechen und Abfrage-Editor schließen"
 		},
 		"errorStep": "Schritt {n} ({label})",
@@ -511,7 +506,7 @@
 			"edit": "Schritt bearbeiten",
 			"delete": "Schritt löschen"
 		},
-		"help": "Ein neuer Schritt wird nach dem gewählten Schritt eingefügt. Klicken Sie auf eine Spaltenüberschrift, um die Spalte auszuwählen (Strg oder Umschalt: mehrere); ihr ▾ oder ein Rechtsklick öffnet das Spaltenmenü.",
+		"help": "Ein neuer Schritt wird nach dem gewählten Schritt eingefügt.",
 		"menu": {
 			"count": "({n} Spalten)",
 			"chosen": "{n} Spalten ausgewählt",

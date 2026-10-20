@@ -54,8 +54,8 @@
 			"remembered": "(remembered)",
 			"remember": "Remember in the system keychain",
 			"help": {
-				"lattis": "No password is saved: the connection uses your session on the server (Account menu in the title bar), and whatever your rights let you read there. As a query source, it is used only for reading (on a replica when the server advertises one).",
-				"web": "The token is never saved in the workbook; it is only sent to addresses that start with the connection's address",
+				"lattis": "No password is saved: the connection uses your session on the server, read-only.",
+				"web": "The token is never saved in the workbook and is only sent to the connection's addresses",
 				"bearer": ": Bearer is added to a bare token",
 				"db": "The password is never saved in the workbook. The connection is used only for reading",
 				"readOnly": "read-only transaction",
@@ -127,7 +127,7 @@
 		},
 		"addcolumn": {
 			"label": "Custom column",
-			"hint": "New column calculated by a SQLite expression ([Column] refers to a column)"
+			"hint": "New column calculated by an SQLite expression"
 		},
 		"index": {
 			"label": "Index column",
@@ -202,7 +202,7 @@
 		"title": "Password",
 		"header": "Connection “{name}”",
 		"stored": "This workbook wants to connect with your password saved on this computer.",
-		"storedHelp": "Allow it if you know this workbook: the permission is remembered for it on this computer. A workbook received from an unknown source shouldn't get it.",
+		"storedHelp": "Only allow a workbook you know (permission remembered on this computer).",
 		"allow": "Allow",
 		"other": "Enter another password",
 		"refuse": "Deny",
@@ -298,14 +298,11 @@
 			"placeholder": "empty: the root or its only array; e.g. data.items"
 		},
 		"json": {
-			"help": "Array of objects, or one JSON object per line (NDJSON). Nested objects become “parent.child” columns."
-		},
-		"parquet": {
-			"help": "Each column of the file gives a column (“parent.child” for a struct; a list becomes text)."
+			"help": "Array of objects, or one JSON object per line (NDJSON)."
 		},
 		"table": "Table",
 		"query": "Query",
-		"queryHelp": "The query starts from the other query's result (reference): changing the other query also changes this one.",
+		"queryHelp": "Changing the referenced query also changes this one.",
 		"newConn": "New…",
 		"web": {
 			"url": "Address (GET)",
@@ -313,22 +310,20 @@
 			"headers": "Headers (one per line, “Name: value”)",
 			"auth": "Authentication",
 			"public": "None (public API)",
-			"help": "Headers are saved in the workbook: a token or an API key goes through a Web connection (kept in the system keychain)."
+			"help": "Headers are saved in the workbook: pass a token through a Web connection."
 		},
 		"tables": "Tables and views",
 		"search": "Search",
 		"view": "(view)",
 		"sql": {
 			"label": "SQL query (read-only)",
-			"dbHelp": "Filter here if you can: the query runs on the server, the steps afterwards in Lattis.",
-			"fileHelp": "The file is opened read-only; the steps apply afterwards.",
+			"dbHelp": "Filter here if you can: this query runs on the server.",
 			"workbook": "SQL query on the workbook (read-only)",
-			"workbookHelp": "As in the SQL tab: the query is reread on every refresh.",
 			"sheet": "Cell[A1] addresses without a sheet are read from “{sheet}”."
 		},
 		"formula": {
 			"label": "Formula (dynamic table)",
-			"help": "The table recalculates when its sources change (without steps; with steps, on refresh, F5)."
+			"help": "Recalculates when its sources change (with steps: on refresh, F5)."
 		}
 	},
 	"step": {
@@ -345,13 +340,13 @@
 		"remove": "Remove",
 		"filter": {
 			"add": "Add a condition",
-			"help": "Numbers and dates are typed as in the grid (3,5; 31/12/2026). Contains, begins with and ends with are not case-sensitive."
+			"help": "Numbers and dates as in the grid (3,5; 31/12/2026)."
 		},
 		"column": "Column",
 		"newName": "New name",
 		"type": "Type",
 		"distinct": {
-			"help": "No column checked: a row is a duplicate if all its values are identical."
+			"help": "No column checked: all columns count."
 		},
 		"unpivot": {
 			"attribute": "Attribute column"
@@ -380,7 +375,7 @@
 			"name": "New column name",
 			"expr": "Formula (SQLite)",
 			"placeholder": "[Quantity] * [Price]",
-			"help": "Available columns: {columns}. Examples: [Price] * 1.2, upper([City]), [LastName] || ' ' || [FirstName], CASE WHEN [Amount] > 100 THEN 'large' ELSE 'small' END."
+			"help": "Columns: {columns}. Example: [Price] * 1.2"
 		},
 		"autoType": "Auto (inferred from the values)",
 		"name": "Name",
@@ -392,7 +387,7 @@
 			"keys": "Matching columns (first query ↔ second):",
 			"addKey": "Add a matching column",
 			"join": "Join kind",
-			"columns": "Columns to take from the second (none checked: all except the matching columns):"
+			"columns": "Columns to take from the second (none checked: all):"
 		},
 		"append": {
 			"from": "Append the rows of",
@@ -451,7 +446,7 @@
 				"hint": "Save the query without loading it (connection only)"
 			},
 			"cancel": {
-				"hint": "Close the query editor without saving the changes (the workbook stays open)"
+				"hint": "Close the Query Editor without saving"
 			},
 			"refresh": {
 				"label": "Refresh preview",
@@ -488,7 +483,7 @@
 		"title": "Query Editor",
 		"tabs": "Ribbon tabs",
 		"close": {
-			"tooltip": "Cancel: close the query editor without saving (the workbook stays open)",
+			"tooltip": "Cancel: close without saving",
 			"aria": "Cancel and close the query editor"
 		},
 		"errorStep": "Step {n} ({label})",
@@ -511,7 +506,7 @@
 			"edit": "Edit step",
 			"delete": "Delete step"
 		},
-		"help": "A new step is inserted after the chosen step. Click a column header to choose it (Ctrl or Shift: several); its ▾ or a right-click opens the column menu.",
+		"help": "A new step is inserted after the chosen step.",
 		"menu": {
 			"count": "({n} columns)",
 			"chosen": "{n} columns chosen",
