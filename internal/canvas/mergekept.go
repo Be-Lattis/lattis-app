@@ -1,7 +1,6 @@
 package canvas
 
 import (
-	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
 	"strings"
 )
@@ -42,25 +41,28 @@ func (t *tx) keptSheets(tables []Table, gone map[int64]bool) ([]string, error) {
 				return nil, err
 			}
 			if !src[id] {
-				what = append(what, "le tableau "+name)
+				what = append(what, t.say("mergeSheets.keptTable", msg.Args{"table": name}))
 			}
 		}
 		rs.Close()
-		for _, o := range []struct{ table, one, many string }{
-			{`_lattis_pivots`, "un tableau croisé", "%d tableaux croisés"},
-			{`_lattis_charts`, "un graphique", "%d graphiques"},
-			{`_lattis_buttons`, "un bouton", "%d boutons"},
+		for _, o := range []struct {
+			table string
+			id    msg.ID
+		}{
+			{`_lattis_pivots`, "mergeSheets.keptPivots"},
+			{`_lattis_charts`, "mergeSheets.keptCharts"},
+			{`_lattis_buttons`, "mergeSheets.keptButtons"},
 		} {
 			var n int
 			if err := t.row(`SELECT count(*) FROM `+o.table+` WHERE sheet = ?`, tb.Sheet).Scan(&n); err != nil {
 				return nil, err
 			}
 			if n > 0 {
-				what = append(what, plural(n, o.one, fmt.Sprintf(o.many, n)))
+				what = append(what, t.say(o.id, msg.Args{"n": n}))
 			}
 		}
 		if len(what) == 0 {
-			what = []string{"une page"}
+			what = []string{t.say("mergeSheets.keptPage", nil)}
 		}
 		out = append(out, t.say("note.sheetKept", msg.Args{"sheet": sheetName, "what": strings.Join(what, ", ")}))
 	}

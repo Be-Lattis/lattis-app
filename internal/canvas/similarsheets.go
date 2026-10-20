@@ -223,9 +223,9 @@ func together(a, b *candidate) bool {
 func (t *tx) excludedTables() (map[int64]string, error) {
 	out := map[int64]string{}
 	for q, why := range map[string]string{
-		`SELECT target FROM _lattis_queries WHERE target IS NOT NULL`: "chargé par une requête (il serait écrasé à l'actualisation : ajoutez plutôt une étape « Ajouter une requête »)",
-		`SELECT tbl FROM _lattis_remote_tables`:                       "partagé sur un Serveur Lattis",
-		`SELECT tbl FROM _lattis_data_sync`:                           "lié au Data Lake Lattis",
+		`SELECT target FROM _lattis_queries WHERE target IS NOT NULL`: "query",
+		`SELECT tbl FROM _lattis_remote_tables`:                       "shared",
+		`SELECT tbl FROM _lattis_data_sync`:                           "linked",
 	} {
 		rs, err := t.query(q)
 		if err != nil {
@@ -258,7 +258,7 @@ func (t *tx) excludedTables() (map[int64]string, error) {
 		}
 		if json.Unmarshal([]byte(raw), &v) == nil {
 			for _, l := range v.Links {
-				out[l.Tbl] = "publié comme source du Data Lake Lattis"
+				out[l.Tbl] = "source"
 			}
 		}
 	}

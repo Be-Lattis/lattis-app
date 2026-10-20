@@ -24,11 +24,11 @@ func (m *Model) KeyCheck(ctx context.Context, table string, i int) (string, erro
 
 func (t *tx) keyCheck(tb Table, i int) (string, error) {
 	if i < 0 || i >= len(tb.Cols) {
-		return "colonne hors du tableau", nil
+		return t.say("key.whyOutOfTable", nil), nil
 	}
 	c := tb.Cols[i]
 	if c.Formula != "" {
-		return "c'est une colonne calculée", nil
+		return t.say("key.whyComputed", nil), nil
 	}
 	var total, filled, distinct int
 	if err := t.row(`SELECT count(*), count(`+colSQL(c.ID)+`), count(DISTINCT `+keyExpr(c.ID, c.Type)+`) FROM `+tb.sql()).Scan(&total, &filled, &distinct); err != nil {

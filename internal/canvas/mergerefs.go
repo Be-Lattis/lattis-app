@@ -47,7 +47,7 @@ type mergeTarget struct {
 // colonne de catégorie, deux onglets de même catégorie).
 func (t *tx) mergeTargets(j *mergeJob) (map[string]mergeTarget, string, error) {
 	if !j.hasCat() {
-		return nil, "pas de colonne de catégorie pour distinguer les onglets", nil
+		return nil, t.say("mergeSheets.whyNoCategory", nil), nil
 	}
 	cat := j.plan.Category
 	seen := map[string]string{}
@@ -64,7 +64,7 @@ func (t *tx) mergeTargets(j *mergeJob) (map[string]mergeTarget, string, error) {
 		seen[low] = s.sheet
 		value, crit := formula.CategoryNodes(formula.FromSQL(s.cat, cat.Type))
 		if value == nil {
-			return nil, "catégorie illisible en formule", nil
+			return nil, t.say("mergeSheets.whyCategoryFormula", nil), nil
 		}
 		cols := map[string]string{}
 		for i, c := range j.cols {

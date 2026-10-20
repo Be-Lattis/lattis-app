@@ -3,6 +3,11 @@ package msg
 import (
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -98,12 +103,83 @@ func TestError(t *testing.T) {
 	}
 }
 
+// typed : une erreur typée qui porte son message (Messager).
+type typed struct{ name string }
+
+func (e typed) Error() string { return e.Msg().String() }
+func (e typed) Msg() Message  { return M("table.nameTaken", Args{"name": e.name}) }
+
+// Paramètres qui sont eux-mêmes des messages ou des erreurs : écrits dans
+// la langue demandée ; erreurs typées traduites comme un *Error.
+func TestMessageArgs(t *testing.T) {
+	catalogs[EN]["table.nameTaken"] = "table: “{name}” already exists"
+	catalogs[EN]["test.wrap"] = "import failed: {err} ({what})"
+	fr["test.wrap"] = "import impossible : {err} ({what})"
+	fr["test.what"] = "le tableau"
+	catalogs[EN]["test.what"] = "the table"
+	t.Cleanup(func() {
+		delete(catalogs[EN], "table.nameTaken")
+		delete(catalogs[EN], "test.wrap")
+		delete(fr, "test.wrap")
+		delete(fr, "test.what")
+		delete(catalogs[EN], "test.what")
+	})
+	inner := typed{"Ventes"}
+	e := Wrap(inner, "test.wrap", Args{"err": inner, "what": M("test.what", nil)})
+	if e.Error() != "import impossible : tableau : « Ventes » existe déjà (le tableau)" {
+		t.Fatalf("Error() = %q", e.Error())
+	}
+	if got := e.Text(EN); got != "import failed: table: “Ventes” already exists (the table)" {
+		t.Errorf("Text = %q", got)
+	}
+	if got := Text(EN, fmt.Errorf("lecture : %w", inner)); got != "lecture : table: “Ventes” already exists" {
+		t.Errorf("Text d'une erreur typée enveloppée = %q", got)
+	}
+	in := e.Args.In(EN)
+	if in["err"] != "table: “Ventes” already exists" || in["what"] != "the table" {
+		t.Errorf("Args.In = %v", in)
+	}
+	if M("test.what", nil).String() != "le tableau" {
+		t.Error("Message.String : le français")
+	}
+}
+
 func TestCurrent(t *testing.T) {
 	defer SetCurrent(Current())
 	SetCurrent("xx")
 	SetCurrent(ES)
 	if Current() != ES {
 		t.Fatalf("Current = %q", Current())
+	}
+}
+
+// Chaque identifiant écrit en toutes lettres dans le moteur
+// (msg.New("table.nameTaken", …), msg.Wrap(…, "…"), msg.M, say, Format)
+// a son texte français.
+func TestIDsInCatalogue(t *testing.T) {
+	call := regexp.MustCompile(`(?:msg\.(?:New|M)\(|msg\.Wrap\([^"\n]*?,\s*|msg\.Format\([^"\n]*?,\s*|\bsay\()"([A-Za-z0-9_.]+)"\s*[,)]`)
+	root := filepath.Join("..", "..")
+	n := 0
+	for _, dir := range []string{"internal", "engine", "cmd"} {
+		filepath.WalkDir(filepath.Join(root, dir), func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") {
+				return nil
+			}
+			b, err := os.ReadFile(p)
+			if err != nil {
+				return nil
+			}
+			for _, m := range call.FindAllStringSubmatch(string(b), -1) {
+				n++
+				if !Has(ID(m[1])) {
+					t.Errorf("%s : %s absent du catalogue français", p, m[1])
+				}
+			}
+			return nil
+		})
+	}
+	if n < 100 {
+		t.Fatalf("%d identifiants trouvés seulement", n)
 	}
 }
 

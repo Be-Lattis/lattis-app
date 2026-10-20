@@ -210,10 +210,10 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 		}
 	}
 	if t.shared() {
-		refuse("le classeur est partagé sur un Serveur Lattis : le regroupement d'onglets n'y est pas encore possible")
+		refuse(t.say("mergeSheets.sharedWorkbook", nil))
 	}
 	if err := t.guardWorkbook(); err != nil {
-		refuse(err.Error())
+		refuse(msg.Text(t.m.Language(), err))
 	}
 	tables := make([]Table, len(plan.Tables))
 	seen := map[int64]bool{}
@@ -233,10 +233,10 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 		}
 		j.srcs = append(j.srcs, &mergeSource{tb: tb, sheet: sheet})
 		if why, ok := excluded[tb.ID]; ok {
-			refuse(fmt.Sprintf("« %s » est %s", tb.Name, why))
+			refuse(t.say("mergeSheets.excluded", msg.Args{"table": tb.Name, "why": t.say("mergeSheets.why."+msg.ID(why), nil)}))
 		}
 		if err := t.guard(tb.Sheet); err != nil {
-			refuse(err.Error())
+			refuse(msg.Text(t.m.Language(), err))
 		}
 		if err := t.lockTable(tb.ID); err != nil {
 			refuse(err.Error())

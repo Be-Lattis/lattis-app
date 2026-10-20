@@ -161,13 +161,13 @@ func (t *tx) validationList(sheet int64, src string) ([]string, string) {
 	s, err := NormalizeDVSource(src)
 	if err != nil {
 		if strings.Contains(src, "#REF!") {
-			return nil, "la plage source a été supprimée (#REF!)"
+			return nil, t.say("validation.sourceDeleted", msg.Args{"ref": "#REF!"})
 		}
 		return nil, strings.TrimPrefix(err.Error(), "validation : ")
 	}
 	n, err := formula.Parse(s, formula.FR)
 	if err != nil {
-		return nil, "référence illisible : " + s
+		return nil, t.say("validation.unreadableRef", msg.Args{"ref": s})
 	}
 	switch v := n.(type) {
 	case formula.Ref:
@@ -186,7 +186,7 @@ func (t *tx) validationList(sheet int64, src string) ([]string, string) {
 		}
 		return t.namedList(v.Name)
 	}
-	return nil, "« " + s + " » n'est pas une plage"
+	return nil, t.say("validation.notARange", msg.Args{"ref": s})
 }
 
 // columnList : valeurs distinctes d'une colonne de tableau (ou de ses
@@ -215,7 +215,7 @@ func (t *tx) columnList(sheet int64, ref formula.Ref, from, to int) ([]string, s
 	}
 	rows, ok, e := t.spillFreeRaw(sheet, raw)
 	if !ok || e.IsErr() {
-		return nil, "la source ne se lit pas (" + e.String() + ")"
+		return nil, t.say("validation.unreadableSource", msg.Args{"err": e.String()})
 	}
 	var vals []formula.Value
 	for i, r := range rows {

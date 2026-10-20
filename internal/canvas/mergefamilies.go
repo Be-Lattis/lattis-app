@@ -1006,7 +1006,7 @@ func (t *tx) placeJob(fj *famJob, sheet int64) error {
 			if !errors.As(err, &ke) {
 				return err
 			}
-			fj.keyNote = "Pas de clé : " + ke.Why
+			fj.keyNote = t.say("mergeSheets.noKey", msg.Args{"why": ke.Why})
 		}
 	}
 	return nil

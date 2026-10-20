@@ -411,7 +411,7 @@ func (t *tx) pivotHandAttach(p *PivotInfo, sheet int64, hand []PivotHandCol, nam
 		return err
 	}
 	if len(cfg.RowFields) == 0 {
-		p.HandNote = "Aucun champ en lignes : les valeurs saisies à droite du tableau croisé sont mises de côté ; elles reviendront avec leur champ en lignes."
+		p.HandNote = t.say("pivot.handNoRows", nil)
 	}
 	return nil
 }
