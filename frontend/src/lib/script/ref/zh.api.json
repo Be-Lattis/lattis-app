@@ -1,0 +1,738 @@
+{
+	"buttons.create": {
+		"signature": "buttons.create(row, col, label, script, [function], [sheet])",
+		"summary": "在工作表上放置一个操作按钮；单击时执行库中的脚本或其中的某个函数。返回按钮的标识符。",
+		"details": "script 是已保存脚本的名称（“脚本”标签）。指定 function 时，先加载脚本，再调用该名称的全局函数：一个脚本可以服务多个按钮。一次单击所做的一切会一次撤消。参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；label：按钮的文字；script：要执行的脚本名称；function：要调用的脚本函数；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：buttons.create{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"buttons.delete": {
+		"signature": "buttons.delete(button)",
+		"summary": "删除一个操作按钮。",
+		"details": "参数 — button：按钮（标识符或标签）。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"buttons.list": {
+		"signature": "buttons.list([sheet]) → { {id, name, kind, label, script, function, row, col}, ... }",
+		"summary": "列出工作表上的操作按钮。",
+		"details": "参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表。"
+	},
+	"buttons.place": {
+		"signature": "buttons.place(button, row, col, [width], [height])",
+		"summary": "移动按钮（左上角位于 row, col），如给出尺寸则调整其大小（像素）。",
+		"details": "参数 — button：按钮（标识符或标签）；row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；width：宽度（像素）；height：高度（像素）。可按顺序传参，或使用命名参数表：buttons.place{button = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"buttons.set": {
+		"signature": "buttons.set(button, [label], [script], [function])",
+		"summary": "更改按钮的标签、脚本或函数（未给出的参数不变）。",
+		"details": "参数 — button：按钮（标识符或标签）；label：按钮的文字；script：脚本名称；function：脚本函数（\"\"：只用脚本）。可按顺序传参，或使用命名参数表：buttons.set{button = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.clear": {
+		"signature": "cells.clear(row, col, [row2], [col2], [sheet])",
+		"summary": "清除单元格区域的内容（表格保持其形状）。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；row2：区域的最后一行（省略时：row）；col2：区域的最后一列（省略时：col）；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.clear{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.dependencies": {
+		"signature": "cells.dependencies(row, col, [sheet]) → {subject, precedents, dependents}",
+		"summary": "给出引用单元格（单元格公式读取的内容）和从属单元格（读取该单元格的公式）。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.dependencies{row = …}。"
+	},
+	"cells.get": {
+		"signature": "cells.get(row, col, [sheet]) → {row, col, raw, value, table, column, header, line, id}",
+		"summary": "读取工作表的一个单元格：输入内容、显示值，若在表格中，还有表格、列和行。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.get{row = …}。"
+	},
+	"cells.merge": {
+		"signature": "cells.merge(row, col, [row2], [col2], [sheet]) → 清除的值的个数",
+		"summary": "将自由单元格合并为一个，内容居中（在表格或数据透视表中会被拒绝）。与 Excel 一样，只保留左上角的值。在带标题组的表格中（tables.two_level_headers），只合并组所在的横条：横条中的格子与某列的标题合并后，该列变为单层（简单名称：其子标题，若标题是自动生成的则为组名）；横条中相邻的多个格子组成一个组（取它们带有的第一个组名，否则为“组”）。各列会被重命名，公式随之更新。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；row2：区域的最后一行（省略时：row）；col2：区域的最后一列（省略时：col）；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.merge{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.name": {
+		"signature": "cells.name(row, col, name, [sheet])",
+		"summary": "为自由单元格命名，以便在公式中引用；名称为空则移除名称。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；name：名称（为空：移除）；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.name{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.note": {
+		"signature": "cells.note(row, col, text, [sheet])",
+		"summary": "设置单元格的批注（红色角标，悬停时显示）；文本为空则移除。在表格中，批注跟随其所在的行。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；text：批注文本（为空：移除批注）；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.note{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.paste": {
+		"signature": "cells.paste(row, col, values, [range], [sheet])",
+		"summary": "从某个单元格起写入一块值，与粘贴相同：一行标题后接若干数据行时会创建表格；range = true 则写成自由单元格区域。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；values：值的各行：{ {\"姓名\", \"年龄\"}, {\"李娜\", 31} }；range：true：自由单元格（一个区域），不创建表格；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.paste{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.read": {
+		"signature": "cells.read(row, col, row2, col2, [sheet]) → { {值, ...}, ... }",
+		"summary": "逐行读取工作表某个区域的显示值：表格、数据透视表和自由单元格一视同仁（\"\"：空单元格）。",
+		"details": "最多 100,000 个单元格；要读取整张表格，tables.rows 或 db.query 更直接。参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；row2：区域的最后一行；col2：区域的最后一列；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.read{row = …}。"
+	},
+	"cells.set": {
+		"signature": "cells.set(row, col, value, [sheet]) → {created, widened, from, to, invalid, keyed}",
+		"summary": "在工作表的单元格中输入一个值，与在网格中键入完全相同。",
+		"details": "以 = 开头的文本是公式。在表格旁边输入会扩展表格，在相邻两行输入会创建表格，\"\" 清除单元格。返回这次输入引起的结果（创建了表格、扩展了列…）。参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；value：输入：文本、数字、布尔值、公式（=…）；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.set{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.style": {
+		"signature": "cells.style(row, col, [row2], [col2], style, [sheet])",
+		"summary": "设置单元格区域的格式。",
+		"details": "style：bold、italic、underline、strike（布尔值），font（字体）和 size（字号，单位为磅），color 和 fill（颜色 \"#rrggbb\"，或工作簿主题中的颜色：\"theme:accent1\" 到 \"theme:accent6\"、\"theme:dk1\"、\"theme:lt1\"、\"theme:dk2\"、\"theme:lt2\"，必要时后接 \":+40\" 表示调亮 40%，或 \":-25\" 表示调暗 25%；它们随主题变化），align（\"left\"、\"center\" 或 \"right\"），valign（\"top\"、\"middle\" 或 \"bottom\"），wrap（自动换行），format（\"0\"、\"0,00\"、\"%\"、\"€\"、\"date\"、\"time\" 或 \"text\"），decimals（小数位数），no_grouping（不用千位分隔符），date_format（日期或时间的格式：\"jj/mm/aaaa\"、\"jj mmm aaaa\"、\"aaaa-mm-jj\"、\"hh:mm\"…），borders（四条边框）或 border_top、border_bottom、border_left、border_right、border_color，以及 validation（下拉列表：允许值的列表 {\"是\", \"否\"}，或源区域 \"=客户[城市]\"、\"=Cell[A1:A10]\"、\"=Sheet2!Cell[A1:A10]\" 或 \"=单元格名称\"，每次打开列表和每次输入时都会重新读取其中不同的非空值）。false 或 \"\" 会移除该属性。参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；row2：区域的最后一行（省略时：row）；col2：区域的最后一列（省略时：col）；style：要设置的属性：{bold = true, fill = \"#fff2cc\"}；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.style{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.style_lines": {
+		"signature": "cells.style_lines(axis, from, [to], style, [sheet])",
+		"summary": "设置工作表中整行或整列的格式（其中所有现有和将来的单元格，包括表格和数据透视表）。单元格格式优先于行，行格式优先于列。",
+		"details": "style：bold、italic、underline、strike（布尔值），font（字体）和 size（字号，单位为磅），color 和 fill（颜色 \"#rrggbb\"，或工作簿主题中的颜色：\"theme:accent1\" 到 \"theme:accent6\"、\"theme:dk1\"、\"theme:lt1\"、\"theme:dk2\"、\"theme:lt2\"，必要时后接 \":+40\" 表示调亮 40%，或 \":-25\" 表示调暗 25%；它们随主题变化），align（\"left\"、\"center\" 或 \"right\"），valign（\"top\"、\"middle\" 或 \"bottom\"），wrap（自动换行），format（\"0\"、\"0,00\"、\"%\"、\"€\"、\"date\"、\"time\" 或 \"text\"），decimals（小数位数），no_grouping（不用千位分隔符），date_format（日期或时间的格式：\"jj/mm/aaaa\"、\"jj mmm aaaa\"、\"aaaa-mm-jj\"、\"hh:mm\"…），borders（四条边框）或 border_top、border_bottom、border_left、border_right、border_color，以及 validation（下拉列表：允许值的列表 {\"是\", \"否\"}，或源区域 \"=客户[城市]\"、\"=Cell[A1:A10]\"、\"=Sheet2!Cell[A1:A10]\" 或 \"=单元格名称\"，每次打开列表和每次输入时都会重新读取其中不同的非空值）。false 或 \"\" 会移除该属性。参数 — axis：\"rows\"（行）或 \"cols\"（列）；from：第一行或第一列，从 1 开始；to：最后一行或最后一列（省略时：from）；style：要设置的属性：{bold = true, fill = \"#fff2cc\"}；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.style_lines{axis = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.text_to_columns": {
+		"signature": "cells.text_to_columns(row, col, [row2], options, [sheet])",
+		"summary": "将 col 列中第 row 到 row2 行单元格的文本拆分为多列（Excel 的分列向导）：在自由单元格中，各部分向右写入（或从 options.dest 开始）；在表格中则插入新列。返回导入的列数。",
+		"details": "options：{delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}。delims：分隔字符（\";\"、\",\"、\" \"、\"\t\"…）；merge = true：连续的分隔符视为一个；quote：文本识别符（向导中默认为 \"\\\"\"，\"'\" 或 \"\" 表示无）。fixed = true：固定宽度，breaks 给出分割位置（以字符计）。columns：生成的每一列的格式，{format = \"\"（常规）、\"text\"、\"date\" 或 \"skip\"（不导入），order = \"DMY\"、\"MDY\"、\"YMD\"… 用于日期}。decimal 和 thousands：数字的分隔符（默认为 \",\" 和 \" \"）。dest：在自由单元格中的目标单元格（“E2”）。参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；row2：区域的最后一行（省略时：row）；options：{delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.text_to_columns{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.to_values": {
+		"signature": "cells.to_values(row, col, [row2], [col2], [sheet])",
+		"summary": "将区域中的公式替换为其值：带公式的自由单元格，以及区域所涉及表格中的计算列（整列）（同 columns.to_values）。溢出动态数组的公式保持不变。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；row2：区域的最后一行（省略时：row）；col2：区域的最后一列（省略时：col）；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.to_values{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"cells.unmerge": {
+		"signature": "cells.unmerge(row, col, [row2], [col2], [sheet])",
+		"summary": "取消与该区域相交的单元格合并。在表格的标题组横条中，跨多列的组保留在第一列上，其他列变为单层（会被重命名）；单层的列不变：可在横条上用 cells.set 或用 columns.rename(“组.子”) 为它设置组。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；row2：区域的最后一行（省略时：row）；col2：区域的最后一列（省略时：col）；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：cells.unmerge{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"charts.create": {
+		"signature": "charts.create(row, col, config, [sheet])",
+		"summary": "在工作表上放置图表，左上角位于 row, col，返回其标识符。",
+		"details": "config：{source, kind, x, series, title, …}。source 是表格或数据透视表，x 是分类（x 轴）所在的列，series 是要绘制的列的列表。kind：\"bar\"（柱形图：竖直的柱子）、\"column\"（水平条形）、\"line\"、\"area\"、\"pie\"、\"doughnut\"、\"scatter\"、\"combo\"（柱形和折线：seriesKinds 给出每个系列的形状，\"bar\"、\"line\" 或 \"area\"）、\"bar3d\" 和 \"pie3d\"（立体）、\"map\"（OpenStreetMap 地图）、\"waterfall\"（瀑布图）、\"treemap\"（树状图）、\"radar\"、\"funnel\"（漏斗图）、\"boxplot\"（箱形图）、\"histogram\"（频率，bins 为分组数）或 \"gauge\"（仪表：第一个系列的最后一个值，介于 yMin 和 yMax 之间）。\n外观：title；legend（\"bottom\"、\"top\"、\"right\" 或 \"none\"）；xTitle、yTitle、y2Title（坐标轴标题）；labels（数据标签）；noGrid（无网格线）；stacked（堆积：柱形、面积）；yMin、yMax（数值轴的范围）；colors（每个系列的颜色，\"#rrggbb\"；饼图、圆环图、漏斗图和树状图按分类；瀑布图为增加、减少和总计）；secondary（布尔值列表：位于右侧坐标轴的系列）；blanks（折线和面积：空单元格 \"gap\" 显示为空距，默认，\"zero\" 或 \"span\" 连接各点）；hidden（同时读取被表格筛选隐藏的行）；filters（基于表格的图表：{{field, values}, ...}，只读取 field 列显示其中某个值的行，类似数据透视表的报表筛选；作用于选择标签的列时，优先于该选择）；width、height（像素）以及 offX、offY（在锚定单元格内的偏移，像素）。\n地图：series = {纬度, 经度, 可选的值}（mapCoords \"pair\"，默认）或 {坐标, 可选的值}（mapCoords \"single\"：一个单元格“48.85, 2.35”）；x 为各点的名称；mapMode \"points\" 或 \"heat\"（密度）；colorBy，其每个值各取一种颜色的列；mapScale，点的大小系数（默认 1，范围 0.25 到 4）；mapView {lat, lon, zoom} 固定视图。参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；config：图表配置；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：charts.create{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"charts.delete": {
+		"signature": "charts.delete(chart)",
+		"summary": "删除图表。",
+		"details": "参数 — chart：图表（标识符或标题）。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"charts.place": {
+		"signature": "charts.place(chart, row, col, [width], [height])",
+		"summary": "移动图表（左上角位于 row, col），如给出尺寸则调整其大小（像素，至少 160 × 120）；否则保持原大小。",
+		"details": "参数 — chart：图表（标识符或标题）；row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；width：宽度（像素）；height：高度（像素）。可按顺序传参，或使用命名参数表：charts.place{chart = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"charts.set": {
+		"signature": "charts.set(chart, config, [replace])",
+		"summary": "修改图表的配置：只更改给出的字段（replace = true 替换整个配置）。",
+		"details": "config：{source, kind, x, series, title, …}。source 是表格或数据透视表，x 是分类（x 轴）所在的列，series 是要绘制的列的列表。kind：\"bar\"（柱形图：竖直的柱子）、\"column\"（水平条形）、\"line\"、\"area\"、\"pie\"、\"doughnut\"、\"scatter\"、\"combo\"（柱形和折线：seriesKinds 给出每个系列的形状，\"bar\"、\"line\" 或 \"area\"）、\"bar3d\" 和 \"pie3d\"（立体）、\"map\"（OpenStreetMap 地图）、\"waterfall\"（瀑布图）、\"treemap\"（树状图）、\"radar\"、\"funnel\"（漏斗图）、\"boxplot\"（箱形图）、\"histogram\"（频率，bins 为分组数）或 \"gauge\"（仪表：第一个系列的最后一个值，介于 yMin 和 yMax 之间）。\n外观：title；legend（\"bottom\"、\"top\"、\"right\" 或 \"none\"）；xTitle、yTitle、y2Title（坐标轴标题）；labels（数据标签）；noGrid（无网格线）；stacked（堆积：柱形、面积）；yMin、yMax（数值轴的范围）；colors（每个系列的颜色，\"#rrggbb\"；饼图、圆环图、漏斗图和树状图按分类；瀑布图为增加、减少和总计）；secondary（布尔值列表：位于右侧坐标轴的系列）；blanks（折线和面积：空单元格 \"gap\" 显示为空距，默认，\"zero\" 或 \"span\" 连接各点）；hidden（同时读取被表格筛选隐藏的行）；filters（基于表格的图表：{{field, values}, ...}，只读取 field 列显示其中某个值的行，类似数据透视表的报表筛选；作用于选择标签的列时，优先于该选择）；width、height（像素）以及 offX、offY（在锚定单元格内的偏移，像素）。\n地图：series = {纬度, 经度, 可选的值}（mapCoords \"pair\"，默认）或 {坐标, 可选的值}（mapCoords \"single\"：一个单元格“48.85, 2.35”）；x 为各点的名称；mapMode \"points\" 或 \"heat\"（密度）；colorBy，其每个值各取一种颜色的列；mapScale，点的大小系数（默认 1，范围 0.25 到 4）；mapView {lat, lon, zoom} 固定视图。参数 — chart：图表（标识符或标题）；config：要更改的字段；replace：替换整个配置（大小、颜色、地图视图…恢复默认）。可按顺序传参，或使用命名参数表：charts.set{chart = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"columns.delete": {
+		"signature": "columns.delete(table, column)",
+		"summary": "删除表格中的一列（表格至少保留一列）。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）。可按顺序传参，或使用命名参数表：columns.delete{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"columns.fix_type": {
+		"signature": "columns.fix_type(table, column)",
+		"summary": "固定列的当前类型：不再自动扩展，类型不符的输入会被标记为错误。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）。可按顺序传参，或使用命名参数表：columns.fix_type{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"columns.insert": {
+		"signature": "columns.insert(table, [name], [position])",
+		"summary": "在表格中插入一列，位于第 position 列之前（省略时：在末尾）。",
+		"details": "参数 — table：表格名称；name：列名；position：序号，从 1 开始。可按顺序传参，或使用命名参数表：columns.insert{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"columns.rename": {
+		"signature": "columns.rename(table, column, name)",
+		"summary": "重命名列（其标题）。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）；name：新名称。可按顺序传参，或使用命名参数表：columns.rename{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"columns.set_filter": {
+		"signature": "columns.set_filter(table, column, [values], [errors], [conds], [any])",
+		"summary": "按某列筛选表格：只显示其值在 values 中的行。",
+		"details": "values 是按显示形式书写的文本列表（\"\" 表示空单元格）；errors = true 只保留有错误的输入。conds 按条件筛选，类似 Excel 的“文本筛选”和“数字筛选”：每个条件为 {op, value, to}，op 可为 \"eq\"、\"ne\"（通配符 * 和 ?）、\"begins\"、\"ends\"、\"contains\"、\"notcontains\"、\"gt\"、\"ge\"、\"lt\"、\"le\"、\"between\"（包含 value 和 to）、\"top\" 和 \"bottom\"（value：项数）、\"above\" 和 \"below\"（平均值）。所有条件都须满足，或在 any = true 时满足其一即可。若没有 values、errors 和 conds，则移除该列的筛选。参数 — table：表格名称；column：列（名称或从 1 开始的序号）；values：保留的值；errors：只保留错误；conds：条件：{ {op = \">\", value = \"100\"}, ... }；any：满足一个条件即可。可按顺序传参，或使用命名参数表：columns.set_filter{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"columns.set_rules": {
+		"signature": "columns.set_rules(table, column, rules)",
+		"summary": "替换列的条件格式规则（空列表：无规则）；第一条满足的规则生效。",
+		"details": "每条规则为 {op, value, to, style}。op：\">\"、\">=\"、\"<\"、\"<=\"、\"=\"、\"<>\"、\"between\"（介于 value 和 to 之间）、\"contains\"、\"empty\"、\"notempty\" 或 \"error\"。style：bold、italic、underline、strike（布尔值），font（字体）和 size（字号，单位为磅），color 和 fill（颜色 \"#rrggbb\"，或工作簿主题中的颜色：\"theme:accent1\" 到 \"theme:accent6\"、\"theme:dk1\"、\"theme:lt1\"、\"theme:dk2\"、\"theme:lt2\"，必要时后接 \":+40\" 表示调亮 40%，或 \":-25\" 表示调暗 25%；它们随主题变化），align（\"left\"、\"center\" 或 \"right\"），valign（\"top\"、\"middle\" 或 \"bottom\"），wrap（自动换行），format（\"0\"、\"0,00\"、\"%\"、\"€\"、\"date\"、\"time\" 或 \"text\"），decimals（小数位数），no_grouping（不用千位分隔符），date_format（日期或时间的格式：\"jj/mm/aaaa\"、\"jj mmm aaaa\"、\"aaaa-mm-jj\"、\"hh:mm\"…），borders（四条边框）或 border_top、border_bottom、border_left、border_right、border_color，以及 validation（下拉列表：允许值的列表 {\"是\", \"否\"}，或源区域 \"=客户[城市]\"、\"=Cell[A1:A10]\"、\"=Sheet2!Cell[A1:A10]\" 或 \"=单元格名称\"，每次打开列表和每次输入时都会重新读取其中不同的非空值）。false 或 \"\" 会移除该属性。参数 — table：表格名称；column：列（名称或从 1 开始的序号）；rules：规则：{ {op = \">\", value = \"100\", style = {fill = \"#c6efce\"}}, ... }。可按顺序传参，或使用命名参数表：columns.set_rules{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"columns.set_type": {
+		"signature": "columns.set_type(table, column, type)",
+		"summary": "设置列的类型；无法转换的值仍然可见，并标记为错误。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）；type：integer、decimal、text、boolean 或 date。可按顺序传参，或使用命名参数表：columns.set_type{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"columns.sort_order": {
+		"signature": "columns.sort_order(table, column) → {list, values = {...}, desc, applied}：若这是表格最后一次排序则 applied 为真",
+		"summary": "返回列已保存的自定义排序（nil：无）。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）。可按顺序传参，或使用命名参数表：columns.sort_order{table = …}。"
+	},
+	"columns.to_values": {
+		"signature": "columns.to_values(table, column)",
+		"summary": "将计算列变为输入列，保留其当前值，类型根据这些值推断。列名保持不变（引用它的公式仍可读取），但不再跟随其公式的来源。在协作工作簿的共享表格中会被拒绝。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）。可按顺序传参，或使用命名参数表：columns.to_values{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"columns.type_mix": {
+		"signature": "columns.type_mix(table, column) → {type, off, total}",
+		"summary": "对于因扩展而变为文本的列：主要类型以及不属于该类型的值的个数。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）。可按顺序传参，或使用命名参数表：columns.type_mix{table = …}。"
+	},
+	"columns.type_preview": {
+		"signature": "columns.type_preview(table, column, type)",
+		"summary": "统计列中无法转换为指定类型的值的个数。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）；type：integer、decimal、text、boolean 或 date。可按顺序传参，或使用命名参数表：columns.type_preview{table = …}。"
+	},
+	"columns.values": {
+		"signature": "columns.values(table, column) → { {text, count}, ... }",
+		"summary": "列出列中的不同值及其出现次数（最多 1,000 个）。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）。可按顺序传参，或使用命名参数表：columns.values{table = …}。"
+	},
+	"connections.list": {
+		"signature": "connections.list() → { {id, name, kind, config = {host, port, database, user, sslmode, instance, url, header}}, ... }（kind：postgres、mysql、sqlserver 或 web）",
+		"summary": "列出工作簿到外部数据源的连接（不含密码：密码从不保存在工作簿中）。"
+	},
+	"controls.add": {
+		"signature": "controls.add(kind, row, col, [props], [sheet]) → {id, name, kind, …}（同 controls.get）",
+		"summary": "在工作表上放置控件，左上角位于 row, col，并返回其描述（未给出名称时自动选择）。",
+		"details": "控件在工作簿中有唯一的名称（“按钮1”、“列表1”…），自动选择，可以修改。kind：\"button\"（单击执行其操作）、\"checkbox\"（复选框，TRUE / FALSE）、\"select\"（下拉列表，options）、\"input\"（单行文本）、\"textarea\"（多行文本）或 \"file\"（文件选择器：单元格接收所选文件的路径）。除按钮外，控件都链接到一个单元格（link，“B3”）：它的值（value）就是该单元格的值——复选框为布尔值，其他为文本。属性：name、label（按钮或复选框的文字，输入框的提示文字）、link、value（写入链接的单元格；值改变时触发 change 事件）、options（下拉列表）、script 和 function（控件的操作）、color、hoverColor、activeColor、textColor（“#rrggbb”）、hidden 或 visible、row、col、width、height（像素）。没有 link 时，按钮以外的控件链接到其右侧的单元格。参数 — kind：\"button\"、\"checkbox\"、\"select\"、\"input\"、\"textarea\" 或 \"file\"；row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；props：属性：{label = …, link = \"B3\"（可选：没有链接单元格时，值保存在控件中）, options = {…} 或 optionsFrom = \"客户[城市]\"（选项取自某一列）, …}；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：controls.add{kind = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"controls.delete": {
+		"signature": "controls.delete(control)",
+		"summary": "删除控件（其链接的单元格保留其值）。",
+		"details": "参数 — control：控件（名称、标识符或标签）。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"controls.fire": {
+		"signature": "controls.fire(control, [event]) → {output, writes, durationMs, error}（脚本之外）",
+		"summary": "像界面一样触发控件的事件（按钮的单击，其他控件以当前值触发 change）：依次执行其操作和侦听器。",
+		"details": "在脚本中，事件在脚本结束时处理。参数 — control：控件（名称、标识符或标签）；event：\"click\" 或 \"change\"（省略时：控件自身的事件）。可按顺序传参，或使用命名参数表：controls.fire{control = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"controls.get": {
+		"signature": "controls.get(control) → {id, name, kind, label, sheet, row, col, width, height, link, value, options, script, function, color, hoverColor, activeColor, textColor, hidden, listeners}",
+		"summary": "描述控件：类型、标签、链接的单元格及其值、选项、颜色、位置、操作和侦听器。",
+		"details": "控件在工作簿中有唯一的名称（“按钮1”、“列表1”…），自动选择，可以修改。kind：\"button\"（单击执行其操作）、\"checkbox\"（复选框，TRUE / FALSE）、\"select\"（下拉列表，options）、\"input\"（单行文本）、\"textarea\"（多行文本）或 \"file\"（文件选择器：单元格接收所选文件的路径）。除按钮外，控件都链接到一个单元格（link，“B3”）：它的值（value）就是该单元格的值——复选框为布尔值，其他为文本。参数 — control：控件（名称、标识符或标签）。"
+	},
+	"controls.list": {
+		"signature": "controls.list([sheet]) → { {id, name, kind, label, sheet, row, col, width, height, link, value, options, script, function, hidden, listeners}, ... }",
+		"summary": "列出工作表或整个工作簿中的控件（按钮、复选框、列表、输入框、文件选择器）。",
+		"details": "控件在工作簿中有唯一的名称（“按钮1”、“列表1”…），自动选择，可以修改。kind：\"button\"（单击执行其操作）、\"checkbox\"（复选框，TRUE / FALSE）、\"select\"（下拉列表，options）、\"input\"（单行文本）、\"textarea\"（多行文本）或 \"file\"（文件选择器：单元格接收所选文件的路径）。除按钮外，控件都链接到一个单元格（link，“B3”）：它的值（value）就是该单元格的值——复选框为布尔值，其他为文本。参数 — sheet：工作表（省略时：整个工作簿）。"
+	},
+	"controls.listeners": {
+		"signature": "controls.listeners([control]) → { {control, event, script, function, action}, ... }",
+		"summary": "列出某个控件或所有控件的事件所执行的内容：其操作（action = true），然后依次是其侦听器。",
+		"details": "事件：\"click\"（按钮）和 \"change\"（其他控件的新值，来自工作表中的输入或 controls.set）。侦听器是库中已保存脚本的全局函数，调用时传入表 {control, event, value, old}（也在全局变量 event 中）；它保存在工作簿中，脚本结束后依然有效。控件的操作（script 和 function）先执行，然后依次执行各侦听器。由脚本引发的事件在脚本结束时执行，属于同一个撤消步骤。参数 — control：控件（省略时：全部）。"
+	},
+	"controls.off": {
+		"signature": "controls.off(control, [event], [handler], [script])",
+		"summary": "取消控件的侦听器订阅并返回其个数：全部，或某个事件、某个函数、某个脚本的侦听器。",
+		"details": "控件的操作（script 和 function，“编辑”窗口）不是侦听器：controls.set(名称, {script = \"\"}) 可将其移除。参数 — control：控件（名称、标识符或标签）；event：事件（省略时：全部）；handler：函数（或其名称；省略时：全部）；script：脚本（省略时：全部）。可按顺序传参，或使用命名参数表：controls.off{control = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"controls.on": {
+		"signature": "controls.on(control, event, handler, [script])",
+		"summary": "将脚本中的函数订阅到控件的事件（按钮的 \"click\"，其他控件的 \"change\"）；每次事件发生时都会以 {control, event, value, old} 调用它。",
+		"details": "事件：\"click\"（按钮）和 \"change\"（其他控件的新值，来自工作表中的输入或 controls.set）。侦听器是库中已保存脚本的全局函数，调用时传入表 {control, event, value, old}（也在全局变量 event 中）；它保存在工作簿中，脚本结束后依然有效。控件的操作（script 和 function）先执行，然后依次执行各侦听器。由脚本引发的事件在脚本结束时执行，属于同一个撤消步骤。 handler 是函数本身或其名称；script 默认为当前运行的脚本（它必须已保存在库中）。同一函数订阅两次不会有任何变化。参数 — control：控件（名称、标识符或标签）；event：\"click\" 或 \"change\"；handler：脚本的全局函数（或其名称）；script：函数所在的脚本（省略时：当前运行的脚本）。可按顺序传参，或使用命名参数表：controls.on{control = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"controls.set": {
+		"signature": "controls.set(control, props)",
+		"summary": "更改控件的属性（其他属性不变）：标签、值、选项、颜色、可见性、位置。",
+		"details": "属性：name、label（按钮或复选框的文字，输入框的提示文字）、link、value（写入链接的单元格；值改变时触发 change 事件）、options（下拉列表）、script 和 function（控件的操作）、color、hoverColor、activeColor、textColor（“#rrggbb”）、hidden 或 visible、row、col、width、height（像素）。写入 value 相当于在链接的单元格中输入该值。参数 — control：控件（名称、标识符或标签）；props：要更改的属性：{value = …, hidden = true, …}。可按顺序传参，或使用命名参数表：controls.set{control = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"doc.recalc": {
+		"signature": "doc.recalc()",
+		"summary": "刷新 AUJOURDHUI、MAINTENANT 和 ALEA（TODAY、NOW、RAND）（F9）。",
+		"details": "可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"doc.set_theme": {
+		"signature": "doc.set_theme([table], [source], [name])",
+		"summary": "更改工作簿的颜色主题：两种基色 #rrggbb，由它们推导出各种色调（标题、文字、边框）。不给颜色：使用设置中的默认主题。",
+		"details": "参数 — table：普通表格的颜色，#rrggbb；source：外部数据源（查询）表格的颜色，#rrggbb；name：主题名称。可按顺序传参，或使用命名参数表：doc.set_theme{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"doc.state": {
+		"signature": "doc.state() → {open, path, title, dirty, undo, redo}",
+		"summary": "描述打开的工作簿：文件、未保存的更改、可撤消和可恢复的操作。"
+	},
+	"doc.theme": {
+		"signature": "doc.theme() → {id, name, table, source} 或 nil",
+		"summary": "工作簿的颜色主题（视图 › 主题）：普通表格的颜色（table）和外部数据源表格的颜色（source）。nil：设置中的默认主题。"
+	},
+	"events.enable": {
+		"signature": "events.enable(on) → 若之前事件已打开则为 true",
+		"summary": "在本次会话中打开（true）或关闭（false）工作簿事件，类似 Excel 的 Application.EnableEvents；返回之前的状态。",
+		"details": "关闭后，工作簿事件的侦听器都不会执行；控件的事件（controls.on）不受影响。打开工作簿时会重新打开。参数 — on：true：打开；false：关闭。"
+	},
+	"events.enabled": {
+		"signature": "events.enabled() → 布尔值",
+		"summary": "表示工作簿事件是否已打开（events.enable）。"
+	},
+	"events.list": {
+		"signature": "events.list([event]) → { {event, script, function}, ... }",
+		"summary": "按执行顺序列出工作簿事件的侦听器。",
+		"details": "事件：\"open\"（工作簿已打开：{path, title}）；\"before_save\"（保存之前（Ctrl+S、另存为）：{path, as}；返回 false 则取消保存）；\"save\"（保存之后：{path}）；\"before_close\"（关闭工作簿或窗口之前：{path, dirty}；返回 false 则取消关闭）；\"sheet\"（显示的标签已切换：{sheet, sheet_id, previous, previous_id}）；\"selection\"（选择已改变，在鼠标或键盘停止操作后：{sheet, sheet_id, row, col, row2, col2, address, table, column}）；\"change\"（用户修改了单元格（输入、粘贴、清除、移动、添加或删除表格行）：{sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}）；\"sheet_add\"（添加（或复制）了工作表：{sheet, sheet_id}）；\"sheet_delete\"（删除了工作表：{sheet, sheet_id}）；\"recalc\"（公式已重新计算（F9、重新计算）：{}）。每个表还带有 event（事件名称）；行和列从 1 开始计数，与 ui.selection 相同。value 和 old（之后和之前显示的值）只在输入单个单元格时提供。只有用户的操作会触发这些事件：脚本（包括侦听器）所做的修改、选择或显示都不会触发，因此侦听器绝不会触发自身。侦听器是库中已保存脚本的全局函数，调用时传入事件的表（也在全局变量 event 中）；它保存在工作簿中，脚本结束后依然有效。同一事件的侦听器按订阅顺序执行；它们所做的一切修改一次撤消（Ctrl+Z）。出错的侦听器会在状态栏和控制台中报告一次，不会阻塞界面。before_save 和 before_close 最多有 5 秒（不含对话框）；出错既不阻止保存，也不阻止关闭。参数 — event：事件（省略时：全部）。"
+	},
+	"events.off": {
+		"signature": "events.off([event], [handler], [script]) → 移除的侦听器个数",
+		"summary": "取消工作簿事件的侦听器订阅并返回其个数：全部，或某个事件、某个函数、某个脚本的侦听器。",
+		"details": "参数 — event：事件（省略时：全部）；handler：函数（或其名称；省略时：全部）；script：脚本（省略时：全部）。可按顺序传参，或使用命名参数表：events.off{event = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"events.on": {
+		"signature": "events.on(event, handler, [script]) → 若侦听器是新的则为 true",
+		"summary": "将脚本中的函数订阅到工作簿事件（打开、保存、关闭、切换标签、选择、输入…）；每次事件发生时都会以描述该事件的表调用它。",
+		"details": "事件：\"open\"（工作簿已打开：{path, title}）；\"before_save\"（保存之前（Ctrl+S、另存为）：{path, as}；返回 false 则取消保存）；\"save\"（保存之后：{path}）；\"before_close\"（关闭工作簿或窗口之前：{path, dirty}；返回 false 则取消关闭）；\"sheet\"（显示的标签已切换：{sheet, sheet_id, previous, previous_id}）；\"selection\"（选择已改变，在鼠标或键盘停止操作后：{sheet, sheet_id, row, col, row2, col2, address, table, column}）；\"change\"（用户修改了单元格（输入、粘贴、清除、移动、添加或删除表格行）：{sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}）；\"sheet_add\"（添加（或复制）了工作表：{sheet, sheet_id}）；\"sheet_delete\"（删除了工作表：{sheet, sheet_id}）；\"recalc\"（公式已重新计算（F9、重新计算）：{}）。每个表还带有 event（事件名称）；行和列从 1 开始计数，与 ui.selection 相同。value 和 old（之后和之前显示的值）只在输入单个单元格时提供。只有用户的操作会触发这些事件：脚本（包括侦听器）所做的修改、选择或显示都不会触发，因此侦听器绝不会触发自身。侦听器是库中已保存脚本的全局函数，调用时传入事件的表（也在全局变量 event 中）；它保存在工作簿中，脚本结束后依然有效。同一事件的侦听器按订阅顺序执行；它们所做的一切修改一次撤消（Ctrl+Z）。出错的侦听器会在状态栏和控制台中报告一次，不会阻塞界面。before_save 和 before_close 最多有 5 秒（不含对话框）；出错既不阻止保存，也不阻止关闭。 handler 是函数本身或其名称；script 默认为当前运行的脚本（它必须已保存在库中）。同一函数订阅两次不会有任何变化。参数 — event：\"open\"、\"before_save\"、\"save\"、\"before_close\"、\"sheet\"、\"selection\"、\"change\"、\"sheet_add\"、\"sheet_delete\" 或 \"recalc\"；handler：脚本的全局函数（或其名称）；script：函数所在的脚本（省略时：当前运行的脚本）。可按顺序传参，或使用命名参数表：events.on{event = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"formulas.functions": {
+		"signature": "formulas.functions()",
+		"summary": "列出公式中的函数（法语名称）及其语法和说明。"
+	},
+	"help.search": {
+		"signature": "help.search([query], [page]) → { {page, title, text}, ... } 或 {id, title, text} 或 { {id, title}, ... }",
+		"summary": "在 Lattis 帮助中搜索（帮助窗格的页面，使用会话语言，否则使用法语）：返回涉及所给词语的章节、整个页面或页面列表。",
+		"details": "query：要搜索的词语（例如“两行标题”“键”“图表 筛选”）；page：要完整阅读的页面标识符（见不带参数时返回的列表）。没有 query 和 page 时：返回页面列表。所描述的操作步骤（菜单、单击）通常有对应的命令：tables.two_level_headers、tables.header_to_title、tables.set_key…参数 — query：要搜索的词语；page：页面标识符（prise-en-main、formules、sql…）。可按顺序传参，或使用命名参数表：help.search{query = …}。"
+	},
+	"http.get": {
+		"signature": "http.get(url, [options]) → {status, ok, url, headers, body, json}",
+		"summary": "发送 HTTP GET 请求（http:// 或 https://）并返回响应。",
+		"details": "响应：status（200、404…）、ok（状态为 2xx 时为 true）、url（重定向后的最终地址）、headers（名称为小写）、body（文本）和 json（响应为 JSON 时解码后的正文）。错误状态（404、500…）不是 Lua 错误：请检查 ok；网络故障或超时才是错误（用 pcall 捕获）。首次向某个主机发送请求前，Lattis 会征求用户许可（可为该工作簿记住；在“脚本”标签 › 网络访问中查看）；MCP 服务器只能访问已获许可的主机。超时：默认 15 秒（timeout，最多 120 秒），不计入脚本的最长运行时间；响应最大 10 MB；最多 10 次重定向；“停止”按钮会中断请求。参数 — url：地址（http:// 或 https://）；options：{headers = {名称 = 值}, timeout = 秒数}。可按顺序传参，或使用命名参数表：http.get{url = …}。"
+	},
+	"http.post": {
+		"signature": "http.post(url, [body], [options]) → {status, ok, url, headers, body, json}",
+		"summary": "发送 HTTP POST 请求并返回响应；文本正文按原样发送，表以 JSON 发送。",
+		"details": "响应：status（200、404…）、ok（状态为 2xx 时为 true）、url（重定向后的最终地址）、headers（名称为小写）、body（文本）和 json（响应为 JSON 时解码后的正文）。错误状态（404、500…）不是 Lua 错误：请检查 ok；网络故障或超时才是错误（用 pcall 捕获）。首次向某个主机发送请求前，Lattis 会征求用户许可（可为该工作簿记住；在“脚本”标签 › 网络访问中查看）；MCP 服务器只能访问已获许可的主机。超时：默认 15 秒（timeout，最多 120 秒），不计入脚本的最长运行时间；响应最大 10 MB；最多 10 次重定向；“停止”按钮会中断请求。参数 — url：地址（http:// 或 https://）；body：正文：文本，或编码为 JSON 的表（Content-Type: application/json）；options：{headers = {名称 = 值}, timeout = 秒数}。可按顺序传参，或使用命名参数表：http.post{url = …}。"
+	},
+	"http.request": {
+		"signature": "http.request(url, [method], [headers], [body], [json], [timeout]) → {status, ok, url, headers, body, json}",
+		"summary": "发送任意 HTTP 请求（GET、POST、PUT、PATCH、DELETE…）并返回响应。",
+		"details": "json 将表编码为 JSON 正文（并带上相应的 Content-Type 标头）；body 按原样发送文本。响应：status（200、404…）、ok（状态为 2xx 时为 true）、url（重定向后的最终地址）、headers（名称为小写）、body（文本）和 json（响应为 JSON 时解码后的正文）。错误状态（404、500…）不是 Lua 错误：请检查 ok；网络故障或超时才是错误（用 pcall 捕获）。首次向某个主机发送请求前，Lattis 会征求用户许可（可为该工作簿记住；在“脚本”标签 › 网络访问中查看）；MCP 服务器只能访问已获许可的主机。超时：默认 15 秒（timeout，最多 120 秒），不计入脚本的最长运行时间；响应最大 10 MB；最多 10 次重定向；“停止”按钮会中断请求。参数 — url：地址（http:// 或 https://）；method：方法（默认 GET）；headers：标头：{名称 = 值}；body：请求正文（文本）；json：请求正文：编码为 JSON 的表；timeout：超时秒数（默认 15，最多 120）。可按顺序传参，或使用命名参数表：http.request{url = …}。"
+	},
+	"pages.add": {
+		"signature": "pages.add([name], [source], [before], [kind]) → {id, name, kind}",
+		"summary": "添加一个网页（在隔离框架中显示的 HTML、CSS 和 JavaScript）或一个文档（kind = \"doc\"：富文本），并返回 {id, name, kind}。",
+		"details": "页面通过 lattis.call(\"命令\", {参数}) 与工作簿通信，它返回一个 Promise（允许的脚本命令列表：读取类如 sheets.list 或 db.query，写值类如 cells.set 或 db.execute，ui.*、http.*、buttons.run；不能访问文件、脚本、结构或保护），并通过 lattis.on(\"change\", 函数) 在工作簿变化时得到调用。没有 source 时，页面使用示例模板。没有 before 时，标签添加在末尾。参数 — name：标签名称（默认 Page1…）；source：页面的 HTML 内容；before：插入到其前面的工作表；kind：\"html\"（默认）或 \"doc\"：文档，其内容是 JSON 格式的 Quill Delta。可按顺序传参，或使用命名参数表：pages.add{name = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"pages.get": {
+		"signature": "pages.get([sheet]) → HTML 文本",
+		"summary": "返回网页的 HTML 内容。",
+		"details": "参数 — sheet：网页（名称或标识符）；省略时：显示的标签。"
+	},
+	"pages.set": {
+		"signature": "pages.set(sheet, source)",
+		"summary": "替换网页的 HTML 内容。",
+		"details": "参数 — sheet：网页（名称或标识符）；source：新的 HTML 内容。可按顺序传参，或使用命名参数表：pages.set{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"pivots.create": {
+		"signature": "pivots.create(config) → {id, name}（工作表）",
+		"summary": "在新工作表上创建数据透视表并返回该工作表。",
+		"details": "config：{source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}。source 是表格，rowFields 是行字段列表，cols 是列字段，values 是 {field, agg, show} 的列表（agg：\"sum\"、\"count\"、\"countDistinct\"、\"avg\"、\"min\" 或 \"max\"；show：\"\"、\"pctTotal\"、\"pctRow\" 或 \"pctCol\"），filters 是 {field, values} 的列表。有多个行字段时，数据透视表以树形显示：subtotals 指定各组小计的位置（\"\" 在组所在行，\"bottom\" 在下方，\"none\" 不显示）；collapsed 列出已折叠的组，每组以其标签表示（{\"人事\"}、{\"人事\", \"巴黎\"}）；collapseAll 折叠全部，expanded 中的组除外。calc 添加计算字段，是 {name, text} 的列表：text 是基于源表格每一行各列的公式（\"=ANNEE([Date])\"、\"=GAUCHE([Code];2)\"，公式用法语书写），name 是字段名，之后可像列一样放入 rowFields、cols、values 或 filters（各行按其结果分组）。参数 — config：数据透视表配置。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"pivots.delete": {
+		"signature": "pivots.delete(pivot)",
+		"summary": "删除数据透视表（其工作表保留）。",
+		"details": "参数 — pivot：数据透视表（标识符或名称）。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"pivots.set": {
+		"signature": "pivots.set(pivot, config)",
+		"summary": "替换数据透视表的配置。",
+		"details": "config：{source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}。source 是表格，rowFields 是行字段列表，cols 是列字段，values 是 {field, agg, show} 的列表（agg：\"sum\"、\"count\"、\"countDistinct\"、\"avg\"、\"min\" 或 \"max\"；show：\"\"、\"pctTotal\"、\"pctRow\" 或 \"pctCol\"），filters 是 {field, values} 的列表。有多个行字段时，数据透视表以树形显示：subtotals 指定各组小计的位置（\"\" 在组所在行，\"bottom\" 在下方，\"none\" 不显示）；collapsed 列出已折叠的组，每组以其标签表示（{\"人事\"}、{\"人事\", \"巴黎\"}）；collapseAll 折叠全部，expanded 中的组除外。calc 添加计算字段，是 {name, text} 的列表：text 是基于源表格每一行各列的公式（\"=ANNEE([Date])\"、\"=GAUCHE([Code];2)\"，公式用法语书写），name 是字段名，之后可像列一样放入 rowFields、cols、values 或 filters（各行按其结果分组）。参数 — pivot：数据透视表（标识符或名称）；config：新配置。可按顺序传参，或使用命名参数表：pivots.set{pivot = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"queries.delete": {
+		"signature": "queries.delete(query)",
+		"summary": "删除导入查询；其表格保留在工作表上。",
+		"details": "参数 — query：查询（名称或标识符）。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"queries.list": {
+		"signature": "queries.list() → { {id, name, source, steps, table, sheet, refreshed}, ... }",
+		"summary": "列出工作簿中的导入查询，以及它们的来源、步骤和加载的表格。"
+	},
+	"queries.preview": {
+		"signature": "queries.preview(query, [steps]) → {columns, rows, count, sample, error, errorStep}",
+		"summary": "计算查询在前 n 个步骤之后的预览（默认全部步骤；基于每个来源的前 1,000 行）。",
+		"details": "参数 — query：查询（名称或标识符）；steps：应用的步骤数。可按顺序传参，或使用命名参数表：queries.preview{query = …}。"
+	},
+	"queries.refresh": {
+		"signature": "queries.refresh(query) → {sheet, table, rows, warnings}",
+		"summary": "刷新查询：重新读取其来源，重新执行其步骤并替换其表格（首次在新工作表上创建）。",
+		"details": "参数 — query：查询（名称或标识符）。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"queries.refresh_all": {
+		"signature": "queries.refresh_all() → { {sheet, table, rows, warnings}, ... }",
+		"summary": "刷新所有已加载到工作表中的查询。",
+		"details": "可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"queries.save": {
+		"signature": "queries.save(name, source, [steps])",
+		"summary": "创建导入查询（或替换同名查询的来源和步骤）并返回其标识符。查询只在刷新时才加载到工作表中。",
+		"details": "source：{kind, ...}，kind 为 \"csv\"（path、delimiter）、\"xlsx\"（path、sheet、从 0 开始的 index）、\"json\"（path、recordPath：记录数组的路径，例如 data.items）、\"parquet\"（path）、\"sqlite\"（path、sql）、\"table\"（table）、\"query\"（query：另一个查询）、\"postgres\"、\"mysql\" 或 \"sqlserver\"（connection、只读 sql）、\"web\"（url、headers = {{name, value}}、recordPath、connection：可选的、携带令牌的 Web 连接）。steps：步骤列表 {op, ...}：filter {conditions = {{column, cmp, value}}, any}、rename {column, name}、type {column, type}、remove/select {columns}、split {column, delimiter, parts}、replace {column, value, with}、transform {column, fn = \"trim\"|\"upper\"|\"lower\"}、addcolumn {name, expr（SQLite，[列]）, type}、index {name, start}、merge {other = 来源, keys, otherKeys, join = \"left\"|\"inner\"|\"full\"|\"right\"|\"anti\", columns}、append {other}、group {columns, aggs = {{name, op, column}}}、sort {sort = {{column, desc}}}、distinct {columns}、top {count}、unpivot {columns, name, valueName}、pivot {column, valueColumn, agg}。cmp：\"=\"、\"<>\"、\"<\"、\"<=\"、\">\"、\">=\"、\"contains\"、\"notcontains\"、\"begins\"、\"ends\"、\"empty\"、\"notempty\"。参数 — name：查询名称；source：数据来源；steps：转换步骤。可按顺序传参，或使用命名参数表：queries.save{name = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"scripts.check": {
+		"signature": "scripts.check(source)",
+		"summary": "检查 Lua 代码的语法而不执行；正确时返回 \"\"，否则返回错误。",
+		"details": "参数 — source：Lua 代码。"
+	},
+	"scripts.delete": {
+		"signature": "scripts.delete(name)",
+		"summary": "从库中删除脚本。",
+		"details": "参数 — name：脚本名称。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"scripts.list": {
+		"signature": "scripts.list() → { {id, name, source}, ... }",
+		"summary": "列出保存在工作簿中的脚本及其源代码。"
+	},
+	"scripts.save": {
+		"signature": "scripts.save(name, source)",
+		"summary": "将脚本保存到工作簿的库中（若已有同名脚本则替换）。",
+		"details": "参数 — name：脚本名称；source：Lua 代码。可按顺序传参，或使用命名参数表：scripts.save{name = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.add": {
+		"signature": "sheets.add([name], [before]) → {id, name}",
+		"summary": "添加工作表并返回 {id, name}。",
+		"details": "没有 before 时，工作表添加在最后一个标签之后。没有名称时，按网格中的方式命名（“Sheet2”…）。参数 — name：新工作表的名称；before：插入到其前面的工作表。可按顺序传参，或使用命名参数表：sheets.add{name = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.choice": {
+		"signature": "sheets.choice([sheet]) → {name, type, table, formula, value, all, values} 或 nil",
+		"summary": "描述工作表的选择标签：分类（列或公式）、选定的值和可选的值；工作表没有选择标签时为 nil。",
+		"details": "选择会筛选工作表中含有分类列的表格，或含有其公式所用列的表格（formula，计算分类）；all：“（全部）”，不筛选。SQL 和脚本始终看到所有行。参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表。"
+	},
+	"sheets.choose_by": {
+		"signature": "sheets.choose_by(table, column, [value], [sheet])",
+		"summary": "按工作表中某个表格的一列把工作表变为选择标签（“选择依据…”“按此列筛选标签”）：标签上的箭头选择显示的值。",
+		"details": "工作表中所有含有同名列的表格都会跟随选择，源表格含有该列的数据透视表也会跟随。指定 sheet 时，选择标签设在该工作表上：即放在源表格以外的数据透视表的“按此字段筛选标签”；数据透视表跟随选择，源表格（在其工作表上）不被筛选。没有值时，标签显示所有值。参数 — table：该列所在的表格（对于数据透视表：其源表格）；column：分类列（年份、月份、城市…）；value：首先显示的值；省略时：全部；sheet：选择标签所在的工作表（数据透视表所在的工作表）；省略时：表格所在的工作表。可按顺序传参，或使用命名参数表：sheets.choose_by{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.choose_by_formula": {
+		"signature": "sheets.choose_by_formula(sheet, formula, name, [value])",
+		"summary": "按基于每行各列的公式把工作表变为选择标签（“选择依据 › 公式…”）：=ANNEE([Date])、=TEXTE([Date];\"mmmm\")、=SI([Montant]>1000;\"Gros\";\"Petit\")（公式用法语书写）。",
+		"details": "工作表中含有公式所引用全部列的表格会跟随选择（源表格含有这些列的数据透视表也会跟随）：只显示公式结果等于选定值的行。没有要填写的列：新添加的行不会自动得到任何值，在下次切换值之前一直显示。“新值”（sheets.new_choice）不适用。一个撤消步骤。参数 — sheet：选择标签所在的工作表；formula：用法语书写的公式，列名放在方括号中（[Date]）；name：分类名称（年份、月份、尺码…）；value：首先显示的值；省略时：全部。可按顺序传参，或使用命名参数表：sheets.choose_by_formula{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.clear_choice": {
+		"signature": "sheets.clear_choice([sheet])",
+		"summary": "移除工作表的选择标签：其表格重新显示所有行。",
+		"details": "参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.color": {
+		"signature": "sheets.color(sheet, [color])",
+		"summary": "设置工作表标签的颜色（“#rrggbb”；为空：无颜色）。",
+		"details": "参数 — sheet：工作表；color：颜色 #rrggbb，或为空。可按顺序传参，或使用命名参数表：sheets.color{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.copy": {
+		"signature": "sheets.copy(sheet, [position]) → {id, name}",
+		"summary": "复制工作表（表格、单元格、格式、数据透视表、图表、按钮）并返回副本的 {id, name}。",
+		"details": "同“移动或复制… › 建立副本”。复制的表格会得到一个可用的名称（销售 → 销售_2）；工作表中原先读取被复制表格的图表或数据透视表会改为读取其副本。没有 position 时，副本放在被复制工作表之后。参数 — sheet：要复制的工作表；position：副本在各标签中的位置，从 1 开始。可按顺序传参，或使用命名参数表：sheets.copy{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.delete": {
+		"signature": "sheets.delete(sheet)",
+		"summary": "删除工作表及其所有内容：表格、单元格、数据透视表、图表和按钮。",
+		"details": "一个撤消步骤即可恢复工作表及其全部内容。工作簿至少保留一个可见的工作表。参数 — sheet：要删除的工作表。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.find": {
+		"signature": "sheets.find(text, [sheet]) → { {row, col}, ... }",
+		"summary": "在工作表中查找文本（不区分大小写）并返回找到的单元格。",
+		"details": "参数 — text：要查找的文本；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：sheets.find{text = …}。"
+	},
+	"sheets.freeze": {
+		"signature": "sheets.freeze(rows, [cols], [sheet])",
+		"summary": "冻结窗格：滚动时前几行和前几列保持可见（0 和 0：取消冻结）。",
+		"details": "参数 — rows：冻结在顶部的行数；cols：冻结在左侧的列数；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：sheets.freeze{rows = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.get": {
+		"signature": "sheets.get([sheet]) → {id, name, tables, cells, names, pivots, charts, buttons}",
+		"summary": "描述工作表的内容：表格、自由单元格、名称、数据透视表、图表和按钮。",
+		"details": "位置（row, col）从 1 开始计数。表格中的值用 tables.rows 或 db.query 读取。参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表。"
+	},
+	"sheets.hide": {
+		"signature": "sheets.hide(sheet, [hidden])",
+		"summary": "隐藏工作表（隐藏），或重新显示（hidden = false）。",
+		"details": "隐藏的工作表不再出现在标签中，但保留其内容；工作簿至少保留一个可见的工作表。参数 — sheet：要隐藏或显示的工作表；hidden：true（默认）：隐藏；false：显示。可按顺序传参，或使用命名参数表：sheets.hide{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.hide_lines": {
+		"signature": "sheets.hide_lines(axis, from, [to], [show], [sheet])",
+		"summary": "隐藏（或显示）工作表中的整行或整列；其内容保持不变并参与公式计算。",
+		"details": "参数 — axis：\"rows\"（行）或 \"cols\"（列）；from：第一行或第一列，从 1 开始；to：最后一行或最后一列（省略时：from）；show：true：显示而不是隐藏；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：sheets.hide_lines{axis = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.list": {
+		"signature": "sheets.list() → { {id, name, protected, structureProtected, kind}, ... }",
+		"summary": "按标签顺序列出工作簿中的工作表。",
+		"details": "受保护的工作表（审阅 › 保护工作表）protected 为 true，结构受保护的工作表（只允许在其表格中输入）structureProtected 为 true；网页的 kind 为 \"html\"，文档为 \"doc\"（工作表没有此项）。"
+	},
+	"sheets.move": {
+		"signature": "sheets.move(sheet, position)",
+		"summary": "将工作表放到各标签中的第 position 位（1：第一位）。",
+		"details": "参数 — sheet：要移动的工作表；position：序号，从 1 开始。可按顺序传参，或使用命名参数表：sheets.move{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.new_choice": {
+		"signature": "sheets.new_choice(sheet, value)",
+		"summary": "向选择标签添加一个值（“新的年份…”）并显示它：工作表看起来是空的，可以开始填写。",
+		"details": "参数 — sheet：带选择标签的工作表；value：新值（2026、十二月…）。可按顺序传参，或使用命名参数表：sheets.new_choice{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.page_setup": {
+		"signature": "sheets.page_setup([sheet]) → {paper, orientation, margins = {top, bottom, left, right, header, footer}, scale, fit_wide, fit_tall, print_area, title_rows, title_cols, row_breaks, col_breaks, gridlines, headings, center_h, center_v, order, black_white, first_page, header = {left, center, right}, footer}",
+		"summary": "读取工作表的页面设置（视图 › 页面设置）：纸张、方向、页边距、缩放、打印区域、打印标题、分页符、页眉和页脚。",
+		"details": "行和列从 1 开始，页边距以厘米计。scale 默认为 100；fit_wide 和 fit_tall（0：自动）将工作表调整为宽、高各若干页。row_breaks：开始新页的行（在其前面手动分页）。order：\"down\"（先向下，再向右）或 \"across\"。页眉和页脚：代码 &[Page]、&[Pages]、&[Date]、&[Heure]、&[Fichier]、&[Chemin]、&[Onglet]（页码、总页数、日期、时间、文件、路径、标签）。参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表。"
+	},
+	"sheets.protect": {
+		"signature": "sheets.protect([sheet], [password])",
+		"summary": "保护工作表，同“审阅 › 保护工作表”：之后对其内容的任何修改都会被拒绝。",
+		"details": "仍允许读取、选择、复制、筛选和只读的 SQL 查询。密码可选；密码不会被存储（只存储加盐散列）。保护操作不能撤消。参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表；password：取消保护所需的密码。可按顺序传参，或使用命名参数表：sheets.protect{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.protect_structure": {
+		"signature": "sheets.protect_structure([sheet], [password])",
+		"summary": "保护工作表的结构，同“审阅 › 保护结构”：除在表格中输入外，一切都被锁定。",
+		"details": "仍允许：表格数据单元格的值（输入、粘贴值、清除）、在表格下方添加行或插入行、删除行、排序和筛选、db.insert、db.update 和 db.delete、读取。被拒绝的有：自由单元格、格式、列和标题、表格本身、对象、名称、规则和数据验证、工作表的行和列、页面设置、标签（名称、颜色、位置、删除、选择标签）以及写入的 SQL 查询。密码可选。保护操作不能撤消。参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表；password：取消保护所需的密码。可按顺序传参，或使用命名参数表：sheets.protect_structure{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.protect_workbook": {
+		"signature": "sheets.protect_workbook([password], [sheets], [structure])",
+		"summary": "保护工作簿的结构，同“审阅 › 保护工作簿”：之后添加、删除、重命名或移动工作表都会被拒绝。",
+		"details": "与 Excel 一样，未受保护工作表的内容仍可修改（见 sheets.protect），除非 sheets = true：此时所有工作表的内容也被锁定，直到 sheets.unprotect_workbook 解除这一锁定且只解除这一锁定（单独保护的工作表仍受保护）。structure = true 时，锁定的是所有工作表的结构：只允许在表格中输入（见 sheets.protect_structure）。密码可选。保护操作不能撤消。参数 — password：取消保护所需的密码；sheets：同时锁定所有工作表的内容；structure：同时锁定所有工作表的结构（只允许在表格中输入）。可按顺序传参，或使用命名参数表：sheets.protect_workbook{password = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.rename": {
+		"signature": "sheets.rename(sheet, name)",
+		"summary": "重命名工作表。",
+		"details": "参数 — sheet：要重命名的工作表；name：新名称。可按顺序传参，或使用命名参数表：sheets.rename{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.replace": {
+		"signature": "sheets.replace(text, by, [sheet])",
+		"summary": "在整个工作表中替换文本，并返回修改的单元格数。",
+		"details": "参数 — text：要查找的文本；by：替换文本；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：sheets.replace{text = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.set_choice": {
+		"signature": "sheets.set_choice(sheet, [value])",
+		"summary": "将工作表的选择标签设为某个值（显示的年份、月份、城市）；没有值时设为“（全部）”。",
+		"details": "这是浏览操作，与切换标签相同：没有撤消步骤。工作表必须已有选择标签（sheets.choose_by）。参数 — sheet：带选择标签的工作表；value：要显示的值；省略时：全部。可按顺序传参，或使用命名参数表：sheets.set_choice{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.set_column_width": {
+		"signature": "sheets.set_column_width(col, width, [sheet])",
+		"summary": "设置工作表中某列的宽度（像素）；0 恢复默认宽度。",
+		"details": "参数 — col：工作表的列，从 1 开始；width：宽度（像素）；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：sheets.set_column_width{col = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.set_page_setup": {
+		"signature": "sheets.set_page_setup(setup, [reset], [sheet])",
+		"summary": "更改工作表的页面设置：只更改给出的字段（名称与 sheets.page_setup 相同）。",
+		"details": "paper：A4、A3、A5、B5、Letter、Legal、Tabloid、Executive。orientation：\"portrait\" 或 \"landscape\"。margins：\"normal\"、\"wide\"、\"narrow\" 或以厘米为单位的表。print_area：\"A1:F40\"（\"\"：整个已用区域）。title_rows：\"1:2\"；title_cols：\"A:B\"（\"\"：无）。reset = true 从默认设置重新开始。“文件 › 打印 / PDF”以及 .xlsx 和 .ods 导出都会使用这些设置。参数 — setup：要更改的字段；reset：从默认设置重新开始；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：sheets.set_page_setup{setup = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.set_row_height": {
+		"signature": "sheets.set_row_height(row, height, [sheet])",
+		"summary": "设置工作表中某行的高度（像素）；0 恢复默认高度。",
+		"details": "参数 — row：工作表的行，从 1 开始；height：高度（像素）；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：sheets.set_row_height{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.unprotect": {
+		"signature": "sheets.unprotect([sheet], [password])",
+		"summary": "取消工作表的保护（如有密码则需提供）。",
+		"details": "参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表；password：保护时设置的密码。可按顺序传参，或使用命名参数表：sheets.unprotect{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.unprotect_structure": {
+		"signature": "sheets.unprotect_structure([sheet], [password])",
+		"summary": "取消工作表结构的保护（如有密码则需提供）。",
+		"details": "参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表；password：保护时设置的密码。可按顺序传参，或使用命名参数表：sheets.unprotect_structure{sheet = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"sheets.unprotect_workbook": {
+		"signature": "sheets.unprotect_workbook([password])",
+		"summary": "取消工作簿结构的保护（如有密码则需提供），以及随之设置的工作表内容锁定。",
+		"details": "参数 — password：保护时设置的密码。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.add_index": {
+		"signature": "tables.add_index(table, columns, [unique])",
+		"summary": "在服务器上为协作工作簿中共享表格的若干列建立索引（所有者或设计者），以加快其他工具的筛选和查找；unique：值不重复。不能用 Ctrl+Z 撤消：用 tables.drop_index 移除。返回索引名称。",
+		"details": "参数 — table：表格名称；columns：索引的列（1 到 8 列）；unique：唯一索引。可按顺序传参，或使用命名参数表：tables.add_index{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.clear_filters": {
+		"signature": "tables.clear_filters(table)",
+		"summary": "移除表格的所有筛选。",
+		"details": "参数 — table：表格名称。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.clear_key": {
+		"signature": "tables.clear_key(table)",
+		"summary": "移除表格的键。",
+		"details": "参数 — table：表格名称。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.delete": {
+		"signature": "tables.delete(tables)",
+		"summary": "删除一个或多个完整的表格（包括数据）。",
+		"details": "参数 — tables：表格名称，或名称列表。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.delete_row": {
+		"signature": "tables.delete_row(table, row)",
+		"summary": "删除第 row 个数据行；表格随之缩小。",
+		"details": "要按键删除行，请使用 db.delete。参数 — table：表格名称；row：数据行，从 1 开始。可按顺序传参，或使用命名参数表：tables.delete_row{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.drop_index": {
+		"signature": "tables.drop_index(table, name)",
+		"summary": "移除在服务器上建立的索引（名称由 tables.add_index 或 tables.indexes 返回）。",
+		"details": "参数 — table：表格名称；name：索引名称（lattis_ix_…）。可按顺序传参，或使用命名参数表：tables.drop_index{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.duplicates": {
+		"signature": "tables.duplicates(table, [columns])",
+		"summary": "按若干列（省略时：全部列）统计表格中的重复行。",
+		"details": "参数 — table：表格名称；columns：比较的列。可按顺序传参，或使用命名参数表：tables.duplicates{table = …}。"
+	},
+	"tables.extract_columns": {
+		"signature": "tables.extract_columns(table, column, column2, row, col)",
+		"summary": "将表格中第 column 到 column2 列移出到放在 row, col 的新表格中。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）；column2：移出的最后一列；row：工作表的行，从 1 开始；col：工作表的列，从 1 开始。可按顺序传参，或使用命名参数表：tables.extract_columns{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.follow_choice": {
+		"signature": "tables.follow_choice(table, [follow]) → 消息",
+		"summary": "勾选或取消勾选带选择标签的工作表上某个表格的“跟随年份”（月份、城市…）：跟随的表格只显示选定值的行，新添加的行会得到该值。",
+		"details": "follow = true（默认）：在最后添加分类列（选定值时隐藏），并填入显示的值。follow = false：若该列只有一个值则移除（不会丢失任何内容）；否则保留该列，表格不再跟随选择（该设置随表格保存）。选择标签的源列不能取消勾选。一个撤消步骤。返回状态栏消息。参数 — table：带选择标签的工作表中的表格；follow：true：跟随；false：不再跟随。可按顺序传参，或使用命名参数表：tables.follow_choice{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.from_range": {
+		"signature": "tables.from_range(row, col, [sheet])",
+		"summary": "由包含该单元格的区域（由 tables.to_range 转换的表格）重新生成表格：其第一行作为标题。返回表格名称。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：tables.from_range{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.get": {
+		"signature": "tables.get(table)",
+		"summary": "描述表格：工作表、位置、行数和列数（类型、公式、键、引用：数据验证取自另一表格键的列有 ref = \"表[键]\"）。",
+		"details": "参数 — table：表格名称。"
+	},
+	"tables.header_to_title": {
+		"signature": "tables.header_to_title(table)",
+		"summary": "表格的标题原本是一个标题文字：它变为上方的自由单元格，第一行数据变为标题。",
+		"details": "参数 — table：表格名称。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.indexes": {
+		"signature": "tables.indexes(table)",
+		"summary": "列出在服务器上为协作工作簿中共享表格建立的索引（所有者或设计者）。",
+		"details": "参数 — table：表格名称。"
+	},
+	"tables.insert_row": {
+		"signature": "tables.insert_row(table, [row])",
+		"summary": "在第 row 个数据行之前插入一个空行（省略时：在表格末尾）。",
+		"details": "整数键在该行得到下一个编号（最大值加 1，不重新编号）；按固定步长递增的第一列整数（10、20、30…）在行添加到末尾时得到下一个编号。参数 — table：表格名称；row：数据行，从 1 开始。可按顺序传参，或使用命名参数表：tables.insert_row{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.keep_row_numbers": {
+		"signature": "tables.keep_row_numbers(table)",
+		"summary": "没有键的表格用行号来指代各行（1 = 第一行，按表格顺序；排序或插入行时会变化）：REFERENCE(T[Col]; n) 读取第 n 行，EXISTE(T; n) 判断该行是否存在，RECHERCHEV（VLOOKUP）变为 INDEX/EQUIV（找到的第一行，允许重复）。Lattis 不再为此表格建议键。另一种选择是 tables.set_key。",
+		"details": "参数 — table：表格名称。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.key_check": {
+		"signature": "tables.key_check(table, column)",
+		"summary": "判断某列能否成为表格的键：能则返回 \"\"，否则返回原因。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）。可按顺序传参，或使用命名参数表：tables.key_check{table = …}。"
+	},
+	"tables.last_row_out": {
+		"signature": "tables.last_row_out(table)",
+		"summary": "最后一个数据行移出表格：它保留在紧下方，成为表格之外的自由单元格（批注，若以“Total”开头则为合计）。",
+		"details": "参数 — table：表格名称。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.list": {
+		"signature": "tables.list() → { {name, kind, sheet, rows, columns, types, colsField, colsFrom}, ... }（colsField：数据透视表的列字段，从第 colsFrom 列起各列为值）",
+		"summary": "列出所有工作表中的表格和数据透视表及其列。"
+	},
+	"tables.merge_sheets": {
+		"signature": "tables.merge_sheets([tables], [options]) → {sheet, sheetName, table, rows, old, keyKept, keyNote, rewritten = { {kind, sheetName, where, formula, after}, ... }, pending = { {kind, sheetName, where, formula, why}, ... }, notes, notice, families = { {name, mode, tables, rows, follows, keyNote}, ... }, cells, perValue}",
+		"summary": "将列相同、各自位于自己标签上的表格（每月、每年、每个城市一个…）合并为新工作表上的一张表格，开头加上一个取自标签名称的分类列（月份、年份、城市…）及其下拉列表。一个撤消步骤。",
+		"details": "tables：按顺序给出的表格（省略时：tables.similar 找到的最大的组）。options：{name（表格名称，否则使用建议名称）、sheet（工作表名称）、category = {name, type = \"date\" | \"integer\" | \"text\", values = {每个表格一个值}}（否则根据标签名称推断）、noCategory = true（无分类列）、columns（列的对应关系，同 tables.similar）、old = \"delete\" | \"hide\"、categoryFrom = \"sheet\" | \"title\" | \"cell:A1\"、families = { {tables, mode = \"merge\" | \"once\" | \"leave\", name, columns}, ... }、noCells = true}。合并的是整个工作表：标签上的每一组其他表格（families；与 tables 同时省略时：找到的组中的那些，使用建议的模式）也会成为同一工作表上的公共表格（merge：带分类列，跟随选择标签；once：只保留一份，即最后一个标签上的那份，对所有值都相同；leave：留在原标签上，该标签因此保留）。布局沿用最新的标签。各标签上的自由单元格（标题、合计、目标）会被保留：处处相同的单元格保留一份，在不同标签间变化的单元格变为每个值一个单元格（显示选定值的那个）。列被合并（缺少某列处为空格子），类型被扩展，格式和无效输入被保留。若没有值在不同标签间重复，键会被保留，否则公共表格没有键（keyNote 给出示例）。引用旧表格的内容会改为引用按分类筛选的公共表格，属于同一个撤消步骤，并列在 rewritten 中（formula：之前，after：之后）：SOMME(Janvier[Montant]) 变为 SOMME.SI.ENS(Ventes[Montant]; Ventes[Mois]; \"=Janvier\")（公式用法语书写；MOYENNE、MAX、MIN 同理；NBVAL 变为对非空格子的 NB.SI.ENS，NB 统计筛选后列中的数字，.SI 和 .SI.ENS 类函数增加月份条件，LIGNES(Janvier) 变为 NB.SI.ENS(Ventes[Mois]; \"=Janvier\")，作为区域读取的其他整列变为 FILTRE(Ventes[X]; Ventes[Mois]=\"Janvier\")）；数据透视表改用公共表格并加上报表筛选“月份 = 一月”，图表加上筛选（config.filters）。没有确切对应的内容（特定行 Janvier[X][3]、REFERENCE、RECHERCHEV、EXISTE、SOUS.TOTAL、整张表格、控件、查询；SQL 文本和 Lua 脚本不会被识别）会连同原因（why）列在 pending 中，此时旧标签会隐藏保留（表格重命名为 Janvier_ancien）而不是删除；没有分类列时，不做任何改写。对于在服务器上共享的工作簿、受保护的工作表、已筛选或由查询加载的表格，此操作会被拒绝。参数 — tables：要合并的表格，按顺序（省略时：最大的一组相似标签）；options：{name, sheet, category = {name, type, values}, noCategory, columns, old, categoryFrom, families, noCells}。可按顺序传参，或使用命名参数表：tables.merge_sheets{tables = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.move": {
+		"signature": "tables.move(table, row, col)",
+		"summary": "在工作表上移动表格（标题左上角位于 row, col）。与另一表格并排放置时，会与之合并。",
+		"details": "参数 — table：表格名称；row：工作表的行，从 1 开始；col：工作表的列，从 1 开始。可按顺序传参，或使用命名参数表：tables.move{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.promote_header": {
+		"signature": "tables.promote_header(table)",
+		"summary": "第一行数据给出各列的名称（空单元格保留原名称）并取代原标题：原标题（未带标题键入或粘贴的表格中的“Column n”，或其他名称）消失，表格下移一行，其底部不动。公式随重命名更新；因这一行而变为文本的列恢复其类型。对已筛选、由查询加载或标题为两行的表格会被拒绝。",
+		"details": "参数 — table：表格名称。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.remove_duplicates": {
+		"signature": "tables.remove_duplicates(table, [columns])",
+		"summary": "删除表格中的重复行（保留第一行）并返回删除的行数。",
+		"details": "参数 — table：表格名称；columns：比较的列（省略时：全部）。可按顺序传参，或使用命名参数表：tables.remove_duplicates{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.rename": {
+		"signature": "tables.rename(table, name)",
+		"summary": "重命名表格；引用它的公式随之更新。",
+		"details": "参数 — table：表格名称；name：新名称。可按顺序传参，或使用命名参数表：tables.rename{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.rows": {
+		"signature": "tables.rows(table, [first], [count]) → {table, columns, first, total, ids, rows}",
+		"summary": "按显示形式读取表格中的行（包括筛选和计算列）。",
+		"details": "first 从 1 开始计数；count 默认为 100（最多 10,000）。要筛选或聚合，最好使用 db.query。参数 — table：表格名称；first：第一行，从 1 开始；count：行数（默认 100）。可按顺序传参，或使用命名参数表：tables.rows{table = …}。"
+	},
+	"tables.set_key": {
+		"signature": "tables.set_key(table, column)",
+		"summary": "将值唯一的列设为表格的键（UNIQUE 索引）。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）。可按顺序传参，或使用命名参数表：tables.set_key{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.set_sort_lists": {
+		"signature": "tables.set_sort_lists(lists)",
+		"summary": "替换工作簿的自定义列表（预定义列表不变）。",
+		"details": "参数 — lists：列表：{ {name = \"尺码\", values = {\"S\", \"M\", \"L\"}}, ... }。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.similar": {
+		"signature": "tables.similar() → { {id, tables = { {table, sheet, sheetName, rows, key, hidden}, ... }, columns = { {name, type, from, paired, text}, ... }, category = {kind, column, type, values, labels, common}, key, name, score, propose, identical, dismissed, summary, notes, sheets = { {sheet, name, hidden, copied}, ... }, families = { {tables, columns, key, name, same, mode, note}, ... }, sources = { {source, label, category}, ... }, categoryFrom, stacked, dataColumn, copies}, ... }",
+		"summary": "查找相似的标签：不同工作表中列相同的表格（每月、每年、每个城市一个标签…），可用 tables.merge_sheets 合并为一张表格。只读取结构（工作表、表格和列的名称）。",
+		"details": "每个组给出其表格（按标签顺序）、列的对应关系（from：每个表格中对应的列，缺少时为 \"\"；paired：按相近名称配对）、取自标签名称的分类（kind：month、month_year、year、quarter、week、date、number、letter、default、city、shape 或 other；column：建议的名称，月份、年份、批次…；type；values）、公共键、建议的名称、可信度（score，propose：高到可以主动建议）以及 dismissed（已选择“不再建议”）。最大的组排在最前。合并的是整个工作表：sheets（各标签，copied：复制自组内另一个标签；copies：其数量）；families：这些标签上的其他表格，逐组配对，每组带有其表格、列、same（处处数据相同，是复制的列表）以及建议的模式（merge：跟随分类的公共表格；once：只保留一份；leave：留在原标签上，若只在一个标签上出现）。sources：分类可能的来源（sheet：标签名称；title：每个表格上方的标题；cell:A1：在不同标签间变化的自由单元格），categoryFrom：建议的来源（由 category 描述）。stacked：在同一工作表上以标题分隔堆叠的相似表格。dataColumn：某个日期列已经承载了分类（其值落在每个标签的月份内）：分类列是可选的。"
+	},
+	"tables.sort": {
+		"signature": "tables.sort(table, column, [descending])",
+		"summary": "按一列对表格排序。",
+		"details": "参数 — table：表格名称；column：列（名称或从 1 开始的序号）；descending：降序。可按顺序传参，或使用命名参数表：tables.sort{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.sort_custom": {
+		"signature": "tables.sort_custom(table, column, [values], [list], [descending])",
+		"summary": "按一列以自定义顺序对表格排序（值的列表或命名列表，如“月份”或“星期”）。",
+		"details": "列表中的值排在前面，按列表顺序（descending 时倒序），与显示的文本比较，不区分大小写；其他值随后按升序排列，空单元格在最后。该顺序会为该列保存，并在刷新由查询加载的表格时重新应用。预定义列表：Jours、Jours abrégés、Mois、Mois abrégés（星期、星期缩写、月份、月份缩写）；其他列表用 tables.set_sort_lists 定义。参数 — table：表格名称；column：列（名称或从 1 开始的序号）；values：按所需顺序排列的值；list：自定义列表的名称（代替 values）；descending：倒序使用列表。可按顺序传参，或使用命名参数表：tables.sort_custom{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.sort_lists": {
+		"signature": "tables.sort_lists() → { {name, values = {...}, builtin}, ... }",
+		"summary": "列出自定义排序列表：先是预定义列表（星期、月份…），然后是工作簿中的列表。"
+	},
+	"tables.text_to_columns": {
+		"signature": "tables.text_to_columns(table, column, options)",
+		"summary": "将一列的文本拆分为多列，类似 Excel 的分列向导：第一部分留在原列，其余部分成为右侧的新列。返回导入的列数。",
+		"details": "options：{delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}。delims：分隔字符（\";\"、\",\"、\" \"、\"\t\"…）；merge = true：连续的分隔符视为一个；quote：文本识别符（向导中默认为 \"\\\"\"，\"'\" 或 \"\" 表示无）。fixed = true：固定宽度，breaks 给出分割位置（以字符计）。columns：生成的每一列的格式，{format = \"\"（常规）、\"text\"、\"date\" 或 \"skip\"（不导入），order = \"DMY\"、\"MDY\"、\"YMD\"… 用于日期}。decimal 和 thousands：数字的分隔符（默认为 \",\" 和 \" \"）。dest：在自由单元格中的目标单元格（“E2”）。参数 — table：表格名称；column：列（名称或从 1 开始的序号）；options：{delims, merge, quote, fixed, breaks, columns, decimal, thousands}。可按顺序传参，或使用命名参数表：tables.text_to_columns{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.title_to_header": {
+		"signature": "tables.title_to_header(table)",
+		"summary": "tables.header_to_title 的逆操作，用于在数据之后键入的标题：表格正上方、位于其各列之上的自由单元格成为各列的名称（空单元格保留原名称）；当前标题成为第 1 行数据（“Column n”这类名称除外），按输入确定类型。公式随重命名更新。标题为两行、位于合并单元格或公式之下时会被拒绝。",
+		"details": "参数 — table：表格名称。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.to_range": {
+		"signature": "tables.to_range(table)",
+		"summary": "将表格转换为自由单元格区域（与 Excel 相同）：标题和值保留在原处，连同其格式；计算列若能简单转换，则以单元格地址给出公式（Cell[B2]*Cell[C2]），否则给出其值。在聚合函数中引用该表格的公式改为引用其单元格（Cell[B2:B9]）；其他公式得到 #REF!。该区域保持为区域：在其中或紧邻处输入不会重新生成表格。",
+		"details": "参数 — table：表格名称。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"tables.two_level_headers": {
+		"signature": "tables.two_level_headers(table, on)",
+		"summary": "以两行显示（on = true）表格的标题：列名“组.子”会在标题上方的横条中显示其组，并在同组的相邻列上合并；公式和 SQL 保留完整名称（T[组.子]）。开启时，标题上方一行的自由单元格（无论是否合并）成为其覆盖各列的组；on = false 则在一行中保留完整名称。名称简单（不含点）的列为单层：它在横条中的格子与其标题是同一个单元格。开启时，自动标题（“Column 17”）上方单独的组会成为该列的名称，与标题重复的组会消失。调整方法：columns.rename（“组.子”或简单名称），在横条上使用 cells.merge / cells.unmerge（见 cells.merge），在横条上用 cells.set 设置或重命名组。",
+		"details": "参数 — table：表格名称；on：true：两行；false：一行。可按顺序传参，或使用命名参数表：tables.two_level_headers{table = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"ui.alert": {
+		"signature": "ui.alert(message, [title])",
+		"summary": "在对话框中显示消息，并等待用户关闭。",
+		"details": "参数 — message：消息文本；title：标题（默认 Lattis）。可按顺序传参，或使用命名参数表：ui.alert{message = …}。"
+	},
+	"ui.confirm": {
+		"signature": "ui.confirm(message, [title])",
+		"summary": "提出一个是 / 否问题；用户确认时返回 true。",
+		"details": "参数 — message：提出的问题；title：标题（默认 Lattis）。可按顺序传参，或使用命名参数表：ui.confirm{message = …}。"
+	},
+	"ui.dialog": {
+		"signature": "ui.dialog(title, fields, [message], [ok], [cancel]) → { 名称 = 值, ... } 或 nil",
+		"summary": "打开带输入字段的对话框并等待回答；返回 { 名称 = 值 }，用户取消时返回 nil。",
+		"details": "字段类型（type）：\"text\"（默认）、\"textarea\"、\"password\"、\"number\"、\"integer\"、\"checkbox\"、\"select\" 和 \"radio\"（带 options = {...}）、\"date\"（以 \"yyyy-mm-dd\" 返回）和 \"color\"（\"#rrggbb\"）。label 是显示的标签（默认为 name），default 是建议值，required 禁止提交空字段，min 和 max 限定数字范围。复选框返回 true 或 false，数字字段返回数字，其他字段返回文本。对话框打开期间不计入脚本的最长运行时间。参数 — title：对话框标题；fields：字段：{ {name, label, type, default, options, required, placeholder, min, max}, ... }；message：显示在字段上方的文本；ok：确认按钮的文字（默认 OK）；cancel：取消按钮的文字（默认 Annuler）。可按顺序传参，或使用命名参数表：ui.dialog{title = …}。"
+	},
+	"ui.notify": {
+		"signature": "ui.notify(message)",
+		"summary": "在状态栏中显示消息，不中断脚本。",
+		"details": "参数 — message：消息文本。"
+	},
+	"ui.prompt": {
+		"signature": "ui.prompt(message, [default], [title])",
+		"summary": "请用户输入文本；返回输入的文本，用户取消时返回 nil。",
+		"details": "参数 — message：提出的问题；default：建议值；title：标题（默认 Lattis）。可按顺序传参，或使用命名参数表：ui.prompt{message = …}。"
+	},
+	"ui.select": {
+		"signature": "ui.select(row, col, [row2], [col2], [sheet]) → 新的选择，同 ui.selection",
+		"summary": "显示一个工作表并在其中选择区域（或单元格）。",
+		"details": "参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；row2：区域的最后一行（省略时：row）；col2：区域的最后一列（省略时：col）；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：ui.select{row = …}。"
+	},
+	"ui.select_cells": {
+		"signature": "ui.select_cells(table, column, [row], [column2], [row2]) → 新的选择，同 ui.selection",
+		"summary": "按列和行号选择表格中的单元格。",
+		"details": "没有 row 时选择整列（数据行）；column2 和 row2 将区域向右和向下扩展。行从标题下方的 1 开始计数。参数 — table：表格名称；column：列（名称或序号）；row：数据行，从 1 开始（省略时：整列）；column2：区域的最后一列；row2：区域的最后一行。可按顺序传参，或使用命名参数表：ui.select_cells{table = …}。"
+	},
+	"ui.select_object": {
+		"signature": "ui.select_object(name) → {kind, sheet, row, col, row2, col2, ...}",
+		"summary": "按名称显示并选择对象：表格、数据透视表、图表（标题）、按钮（标签）或命名单元格。",
+		"details": "表格被整体选中，包括标题。返回选择，带有 kind：\"table\"、\"pivot\"、\"chart\"、\"button\" 或 \"name\"。参数 — name：对象名称。"
+	},
+	"ui.selection": {
+		"signature": "ui.selection() → {sheet, sheet_id, row, col, row2, col2, table, column, view}",
+		"summary": "给出显示的工作表以及网格中选定的区域。",
+		"details": "row, col 是选择的左上角，row2, col2 是右下角（从 1 开始）。table 和 column 指左上角单元格所在的表格和列（如有）。"
+	},
+	"ui.show_sheet": {
+		"signature": "ui.show_sheet(sheet)",
+		"summary": "显示一个工作表（网格视图），保留左上角单元格的选择。",
+		"details": "参数 — sheet：工作表（名称或标识符）。"
+	},
+	"ui.show_view": {
+		"signature": "ui.show_view(view)",
+		"summary": "显示应用程序的一个视图：\"grid\"（工作表）、\"sql\" 或 \"script\"。",
+		"details": "参数 — view：grid、sql 或 script。"
+	}
+}

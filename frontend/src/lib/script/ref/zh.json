@@ -1,0 +1,206 @@
+{
+	"db.query": {
+		"signature": "db.query(sql, ...) → { 行, ... }",
+		"summary": "执行只读 SQL 查询并返回所有行。",
+		"details": "每一行是一个表 { 列 = 值 }。表格和列的名称与网格中相同；含空格、重音或大写字母的名称要放在双引号中（\"不含税金额\"）。每个表格都有一个隐藏列 _id，即行的键。? 依次取后面的参数（数字、文本、布尔值或 nil）。最多 100,000 行：超过时请使用 db.rows。空单元格得到 nil（该键不在行中），布尔值得到 true/false，日期得到文本 \"yyyy-mm-dd\"。"
+	},
+	"db.rows": {
+		"signature": "for 行 in db.rows(sql, ...) do ... end",
+		"summary": "逐行遍历查询结果，行数不受限制。",
+		"details": "规则与 db.query 相同，但不会把所有行都保存在内存中：适合大表格。"
+	},
+	"db.value": {
+		"signature": "db.value(sql, ...) → 值或 nil",
+		"summary": "返回第一行的第一列；没有任何行时返回 nil。"
+	},
+	"db.tables": {
+		"summary": "列出工作簿中的表格及其列。",
+		"details": "每一列为 { name, type, fixed }；type 为 \"integer\"、\"decimal\"、\"text\"、\"boolean\" 或 \"date\"，若类型是手动固定的则 fixed 为 true。"
+	},
+	"db.insert": {
+		"signature": "db.insert(表格, { 列 = 值 }) → _id",
+		"summary": "在表格末尾添加一行并返回其键 _id。",
+		"details": "值的处理方式与在网格中输入相同：类型为推断的列会扩展，类型固定的列会把输入标记为无效，\"\" 使单元格为空。true 和 false 写作 vrai 和 faux（TRUE 和 FALSE）；日期以文本给出（\"16/10/2026\"）。表格和列的名称必须完全一致（包括大小写和重音）。"
+	},
+	"db.update": {
+		"signature": "db.update(表格, _id, { 列 = 值 })",
+		"summary": "修改 _id 行中给出的列；其他列不变。",
+		"details": "写入规则与 db.insert 相同。\"\" 清除单元格。"
+	},
+	"db.delete": {
+		"signature": "db.delete(表格, _id)",
+		"summary": "删除 _id 行；表格减少一行。"
+	},
+	"db.execute": {
+		"signature": "db.execute(sql, ...) → 受影响的行数",
+		"summary": "使用显示的名称执行 INSERT、UPDATE 或 DELETE。",
+		"details": "与脚本的其余部分一样可以撤消。列的类型是严格的：类型不符的值会使整个查询失败（布尔值写作 1 或 0，日期写作 'yyyy-mm-dd'）。目前不允许：CREATE、ALTER、DROP 以及内部表 _lattis_*。"
+	},
+	"print": { "summary": "在输出中显示值，以制表符分隔。" },
+	"type": { "summary": "以文本形式返回值的类型。" },
+	"tostring": { "signature": "tostring(v) → 文本", "summary": "将值转换为文本。" },
+	"tonumber": {
+		"signature": "tonumber(v [, 进制]) → 数字或 nil",
+		"summary": "将文本转换为数字；不是数字时返回 nil。",
+		"details": "小数分隔符是点：tonumber(\"80,5\") 得到 nil。"
+	},
+	"ipairs": {
+		"signature": "for i, v in ipairs(列表) do ... end",
+		"summary": "按顺序遍历列表（索引 1、2、3...），直到第一个空缺。"
+	},
+	"pairs": {
+		"signature": "for 键, v in pairs(t) do ... end",
+		"summary": "遍历表的所有键，不保证顺序。"
+	},
+	"next": {
+		"signature": "next(t [, 键]) → 键, 值",
+		"summary": "返回表的下一个键；next(t) == nil 用于判断表是否为空。"
+	},
+	"select": { "summary": "返回从第 n 个起的参数，或用 \"#\" 返回参数个数。" },
+	"unpack": {
+		"signature": "unpack(列表 [, i [, j]]) → v1, v2, ...",
+		"summary": "将列表的元素作为多个独立的值返回。"
+	},
+	"pcall": {
+		"signature": "pcall(f, ...) → ok, 结果或消息",
+		"summary": "调用 f 并捕获其错误；出错时 ok 为 false。"
+	},
+	"xpcall": {
+		"signature": "xpcall(f, 处理函数) → ok, 结果",
+		"summary": "与 pcall 相同，但会把错误消息传给一个处理函数。"
+	},
+	"error": {
+		"signature": "error(消息 [, 层级])",
+		"summary": "以一条消息停止脚本（或当前的 pcall）。"
+	},
+	"assert": { "summary": "条件为假（nil 或 false）时以该消息停止脚本。" },
+	"setmetatable": { "summary": "为表关联一个元表（默认值、运算符...）。" },
+	"getmetatable": { "signature": "getmetatable(v) → 元表或 nil", "summary": "返回值的元表。" },
+	"rawget": { "signature": "rawget(t, 键)", "summary": "读取键，不经过元表。" },
+	"rawset": { "signature": "rawset(t, 键, 值)", "summary": "写入键，不经过元表。" },
+	"rawequal": { "summary": "比较两个值，不经过元表。" },
+	"string.format": {
+		"signature": "string.format(格式, ...) → 文本",
+		"summary": "格式化值：%s 文本，%d 整数，%.2f 小数，%5s 宽度，%% 表示 % 符号。"
+	},
+	"string.sub": {
+		"signature": "s:sub(i [, j]) → 文本",
+		"summary": "提取第 i 到第 j 个字符（索引从 1 开始，负数从末尾算起）。",
+		"details": "索引按字节计算：一个带重音的字母占两个字节，一个汉字占三个。"
+	},
+	"string.upper": { "signature": "s:upper() → 文本", "summary": "转换为大写（含带重音的字母）。" },
+	"string.lower": { "signature": "s:lower() → 文本", "summary": "转换为小写。" },
+	"string.len": { "signature": "s:len() → 数字（或 #s）", "summary": "以字节计的长度：#\"Payé\" 为 5。" },
+	"string.find": {
+		"signature": "s:find(模式 [, 起点 [, 纯文本]]) → 起点, 终点或 nil",
+		"summary": "查找模式；纯文本 = true 时按原样查找文本。",
+		"details": "模式：%d 数字，%a 字母，%s 空白，%w 字母或数字，. 任意字符，* + - ? 重复，^ $ 锚点，% 用于转义。这些不是正则表达式。"
+	},
+	"string.match": {
+		"signature": "s:match(模式 [, 起点]) → 捕获或 nil",
+		"summary": "返回与模式匹配的内容，或其中用括号标出的捕获。"
+	},
+	"string.gmatch": {
+		"signature": "for m in s:gmatch(模式) do ... end",
+		"summary": "遍历模式的所有匹配。"
+	},
+	"string.gsub": {
+		"signature": "s:gsub(模式, 替换 [, n]) → 文本, 数字",
+		"summary": "替换匹配项；替换可以是文本、表或函数。"
+	},
+	"string.rep": { "signature": "s:rep(n) → 文本", "summary": "将文本重复 n 次（结果最大 16 MB）。" },
+	"string.reverse": { "signature": "s:reverse() → 文本", "summary": "反转文本（按字节）。" },
+	"string.byte": { "summary": "返回第 i 到第 j 个字节的代码。" },
+	"string.char": { "signature": "string.char(代码, ...) → 文本", "summary": "由字节代码构造文本。" },
+	"string.gfind": { "signature": "string.gfind(s, 模式)", "summary": "string.gmatch 的旧名称。" },
+	"table.insert": {
+		"signature": "table.insert(列表, [位置,] 值)",
+		"summary": "在列表末尾或指定位置添加一个值。"
+	},
+	"table.remove": {
+		"signature": "table.remove(列表 [, 位置]) → 移除的值",
+		"summary": "移除最后一个元素，或指定位置的元素。"
+	},
+	"table.sort": {
+		"signature": "table.sort(列表 [, 在前])",
+		"summary": "就地对列表排序；若 a 应排在 b 之前，在前(a, b) 返回 true。"
+	},
+	"table.concat": {
+		"signature": "table.concat(列表 [, 分隔符 [, i [, j]]]) → 文本",
+		"summary": "把列表的元素连接成一个文本。"
+	},
+	"table.maxn": { "signature": "table.maxn(t) → 数字", "summary": "返回表中最大的数字索引。" },
+	"table.getn": { "summary": "#t 的旧等价写法。" },
+	"math.floor": { "summary": "向下取整；math.floor(a / b) 做整数除法。" },
+	"math.ceil": { "summary": "向上取整。" },
+	"math.abs": { "summary": "绝对值。" },
+	"math.min": { "summary": "各值中的最小值。" },
+	"math.max": { "summary": "各值中的最大值。" },
+	"math.sqrt": { "summary": "平方根。" },
+	"math.pow": { "summary": "乘幂；也可写作 x ^ y。" },
+	"math.exp": { "summary": "指数函数。" },
+	"math.log": { "summary": "自然对数。" },
+	"math.log10": { "summary": "以 10 为底的对数。" },
+	"math.fmod": { "summary": "除法的余数（符号与 x 相同）；另见运算符 %。" },
+	"math.modf": { "signature": "math.modf(x) → 整数, 小数", "summary": "分离整数部分和小数部分。" },
+	"math.random": { "summary": "随机数：[0, 1[ 中的实数，[1, m] 或 [m, n] 中的整数。" },
+	"math.randomseed": { "summary": "初始化 math.random 的生成器。" },
+	"math.huge": { "summary": "无穷大（是一个值，不是函数）。" },
+	"math.pi": { "summary": "圆周率 π（是一个值，不是函数）。" },
+	"math.sin": { "summary": "正弦（x 为弧度）。" },
+	"math.cos": { "summary": "余弦（x 为弧度）。" },
+	"math.tan": { "summary": "正切（x 为弧度）。" },
+	"math.asin": { "summary": "反正弦。" },
+	"math.acos": { "summary": "反余弦。" },
+	"math.atan": { "summary": "反正切。" },
+	"math.atan2": { "summary": "y/x 的反正切，位于正确的象限。" },
+	"math.sinh": { "summary": "双曲正弦。" },
+	"math.cosh": { "summary": "双曲余弦。" },
+	"math.tanh": { "summary": "双曲正切。" },
+	"math.deg": { "summary": "弧度转换为度。" },
+	"math.rad": { "summary": "度转换为弧度。" },
+	"math.frexp": { "summary": "将 x 分解为 m × 2^e。" },
+	"math.ldexp": { "summary": "计算 m × 2^e。" },
+	"math.mod": { "summary": "math.fmod 的旧名称。" },
+	"os.date": {
+		"signature": "os.date([格式 [, 时间]]) → 文本",
+		"summary": "格式化日期：%d 日，%m 月，%Y 年，%H:%M:%S 时间。",
+		"details": "工作簿中的日期格式为 \"yyyy-mm-dd\"，即 os.date(\"%Y-%m-%d\")；这样它们就可以像文本一样比较。"
+	},
+	"os.time": {
+		"signature": "os.time([{year, month, day, hour, min, sec}]) → 秒",
+		"summary": "以秒为单位返回当前时间，或给定日期的时间。"
+	},
+	"os.difftime": { "signature": "os.difftime(t2, t1) → 秒", "summary": "os.time 返回的两个时间之差。" },
+	"os.clock": { "signature": "os.clock() → 秒", "summary": "已用的处理器时间：用于测量处理所需的时长。" },
+	"local": {
+		"signature": "local 名称 = 值",
+		"summary": "声明局部变量。不加 local 时，变量是全局的。",
+		"details": "名称只能包含不带重音的字母、数字和 _。只有 nil 和 false 为假：0 和 \"\" 都为真。"
+	},
+	"if": { "summary": "条件。不等于写作 ~=；and、or 和 not 是逻辑运算符。" },
+	"for": {
+		"signature": "for i = 起始, 结束 [, 步长] do ... end",
+		"summary": "数值循环；for ... in 用于迭代器（ipairs、pairs、db.rows）。",
+		"details": "break 退出循环；没有 continue。"
+	},
+	"for in": {
+		"signature": "for i, v in ipairs(列表) do ... end  |  for k, v in pairs(t) do ... end",
+		"summary": "按顺序遍历列表（ipairs），或遍历表的所有键（pairs，顺序不定）。"
+	},
+	"while": { "summary": "条件循环。无限循环会在 30 秒后或按“停止”按钮时被终止。" },
+	"function": {
+		"signature": "local function 名称(a, b) ... return x end",
+		"summary": "定义函数；函数可以返回多个值。"
+	},
+	"table": {
+		"signature": "{ v1, v2 }  |  { 键 = 值, [\"clé\"] = 值 }",
+		"summary": "唯一的数据结构：列表（索引从 1 开始）或字典。",
+		"details": "#t 给出列表的长度。带重音或空格的键写作 t[\"Payé\"]。"
+	},
+	"..": { "summary": "连接两个文本（或数字）。# 给出长度，[[ ... ]] 可书写多行文本。" },
+	"--": {
+		"signature": "-- 注释  |  --[[ 长注释 ]]",
+		"summary": "单行注释，或多行注释。"
+	}
+}

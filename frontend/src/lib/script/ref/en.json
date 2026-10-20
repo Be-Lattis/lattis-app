@@ -1,0 +1,206 @@
+{
+	"db.query": {
+		"signature": "db.query(sql, ...) → { row, ... }",
+		"summary": "Runs a read SQL query and returns all the rows.",
+		"details": "Each row is a table { column = value }. Tables and columns are named as in the grid; a name with a space, an accent or a capital letter goes in double quotes (\"Amount excl. tax\"). Each table has a hidden column _id, the key of the row. The ? take the following parameters (number, text, boolean or nil). At most 100,000 rows: beyond that, use db.rows. An empty cell gives nil (the key is missing from the row), a boolean true/false, a date a text \"yyyy-mm-dd\"."
+	},
+	"db.rows": {
+		"signature": "for row in db.rows(sql, ...) do ... end",
+		"summary": "Goes through the rows of a query one by one, with no limit on their number.",
+		"details": "Same rules as db.query, but the rows are not all kept in memory: better for large tables."
+	},
+	"db.value": {
+		"signature": "db.value(sql, ...) → value or nil",
+		"summary": "Returns the first column of the first row, or nil if there is no row."
+	},
+	"db.tables": {
+		"summary": "Lists the tables of the workbook with their columns.",
+		"details": "Each column is { name, type, fixed }; type is \"integer\", \"decimal\", \"text\", \"boolean\" or \"date\", fixed is true if the type was set by hand."
+	},
+	"db.insert": {
+		"signature": "db.insert(table, { column = value }) → _id",
+		"summary": "Adds a row at the end of a table and returns its key _id.",
+		"details": "Values are handled like typing in the grid: a column with an inferred type widens, a column with a fixed type marks the entry as invalid, \"\" leaves the cell empty. true and false are written as vrai and faux (TRUE and FALSE); a date is given as text (\"16/10/2026\"). Table and column names must be exact (capitals and accents included)."
+	},
+	"db.update": {
+		"signature": "db.update(table, _id, { column = value })",
+		"summary": "Changes the given columns of row _id; the others do not move.",
+		"details": "Same writing rules as db.insert. \"\" clears the cell."
+	},
+	"db.delete": {
+		"signature": "db.delete(table, _id)",
+		"summary": "Deletes row _id; the table shrinks by one row."
+	},
+	"db.execute": {
+		"signature": "db.execute(sql, ...) → number of rows affected",
+		"summary": "Runs an INSERT, UPDATE or DELETE with the displayed names.",
+		"details": "Undoable like the rest of the script. Columns are strictly typed: a value of the wrong type makes the whole query fail (a boolean is written 1 or 0, a date 'yyyy-mm-dd'). Refused for now: CREATE, ALTER, DROP and the internal tables _lattis_*."
+	},
+	"print": { "summary": "Shows values in the output, separated by a tab." },
+	"type": { "summary": "Returns the type of a value, as text." },
+	"tostring": { "signature": "tostring(v) → text", "summary": "Converts a value to text." },
+	"tonumber": {
+		"signature": "tonumber(v [, base]) → number or nil",
+		"summary": "Converts a text to a number; returns nil if it is not a number.",
+		"details": "The decimal separator is the dot: tonumber(\"80,5\") gives nil."
+	},
+	"ipairs": {
+		"signature": "for i, v in ipairs(list) do ... end",
+		"summary": "Goes through a list in order (indexes 1, 2, 3...) up to the first gap."
+	},
+	"pairs": {
+		"signature": "for key, v in pairs(t) do ... end",
+		"summary": "Goes through all the keys of a table, in no guaranteed order."
+	},
+	"next": {
+		"signature": "next(t [, key]) → key, value",
+		"summary": "Returns the next key of a table; next(t) == nil tests whether it is empty."
+	},
+	"select": { "summary": "Returns the arguments from the n-th on, or their number with \"#\"." },
+	"unpack": {
+		"signature": "unpack(list [, i [, j]]) → v1, v2, ...",
+		"summary": "Returns the items of a list as separate values."
+	},
+	"pcall": {
+		"signature": "pcall(f, ...) → ok, result or message",
+		"summary": "Calls f and catches its error; ok is false on error."
+	},
+	"xpcall": {
+		"signature": "xpcall(f, handler) → ok, result",
+		"summary": "Like pcall, but passes the error message to a handling function."
+	},
+	"error": {
+		"signature": "error(message [, level])",
+		"summary": "Stops the script (or the running pcall) with a message."
+	},
+	"assert": { "summary": "Stops the script with the message if the condition is false (nil or false)." },
+	"setmetatable": { "summary": "Attaches a metatable to a table (default values, operators...)." },
+	"getmetatable": { "signature": "getmetatable(v) → metatable or nil", "summary": "Returns the metatable of a value." },
+	"rawget": { "signature": "rawget(t, key)", "summary": "Reads a key without going through the metatable." },
+	"rawset": { "signature": "rawset(t, key, value)", "summary": "Writes a key without going through the metatable." },
+	"rawequal": { "summary": "Compares two values without going through the metatable." },
+	"string.format": {
+		"signature": "string.format(pattern, ...) → text",
+		"summary": "Formats values: %s text, %d integer, %.2f decimal, %5s width, %% the % sign."
+	},
+	"string.sub": {
+		"signature": "s:sub(i [, j]) → text",
+		"summary": "Extracts the characters from i to j (indexes from 1, negative ones from the end).",
+		"details": "Indexes count bytes: an accented letter takes two."
+	},
+	"string.upper": { "signature": "s:upper() → text", "summary": "Converts to uppercase (accented letters included)." },
+	"string.lower": { "signature": "s:lower() → text", "summary": "Converts to lowercase." },
+	"string.len": { "signature": "s:len() → number (or #s)", "summary": "Length in bytes: #\"Payé\" is 5." },
+	"string.find": {
+		"signature": "s:find(pattern [, start [, plain]]) → start, end or nil",
+		"summary": "Searches for a pattern; plain = true searches for the text as is.",
+		"details": "Patterns: %d digit, %a letter, %s space, %w alphanumeric, . any character, * + - ? repetitions, ^ $ anchors, % to escape. These are not regular expressions."
+	},
+	"string.match": {
+		"signature": "s:match(pattern [, start]) → captures or nil",
+		"summary": "Returns what matches the pattern, or its captures in parentheses."
+	},
+	"string.gmatch": {
+		"signature": "for m in s:gmatch(pattern) do ... end",
+		"summary": "Goes through all the matches of a pattern."
+	},
+	"string.gsub": {
+		"signature": "s:gsub(pattern, replacement [, n]) → text, number",
+		"summary": "Replaces the matches; the replacement can be a text, a table or a function."
+	},
+	"string.rep": { "signature": "s:rep(n) → text", "summary": "Repeats a text n times (result limited to 16 MB)." },
+	"string.reverse": { "signature": "s:reverse() → text", "summary": "Reverses a text (byte by byte)." },
+	"string.byte": { "summary": "Returns the codes of the bytes from i to j." },
+	"string.char": { "signature": "string.char(code, ...) → text", "summary": "Builds a text from byte codes." },
+	"string.gfind": { "signature": "string.gfind(s, pattern)", "summary": "Old name of string.gmatch." },
+	"table.insert": {
+		"signature": "table.insert(list, [position,] value)",
+		"summary": "Adds a value at the end of a list, or at the given position."
+	},
+	"table.remove": {
+		"signature": "table.remove(list [, position]) → value removed",
+		"summary": "Removes the last item, or the one at the given position."
+	},
+	"table.sort": {
+		"signature": "table.sort(list [, before])",
+		"summary": "Sorts a list in place; before(a, b) returns true if a must come before b."
+	},
+	"table.concat": {
+		"signature": "table.concat(list [, separator [, i [, j]]]) → text",
+		"summary": "Joins the items of a list into one text."
+	},
+	"table.maxn": { "signature": "table.maxn(t) → number", "summary": "Returns the largest numeric index of a table." },
+	"table.getn": { "summary": "Old equivalent of #t." },
+	"math.floor": { "summary": "Rounds down to an integer; math.floor(a / b) does an integer division." },
+	"math.ceil": { "summary": "Rounds up to an integer." },
+	"math.abs": { "summary": "Absolute value." },
+	"math.min": { "summary": "Smallest of the values." },
+	"math.max": { "summary": "Largest of the values." },
+	"math.sqrt": { "summary": "Square root." },
+	"math.pow": { "summary": "Power; also written x ^ y." },
+	"math.exp": { "summary": "Exponential." },
+	"math.log": { "summary": "Natural logarithm." },
+	"math.log10": { "summary": "Base-10 logarithm." },
+	"math.fmod": { "summary": "Remainder of the division (sign of x); see also the % operator." },
+	"math.modf": { "signature": "math.modf(x) → integer, fraction", "summary": "Splits the integer part and the decimal part." },
+	"math.random": { "summary": "Random number: real in [0, 1[, integer in [1, m] or [m, n]." },
+	"math.randomseed": { "summary": "Seeds the generator of math.random." },
+	"math.huge": { "summary": "Infinity (a value, not a function)." },
+	"math.pi": { "summary": "The number π (a value, not a function)." },
+	"math.sin": { "summary": "Sine (x in radians)." },
+	"math.cos": { "summary": "Cosine (x in radians)." },
+	"math.tan": { "summary": "Tangent (x in radians)." },
+	"math.asin": { "summary": "Arcsine." },
+	"math.acos": { "summary": "Arccosine." },
+	"math.atan": { "summary": "Arctangent." },
+	"math.atan2": { "summary": "Arctangent of y/x, in the right quadrant." },
+	"math.sinh": { "summary": "Hyperbolic sine." },
+	"math.cosh": { "summary": "Hyperbolic cosine." },
+	"math.tanh": { "summary": "Hyperbolic tangent." },
+	"math.deg": { "summary": "Radians to degrees." },
+	"math.rad": { "summary": "Degrees to radians." },
+	"math.frexp": { "summary": "Splits x into m × 2^e." },
+	"math.ldexp": { "summary": "Calculates m × 2^e." },
+	"math.mod": { "summary": "Old name of math.fmod." },
+	"os.date": {
+		"signature": "os.date([format [, time]]) → text",
+		"summary": "Formats a date: %d day, %m month, %Y year, %H:%M:%S time.",
+		"details": "Workbook dates are in the format \"yyyy-mm-dd\", that is os.date(\"%Y-%m-%d\"); they then compare like texts."
+	},
+	"os.time": {
+		"signature": "os.time([{year, month, day, hour, min, sec}]) → seconds",
+		"summary": "Returns the current time, or that of the given date, in seconds."
+	},
+	"os.difftime": { "signature": "os.difftime(t2, t1) → seconds", "summary": "Difference between two times returned by os.time." },
+	"os.clock": { "signature": "os.clock() → seconds", "summary": "Processor time used: measures how long a task takes." },
+	"local": {
+		"signature": "local name = value",
+		"summary": "Declares a local variable. Without local, the variable is global.",
+		"details": "A name contains only unaccented letters, digits and _. Only nil and false are false: 0 and \"\" are true."
+	},
+	"if": { "summary": "Condition. Not equal is written ~=; and, or and not are the logical operators." },
+	"for": {
+		"signature": "for i = start, stop [, step] do ... end",
+		"summary": "Numeric loop; for ... in is for iterators (ipairs, pairs, db.rows).",
+		"details": "break leaves the loop; there is no continue."
+	},
+	"for in": {
+		"signature": "for i, v in ipairs(list) do ... end  |  for k, v in pairs(t) do ... end",
+		"summary": "Goes through a list in order (ipairs) or all the keys of a table (pairs, any order)."
+	},
+	"while": { "summary": "Conditional loops. An endless loop is stopped after 30 s or by the Stop button." },
+	"function": {
+		"signature": "local function name(a, b) ... return x end",
+		"summary": "Defines a function; it can return several values."
+	},
+	"table": {
+		"signature": "{ v1, v2 }  |  { key = value, [\"clé\"] = value }",
+		"summary": "The only data structure: list (indexes from 1) or dictionary.",
+		"details": "#t gives the length of a list. A key with an accent or a space is written t[\"Payé\"]."
+	},
+	"..": { "summary": "Concatenates two texts (or numbers). # gives the length, [[ ... ]] writes a text over several lines." },
+	"--": {
+		"signature": "-- comment  |  --[[ long comment ]]",
+		"summary": "Comment on one line, or over several lines."
+	}
+}

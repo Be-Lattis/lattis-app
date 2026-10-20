@@ -1,0 +1,206 @@
+{
+	"db.query": {
+		"signature": "db.query(sql, ...) → { fila, ... }",
+		"summary": "Ejecuta una consulta SQL de lectura y devuelve todas las filas.",
+		"details": "Cada fila es una tabla { columna = valor }. Las tablas y columnas se nombran como en la cuadrícula; un nombre con espacio, acento o mayúscula va entre comillas dobles (\"Importe neto\"). Cada tabla tiene una columna oculta _id, la clave de la fila. Los ? toman los parámetros siguientes (número, texto, booleano o nil). 100 000 filas como máximo: por encima, use db.rows. Una celda vacía da nil (la clave falta en la fila), un booleano true/false, una fecha un texto \"yyyy-mm-dd\"."
+	},
+	"db.rows": {
+		"signature": "for fila in db.rows(sql, ...) do ... end",
+		"summary": "Recorre las filas de una consulta una a una, sin límite de número.",
+		"details": "Mismas reglas que db.query, pero las filas no se guardan todas en memoria: preferible para las tablas grandes."
+	},
+	"db.value": {
+		"signature": "db.value(sql, ...) → valor o nil",
+		"summary": "Devuelve la primera columna de la primera fila, o nil si no hay ninguna fila."
+	},
+	"db.tables": {
+		"summary": "Enumera las tablas del libro con sus columnas.",
+		"details": "Cada columna es { name, type, fixed }; type vale \"integer\", \"decimal\", \"text\", \"boolean\" o \"date\", fixed es true si el tipo se fijó a mano."
+	},
+	"db.insert": {
+		"signature": "db.insert(tabla, { columna = valor }) → _id",
+		"summary": "Añade una fila al final de una tabla y devuelve su clave _id.",
+		"details": "Los valores se tratan como una entrada en la cuadrícula: una columna de tipo deducido se amplía, una columna de tipo fijado marca la entrada como no válida, \"\" deja la celda vacía. true y false se escriben vrai y faux (VERDADERO y FALSO); una fecha se da como texto (\"16/10/2026\"). Los nombres de tabla y de columna deben ser exactos (mayúsculas y acentos incluidos)."
+	},
+	"db.update": {
+		"signature": "db.update(tabla, _id, { columna = valor })",
+		"summary": "Modifica las columnas indicadas de la fila _id; las demás no cambian.",
+		"details": "Mismas reglas de escritura que db.insert. \"\" borra la celda."
+	},
+	"db.delete": {
+		"signature": "db.delete(tabla, _id)",
+		"summary": "Elimina la fila _id; la tabla se reduce en una fila."
+	},
+	"db.execute": {
+		"signature": "db.execute(sql, ...) → número de filas afectadas",
+		"summary": "Ejecuta un INSERT, UPDATE o DELETE con los nombres mostrados.",
+		"details": "Se puede deshacer como el resto del script. Las columnas tienen tipo estricto: un valor del tipo equivocado hace fallar toda la consulta (un booleano se escribe 1 o 0, una fecha 'yyyy-mm-dd'). Rechazados por ahora: CREATE, ALTER, DROP y las tablas internas _lattis_*."
+	},
+	"print": { "summary": "Muestra valores en la salida, separados por una tabulación." },
+	"type": { "summary": "Devuelve el tipo de un valor, como texto." },
+	"tostring": { "signature": "tostring(v) → texto", "summary": "Convierte un valor en texto." },
+	"tonumber": {
+		"signature": "tonumber(v [, base]) → número o nil",
+		"summary": "Convierte un texto en número; devuelve nil si no es un número.",
+		"details": "El separador decimal es el punto: tonumber(\"80,5\") da nil."
+	},
+	"ipairs": {
+		"signature": "for i, v in ipairs(lista) do ... end",
+		"summary": "Recorre una lista en orden (índices 1, 2, 3...) hasta el primer hueco."
+	},
+	"pairs": {
+		"signature": "for clave, v in pairs(t) do ... end",
+		"summary": "Recorre todas las claves de una tabla, sin orden garantizado."
+	},
+	"next": {
+		"signature": "next(t [, clave]) → clave, valor",
+		"summary": "Devuelve la clave siguiente de una tabla; next(t) == nil comprueba si está vacía."
+	},
+	"select": { "summary": "Devuelve los argumentos a partir del n-ésimo, o su número con \"#\"." },
+	"unpack": {
+		"signature": "unpack(lista [, i [, j]]) → v1, v2, ...",
+		"summary": "Devuelve los elementos de una lista como valores separados."
+	},
+	"pcall": {
+		"signature": "pcall(f, ...) → ok, resultado o mensaje",
+		"summary": "Llama a f capturando su error; ok vale false en caso de error."
+	},
+	"xpcall": {
+		"signature": "xpcall(f, gestor) → ok, resultado",
+		"summary": "Como pcall, pero pasa el mensaje de error a una función de tratamiento."
+	},
+	"error": {
+		"signature": "error(mensaje [, nivel])",
+		"summary": "Detiene el script (o el pcall en curso) con un mensaje."
+	},
+	"assert": { "summary": "Detiene el script con el mensaje si la condición es falsa (nil o false)." },
+	"setmetatable": { "summary": "Asocia una metatabla a una tabla (valores por defecto, operadores...)." },
+	"getmetatable": { "signature": "getmetatable(v) → metatabla o nil", "summary": "Devuelve la metatabla de un valor." },
+	"rawget": { "signature": "rawget(t, clave)", "summary": "Lee una clave sin pasar por la metatabla." },
+	"rawset": { "signature": "rawset(t, clave, valor)", "summary": "Escribe una clave sin pasar por la metatabla." },
+	"rawequal": { "summary": "Compara dos valores sin pasar por la metatabla." },
+	"string.format": {
+		"signature": "string.format(modelo, ...) → texto",
+		"summary": "Da formato a valores: %s texto, %d entero, %.2f decimal, %5s ancho, %% el signo %."
+	},
+	"string.sub": {
+		"signature": "s:sub(i [, j]) → texto",
+		"summary": "Extrae los caracteres de i a j (índices desde 1, negativos desde el final).",
+		"details": "Los índices cuentan bytes: una letra acentuada ocupa dos."
+	},
+	"string.upper": { "signature": "s:upper() → texto", "summary": "Pone en mayúsculas (acentos incluidos)." },
+	"string.lower": { "signature": "s:lower() → texto", "summary": "Pone en minúsculas." },
+	"string.len": { "signature": "s:len() → número (o #s)", "summary": "Longitud en bytes: #\"Payé\" vale 5." },
+	"string.find": {
+		"signature": "s:find(patrón [, inicio [, simple]]) → inicio, fin o nil",
+		"summary": "Busca un patrón; simple = true busca el texto tal cual.",
+		"details": "Patrones: %d dígito, %a letra, %s espacio, %w alfanumérico, . cualquier carácter, * + - ? repeticiones, ^ $ anclas, % para escapar. No son expresiones regulares."
+	},
+	"string.match": {
+		"signature": "s:match(patrón [, inicio]) → capturas o nil",
+		"summary": "Devuelve lo que corresponde al patrón, o sus capturas entre paréntesis."
+	},
+	"string.gmatch": {
+		"signature": "for m in s:gmatch(patrón) do ... end",
+		"summary": "Recorre todas las coincidencias de un patrón."
+	},
+	"string.gsub": {
+		"signature": "s:gsub(patrón, reemplazo [, n]) → texto, número",
+		"summary": "Reemplaza las coincidencias; el reemplazo puede ser un texto, una tabla o una función."
+	},
+	"string.rep": { "signature": "s:rep(n) → texto", "summary": "Repite un texto n veces (resultado limitado a 16 MB)." },
+	"string.reverse": { "signature": "s:reverse() → texto", "summary": "Invierte un texto (byte a byte)." },
+	"string.byte": { "summary": "Devuelve los códigos de los bytes de i a j." },
+	"string.char": { "signature": "string.char(código, ...) → texto", "summary": "Construye un texto a partir de códigos de bytes." },
+	"string.gfind": { "signature": "string.gfind(s, patrón)", "summary": "Nombre antiguo de string.gmatch." },
+	"table.insert": {
+		"signature": "table.insert(lista, [posición,] valor)",
+		"summary": "Añade un valor al final de una lista, o en la posición indicada."
+	},
+	"table.remove": {
+		"signature": "table.remove(lista [, posición]) → valor quitado",
+		"summary": "Quita el último elemento, o el de la posición indicada."
+	},
+	"table.sort": {
+		"signature": "table.sort(lista [, antes])",
+		"summary": "Ordena una lista en el sitio; antes(a, b) devuelve true si a debe ir antes que b."
+	},
+	"table.concat": {
+		"signature": "table.concat(lista [, separador [, i [, j]]]) → texto",
+		"summary": "Une los elementos de una lista en un texto."
+	},
+	"table.maxn": { "signature": "table.maxn(t) → número", "summary": "Devuelve el mayor índice numérico de una tabla." },
+	"table.getn": { "summary": "Equivalente antiguo de #t." },
+	"math.floor": { "summary": "Redondea al entero inferior; math.floor(a / b) hace una división entera." },
+	"math.ceil": { "summary": "Redondea al entero superior." },
+	"math.abs": { "summary": "Valor absoluto." },
+	"math.min": { "summary": "El menor de los valores." },
+	"math.max": { "summary": "El mayor de los valores." },
+	"math.sqrt": { "summary": "Raíz cuadrada." },
+	"math.pow": { "summary": "Potencia; también se escribe x ^ y." },
+	"math.exp": { "summary": "Exponencial." },
+	"math.log": { "summary": "Logaritmo natural." },
+	"math.log10": { "summary": "Logaritmo decimal." },
+	"math.fmod": { "summary": "Resto de la división (signo de x); vea también el operador %." },
+	"math.modf": { "signature": "math.modf(x) → entero, fracción", "summary": "Separa la parte entera y la parte decimal." },
+	"math.random": { "summary": "Número al azar: real en [0, 1[, entero en [1, m] o [m, n]." },
+	"math.randomseed": { "summary": "Inicializa el generador de math.random." },
+	"math.huge": { "summary": "El infinito (un valor, no una función)." },
+	"math.pi": { "summary": "El número π (un valor, no una función)." },
+	"math.sin": { "summary": "Seno (x en radianes)." },
+	"math.cos": { "summary": "Coseno (x en radianes)." },
+	"math.tan": { "summary": "Tangente (x en radianes)." },
+	"math.asin": { "summary": "Arcoseno." },
+	"math.acos": { "summary": "Arcocoseno." },
+	"math.atan": { "summary": "Arcotangente." },
+	"math.atan2": { "summary": "Arcotangente de y/x, en el cuadrante correcto." },
+	"math.sinh": { "summary": "Seno hiperbólico." },
+	"math.cosh": { "summary": "Coseno hiperbólico." },
+	"math.tanh": { "summary": "Tangente hiperbólica." },
+	"math.deg": { "summary": "Radianes a grados." },
+	"math.rad": { "summary": "Grados a radianes." },
+	"math.frexp": { "summary": "Descompone x en m × 2^e." },
+	"math.ldexp": { "summary": "Calcula m × 2^e." },
+	"math.mod": { "summary": "Nombre antiguo de math.fmod." },
+	"os.date": {
+		"signature": "os.date([formato [, tiempo]]) → texto",
+		"summary": "Da formato a una fecha: %d día, %m mes, %Y año, %H:%M:%S hora.",
+		"details": "Las fechas del libro tienen el formato \"yyyy-mm-dd\", es decir os.date(\"%Y-%m-%d\"); entonces se comparan como textos."
+	},
+	"os.time": {
+		"signature": "os.time([{year, month, day, hour, min, sec}]) → segundos",
+		"summary": "Devuelve la hora actual, o la de la fecha indicada, en segundos."
+	},
+	"os.difftime": { "signature": "os.difftime(t2, t1) → segundos", "summary": "Diferencia entre dos tiempos devueltos por os.time." },
+	"os.clock": { "signature": "os.clock() → segundos", "summary": "Tiempo de procesador transcurrido: sirve para medir la duración de un proceso." },
+	"local": {
+		"signature": "local nombre = valor",
+		"summary": "Declara una variable local. Sin local, la variable es global.",
+		"details": "Un nombre solo contiene letras sin acento, cifras y _. Solo nil y false son falsos: 0 y \"\" son verdaderos."
+	},
+	"if": { "summary": "Condición. Distinto se escribe ~=; and, or y not son los operadores lógicos." },
+	"for": {
+		"signature": "for i = inicio, fin [, paso] do ... end",
+		"summary": "Bucle numérico; for ... in sirve para los iteradores (ipairs, pairs, db.rows).",
+		"details": "break sale del bucle; no hay continue."
+	},
+	"for in": {
+		"signature": "for i, v in ipairs(lista) do ... end  |  for k, v in pairs(t) do ... end",
+		"summary": "Recorre una lista en orden (ipairs) o todas las claves de una tabla (pairs, en cualquier orden)."
+	},
+	"while": { "summary": "Bucles condicionales. Un bucle sin fin se detiene al cabo de 30 s o con el botón Detener." },
+	"function": {
+		"signature": "local function nombre(a, b) ... return x end",
+		"summary": "Define una función; puede devolver varios valores."
+	},
+	"table": {
+		"signature": "{ v1, v2 }  |  { clave = valor, [\"clé\"] = valor }",
+		"summary": "La única estructura de datos: lista (índices desde 1) o diccionario.",
+		"details": "#t da la longitud de una lista. Una clave con acento o espacio se escribe t[\"Payé\"]."
+	},
+	"..": { "summary": "Concatena dos textos (o números). # da la longitud, [[ ... ]] escribe un texto en varias líneas." },
+	"--": {
+		"signature": "-- comentario  |  --[[ comentario largo ]]",
+		"summary": "Comentario en una línea, o en varias líneas."
+	}
+}

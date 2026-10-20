@@ -1,0 +1,738 @@
+{
+	"buttons.create": {
+		"signature": "buttons.create(row, col, label, script, [function], [sheet])",
+		"summary": "Places an action button on a sheet; a click runs a script from the library, or one of its functions. Returns the identifier of the button.",
+		"details": "script is the name of a saved script (Script tab). With function, the script is loaded, then the global function of that name is called: one script can serve several buttons. Everything a click does is undone at once. Parameters — row: sheet row, from 1; col: sheet column, from 1; label: text of the button; script: name of the script to run; function: function of the script to call; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: buttons.create{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"buttons.delete": {
+		"signature": "buttons.delete(button)",
+		"summary": "Deletes an action button.",
+		"details": "Parameters — button: button (identifier or label). Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"buttons.list": {
+		"signature": "buttons.list([sheet]) → { {id, name, kind, label, script, function, row, col}, ... }",
+		"summary": "Lists the action buttons of a sheet.",
+		"details": "Parameters — sheet: sheet (name or identifier); missing: the displayed sheet."
+	},
+	"buttons.place": {
+		"signature": "buttons.place(button, row, col, [width], [height])",
+		"summary": "Moves a button (top-left corner at row, col) and, if given, resizes it (pixels).",
+		"details": "Parameters — button: button (identifier or label); row: sheet row, from 1; col: sheet column, from 1; width: width in pixels; height: height in pixels. Arguments in order, or a table of named arguments: buttons.place{button = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"buttons.set": {
+		"signature": "buttons.set(button, [label], [script], [function])",
+		"summary": "Changes the label, the script or the function of a button (missing parameters do not change).",
+		"details": "Parameters — button: button (identifier or label); label: text of the button; script: name of the script; function: function of the script (\"\": the script alone). Arguments in order, or a table of named arguments: buttons.set{button = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.clear": {
+		"signature": "cells.clear(row, col, [row2], [col2], [sheet])",
+		"summary": "Clears the content of a range of cells (tables keep their shape).",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; row2: last row of the range (missing: row); col2: last column of the range (missing: col); sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.clear{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.dependencies": {
+		"signature": "cells.dependencies(row, col, [sheet]) → {subject, precedents, dependents}",
+		"summary": "Gives the precedents (what the cell's formula reads) and the dependents (the formulas that read it).",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.dependencies{row = …}."
+	},
+	"cells.get": {
+		"signature": "cells.get(row, col, [sheet]) → {row, col, raw, value, table, column, header, line, id}",
+		"summary": "Reads a cell of the sheet: entry, displayed value and, in a table, the table, the column and the row.",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.get{row = …}."
+	},
+	"cells.merge": {
+		"signature": "cells.merge(row, col, [row2], [col2], [sheet]) → number of values cleared",
+		"summary": "Merges free cells into one, with centered content (refused in a table or a PivotTable). Like Excel, only the top-left value is kept. In a table with header groups (tables.two_level_headers), only the group band merges: its box and the header of a column put the column on one level (simple name: its subheader, or the group if the header was automatic); several neighboring boxes of the band form a single group (the first one they carry, “Group” otherwise). Columns are renamed, formulas follow.",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; row2: last row of the range (missing: row); col2: last column of the range (missing: col); sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.merge{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.name": {
+		"signature": "cells.name(row, col, name, [sheet])",
+		"summary": "Names a free cell, to cite it in formulas; an empty name removes the name.",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; name: name (empty: remove); sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.name{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.note": {
+		"signature": "cells.note(row, col, text, [sheet])",
+		"summary": "Sets the note of a cell (red corner, shown on hover); an empty text removes it. In a table, the note follows its row.",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; text: text of the note (empty: remove it); sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.note{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.paste": {
+		"signature": "cells.paste(row, col, values, [range], [sheet])",
+		"summary": "Writes a block of values from a cell, like a paste: a row of headers followed by rows of data creates a table; range = true writes it as a range of free cells.",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; values: rows of values: { {\"Name\", \"Age\"}, {\"Lea\", 31} }; range: true: free cells (a range), without creating a table; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.paste{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.read": {
+		"signature": "cells.read(row, col, row2, col2, [sheet]) → { {value, ...}, ... }",
+		"summary": "Reads the displayed values of a range of the sheet, row by row: tables, PivotTables and free cells alike (\"\": empty cell).",
+		"details": "100,000 cells at most; for a whole table, tables.rows or db.query are more direct. Parameters — row: sheet row, from 1; col: sheet column, from 1; row2: last row of the range; col2: last column of the range; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.read{row = …}."
+	},
+	"cells.set": {
+		"signature": "cells.set(row, col, value, [sheet]) → {created, widened, from, to, invalid, keyed}",
+		"summary": "Enters a value in a cell of the sheet, exactly like typing in the grid.",
+		"details": "A text that starts with = is a formula. Typing next to a table extends it, typing two adjacent rows creates a table, \"\" clears the cell. Returns what the entry caused (table created, column widened…). Parameters — row: sheet row, from 1; col: sheet column, from 1; value: entry: text, number, boolean, formula (=…); sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.set{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.style": {
+		"signature": "cells.style(row, col, [row2], [col2], style, [sheet])",
+		"summary": "Formats a range of cells.",
+		"details": "style: bold, italic, underline, strike (booleans), font (font name) and size (size in points), color and fill (colors \"#rrggbb\", or from the workbook theme: \"theme:accent1\" to \"theme:accent6\", \"theme:dk1\", \"theme:lt1\", \"theme:dk2\", \"theme:lt2\", followed if needed by \":+40\" for 40% lighter or \":-25\" for 25% darker; they change with the theme), align (\"left\", \"center\" or \"right\"), valign (\"top\", \"middle\" or \"bottom\"), wrap (wrap text), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" or \"text\"), decimals (number of decimal places), no_grouping (no thousands separator), date_format (pattern of a date or a time: \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (all four borders) or border_top, border_bottom, border_left, border_right, border_color, and validation (drop-down list: list of allowed values {\"Yes\", \"No\"}, or source range \"=Customers[City]\", \"=Cell[A1:A10]\", \"=Sheet2!Cell[A1:A10]\" or \"=CellName\", whose distinct non-blank values are read again each time the list opens and at each entry). false or \"\" removes the property. Parameters — row: sheet row, from 1; col: sheet column, from 1; row2: last row of the range (missing: row); col2: last column of the range (missing: col); style: properties to set: {bold = true, fill = \"#fff2cc\"}; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.style{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.style_lines": {
+		"signature": "cells.style_lines(axis, from, [to], style, [sheet])",
+		"summary": "Formats whole rows or columns of the sheet (all their cells, present and future, tables and PivotTables included). A cell takes precedence over its row, a row over its column.",
+		"details": "style: bold, italic, underline, strike (booleans), font (font name) and size (size in points), color and fill (colors \"#rrggbb\", or from the workbook theme: \"theme:accent1\" to \"theme:accent6\", \"theme:dk1\", \"theme:lt1\", \"theme:dk2\", \"theme:lt2\", followed if needed by \":+40\" for 40% lighter or \":-25\" for 25% darker; they change with the theme), align (\"left\", \"center\" or \"right\"), valign (\"top\", \"middle\" or \"bottom\"), wrap (wrap text), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" or \"text\"), decimals (number of decimal places), no_grouping (no thousands separator), date_format (pattern of a date or a time: \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (all four borders) or border_top, border_bottom, border_left, border_right, border_color, and validation (drop-down list: list of allowed values {\"Yes\", \"No\"}, or source range \"=Customers[City]\", \"=Cell[A1:A10]\", \"=Sheet2!Cell[A1:A10]\" or \"=CellName\", whose distinct non-blank values are read again each time the list opens and at each entry). false or \"\" removes the property. Parameters — axis: \"rows\" or \"cols\" (columns); from: first row or column, from 1; to: last row or column (missing: from); style: properties to set: {bold = true, fill = \"#fff2cc\"}; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.style_lines{axis = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.text_to_columns": {
+		"signature": "cells.text_to_columns(row, col, [row2], options, [sheet])",
+		"summary": "Splits the text of the cells of column col, rows row to row2, into columns (Excel's Text to Columns wizard): in free cells, the parts are written to the right (or from options.dest); in a table, new columns are inserted. Returns the number of columns imported.",
+		"details": "options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}. delims: separator characters (\";\", \",\", \" \", \"\t\"…); merge = true: consecutive separators count as one; quote: text qualifier (\"\\\"\" by default in the wizard, \"'\" or \"\" for none). fixed = true: fixed width, breaks gives the positions of the breaks (in characters). columns: format of each column produced, {format = \"\" (general), \"text\", \"date\" or \"skip\" (not imported), order = \"DMY\", \"MDY\", \"YMD\"… for dates}. decimal and thousands: number separators (\",\" and \" \" by default). dest: destination cell (“E2”) in free cells. Parameters — row: sheet row, from 1; col: sheet column, from 1; row2: last row of the range (missing: row); options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.text_to_columns{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.to_values": {
+		"signature": "cells.to_values(row, col, [row2], [col2], [sheet])",
+		"summary": "Replaces the formulas of a range with their values: free cells with a formula, and calculated columns (whole) of the tables the range touches (like columns.to_values). Formulas that spill a dynamic array are kept.",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; row2: last row of the range (missing: row); col2: last column of the range (missing: col); sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.to_values{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"cells.unmerge": {
+		"signature": "cells.unmerge(row, col, [row2], [col2], [sheet])",
+		"summary": "Undoes the merges of cells that touch the range. In the header group band of a table, a group over several columns stays on the first, the others go to one level (renamed); a column on one level does not change: give it a group with cells.set on the band or columns.rename(“Group.Sub”).",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; row2: last row of the range (missing: row); col2: last column of the range (missing: col); sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.unmerge{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"charts.create": {
+		"signature": "charts.create(row, col, config, [sheet])",
+		"summary": "Places a chart on a sheet, top-left corner at row, col, and returns its identifier.",
+		"details": "config: {source, kind, x, series, title, …}. source is a table or a PivotTable, x the column of the categories (x axis), series the list of plotted columns. kind: \"bar\" (column chart: vertical bars), \"column\" (horizontal bars), \"line\", \"area\", \"pie\", \"doughnut\", \"scatter\", \"combo\" (bars and lines: seriesKinds gives the shape of each series, \"bar\", \"line\" or \"area\"), \"bar3d\" and \"pie3d\" (in perspective), \"map\" (OpenStreetMap map), \"waterfall\", \"treemap\", \"radar\", \"funnel\", \"boxplot\" (box and whisker), \"histogram\" (frequencies, bins classes) or \"gauge\" (last value of the first series, between yMin and yMax).\nLayout: title; legend (\"bottom\", \"top\", \"right\" or \"none\"); xTitle, yTitle, y2Title (axis titles); labels (data labels); noGrid (no gridlines); stacked (bars, areas); yMin, yMax (bounds of the value axis); colors (color of each series, \"#rrggbb\"; per category for pie, doughnut, funnel and treemap; increase, decrease and total for the waterfall); secondary (list of booleans: series on the right axis); blanks (lines and areas: blank cell \"gap\" as a gap, the default, \"zero\" or \"span\" to connect the points); hidden (also reads the rows hidden by the table filter); filters (chart drawn from a table: {{field, values}, ...}, reads only the rows whose field column shows one of the values, like the report filter of a PivotTable; on the column of a choice tab, it takes precedence over the choice); width, height (pixels) and offX, offY (offset within the anchor cell, pixels).\nMap: series = {latitude, longitude, optional value} (mapCoords \"pair\", the default) or {coordinates, optional value} (mapCoords \"single\": one cell “48.85, 2.35”); x the name of the points; mapMode \"points\" or \"heat\" (density); colorBy, column whose each value gets its own color; mapScale, size factor of the points (1 by default, from 0.25 to 4); mapView {lat, lon, zoom} sets the view. Parameters — row: sheet row, from 1; col: sheet column, from 1; config: configuration of the chart; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: charts.create{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"charts.delete": {
+		"signature": "charts.delete(chart)",
+		"summary": "Deletes a chart.",
+		"details": "Parameters — chart: chart (identifier or title). Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"charts.place": {
+		"signature": "charts.place(chart, row, col, [width], [height])",
+		"summary": "Moves a chart (top-left corner at row, col) and, if given, resizes it (pixels, at least 160 × 120); otherwise it keeps its size.",
+		"details": "Parameters — chart: chart (identifier or title); row: sheet row, from 1; col: sheet column, from 1; width: width in pixels; height: height in pixels. Arguments in order, or a table of named arguments: charts.place{chart = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"charts.set": {
+		"signature": "charts.set(chart, config, [replace])",
+		"summary": "Changes the configuration of a chart: only the given fields change (replace = true replaces the whole configuration).",
+		"details": "config: {source, kind, x, series, title, …}. source is a table or a PivotTable, x the column of the categories (x axis), series the list of plotted columns. kind: \"bar\" (column chart: vertical bars), \"column\" (horizontal bars), \"line\", \"area\", \"pie\", \"doughnut\", \"scatter\", \"combo\" (bars and lines: seriesKinds gives the shape of each series, \"bar\", \"line\" or \"area\"), \"bar3d\" and \"pie3d\" (in perspective), \"map\" (OpenStreetMap map), \"waterfall\", \"treemap\", \"radar\", \"funnel\", \"boxplot\" (box and whisker), \"histogram\" (frequencies, bins classes) or \"gauge\" (last value of the first series, between yMin and yMax).\nLayout: title; legend (\"bottom\", \"top\", \"right\" or \"none\"); xTitle, yTitle, y2Title (axis titles); labels (data labels); noGrid (no gridlines); stacked (bars, areas); yMin, yMax (bounds of the value axis); colors (color of each series, \"#rrggbb\"; per category for pie, doughnut, funnel and treemap; increase, decrease and total for the waterfall); secondary (list of booleans: series on the right axis); blanks (lines and areas: blank cell \"gap\" as a gap, the default, \"zero\" or \"span\" to connect the points); hidden (also reads the rows hidden by the table filter); filters (chart drawn from a table: {{field, values}, ...}, reads only the rows whose field column shows one of the values, like the report filter of a PivotTable; on the column of a choice tab, it takes precedence over the choice); width, height (pixels) and offX, offY (offset within the anchor cell, pixels).\nMap: series = {latitude, longitude, optional value} (mapCoords \"pair\", the default) or {coordinates, optional value} (mapCoords \"single\": one cell “48.85, 2.35”); x the name of the points; mapMode \"points\" or \"heat\" (density); colorBy, column whose each value gets its own color; mapScale, size factor of the points (1 by default, from 0.25 to 4); mapView {lat, lon, zoom} sets the view. Parameters — chart: chart (identifier or title); config: fields to change; replace: replace the whole configuration (size, colors, map view… go back to default). Arguments in order, or a table of named arguments: charts.set{chart = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"columns.delete": {
+		"signature": "columns.delete(table, column)",
+		"summary": "Deletes a column of a table (a table keeps at least one column).",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1). Arguments in order, or a table of named arguments: columns.delete{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"columns.fix_type": {
+		"signature": "columns.fix_type(table, column)",
+		"summary": "Fixes the current type of a column: it will no longer widen, an entry outside the type will be marked as an error.",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1). Arguments in order, or a table of named arguments: columns.fix_type{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"columns.insert": {
+		"signature": "columns.insert(table, [name], [position])",
+		"summary": "Inserts a column in a table, before column position (missing: at the end).",
+		"details": "Parameters — table: name of the table; name: name of the column; position: position, from 1. Arguments in order, or a table of named arguments: columns.insert{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"columns.rename": {
+		"signature": "columns.rename(table, column, name)",
+		"summary": "Renames a column (its header).",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1); name: new name. Arguments in order, or a table of named arguments: columns.rename{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"columns.set_filter": {
+		"signature": "columns.set_filter(table, column, [values], [errors], [conds], [any])",
+		"summary": "Filters a table on a column: only the rows whose value is in values stay displayed.",
+		"details": "values is a list of texts as displayed (\"\" for empty cells); errors = true keeps only the entries in error. conds filters by condition, like Excel's “Text Filters” and “Number Filters”: each condition is {op, value, to} with op among \"eq\", \"ne\" (wildcards * and ?), \"begins\", \"ends\", \"contains\", \"notcontains\", \"gt\", \"ge\", \"lt\", \"le\", \"between\" (value and to included), \"top\" and \"bottom\" (value: number of items), \"above\" and \"below\" (average). The conditions must all be met, or one of them with any = true. Without values, errors or conds, the filter of the column is removed. Parameters — table: name of the table; column: column (name or position from 1); values: values kept; errors: keep only the errors; conds: conditions: { {op = \">\", value = \"100\"}, ... }; any: a single condition is enough. Arguments in order, or a table of named arguments: columns.set_filter{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"columns.set_rules": {
+		"signature": "columns.set_rules(table, column, rules)",
+		"summary": "Replaces the conditional formatting rules of a column (empty list: none); the first rule met wins.",
+		"details": "Each rule is {op, value, to, style}. op: \">\", \">=\", \"<\", \"<=\", \"=\", \"<>\", \"between\" (between value and to), \"contains\", \"empty\", \"notempty\" or \"error\". style: bold, italic, underline, strike (booleans), font (font name) and size (size in points), color and fill (colors \"#rrggbb\", or from the workbook theme: \"theme:accent1\" to \"theme:accent6\", \"theme:dk1\", \"theme:lt1\", \"theme:dk2\", \"theme:lt2\", followed if needed by \":+40\" for 40% lighter or \":-25\" for 25% darker; they change with the theme), align (\"left\", \"center\" or \"right\"), valign (\"top\", \"middle\" or \"bottom\"), wrap (wrap text), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" or \"text\"), decimals (number of decimal places), no_grouping (no thousands separator), date_format (pattern of a date or a time: \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (all four borders) or border_top, border_bottom, border_left, border_right, border_color, and validation (drop-down list: list of allowed values {\"Yes\", \"No\"}, or source range \"=Customers[City]\", \"=Cell[A1:A10]\", \"=Sheet2!Cell[A1:A10]\" or \"=CellName\", whose distinct non-blank values are read again each time the list opens and at each entry). false or \"\" removes the property. Parameters — table: name of the table; column: column (name or position from 1); rules: rules: { {op = \">\", value = \"100\", style = {fill = \"#c6efce\"}}, ... }. Arguments in order, or a table of named arguments: columns.set_rules{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"columns.set_type": {
+		"signature": "columns.set_type(table, column, type)",
+		"summary": "Sets the type of a column; values that do not convert stay visible, marked as errors.",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1); type: integer, decimal, text, boolean or date. Arguments in order, or a table of named arguments: columns.set_type{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"columns.sort_order": {
+		"signature": "columns.sort_order(table, column) → {list, values = {...}, desc, applied}: applied if it is the last sort of the table",
+		"summary": "Returns the saved custom order of a column (nil: none).",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1). Arguments in order, or a table of named arguments: columns.sort_order{table = …}."
+	},
+	"columns.to_values": {
+		"signature": "columns.to_values(table, column)",
+		"summary": "Turns a calculated column into a typed column that keeps its current values, with the type guessed from these values. It keeps its name (formulas that cite it still read it) but no longer follows the sources of its formula. Refused in a shared table of a collaborative workbook.",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1). Arguments in order, or a table of named arguments: columns.to_values{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"columns.type_mix": {
+		"signature": "columns.type_mix(table, column) → {type, off, total}",
+		"summary": "For a column turned into text by widening: majority type and number of values that are not of it.",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1). Arguments in order, or a table of named arguments: columns.type_mix{table = …}."
+	},
+	"columns.type_preview": {
+		"signature": "columns.type_preview(table, column, type)",
+		"summary": "Counts the values of a column that would not convert to the given type.",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1); type: integer, decimal, text, boolean or date. Arguments in order, or a table of named arguments: columns.type_preview{table = …}."
+	},
+	"columns.values": {
+		"signature": "columns.values(table, column) → { {text, count}, ... }",
+		"summary": "Lists the distinct values of a column with their number of occurrences (1,000 at most).",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1). Arguments in order, or a table of named arguments: columns.values{table = …}."
+	},
+	"connections.list": {
+		"signature": "connections.list() → { {id, name, kind, config = {host, port, database, user, sslmode, instance, url, header}}, ... } (kind: postgres, mysql, sqlserver or web)",
+		"summary": "Lists the workbook's connections to external sources (without password: it is never saved in the workbook)."
+	},
+	"controls.add": {
+		"signature": "controls.add(kind, row, col, [props], [sheet]) → {id, name, kind, …} (like controls.get)",
+		"summary": "Places a control on a sheet, top-left corner at row, col, and returns it described (its name is chosen automatically if not given).",
+		"details": "A control has a name that is unique in the workbook (“Button1”, “List1”…), chosen automatically and editable. kind: \"button\" (a click runs its action), \"checkbox\" (TRUE / FALSE), \"select\" (drop-down list, options), \"input\" (single-line text), \"textarea\" (multi-line text) or \"file\" (file picker: the cell receives the path of the chosen file). Except for the button, a control is linked to a cell (link, “B3”): its value (value) is that cell's — a boolean for a checkbox, a text otherwise. Properties: name, label (text of the button or the checkbox, placeholder of an input box), link, value (written to the linked cell; fires the change event if it changes), options (drop-down list), script and function (action of the control), color, hoverColor, activeColor, textColor (“#rrggbb”), hidden or visible, row, col, width, height (pixels). Without link, a control other than a button is linked to the cell on its right. Parameters — kind: \"button\", \"checkbox\", \"select\", \"input\", \"textarea\" or \"file\"; row: sheet row, from 1; col: sheet column, from 1; props: properties: {label = …, link = \"B3\" (optional: without a linked cell, the value is kept in the control), options = {…} or optionsFrom = \"Customers[City]\" (choices taken from a column), …}; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: controls.add{kind = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"controls.delete": {
+		"signature": "controls.delete(control)",
+		"summary": "Deletes a control (its linked cell keeps its value).",
+		"details": "Parameters — control: control (name, identifier or label). Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"controls.fire": {
+		"signature": "controls.fire(control, [event]) → {output, writes, durationMs, error} (outside a script)",
+		"summary": "Fires an event of a control like the interface does (click of a button, change with the current value of the others): its action, then its listeners, run.",
+		"details": "In a script, the event is handled at the end of the script. Parameters — control: control (name, identifier or label); event: \"click\" or \"change\" (missing: that of the control). Arguments in order, or a table of named arguments: controls.fire{control = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"controls.get": {
+		"signature": "controls.get(control) → {id, name, kind, label, sheet, row, col, width, height, link, value, options, script, function, color, hoverColor, activeColor, textColor, hidden, listeners}",
+		"summary": "Describes a control: kind, label, linked cell and its value, choices, colors, position, action and listeners.",
+		"details": "A control has a name that is unique in the workbook (“Button1”, “List1”…), chosen automatically and editable. kind: \"button\" (a click runs its action), \"checkbox\" (TRUE / FALSE), \"select\" (drop-down list, options), \"input\" (single-line text), \"textarea\" (multi-line text) or \"file\" (file picker: the cell receives the path of the chosen file). Except for the button, a control is linked to a cell (link, “B3”): its value (value) is that cell's — a boolean for a checkbox, a text otherwise. Parameters — control: control (name, identifier or label)."
+	},
+	"controls.list": {
+		"signature": "controls.list([sheet]) → { {id, name, kind, label, sheet, row, col, width, height, link, value, options, script, function, hidden, listeners}, ... }",
+		"summary": "Lists the controls (buttons, checkboxes, lists, input boxes, file pickers) of a sheet, or of the whole workbook.",
+		"details": "A control has a name that is unique in the workbook (“Button1”, “List1”…), chosen automatically and editable. kind: \"button\" (a click runs its action), \"checkbox\" (TRUE / FALSE), \"select\" (drop-down list, options), \"input\" (single-line text), \"textarea\" (multi-line text) or \"file\" (file picker: the cell receives the path of the chosen file). Except for the button, a control is linked to a cell (link, “B3”): its value (value) is that cell's — a boolean for a checkbox, a text otherwise. Parameters — sheet: sheet (missing: the whole workbook)."
+	},
+	"controls.listeners": {
+		"signature": "controls.listeners([control]) → { {control, event, script, function, action}, ... }",
+		"summary": "Lists what the events of a control, or of all of them, run: its action (action = true), then its listeners, in order.",
+		"details": "Events: \"click\" (button) and \"change\" (new value of the other controls, entry in the sheet or controls.set). A listener is a global function of a script saved in the library, called with the table {control, event, value, old} (also in the global variable event); it is saved in the workbook and outlives the script. The action of the control (script and function) runs first, then the listeners in order. Events caused by a script run when it ends, in the same undo step. Parameters — control: control (missing: all)."
+	},
+	"controls.off": {
+		"signature": "controls.off(control, [event], [handler], [script])",
+		"summary": "Unsubscribes listeners of a control and returns their number: all, or those of an event, a function, a script.",
+		"details": "The action of the control (script and function, Edit window) is not a listener: controls.set(name, {script = \"\"}) removes it. Parameters — control: control (name, identifier or label); event: event (missing: all); handler: function (or its name; missing: all); script: script (missing: all). Arguments in order, or a table of named arguments: controls.off{control = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"controls.on": {
+		"signature": "controls.on(control, event, handler, [script])",
+		"summary": "Subscribes a function of a script to an event of a control (\"click\" of a button, \"change\" of the others); it will be called at each event with {control, event, value, old}.",
+		"details": "Events: \"click\" (button) and \"change\" (new value of the other controls, entry in the sheet or controls.set). A listener is a global function of a script saved in the library, called with the table {control, event, value, old} (also in the global variable event); it is saved in the workbook and outlives the script. The action of the control (script and function) runs first, then the listeners in order. Events caused by a script run when it ends, in the same undo step. handler is the function itself or its name; script, by default the running script (it must be saved in the library). Subscribing the same function twice changes nothing. Parameters — control: control (name, identifier or label); event: \"click\" or \"change\"; handler: global function of the script (or its name); script: script of the function (missing: the running script). Arguments in order, or a table of named arguments: controls.on{control = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"controls.set": {
+		"signature": "controls.set(control, props)",
+		"summary": "Changes properties of a control (the others do not change): label, value, choices, colors, visibility, position.",
+		"details": "Properties: name, label (text of the button or the checkbox, placeholder of an input box), link, value (written to the linked cell; fires the change event if it changes), options (drop-down list), script and function (action of the control), color, hoverColor, activeColor, textColor (“#rrggbb”), hidden or visible, row, col, width, height (pixels). Writing value amounts to entering the value in the linked cell. Parameters — control: control (name, identifier or label); props: properties to change: {value = …, hidden = true, …}. Arguments in order, or a table of named arguments: controls.set{control = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"doc.recalc": {
+		"signature": "doc.recalc()",
+		"summary": "Renews AUJOURDHUI, MAINTENANT and ALEA (TODAY, NOW, RAND) (F9).",
+		"details": "Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"doc.set_theme": {
+		"signature": "doc.set_theme([table], [source], [name])",
+		"summary": "Changes the color theme of the workbook: two base colors #rrggbb, the shades (header, text, border) are derived from them. Without colors: the default theme of the settings.",
+		"details": "Parameters — table: color of ordinary tables, #rrggbb; source: color of the tables of an external source (query), #rrggbb; name: name of the theme. Arguments in order, or a table of named arguments: doc.set_theme{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"doc.state": {
+		"signature": "doc.state() → {open, path, title, dirty, undo, redo}",
+		"summary": "Describes the open workbook: file, unsaved changes, actions to undo and redo."
+	},
+	"doc.theme": {
+		"signature": "doc.theme() → {id, name, table, source} or nil",
+		"summary": "Color theme of the workbook (View › Theme): color of ordinary tables (table) and of the tables of an external source (source). nil: default theme of the settings."
+	},
+	"events.enable": {
+		"signature": "events.enable(on) → true if the events were on",
+		"summary": "Turns the workbook events on (true) or off (false) for the session, like Excel's Application.EnableEvents; returns the previous state.",
+		"details": "When off, no listener of the workbook events runs; the events of the controls (controls.on) are not affected. Opening a workbook turns them back on. Parameters — on: true: turn on; false: turn off."
+	},
+	"events.enabled": {
+		"signature": "events.enabled() → boolean",
+		"summary": "Says whether the workbook events are on (events.enable)."
+	},
+	"events.list": {
+		"signature": "events.list([event]) → { {event, script, function}, ... }",
+		"summary": "Lists the listeners of the workbook events, in the order they run.",
+		"details": "Events: \"open\" (workbook opened: {path, title}); \"before_save\" (before saving (Ctrl+S, Save As): {path, as}; returning false cancels it); \"save\" (after saving: {path}); \"before_close\" (before closing the workbook or the window: {path, dirty}; returning false cancels it); \"sheet\" (displayed tab changed: {sheet, sheet_id, previous, previous_id}); \"selection\" (selection changed, once the mouse or keyboard is idle: {sheet, sheet_id, row, col, row2, col2, address, table, column}); \"change\" (cells changed by the user (entry, paste, clear, move, table row added or deleted): {sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}); \"sheet_add\" (sheet added (or copied): {sheet, sheet_id}); \"sheet_delete\" (sheet deleted: {sheet, sheet_id}); \"recalc\" (formulas recalculated (F9, Recalculate): {}). Each table also carries event (the name of the event); rows and columns count from 1, like ui.selection. value and old (displayed value after and before) are given only for a single cell entered. Only the user's actions fire these events: what a script (listener included) changes, selects or displays fires none, so a listener never triggers itself. A listener is a global function of a script saved in the library, called with the table of the event (also in the global variable event); it is saved in the workbook and outlives the script. The listeners of an event run in the order they were subscribed; everything they change is undone at once (Ctrl+Z). A listener in error is reported once in the status bar and the console, without blocking the interface. before_save and before_close have 5 seconds at most (dialog boxes excluded); an error blocks neither saving nor closing. Parameters — event: event (missing: all)."
+	},
+	"events.off": {
+		"signature": "events.off([event], [handler], [script]) → number of listeners removed",
+		"summary": "Unsubscribes listeners of the workbook events and returns their number: all, or those of an event, a function, a script.",
+		"details": "Parameters — event: event (missing: all); handler: function (or its name; missing: all); script: script (missing: all). Arguments in order, or a table of named arguments: events.off{event = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"events.on": {
+		"signature": "events.on(event, handler, [script]) → true if the listener is new",
+		"summary": "Subscribes a function of a script to a workbook event (opening, saving, closing, change of tab, of selection, entry…); it will be called at each event with a table that describes it.",
+		"details": "Events: \"open\" (workbook opened: {path, title}); \"before_save\" (before saving (Ctrl+S, Save As): {path, as}; returning false cancels it); \"save\" (after saving: {path}); \"before_close\" (before closing the workbook or the window: {path, dirty}; returning false cancels it); \"sheet\" (displayed tab changed: {sheet, sheet_id, previous, previous_id}); \"selection\" (selection changed, once the mouse or keyboard is idle: {sheet, sheet_id, row, col, row2, col2, address, table, column}); \"change\" (cells changed by the user (entry, paste, clear, move, table row added or deleted): {sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}); \"sheet_add\" (sheet added (or copied): {sheet, sheet_id}); \"sheet_delete\" (sheet deleted: {sheet, sheet_id}); \"recalc\" (formulas recalculated (F9, Recalculate): {}). Each table also carries event (the name of the event); rows and columns count from 1, like ui.selection. value and old (displayed value after and before) are given only for a single cell entered. Only the user's actions fire these events: what a script (listener included) changes, selects or displays fires none, so a listener never triggers itself. A listener is a global function of a script saved in the library, called with the table of the event (also in the global variable event); it is saved in the workbook and outlives the script. The listeners of an event run in the order they were subscribed; everything they change is undone at once (Ctrl+Z). A listener in error is reported once in the status bar and the console, without blocking the interface. before_save and before_close have 5 seconds at most (dialog boxes excluded); an error blocks neither saving nor closing. handler is the function itself or its name; script, by default the running script (it must be saved in the library). Subscribing the same function twice changes nothing. Parameters — event: \"open\", \"before_save\", \"save\", \"before_close\", \"sheet\", \"selection\", \"change\", \"sheet_add\", \"sheet_delete\" or \"recalc\"; handler: global function of the script (or its name); script: script of the function (missing: the running script). Arguments in order, or a table of named arguments: events.on{event = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"formulas.functions": {
+		"signature": "formulas.functions()",
+		"summary": "Lists the formula functions (French names), with their syntax and their description."
+	},
+	"help.search": {
+		"signature": "help.search([query], [page]) → { {page, title, text}, ... } or {id, title, text} or { {id, title}, ... }",
+		"summary": "Searches Lattis's help (the pages of the help pane, in the session language, in French otherwise): returns the sections about the given words, or a whole page, or the list of pages.",
+		"details": "query: words to search for (for example “headers on two rows”, “key”, “chart filter”); page: identifier of a page to read in full (see the list returned without parameters). Without query or page: the list of pages. The procedures described (menus, clicks) often have an equivalent command: tables.two_level_headers, tables.header_to_title, tables.set_key… Parameters — query: words to search for; page: identifier of a page (prise-en-main, formules, sql…). Arguments in order, or a table of named arguments: help.search{query = …}."
+	},
+	"http.get": {
+		"signature": "http.get(url, [options]) → {status, ok, url, headers, body, json}",
+		"summary": "Sends an HTTP GET request (http:// or https://) and returns the response.",
+		"details": "The response: status (200, 404…), ok (true for a 2xx status), url (final address, after redirects), headers (lowercase names), body (text) and json (the decoded body when the response is JSON). An error status (404, 500…) is not a Lua error: test ok; a network failure or a timeout is one (use pcall to catch it). Before the first request to a host, Lattis asks the user for permission (can be remembered for the workbook; Script tab › Network access to review it); the MCP server only reaches hosts already allowed. Timeout: 15 s by default (timeout, 120 s at most), not counted in the maximum duration of the script; response of 10 MB at most; 10 redirects at most; the Stop button interrupts the request. Parameters — url: address (http:// or https://); options: {headers = {name = value}, timeout = seconds}. Arguments in order, or a table of named arguments: http.get{url = …}."
+	},
+	"http.post": {
+		"signature": "http.post(url, [body], [options]) → {status, ok, url, headers, body, json}",
+		"summary": "Sends an HTTP POST request and returns the response; a text body is sent as is, a table is sent as JSON.",
+		"details": "The response: status (200, 404…), ok (true for a 2xx status), url (final address, after redirects), headers (lowercase names), body (text) and json (the decoded body when the response is JSON). An error status (404, 500…) is not a Lua error: test ok; a network failure or a timeout is one (use pcall to catch it). Before the first request to a host, Lattis asks the user for permission (can be remembered for the workbook; Script tab › Network access to review it); the MCP server only reaches hosts already allowed. Timeout: 15 s by default (timeout, 120 s at most), not counted in the maximum duration of the script; response of 10 MB at most; 10 redirects at most; the Stop button interrupts the request. Parameters — url: address (http:// or https://); body: body: text, or table encoded as JSON (Content-Type: application/json); options: {headers = {name = value}, timeout = seconds}. Arguments in order, or a table of named arguments: http.post{url = …}."
+	},
+	"http.request": {
+		"signature": "http.request(url, [method], [headers], [body], [json], [timeout]) → {status, ok, url, headers, body, json}",
+		"summary": "Sends any HTTP request (GET, POST, PUT, PATCH, DELETE…) and returns the response.",
+		"details": "json encodes a table as a JSON body (with the matching Content-Type header); body sends a text as is. The response: status (200, 404…), ok (true for a 2xx status), url (final address, after redirects), headers (lowercase names), body (text) and json (the decoded body when the response is JSON). An error status (404, 500…) is not a Lua error: test ok; a network failure or a timeout is one (use pcall to catch it). Before the first request to a host, Lattis asks the user for permission (can be remembered for the workbook; Script tab › Network access to review it); the MCP server only reaches hosts already allowed. Timeout: 15 s by default (timeout, 120 s at most), not counted in the maximum duration of the script; response of 10 MB at most; 10 redirects at most; the Stop button interrupts the request. Parameters — url: address (http:// or https://); method: method (GET by default); headers: headers: {name = value}; body: body of the request (text); json: body of the request: table encoded as JSON; timeout: timeout in seconds (15 by default, 120 at most). Arguments in order, or a table of named arguments: http.request{url = …}."
+	},
+	"pages.add": {
+		"signature": "pages.add([name], [source], [before], [kind]) → {id, name, kind}",
+		"summary": "Adds a web page (HTML, CSS and JavaScript displayed in an isolated frame), or a document (kind = \"doc\": rich text), and returns {id, name, kind}.",
+		"details": "The page talks to the workbook with lattis.call(\"command\", {arguments}), which returns a promise (an allowed list of the script commands: reading like sheets.list or db.query, values like cells.set or db.execute, ui.*, http.*, buttons.run; no files, no scripts, no structure, no protections), and lattis.on(\"change\", function), called when the workbook changes. Without source, the page receives a sample template. Without before, the tab is added at the end. Parameters — name: name of the tab (Page1… by default); source: HTML content of the page; before: sheet before which to insert it; kind: \"html\" (default) or \"doc\": document, whose content is a Quill Delta in JSON. Arguments in order, or a table of named arguments: pages.add{name = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"pages.get": {
+		"signature": "pages.get([sheet]) → HTML text",
+		"summary": "Returns the HTML content of a web page.",
+		"details": "Parameters — sheet: web page (name or identifier); missing: the displayed tab."
+	},
+	"pages.set": {
+		"signature": "pages.set(sheet, source)",
+		"summary": "Replaces the HTML content of a web page.",
+		"details": "Parameters — sheet: web page (name or identifier); source: new HTML content. Arguments in order, or a table of named arguments: pages.set{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"pivots.create": {
+		"signature": "pivots.create(config) → {id, name} (the sheet)",
+		"summary": "Creates a PivotTable on a new sheet and returns that sheet.",
+		"details": "config: {source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source is a table, rowFields the list of row fields, cols the column field, values a list of {field, agg, show} (agg: \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" or \"max\"; show: \"\", \"pctTotal\", \"pctRow\" or \"pctCol\"), filters a list of {field, values}. With several row fields, the PivotTable shows as a tree: subtotals places the group subtotals (\"\" on the group row, \"bottom\" below, \"none\" none); collapsed lists the collapsed groups, each by its labels ({\"HR\"}, {\"HR\", \"Paris\"}); collapseAll collapses everything except the groups in expanded. calc adds calculated fields, a list of {name, text}: text is a formula on the columns of each row of the source table (\"=ANNEE([Date])\", \"=GAUCHE([Code];2)\", formulas in French), and name the name of the field, which then goes into rowFields, cols, values or filters like a column (rows are grouped by its result). Parameters — config: configuration of the PivotTable. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"pivots.delete": {
+		"signature": "pivots.delete(pivot)",
+		"summary": "Deletes a PivotTable (its sheet stays).",
+		"details": "Parameters — pivot: PivotTable (identifier or name). Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"pivots.set": {
+		"signature": "pivots.set(pivot, config)",
+		"summary": "Replaces the configuration of a PivotTable.",
+		"details": "config: {source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source is a table, rowFields the list of row fields, cols the column field, values a list of {field, agg, show} (agg: \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" or \"max\"; show: \"\", \"pctTotal\", \"pctRow\" or \"pctCol\"), filters a list of {field, values}. With several row fields, the PivotTable shows as a tree: subtotals places the group subtotals (\"\" on the group row, \"bottom\" below, \"none\" none); collapsed lists the collapsed groups, each by its labels ({\"HR\"}, {\"HR\", \"Paris\"}); collapseAll collapses everything except the groups in expanded. calc adds calculated fields, a list of {name, text}: text is a formula on the columns of each row of the source table (\"=ANNEE([Date])\", \"=GAUCHE([Code];2)\", formulas in French), and name the name of the field, which then goes into rowFields, cols, values or filters like a column (rows are grouped by its result). Parameters — pivot: PivotTable (identifier or name); config: new configuration. Arguments in order, or a table of named arguments: pivots.set{pivot = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"queries.delete": {
+		"signature": "queries.delete(query)",
+		"summary": "Deletes an import query; its table stays on the sheet.",
+		"details": "Parameters — query: query (name or identifier). Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"queries.list": {
+		"signature": "queries.list() → { {id, name, source, steps, table, sheet, refreshed}, ... }",
+		"summary": "Lists the import queries of the workbook, with their source, their steps and the loaded table."
+	},
+	"queries.preview": {
+		"signature": "queries.preview(query, [steps]) → {columns, rows, count, sample, error, errorStep}",
+		"summary": "Calculates the preview of a query (on the first 1,000 rows of each source) after its first n steps (all by default).",
+		"details": "Parameters — query: query (name or identifier); steps: number of steps applied. Arguments in order, or a table of named arguments: queries.preview{query = …}."
+	},
+	"queries.refresh": {
+		"signature": "queries.refresh(query) → {sheet, table, rows, warnings}",
+		"summary": "Refreshes a query: reads its source again, replays its steps and replaces its table (created on a new sheet the first time).",
+		"details": "Parameters — query: query (name or identifier). Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"queries.refresh_all": {
+		"signature": "queries.refresh_all() → { {sheet, table, rows, warnings}, ... }",
+		"summary": "Refreshes all the queries already loaded into a sheet.",
+		"details": "Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"queries.save": {
+		"signature": "queries.save(name, source, [steps])",
+		"summary": "Creates an import query (or replaces the source and the steps of the one with that name) and returns its identifier. It is loaded into a sheet only when refreshed.",
+		"details": "source: {kind, ...} with kind \"csv\" (path, delimiter), \"xlsx\" (path, sheet, index from 0), \"json\" (path, recordPath: path of the array of records, e.g. data.items), \"parquet\" (path), \"sqlite\" (path, sql), \"table\" (table), \"query\" (query: another query), \"postgres\", \"mysql\" or \"sqlserver\" (connection, read-only sql), \"web\" (url, headers = {{name, value}}, recordPath, connection: optional Web connection that carries the token). steps: list of steps {op, ...}: filter {conditions = {{column, cmp, value}}, any}, rename {column, name}, type {column, type}, remove/select {columns}, split {column, delimiter, parts}, replace {column, value, with}, transform {column, fn = \"trim\"|\"upper\"|\"lower\"}, addcolumn {name, expr (SQLite, [Column]), type}, index {name, start}, merge {other = source, keys, otherKeys, join = \"left\"|\"inner\"|\"full\"|\"right\"|\"anti\", columns}, append {other}, group {columns, aggs = {{name, op, column}}}, sort {sort = {{column, desc}}}, distinct {columns}, top {count}, unpivot {columns, name, valueName}, pivot {column, valueColumn, agg}. cmp: \"=\", \"<>\", \"<\", \"<=\", \">\", \">=\", \"contains\", \"notcontains\", \"begins\", \"ends\", \"empty\", \"notempty\". Parameters — name: name of the query; source: data source; steps: transformation steps. Arguments in order, or a table of named arguments: queries.save{name = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"scripts.check": {
+		"signature": "scripts.check(source)",
+		"summary": "Checks the syntax of Lua code without running it; returns \"\" if it is correct, the error otherwise.",
+		"details": "Parameters — source: Lua code."
+	},
+	"scripts.delete": {
+		"signature": "scripts.delete(name)",
+		"summary": "Deletes a script from the library.",
+		"details": "Parameters — name: name of the script. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"scripts.list": {
+		"signature": "scripts.list() → { {id, name, source}, ... }",
+		"summary": "Lists the scripts saved in the workbook, with their source."
+	},
+	"scripts.save": {
+		"signature": "scripts.save(name, source)",
+		"summary": "Saves a script in the workbook's library (replaces it if it already exists under that name).",
+		"details": "Parameters — name: name of the script; source: Lua code. Arguments in order, or a table of named arguments: scripts.save{name = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.add": {
+		"signature": "sheets.add([name], [before]) → {id, name}",
+		"summary": "Adds a sheet and returns {id, name}.",
+		"details": "Without before, the sheet is added after the last tab. Without a name, it is named as in the grid (“Sheet2”…). Parameters — name: name of the new sheet; before: sheet before which to insert it. Arguments in order, or a table of named arguments: sheets.add{name = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.choice": {
+		"signature": "sheets.choice([sheet]) → {name, type, table, formula, value, all, values} or nil",
+		"summary": "Describes the choice tab of a sheet: category (column or formula), chosen value and offered values; nil if the sheet has none.",
+		"details": "The choice filters the tables of the sheet that have the category column, or the columns of its formula (formula, calculated category); all: “(All)”, no filter. SQL and scripts always see all the rows. Parameters — sheet: sheet (name or identifier); missing: the displayed sheet."
+	},
+	"sheets.choose_by": {
+		"signature": "sheets.choose_by(table, column, [value], [sheet])",
+		"summary": "Makes a sheet a choice tab by a column of one of its tables (“Choose by…”, “Filter the tab by this column”): the arrow of the tab chooses the displayed value.",
+		"details": "All the tables of the sheet that have a column of that name follow the choice, as well as its PivotTables whose source table has that column. With sheet, the choice tab is set on that sheet: it is “Filter the tab by this field” of a PivotTable placed elsewhere than its source table; the PivotTable follows the choice, the source table (on its sheet) is not filtered. Without a value, the tab shows all the values. Parameters — table: table of the column (for a PivotTable: its source table); column: category column (Year, Month, City…); value: value displayed first; missing: all; sheet: sheet of the choice tab (that of a PivotTable); missing: that of the table. Arguments in order, or a table of named arguments: sheets.choose_by{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.choose_by_formula": {
+		"signature": "sheets.choose_by_formula(sheet, formula, name, [value])",
+		"summary": "Makes a sheet a choice tab by a formula on the columns of each row (“Choose by › A formula…”): =ANNEE([Date]), =TEXTE([Date];\"mmmm\"), =SI([Montant]>1000;\"Gros\";\"Petit\") (formulas in French).",
+		"details": "The tables of the sheet that have all the columns cited by the formula follow the choice (as well as its PivotTables whose source table has them): only the rows for which the formula gives the chosen value stay displayed. No column to fill in: an added row receives nothing automatically, it stays displayed until the next change of value. “New value” (sheets.new_choice) does not apply. One undo step. Parameters — sheet: sheet of the choice tab; formula: formula in French, columns in brackets ([Date]); name: name of the category (Year, Month, Size…); value: value displayed first; missing: all. Arguments in order, or a table of named arguments: sheets.choose_by_formula{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.clear_choice": {
+		"signature": "sheets.clear_choice([sheet])",
+		"summary": "Removes the choice tab of a sheet: its tables show all their rows again.",
+		"details": "Parameters — sheet: sheet (name or identifier); missing: the displayed sheet. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.color": {
+		"signature": "sheets.color(sheet, [color])",
+		"summary": "Sets the tab color of a sheet (“#rrggbb”; empty: no color).",
+		"details": "Parameters — sheet: sheet; color: color #rrggbb, or empty. Arguments in order, or a table of named arguments: sheets.color{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.copy": {
+		"signature": "sheets.copy(sheet, [position]) → {id, name}",
+		"summary": "Copies a sheet (tables, cells, formatting, PivotTables, charts, buttons) and returns {id, name} of the copy.",
+		"details": "Like Move or Copy… › Create a copy. Copied tables get a free name (Sales → Sales_2); a chart or a PivotTable of the sheet that read a copied table reads its copy. Without position, the copy is placed right after the copied sheet. Parameters — sheet: sheet to copy; position: position of the copy among the tabs, from 1. Arguments in order, or a table of named arguments: sheets.copy{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.delete": {
+		"signature": "sheets.delete(sheet)",
+		"summary": "Deletes a sheet and everything it contains: tables, cells, PivotTables, charts and buttons.",
+		"details": "A single undo step brings back the sheet and all its content. The workbook keeps at least one visible sheet. Parameters — sheet: sheet to delete. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.find": {
+		"signature": "sheets.find(text, [sheet]) → { {row, col}, ... }",
+		"summary": "Searches for a text in a sheet (case-insensitive) and returns the cells found.",
+		"details": "Parameters — text: text searched for; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: sheets.find{text = …}."
+	},
+	"sheets.freeze": {
+		"signature": "sheets.freeze(rows, [cols], [sheet])",
+		"summary": "Freezes panes: the first rows and columns stay displayed while scrolling (0 and 0: unfreezes the panes).",
+		"details": "Parameters — rows: rows frozen at the top; cols: columns frozen on the left; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: sheets.freeze{rows = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.get": {
+		"signature": "sheets.get([sheet]) → {id, name, tables, cells, names, pivots, charts, buttons}",
+		"summary": "Describes the content of a sheet: tables, free cells, names, PivotTables, charts and buttons.",
+		"details": "Positions (row, col) count from 1. The values of the tables are read with tables.rows or db.query. Parameters — sheet: sheet (name or identifier); missing: the displayed sheet."
+	},
+	"sheets.hide": {
+		"signature": "sheets.hide(sheet, [hidden])",
+		"summary": "Hides a sheet (Hide) or shows it again (hidden = false).",
+		"details": "A hidden sheet no longer appears in the tabs but keeps its content; the workbook keeps at least one visible sheet. Parameters — sheet: sheet to hide or show; hidden: true (default): hide; false: show. Arguments in order, or a table of named arguments: sheets.hide{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.hide_lines": {
+		"signature": "sheets.hide_lines(axis, from, [to], [show], [sheet])",
+		"summary": "Hides (or shows) whole rows or columns of the sheet; their content stays in place and counts in formulas.",
+		"details": "Parameters — axis: \"rows\" or \"cols\" (columns); from: first row or column, from 1; to: last row or column (missing: from); show: true: show instead of hiding; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: sheets.hide_lines{axis = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.list": {
+		"signature": "sheets.list() → { {id, name, protected, structureProtected, kind}, ... }",
+		"summary": "Lists the sheets of the workbook, in tab order.",
+		"details": "protected is true for a protected sheet (Review › Protect Sheet), structureProtected for a sheet whose structure is protected (only entry in its tables is allowed); kind is \"html\" for a web page, \"doc\" for a document (missing for a sheet)."
+	},
+	"sheets.move": {
+		"signature": "sheets.move(sheet, position)",
+		"summary": "Places a sheet at position among the tabs (1: first).",
+		"details": "Parameters — sheet: sheet to move; position: position, from 1. Arguments in order, or a table of named arguments: sheets.move{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.new_choice": {
+		"signature": "sheets.new_choice(sheet, value)",
+		"summary": "Adds a value to the choice tab (“New year…”) and displays it: the sheet looks empty, ready to be filled in.",
+		"details": "Parameters — sheet: sheet with a choice tab; value: new value (2026, December…). Arguments in order, or a table of named arguments: sheets.new_choice{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.page_setup": {
+		"signature": "sheets.page_setup([sheet]) → {paper, orientation, margins = {top, bottom, left, right, header, footer}, scale, fit_wide, fit_tall, print_area, title_rows, title_cols, row_breaks, col_breaks, gridlines, headings, center_h, center_v, order, black_white, first_page, header = {left, center, right}, footer}",
+		"summary": "Reads the page setup of a sheet (View › Page Setup): paper, orientation, margins, scale, print area, titles, page breaks, header and footer.",
+		"details": "Rows and columns from 1, margins in centimeters. scale is 100 by default; fit_wide and fit_tall (0: automatic) fit the sheet to a number of pages wide and tall. row_breaks: rows that start a page (manual break before them). order: \"down\" (down, then across) or \"across\". Header and footer: codes &[Page], &[Pages], &[Date], &[Heure], &[Fichier], &[Chemin], &[Onglet] (page, pages, date, time, file, path, tab). Parameters — sheet: sheet (name or identifier); missing: the displayed sheet."
+	},
+	"sheets.protect": {
+		"signature": "sheets.protect([sheet], [password])",
+		"summary": "Protects a sheet, like Review › Protect Sheet: any change to its content is then refused.",
+		"details": "Still allowed: reading, selecting, copying, filters and read SQL queries. The password is optional; it is not stored (only a salted hash). Protecting cannot be undone. Parameters — sheet: sheet (name or identifier); missing: the displayed sheet; password: password to remove the protection. Arguments in order, or a table of named arguments: sheets.protect{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.protect_structure": {
+		"signature": "sheets.protect_structure([sheet], [password])",
+		"summary": "Protects the structure of a sheet, like Review › Protect structure: everything is locked except entry in the tables.",
+		"details": "Still allowed: the values of the data cells of tables (entry, pasting values, clearing), adding rows below a table or inserting them, deleting rows, sorting and filtering, db.insert, db.update and db.delete, reading. Refused: free cells, formatting, columns and headers, the tables themselves, objects, names, rules and validation, rows and columns of the sheet, page setup, the tab (name, color, position, deletion, choice tab) and write SQL queries. The password is optional. Protecting cannot be undone. Parameters — sheet: sheet (name or identifier); missing: the displayed sheet; password: password to remove the protection. Arguments in order, or a table of named arguments: sheets.protect_structure{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.protect_workbook": {
+		"signature": "sheets.protect_workbook([password], [sheets], [structure])",
+		"summary": "Protects the structure of the workbook, like Review › Protect Workbook: adding, deleting, renaming or moving sheets is then refused.",
+		"details": "Like Excel, the content of unprotected sheets stays editable (see sheets.protect), except with sheets = true: the content of all the sheets is then locked too, until sheets.unprotect_workbook, which removes this lock and only it (sheets protected one by one stay protected). With structure = true, it is the structure of all the sheets that is locked: only entry in the tables stays allowed (see sheets.protect_structure). The password is optional. Protecting cannot be undone. Parameters — password: password to remove the protection; sheets: also lock the content of all the sheets; structure: also lock the structure of all the sheets (entry in tables only). Arguments in order, or a table of named arguments: sheets.protect_workbook{password = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.rename": {
+		"signature": "sheets.rename(sheet, name)",
+		"summary": "Renames a sheet.",
+		"details": "Parameters — sheet: sheet to rename; name: new name. Arguments in order, or a table of named arguments: sheets.rename{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.replace": {
+		"signature": "sheets.replace(text, by, [sheet])",
+		"summary": "Replaces a text in a whole sheet and returns the number of cells changed.",
+		"details": "Parameters — text: text searched for; by: replacement text; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: sheets.replace{text = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.set_choice": {
+		"signature": "sheets.set_choice(sheet, [value])",
+		"summary": "Sets the choice tab of a sheet to a value (the year, month, city displayed); without a value, to “(All)”.",
+		"details": "This is navigation, like switching tabs: no undo step. The sheet must already have a choice tab (sheets.choose_by). Parameters — sheet: sheet with a choice tab; value: value to display; missing: all. Arguments in order, or a table of named arguments: sheets.set_choice{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.set_column_width": {
+		"signature": "sheets.set_column_width(col, width, [sheet])",
+		"summary": "Sets the width (pixels) of a column of the sheet; 0 goes back to the default width.",
+		"details": "Parameters — col: sheet column, from 1; width: width in pixels; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: sheets.set_column_width{col = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.set_page_setup": {
+		"signature": "sheets.set_page_setup(setup, [reset], [sheet])",
+		"summary": "Changes the page setup of a sheet: only the given fields change (same names as sheets.page_setup).",
+		"details": "paper: A4, A3, A5, B5, Letter, Legal, Tabloid, Executive. orientation: \"portrait\" or \"landscape\". margins: \"normal\", \"wide\", \"narrow\" or a table in cm. print_area: \"A1:F40\" (\"\": the whole used range). title_rows: \"1:2\"; title_cols: \"A:B\" (\"\": none). reset = true starts again from the default settings. File › Print / PDF and the .xlsx and .ods exports use it. Parameters — setup: fields to change; reset: start again from the default settings; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: sheets.set_page_setup{setup = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.set_row_height": {
+		"signature": "sheets.set_row_height(row, height, [sheet])",
+		"summary": "Sets the height (pixels) of a row of the sheet; 0 goes back to the default height.",
+		"details": "Parameters — row: sheet row, from 1; height: height in pixels; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: sheets.set_row_height{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.unprotect": {
+		"signature": "sheets.unprotect([sheet], [password])",
+		"summary": "Removes the protection of a sheet (with its password if there is one).",
+		"details": "Parameters — sheet: sheet (name or identifier); missing: the displayed sheet; password: password given when protecting. Arguments in order, or a table of named arguments: sheets.unprotect{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.unprotect_structure": {
+		"signature": "sheets.unprotect_structure([sheet], [password])",
+		"summary": "Removes the protection of the structure of a sheet (with its password if there is one).",
+		"details": "Parameters — sheet: sheet (name or identifier); missing: the displayed sheet; password: password given when protecting. Arguments in order, or a table of named arguments: sheets.unprotect_structure{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"sheets.unprotect_workbook": {
+		"signature": "sheets.unprotect_workbook([password])",
+		"summary": "Removes the protection of the workbook structure (with its password if there is one), and the lock on the content of the sheets set with it.",
+		"details": "Parameters — password: password given when protecting. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.add_index": {
+		"signature": "tables.add_index(table, columns, [unique])",
+		"summary": "Creates on the server an index on columns of a shared table of a collaborative workbook (owner or designer), to speed up the filters and lookups of other tools; unique: values do not repeat. Not undone by Ctrl+Z: tables.drop_index removes it. Returns its name.",
+		"details": "Parameters — table: name of the table; columns: columns of the index (1 to 8); unique: unique index. Arguments in order, or a table of named arguments: tables.add_index{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.clear_filters": {
+		"signature": "tables.clear_filters(table)",
+		"summary": "Removes all the filters of a table.",
+		"details": "Parameters — table: name of the table. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.clear_key": {
+		"signature": "tables.clear_key(table)",
+		"summary": "Removes the key of a table.",
+		"details": "Parameters — table: name of the table. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.delete": {
+		"signature": "tables.delete(tables)",
+		"summary": "Deletes one or more whole tables (data included).",
+		"details": "Parameters — tables: name of the table, or list of names. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.delete_row": {
+		"signature": "tables.delete_row(table, row)",
+		"summary": "Deletes data row row; the table shrinks.",
+		"details": "To delete a row by its key, use db.delete. Parameters — table: name of the table; row: data row, from 1. Arguments in order, or a table of named arguments: tables.delete_row{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.drop_index": {
+		"signature": "tables.drop_index(table, name)",
+		"summary": "Removes an index created on the server (name returned by tables.add_index or tables.indexes).",
+		"details": "Parameters — table: name of the table; name: name of the index (lattis_ix_…). Arguments in order, or a table of named arguments: tables.drop_index{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.duplicates": {
+		"signature": "tables.duplicates(table, [columns])",
+		"summary": "Counts the duplicate rows of a table, by some columns (missing: all).",
+		"details": "Parameters — table: name of the table; columns: columns compared. Arguments in order, or a table of named arguments: tables.duplicates{table = …}."
+	},
+	"tables.extract_columns": {
+		"signature": "tables.extract_columns(table, column, column2, row, col)",
+		"summary": "Moves columns column to column2 of a table out to a new table placed at row, col.",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1); column2: last column extracted; row: sheet row, from 1; col: sheet column, from 1. Arguments in order, or a table of named arguments: tables.extract_columns{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.follow_choice": {
+		"signature": "tables.follow_choice(table, [follow]) → message",
+		"summary": "Checks or unchecks “Follow the year” (the month, the city…) on a table of a sheet with a choice tab: a table that follows shows only the rows of the chosen value, and an added row receives that value.",
+		"details": "follow = true (default): adds the category column last (hidden while a value is chosen), filled with the displayed value. follow = false: removes the column if it has only one value (nothing is lost); otherwise keeps it, and the table no longer follows the choice (setting kept with the table). The source column of the choice tab cannot be unchecked. One undo step. Returns the status bar message. Parameters — table: table of the sheet with a choice tab; follow: true: follow; false: stop following. Arguments in order, or a table of named arguments: tables.follow_choice{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.from_range": {
+		"signature": "tables.from_range(row, col, [sheet])",
+		"summary": "Makes a table again from a range (table converted by tables.to_range) that contains the cell: its first row gives the headers. Returns the name of the table.",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: tables.from_range{row = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.get": {
+		"signature": "tables.get(table)",
+		"summary": "Describes a table: sheet, position, number of rows and columns (type, formula, key, reference: ref = \"Table[Key]\" for a column whose validation comes from the key of another table).",
+		"details": "Parameters — table: name of the table."
+	},
+	"tables.header_to_title": {
+		"signature": "tables.header_to_title(table)",
+		"summary": "The header of the table was a title: it becomes a free cell above, and the first data row becomes the header.",
+		"details": "Parameters — table: name of the table. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.indexes": {
+		"signature": "tables.indexes(table)",
+		"summary": "Lists the indexes created on the server for a shared table of a collaborative workbook (owner or designer).",
+		"details": "Parameters — table: name of the table."
+	},
+	"tables.insert_row": {
+		"signature": "tables.insert_row(table, [row])",
+		"summary": "Inserts an empty row before data row row (missing: at the end of the table).",
+		"details": "An integer key receives the next number there (the largest plus 1, without renumbering); a first column of integers in a regular sequence (10, 20, 30…), the next number if the row is added at the end. Parameters — table: name of the table; row: data row, from 1. Arguments in order, or a table of named arguments: tables.insert_row{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.keep_row_numbers": {
+		"signature": "tables.keep_row_numbers(table)",
+		"summary": "The table, without a key, designates its rows by their number (1 = first, in table order; it changes if rows are sorted or inserted): REFERENCE(T[Col]; n) reads the n-th row, EXISTE(T; n) says whether it exists, a RECHERCHEV (VLOOKUP) becomes INDEX/EQUIV (first row found, duplicates allowed). Lattis no longer suggests a key for this table. The other choice is tables.set_key.",
+		"details": "Parameters — table: name of the table. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.key_check": {
+		"signature": "tables.key_check(table, column)",
+		"summary": "Says whether a column can become the key of the table: returns \"\" if so, the reason otherwise.",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1). Arguments in order, or a table of named arguments: tables.key_check{table = …}."
+	},
+	"tables.last_row_out": {
+		"signature": "tables.last_row_out(table)",
+		"summary": "The last data row leaves the table: it stays just below as free cells, kept out of the table (a note, or a total if it starts with “Total”).",
+		"details": "Parameters — table: name of the table. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.list": {
+		"signature": "tables.list() → { {name, kind, sheet, rows, columns, types, colsField, colsFrom}, ... } (colsField: column field of a PivotTable, whose columns from the colsFrom-th carry the values)",
+		"summary": "Lists the tables and the PivotTables of all the sheets, with their columns."
+	},
+	"tables.merge_sheets": {
+		"signature": "tables.merge_sheets([tables], [options]) → {sheet, sheetName, table, rows, old, keyKept, keyNote, rewritten = { {kind, sheetName, where, formula, after}, ... }, pending = { {kind, sheetName, where, formula, why}, ... }, notes, notice, families = { {name, mode, tables, rows, follows, keyNote}, ... }, cells, perValue}",
+		"summary": "Combines tables with the same columns, each on its own tab (one per month, per year, per city…), into a single table on a new sheet, with a category column at the front taken from the tab names (Month, Year, City…) and its drop-down list. A single undo step.",
+		"details": "tables: the tables, in order (missing: the largest group found by tables.similar). options: {name (name of the table, suggested otherwise), sheet (name of the sheet), category = {name, type = \"date\" | \"integer\" | \"text\", values = {one value per table}} (deduced from the tab names otherwise), noCategory = true (no category column), columns (mapping, like that of tables.similar), old = \"delete\" | \"hide\", categoryFrom = \"sheet\" | \"title\" | \"cell:A1\", families = { {tables, mode = \"merge\" | \"once\" | \"leave\", name, columns}, ... }, noCells = true}. Whole sheets are combined: each other family of tables of the tabs (families; missing with tables missing: those of the group found, with the suggested mode) also becomes a common table on the same sheet (merge: with the category column, it follows the choice tab; once: a single copy, that of the last tab, the same for all values; leave: it stays on its tab, which is then kept). The layout follows that of the most recent tab. The free cells of the tabs (titles, totals, targets) are carried over: a cell identical everywhere once, a cell that changes from one tab to another becomes one cell per value (it shows that of the chosen value). Columns combined (blank boxes where a column was missing), types widened, formatting and invalid entries kept. The key is kept if no value repeats from one tab to another, otherwise the common table has no key (keyNote gives an example). What cited the old tables is carried over to the common table filtered by the category, in the same undo step, and listed in rewritten (formula: before, after: after): SOMME(Janvier[Montant]) becomes SOMME.SI.ENS(Ventes[Montant]; Ventes[Mois]; \"=Janvier\") (formulas in French; likewise MOYENNE, MAX, MIN; NBVAL becomes NB.SI.ENS on non-blank boxes, NB counts the numbers of the filtered column, the .SI and .SI.ENS functions gain the month criteria, LIGNES(Janvier) becomes NB.SI.ENS(Ventes[Mois]; \"=Janvier\"), another whole column read as a range becomes FILTRE(Ventes[X]; Ventes[Mois]=\"Janvier\")); a PivotTable moves to the common table with a report filter Month = January, a chart with a filter (config.filters). What has no exact equivalent (a specific row Janvier[X][3], REFERENCE, RECHERCHEV, EXISTE, SOUS.TOTAL, the whole table, a control, a query; SQL text and Lua scripts are not detected) is listed in pending with the reason (why), and the old tabs are then kept hidden (tables renamed Janvier_ancien) rather than deleted; without a category column, nothing is carried over. Refused for a workbook shared on a server, a protected sheet, a filtered table or one loaded by a query. Parameters — tables: tables to combine, in order (missing: the largest group of similar tabs); options: {name, sheet, category = {name, type, values}, noCategory, columns, old, categoryFrom, families, noCells}. Arguments in order, or a table of named arguments: tables.merge_sheets{tables = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.move": {
+		"signature": "tables.move(table, row, col)",
+		"summary": "Moves a table on its sheet (top-left corner of the header at row, col). Placed side by side with another table, it joins it.",
+		"details": "Parameters — table: name of the table; row: sheet row, from 1; col: sheet column, from 1. Arguments in order, or a table of named arguments: tables.move{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.promote_header": {
+		"signature": "tables.promote_header(table)",
+		"summary": "The first data row gives the names of the columns (an empty cell keeps the name) and becomes the header in its place: the old header (“Column n” of a table typed or pasted without headers, or other names) disappears, the table moves down one row, its bottom does not move. Formulas follow the renamings; a column turned into text because of this row gets its type back. Refused on a filtered table, one loaded by a query or one with headers on two rows.",
+		"details": "Parameters — table: name of the table. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.remove_duplicates": {
+		"signature": "tables.remove_duplicates(table, [columns])",
+		"summary": "Deletes the duplicate rows of a table (the first is kept) and returns their number.",
+		"details": "Parameters — table: name of the table; columns: columns compared (missing: all). Arguments in order, or a table of named arguments: tables.remove_duplicates{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.rename": {
+		"signature": "tables.rename(table, name)",
+		"summary": "Renames a table; formulas that cite it follow.",
+		"details": "Parameters — table: name of the table; name: new name. Arguments in order, or a table of named arguments: tables.rename{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.rows": {
+		"signature": "tables.rows(table, [first], [count]) → {table, columns, first, total, ids, rows}",
+		"summary": "Reads rows of a table as they are displayed (filter and calculated columns included).",
+		"details": "first counts from 1; count is 100 by default (10,000 at most). To filter or aggregate, prefer db.query. Parameters — table: name of the table; first: first row, from 1; count: number of rows (100 by default). Arguments in order, or a table of named arguments: tables.rows{table = …}."
+	},
+	"tables.set_key": {
+		"signature": "tables.set_key(table, column)",
+		"summary": "Makes a column with unique values the key of the table (UNIQUE index).",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1). Arguments in order, or a table of named arguments: tables.set_key{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.set_sort_lists": {
+		"signature": "tables.set_sort_lists(lists)",
+		"summary": "Replaces the custom lists of the workbook (the built-in lists do not change).",
+		"details": "Parameters — lists: lists: { {name = \"Sizes\", values = {\"S\", \"M\", \"L\"}}, ... }. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.similar": {
+		"signature": "tables.similar() → { {id, tables = { {table, sheet, sheetName, rows, key, hidden}, ... }, columns = { {name, type, from, paired, text}, ... }, category = {kind, column, type, values, labels, common}, key, name, score, propose, identical, dismissed, summary, notes, sheets = { {sheet, name, hidden, copied}, ... }, families = { {tables, columns, key, name, same, mode, note}, ... }, sources = { {source, label, category}, ... }, categoryFrom, stacked, dataColumn, copies}, ... }",
+		"summary": "Looks for similar tabs: tables of different sheets with the same columns (one tab per month, per year, per city…), to combine into a single table with tables.merge_sheets. Reads only the structure (names of sheets, tables and columns).",
+		"details": "Each group gives its tables (in tab order), the column mapping (from: the column of each table, \"\" if missing; paired: matched by a close name), the category taken from the tab names (kind: month, month_year, year, quarter, week, date, number, letter, default, city, shape or other; column: suggested name, Month, Year, Lot…; type; values), the common key, the suggested name, the confidence score (score, propose: high enough to suggest it unprompted) and dismissed (“Don't suggest again” chosen). The largest group first. Whole sheets are combined: sheets (the tabs, copied: copied from another tab of the group; copies: their number); families: the other tables of these tabs, matched family by family, each with its tables, its columns, same (same data everywhere, a copied list) and the suggested mode (merge: a common table that follows the category; once: a single copy; leave: stays on its tab, if it is on only one tab). sources: where the category can come from (sheet: tab names; title: title above each table; cell:A1: a free cell that changes from one tab to another), categoryFrom: the suggested one (described by category). stacked: similar tables stacked on one sheet under titles. dataColumn: a date column already carries the category (its values fall in the month of each tab): the category column is optional."
+	},
+	"tables.sort": {
+		"signature": "tables.sort(table, column, [descending])",
+		"summary": "Sorts a table by a column.",
+		"details": "Parameters — table: name of the table; column: column (name or position from 1); descending: descending order. Arguments in order, or a table of named arguments: tables.sort{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.sort_custom": {
+		"signature": "tables.sort_custom(table, column, [values], [list], [descending])",
+		"summary": "Sorts a table by a column in a custom order (list of values or named list, like “Months” or “Days”).",
+		"details": "The values of the list come first, in its order (reversed with descending), compared with the displayed text, case-insensitively; the others follow in ascending order, empty cells at the end. The order is saved for the column and applied again when a table loaded by a query is refreshed. Built-in lists: Jours, Jours abrégés, Mois, Mois abrégés (days, short days, months, short months); the others are defined with tables.set_sort_lists. Parameters — table: name of the table; column: column (name or position from 1); values: values in the order wanted; list: name of a custom list (instead of values); descending: list reversed. Arguments in order, or a table of named arguments: tables.sort_custom{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.sort_lists": {
+		"signature": "tables.sort_lists() → { {name, values = {...}, builtin}, ... }",
+		"summary": "Lists the custom sort lists: built-in (Days, Months…) then those of the workbook."
+	},
+	"tables.text_to_columns": {
+		"signature": "tables.text_to_columns(table, column, options)",
+		"summary": "Splits the text of a column into columns, like Excel's Text to Columns wizard: the first part stays in the column, the following ones become new columns on the right. Returns the number of columns imported.",
+		"details": "options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}. delims: separator characters (\";\", \",\", \" \", \"\t\"…); merge = true: consecutive separators count as one; quote: text qualifier (\"\\\"\" by default in the wizard, \"'\" or \"\" for none). fixed = true: fixed width, breaks gives the positions of the breaks (in characters). columns: format of each column produced, {format = \"\" (general), \"text\", \"date\" or \"skip\" (not imported), order = \"DMY\", \"MDY\", \"YMD\"… for dates}. decimal and thousands: number separators (\",\" and \" \" by default). dest: destination cell (“E2”) in free cells. Parameters — table: name of the table; column: column (name or position from 1); options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands}. Arguments in order, or a table of named arguments: tables.text_to_columns{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.title_to_header": {
+		"signature": "tables.title_to_header(table)",
+		"summary": "The reverse of tables.header_to_title, for headers typed after the data: the free cells just above the table, over its columns, become the names of the columns (an empty cell keeps the name); the current header becomes the 1st data row (except the names “Column n”), typed like an entry. Formulas follow the renamings. Refused on headers on two rows, under merged cells or a formula.",
+		"details": "Parameters — table: name of the table. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.to_range": {
+		"signature": "tables.to_range(table)",
+		"summary": "Converts a table into a range of free cells (like Excel): header and values stay in the same place, with their formatting; a calculated column gives its formula in cell addresses (Cell[B2]*Cell[C2]) if it translates simply, its values otherwise. Formulas that cited the table in an aggregate target its cells (Cell[B2:B9]); the others give #REF!. The area stays a range: writing in it, or right next to it, does not make a table again.",
+		"details": "Parameters — table: name of the table. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"tables.two_level_headers": {
+		"signature": "tables.two_level_headers(table, on)",
+		"summary": "Shows (on = true) the headers of the table on two rows: the name “Group.Sub” of a column shows its group in a band above the header, merged over the neighboring columns of the same group; formulas and SQL keep the full name (T[Group.Sub]). When turned on, the free cells of the row above the header (merged or not) become the groups of the columns they cover; on = false keeps the full names on one row. A column with a simple name (no dot) is on one level: its box of the band and its header are a single cell. When turned on, a group alone above an automatic header (“Column 17”) becomes the name of the column, a group that repeats the header disappears. To adjust: columns.rename (“Group.Sub” or simple name), cells.merge / cells.unmerge on the band (see cells.merge), cells.set on the band to set or rename a group.",
+		"details": "Parameters — table: name of the table; on: true: two rows; false: one row. Arguments in order, or a table of named arguments: tables.two_level_headers{table = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
+	"ui.alert": {
+		"signature": "ui.alert(message, [title])",
+		"summary": "Shows a message in a dialog box and waits for the user to close it.",
+		"details": "Parameters — message: text of the message; title: title (Lattis by default). Arguments in order, or a table of named arguments: ui.alert{message = …}."
+	},
+	"ui.confirm": {
+		"signature": "ui.confirm(message, [title])",
+		"summary": "Asks a yes / no question; returns true if the user confirms.",
+		"details": "Parameters — message: question asked; title: title (Lattis by default). Arguments in order, or a table of named arguments: ui.confirm{message = …}."
+	},
+	"ui.dialog": {
+		"signature": "ui.dialog(title, fields, [message], [ok], [cancel]) → { name = value, ... } or nil",
+		"summary": "Opens a dialog box with input fields and waits for the answer; returns { name = value } or nil if the user cancels.",
+		"details": "Field types (type): \"text\" (default), \"textarea\", \"password\", \"number\", \"integer\", \"checkbox\", \"select\" and \"radio\" (with options = {...}), \"date\" (returned as \"yyyy-mm-dd\") and \"color\" (\"#rrggbb\"). label is the displayed label (name by default), default the suggested value, required prevents validating an empty field, min and max bound a number. A checkbox returns true or false, a number a number, the other fields a text. The maximum duration of the script does not run while the box is open. Parameters — title: title of the box; fields: fields: { {name, label, type, default, options, required, placeholder, min, max}, ... }; message: text displayed above the fields; ok: label of the OK button (OK by default); cancel: label of the cancel button (Annuler by default). Arguments in order, or a table of named arguments: ui.dialog{title = …}."
+	},
+	"ui.notify": {
+		"signature": "ui.notify(message)",
+		"summary": "Shows a message in the status bar, without interrupting the script.",
+		"details": "Parameters — message: text of the message."
+	},
+	"ui.prompt": {
+		"signature": "ui.prompt(message, [default], [title])",
+		"summary": "Asks the user for a text; returns the text entered, or nil if they cancel.",
+		"details": "Parameters — message: question asked; default: suggested value; title: title (Lattis by default). Arguments in order, or a table of named arguments: ui.prompt{message = …}."
+	},
+	"ui.select": {
+		"signature": "ui.select(row, col, [row2], [col2], [sheet]) → the new selection, like ui.selection",
+		"summary": "Displays a sheet and selects a range (or a cell) in it.",
+		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; row2: last row of the range (missing: row); col2: last column of the range (missing: col); sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: ui.select{row = …}."
+	},
+	"ui.select_cells": {
+		"signature": "ui.select_cells(table, column, [row], [column2], [row2]) → the new selection, like ui.selection",
+		"summary": "Selects cells of a table by column and row number.",
+		"details": "Without row, the whole column (data rows); column2 and row2 extend the range to the right and down. Rows count from 1 below the header. Parameters — table: name of the table; column: column (name or position); row: data row, from 1 (missing: the whole column); column2: last column of the range; row2: last row of the range. Arguments in order, or a table of named arguments: ui.select_cells{table = …}."
+	},
+	"ui.select_object": {
+		"signature": "ui.select_object(name) → {kind, sheet, row, col, row2, col2, ...}",
+		"summary": "Displays and selects an object by its name: table, PivotTable, chart (title), button (label) or named cell.",
+		"details": "The table is selected whole, header included. Returns the selection, with kind: \"table\", \"pivot\", \"chart\", \"button\" or \"name\". Parameters — name: name of the object."
+	},
+	"ui.selection": {
+		"signature": "ui.selection() → {sheet, sheet_id, row, col, row2, col2, table, column, view}",
+		"summary": "Gives the displayed sheet and the range selected in the grid.",
+		"details": "row, col is the top-left corner of the selection, row2, col2 the bottom-right corner (from 1). table and column designate the table and the column of the top-left cell, if there is one."
+	},
+	"ui.show_sheet": {
+		"signature": "ui.show_sheet(sheet)",
+		"summary": "Displays a sheet (grid view), keeping the selection of the top-left cell.",
+		"details": "Parameters — sheet: sheet (name or identifier)."
+	},
+	"ui.show_view": {
+		"signature": "ui.show_view(view)",
+		"summary": "Displays a view of the application: \"grid\" (sheets), \"sql\" or \"script\".",
+		"details": "Parameters — view: grid, sql or script."
+	}
+}

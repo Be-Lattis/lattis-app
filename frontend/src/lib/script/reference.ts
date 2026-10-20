@@ -11,9 +11,15 @@
 // http…) sont générées depuis internal/api dans api.gen.ts, avec leurs
 // exemples vérifiés par les tests Go : les mêmes commandes servent le
 // serveur MCP.
+//
+// Les textes ici sont français ; signature, résumé et précisions dans les
+// autres langues sont dans ref/<langue>.json (fonctions du langage, db.*) et
+// ref/<langue>.api.json (généré avec api.gen.ts), voir reftext.svelte.ts.
+// Les exemples restent tels quels : ils tournent sur le classeur d'exemple.
 
 import { apiReference } from './api.gen';
 import { tAny } from '#lib/i18n/index.js';
+import { refText } from './reftext.svelte.js';
 
 export type Category = 'db' | 'sheets' | 'cells' | 'tables' | 'columns' | 'ui' | 'objects' | 'controls' | 'events' | 'workbook' | 'http' | 'base' | 'string' | 'table' | 'math' | 'os' | 'syntaxe';
 
@@ -645,6 +651,24 @@ print("Requête : " .. sql, #sql)`
 ];
 
 reference.splice(reference.findIndex((e) => e.category !== 'db'), 0, ...apiReference);
+
+/**
+ * L'entrée avec sa signature, son résumé et ses précisions dans la langue de
+ * l'interface (ref/<langue>.json, chargés à la demande ; le français à
+ * défaut). Le nom, l'exemple et le nombre d'arguments ne changent pas.
+ */
+function localized(e: RefEntry): RefEntry {
+	const { signature, summary, details } = e;
+	return Object.defineProperties(
+		{ ...e },
+		{
+			signature: { get: () => refText(e.name, 'signature') ?? signature, enumerable: true },
+			summary: { get: () => refText(e.name, 'summary') ?? summary, enumerable: true },
+			details: { get: () => (details === undefined ? undefined : (refText(e.name, 'details') ?? details)), enumerable: true }
+		}
+	);
+}
+reference.forEach((e, i) => (reference[i] = localized(e)));
 
 /** Index par nom complet. */
 export const byName: Map<string, RefEntry> = new Map(reference.map((e) => [e.name, e]));

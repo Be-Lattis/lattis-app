@@ -1,0 +1,206 @@
+{
+	"db.query": {
+		"signature": "db.query(sql, ...) → { Zeile, ... }",
+		"summary": "Führt eine lesende SQL-Abfrage aus und gibt alle Zeilen zurück.",
+		"details": "Jede Zeile ist eine Tabelle { Spalte = Wert }. Tabellen und Spalten heißen wie im Raster; ein Name mit Leerzeichen, Akzent oder Großbuchstaben steht in doppelten Anführungszeichen (\"Betrag netto\"). Jede Tabelle hat eine verborgene Spalte _id, den Schlüssel der Zeile. Die ? übernehmen die folgenden Parameter (Zahl, Text, Wahrheitswert oder nil). Höchstens 100.000 Zeilen: darüber hinaus db.rows verwenden. Eine leere Zelle ergibt nil (der Schlüssel fehlt in der Zeile), ein Wahrheitswert true/false, ein Datum einen Text \"yyyy-mm-dd\"."
+	},
+	"db.rows": {
+		"signature": "for Zeile in db.rows(sql, ...) do ... end",
+		"summary": "Durchläuft die Zeilen einer Abfrage einzeln, ohne Begrenzung der Anzahl.",
+		"details": "Dieselben Regeln wie db.query, aber die Zeilen werden nicht alle im Speicher gehalten: besser für große Tabellen."
+	},
+	"db.value": {
+		"signature": "db.value(sql, ...) → Wert oder nil",
+		"summary": "Gibt die erste Spalte der ersten Zeile zurück oder nil, wenn es keine Zeile gibt."
+	},
+	"db.tables": {
+		"summary": "Listet die Tabellen der Arbeitsmappe mit ihren Spalten auf.",
+		"details": "Jede Spalte ist { name, type, fixed }; type ist \"integer\", \"decimal\", \"text\", \"boolean\" oder \"date\", fixed ist true, wenn der Typ von Hand festgelegt wurde."
+	},
+	"db.insert": {
+		"signature": "db.insert(Tabelle, { Spalte = Wert }) → _id",
+		"summary": "Fügt am Ende einer Tabelle eine Zeile an und gibt ihren Schlüssel _id zurück.",
+		"details": "Die Werte werden wie eine Eingabe im Raster behandelt: Eine Spalte mit abgeleitetem Typ wird erweitert, eine Spalte mit festgelegtem Typ markiert die Eingabe als ungültig, \"\" lässt die Zelle leer. true und false werden als vrai und faux (WAHR und FALSCH) geschrieben; ein Datum wird als Text angegeben (\"16/10/2026\"). Tabellen- und Spaltennamen müssen genau stimmen (Groß-/Kleinschreibung und Akzente eingeschlossen)."
+	},
+	"db.update": {
+		"signature": "db.update(Tabelle, _id, { Spalte = Wert })",
+		"summary": "Ändert die angegebenen Spalten der Zeile _id; die anderen bleiben unverändert.",
+		"details": "Dieselben Schreibregeln wie db.insert. \"\" löscht die Zelle."
+	},
+	"db.delete": {
+		"signature": "db.delete(Tabelle, _id)",
+		"summary": "Löscht die Zeile _id; die Tabelle schrumpft um eine Zeile."
+	},
+	"db.execute": {
+		"signature": "db.execute(sql, ...) → Anzahl der betroffenen Zeilen",
+		"summary": "Führt ein INSERT, UPDATE oder DELETE mit den angezeigten Namen aus.",
+		"details": "Rückgängig machbar wie der Rest des Skripts. Die Spalten sind streng typisiert: Ein Wert des falschen Typs lässt die ganze Abfrage scheitern (ein Wahrheitswert wird 1 oder 0 geschrieben, ein Datum 'yyyy-mm-dd'). Vorerst abgelehnt: CREATE, ALTER, DROP und die internen Tabellen _lattis_*."
+	},
+	"print": { "summary": "Gibt Werte in der Ausgabe aus, durch einen Tabulator getrennt." },
+	"type": { "summary": "Gibt den Typ eines Werts als Text zurück." },
+	"tostring": { "signature": "tostring(v) → Text", "summary": "Wandelt einen Wert in Text um." },
+	"tonumber": {
+		"signature": "tonumber(v [, Basis]) → Zahl oder nil",
+		"summary": "Wandelt einen Text in eine Zahl um; gibt nil zurück, wenn es keine Zahl ist.",
+		"details": "Das Dezimaltrennzeichen ist der Punkt: tonumber(\"80,5\") ergibt nil."
+	},
+	"ipairs": {
+		"signature": "for i, v in ipairs(Liste) do ... end",
+		"summary": "Durchläuft eine Liste der Reihe nach (Indizes 1, 2, 3...) bis zur ersten Lücke."
+	},
+	"pairs": {
+		"signature": "for Schlüssel, v in pairs(t) do ... end",
+		"summary": "Durchläuft alle Schlüssel einer Tabelle, ohne garantierte Reihenfolge."
+	},
+	"next": {
+		"signature": "next(t [, Schlüssel]) → Schlüssel, Wert",
+		"summary": "Gibt den nächsten Schlüssel einer Tabelle zurück; next(t) == nil prüft, ob sie leer ist."
+	},
+	"select": { "summary": "Gibt die Argumente ab dem n-ten zurück oder mit \"#\" ihre Anzahl." },
+	"unpack": {
+		"signature": "unpack(Liste [, i [, j]]) → v1, v2, ...",
+		"summary": "Gibt die Elemente einer Liste als einzelne Werte zurück."
+	},
+	"pcall": {
+		"signature": "pcall(f, ...) → ok, Ergebnis oder Meldung",
+		"summary": "Ruft f auf und fängt seinen Fehler ab; ok ist bei einem Fehler false."
+	},
+	"xpcall": {
+		"signature": "xpcall(f, Behandler) → ok, Ergebnis",
+		"summary": "Wie pcall, übergibt aber die Fehlermeldung an eine Behandlungsfunktion."
+	},
+	"error": {
+		"signature": "error(Meldung [, Ebene])",
+		"summary": "Beendet das Skript (oder das laufende pcall) mit einer Meldung."
+	},
+	"assert": { "summary": "Beendet das Skript mit der Meldung, wenn die Bedingung falsch ist (nil oder false)." },
+	"setmetatable": { "summary": "Verbindet eine Metatabelle mit einer Tabelle (Standardwerte, Operatoren...)." },
+	"getmetatable": { "signature": "getmetatable(v) → Metatabelle oder nil", "summary": "Gibt die Metatabelle eines Werts zurück." },
+	"rawget": { "signature": "rawget(t, Schlüssel)", "summary": "Liest einen Schlüssel, ohne die Metatabelle zu durchlaufen." },
+	"rawset": { "signature": "rawset(t, Schlüssel, Wert)", "summary": "Schreibt einen Schlüssel, ohne die Metatabelle zu durchlaufen." },
+	"rawequal": { "summary": "Vergleicht zwei Werte, ohne die Metatabelle zu durchlaufen." },
+	"string.format": {
+		"signature": "string.format(Muster, ...) → Text",
+		"summary": "Formatiert Werte: %s Text, %d Ganzzahl, %.2f Dezimalzahl, %5s Breite, %% das Zeichen %."
+	},
+	"string.sub": {
+		"signature": "s:sub(i [, j]) → Text",
+		"summary": "Extrahiert die Zeichen von i bis j (Indizes ab 1, negative vom Ende her).",
+		"details": "Die Indizes zählen Bytes: Ein Buchstabe mit Akzent oder Umlaut belegt zwei."
+	},
+	"string.upper": { "signature": "s:upper() → Text", "summary": "Wandelt in Großbuchstaben um (Akzente und Umlaute eingeschlossen)." },
+	"string.lower": { "signature": "s:lower() → Text", "summary": "Wandelt in Kleinbuchstaben um." },
+	"string.len": { "signature": "s:len() → Zahl (oder #s)", "summary": "Länge in Bytes: #\"Payé\" ist 5." },
+	"string.find": {
+		"signature": "s:find(Muster [, Anfang [, einfach]]) → Anfang, Ende oder nil",
+		"summary": "Sucht ein Muster; einfach = true sucht den Text unverändert.",
+		"details": "Muster: %d Ziffer, %a Buchstabe, %s Leerraum, %w alphanumerisch, . beliebiges Zeichen, * + - ? Wiederholungen, ^ $ Anker, % zum Maskieren. Das sind keine regulären Ausdrücke."
+	},
+	"string.match": {
+		"signature": "s:match(Muster [, Anfang]) → Erfassungen oder nil",
+		"summary": "Gibt zurück, was dem Muster entspricht, oder seine Erfassungen in Klammern."
+	},
+	"string.gmatch": {
+		"signature": "for m in s:gmatch(Muster) do ... end",
+		"summary": "Durchläuft alle Treffer eines Musters."
+	},
+	"string.gsub": {
+		"signature": "s:gsub(Muster, Ersatz [, n]) → Text, Zahl",
+		"summary": "Ersetzt die Treffer; der Ersatz kann ein Text, eine Tabelle oder eine Funktion sein."
+	},
+	"string.rep": { "signature": "s:rep(n) → Text", "summary": "Wiederholt einen Text n-mal (Ergebnis auf 16 MB begrenzt)." },
+	"string.reverse": { "signature": "s:reverse() → Text", "summary": "Kehrt einen Text um (Byte für Byte)." },
+	"string.byte": { "summary": "Gibt die Codes der Bytes von i bis j zurück." },
+	"string.char": { "signature": "string.char(Code, ...) → Text", "summary": "Bildet einen Text aus Byte-Codes." },
+	"string.gfind": { "signature": "string.gfind(s, Muster)", "summary": "Alter Name von string.gmatch." },
+	"table.insert": {
+		"signature": "table.insert(Liste, [Position,] Wert)",
+		"summary": "Fügt einen Wert am Ende einer Liste oder an der angegebenen Position ein."
+	},
+	"table.remove": {
+		"signature": "table.remove(Liste [, Position]) → entfernter Wert",
+		"summary": "Entfernt das letzte Element oder das an der angegebenen Position."
+	},
+	"table.sort": {
+		"signature": "table.sort(Liste [, vor])",
+		"summary": "Sortiert eine Liste an Ort und Stelle; vor(a, b) gibt true zurück, wenn a vor b kommen muss."
+	},
+	"table.concat": {
+		"signature": "table.concat(Liste [, Trennzeichen [, i [, j]]]) → Text",
+		"summary": "Verbindet die Elemente einer Liste zu einem Text."
+	},
+	"table.maxn": { "signature": "table.maxn(t) → Zahl", "summary": "Gibt den größten numerischen Index einer Tabelle zurück." },
+	"table.getn": { "summary": "Alte Entsprechung von #t." },
+	"math.floor": { "summary": "Rundet auf die nächstkleinere ganze Zahl ab; math.floor(a / b) ergibt eine ganzzahlige Division." },
+	"math.ceil": { "summary": "Rundet auf die nächstgrößere ganze Zahl auf." },
+	"math.abs": { "summary": "Absolutwert." },
+	"math.min": { "summary": "Kleinster der Werte." },
+	"math.max": { "summary": "Größter der Werte." },
+	"math.sqrt": { "summary": "Quadratwurzel." },
+	"math.pow": { "summary": "Potenz; auch als x ^ y geschrieben." },
+	"math.exp": { "summary": "Exponentialfunktion." },
+	"math.log": { "summary": "Natürlicher Logarithmus." },
+	"math.log10": { "summary": "Zehnerlogarithmus." },
+	"math.fmod": { "summary": "Rest der Division (Vorzeichen von x); siehe auch den Operator %." },
+	"math.modf": { "signature": "math.modf(x) → Ganzzahl, Bruchteil", "summary": "Trennt ganzzahligen Teil und Nachkommateil." },
+	"math.random": { "summary": "Zufallszahl: reell in [0, 1[, ganzzahlig in [1, m] oder [m, n]." },
+	"math.randomseed": { "summary": "Initialisiert den Generator von math.random." },
+	"math.huge": { "summary": "Unendlich (ein Wert, keine Funktion)." },
+	"math.pi": { "summary": "Die Zahl π (ein Wert, keine Funktion)." },
+	"math.sin": { "summary": "Sinus (x im Bogenmaß)." },
+	"math.cos": { "summary": "Kosinus (x im Bogenmaß)." },
+	"math.tan": { "summary": "Tangens (x im Bogenmaß)." },
+	"math.asin": { "summary": "Arkussinus." },
+	"math.acos": { "summary": "Arkuskosinus." },
+	"math.atan": { "summary": "Arkustangens." },
+	"math.atan2": { "summary": "Arkustangens von y/x, im richtigen Quadranten." },
+	"math.sinh": { "summary": "Sinus hyperbolicus." },
+	"math.cosh": { "summary": "Kosinus hyperbolicus." },
+	"math.tanh": { "summary": "Tangens hyperbolicus." },
+	"math.deg": { "summary": "Bogenmaß in Grad." },
+	"math.rad": { "summary": "Grad in Bogenmaß." },
+	"math.frexp": { "summary": "Zerlegt x in m × 2^e." },
+	"math.ldexp": { "summary": "Berechnet m × 2^e." },
+	"math.mod": { "summary": "Alter Name von math.fmod." },
+	"os.date": {
+		"signature": "os.date([Format [, Zeit]]) → Text",
+		"summary": "Formatiert ein Datum: %d Tag, %m Monat, %Y Jahr, %H:%M:%S Uhrzeit.",
+		"details": "Die Datumswerte der Arbeitsmappe haben das Format \"yyyy-mm-dd\", also os.date(\"%Y-%m-%d\"); sie lassen sich dann wie Texte vergleichen."
+	},
+	"os.time": {
+		"signature": "os.time([{year, month, day, hour, min, sec}]) → Sekunden",
+		"summary": "Gibt die aktuelle Zeit oder die des angegebenen Datums in Sekunden zurück."
+	},
+	"os.difftime": { "signature": "os.difftime(t2, t1) → Sekunden", "summary": "Abstand zwischen zwei von os.time zurückgegebenen Zeiten." },
+	"os.clock": { "signature": "os.clock() → Sekunden", "summary": "Verbrauchte Prozessorzeit: misst die Dauer einer Verarbeitung." },
+	"local": {
+		"signature": "local Name = Wert",
+		"summary": "Deklariert eine lokale Variable. Ohne local ist die Variable global.",
+		"details": "Ein Name enthält nur Buchstaben ohne Akzent oder Umlaut, Ziffern und _. Nur nil und false sind falsch: 0 und \"\" sind wahr."
+	},
+	"if": { "summary": "Bedingung. Ungleich schreibt man ~=; and, or und not sind die logischen Operatoren." },
+	"for": {
+		"signature": "for i = Anfang, Ende [, Schritt] do ... end",
+		"summary": "Zählschleife; for ... in dient den Iteratoren (ipairs, pairs, db.rows).",
+		"details": "break verlässt die Schleife; es gibt kein continue."
+	},
+	"for in": {
+		"signature": "for i, v in ipairs(Liste) do ... end  |  for k, v in pairs(t) do ... end",
+		"summary": "Durchläuft eine Liste der Reihe nach (ipairs) oder alle Schlüssel einer Tabelle (pairs, beliebige Reihenfolge)."
+	},
+	"while": { "summary": "Bedingte Schleifen. Eine Endlosschleife wird nach 30 s oder über die Schaltfläche Anhalten beendet." },
+	"function": {
+		"signature": "local function Name(a, b) ... return x end",
+		"summary": "Definiert eine Funktion; sie kann mehrere Werte zurückgeben."
+	},
+	"table": {
+		"signature": "{ v1, v2 }  |  { Schlüssel = Wert, [\"clé\"] = Wert }",
+		"summary": "Die einzige Datenstruktur: Liste (Indizes ab 1) oder Wörterbuch.",
+		"details": "#t ergibt die Länge einer Liste. Ein Schlüssel mit Akzent oder Leerzeichen wird t[\"Payé\"] geschrieben."
+	},
+	"..": { "summary": "Verkettet zwei Texte (oder Zahlen). # ergibt die Länge, [[ ... ]] schreibt einen Text über mehrere Zeilen." },
+	"--": {
+		"signature": "-- Kommentar  |  --[[ langer Kommentar ]]",
+		"summary": "Kommentar über eine Zeile oder über mehrere Zeilen."
+	}
+}

@@ -1,0 +1,738 @@
+{
+	"buttons.create": {
+		"signature": "buttons.create(row, col, label, script, [function], [sheet])",
+		"summary": "Coloca un botón de acción en una hoja; un clic ejecuta un script de la biblioteca, o una de sus funciones. Devuelve el identificador del botón.",
+		"details": "script es el nombre de un script guardado (pestaña Script). Con function, se carga el script y luego se llama a la función global de ese nombre: un mismo script puede servir a varios botones. Todo lo que hace un clic se deshace de una vez. Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; label: texto del botón; script: nombre del script que se ejecuta; function: función del script a la que se llama; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: buttons.create{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"buttons.delete": {
+		"signature": "buttons.delete(button)",
+		"summary": "Elimina un botón de acción.",
+		"details": "Parámetros — button: botón (identificador o etiqueta). Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"buttons.list": {
+		"signature": "buttons.list([sheet]) → { {id, name, kind, label, script, function, row, col}, ... }",
+		"summary": "Enumera los botones de acción de una hoja.",
+		"details": "Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada."
+	},
+	"buttons.place": {
+		"signature": "buttons.place(button, row, col, [width], [height])",
+		"summary": "Mueve un botón (esquina superior izquierda en row, col) y, si se indican, cambia su tamaño (píxeles).",
+		"details": "Parámetros — button: botón (identificador o etiqueta); row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; width: ancho en píxeles; height: alto en píxeles. Argumentos en orden, o una tabla de argumentos con nombre: buttons.place{button = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"buttons.set": {
+		"signature": "buttons.set(button, [label], [script], [function])",
+		"summary": "Cambia la etiqueta, el script o la función de un botón (los parámetros ausentes no cambian).",
+		"details": "Parámetros — button: botón (identificador o etiqueta); label: texto del botón; script: nombre del script; function: función del script (\"\": solo el script). Argumentos en orden, o una tabla de argumentos con nombre: buttons.set{button = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.clear": {
+		"signature": "cells.clear(row, col, [row2], [col2], [sheet])",
+		"summary": "Borra el contenido de un rango de celdas (las tablas conservan su forma).",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; row2: última fila del rango (si falta: row); col2: última columna del rango (si falta: col); sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.clear{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.dependencies": {
+		"signature": "cells.dependencies(row, col, [sheet]) → {subject, precedents, dependents}",
+		"summary": "Da los precedentes (lo que lee la fórmula de la celda) y los dependientes (las fórmulas que la leen).",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.dependencies{row = …}."
+	},
+	"cells.get": {
+		"signature": "cells.get(row, col, [sheet]) → {row, col, raw, value, table, column, header, line, id}",
+		"summary": "Lee una celda de la hoja: entrada, valor mostrado y, en una tabla, la tabla, la columna y la fila.",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.get{row = …}."
+	},
+	"cells.merge": {
+		"signature": "cells.merge(row, col, [row2], [col2], [sheet]) → número de valores borrados",
+		"summary": "Combina celdas libres en una sola, con el contenido centrado (rechazado en una tabla o una tabla dinámica). Como en Excel, solo se conserva el valor de arriba a la izquierda. En una tabla con grupos de encabezados (tables.two_level_headers), solo se combina la banda de los grupos: su casilla y el encabezado de una columna ponen la columna en un nivel (nombre simple: su subencabezado, o el grupo si el encabezado era automático); varias casillas vecinas de la banda forman un solo grupo (el primero que llevan, «Grupo» si no). Las columnas se renombran, las fórmulas siguen.",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; row2: última fila del rango (si falta: row); col2: última columna del rango (si falta: col); sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.merge{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.name": {
+		"signature": "cells.name(row, col, name, [sheet])",
+		"summary": "Da nombre a una celda libre, para citarla en las fórmulas; un nombre vacío quita el nombre.",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; name: nombre (vacío: quitar); sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.name{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.note": {
+		"signature": "cells.note(row, col, text, [sheet])",
+		"summary": "Pone la nota de una celda (esquina roja, mostrada al pasar el ratón); un texto vacío la quita. En una tabla, la nota sigue a su fila.",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; text: texto de la nota (vacío: quitarla); sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.note{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.paste": {
+		"signature": "cells.paste(row, col, values, [range], [sheet])",
+		"summary": "Escribe un bloque de valores a partir de una celda, como un pegado: una fila de encabezados seguida de filas de datos crea una tabla; range = true lo escribe como rango de celdas libres.",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; values: filas de valores: { {\"Nombre\", \"Edad\"}, {\"Lea\", 31} }; range: true: celdas libres (un rango), sin crear tabla; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.paste{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.read": {
+		"signature": "cells.read(row, col, row2, col2, [sheet]) → { {valor, ...}, ... }",
+		"summary": "Lee los valores mostrados de un rango de la hoja, fila por fila: tablas, tablas dinámicas y celdas libres por igual (\"\": celda vacía).",
+		"details": "100 000 celdas como máximo; para toda una tabla, tables.rows o db.query son más directos. Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; row2: última fila del rango; col2: última columna del rango; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.read{row = …}."
+	},
+	"cells.set": {
+		"signature": "cells.set(row, col, value, [sheet]) → {created, widened, from, to, invalid, keyed}",
+		"summary": "Introduce un valor en una celda de la hoja, exactamente como al escribir en la cuadrícula.",
+		"details": "Un texto que empieza por = es una fórmula. Escribir junto a una tabla la amplía, escribir dos filas contiguas crea una tabla, \"\" borra la celda. Devuelve lo que ha provocado la entrada (tabla creada, columna ampliada…). Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; value: entrada: texto, número, booleano, fórmula (=…); sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.set{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.style": {
+		"signature": "cells.style(row, col, [row2], [col2], style, [sheet])",
+		"summary": "Da formato a un rango de celdas.",
+		"details": "style: bold, italic, underline, strike (booleanos), font (fuente) y size (tamaño en puntos), color y fill (colores \"#rrggbb\", o del tema del libro: \"theme:accent1\" a \"theme:accent6\", \"theme:dk1\", \"theme:lt1\", \"theme:dk2\", \"theme:lt2\", seguidos si hace falta de \":+40\" para un 40 % más claro o \":-25\" para un 25 % más oscuro; cambian con el tema), align (\"left\", \"center\" o \"right\"), valign (\"top\", \"middle\" o \"bottom\"), wrap (ajustar texto), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" o \"text\"), decimals (número de decimales), no_grouping (sin separador de miles), date_format (patrón de una fecha o una hora: \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (los cuatro bordes) o border_top, border_bottom, border_left, border_right, border_color, y validation (lista desplegable: lista de los valores permitidos {\"Sí\", \"No\"}, o rango de origen \"=Clientes[Ciudad]\", \"=Cell[A1:A10]\", \"=Hoja2!Cell[A1:A10]\" o \"=NombreDeCelda\", cuyos valores distintos no vacíos se releen cada vez que se abre la lista y en cada entrada). false o \"\" quita la propiedad. Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; row2: última fila del rango (si falta: row); col2: última columna del rango (si falta: col); style: propiedades que se ponen: {bold = true, fill = \"#fff2cc\"}; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.style{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.style_lines": {
+		"signature": "cells.style_lines(axis, from, [to], style, [sheet])",
+		"summary": "Da formato a filas o columnas enteras de la hoja (todas sus celdas, presentes y futuras, tablas y tablas dinámicas incluidas). Una celda prevalece sobre su fila, una fila sobre su columna.",
+		"details": "style: bold, italic, underline, strike (booleanos), font (fuente) y size (tamaño en puntos), color y fill (colores \"#rrggbb\", o del tema del libro: \"theme:accent1\" a \"theme:accent6\", \"theme:dk1\", \"theme:lt1\", \"theme:dk2\", \"theme:lt2\", seguidos si hace falta de \":+40\" para un 40 % más claro o \":-25\" para un 25 % más oscuro; cambian con el tema), align (\"left\", \"center\" o \"right\"), valign (\"top\", \"middle\" o \"bottom\"), wrap (ajustar texto), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" o \"text\"), decimals (número de decimales), no_grouping (sin separador de miles), date_format (patrón de una fecha o una hora: \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (los cuatro bordes) o border_top, border_bottom, border_left, border_right, border_color, y validation (lista desplegable: lista de los valores permitidos {\"Sí\", \"No\"}, o rango de origen \"=Clientes[Ciudad]\", \"=Cell[A1:A10]\", \"=Hoja2!Cell[A1:A10]\" o \"=NombreDeCelda\", cuyos valores distintos no vacíos se releen cada vez que se abre la lista y en cada entrada). false o \"\" quita la propiedad. Parámetros — axis: \"rows\" (filas) o \"cols\" (columnas); from: primera fila o columna, desde 1; to: última fila o columna (si falta: from); style: propiedades que se ponen: {bold = true, fill = \"#fff2cc\"}; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.style_lines{axis = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.text_to_columns": {
+		"signature": "cells.text_to_columns(row, col, [row2], options, [sheet])",
+		"summary": "Convierte el texto de las celdas de la columna col, filas row a row2, en columnas (asistente Texto en columnas de Excel): en celdas libres, las partes se escriben hacia la derecha (o a partir de options.dest); en una tabla, se insertan columnas nuevas. Devuelve el número de columnas importadas.",
+		"details": "options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}. delims: caracteres separadores (\";\", \",\", \" \", \"\t\"…); merge = true: separadores consecutivos contados como uno; quote: calificador de texto (\"\\\"\" por defecto en el asistente, \"'\" o \"\" para ninguno). fixed = true: ancho fijo, breaks da las posiciones de los cortes (en caracteres). columns: formato de cada columna producida, {format = \"\" (general), \"text\", \"date\" o \"skip\" (no importada), order = \"DMY\", \"MDY\", \"YMD\"… para las fechas}. decimal y thousands: separadores de los números (\",\" y \" \" por defecto). dest: celda de destino («E2») en celdas libres. Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; row2: última fila del rango (si falta: row); options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.text_to_columns{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.to_values": {
+		"signature": "cells.to_values(row, col, [row2], [col2], [sheet])",
+		"summary": "Sustituye las fórmulas de un rango por sus valores: celdas libres con fórmula y columnas calculadas (enteras) de las tablas que toca el rango (como columns.to_values). Las fórmulas que desbordan una matriz dinámica se conservan.",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; row2: última fila del rango (si falta: row); col2: última columna del rango (si falta: col); sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.to_values{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"cells.unmerge": {
+		"signature": "cells.unmerge(row, col, [row2], [col2], [sheet])",
+		"summary": "Deshace las combinaciones de celdas que tocan el rango. En la banda de grupos de encabezados de una tabla, un grupo sobre varias columnas se queda en la primera, las demás pasan a un nivel (renombradas); una columna en un nivel no cambia: póngale un grupo con cells.set en la banda o columns.rename(«Grupo.Sub»).",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; row2: última fila del rango (si falta: row); col2: última columna del rango (si falta: col); sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.unmerge{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"charts.create": {
+		"signature": "charts.create(row, col, config, [sheet])",
+		"summary": "Coloca un gráfico en una hoja, esquina superior izquierda en row, col, y devuelve su identificador.",
+		"details": "config: {source, kind, x, series, title, …}. source es una tabla o una tabla dinámica, x la columna de las categorías (eje x), series la lista de las columnas trazadas. kind: \"bar\" (gráfico de columnas: barras verticales), \"column\" (barras horizontales), \"line\", \"area\", \"pie\", \"doughnut\", \"scatter\", \"combo\" (barras y líneas: seriesKinds da la forma de cada serie, \"bar\", \"line\" o \"area\"), \"bar3d\" y \"pie3d\" (en perspectiva), \"map\" (mapa OpenStreetMap), \"waterfall\" (cascada), \"treemap\" (rectángulos), \"radar\", \"funnel\" (embudo), \"boxplot\" (cajas y bigotes), \"histogram\" (frecuencias, bins clases) o \"gauge\" (indicador: último valor de la primera serie, entre yMin e yMax).\nPresentación: title; legend (\"bottom\", \"top\", \"right\" o \"none\"); xTitle, yTitle, y2Title (títulos de los ejes); labels (etiquetas de datos); noGrid (sin líneas de cuadrícula); stacked (apilado: barras, áreas); yMin, yMax (límites del eje de valores); colors (color de cada serie, \"#rrggbb\"; por categoría para circular, anillo, embudo y rectángulos; aumento, disminución y total para la cascada); secondary (lista de booleanos: series en el eje derecho); blanks (líneas y áreas: celda vacía \"gap\" como hueco, por defecto, \"zero\" o \"span\" para unir los puntos); hidden (lee también las filas ocultas por el filtro de la tabla); filters (gráfico sacado de una tabla: {{field, values}, ...}, solo lee las filas cuya columna field muestra uno de los valores, como el filtro de informe de una tabla dinámica; en la columna de una pestaña de selección, prevalece sobre la selección); width, height (píxeles) y offX, offY (desplazamiento dentro de la celda de anclaje, píxeles).\nMapa: series = {latitud, longitud, valor opcional} (mapCoords \"pair\", por defecto) o {coordenadas, valor opcional} (mapCoords \"single\": una celda «48.85, 2.35»); x el nombre de los puntos; mapMode \"points\" o \"heat\" (densidad); colorBy, columna cuyos valores reciben cada uno su color; mapScale, factor de tamaño de los puntos (1 por defecto, de 0,25 a 4); mapView {lat, lon, zoom} fija la vista. Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; config: configuración del gráfico; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: charts.create{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"charts.delete": {
+		"signature": "charts.delete(chart)",
+		"summary": "Elimina un gráfico.",
+		"details": "Parámetros — chart: gráfico (identificador o título). Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"charts.place": {
+		"signature": "charts.place(chart, row, col, [width], [height])",
+		"summary": "Mueve un gráfico (esquina superior izquierda en row, col) y, si se indican, cambia su tamaño (píxeles, al menos 160 × 120); si no, conserva su tamaño.",
+		"details": "Parámetros — chart: gráfico (identificador o título); row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; width: ancho en píxeles; height: alto en píxeles. Argumentos en orden, o una tabla de argumentos con nombre: charts.place{chart = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"charts.set": {
+		"signature": "charts.set(chart, config, [replace])",
+		"summary": "Modifica la configuración de un gráfico: solo cambian los campos indicados (replace = true sustituye toda la configuración).",
+		"details": "config: {source, kind, x, series, title, …}. source es una tabla o una tabla dinámica, x la columna de las categorías (eje x), series la lista de las columnas trazadas. kind: \"bar\" (gráfico de columnas: barras verticales), \"column\" (barras horizontales), \"line\", \"area\", \"pie\", \"doughnut\", \"scatter\", \"combo\" (barras y líneas: seriesKinds da la forma de cada serie, \"bar\", \"line\" o \"area\"), \"bar3d\" y \"pie3d\" (en perspectiva), \"map\" (mapa OpenStreetMap), \"waterfall\" (cascada), \"treemap\" (rectángulos), \"radar\", \"funnel\" (embudo), \"boxplot\" (cajas y bigotes), \"histogram\" (frecuencias, bins clases) o \"gauge\" (indicador: último valor de la primera serie, entre yMin e yMax).\nPresentación: title; legend (\"bottom\", \"top\", \"right\" o \"none\"); xTitle, yTitle, y2Title (títulos de los ejes); labels (etiquetas de datos); noGrid (sin líneas de cuadrícula); stacked (apilado: barras, áreas); yMin, yMax (límites del eje de valores); colors (color de cada serie, \"#rrggbb\"; por categoría para circular, anillo, embudo y rectángulos; aumento, disminución y total para la cascada); secondary (lista de booleanos: series en el eje derecho); blanks (líneas y áreas: celda vacía \"gap\" como hueco, por defecto, \"zero\" o \"span\" para unir los puntos); hidden (lee también las filas ocultas por el filtro de la tabla); filters (gráfico sacado de una tabla: {{field, values}, ...}, solo lee las filas cuya columna field muestra uno de los valores, como el filtro de informe de una tabla dinámica; en la columna de una pestaña de selección, prevalece sobre la selección); width, height (píxeles) y offX, offY (desplazamiento dentro de la celda de anclaje, píxeles).\nMapa: series = {latitud, longitud, valor opcional} (mapCoords \"pair\", por defecto) o {coordenadas, valor opcional} (mapCoords \"single\": una celda «48.85, 2.35»); x el nombre de los puntos; mapMode \"points\" o \"heat\" (densidad); colorBy, columna cuyos valores reciben cada uno su color; mapScale, factor de tamaño de los puntos (1 por defecto, de 0,25 a 4); mapView {lat, lon, zoom} fija la vista. Parámetros — chart: gráfico (identificador o título); config: campos que se cambian; replace: sustituir toda la configuración (tamaño, colores, vista del mapa… vuelven a los valores predeterminados). Argumentos en orden, o una tabla de argumentos con nombre: charts.set{chart = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"columns.delete": {
+		"signature": "columns.delete(table, column)",
+		"summary": "Elimina una columna de una tabla (una tabla conserva al menos una columna).",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1). Argumentos en orden, o una tabla de argumentos con nombre: columns.delete{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"columns.fix_type": {
+		"signature": "columns.fix_type(table, column)",
+		"summary": "Fija el tipo actual de una columna: ya no se ampliará, una entrada fuera de tipo se marcará como error.",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1). Argumentos en orden, o una tabla de argumentos con nombre: columns.fix_type{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"columns.insert": {
+		"signature": "columns.insert(table, [name], [position])",
+		"summary": "Inserta una columna en una tabla, antes de la columna position (si falta: al final).",
+		"details": "Parámetros — table: nombre de la tabla; name: nombre de la columna; position: posición, desde 1. Argumentos en orden, o una tabla de argumentos con nombre: columns.insert{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"columns.rename": {
+		"signature": "columns.rename(table, column, name)",
+		"summary": "Cambia el nombre de una columna (su encabezado).",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1); name: nombre nuevo. Argumentos en orden, o una tabla de argumentos con nombre: columns.rename{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"columns.set_filter": {
+		"signature": "columns.set_filter(table, column, [values], [errors], [conds], [any])",
+		"summary": "Filtra una tabla por una columna: solo quedan visibles las filas cuyo valor está en values.",
+		"details": "values es una lista de textos tal como se muestran (\"\" para las celdas vacías); errors = true solo conserva las entradas con error. conds filtra por condición, como los «Filtros de texto» y «Filtros de número» de Excel: cada condición es {op, value, to} con op entre \"eq\", \"ne\" (comodines * y ?), \"begins\", \"ends\", \"contains\", \"notcontains\", \"gt\", \"ge\", \"lt\", \"le\", \"between\" (value y to incluidos), \"top\" y \"bottom\" (value: número de elementos), \"above\" y \"below\" (media). Las condiciones deben cumplirse todas, o una de ellas con any = true. Sin values, errors ni conds, se quita el filtro de la columna. Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1); values: valores conservados; errors: conservar solo los errores; conds: condiciones: { {op = \">\", value = \"100\"}, ... }; any: basta una sola condición. Argumentos en orden, o una tabla de argumentos con nombre: columns.set_filter{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"columns.set_rules": {
+		"signature": "columns.set_rules(table, column, rules)",
+		"summary": "Sustituye las reglas de formato condicional de una columna (lista vacía: ninguna); gana la primera regla que se cumple.",
+		"details": "Cada regla es {op, value, to, style}. op: \">\", \">=\", \"<\", \"<=\", \"=\", \"<>\", \"between\" (entre value y to), \"contains\", \"empty\", \"notempty\" o \"error\". style: bold, italic, underline, strike (booleanos), font (fuente) y size (tamaño en puntos), color y fill (colores \"#rrggbb\", o del tema del libro: \"theme:accent1\" a \"theme:accent6\", \"theme:dk1\", \"theme:lt1\", \"theme:dk2\", \"theme:lt2\", seguidos si hace falta de \":+40\" para un 40 % más claro o \":-25\" para un 25 % más oscuro; cambian con el tema), align (\"left\", \"center\" o \"right\"), valign (\"top\", \"middle\" o \"bottom\"), wrap (ajustar texto), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" o \"text\"), decimals (número de decimales), no_grouping (sin separador de miles), date_format (patrón de una fecha o una hora: \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (los cuatro bordes) o border_top, border_bottom, border_left, border_right, border_color, y validation (lista desplegable: lista de los valores permitidos {\"Sí\", \"No\"}, o rango de origen \"=Clientes[Ciudad]\", \"=Cell[A1:A10]\", \"=Hoja2!Cell[A1:A10]\" o \"=NombreDeCelda\", cuyos valores distintos no vacíos se releen cada vez que se abre la lista y en cada entrada). false o \"\" quita la propiedad. Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1); rules: reglas: { {op = \">\", value = \"100\", style = {fill = \"#c6efce\"}}, ... }. Argumentos en orden, o una tabla de argumentos con nombre: columns.set_rules{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"columns.set_type": {
+		"signature": "columns.set_type(table, column, type)",
+		"summary": "Fija el tipo de una columna; los valores que no se convierten siguen visibles, marcados como error.",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1); type: integer, decimal, text, boolean o date. Argumentos en orden, o una tabla de argumentos con nombre: columns.set_type{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"columns.sort_order": {
+		"signature": "columns.sort_order(table, column) → {list, values = {...}, desc, applied}: applied si es la última ordenación de la tabla",
+		"summary": "Devuelve el orden personalizado guardado de una columna (nil: ninguno).",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1). Argumentos en orden, o una tabla de argumentos con nombre: columns.sort_order{table = …}."
+	},
+	"columns.to_values": {
+		"signature": "columns.to_values(table, column)",
+		"summary": "Convierte una columna calculada en una columna introducida que conserva sus valores actuales, con el tipo deducido de esos valores. Conserva su nombre (las fórmulas que la citan siguen leyéndola) pero ya no sigue las fuentes de su fórmula. Rechazado en una tabla compartida de un libro colaborativo.",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1). Argumentos en orden, o una tabla de argumentos con nombre: columns.to_values{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"columns.type_mix": {
+		"signature": "columns.type_mix(table, column) → {type, off, total}",
+		"summary": "Para una columna que pasó a texto por ampliación: tipo mayoritario y número de valores que no lo son.",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1). Argumentos en orden, o una tabla de argumentos con nombre: columns.type_mix{table = …}."
+	},
+	"columns.type_preview": {
+		"signature": "columns.type_preview(table, column, type)",
+		"summary": "Cuenta los valores de una columna que no se convertirían al tipo indicado.",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1); type: integer, decimal, text, boolean o date. Argumentos en orden, o una tabla de argumentos con nombre: columns.type_preview{table = …}."
+	},
+	"columns.values": {
+		"signature": "columns.values(table, column) → { {text, count}, ... }",
+		"summary": "Enumera los valores distintos de una columna con su número de apariciones (1000 como máximo).",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1). Argumentos en orden, o una tabla de argumentos con nombre: columns.values{table = …}."
+	},
+	"connections.list": {
+		"signature": "connections.list() → { {id, name, kind, config = {host, port, database, user, sslmode, instance, url, header}}, ... } (kind: postgres, mysql, sqlserver o web)",
+		"summary": "Enumera las conexiones del libro a fuentes externas (sin contraseña: nunca se guarda en el libro)."
+	},
+	"controls.add": {
+		"signature": "controls.add(kind, row, col, [props], [sheet]) → {id, name, kind, …} (como controls.get)",
+		"summary": "Coloca un control en una hoja, esquina superior izquierda en row, col, y lo devuelve descrito (su nombre se elige automáticamente si no se indica).",
+		"details": "Un control tiene un nombre único en el libro («Botón1», «Lista1»…), elegido automáticamente y modificable. kind: \"button\" (un clic ejecuta su acción), \"checkbox\" (casilla, VERDADERO / FALSO), \"select\" (lista desplegable, options), \"input\" (texto en una línea), \"textarea\" (texto en varias líneas) o \"file\" (selector de archivo: la celda recibe la ruta del archivo elegido). Salvo el botón, un control está vinculado a una celda (link, «B3»): su valor (value) es el de esa celda — un booleano para una casilla, un texto en los demás casos. Propiedades: name, label (texto del botón o de la casilla, texto indicativo de un cuadro de entrada), link, value (escrito en la celda vinculada; desencadena el evento change si cambia), options (lista desplegable), script y function (acción del control), color, hoverColor, activeColor, textColor («#rrggbb»), hidden o visible, row, col, width, height (píxeles). Sin link, un control que no sea un botón se vincula a la celda de su derecha. Parámetros — kind: \"button\", \"checkbox\", \"select\", \"input\", \"textarea\" o \"file\"; row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; props: propiedades: {label = …, link = \"B3\" (opcional: sin celda vinculada, el valor se guarda en el control), options = {…} u optionsFrom = \"Clientes[Ciudad]\" (opciones sacadas de una columna), …}; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: controls.add{kind = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"controls.delete": {
+		"signature": "controls.delete(control)",
+		"summary": "Elimina un control (su celda vinculada conserva su valor).",
+		"details": "Parámetros — control: control (nombre, identificador o etiqueta). Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"controls.fire": {
+		"signature": "controls.fire(control, [event]) → {output, writes, durationMs, error} (fuera de un script)",
+		"summary": "Desencadena un evento de un control como la interfaz (clic de un botón, change con el valor actual en los demás): se ejecutan su acción y luego sus escuchas.",
+		"details": "En un script, el evento se trata al final del script. Parámetros — control: control (nombre, identificador o etiqueta); event: \"click\" o \"change\" (si falta: el del control). Argumentos en orden, o una tabla de argumentos con nombre: controls.fire{control = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"controls.get": {
+		"signature": "controls.get(control) → {id, name, kind, label, sheet, row, col, width, height, link, value, options, script, function, color, hoverColor, activeColor, textColor, hidden, listeners}",
+		"summary": "Describe un control: tipo, etiqueta, celda vinculada y su valor, opciones, colores, posición, acción y escuchas.",
+		"details": "Un control tiene un nombre único en el libro («Botón1», «Lista1»…), elegido automáticamente y modificable. kind: \"button\" (un clic ejecuta su acción), \"checkbox\" (casilla, VERDADERO / FALSO), \"select\" (lista desplegable, options), \"input\" (texto en una línea), \"textarea\" (texto en varias líneas) o \"file\" (selector de archivo: la celda recibe la ruta del archivo elegido). Salvo el botón, un control está vinculado a una celda (link, «B3»): su valor (value) es el de esa celda — un booleano para una casilla, un texto en los demás casos. Parámetros — control: control (nombre, identificador o etiqueta)."
+	},
+	"controls.list": {
+		"signature": "controls.list([sheet]) → { {id, name, kind, label, sheet, row, col, width, height, link, value, options, script, function, hidden, listeners}, ... }",
+		"summary": "Enumera los controles (botones, casillas, listas, cuadros de entrada, selectores de archivo) de una hoja, o de todo el libro.",
+		"details": "Un control tiene un nombre único en el libro («Botón1», «Lista1»…), elegido automáticamente y modificable. kind: \"button\" (un clic ejecuta su acción), \"checkbox\" (casilla, VERDADERO / FALSO), \"select\" (lista desplegable, options), \"input\" (texto en una línea), \"textarea\" (texto en varias líneas) o \"file\" (selector de archivo: la celda recibe la ruta del archivo elegido). Salvo el botón, un control está vinculado a una celda (link, «B3»): su valor (value) es el de esa celda — un booleano para una casilla, un texto en los demás casos. Parámetros — sheet: hoja (si falta: todo el libro)."
+	},
+	"controls.listeners": {
+		"signature": "controls.listeners([control]) → { {control, event, script, function, action}, ... }",
+		"summary": "Enumera lo que ejecutan los eventos de un control, o de todos: su acción (action = true) y luego sus escuchas, en orden.",
+		"details": "Eventos: \"click\" (botón) y \"change\" (nuevo valor de los demás controles, entrada en la hoja o controls.set). Una escucha es una función global de un script guardado en la biblioteca, llamada con la tabla {control, event, value, old} (también en la variable global event); se guarda en el libro y sobrevive al script. La acción del control (script y function) se ejecuta primero, luego las escuchas en orden. Los eventos provocados por un script se ejecutan al terminar, en el mismo paso de deshacer. Parámetros — control: control (si falta: todos)."
+	},
+	"controls.off": {
+		"signature": "controls.off(control, [event], [handler], [script])",
+		"summary": "Cancela la suscripción de escuchas de un control y devuelve su número: todas, o las de un evento, una función, un script.",
+		"details": "La acción del control (script y function, ventana Modificar) no es una escucha: controls.set(nombre, {script = \"\"}) la quita. Parámetros — control: control (nombre, identificador o etiqueta); event: evento (si falta: todos); handler: función (o su nombre; si falta: todas); script: script (si falta: todos). Argumentos en orden, o una tabla de argumentos con nombre: controls.off{control = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"controls.on": {
+		"signature": "controls.on(control, event, handler, [script])",
+		"summary": "Suscribe una función de un script a un evento de un control (\"click\" de un botón, \"change\" de los demás); se llamará en cada evento con {control, event, value, old}.",
+		"details": "Eventos: \"click\" (botón) y \"change\" (nuevo valor de los demás controles, entrada en la hoja o controls.set). Una escucha es una función global de un script guardado en la biblioteca, llamada con la tabla {control, event, value, old} (también en la variable global event); se guarda en el libro y sobrevive al script. La acción del control (script y function) se ejecuta primero, luego las escuchas en orden. Los eventos provocados por un script se ejecutan al terminar, en el mismo paso de deshacer. handler es la función misma o su nombre; script, por defecto el script en curso (debe estar guardado en la biblioteca). Suscribir dos veces la misma función no cambia nada. Parámetros — control: control (nombre, identificador o etiqueta); event: \"click\" o \"change\"; handler: función global del script (o su nombre); script: script de la función (si falta: el script en curso). Argumentos en orden, o una tabla de argumentos con nombre: controls.on{control = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"controls.set": {
+		"signature": "controls.set(control, props)",
+		"summary": "Cambia propiedades de un control (las demás no cambian): etiqueta, valor, opciones, colores, visibilidad, posición.",
+		"details": "Propiedades: name, label (texto del botón o de la casilla, texto indicativo de un cuadro de entrada), link, value (escrito en la celda vinculada; desencadena el evento change si cambia), options (lista desplegable), script y function (acción del control), color, hoverColor, activeColor, textColor («#rrggbb»), hidden o visible, row, col, width, height (píxeles). Escribir value equivale a introducir el valor en la celda vinculada. Parámetros — control: control (nombre, identificador o etiqueta); props: propiedades que se cambian: {value = …, hidden = true, …}. Argumentos en orden, o una tabla de argumentos con nombre: controls.set{control = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"doc.recalc": {
+		"signature": "doc.recalc()",
+		"summary": "Renueva AUJOURDHUI, MAINTENANT y ALEA (HOY, AHORA, ALEATORIO) (F9).",
+		"details": "Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"doc.set_theme": {
+		"signature": "doc.set_theme([table], [source], [name])",
+		"summary": "Cambia el tema de color del libro: dos colores base #rrggbb, de los que se deducen los matices (encabezado, texto, borde). Sin colores: el tema predeterminado de los ajustes.",
+		"details": "Parámetros — table: color de las tablas normales, #rrggbb; source: color de las tablas de una fuente externa (consulta), #rrggbb; name: nombre del tema. Argumentos en orden, o una tabla de argumentos con nombre: doc.set_theme{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"doc.state": {
+		"signature": "doc.state() → {open, path, title, dirty, undo, redo}",
+		"summary": "Describe el libro abierto: archivo, cambios sin guardar, acciones que deshacer y rehacer."
+	},
+	"doc.theme": {
+		"signature": "doc.theme() → {id, name, table, source} o nil",
+		"summary": "Tema de color del libro (Vista › Tema): color de las tablas normales (table) y de las tablas de una fuente externa (source). nil: tema predeterminado de los ajustes."
+	},
+	"events.enable": {
+		"signature": "events.enable(on) → true si los eventos estaban activados",
+		"summary": "Activa (true) o desactiva (false) los eventos del libro durante la sesión, como Application.EnableEvents de Excel; devuelve el estado anterior.",
+		"details": "Desactivados, no se ejecuta ninguna escucha de los eventos del libro; los eventos de los controles (controls.on) no se ven afectados. Abrir un libro los vuelve a activar. Parámetros — on: true: activar; false: desactivar."
+	},
+	"events.enabled": {
+		"signature": "events.enabled() → booleano",
+		"summary": "Indica si los eventos del libro están activados (events.enable)."
+	},
+	"events.list": {
+		"signature": "events.list([event]) → { {event, script, function}, ... }",
+		"summary": "Enumera las escuchas de los eventos del libro, en el orden en que se ejecutan.",
+		"details": "Eventos: \"open\" (libro abierto: {path, title}); \"before_save\" (antes de guardar (Ctrl+S, Guardar como): {path, as}; devolver false lo cancela); \"save\" (después de guardar: {path}); \"before_close\" (antes de cerrar el libro o la ventana: {path, dirty}; devolver false lo cancela); \"sheet\" (pestaña mostrada cambiada: {sheet, sheet_id, previous, previous_id}); \"selection\" (selección cambiada, cuando el ratón o el teclado están en reposo: {sheet, sheet_id, row, col, row2, col2, address, table, column}); \"change\" (celdas modificadas por el usuario (entrada, pegado, borrado, movimiento, fila de tabla añadida o eliminada): {sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}); \"sheet_add\" (hoja añadida (o copiada): {sheet, sheet_id}); \"sheet_delete\" (hoja eliminada: {sheet, sheet_id}); \"recalc\" (fórmulas recalculadas (F9, Recalcular): {}). Cada tabla lleva también event (el nombre del evento); filas y columnas se cuentan desde 1, como ui.selection. value y old (valor mostrado después y antes) solo se dan para una única celda introducida. Solo las acciones del usuario desencadenan estos eventos: lo que un script (escuchas incluidas) modifica, selecciona o muestra no desencadena ninguno, de modo que una escucha nunca se relanza a sí misma. Una escucha es una función global de un script guardado en la biblioteca, llamada con la tabla del evento (también en la variable global event); se guarda en el libro y sobrevive al script. Las escuchas de un evento se ejecutan en el orden en que se suscribieron; todo lo que modifican se deshace de una vez (Ctrl+Z). Una escucha con error se señala una vez en la barra de estado y la consola, sin bloquear la interfaz. before_save y before_close disponen de 5 segundos como máximo (sin contar los cuadros de diálogo); un error no bloquea ni el guardado ni el cierre. Parámetros — event: evento (si falta: todos)."
+	},
+	"events.off": {
+		"signature": "events.off([event], [handler], [script]) → número de escuchas quitadas",
+		"summary": "Cancela la suscripción de escuchas de los eventos del libro y devuelve su número: todas, o las de un evento, una función, un script.",
+		"details": "Parámetros — event: evento (si falta: todos); handler: función (o su nombre; si falta: todas); script: script (si falta: todos). Argumentos en orden, o una tabla de argumentos con nombre: events.off{event = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"events.on": {
+		"signature": "events.on(event, handler, [script]) → true si la escucha es nueva",
+		"summary": "Suscribe una función de un script a un evento del libro (apertura, guardado, cierre, cambio de pestaña, de selección, entrada…); se llamará en cada evento con una tabla que lo describe.",
+		"details": "Eventos: \"open\" (libro abierto: {path, title}); \"before_save\" (antes de guardar (Ctrl+S, Guardar como): {path, as}; devolver false lo cancela); \"save\" (después de guardar: {path}); \"before_close\" (antes de cerrar el libro o la ventana: {path, dirty}; devolver false lo cancela); \"sheet\" (pestaña mostrada cambiada: {sheet, sheet_id, previous, previous_id}); \"selection\" (selección cambiada, cuando el ratón o el teclado están en reposo: {sheet, sheet_id, row, col, row2, col2, address, table, column}); \"change\" (celdas modificadas por el usuario (entrada, pegado, borrado, movimiento, fila de tabla añadida o eliminada): {sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}); \"sheet_add\" (hoja añadida (o copiada): {sheet, sheet_id}); \"sheet_delete\" (hoja eliminada: {sheet, sheet_id}); \"recalc\" (fórmulas recalculadas (F9, Recalcular): {}). Cada tabla lleva también event (el nombre del evento); filas y columnas se cuentan desde 1, como ui.selection. value y old (valor mostrado después y antes) solo se dan para una única celda introducida. Solo las acciones del usuario desencadenan estos eventos: lo que un script (escuchas incluidas) modifica, selecciona o muestra no desencadena ninguno, de modo que una escucha nunca se relanza a sí misma. Una escucha es una función global de un script guardado en la biblioteca, llamada con la tabla del evento (también en la variable global event); se guarda en el libro y sobrevive al script. Las escuchas de un evento se ejecutan en el orden en que se suscribieron; todo lo que modifican se deshace de una vez (Ctrl+Z). Una escucha con error se señala una vez en la barra de estado y la consola, sin bloquear la interfaz. before_save y before_close disponen de 5 segundos como máximo (sin contar los cuadros de diálogo); un error no bloquea ni el guardado ni el cierre. handler es la función misma o su nombre; script, por defecto el script en curso (debe estar guardado en la biblioteca). Suscribir dos veces la misma función no cambia nada. Parámetros — event: \"open\", \"before_save\", \"save\", \"before_close\", \"sheet\", \"selection\", \"change\", \"sheet_add\", \"sheet_delete\" o \"recalc\"; handler: función global del script (o su nombre); script: script de la función (si falta: el script en curso). Argumentos en orden, o una tabla de argumentos con nombre: events.on{event = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"formulas.functions": {
+		"signature": "formulas.functions()",
+		"summary": "Enumera las funciones de las fórmulas (nombres franceses), con su sintaxis y su descripción."
+	},
+	"help.search": {
+		"signature": "help.search([query], [page]) → { {page, title, text}, ... } o {id, title, text} o { {id, title}, ... }",
+		"summary": "Busca en la ayuda de Lattis (las páginas del panel de ayuda, en el idioma de la sesión, en francés si no): devuelve las secciones que hablan de las palabras dadas, o una página entera, o la lista de páginas.",
+		"details": "query: palabras que se buscan (por ejemplo «encabezados en dos filas», «clave», «gráfico filtro»); page: identificador de una página que se lee entera (vea la lista devuelta sin parámetros). Sin query ni page: la lista de páginas. Los procedimientos descritos (menús, clics) suelen tener un comando equivalente: tables.two_level_headers, tables.header_to_title, tables.set_key… Parámetros — query: palabras que se buscan; page: identificador de una página (prise-en-main, formules, sql…). Argumentos en orden, o una tabla de argumentos con nombre: help.search{query = …}."
+	},
+	"http.get": {
+		"signature": "http.get(url, [options]) → {status, ok, url, headers, body, json}",
+		"summary": "Envía una petición HTTP GET (http:// o https://) y devuelve la respuesta.",
+		"details": "La respuesta: status (200, 404…), ok (true para un estado 2xx), url (dirección final, tras las redirecciones), headers (nombres en minúsculas), body (texto) y json (el cuerpo decodificado cuando la respuesta es JSON). Un estado de error (404, 500…) no es un error de Lua: compruebe ok; un fallo de red o un tiempo agotado sí lo es (pcall para capturarlo). Antes de la primera petición a un host, Lattis pide permiso al usuario (se puede recordar para el libro; pestaña Script › Acceso a la red para revisarlo); el servidor MCP solo llega a los hosts ya autorizados. Tiempo de espera: 15 s por defecto (timeout, 120 s como máximo), sin contar en la duración máxima del script; respuesta de 10 MB como máximo; 10 redirecciones como máximo; el botón Detener interrumpe la petición. Parámetros — url: dirección (http:// o https://); options: {headers = {nombre = valor}, timeout = segundos}. Argumentos en orden, o una tabla de argumentos con nombre: http.get{url = …}."
+	},
+	"http.post": {
+		"signature": "http.post(url, [body], [options]) → {status, ok, url, headers, body, json}",
+		"summary": "Envía una petición HTTP POST y devuelve la respuesta; un cuerpo de texto se envía tal cual, una tabla se envía en JSON.",
+		"details": "La respuesta: status (200, 404…), ok (true para un estado 2xx), url (dirección final, tras las redirecciones), headers (nombres en minúsculas), body (texto) y json (el cuerpo decodificado cuando la respuesta es JSON). Un estado de error (404, 500…) no es un error de Lua: compruebe ok; un fallo de red o un tiempo agotado sí lo es (pcall para capturarlo). Antes de la primera petición a un host, Lattis pide permiso al usuario (se puede recordar para el libro; pestaña Script › Acceso a la red para revisarlo); el servidor MCP solo llega a los hosts ya autorizados. Tiempo de espera: 15 s por defecto (timeout, 120 s como máximo), sin contar en la duración máxima del script; respuesta de 10 MB como máximo; 10 redirecciones como máximo; el botón Detener interrumpe la petición. Parámetros — url: dirección (http:// o https://); body: cuerpo: texto, o tabla codificada en JSON (Content-Type: application/json); options: {headers = {nombre = valor}, timeout = segundos}. Argumentos en orden, o una tabla de argumentos con nombre: http.post{url = …}."
+	},
+	"http.request": {
+		"signature": "http.request(url, [method], [headers], [body], [json], [timeout]) → {status, ok, url, headers, body, json}",
+		"summary": "Envía cualquier petición HTTP (GET, POST, PUT, PATCH, DELETE…) y devuelve la respuesta.",
+		"details": "json codifica una tabla como cuerpo JSON (con el encabezado Content-Type adecuado); body envía un texto tal cual. La respuesta: status (200, 404…), ok (true para un estado 2xx), url (dirección final, tras las redirecciones), headers (nombres en minúsculas), body (texto) y json (el cuerpo decodificado cuando la respuesta es JSON). Un estado de error (404, 500…) no es un error de Lua: compruebe ok; un fallo de red o un tiempo agotado sí lo es (pcall para capturarlo). Antes de la primera petición a un host, Lattis pide permiso al usuario (se puede recordar para el libro; pestaña Script › Acceso a la red para revisarlo); el servidor MCP solo llega a los hosts ya autorizados. Tiempo de espera: 15 s por defecto (timeout, 120 s como máximo), sin contar en la duración máxima del script; respuesta de 10 MB como máximo; 10 redirecciones como máximo; el botón Detener interrumpe la petición. Parámetros — url: dirección (http:// o https://); method: método (GET por defecto); headers: encabezados: {nombre = valor}; body: cuerpo de la petición (texto); json: cuerpo de la petición: tabla codificada en JSON; timeout: tiempo de espera en segundos (15 por defecto, 120 como máximo). Argumentos en orden, o una tabla de argumentos con nombre: http.request{url = …}."
+	},
+	"pages.add": {
+		"signature": "pages.add([name], [source], [before], [kind]) → {id, name, kind}",
+		"summary": "Añade una página web (HTML, CSS y JavaScript mostrados en un marco aislado), o un documento (kind = \"doc\": texto enriquecido), y devuelve {id, name, kind}.",
+		"details": "La página habla con el libro mediante lattis.call(\"comando\", {argumentos}), que devuelve una promesa (una lista permitida de los comandos de los scripts: lectura como sheets.list o db.query, valores como cells.set o db.execute, ui.*, http.*, buttons.run; ni archivos, ni scripts, ni estructura, ni protecciones), y lattis.on(\"change\", función), llamada cuando el libro cambia. Sin source, la página recibe una plantilla de ejemplo. Sin before, la pestaña se añade al final. Parámetros — name: nombre de la pestaña (Page1… por defecto); source: contenido HTML de la página; before: hoja delante de la cual se inserta; kind: \"html\" (por defecto) o \"doc\": documento, cuyo contenido es un Delta de Quill en JSON. Argumentos en orden, o una tabla de argumentos con nombre: pages.add{name = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"pages.get": {
+		"signature": "pages.get([sheet]) → texto HTML",
+		"summary": "Devuelve el contenido HTML de una página web.",
+		"details": "Parámetros — sheet: página web (nombre o identificador); si falta: la pestaña mostrada."
+	},
+	"pages.set": {
+		"signature": "pages.set(sheet, source)",
+		"summary": "Sustituye el contenido HTML de una página web.",
+		"details": "Parámetros — sheet: página web (nombre o identificador); source: nuevo contenido HTML. Argumentos en orden, o una tabla de argumentos con nombre: pages.set{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"pivots.create": {
+		"signature": "pivots.create(config) → {id, name} (la hoja)",
+		"summary": "Crea una tabla dinámica en una hoja nueva y devuelve esa hoja.",
+		"details": "config: {source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source es una tabla, rowFields la lista de los campos de fila, cols el campo de columna, values una lista de {field, agg, show} (agg: \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" o \"max\"; show: \"\", \"pctTotal\", \"pctRow\" o \"pctCol\"), filters una lista de {field, values}. Con varios campos de fila, la tabla se muestra en árbol: subtotals coloca los subtotales de los grupos (\"\" en la fila del grupo, \"bottom\" debajo, \"none\" ninguno); collapsed enumera los grupos contraídos, cada uno por sus etiquetas ({\"RR. HH.\"}, {\"RR. HH.\", \"París\"}); collapseAll contrae todo, salvo los grupos de expanded. calc añade campos calculados, una lista de {name, text}: text es una fórmula sobre las columnas de cada fila de la tabla de origen (\"=ANNEE([Date])\", \"=GAUCHE([Code];2)\", fórmulas en francés), y name el nombre del campo, que luego se coloca en rowFields, cols, values o filters como una columna (las filas se agrupan por su resultado). Parámetros — config: configuración de la tabla dinámica. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"pivots.delete": {
+		"signature": "pivots.delete(pivot)",
+		"summary": "Elimina una tabla dinámica (su hoja se queda).",
+		"details": "Parámetros — pivot: tabla dinámica (identificador o nombre). Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"pivots.set": {
+		"signature": "pivots.set(pivot, config)",
+		"summary": "Sustituye la configuración de una tabla dinámica.",
+		"details": "config: {source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source es una tabla, rowFields la lista de los campos de fila, cols el campo de columna, values una lista de {field, agg, show} (agg: \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" o \"max\"; show: \"\", \"pctTotal\", \"pctRow\" o \"pctCol\"), filters una lista de {field, values}. Con varios campos de fila, la tabla se muestra en árbol: subtotals coloca los subtotales de los grupos (\"\" en la fila del grupo, \"bottom\" debajo, \"none\" ninguno); collapsed enumera los grupos contraídos, cada uno por sus etiquetas ({\"RR. HH.\"}, {\"RR. HH.\", \"París\"}); collapseAll contrae todo, salvo los grupos de expanded. calc añade campos calculados, una lista de {name, text}: text es una fórmula sobre las columnas de cada fila de la tabla de origen (\"=ANNEE([Date])\", \"=GAUCHE([Code];2)\", fórmulas en francés), y name el nombre del campo, que luego se coloca en rowFields, cols, values o filters como una columna (las filas se agrupan por su resultado). Parámetros — pivot: tabla dinámica (identificador o nombre); config: nueva configuración. Argumentos en orden, o una tabla de argumentos con nombre: pivots.set{pivot = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"queries.delete": {
+		"signature": "queries.delete(query)",
+		"summary": "Elimina una consulta de importación; su tabla se queda en la hoja.",
+		"details": "Parámetros — query: consulta (nombre o identificador). Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"queries.list": {
+		"signature": "queries.list() → { {id, name, source, steps, table, sheet, refreshed}, ... }",
+		"summary": "Enumera las consultas de importación del libro, con su origen, sus pasos y la tabla cargada."
+	},
+	"queries.preview": {
+		"signature": "queries.preview(query, [steps]) → {columns, rows, count, sample, error, errorStep}",
+		"summary": "Calcula la vista previa de una consulta (sobre las 1000 primeras filas de cada origen) tras sus n primeros pasos (todos por defecto).",
+		"details": "Parámetros — query: consulta (nombre o identificador); steps: número de pasos aplicados. Argumentos en orden, o una tabla de argumentos con nombre: queries.preview{query = …}."
+	},
+	"queries.refresh": {
+		"signature": "queries.refresh(query) → {sheet, table, rows, warnings}",
+		"summary": "Actualiza una consulta: vuelve a leer su origen, repite sus pasos y sustituye su tabla (creada en una hoja nueva la primera vez).",
+		"details": "Parámetros — query: consulta (nombre o identificador). Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"queries.refresh_all": {
+		"signature": "queries.refresh_all() → { {sheet, table, rows, warnings}, ... }",
+		"summary": "Actualiza todas las consultas ya cargadas en una hoja.",
+		"details": "Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"queries.save": {
+		"signature": "queries.save(name, source, [steps])",
+		"summary": "Crea una consulta de importación (o sustituye el origen y los pasos de la que lleva ese nombre) y devuelve su identificador. Solo se carga en una hoja al actualizarla.",
+		"details": "source: {kind, ...} con kind \"csv\" (path, delimiter), \"xlsx\" (path, sheet, index desde 0), \"json\" (path, recordPath: ruta de la matriz de registros, p. ej. data.items), \"parquet\" (path), \"sqlite\" (path, sql), \"table\" (table), \"query\" (query: otra consulta), \"postgres\", \"mysql\" o \"sqlserver\" (connection, sql de solo lectura), \"web\" (url, headers = {{name, value}}, recordPath, connection: conexión Web opcional que lleva el token). steps: lista de pasos {op, ...}: filter {conditions = {{column, cmp, value}}, any}, rename {column, name}, type {column, type}, remove/select {columns}, split {column, delimiter, parts}, replace {column, value, with}, transform {column, fn = \"trim\"|\"upper\"|\"lower\"}, addcolumn {name, expr (SQLite, [Columna]), type}, index {name, start}, merge {other = origen, keys, otherKeys, join = \"left\"|\"inner\"|\"full\"|\"right\"|\"anti\", columns}, append {other}, group {columns, aggs = {{name, op, column}}}, sort {sort = {{column, desc}}}, distinct {columns}, top {count}, unpivot {columns, name, valueName}, pivot {column, valueColumn, agg}. cmp: \"=\", \"<>\", \"<\", \"<=\", \">\", \">=\", \"contains\", \"notcontains\", \"begins\", \"ends\", \"empty\", \"notempty\". Parámetros — name: nombre de la consulta; source: origen de los datos; steps: pasos de transformación. Argumentos en orden, o una tabla de argumentos con nombre: queries.save{name = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"scripts.check": {
+		"signature": "scripts.check(source)",
+		"summary": "Comprueba la sintaxis de un código Lua sin ejecutarlo; devuelve \"\" si es correcto y, si no, el error.",
+		"details": "Parámetros — source: código Lua."
+	},
+	"scripts.delete": {
+		"signature": "scripts.delete(name)",
+		"summary": "Elimina un script de la biblioteca.",
+		"details": "Parámetros — name: nombre del script. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"scripts.list": {
+		"signature": "scripts.list() → { {id, name, source}, ... }",
+		"summary": "Enumera los scripts guardados en el libro, con su código."
+	},
+	"scripts.save": {
+		"signature": "scripts.save(name, source)",
+		"summary": "Guarda un script en la biblioteca del libro (lo sustituye si ya existe con ese nombre).",
+		"details": "Parámetros — name: nombre del script; source: código Lua. Argumentos en orden, o una tabla de argumentos con nombre: scripts.save{name = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.add": {
+		"signature": "sheets.add([name], [before]) → {id, name}",
+		"summary": "Añade una hoja y devuelve {id, name}.",
+		"details": "Sin before, la hoja se añade tras la última pestaña. Sin nombre, se llama como en la cuadrícula («Hoja2»…). Parámetros — name: nombre de la hoja nueva; before: hoja delante de la cual se inserta. Argumentos en orden, o una tabla de argumentos con nombre: sheets.add{name = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.choice": {
+		"signature": "sheets.choice([sheet]) → {name, type, table, formula, value, all, values} o nil",
+		"summary": "Describe la pestaña de selección de una hoja: categoría (columna o fórmula), valor elegido y valores propuestos; nil si la hoja no tiene.",
+		"details": "La selección filtra las tablas de la hoja que tienen la columna de categoría, o las columnas de su fórmula (formula, categoría calculada); all: «(Todos)», ningún filtro. El SQL y los scripts siempre ven todas las filas. Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada."
+	},
+	"sheets.choose_by": {
+		"signature": "sheets.choose_by(table, column, [value], [sheet])",
+		"summary": "Convierte una hoja en pestaña de selección por una columna de una de sus tablas («Elegir por…», «Filtrar la pestaña por esta columna»): la flecha de la pestaña elige el valor mostrado.",
+		"details": "Todas las tablas de la hoja que tienen una columna con ese nombre siguen la selección, así como sus tablas dinámicas cuya tabla de origen tiene esa columna. Con sheet, la pestaña de selección se pone en esa hoja: es «Filtrar la pestaña por este campo» de una tabla dinámica colocada en otra hoja que su tabla de origen; la tabla dinámica sigue la selección, la tabla de origen (en su hoja) no se filtra. Sin valor, la pestaña muestra todos los valores. Parámetros — table: tabla de la columna (para una tabla dinámica: su tabla de origen); column: columna de categoría (Año, Mes, Ciudad…); value: valor mostrado primero; si falta: todos; sheet: hoja de la pestaña de selección (la de una tabla dinámica); si falta: la de la tabla. Argumentos en orden, o una tabla de argumentos con nombre: sheets.choose_by{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.choose_by_formula": {
+		"signature": "sheets.choose_by_formula(sheet, formula, name, [value])",
+		"summary": "Convierte una hoja en pestaña de selección por una fórmula sobre las columnas de cada fila («Elegir por › Una fórmula…»): =ANNEE([Date]), =TEXTE([Date];\"mmmm\"), =SI([Montant]>1000;\"Gros\";\"Petit\") (fórmulas en francés).",
+		"details": "Las tablas de la hoja que tienen todas las columnas citadas por la fórmula siguen la selección (así como sus tablas dinámicas cuya tabla de origen las tiene): solo quedan visibles las filas para las que la fórmula da el valor elegido. No hay columna que rellenar: una fila añadida no recibe nada automáticamente, queda visible hasta el próximo cambio de valor. «Valor nuevo» (sheets.new_choice) no se aplica. Un paso de deshacer. Parámetros — sheet: hoja de la pestaña de selección; formula: fórmula en francés, columnas entre corchetes ([Date]); name: nombre de la categoría (Año, Mes, Talla…); value: valor mostrado primero; si falta: todos. Argumentos en orden, o una tabla de argumentos con nombre: sheets.choose_by_formula{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.clear_choice": {
+		"signature": "sheets.clear_choice([sheet])",
+		"summary": "Quita la pestaña de selección de una hoja: sus tablas vuelven a mostrar todas sus filas.",
+		"details": "Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.color": {
+		"signature": "sheets.color(sheet, [color])",
+		"summary": "Fija el color de la pestaña de una hoja («#rrggbb»; vacío: ningún color).",
+		"details": "Parámetros — sheet: hoja; color: color #rrggbb, o vacío. Argumentos en orden, o una tabla de argumentos con nombre: sheets.color{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.copy": {
+		"signature": "sheets.copy(sheet, [position]) → {id, name}",
+		"summary": "Copia una hoja (tablas, celdas, formato, tablas dinámicas, gráficos, botones) y devuelve {id, name} de la copia.",
+		"details": "Como Mover o copiar… › Crear una copia. Las tablas copiadas reciben un nombre libre (Ventas → Ventas_2); un gráfico o una tabla dinámica de la hoja que leía una tabla copiada lee su copia. Sin position, la copia se coloca justo después de la hoja copiada. Parámetros — sheet: hoja que se copia; position: posición de la copia entre las pestañas, desde 1. Argumentos en orden, o una tabla de argumentos con nombre: sheets.copy{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.delete": {
+		"signature": "sheets.delete(sheet)",
+		"summary": "Elimina una hoja y todo lo que contiene: tablas, celdas, tablas dinámicas, gráficos y botones.",
+		"details": "Un solo paso de deshacer devuelve la hoja y todo su contenido. El libro conserva al menos una hoja visible. Parámetros — sheet: hoja que se elimina. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.find": {
+		"signature": "sheets.find(text, [sheet]) → { {row, col}, ... }",
+		"summary": "Busca un texto en una hoja (sin distinguir mayúsculas y minúsculas) y devuelve las celdas encontradas.",
+		"details": "Parámetros — text: texto buscado; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: sheets.find{text = …}."
+	},
+	"sheets.freeze": {
+		"signature": "sheets.freeze(rows, [cols], [sheet])",
+		"summary": "Inmoviliza paneles: las primeras filas y columnas quedan visibles al desplazarse (0 y 0: libera los paneles).",
+		"details": "Parámetros — rows: filas inmovilizadas arriba; cols: columnas inmovilizadas a la izquierda; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: sheets.freeze{rows = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.get": {
+		"signature": "sheets.get([sheet]) → {id, name, tables, cells, names, pivots, charts, buttons}",
+		"summary": "Describe el contenido de una hoja: tablas, celdas libres, nombres, tablas dinámicas, gráficos y botones.",
+		"details": "Las posiciones (row, col) se cuentan desde 1. Los valores de las tablas se leen con tables.rows o db.query. Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada."
+	},
+	"sheets.hide": {
+		"signature": "sheets.hide(sheet, [hidden])",
+		"summary": "Oculta una hoja (Ocultar) o la vuelve a mostrar (hidden = false).",
+		"details": "Una hoja oculta ya no aparece en las pestañas pero conserva su contenido; el libro conserva al menos una hoja visible. Parámetros — sheet: hoja que se oculta o se muestra; hidden: true (por defecto): ocultar; false: mostrar. Argumentos en orden, o una tabla de argumentos con nombre: sheets.hide{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.hide_lines": {
+		"signature": "sheets.hide_lines(axis, from, [to], [show], [sheet])",
+		"summary": "Oculta (o muestra) filas o columnas enteras de la hoja; su contenido sigue en su sitio y cuenta en las fórmulas.",
+		"details": "Parámetros — axis: \"rows\" (filas) o \"cols\" (columnas); from: primera fila o columna, desde 1; to: última fila o columna (si falta: from); show: true: mostrar en lugar de ocultar; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: sheets.hide_lines{axis = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.list": {
+		"signature": "sheets.list() → { {id, name, protected, structureProtected, kind}, ... }",
+		"summary": "Enumera las hojas del libro, en el orden de las pestañas.",
+		"details": "protected vale true para una hoja protegida (Revisar › Proteger hoja), structureProtected para una hoja cuya estructura está protegida (solo se permite la entrada en sus tablas); kind vale \"html\" para una página web, \"doc\" para un documento (ausente para una hoja)."
+	},
+	"sheets.move": {
+		"signature": "sheets.move(sheet, position)",
+		"summary": "Coloca una hoja en la posición position entre las pestañas (1: primera).",
+		"details": "Parámetros — sheet: hoja que se mueve; position: posición, desde 1. Argumentos en orden, o una tabla de argumentos con nombre: sheets.move{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.new_choice": {
+		"signature": "sheets.new_choice(sheet, value)",
+		"summary": "Añade un valor a la pestaña de selección («Año nuevo…») y lo muestra: la hoja parece vacía, lista para rellenar.",
+		"details": "Parámetros — sheet: hoja con pestaña de selección; value: valor nuevo (2026, Diciembre…). Argumentos en orden, o una tabla de argumentos con nombre: sheets.new_choice{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.page_setup": {
+		"signature": "sheets.page_setup([sheet]) → {paper, orientation, margins = {top, bottom, left, right, header, footer}, scale, fit_wide, fit_tall, print_area, title_rows, title_cols, row_breaks, col_breaks, gridlines, headings, center_h, center_v, order, black_white, first_page, header = {left, center, right}, footer}",
+		"summary": "Lee la configuración de página de una hoja (Vista › Configurar página): papel, orientación, márgenes, escala, área de impresión, títulos, saltos de página, encabezado y pie de página.",
+		"details": "Filas y columnas desde 1, márgenes en centímetros. scale vale 100 por defecto; fit_wide y fit_tall (0: automático) ajustan la hoja a un número de páginas de ancho y de alto. row_breaks: filas que empiezan una página (salto manual antes de ellas). order: \"down\" (hacia abajo, luego a la derecha) o \"across\". Encabezado y pie de página: códigos &[Page], &[Pages], &[Date], &[Heure], &[Fichier], &[Chemin], &[Onglet] (página, páginas, fecha, hora, archivo, ruta, pestaña). Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada."
+	},
+	"sheets.protect": {
+		"signature": "sheets.protect([sheet], [password])",
+		"summary": "Protege una hoja, como Revisar › Proteger hoja: después se rechaza cualquier cambio de su contenido.",
+		"details": "Siguen permitidas la lectura, la selección, la copia, los filtros y las consultas SQL de lectura. La contraseña es opcional; no se guarda (solo un hash con sal). Proteger no se deshace. Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada; password: contraseña para quitar la protección. Argumentos en orden, o una tabla de argumentos con nombre: sheets.protect{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.protect_structure": {
+		"signature": "sheets.protect_structure([sheet], [password])",
+		"summary": "Protege la estructura de una hoja, como Revisar › Proteger estructura: todo queda bloqueado salvo la entrada en las tablas.",
+		"details": "Siguen permitidos: los valores de las celdas de datos de las tablas (entrada, pegado de valores, borrado), añadir filas bajo una tabla o insertarlas, eliminar filas, ordenar y filtrar, db.insert, db.update y db.delete, la lectura. Se rechazan las celdas libres, el formato, las columnas y los encabezados, las propias tablas, los objetos, los nombres, las reglas y la validación, las filas y columnas de la hoja, la configuración de página, la pestaña (nombre, color, posición, eliminación, pestaña de selección) y las consultas SQL de escritura. La contraseña es opcional. Proteger no se deshace. Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada; password: contraseña para quitar la protección. Argumentos en orden, o una tabla de argumentos con nombre: sheets.protect_structure{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.protect_workbook": {
+		"signature": "sheets.protect_workbook([password], [sheets], [structure])",
+		"summary": "Protege la estructura del libro, como Revisar › Proteger libro: después se rechaza añadir, eliminar, renombrar o mover hojas.",
+		"details": "Como en Excel, el contenido de las hojas no protegidas sigue siendo modificable (vea sheets.protect), salvo con sheets = true: entonces el contenido de todas las hojas también queda bloqueado, hasta sheets.unprotect_workbook, que quita ese bloqueo y solo ese (las hojas protegidas una a una lo siguen estando). Con structure = true, es la estructura de todas las hojas la que queda bloqueada: solo sigue permitida la entrada en las tablas (vea sheets.protect_structure). La contraseña es opcional. Proteger no se deshace. Parámetros — password: contraseña para quitar la protección; sheets: bloquear también el contenido de todas las hojas; structure: bloquear también la estructura de todas las hojas (solo entrada en las tablas). Argumentos en orden, o una tabla de argumentos con nombre: sheets.protect_workbook{password = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.rename": {
+		"signature": "sheets.rename(sheet, name)",
+		"summary": "Cambia el nombre de una hoja.",
+		"details": "Parámetros — sheet: hoja que se renombra; name: nombre nuevo. Argumentos en orden, o una tabla de argumentos con nombre: sheets.rename{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.replace": {
+		"signature": "sheets.replace(text, by, [sheet])",
+		"summary": "Reemplaza un texto en toda una hoja y devuelve el número de celdas modificadas.",
+		"details": "Parámetros — text: texto buscado; by: texto de reemplazo; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: sheets.replace{text = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.set_choice": {
+		"signature": "sheets.set_choice(sheet, [value])",
+		"summary": "Pone la pestaña de selección de una hoja en un valor (el año, el mes, la ciudad mostrados); sin valor, en «(Todos)».",
+		"details": "Es navegación, como cambiar de pestaña: sin paso de deshacer. La hoja ya debe tener una pestaña de selección (sheets.choose_by). Parámetros — sheet: hoja con pestaña de selección; value: valor que se muestra; si falta: todos. Argumentos en orden, o una tabla de argumentos con nombre: sheets.set_choice{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.set_column_width": {
+		"signature": "sheets.set_column_width(col, width, [sheet])",
+		"summary": "Fija el ancho (píxeles) de una columna de la hoja; 0 vuelve al ancho predeterminado.",
+		"details": "Parámetros — col: columna de la hoja, desde 1; width: ancho en píxeles; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: sheets.set_column_width{col = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.set_page_setup": {
+		"signature": "sheets.set_page_setup(setup, [reset], [sheet])",
+		"summary": "Cambia la configuración de página de una hoja: solo cambian los campos indicados (mismos nombres que sheets.page_setup).",
+		"details": "paper: A4, A3, A5, B5, Letter, Legal, Tabloid, Executive. orientation: \"portrait\" o \"landscape\". margins: \"normal\", \"wide\", \"narrow\" o una tabla en cm. print_area: \"A1:F40\" (\"\": todo el rango usado). title_rows: \"1:2\"; title_cols: \"A:B\" (\"\": ninguno). reset = true vuelve a partir de los ajustes predeterminados. Archivo › Imprimir / PDF y las exportaciones .xlsx y .ods la usan. Parámetros — setup: campos que se cambian; reset: volver a partir de los ajustes predeterminados; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: sheets.set_page_setup{setup = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.set_row_height": {
+		"signature": "sheets.set_row_height(row, height, [sheet])",
+		"summary": "Fija el alto (píxeles) de una fila de la hoja; 0 vuelve al alto predeterminado.",
+		"details": "Parámetros — row: fila de la hoja, desde 1; height: alto en píxeles; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: sheets.set_row_height{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.unprotect": {
+		"signature": "sheets.unprotect([sheet], [password])",
+		"summary": "Quita la protección de una hoja (con su contraseña, si la tiene).",
+		"details": "Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada; password: contraseña indicada al proteger. Argumentos en orden, o una tabla de argumentos con nombre: sheets.unprotect{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.unprotect_structure": {
+		"signature": "sheets.unprotect_structure([sheet], [password])",
+		"summary": "Quita la protección de la estructura de una hoja (con su contraseña, si la tiene).",
+		"details": "Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada; password: contraseña indicada al proteger. Argumentos en orden, o una tabla de argumentos con nombre: sheets.unprotect_structure{sheet = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"sheets.unprotect_workbook": {
+		"signature": "sheets.unprotect_workbook([password])",
+		"summary": "Quita la protección de la estructura del libro (con su contraseña, si la tiene), y el bloqueo del contenido de las hojas puesto con ella.",
+		"details": "Parámetros — password: contraseña indicada al proteger. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.add_index": {
+		"signature": "tables.add_index(table, columns, [unique])",
+		"summary": "Crea en el servidor un índice sobre columnas de una tabla compartida de un libro colaborativo (propietario o diseñador), para acelerar los filtros y búsquedas de otras herramientas; unique: los valores no se repiten. No se deshace con Ctrl+Z: tables.drop_index lo quita. Devuelve su nombre.",
+		"details": "Parámetros — table: nombre de la tabla; columns: columnas del índice (1 a 8); unique: índice único. Argumentos en orden, o una tabla de argumentos con nombre: tables.add_index{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.clear_filters": {
+		"signature": "tables.clear_filters(table)",
+		"summary": "Quita todos los filtros de una tabla.",
+		"details": "Parámetros — table: nombre de la tabla. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.clear_key": {
+		"signature": "tables.clear_key(table)",
+		"summary": "Quita la clave de una tabla.",
+		"details": "Parámetros — table: nombre de la tabla. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.delete": {
+		"signature": "tables.delete(tables)",
+		"summary": "Elimina una o varias tablas enteras (datos incluidos).",
+		"details": "Parámetros — tables: nombre de la tabla, o lista de nombres. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.delete_row": {
+		"signature": "tables.delete_row(table, row)",
+		"summary": "Elimina la fila de datos row; la tabla se reduce.",
+		"details": "Para eliminar una fila por su clave, use db.delete. Parámetros — table: nombre de la tabla; row: fila de datos, desde 1. Argumentos en orden, o una tabla de argumentos con nombre: tables.delete_row{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.drop_index": {
+		"signature": "tables.drop_index(table, name)",
+		"summary": "Quita un índice creado en el servidor (nombre devuelto por tables.add_index o tables.indexes).",
+		"details": "Parámetros — table: nombre de la tabla; name: nombre del índice (lattis_ix_…). Argumentos en orden, o una tabla de argumentos con nombre: tables.drop_index{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.duplicates": {
+		"signature": "tables.duplicates(table, [columns])",
+		"summary": "Cuenta las filas duplicadas de una tabla, según unas columnas (si faltan: todas).",
+		"details": "Parámetros — table: nombre de la tabla; columns: columnas comparadas. Argumentos en orden, o una tabla de argumentos con nombre: tables.duplicates{table = …}."
+	},
+	"tables.extract_columns": {
+		"signature": "tables.extract_columns(table, column, column2, row, col)",
+		"summary": "Saca las columnas column a column2 de una tabla a una tabla nueva colocada en row, col.",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1); column2: última columna extraída; row: fila de la hoja, desde 1; col: columna de la hoja, desde 1. Argumentos en orden, o una tabla de argumentos con nombre: tables.extract_columns{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.follow_choice": {
+		"signature": "tables.follow_choice(table, [follow]) → mensaje",
+		"summary": "Marca o desmarca «Seguir el año» (el mes, la ciudad…) en una tabla de una hoja con pestaña de selección: una tabla que sigue solo muestra las filas del valor elegido, y una fila añadida recibe ese valor.",
+		"details": "follow = true (por defecto): añade la columna de categoría al final (oculta mientras haya un valor elegido), rellenada con el valor mostrado. follow = false: quita la columna si solo tiene un valor (no se pierde nada); si no, la conserva, y la tabla deja de seguir la selección (ajuste guardado con la tabla). La columna de origen de la pestaña de selección no se desmarca. Un paso de deshacer. Devuelve el mensaje de la barra de estado. Parámetros — table: tabla de la hoja con pestaña de selección; follow: true: seguir; false: dejar de seguir. Argumentos en orden, o una tabla de argumentos con nombre: tables.follow_choice{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.from_range": {
+		"signature": "tables.from_range(row, col, [sheet])",
+		"summary": "Vuelve a hacer una tabla a partir de un rango (tabla convertida por tables.to_range) que contiene la celda: su primera fila da los encabezados. Devuelve el nombre de la tabla.",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: tables.from_range{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.get": {
+		"signature": "tables.get(table)",
+		"summary": "Describe una tabla: hoja, posición, número de filas y columnas (tipo, fórmula, clave, referencia: ref = \"Tabla[Clave]\" para una columna cuya validación sale de la clave de otra tabla).",
+		"details": "Parámetros — table: nombre de la tabla."
+	},
+	"tables.header_to_title": {
+		"signature": "tables.header_to_title(table)",
+		"summary": "El encabezado de la tabla era un título: pasa a ser una celda libre encima, y la primera fila de datos pasa a ser el encabezado.",
+		"details": "Parámetros — table: nombre de la tabla. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.indexes": {
+		"signature": "tables.indexes(table)",
+		"summary": "Enumera los índices creados en el servidor para una tabla compartida de un libro colaborativo (propietario o diseñador).",
+		"details": "Parámetros — table: nombre de la tabla."
+	},
+	"tables.insert_row": {
+		"signature": "tables.insert_row(table, [row])",
+		"summary": "Inserta una fila vacía antes de la fila de datos row (si falta: al final de la tabla).",
+		"details": "Una clave de enteros recibe ahí el número siguiente (el mayor más 1, sin renumerar); una primera columna de enteros en serie regular (10, 20, 30…), el número siguiente si la fila se añade al final. Parámetros — table: nombre de la tabla; row: fila de datos, desde 1. Argumentos en orden, o una tabla de argumentos con nombre: tables.insert_row{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.keep_row_numbers": {
+		"signature": "tables.keep_row_numbers(table)",
+		"summary": "La tabla, sin clave, designa sus filas por su número (1 = primera, en el orden de la tabla; cambia si se ordenan o insertan filas): REFERENCE(T[Col]; n) lee la n-ésima fila, EXISTE(T; n) dice si existe, un RECHERCHEV (BUSCARV) se convierte en INDEX/EQUIV (primera fila encontrada, duplicados permitidos). Lattis ya no propone clave para esta tabla. La otra opción es tables.set_key.",
+		"details": "Parámetros — table: nombre de la tabla. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.key_check": {
+		"signature": "tables.key_check(table, column)",
+		"summary": "Indica si una columna puede ser la clave de la tabla: devuelve \"\" si es así y, si no, el motivo.",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1). Argumentos en orden, o una tabla de argumentos con nombre: tables.key_check{table = …}."
+	},
+	"tables.last_row_out": {
+		"signature": "tables.last_row_out(table)",
+		"summary": "La última fila de datos sale de la tabla: se queda justo debajo como celdas libres, fuera de la tabla (una nota, o un total si empieza por «Total»).",
+		"details": "Parámetros — table: nombre de la tabla. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.list": {
+		"signature": "tables.list() → { {name, kind, sheet, rows, columns, types, colsField, colsFrom}, ... } (colsField: campo de columna de una tabla dinámica, cuyas columnas a partir de la colsFrom-ésima llevan los valores)",
+		"summary": "Enumera las tablas y las tablas dinámicas de todas las hojas, con sus columnas."
+	},
+	"tables.merge_sheets": {
+		"signature": "tables.merge_sheets([tables], [options]) → {sheet, sheetName, table, rows, old, keyKept, keyNote, rewritten = { {kind, sheetName, where, formula, after}, ... }, pending = { {kind, sheetName, where, formula, why}, ... }, notes, notice, families = { {name, mode, tables, rows, follows, keyNote}, ... }, cells, perValue}",
+		"summary": "Reúne tablas con las mismas columnas, cada una en su pestaña (una por mes, por año, por ciudad…), en una sola tabla en una hoja nueva, con al principio una columna de categoría sacada de los nombres de las pestañas (Mes, Año, Ciudad…) y su lista desplegable. Un solo paso de deshacer.",
+		"details": "tables: las tablas, en orden (si faltan: el mayor grupo encontrado por tables.similar). options: {name (nombre de la tabla, propuesto si no), sheet (nombre de la hoja), category = {name, type = \"date\" | \"integer\" | \"text\", values = {un valor por tabla}} (deducida de los nombres de las pestañas si no), noCategory = true (sin columna de categoría), columns (correspondencia, como la de tables.similar), old = \"delete\" | \"hide\", categoryFrom = \"sheet\" | \"title\" | \"cell:A1\", families = { {tables, mode = \"merge\" | \"once\" | \"leave\", name, columns}, ... }, noCells = true}. Se reúnen hojas enteras: cada otra familia de tablas de las pestañas (families; si falta y falta tables: las del grupo encontrado, con el modo propuesto) se convierte también en una tabla común en la misma hoja (merge: con la columna de categoría, sigue la pestaña de selección; once: un solo ejemplar, el de la última pestaña, el mismo para todos los valores; leave: se queda en su pestaña, que entonces se conserva). La disposición retoma la de la pestaña más reciente. Las celdas libres de las pestañas (títulos, totales, objetivos) se retoman: una celda idéntica en todas partes, una vez; una celda que cambia de una pestaña a otra se convierte en una celda por valor (muestra la del valor elegido). Columnas reunidas (casillas vacías donde faltaba una columna), tipos ampliados, formato y entradas no válidas conservados. La clave se conserva si ningún valor se repite de una pestaña a otra; si no, la tabla común no tiene clave (keyNote da un ejemplo). Lo que citaba las tablas antiguas se traslada a la tabla común filtrada por la categoría, en el mismo paso de deshacer, y se enumera en rewritten (formula: antes, after: después): SOMME(Janvier[Montant]) se convierte en SOMME.SI.ENS(Ventes[Montant]; Ventes[Mois]; \"=Janvier\") (fórmulas en francés; igual con MOYENNE, MAX, MIN; NBVAL se convierte en NB.SI.ENS sobre las casillas no vacías, NB cuenta los números de la columna filtrada, las funciones .SI y .SI.ENS ganan el criterio del mes, LIGNES(Janvier) se convierte en NB.SI.ENS(Ventes[Mois]; \"=Janvier\"), otra columna entera leída como rango se convierte en FILTRE(Ventes[X]; Ventes[Mois]=\"Janvier\")); una tabla dinámica pasa a la tabla común con un filtro de informe Mes = Enero, un gráfico con un filtro (config.filters). Lo que no tiene equivalente exacto (una fila concreta Janvier[X][3], REFERENCE, RECHERCHEV, EXISTE, SOUS.TOTAL, la tabla entera, un control, una consulta; el texto SQL y los scripts Lua no se detectan) se enumera en pending con el motivo (why), y las pestañas antiguas se conservan entonces ocultas (tablas renombradas Janvier_ancien) en lugar de eliminarse; sin columna de categoría, no se traslada nada. Rechazado para un libro compartido en un servidor, una hoja protegida, una tabla filtrada o cargada por una consulta. Parámetros — tables: tablas que se reúnen, en orden (si falta: el mayor grupo de pestañas parecidas); options: {name, sheet, category = {name, type, values}, noCategory, columns, old, categoryFrom, families, noCells}. Argumentos en orden, o una tabla de argumentos con nombre: tables.merge_sheets{tables = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.move": {
+		"signature": "tables.move(table, row, col)",
+		"summary": "Mueve una tabla en su hoja (esquina superior izquierda del encabezado en row, col). Colocada junto a otra tabla, se une a ella.",
+		"details": "Parámetros — table: nombre de la tabla; row: fila de la hoja, desde 1; col: columna de la hoja, desde 1. Argumentos en orden, o una tabla de argumentos con nombre: tables.move{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.promote_header": {
+		"signature": "tables.promote_header(table)",
+		"summary": "La primera fila de datos da los nombres de las columnas (una celda vacía conserva el nombre) y pasa a ser el encabezado en su lugar: el encabezado antiguo («Columna n» de una tabla escrita o pegada sin encabezados, u otros nombres) desaparece, la tabla baja una fila, su parte inferior no se mueve. Las fórmulas siguen los cambios de nombre; una columna que pasó a texto por esa fila recupera su tipo. Rechazado en una tabla filtrada, cargada por una consulta o con encabezados en dos filas.",
+		"details": "Parámetros — table: nombre de la tabla. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.remove_duplicates": {
+		"signature": "tables.remove_duplicates(table, [columns])",
+		"summary": "Elimina las filas duplicadas de una tabla (se conserva la primera) y devuelve su número.",
+		"details": "Parámetros — table: nombre de la tabla; columns: columnas comparadas (si faltan: todas). Argumentos en orden, o una tabla de argumentos con nombre: tables.remove_duplicates{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.rename": {
+		"signature": "tables.rename(table, name)",
+		"summary": "Cambia el nombre de una tabla; las fórmulas que la citan siguen.",
+		"details": "Parámetros — table: nombre de la tabla; name: nombre nuevo. Argumentos en orden, o una tabla de argumentos con nombre: tables.rename{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.rows": {
+		"signature": "tables.rows(table, [first], [count]) → {table, columns, first, total, ids, rows}",
+		"summary": "Lee filas de una tabla tal como se muestran (filtro y columnas calculadas incluidos).",
+		"details": "first se cuenta desde 1; count vale 100 por defecto (10 000 como máximo). Para filtrar o agregar, es preferible db.query. Parámetros — table: nombre de la tabla; first: primera fila, desde 1; count: número de filas (100 por defecto). Argumentos en orden, o una tabla de argumentos con nombre: tables.rows{table = …}."
+	},
+	"tables.set_key": {
+		"signature": "tables.set_key(table, column)",
+		"summary": "Convierte una columna de valores únicos en la clave de la tabla (índice UNIQUE).",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1). Argumentos en orden, o una tabla de argumentos con nombre: tables.set_key{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.set_sort_lists": {
+		"signature": "tables.set_sort_lists(lists)",
+		"summary": "Sustituye las listas personalizadas del libro (las listas predefinidas no cambian).",
+		"details": "Parámetros — lists: listas: { {name = \"Tallas\", values = {\"S\", \"M\", \"L\"}}, ... }. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.similar": {
+		"signature": "tables.similar() → { {id, tables = { {table, sheet, sheetName, rows, key, hidden}, ... }, columns = { {name, type, from, paired, text}, ... }, category = {kind, column, type, values, labels, common}, key, name, score, propose, identical, dismissed, summary, notes, sheets = { {sheet, name, hidden, copied}, ... }, families = { {tables, columns, key, name, same, mode, note}, ... }, sources = { {source, label, category}, ... }, categoryFrom, stacked, dataColumn, copies}, ... }",
+		"summary": "Busca pestañas parecidas: tablas de hojas distintas con las mismas columnas (una pestaña por mes, por año, por ciudad…), para reunirlas en una sola tabla con tables.merge_sheets. Solo lee la estructura (nombres de hojas, de tablas y de columnas).",
+		"details": "Cada grupo da sus tablas (en el orden de las pestañas), la correspondencia de las columnas (from: la columna de cada tabla, \"\" si falta; paired: emparejada por un nombre cercano), la categoría sacada de los nombres de las pestañas (kind: month, month_year, year, quarter, week, date, number, letter, default, city, shape u other; column: nombre propuesto, Mes, Año, Lote…; type; values), la clave común, el nombre propuesto, el índice de confianza (score, propose: lo bastante alto para proponerlo por iniciativa propia) y dismissed («No volver a proponer» elegido). El mayor grupo primero. Se reúnen hojas enteras: sheets (las pestañas, copied: copiada de otra pestaña del grupo; copies: su número); families: las otras tablas de esas pestañas, emparejadas familia por familia, cada una con sus tablas, sus columnas, same (mismos datos en todas partes, una lista copiada) y el modo propuesto (merge: una tabla común que sigue la categoría; once: un solo ejemplar; leave: se queda en su pestaña, si solo está en una). sources: de dónde puede venir la categoría (sheet: nombres de las pestañas; title: título encima de cada tabla; cell:A1: una celda libre que cambia de una pestaña a otra), categoryFrom: la propuesta (descrita por category). stacked: tablas parecidas apiladas en una misma hoja bajo títulos. dataColumn: una columna de fecha ya lleva la categoría (sus valores caen en el mes de cada pestaña): la columna de categoría es opcional."
+	},
+	"tables.sort": {
+		"signature": "tables.sort(table, column, [descending])",
+		"summary": "Ordena una tabla según una columna.",
+		"details": "Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1); descending: orden descendente. Argumentos en orden, o una tabla de argumentos con nombre: tables.sort{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.sort_custom": {
+		"signature": "tables.sort_custom(table, column, [values], [list], [descending])",
+		"summary": "Ordena una tabla según una columna en un orden personalizado (lista de valores o lista con nombre, como «Meses» o «Días»).",
+		"details": "Los valores de la lista van primero, en su orden (al revés con descending), comparados con el texto mostrado sin distinguir mayúsculas y minúsculas; los demás siguen en orden ascendente, las celdas vacías al final. El orden se guarda para la columna y se vuelve a aplicar al actualizar una tabla cargada por una consulta. Listas predefinidas: Jours, Jours abrégés, Mois, Mois abrégés (días, días abreviados, meses, meses abreviados); las demás se definen con tables.set_sort_lists. Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1); values: valores en el orden deseado; list: nombre de una lista personalizada (en lugar de values); descending: lista al revés. Argumentos en orden, o una tabla de argumentos con nombre: tables.sort_custom{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.sort_lists": {
+		"signature": "tables.sort_lists() → { {name, values = {...}, builtin}, ... }",
+		"summary": "Enumera las listas personalizadas de ordenación: predefinidas (Días, Meses…) y luego las del libro."
+	},
+	"tables.text_to_columns": {
+		"signature": "tables.text_to_columns(table, column, options)",
+		"summary": "Convierte el texto de una columna en columnas, como el asistente Texto en columnas de Excel: la primera parte se queda en la columna, las siguientes se convierten en columnas nuevas a la derecha. Devuelve el número de columnas importadas.",
+		"details": "options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}. delims: caracteres separadores (\";\", \",\", \" \", \"\t\"…); merge = true: separadores consecutivos contados como uno; quote: calificador de texto (\"\\\"\" por defecto en el asistente, \"'\" o \"\" para ninguno). fixed = true: ancho fijo, breaks da las posiciones de los cortes (en caracteres). columns: formato de cada columna producida, {format = \"\" (general), \"text\", \"date\" o \"skip\" (no importada), order = \"DMY\", \"MDY\", \"YMD\"… para las fechas}. decimal y thousands: separadores de los números (\",\" y \" \" por defecto). dest: celda de destino («E2») en celdas libres. Parámetros — table: nombre de la tabla; column: columna (nombre o posición desde 1); options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands}. Argumentos en orden, o una tabla de argumentos con nombre: tables.text_to_columns{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.title_to_header": {
+		"signature": "tables.title_to_header(table)",
+		"summary": "Lo inverso de tables.header_to_title, para encabezados escritos tras los datos: las celdas libres justo encima de la tabla, sobre sus columnas, pasan a ser los nombres de las columnas (una celda vacía conserva el nombre); el encabezado actual pasa a ser la 1.ª fila de datos (salvo los nombres «Columna n»), tipada como una entrada. Las fórmulas siguen los cambios de nombre. Rechazado en encabezados de dos filas, bajo celdas combinadas o una fórmula.",
+		"details": "Parámetros — table: nombre de la tabla. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.to_range": {
+		"signature": "tables.to_range(table)",
+		"summary": "Convierte una tabla en un rango de celdas libres (como Excel): encabezado y valores se quedan en el mismo sitio, con su formato; una columna calculada da su fórmula con direcciones de celdas (Cell[B2]*Cell[C2]) si se traduce de forma sencilla y, si no, sus valores. Las fórmulas que citaban la tabla en un agregado apuntan a sus celdas (Cell[B2:B9]); las demás dan #REF!. La zona sigue siendo un rango: escribir en ella, o justo al lado, no vuelve a crear una tabla.",
+		"details": "Parámetros — table: nombre de la tabla. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"tables.two_level_headers": {
+		"signature": "tables.two_level_headers(table, on)",
+		"summary": "Muestra (on = true) los encabezados de la tabla en dos filas: el nombre «Grupo.Sub» de una columna muestra su grupo en una banda encima del encabezado, combinada sobre las columnas vecinas del mismo grupo; las fórmulas y el SQL conservan el nombre completo (T[Grupo.Sub]). Al activarlo, las celdas libres de la fila encima del encabezado (combinadas o no) pasan a ser los grupos de las columnas que cubren; on = false conserva los nombres completos en una fila. Una columna de nombre simple (sin punto) está en un nivel: su casilla de la banda y su encabezado son una sola celda. Al activarlo, un grupo solo encima de un encabezado automático («Columna 17») pasa a ser el nombre de la columna, un grupo que repite el encabezado desaparece. Para ajustar: columns.rename («Grupo.Sub» o nombre simple), cells.merge / cells.unmerge en la banda (vea cells.merge), cells.set en la banda para poner o renombrar un grupo.",
+		"details": "Parámetros — table: nombre de la tabla; on: true: dos filas; false: una fila. Argumentos en orden, o una tabla de argumentos con nombre: tables.two_level_headers{table = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"ui.alert": {
+		"signature": "ui.alert(message, [title])",
+		"summary": "Muestra un mensaje en un cuadro de diálogo y espera a que el usuario lo cierre.",
+		"details": "Parámetros — message: texto del mensaje; title: título (Lattis por defecto). Argumentos en orden, o una tabla de argumentos con nombre: ui.alert{message = …}."
+	},
+	"ui.confirm": {
+		"signature": "ui.confirm(message, [title])",
+		"summary": "Hace una pregunta de sí / no; devuelve true si el usuario confirma.",
+		"details": "Parámetros — message: pregunta formulada; title: título (Lattis por defecto). Argumentos en orden, o una tabla de argumentos con nombre: ui.confirm{message = …}."
+	},
+	"ui.dialog": {
+		"signature": "ui.dialog(title, fields, [message], [ok], [cancel]) → { nombre = valor, ... } o nil",
+		"summary": "Abre un cuadro de diálogo con campos de entrada y espera la respuesta; devuelve { nombre = valor } o nil si el usuario cancela.",
+		"details": "Tipos de campos (type): \"text\" (por defecto), \"textarea\", \"password\", \"number\", \"integer\", \"checkbox\", \"select\" y \"radio\" (con options = {...}), \"date\" (devuelta como \"yyyy-mm-dd\") y \"color\" (\"#rrggbb\"). label es la etiqueta mostrada (name por defecto), default el valor propuesto, required impide validar un campo vacío, min y max acotan un número. Una casilla devuelve true o false, un número un número, los demás campos un texto. La duración máxima del script no corre mientras el cuadro está abierto. Parámetros — title: título del cuadro; fields: campos: { {name, label, type, default, options, required, placeholder, min, max}, ... }; message: texto mostrado encima de los campos; ok: etiqueta del botón de validación (OK por defecto); cancel: etiqueta del botón de cancelación (Annuler por defecto). Argumentos en orden, o una tabla de argumentos con nombre: ui.dialog{title = …}."
+	},
+	"ui.notify": {
+		"signature": "ui.notify(message)",
+		"summary": "Muestra un mensaje en la barra de estado, sin interrumpir el script.",
+		"details": "Parámetros — message: texto del mensaje."
+	},
+	"ui.prompt": {
+		"signature": "ui.prompt(message, [default], [title])",
+		"summary": "Pide un texto al usuario; devuelve el texto introducido, o nil si cancela.",
+		"details": "Parámetros — message: pregunta formulada; default: valor propuesto; title: título (Lattis por defecto). Argumentos en orden, o una tabla de argumentos con nombre: ui.prompt{message = …}."
+	},
+	"ui.select": {
+		"signature": "ui.select(row, col, [row2], [col2], [sheet]) → la nueva selección, como ui.selection",
+		"summary": "Muestra una hoja y selecciona en ella un rango (o una celda).",
+		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; row2: última fila del rango (si falta: row); col2: última columna del rango (si falta: col); sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: ui.select{row = …}."
+	},
+	"ui.select_cells": {
+		"signature": "ui.select_cells(table, column, [row], [column2], [row2]) → la nueva selección, como ui.selection",
+		"summary": "Selecciona celdas de una tabla por columna y número de fila.",
+		"details": "Sin row, toda la columna (filas de datos); column2 y row2 extienden el rango hacia la derecha y hacia abajo. Las filas se cuentan desde 1 bajo el encabezado. Parámetros — table: nombre de la tabla; column: columna (nombre o posición); row: fila de datos, desde 1 (si falta: toda la columna); column2: última columna del rango; row2: última fila del rango. Argumentos en orden, o una tabla de argumentos con nombre: ui.select_cells{table = …}."
+	},
+	"ui.select_object": {
+		"signature": "ui.select_object(name) → {kind, sheet, row, col, row2, col2, ...}",
+		"summary": "Muestra y selecciona un objeto por su nombre: tabla, tabla dinámica, gráfico (título), botón (etiqueta) o celda con nombre.",
+		"details": "La tabla se selecciona entera, encabezado incluido. Devuelve la selección, con kind: \"table\", \"pivot\", \"chart\", \"button\" o \"name\". Parámetros — name: nombre del objeto."
+	},
+	"ui.selection": {
+		"signature": "ui.selection() → {sheet, sheet_id, row, col, row2, col2, table, column, view}",
+		"summary": "Da la hoja mostrada y el rango seleccionado en la cuadrícula.",
+		"details": "row, col es la esquina superior izquierda de la selección, row2, col2 la esquina inferior derecha (desde 1). table y column designan la tabla y la columna de la celda de arriba a la izquierda, si la hay."
+	},
+	"ui.show_sheet": {
+		"signature": "ui.show_sheet(sheet)",
+		"summary": "Muestra una hoja (vista de cuadrícula), conservando la selección de la celda de arriba a la izquierda.",
+		"details": "Parámetros — sheet: hoja (nombre o identificador)."
+	},
+	"ui.show_view": {
+		"signature": "ui.show_view(view)",
+		"summary": "Muestra una vista de la aplicación: \"grid\" (hojas), \"sql\" o \"script\".",
+		"details": "Parámetros — view: grid, sql o script."
+	}
+}

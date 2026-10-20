@@ -1,0 +1,738 @@
+{
+	"buttons.create": {
+		"signature": "buttons.create(row, col, label, script, [function], [sheet])",
+		"summary": "Platziert eine Aktionsschaltfläche auf einem Blatt; ein Klick führt ein Skript der Bibliothek oder eine seiner Funktionen aus. Gibt die Kennung der Schaltfläche zurück.",
+		"details": "script ist der Name eines gespeicherten Skripts (Registerkarte Skript). Mit function wird das Skript geladen und dann die globale Funktion dieses Namens aufgerufen: Ein Skript kann mehrere Schaltflächen bedienen. Alles, was ein Klick bewirkt, wird auf einmal rückgängig gemacht. Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; label: Text der Schaltfläche; script: Name des auszuführenden Skripts; function: aufzurufende Funktion des Skripts; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: buttons.create{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"buttons.delete": {
+		"signature": "buttons.delete(button)",
+		"summary": "Löscht eine Aktionsschaltfläche.",
+		"details": "Parameter — button: Schaltfläche (Kennung oder Beschriftung). Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"buttons.list": {
+		"signature": "buttons.list([sheet]) → { {id, name, kind, label, script, function, row, col}, ... }",
+		"summary": "Listet die Aktionsschaltflächen eines Blatts auf.",
+		"details": "Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt."
+	},
+	"buttons.place": {
+		"signature": "buttons.place(button, row, col, [width], [height])",
+		"summary": "Verschiebt eine Schaltfläche (obere linke Ecke bei row, col) und ändert, falls angegeben, ihre Größe (Pixel).",
+		"details": "Parameter — button: Schaltfläche (Kennung oder Beschriftung); row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; width: Breite in Pixeln; height: Höhe in Pixeln. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: buttons.place{button = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"buttons.set": {
+		"signature": "buttons.set(button, [label], [script], [function])",
+		"summary": "Ändert die Beschriftung, das Skript oder die Funktion einer Schaltfläche (fehlende Parameter ändern sich nicht).",
+		"details": "Parameter — button: Schaltfläche (Kennung oder Beschriftung); label: Text der Schaltfläche; script: Name des Skripts; function: Funktion des Skripts (\"\": nur das Skript). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: buttons.set{button = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.clear": {
+		"signature": "cells.clear(row, col, [row2], [col2], [sheet])",
+		"summary": "Löscht den Inhalt eines Zellbereichs (Tabellen behalten ihre Form).",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; row2: letzte Zeile des Bereichs (fehlt sie: row); col2: letzte Spalte des Bereichs (fehlt sie: col); sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.clear{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.dependencies": {
+		"signature": "cells.dependencies(row, col, [sheet]) → {subject, precedents, dependents}",
+		"summary": "Liefert die Vorgänger (was die Formel der Zelle liest) und die Nachfolger (die Formeln, die sie lesen).",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.dependencies{row = …}."
+	},
+	"cells.get": {
+		"signature": "cells.get(row, col, [sheet]) → {row, col, raw, value, table, column, header, line, id}",
+		"summary": "Liest eine Zelle des Blatts: Eingabe, angezeigter Wert und, in einer Tabelle, die Tabelle, die Spalte und die Zeile.",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.get{row = …}."
+	},
+	"cells.merge": {
+		"signature": "cells.merge(row, col, [row2], [col2], [sheet]) → Anzahl der gelöschten Werte",
+		"summary": "Verbindet freie Zellen zu einer einzigen mit zentriertem Inhalt (in einer Tabelle oder PivotTable abgelehnt). Wie in Excel bleibt nur der Wert oben links erhalten. In einer Tabelle mit Überschriftengruppen (tables.two_level_headers) wird nur das Gruppenband verbunden: sein Feld und die Überschrift einer Spalte setzen die Spalte auf eine Ebene (einfacher Name: ihre Unterüberschrift oder die Gruppe, wenn die Überschrift automatisch war); mehrere benachbarte Felder des Bands bilden eine einzige Gruppe (die erste, die sie tragen, sonst „Gruppe“). Die Spalten werden umbenannt, die Formeln folgen.",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; row2: letzte Zeile des Bereichs (fehlt sie: row); col2: letzte Spalte des Bereichs (fehlt sie: col); sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.merge{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.name": {
+		"signature": "cells.name(row, col, name, [sheet])",
+		"summary": "Benennt eine freie Zelle, um sie in Formeln zu verwenden; ein leerer Name entfernt den Namen.",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; name: Name (leer: entfernen); sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.name{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.note": {
+		"signature": "cells.note(row, col, text, [sheet])",
+		"summary": "Setzt die Notiz einer Zelle (rote Ecke, beim Überfahren angezeigt); ein leerer Text entfernt sie. In einer Tabelle folgt die Notiz ihrer Zeile.",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; text: Text der Notiz (leer: entfernen); sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.note{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.paste": {
+		"signature": "cells.paste(row, col, values, [range], [sheet])",
+		"summary": "Schreibt einen Block von Werten ab einer Zelle, wie beim Einfügen: Eine Zeile mit Überschriften gefolgt von Datenzeilen erzeugt eine Tabelle; range = true schreibt ihn als Bereich freier Zellen.",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; values: Zeilen mit Werten: { {\"Name\", \"Alter\"}, {\"Lea\", 31} }; range: true: freie Zellen (ein Bereich), ohne eine Tabelle zu erstellen; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.paste{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.read": {
+		"signature": "cells.read(row, col, row2, col2, [sheet]) → { {Wert, ...}, ... }",
+		"summary": "Liest die angezeigten Werte eines Bereichs des Blatts, Zeile für Zeile: Tabellen, PivotTables und freie Zellen gleichermaßen (\"\": leere Zelle).",
+		"details": "Höchstens 100.000 Zellen; für eine ganze Tabelle sind tables.rows oder db.query direkter. Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; row2: letzte Zeile des Bereichs; col2: letzte Spalte des Bereichs; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.read{row = …}."
+	},
+	"cells.set": {
+		"signature": "cells.set(row, col, value, [sheet]) → {created, widened, from, to, invalid, keyed}",
+		"summary": "Gibt einen Wert in eine Zelle des Blatts ein, genau wie eine Eingabe im Raster.",
+		"details": "Ein Text, der mit = beginnt, ist eine Formel. Eine Eingabe neben einer Tabelle vergrößert sie, eine Eingabe in zwei aufeinanderfolgende Zeilen erzeugt eine Tabelle, \"\" löscht die Zelle. Gibt zurück, was die Eingabe bewirkt hat (Tabelle erstellt, Spalte erweitert…). Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; value: Eingabe: Text, Zahl, Wahrheitswert, Formel (=…); sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.set{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.style": {
+		"signature": "cells.style(row, col, [row2], [col2], style, [sheet])",
+		"summary": "Formatiert einen Zellbereich.",
+		"details": "style: bold, italic, underline, strike (Wahrheitswerte), font (Schriftart) und size (Größe in Punkt), color und fill (Farben \"#rrggbb\" oder aus dem Design der Arbeitsmappe: \"theme:accent1\" bis \"theme:accent6\", \"theme:dk1\", \"theme:lt1\", \"theme:dk2\", \"theme:lt2\", bei Bedarf gefolgt von \":+40\" für 40 % heller oder \":-25\" für 25 % dunkler; sie ändern sich mit dem Design), align (\"left\", \"center\" oder \"right\"), valign (\"top\", \"middle\" oder \"bottom\"), wrap (Zeilenumbruch), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" oder \"text\"), decimals (Anzahl der Nachkommastellen), no_grouping (ohne Tausendertrennzeichen), date_format (Muster eines Datums oder einer Uhrzeit: \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (alle vier Rahmenlinien) oder border_top, border_bottom, border_left, border_right, border_color, und validation (Dropdownliste: Liste der erlaubten Werte {\"Ja\", \"Nein\"} oder Quellbereich \"=Kunden[Stadt]\", \"=Cell[A1:A10]\", \"=Blatt2!Cell[A1:A10]\" oder \"=Zellname\", deren eindeutige, nicht leere Werte bei jedem Öffnen der Liste und bei jeder Eingabe neu gelesen werden). false oder \"\" entfernt die Eigenschaft. Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; row2: letzte Zeile des Bereichs (fehlt sie: row); col2: letzte Spalte des Bereichs (fehlt sie: col); style: zu setzende Eigenschaften: {bold = true, fill = \"#fff2cc\"}; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.style{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.style_lines": {
+		"signature": "cells.style_lines(axis, from, [to], style, [sheet])",
+		"summary": "Formatiert ganze Zeilen oder Spalten des Blatts (alle ihre Zellen, vorhandene und künftige, Tabellen und PivotTables eingeschlossen). Eine Zelle hat Vorrang vor ihrer Zeile, eine Zeile vor ihrer Spalte.",
+		"details": "style: bold, italic, underline, strike (Wahrheitswerte), font (Schriftart) und size (Größe in Punkt), color und fill (Farben \"#rrggbb\" oder aus dem Design der Arbeitsmappe: \"theme:accent1\" bis \"theme:accent6\", \"theme:dk1\", \"theme:lt1\", \"theme:dk2\", \"theme:lt2\", bei Bedarf gefolgt von \":+40\" für 40 % heller oder \":-25\" für 25 % dunkler; sie ändern sich mit dem Design), align (\"left\", \"center\" oder \"right\"), valign (\"top\", \"middle\" oder \"bottom\"), wrap (Zeilenumbruch), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" oder \"text\"), decimals (Anzahl der Nachkommastellen), no_grouping (ohne Tausendertrennzeichen), date_format (Muster eines Datums oder einer Uhrzeit: \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (alle vier Rahmenlinien) oder border_top, border_bottom, border_left, border_right, border_color, und validation (Dropdownliste: Liste der erlaubten Werte {\"Ja\", \"Nein\"} oder Quellbereich \"=Kunden[Stadt]\", \"=Cell[A1:A10]\", \"=Blatt2!Cell[A1:A10]\" oder \"=Zellname\", deren eindeutige, nicht leere Werte bei jedem Öffnen der Liste und bei jeder Eingabe neu gelesen werden). false oder \"\" entfernt die Eigenschaft. Parameter — axis: \"rows\" (Zeilen) oder \"cols\" (Spalten); from: erste Zeile oder Spalte, ab 1; to: letzte Zeile oder Spalte (fehlt sie: from); style: zu setzende Eigenschaften: {bold = true, fill = \"#fff2cc\"}; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.style_lines{axis = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.text_to_columns": {
+		"signature": "cells.text_to_columns(row, col, [row2], options, [sheet])",
+		"summary": "Teilt den Text der Zellen der Spalte col, Zeilen row bis row2, in Spalten auf (Excel-Assistent Text in Spalten): In freien Zellen werden die Teile nach rechts geschrieben (oder ab options.dest); in einer Tabelle werden neue Spalten eingefügt. Gibt die Anzahl der importierten Spalten zurück.",
+		"details": "options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}. delims: Trennzeichen (\";\", \",\", \" \", \"\t\"…); merge = true: aufeinanderfolgende Trennzeichen zählen als eines; quote: Textqualifizierer (\"\\\"\" standardmäßig im Assistenten, \"'\" oder \"\" für keinen). fixed = true: feste Breite, breaks gibt die Positionen der Umbrüche an (in Zeichen). columns: Format jeder erzeugten Spalte, {format = \"\" (Standard), \"text\", \"date\" oder \"skip\" (nicht importiert), order = \"DMY\", \"MDY\", \"YMD\"… für Datumswerte}. decimal und thousands: Trennzeichen der Zahlen (\",\" und \" \" standardmäßig). dest: Zielzelle („E2“) in freien Zellen. Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; row2: letzte Zeile des Bereichs (fehlt sie: row); options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.text_to_columns{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.to_values": {
+		"signature": "cells.to_values(row, col, [row2], [col2], [sheet])",
+		"summary": "Ersetzt die Formeln eines Bereichs durch ihre Werte: freie Zellen mit Formel und berechnete Spalten (vollständig) der Tabellen, die der Bereich berührt (wie columns.to_values). Formeln, die ein dynamisches Array überlaufen lassen, bleiben erhalten.",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; row2: letzte Zeile des Bereichs (fehlt sie: row); col2: letzte Spalte des Bereichs (fehlt sie: col); sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.to_values{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"cells.unmerge": {
+		"signature": "cells.unmerge(row, col, [row2], [col2], [sheet])",
+		"summary": "Hebt die Zellverbindungen auf, die den Bereich berühren. Im Band der Überschriftengruppen einer Tabelle bleibt eine Gruppe über mehrere Spalten auf der ersten, die anderen gehen auf eine Ebene (umbenannt); eine Spalte auf einer Ebene ändert sich nicht: Geben Sie ihr eine Gruppe mit cells.set auf dem Band oder columns.rename(„Gruppe.Unter“).",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; row2: letzte Zeile des Bereichs (fehlt sie: row); col2: letzte Spalte des Bereichs (fehlt sie: col); sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.unmerge{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"charts.create": {
+		"signature": "charts.create(row, col, config, [sheet])",
+		"summary": "Platziert ein Diagramm auf einem Blatt, obere linke Ecke bei row, col, und gibt seine Kennung zurück.",
+		"details": "config: {source, kind, x, series, title, …}. source ist eine Tabelle oder eine PivotTable, x die Spalte der Rubriken (x-Achse), series die Liste der dargestellten Spalten. kind: \"bar\" (Säulendiagramm: senkrechte Balken), \"column\" (waagerechte Balken), \"line\", \"area\", \"pie\", \"doughnut\", \"scatter\", \"combo\" (Balken und Linien: seriesKinds gibt die Form jeder Reihe an, \"bar\", \"line\" oder \"area\"), \"bar3d\" und \"pie3d\" (perspektivisch), \"map\" (OpenStreetMap-Karte), \"waterfall\" (Wasserfall), \"treemap\", \"radar\", \"funnel\" (Trichter), \"boxplot\" (Kastengrafik), \"histogram\" (Häufigkeiten, bins Klassen) oder \"gauge\" (Tachometer: letzter Wert der ersten Reihe, zwischen yMin und yMax).\nDarstellung: title; legend (\"bottom\", \"top\", \"right\" oder \"none\"); xTitle, yTitle, y2Title (Achsentitel); labels (Datenbeschriftungen); noGrid (ohne Gitternetzlinien); stacked (gestapelt: Balken, Flächen); yMin, yMax (Grenzen der Wertachse); colors (Farbe jeder Reihe, \"#rrggbb\"; pro Rubrik bei Kreis, Ring, Trichter und Treemap; Anstieg, Rückgang und Summe beim Wasserfall); secondary (Liste von Wahrheitswerten: Reihen auf der rechten Achse); blanks (Linien und Flächen: leere Zelle \"gap\" als Lücke, Standard, \"zero\" oder \"span\", um die Punkte zu verbinden); hidden (liest auch die vom Tabellenfilter ausgeblendeten Zeilen); filters (Diagramm aus einer Tabelle: {{field, values}, ...}, liest nur die Zeilen, deren Spalte field einen der Werte anzeigt, wie der Berichtsfilter einer PivotTable; auf der Spalte eines Auswahlregisters hat er Vorrang vor der Auswahl); width, height (Pixel) und offX, offY (Versatz in der Ankerzelle, Pixel).\nKarte: series = {Breite, Länge, optionaler Wert} (mapCoords \"pair\", Standard) oder {Koordinaten, optionaler Wert} (mapCoords \"single\": eine Zelle „48.85, 2.35“); x der Name der Punkte; mapMode \"points\" oder \"heat\" (Dichte); colorBy, Spalte, deren Werte je eine eigene Farbe erhalten; mapScale, Größenfaktor der Punkte (1 standardmäßig, von 0,25 bis 4); mapView {lat, lon, zoom} legt die Ansicht fest. Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; config: Konfiguration des Diagramms; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: charts.create{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"charts.delete": {
+		"signature": "charts.delete(chart)",
+		"summary": "Löscht ein Diagramm.",
+		"details": "Parameter — chart: Diagramm (Kennung oder Titel). Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"charts.place": {
+		"signature": "charts.place(chart, row, col, [width], [height])",
+		"summary": "Verschiebt ein Diagramm (obere linke Ecke bei row, col) und ändert, falls angegeben, seine Größe (Pixel, mindestens 160 × 120); sonst behält es seine Größe.",
+		"details": "Parameter — chart: Diagramm (Kennung oder Titel); row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; width: Breite in Pixeln; height: Höhe in Pixeln. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: charts.place{chart = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"charts.set": {
+		"signature": "charts.set(chart, config, [replace])",
+		"summary": "Ändert die Konfiguration eines Diagramms: Nur die angegebenen Felder ändern sich (replace = true ersetzt die ganze Konfiguration).",
+		"details": "config: {source, kind, x, series, title, …}. source ist eine Tabelle oder eine PivotTable, x die Spalte der Rubriken (x-Achse), series die Liste der dargestellten Spalten. kind: \"bar\" (Säulendiagramm: senkrechte Balken), \"column\" (waagerechte Balken), \"line\", \"area\", \"pie\", \"doughnut\", \"scatter\", \"combo\" (Balken und Linien: seriesKinds gibt die Form jeder Reihe an, \"bar\", \"line\" oder \"area\"), \"bar3d\" und \"pie3d\" (perspektivisch), \"map\" (OpenStreetMap-Karte), \"waterfall\" (Wasserfall), \"treemap\", \"radar\", \"funnel\" (Trichter), \"boxplot\" (Kastengrafik), \"histogram\" (Häufigkeiten, bins Klassen) oder \"gauge\" (Tachometer: letzter Wert der ersten Reihe, zwischen yMin und yMax).\nDarstellung: title; legend (\"bottom\", \"top\", \"right\" oder \"none\"); xTitle, yTitle, y2Title (Achsentitel); labels (Datenbeschriftungen); noGrid (ohne Gitternetzlinien); stacked (gestapelt: Balken, Flächen); yMin, yMax (Grenzen der Wertachse); colors (Farbe jeder Reihe, \"#rrggbb\"; pro Rubrik bei Kreis, Ring, Trichter und Treemap; Anstieg, Rückgang und Summe beim Wasserfall); secondary (Liste von Wahrheitswerten: Reihen auf der rechten Achse); blanks (Linien und Flächen: leere Zelle \"gap\" als Lücke, Standard, \"zero\" oder \"span\", um die Punkte zu verbinden); hidden (liest auch die vom Tabellenfilter ausgeblendeten Zeilen); filters (Diagramm aus einer Tabelle: {{field, values}, ...}, liest nur die Zeilen, deren Spalte field einen der Werte anzeigt, wie der Berichtsfilter einer PivotTable; auf der Spalte eines Auswahlregisters hat er Vorrang vor der Auswahl); width, height (Pixel) und offX, offY (Versatz in der Ankerzelle, Pixel).\nKarte: series = {Breite, Länge, optionaler Wert} (mapCoords \"pair\", Standard) oder {Koordinaten, optionaler Wert} (mapCoords \"single\": eine Zelle „48.85, 2.35“); x der Name der Punkte; mapMode \"points\" oder \"heat\" (Dichte); colorBy, Spalte, deren Werte je eine eigene Farbe erhalten; mapScale, Größenfaktor der Punkte (1 standardmäßig, von 0,25 bis 4); mapView {lat, lon, zoom} legt die Ansicht fest. Parameter — chart: Diagramm (Kennung oder Titel); config: zu ändernde Felder; replace: die ganze Konfiguration ersetzen (Größe, Farben, Kartenansicht… kehren zum Standard zurück). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: charts.set{chart = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"columns.delete": {
+		"signature": "columns.delete(table, column)",
+		"summary": "Löscht eine Spalte einer Tabelle (eine Tabelle behält mindestens eine Spalte).",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.delete{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"columns.fix_type": {
+		"signature": "columns.fix_type(table, column)",
+		"summary": "Legt den aktuellen Typ einer Spalte fest: Er wird nicht mehr erweitert, eine typfremde Eingabe wird als Fehler markiert.",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.fix_type{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"columns.insert": {
+		"signature": "columns.insert(table, [name], [position])",
+		"summary": "Fügt eine Spalte in eine Tabelle ein, vor der Spalte position (fehlt sie: am Ende).",
+		"details": "Parameter — table: Name der Tabelle; name: Name der Spalte; position: Position, ab 1. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.insert{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"columns.rename": {
+		"signature": "columns.rename(table, column, name)",
+		"summary": "Benennt eine Spalte um (ihre Überschrift).",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1); name: neuer Name. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.rename{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"columns.set_filter": {
+		"signature": "columns.set_filter(table, column, [values], [errors], [conds], [any])",
+		"summary": "Filtert eine Tabelle nach einer Spalte: Nur die Zeilen, deren Wert in values steht, bleiben sichtbar.",
+		"details": "values ist eine Liste von Texten wie angezeigt (\"\" für leere Zellen); errors = true behält nur die fehlerhaften Eingaben. conds filtert nach Bedingung, wie die „Textfilter“ und „Zahlenfilter“ von Excel: Jede Bedingung ist {op, value, to} mit op aus \"eq\", \"ne\" (Platzhalter * und ?), \"begins\", \"ends\", \"contains\", \"notcontains\", \"gt\", \"ge\", \"lt\", \"le\", \"between\" (value und to eingeschlossen), \"top\" und \"bottom\" (value: Anzahl der Elemente), \"above\" und \"below\" (Mittelwert). Die Bedingungen müssen alle erfüllt sein oder eine davon mit any = true. Ohne values, errors und conds wird der Filter der Spalte entfernt. Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1); values: behaltene Werte; errors: nur die Fehler behalten; conds: Bedingungen: { {op = \">\", value = \"100\"}, ... }; any: eine einzige Bedingung genügt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.set_filter{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"columns.set_rules": {
+		"signature": "columns.set_rules(table, column, rules)",
+		"summary": "Ersetzt die Regeln der bedingten Formatierung einer Spalte (leere Liste: keine); die erste erfüllte Regel gewinnt.",
+		"details": "Jede Regel ist {op, value, to, style}. op: \">\", \">=\", \"<\", \"<=\", \"=\", \"<>\", \"between\" (zwischen value und to), \"contains\", \"empty\", \"notempty\" oder \"error\". style: bold, italic, underline, strike (Wahrheitswerte), font (Schriftart) und size (Größe in Punkt), color und fill (Farben \"#rrggbb\" oder aus dem Design der Arbeitsmappe: \"theme:accent1\" bis \"theme:accent6\", \"theme:dk1\", \"theme:lt1\", \"theme:dk2\", \"theme:lt2\", bei Bedarf gefolgt von \":+40\" für 40 % heller oder \":-25\" für 25 % dunkler; sie ändern sich mit dem Design), align (\"left\", \"center\" oder \"right\"), valign (\"top\", \"middle\" oder \"bottom\"), wrap (Zeilenumbruch), format (\"0\", \"0,00\", \"%\", \"€\", \"date\", \"time\" oder \"text\"), decimals (Anzahl der Nachkommastellen), no_grouping (ohne Tausendertrennzeichen), date_format (Muster eines Datums oder einer Uhrzeit: \"jj/mm/aaaa\", \"jj mmm aaaa\", \"aaaa-mm-jj\", \"hh:mm\"…), borders (alle vier Rahmenlinien) oder border_top, border_bottom, border_left, border_right, border_color, und validation (Dropdownliste: Liste der erlaubten Werte {\"Ja\", \"Nein\"} oder Quellbereich \"=Kunden[Stadt]\", \"=Cell[A1:A10]\", \"=Blatt2!Cell[A1:A10]\" oder \"=Zellname\", deren eindeutige, nicht leere Werte bei jedem Öffnen der Liste und bei jeder Eingabe neu gelesen werden). false oder \"\" entfernt die Eigenschaft. Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1); rules: Regeln: { {op = \">\", value = \"100\", style = {fill = \"#c6efce\"}}, ... }. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.set_rules{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"columns.set_type": {
+		"signature": "columns.set_type(table, column, type)",
+		"summary": "Legt den Typ einer Spalte fest; Werte, die sich nicht umwandeln lassen, bleiben sichtbar und werden als Fehler markiert.",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1); type: integer, decimal, text, boolean oder date. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.set_type{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"columns.sort_order": {
+		"signature": "columns.sort_order(table, column) → {list, values = {...}, desc, applied}: applied, wenn es die letzte Sortierung der Tabelle ist",
+		"summary": "Gibt die gespeicherte benutzerdefinierte Reihenfolge einer Spalte zurück (nil: keine).",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.sort_order{table = …}."
+	},
+	"columns.to_values": {
+		"signature": "columns.to_values(table, column)",
+		"summary": "Macht aus einer berechneten Spalte eine eingegebene Spalte, die ihre aktuellen Werte behält, mit dem aus diesen Werten erkannten Typ. Sie behält ihren Namen (Formeln, die sie verwenden, lesen sie weiterhin), folgt aber nicht mehr den Quellen ihrer Formel. In einer geteilten Tabelle einer gemeinsamen Arbeitsmappe abgelehnt.",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.to_values{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"columns.type_mix": {
+		"signature": "columns.type_mix(table, column) → {type, off, total}",
+		"summary": "Für eine durch Erweiterung zu Text gewordene Spalte: überwiegender Typ und Anzahl der Werte, die nicht von diesem Typ sind.",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.type_mix{table = …}."
+	},
+	"columns.type_preview": {
+		"signature": "columns.type_preview(table, column, type)",
+		"summary": "Zählt die Werte einer Spalte, die sich nicht in den angegebenen Typ umwandeln ließen.",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1); type: integer, decimal, text, boolean oder date. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.type_preview{table = …}."
+	},
+	"columns.values": {
+		"signature": "columns.values(table, column) → { {text, count}, ... }",
+		"summary": "Listet die eindeutigen Werte einer Spalte mit ihrer Häufigkeit auf (höchstens 1.000).",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: columns.values{table = …}."
+	},
+	"connections.list": {
+		"signature": "connections.list() → { {id, name, kind, config = {host, port, database, user, sslmode, instance, url, header}}, ... } (kind: postgres, mysql, sqlserver oder web)",
+		"summary": "Listet die Verbindungen der Arbeitsmappe zu externen Quellen auf (ohne Kennwort: Es wird nie in der Arbeitsmappe gespeichert)."
+	},
+	"controls.add": {
+		"signature": "controls.add(kind, row, col, [props], [sheet]) → {id, name, kind, …} (wie controls.get)",
+		"summary": "Platziert ein Steuerelement auf einem Blatt, obere linke Ecke bei row, col, und gibt seine Beschreibung zurück (sein Name wird automatisch gewählt, wenn er nicht angegeben ist).",
+		"details": "Ein Steuerelement hat einen in der Arbeitsmappe eindeutigen Namen („Schaltfläche1“, „Liste1“…), automatisch gewählt und änderbar. kind: \"button\" (ein Klick führt seine Aktion aus), \"checkbox\" (Kontrollkästchen, WAHR / FALSCH), \"select\" (Dropdownliste, options), \"input\" (einzeiliger Text), \"textarea\" (mehrzeiliger Text) oder \"file\" (Dateiauswahl: die Zelle erhält den Pfad der gewählten Datei). Außer der Schaltfläche ist ein Steuerelement mit einer Zelle verknüpft (link, „B3“): sein Wert (value) ist der dieser Zelle — ein Wahrheitswert bei einem Kontrollkästchen, sonst ein Text. Eigenschaften: name, label (Text der Schaltfläche oder des Kästchens, Platzhaltertext eines Eingabefelds), link, value (in die verknüpfte Zelle geschrieben; löst das Ereignis change aus, wenn er sich ändert), options (Dropdownliste), script und function (Aktion des Steuerelements), color, hoverColor, activeColor, textColor („#rrggbb“), hidden oder visible, row, col, width, height (Pixel). Ohne link ist ein Steuerelement, das keine Schaltfläche ist, mit der Zelle rechts daneben verknüpft. Parameter — kind: \"button\", \"checkbox\", \"select\", \"input\", \"textarea\" oder \"file\"; row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; props: Eigenschaften: {label = …, link = \"B3\" (optional: ohne verknüpfte Zelle wird der Wert im Steuerelement gehalten), options = {…} oder optionsFrom = \"Kunden[Stadt]\" (Auswahl aus einer Spalte), …}; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: controls.add{kind = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"controls.delete": {
+		"signature": "controls.delete(control)",
+		"summary": "Löscht ein Steuerelement (seine verknüpfte Zelle behält ihren Wert).",
+		"details": "Parameter — control: Steuerelement (Name, Kennung oder Beschriftung). Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"controls.fire": {
+		"signature": "controls.fire(control, [event]) → {output, writes, durationMs, error} (außerhalb eines Skripts)",
+		"summary": "Löst ein Ereignis eines Steuerelements wie die Oberfläche aus (Klick auf eine Schaltfläche, change mit dem aktuellen Wert bei den anderen): Seine Aktion und dann seine Listener laufen.",
+		"details": "In einem Skript wird das Ereignis am Ende des Skripts verarbeitet. Parameter — control: Steuerelement (Name, Kennung oder Beschriftung); event: \"click\" oder \"change\" (fehlt es: das des Steuerelements). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: controls.fire{control = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"controls.get": {
+		"signature": "controls.get(control) → {id, name, kind, label, sheet, row, col, width, height, link, value, options, script, function, color, hoverColor, activeColor, textColor, hidden, listeners}",
+		"summary": "Beschreibt ein Steuerelement: Art, Beschriftung, verknüpfte Zelle und ihr Wert, Auswahlmöglichkeiten, Farben, Position, Aktion und Listener.",
+		"details": "Ein Steuerelement hat einen in der Arbeitsmappe eindeutigen Namen („Schaltfläche1“, „Liste1“…), automatisch gewählt und änderbar. kind: \"button\" (ein Klick führt seine Aktion aus), \"checkbox\" (Kontrollkästchen, WAHR / FALSCH), \"select\" (Dropdownliste, options), \"input\" (einzeiliger Text), \"textarea\" (mehrzeiliger Text) oder \"file\" (Dateiauswahl: die Zelle erhält den Pfad der gewählten Datei). Außer der Schaltfläche ist ein Steuerelement mit einer Zelle verknüpft (link, „B3“): sein Wert (value) ist der dieser Zelle — ein Wahrheitswert bei einem Kontrollkästchen, sonst ein Text. Parameter — control: Steuerelement (Name, Kennung oder Beschriftung)."
+	},
+	"controls.list": {
+		"signature": "controls.list([sheet]) → { {id, name, kind, label, sheet, row, col, width, height, link, value, options, script, function, hidden, listeners}, ... }",
+		"summary": "Listet die Steuerelemente (Schaltflächen, Kontrollkästchen, Listen, Eingabefelder, Dateiauswahlen) eines Blatts oder der ganzen Arbeitsmappe auf.",
+		"details": "Ein Steuerelement hat einen in der Arbeitsmappe eindeutigen Namen („Schaltfläche1“, „Liste1“…), automatisch gewählt und änderbar. kind: \"button\" (ein Klick führt seine Aktion aus), \"checkbox\" (Kontrollkästchen, WAHR / FALSCH), \"select\" (Dropdownliste, options), \"input\" (einzeiliger Text), \"textarea\" (mehrzeiliger Text) oder \"file\" (Dateiauswahl: die Zelle erhält den Pfad der gewählten Datei). Außer der Schaltfläche ist ein Steuerelement mit einer Zelle verknüpft (link, „B3“): sein Wert (value) ist der dieser Zelle — ein Wahrheitswert bei einem Kontrollkästchen, sonst ein Text. Parameter — sheet: Blatt (fehlt es: die ganze Arbeitsmappe)."
+	},
+	"controls.listeners": {
+		"signature": "controls.listeners([control]) → { {control, event, script, function, action}, ... }",
+		"summary": "Listet auf, was die Ereignisse eines Steuerelements oder aller ausführen: seine Aktion (action = true), dann seine Listener, der Reihe nach.",
+		"details": "Ereignisse: \"click\" (Schaltfläche) und \"change\" (neuer Wert der anderen Steuerelemente, Eingabe im Blatt oder controls.set). Ein Listener ist eine globale Funktion eines in der Bibliothek gespeicherten Skripts, aufgerufen mit der Tabelle {control, event, value, old} (auch in der globalen Variable event); er wird in der Arbeitsmappe gespeichert und überdauert das Skript. Die Aktion des Steuerelements (script und function) läuft zuerst, dann die Listener der Reihe nach. Von einem Skript ausgelöste Ereignisse laufen an seinem Ende, im selben Rückgängig-Schritt. Parameter — control: Steuerelement (fehlt es: alle)."
+	},
+	"controls.off": {
+		"signature": "controls.off(control, [event], [handler], [script])",
+		"summary": "Meldet Listener eines Steuerelements ab und gibt ihre Anzahl zurück: alle oder die eines Ereignisses, einer Funktion, eines Skripts.",
+		"details": "Die Aktion des Steuerelements (script und function, Fenster Bearbeiten) ist kein Listener: controls.set(name, {script = \"\"}) entfernt sie. Parameter — control: Steuerelement (Name, Kennung oder Beschriftung); event: Ereignis (fehlt es: alle); handler: Funktion (oder ihr Name; fehlt sie: alle); script: Skript (fehlt es: alle). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: controls.off{control = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"controls.on": {
+		"signature": "controls.on(control, event, handler, [script])",
+		"summary": "Meldet eine Funktion eines Skripts für ein Ereignis eines Steuerelements an (\"click\" einer Schaltfläche, \"change\" der anderen); sie wird bei jedem Ereignis mit {control, event, value, old} aufgerufen.",
+		"details": "Ereignisse: \"click\" (Schaltfläche) und \"change\" (neuer Wert der anderen Steuerelemente, Eingabe im Blatt oder controls.set). Ein Listener ist eine globale Funktion eines in der Bibliothek gespeicherten Skripts, aufgerufen mit der Tabelle {control, event, value, old} (auch in der globalen Variable event); er wird in der Arbeitsmappe gespeichert und überdauert das Skript. Die Aktion des Steuerelements (script und function) läuft zuerst, dann die Listener der Reihe nach. Von einem Skript ausgelöste Ereignisse laufen an seinem Ende, im selben Rückgängig-Schritt. handler ist die Funktion selbst oder ihr Name; script, standardmäßig das laufende Skript (es muss in der Bibliothek gespeichert sein). Dieselbe Funktion zweimal anzumelden ändert nichts. Parameter — control: Steuerelement (Name, Kennung oder Beschriftung); event: \"click\" oder \"change\"; handler: globale Funktion des Skripts (oder ihr Name); script: Skript der Funktion (fehlt es: das laufende Skript). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: controls.on{control = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"controls.set": {
+		"signature": "controls.set(control, props)",
+		"summary": "Ändert Eigenschaften eines Steuerelements (die anderen ändern sich nicht): Beschriftung, Wert, Auswahlmöglichkeiten, Farben, Sichtbarkeit, Position.",
+		"details": "Eigenschaften: name, label (Text der Schaltfläche oder des Kästchens, Platzhaltertext eines Eingabefelds), link, value (in die verknüpfte Zelle geschrieben; löst das Ereignis change aus, wenn er sich ändert), options (Dropdownliste), script und function (Aktion des Steuerelements), color, hoverColor, activeColor, textColor („#rrggbb“), hidden oder visible, row, col, width, height (Pixel). value zu schreiben bedeutet, den Wert in die verknüpfte Zelle einzugeben. Parameter — control: Steuerelement (Name, Kennung oder Beschriftung); props: zu ändernde Eigenschaften: {value = …, hidden = true, …}. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: controls.set{control = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"doc.recalc": {
+		"signature": "doc.recalc()",
+		"summary": "Erneuert AUJOURDHUI, MAINTENANT und ALEA (TODAY, NOW, RAND) (F9).",
+		"details": "Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"doc.set_theme": {
+		"signature": "doc.set_theme([table], [source], [name])",
+		"summary": "Ändert das Farbdesign der Arbeitsmappe: zwei Grundfarben #rrggbb, aus denen sich die Abstufungen (Überschrift, Text, Rahmen) ableiten. Ohne Farben: das Standarddesign der Einstellungen.",
+		"details": "Parameter — table: Farbe der gewöhnlichen Tabellen, #rrggbb; source: Farbe der Tabellen einer externen Quelle (Abfrage), #rrggbb; name: Name des Designs. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: doc.set_theme{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"doc.state": {
+		"signature": "doc.state() → {open, path, title, dirty, undo, redo}",
+		"summary": "Beschreibt die geöffnete Arbeitsmappe: Datei, nicht gespeicherte Änderungen, rückgängig zu machende und wiederherzustellende Aktionen."
+	},
+	"doc.theme": {
+		"signature": "doc.theme() → {id, name, table, source} oder nil",
+		"summary": "Farbdesign der Arbeitsmappe (Ansicht › Design): Farbe der gewöhnlichen Tabellen (table) und der Tabellen einer externen Quelle (source). nil: Standarddesign der Einstellungen."
+	},
+	"events.enable": {
+		"signature": "events.enable(on) → true, wenn die Ereignisse eingeschaltet waren",
+		"summary": "Schaltet die Ereignisse der Arbeitsmappe für die Sitzung ein (true) oder aus (false), wie Application.EnableEvents in Excel; gibt den vorherigen Zustand zurück.",
+		"details": "Ausgeschaltet läuft kein Listener der Arbeitsmappenereignisse; die Ereignisse der Steuerelemente (controls.on) sind nicht betroffen. Das Öffnen einer Arbeitsmappe schaltet sie wieder ein. Parameter — on: true: einschalten; false: ausschalten."
+	},
+	"events.enabled": {
+		"signature": "events.enabled() → Wahrheitswert",
+		"summary": "Gibt an, ob die Ereignisse der Arbeitsmappe eingeschaltet sind (events.enable)."
+	},
+	"events.list": {
+		"signature": "events.list([event]) → { {event, script, function}, ... }",
+		"summary": "Listet die Listener der Arbeitsmappenereignisse in der Reihenfolge auf, in der sie laufen.",
+		"details": "Ereignisse: \"open\" (Arbeitsmappe geöffnet: {path, title}); \"before_save\" (vor dem Speichern (Strg+S, Speichern unter): {path, as}; false zurückgeben bricht es ab); \"save\" (nach dem Speichern: {path}); \"before_close\" (vor dem Schließen der Arbeitsmappe oder des Fensters: {path, dirty}; false zurückgeben bricht es ab); \"sheet\" (angezeigtes Register gewechselt: {sheet, sheet_id, previous, previous_id}); \"selection\" (Auswahl geändert, sobald Maus oder Tastatur ruhen: {sheet, sheet_id, row, col, row2, col2, address, table, column}); \"change\" (vom Benutzer geänderte Zellen (Eingabe, Einfügen, Löschen, Verschieben, Tabellenzeile hinzugefügt oder gelöscht): {sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}); \"sheet_add\" (Blatt hinzugefügt (oder kopiert): {sheet, sheet_id}); \"sheet_delete\" (Blatt gelöscht: {sheet, sheet_id}); \"recalc\" (Formeln neu berechnet (F9, Neu berechnen): {}). Jede Tabelle trägt auch event (den Namen des Ereignisses); Zeilen und Spalten zählen ab 1, wie ui.selection. value und old (angezeigter Wert danach und davor) gibt es nur bei einer einzelnen eingegebenen Zelle. Nur Aktionen des Benutzers lösen diese Ereignisse aus: Was ein Skript (Listener eingeschlossen) ändert, auswählt oder anzeigt, löst keines aus, sodass ein Listener sich nie selbst erneut startet. Ein Listener ist eine globale Funktion eines in der Bibliothek gespeicherten Skripts, aufgerufen mit der Tabelle des Ereignisses (auch in der globalen Variable event); er wird in der Arbeitsmappe gespeichert und überdauert das Skript. Die Listener eines Ereignisses laufen in der Reihenfolge ihrer Anmeldung; alles, was sie ändern, wird auf einmal rückgängig gemacht (Strg+Z). Ein fehlerhafter Listener wird einmal in der Statusleiste und der Konsole gemeldet, ohne die Oberfläche zu blockieren. before_save und before_close haben höchstens 5 Sekunden (Dialogfelder ausgenommen); ein Fehler blockiert weder das Speichern noch das Schließen. Parameter — event: Ereignis (fehlt es: alle)."
+	},
+	"events.off": {
+		"signature": "events.off([event], [handler], [script]) → Anzahl der entfernten Listener",
+		"summary": "Meldet Listener der Arbeitsmappenereignisse ab und gibt ihre Anzahl zurück: alle oder die eines Ereignisses, einer Funktion, eines Skripts.",
+		"details": "Parameter — event: Ereignis (fehlt es: alle); handler: Funktion (oder ihr Name; fehlt sie: alle); script: Skript (fehlt es: alle). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: events.off{event = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"events.on": {
+		"signature": "events.on(event, handler, [script]) → true, wenn der Listener neu ist",
+		"summary": "Meldet eine Funktion eines Skripts für ein Ereignis der Arbeitsmappe an (Öffnen, Speichern, Schließen, Wechsel des Registers, der Auswahl, Eingabe…); sie wird bei jedem Ereignis mit einer Tabelle aufgerufen, die es beschreibt.",
+		"details": "Ereignisse: \"open\" (Arbeitsmappe geöffnet: {path, title}); \"before_save\" (vor dem Speichern (Strg+S, Speichern unter): {path, as}; false zurückgeben bricht es ab); \"save\" (nach dem Speichern: {path}); \"before_close\" (vor dem Schließen der Arbeitsmappe oder des Fensters: {path, dirty}; false zurückgeben bricht es ab); \"sheet\" (angezeigtes Register gewechselt: {sheet, sheet_id, previous, previous_id}); \"selection\" (Auswahl geändert, sobald Maus oder Tastatur ruhen: {sheet, sheet_id, row, col, row2, col2, address, table, column}); \"change\" (vom Benutzer geänderte Zellen (Eingabe, Einfügen, Löschen, Verschieben, Tabellenzeile hinzugefügt oder gelöscht): {sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}); \"sheet_add\" (Blatt hinzugefügt (oder kopiert): {sheet, sheet_id}); \"sheet_delete\" (Blatt gelöscht: {sheet, sheet_id}); \"recalc\" (Formeln neu berechnet (F9, Neu berechnen): {}). Jede Tabelle trägt auch event (den Namen des Ereignisses); Zeilen und Spalten zählen ab 1, wie ui.selection. value und old (angezeigter Wert danach und davor) gibt es nur bei einer einzelnen eingegebenen Zelle. Nur Aktionen des Benutzers lösen diese Ereignisse aus: Was ein Skript (Listener eingeschlossen) ändert, auswählt oder anzeigt, löst keines aus, sodass ein Listener sich nie selbst erneut startet. Ein Listener ist eine globale Funktion eines in der Bibliothek gespeicherten Skripts, aufgerufen mit der Tabelle des Ereignisses (auch in der globalen Variable event); er wird in der Arbeitsmappe gespeichert und überdauert das Skript. Die Listener eines Ereignisses laufen in der Reihenfolge ihrer Anmeldung; alles, was sie ändern, wird auf einmal rückgängig gemacht (Strg+Z). Ein fehlerhafter Listener wird einmal in der Statusleiste und der Konsole gemeldet, ohne die Oberfläche zu blockieren. before_save und before_close haben höchstens 5 Sekunden (Dialogfelder ausgenommen); ein Fehler blockiert weder das Speichern noch das Schließen. handler ist die Funktion selbst oder ihr Name; script, standardmäßig das laufende Skript (es muss in der Bibliothek gespeichert sein). Dieselbe Funktion zweimal anzumelden ändert nichts. Parameter — event: \"open\", \"before_save\", \"save\", \"before_close\", \"sheet\", \"selection\", \"change\", \"sheet_add\", \"sheet_delete\" oder \"recalc\"; handler: globale Funktion des Skripts (oder ihr Name); script: Skript der Funktion (fehlt es: das laufende Skript). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: events.on{event = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"formulas.functions": {
+		"signature": "formulas.functions()",
+		"summary": "Listet die Funktionen der Formeln auf (französische Namen), mit ihrer Syntax und ihrer Beschreibung."
+	},
+	"help.search": {
+		"signature": "help.search([query], [page]) → { {page, title, text}, ... } oder {id, title, text} oder { {id, title}, ... }",
+		"summary": "Durchsucht die Hilfe von Lattis (die Seiten des Hilfebereichs, in der Sprache der Sitzung, sonst auf Französisch): gibt die Abschnitte zu den angegebenen Wörtern, eine ganze Seite oder die Liste der Seiten zurück.",
+		"details": "query: zu suchende Wörter (zum Beispiel „Überschriften in zwei Zeilen“, „Schlüssel“, „Diagramm Filter“); page: Kennung einer vollständig zu lesenden Seite (siehe die ohne Parameter zurückgegebene Liste). Ohne query und page: die Liste der Seiten. Die beschriebenen Vorgehensweisen (Menüs, Klicks) haben oft einen entsprechenden Befehl: tables.two_level_headers, tables.header_to_title, tables.set_key… Parameter — query: zu suchende Wörter; page: Kennung einer Seite (prise-en-main, formules, sql…). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: help.search{query = …}."
+	},
+	"http.get": {
+		"signature": "http.get(url, [options]) → {status, ok, url, headers, body, json}",
+		"summary": "Sendet eine HTTP-GET-Anfrage (http:// oder https://) und gibt die Antwort zurück.",
+		"details": "Die Antwort: status (200, 404…), ok (true bei einem Status 2xx), url (endgültige Adresse nach den Weiterleitungen), headers (Namen in Kleinbuchstaben), body (Text) und json (der dekodierte Inhalt, wenn die Antwort JSON ist). Ein Fehlerstatus (404, 500…) ist kein Lua-Fehler: ok prüfen; ein Netzwerkausfall oder eine Zeitüberschreitung ist einer (pcall fängt ihn ab). Vor der ersten Anfrage an einen Host fragt Lattis den Benutzer um Erlaubnis (für die Arbeitsmappe speicherbar; Registerkarte Skript › Netzwerkzugriff, um sie zu prüfen); der MCP-Server erreicht nur bereits erlaubte Hosts. Zeitlimit: standardmäßig 15 s (timeout, höchstens 120 s), nicht auf die maximale Laufzeit des Skripts angerechnet; Antwort von höchstens 10 MB; höchstens 10 Weiterleitungen; die Schaltfläche Anhalten bricht die Anfrage ab. Parameter — url: Adresse (http:// oder https://); options: {headers = {Name = Wert}, timeout = Sekunden}. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: http.get{url = …}."
+	},
+	"http.post": {
+		"signature": "http.post(url, [body], [options]) → {status, ok, url, headers, body, json}",
+		"summary": "Sendet eine HTTP-POST-Anfrage und gibt die Antwort zurück; ein Textinhalt wird unverändert gesendet, eine Tabelle als JSON.",
+		"details": "Die Antwort: status (200, 404…), ok (true bei einem Status 2xx), url (endgültige Adresse nach den Weiterleitungen), headers (Namen in Kleinbuchstaben), body (Text) und json (der dekodierte Inhalt, wenn die Antwort JSON ist). Ein Fehlerstatus (404, 500…) ist kein Lua-Fehler: ok prüfen; ein Netzwerkausfall oder eine Zeitüberschreitung ist einer (pcall fängt ihn ab). Vor der ersten Anfrage an einen Host fragt Lattis den Benutzer um Erlaubnis (für die Arbeitsmappe speicherbar; Registerkarte Skript › Netzwerkzugriff, um sie zu prüfen); der MCP-Server erreicht nur bereits erlaubte Hosts. Zeitlimit: standardmäßig 15 s (timeout, höchstens 120 s), nicht auf die maximale Laufzeit des Skripts angerechnet; Antwort von höchstens 10 MB; höchstens 10 Weiterleitungen; die Schaltfläche Anhalten bricht die Anfrage ab. Parameter — url: Adresse (http:// oder https://); body: Inhalt: Text oder als JSON kodierte Tabelle (Content-Type: application/json); options: {headers = {Name = Wert}, timeout = Sekunden}. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: http.post{url = …}."
+	},
+	"http.request": {
+		"signature": "http.request(url, [method], [headers], [body], [json], [timeout]) → {status, ok, url, headers, body, json}",
+		"summary": "Sendet eine beliebige HTTP-Anfrage (GET, POST, PUT, PATCH, DELETE…) und gibt die Antwort zurück.",
+		"details": "json kodiert eine Tabelle als JSON-Inhalt (mit dem passenden Content-Type-Header); body sendet einen Text unverändert. Die Antwort: status (200, 404…), ok (true bei einem Status 2xx), url (endgültige Adresse nach den Weiterleitungen), headers (Namen in Kleinbuchstaben), body (Text) und json (der dekodierte Inhalt, wenn die Antwort JSON ist). Ein Fehlerstatus (404, 500…) ist kein Lua-Fehler: ok prüfen; ein Netzwerkausfall oder eine Zeitüberschreitung ist einer (pcall fängt ihn ab). Vor der ersten Anfrage an einen Host fragt Lattis den Benutzer um Erlaubnis (für die Arbeitsmappe speicherbar; Registerkarte Skript › Netzwerkzugriff, um sie zu prüfen); der MCP-Server erreicht nur bereits erlaubte Hosts. Zeitlimit: standardmäßig 15 s (timeout, höchstens 120 s), nicht auf die maximale Laufzeit des Skripts angerechnet; Antwort von höchstens 10 MB; höchstens 10 Weiterleitungen; die Schaltfläche Anhalten bricht die Anfrage ab. Parameter — url: Adresse (http:// oder https://); method: Methode (standardmäßig GET); headers: Header: {Name = Wert}; body: Inhalt der Anfrage (Text); json: Inhalt der Anfrage: als JSON kodierte Tabelle; timeout: Zeitlimit in Sekunden (standardmäßig 15, höchstens 120). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: http.request{url = …}."
+	},
+	"pages.add": {
+		"signature": "pages.add([name], [source], [before], [kind]) → {id, name, kind}",
+		"summary": "Fügt eine Webseite (HTML, CSS und JavaScript in einem isolierten Rahmen) oder ein Dokument (kind = \"doc\": formatierter Text) hinzu und gibt {id, name, kind} zurück.",
+		"details": "Die Seite spricht mit der Arbeitsmappe über lattis.call(\"Befehl\", {Argumente}), das ein Promise zurückgibt (eine erlaubte Liste der Skriptbefehle: Lesen wie sheets.list oder db.query, Werte wie cells.set oder db.execute, ui.*, http.*, buttons.run; keine Dateien, keine Skripte, keine Struktur, keine Schutzfunktionen), und lattis.on(\"change\", Funktion), aufgerufen, wenn sich die Arbeitsmappe ändert. Ohne source erhält die Seite eine Beispielvorlage. Ohne before wird das Register am Ende hinzugefügt. Parameter — name: Name des Registers (standardmäßig Page1…); source: HTML-Inhalt der Seite; before: Blatt, vor dem eingefügt wird; kind: \"html\" (Standard) oder \"doc\": Dokument, dessen Inhalt ein Quill-Delta in JSON ist. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: pages.add{name = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"pages.get": {
+		"signature": "pages.get([sheet]) → HTML-Text",
+		"summary": "Gibt den HTML-Inhalt einer Webseite zurück.",
+		"details": "Parameter — sheet: Webseite (Name oder Kennung); fehlt sie: das angezeigte Register."
+	},
+	"pages.set": {
+		"signature": "pages.set(sheet, source)",
+		"summary": "Ersetzt den HTML-Inhalt einer Webseite.",
+		"details": "Parameter — sheet: Webseite (Name oder Kennung); source: neuer HTML-Inhalt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: pages.set{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"pivots.create": {
+		"signature": "pivots.create(config) → {id, name} (das Blatt)",
+		"summary": "Erstellt eine PivotTable auf einem neuen Blatt und gibt dieses Blatt zurück.",
+		"details": "config: {source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source ist eine Tabelle, rowFields die Liste der Zeilenfelder, cols das Spaltenfeld, values eine Liste von {field, agg, show} (agg: \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" oder \"max\"; show: \"\", \"pctTotal\", \"pctRow\" oder \"pctCol\"), filters eine Liste von {field, values}. Mit mehreren Zeilenfeldern erscheint die PivotTable als Baum: subtotals platziert die Teilergebnisse der Gruppen (\"\" in der Zeile der Gruppe, \"bottom\" darunter, \"none\" keine); collapsed listet die reduzierten Gruppen, jede durch ihre Beschriftungen ({\"Personal\"}, {\"Personal\", \"Paris\"}); collapseAll reduziert alles außer den Gruppen in expanded. calc fügt berechnete Felder hinzu, eine Liste von {name, text}: text ist eine Formel über die Spalten jeder Zeile der Quelltabelle (\"=ANNEE([Date])\", \"=GAUCHE([Code];2)\", Formeln auf Französisch), und name der Name des Felds, das dann wie eine Spalte in rowFields, cols, values oder filters kommt (die Zeilen werden nach seinem Ergebnis gruppiert). Parameter — config: Konfiguration der PivotTable. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"pivots.delete": {
+		"signature": "pivots.delete(pivot)",
+		"summary": "Löscht eine PivotTable (ihr Blatt bleibt).",
+		"details": "Parameter — pivot: PivotTable (Kennung oder Name). Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"pivots.set": {
+		"signature": "pivots.set(pivot, config)",
+		"summary": "Ersetzt die Konfiguration einer PivotTable.",
+		"details": "config: {source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}. source ist eine Tabelle, rowFields die Liste der Zeilenfelder, cols das Spaltenfeld, values eine Liste von {field, agg, show} (agg: \"sum\", \"count\", \"countDistinct\", \"avg\", \"min\" oder \"max\"; show: \"\", \"pctTotal\", \"pctRow\" oder \"pctCol\"), filters eine Liste von {field, values}. Mit mehreren Zeilenfeldern erscheint die PivotTable als Baum: subtotals platziert die Teilergebnisse der Gruppen (\"\" in der Zeile der Gruppe, \"bottom\" darunter, \"none\" keine); collapsed listet die reduzierten Gruppen, jede durch ihre Beschriftungen ({\"Personal\"}, {\"Personal\", \"Paris\"}); collapseAll reduziert alles außer den Gruppen in expanded. calc fügt berechnete Felder hinzu, eine Liste von {name, text}: text ist eine Formel über die Spalten jeder Zeile der Quelltabelle (\"=ANNEE([Date])\", \"=GAUCHE([Code];2)\", Formeln auf Französisch), und name der Name des Felds, das dann wie eine Spalte in rowFields, cols, values oder filters kommt (die Zeilen werden nach seinem Ergebnis gruppiert). Parameter — pivot: PivotTable (Kennung oder Name); config: neue Konfiguration. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: pivots.set{pivot = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"queries.delete": {
+		"signature": "queries.delete(query)",
+		"summary": "Löscht eine Importabfrage; ihre Tabelle bleibt auf dem Blatt.",
+		"details": "Parameter — query: Abfrage (Name oder Kennung). Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"queries.list": {
+		"signature": "queries.list() → { {id, name, source, steps, table, sheet, refreshed}, ... }",
+		"summary": "Listet die Importabfragen der Arbeitsmappe mit ihrer Quelle, ihren Schritten und der geladenen Tabelle auf."
+	},
+	"queries.preview": {
+		"signature": "queries.preview(query, [steps]) → {columns, rows, count, sample, error, errorStep}",
+		"summary": "Berechnet die Vorschau einer Abfrage (auf den ersten 1.000 Zeilen jeder Quelle) nach ihren ersten n Schritten (standardmäßig allen).",
+		"details": "Parameter — query: Abfrage (Name oder Kennung); steps: Anzahl der angewendeten Schritte. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: queries.preview{query = …}."
+	},
+	"queries.refresh": {
+		"signature": "queries.refresh(query) → {sheet, table, rows, warnings}",
+		"summary": "Aktualisiert eine Abfrage: liest ihre Quelle neu, führt ihre Schritte erneut aus und ersetzt ihre Tabelle (beim ersten Mal auf einem neuen Blatt erstellt).",
+		"details": "Parameter — query: Abfrage (Name oder Kennung). Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"queries.refresh_all": {
+		"signature": "queries.refresh_all() → { {sheet, table, rows, warnings}, ... }",
+		"summary": "Aktualisiert alle bereits in ein Blatt geladenen Abfragen.",
+		"details": "Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"queries.save": {
+		"signature": "queries.save(name, source, [steps])",
+		"summary": "Erstellt eine Importabfrage (oder ersetzt die Quelle und die Schritte derjenigen mit diesem Namen) und gibt ihre Kennung zurück. Sie wird erst beim Aktualisieren in ein Blatt geladen.",
+		"details": "source: {kind, ...} mit kind \"csv\" (path, delimiter), \"xlsx\" (path, sheet, index ab 0), \"json\" (path, recordPath: Pfad des Datensatz-Arrays, z. B. data.items), \"parquet\" (path), \"sqlite\" (path, sql), \"table\" (table), \"query\" (query: andere Abfrage), \"postgres\", \"mysql\" oder \"sqlserver\" (connection, schreibgeschütztes sql), \"web\" (url, headers = {{name, value}}, recordPath, connection: optionale Web-Verbindung mit dem Token). steps: Liste von Schritten {op, ...}: filter {conditions = {{column, cmp, value}}, any}, rename {column, name}, type {column, type}, remove/select {columns}, split {column, delimiter, parts}, replace {column, value, with}, transform {column, fn = \"trim\"|\"upper\"|\"lower\"}, addcolumn {name, expr (SQLite, [Spalte]), type}, index {name, start}, merge {other = Quelle, keys, otherKeys, join = \"left\"|\"inner\"|\"full\"|\"right\"|\"anti\", columns}, append {other}, group {columns, aggs = {{name, op, column}}}, sort {sort = {{column, desc}}}, distinct {columns}, top {count}, unpivot {columns, name, valueName}, pivot {column, valueColumn, agg}. cmp: \"=\", \"<>\", \"<\", \"<=\", \">\", \">=\", \"contains\", \"notcontains\", \"begins\", \"ends\", \"empty\", \"notempty\". Parameter — name: Name der Abfrage; source: Datenquelle; steps: Transformationsschritte. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: queries.save{name = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"scripts.check": {
+		"signature": "scripts.check(source)",
+		"summary": "Prüft die Syntax von Lua-Code, ohne ihn auszuführen; gibt \"\" zurück, wenn er korrekt ist, sonst den Fehler.",
+		"details": "Parameter — source: Lua-Code."
+	},
+	"scripts.delete": {
+		"signature": "scripts.delete(name)",
+		"summary": "Löscht ein Skript aus der Bibliothek.",
+		"details": "Parameter — name: Name des Skripts. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"scripts.list": {
+		"signature": "scripts.list() → { {id, name, source}, ... }",
+		"summary": "Listet die in der Arbeitsmappe gespeicherten Skripts mit ihrem Quelltext auf."
+	},
+	"scripts.save": {
+		"signature": "scripts.save(name, source)",
+		"summary": "Speichert ein Skript in der Bibliothek der Arbeitsmappe (ersetzt es, wenn es unter diesem Namen schon existiert).",
+		"details": "Parameter — name: Name des Skripts; source: Lua-Code. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: scripts.save{name = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.add": {
+		"signature": "sheets.add([name], [before]) → {id, name}",
+		"summary": "Fügt ein Blatt hinzu und gibt {id, name} zurück.",
+		"details": "Ohne before wird das Blatt nach dem letzten Register hinzugefügt. Ohne Namen heißt es wie im Raster („Blatt2“…). Parameter — name: Name des neuen Blatts; before: Blatt, vor dem eingefügt wird. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.add{name = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.choice": {
+		"signature": "sheets.choice([sheet]) → {name, type, table, formula, value, all, values} oder nil",
+		"summary": "Beschreibt das Auswahlregister eines Blatts: Kategorie (Spalte oder Formel), gewählter Wert und angebotene Werte; nil, wenn das Blatt keines hat.",
+		"details": "Die Auswahl filtert die Tabellen des Blatts, die die Kategoriespalte haben, oder die Spalten seiner Formel (formula, berechnete Kategorie); all: „(Alle)“, kein Filter. SQL und Skripts sehen immer alle Zeilen. Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt."
+	},
+	"sheets.choose_by": {
+		"signature": "sheets.choose_by(table, column, [value], [sheet])",
+		"summary": "Macht ein Blatt zu einem Auswahlregister nach einer Spalte einer seiner Tabellen („Auswählen nach…“, „Register nach dieser Spalte filtern“): Der Pfeil des Registers wählt den angezeigten Wert.",
+		"details": "Alle Tabellen des Blatts, die eine Spalte dieses Namens haben, folgen der Auswahl, ebenso seine PivotTables, deren Quelltabelle diese Spalte hat. Mit sheet wird das Auswahlregister auf diesem Blatt gesetzt: Das ist „Register nach diesem Feld filtern“ einer PivotTable, die nicht bei ihrer Quelltabelle liegt; die PivotTable folgt der Auswahl, die Quelltabelle (auf ihrem Blatt) wird nicht gefiltert. Ohne Wert zeigt das Register alle Werte. Parameter — table: Tabelle der Spalte (bei einer PivotTable: ihre Quelltabelle); column: Kategoriespalte (Jahr, Monat, Stadt…); value: zuerst angezeigter Wert; fehlt er: alle; sheet: Blatt des Auswahlregisters (das einer PivotTable); fehlt es: das der Tabelle. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.choose_by{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.choose_by_formula": {
+		"signature": "sheets.choose_by_formula(sheet, formula, name, [value])",
+		"summary": "Macht ein Blatt zu einem Auswahlregister nach einer Formel über die Spalten jeder Zeile („Auswählen nach › Eine Formel…“): =ANNEE([Date]), =TEXTE([Date];\"mmmm\"), =SI([Montant]>1000;\"Gros\";\"Petit\") (Formeln auf Französisch).",
+		"details": "Die Tabellen des Blatts, die alle in der Formel genannten Spalten haben, folgen der Auswahl (ebenso seine PivotTables, deren Quelltabelle sie hat): Nur die Zeilen, für die die Formel den gewählten Wert ergibt, bleiben sichtbar. Keine Spalte auszufüllen: Eine hinzugefügte Zeile erhält nichts automatisch, sie bleibt bis zum nächsten Wertwechsel sichtbar. „Neuer Wert“ (sheets.new_choice) gilt nicht. Ein Rückgängig-Schritt. Parameter — sheet: Blatt des Auswahlregisters; formula: Formel auf Französisch, Spalten in eckigen Klammern ([Date]); name: Name der Kategorie (Jahr, Monat, Größe…); value: zuerst angezeigter Wert; fehlt er: alle. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.choose_by_formula{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.clear_choice": {
+		"signature": "sheets.clear_choice([sheet])",
+		"summary": "Entfernt das Auswahlregister eines Blatts: Seine Tabellen zeigen wieder alle ihre Zeilen.",
+		"details": "Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.color": {
+		"signature": "sheets.color(sheet, [color])",
+		"summary": "Legt die Registerfarbe eines Blatts fest („#rrggbb“; leer: keine Farbe).",
+		"details": "Parameter — sheet: Blatt; color: Farbe #rrggbb oder leer. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.color{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.copy": {
+		"signature": "sheets.copy(sheet, [position]) → {id, name}",
+		"summary": "Kopiert ein Blatt (Tabellen, Zellen, Formatierung, PivotTables, Diagramme, Schaltflächen) und gibt {id, name} der Kopie zurück.",
+		"details": "Wie Verschieben oder kopieren… › Kopie erstellen. Kopierte Tabellen erhalten einen freien Namen (Verkäufe → Verkäufe_2); ein Diagramm oder eine PivotTable des Blatts, das eine kopierte Tabelle las, liest deren Kopie. Ohne position wird die Kopie direkt nach dem kopierten Blatt platziert. Parameter — sheet: zu kopierendes Blatt; position: Position der Kopie unter den Registern, ab 1. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.copy{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.delete": {
+		"signature": "sheets.delete(sheet)",
+		"summary": "Löscht ein Blatt und alles, was es enthält: Tabellen, Zellen, PivotTables, Diagramme und Schaltflächen.",
+		"details": "Ein einziger Rückgängig-Schritt stellt das Blatt mit seinem ganzen Inhalt wieder her. Die Arbeitsmappe behält mindestens ein sichtbares Blatt. Parameter — sheet: zu löschendes Blatt. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.find": {
+		"signature": "sheets.find(text, [sheet]) → { {row, col}, ... }",
+		"summary": "Sucht einen Text in einem Blatt (ohne Beachtung der Groß-/Kleinschreibung) und gibt die gefundenen Zellen zurück.",
+		"details": "Parameter — text: gesuchter Text; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.find{text = …}."
+	},
+	"sheets.freeze": {
+		"signature": "sheets.freeze(rows, [cols], [sheet])",
+		"summary": "Fixiert Bereiche: Die ersten Zeilen und Spalten bleiben beim Blättern sichtbar (0 und 0: hebt die Fixierung auf).",
+		"details": "Parameter — rows: oben fixierte Zeilen; cols: links fixierte Spalten; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.freeze{rows = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.get": {
+		"signature": "sheets.get([sheet]) → {id, name, tables, cells, names, pivots, charts, buttons}",
+		"summary": "Beschreibt den Inhalt eines Blatts: Tabellen, freie Zellen, Namen, PivotTables, Diagramme und Schaltflächen.",
+		"details": "Die Positionen (row, col) zählen ab 1. Die Werte der Tabellen liest man mit tables.rows oder db.query. Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt."
+	},
+	"sheets.hide": {
+		"signature": "sheets.hide(sheet, [hidden])",
+		"summary": "Blendet ein Blatt aus (Ausblenden) oder wieder ein (hidden = false).",
+		"details": "Ein ausgeblendetes Blatt erscheint nicht mehr in den Registern, behält aber seinen Inhalt; die Arbeitsmappe behält mindestens ein sichtbares Blatt. Parameter — sheet: aus- oder einzublendendes Blatt; hidden: true (Standard): ausblenden; false: einblenden. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.hide{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.hide_lines": {
+		"signature": "sheets.hide_lines(axis, from, [to], [show], [sheet])",
+		"summary": "Blendet ganze Zeilen oder Spalten des Blatts aus (oder ein); ihr Inhalt bleibt an Ort und Stelle und zählt in den Formeln.",
+		"details": "Parameter — axis: \"rows\" (Zeilen) oder \"cols\" (Spalten); from: erste Zeile oder Spalte, ab 1; to: letzte Zeile oder Spalte (fehlt sie: from); show: true: einblenden statt ausblenden; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.hide_lines{axis = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.list": {
+		"signature": "sheets.list() → { {id, name, protected, structureProtected, kind}, ... }",
+		"summary": "Listet die Blätter der Arbeitsmappe in der Reihenfolge der Register auf.",
+		"details": "protected ist true bei einem geschützten Blatt (Überprüfen › Blatt schützen), structureProtected bei einem Blatt mit geschützter Struktur (nur die Eingabe in seine Tabellen ist erlaubt); kind ist \"html\" bei einer Webseite, \"doc\" bei einem Dokument (fehlt bei einem Blatt)."
+	},
+	"sheets.move": {
+		"signature": "sheets.move(sheet, position)",
+		"summary": "Setzt ein Blatt an die Position position unter den Registern (1: erstes).",
+		"details": "Parameter — sheet: zu verschiebendes Blatt; position: Position, ab 1. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.move{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.new_choice": {
+		"signature": "sheets.new_choice(sheet, value)",
+		"summary": "Fügt dem Auswahlregister einen Wert hinzu („Neues Jahr…“) und zeigt ihn an: Das Blatt wirkt leer, bereit zum Ausfüllen.",
+		"details": "Parameter — sheet: Blatt mit Auswahlregister; value: neuer Wert (2026, Dezember…). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.new_choice{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.page_setup": {
+		"signature": "sheets.page_setup([sheet]) → {paper, orientation, margins = {top, bottom, left, right, header, footer}, scale, fit_wide, fit_tall, print_area, title_rows, title_cols, row_breaks, col_breaks, gridlines, headings, center_h, center_v, order, black_white, first_page, header = {left, center, right}, footer}",
+		"summary": "Liest die Seiteneinrichtung eines Blatts (Ansicht › Seite einrichten): Papier, Ausrichtung, Ränder, Skalierung, Druckbereich, Drucktitel, Seitenumbrüche, Kopf- und Fußzeile.",
+		"details": "Zeilen und Spalten ab 1, Ränder in Zentimetern. scale ist standardmäßig 100; fit_wide und fit_tall (0: automatisch) passen das Blatt an eine Anzahl Seiten in Breite und Höhe an. row_breaks: Zeilen, die eine Seite beginnen (manueller Umbruch davor). order: \"down\" (nach unten, dann nach rechts) oder \"across\". Kopf- und Fußzeile: Codes &[Page], &[Pages], &[Date], &[Heure], &[Fichier], &[Chemin], &[Onglet] (Seite, Seiten, Datum, Uhrzeit, Datei, Pfad, Register). Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt."
+	},
+	"sheets.protect": {
+		"signature": "sheets.protect([sheet], [password])",
+		"summary": "Schützt ein Blatt wie Überprüfen › Blatt schützen: Jede Änderung seines Inhalts wird danach abgelehnt.",
+		"details": "Weiterhin erlaubt sind Lesen, Auswählen, Kopieren, Filter und lesende SQL-Abfragen. Das Kennwort ist optional; es wird nicht gespeichert (nur ein gesalzener Hash). Schützen lässt sich nicht rückgängig machen. Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt; password: Kennwort zum Aufheben des Schutzes. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.protect{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.protect_structure": {
+		"signature": "sheets.protect_structure([sheet], [password])",
+		"summary": "Schützt die Struktur eines Blatts wie Überprüfen › Struktur schützen: Alles ist gesperrt außer der Eingabe in die Tabellen.",
+		"details": "Weiterhin erlaubt: die Werte der Datenzellen der Tabellen (Eingabe, Einfügen von Werten, Löschen), das Anfügen von Zeilen unter einer Tabelle oder ihr Einfügen, das Löschen von Zeilen, Sortieren und Filtern, db.insert, db.update und db.delete, das Lesen. Abgelehnt werden freie Zellen, Formatierung, Spalten und Überschriften, die Tabellen selbst, Objekte, Namen, Regeln und Datenüberprüfung, Zeilen und Spalten des Blatts, Seiteneinrichtung, das Register (Name, Farbe, Position, Löschen, Auswahlregister) und schreibende SQL-Abfragen. Das Kennwort ist optional. Schützen lässt sich nicht rückgängig machen. Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt; password: Kennwort zum Aufheben des Schutzes. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.protect_structure{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.protect_workbook": {
+		"signature": "sheets.protect_workbook([password], [sheets], [structure])",
+		"summary": "Schützt die Struktur der Arbeitsmappe wie Überprüfen › Arbeitsmappe schützen: Hinzufügen, Löschen, Umbenennen oder Verschieben von Blättern wird danach abgelehnt.",
+		"details": "Wie in Excel bleibt der Inhalt ungeschützter Blätter änderbar (siehe sheets.protect), außer mit sheets = true: Dann wird auch der Inhalt aller Blätter gesperrt, bis sheets.unprotect_workbook diese Sperre und nur sie aufhebt (einzeln geschützte Blätter bleiben geschützt). Mit structure = true wird die Struktur aller Blätter gesperrt: Nur die Eingabe in die Tabellen bleibt erlaubt (siehe sheets.protect_structure). Das Kennwort ist optional. Schützen lässt sich nicht rückgängig machen. Parameter — password: Kennwort zum Aufheben des Schutzes; sheets: auch den Inhalt aller Blätter sperren; structure: auch die Struktur aller Blätter sperren (nur Eingabe in Tabellen). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.protect_workbook{password = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.rename": {
+		"signature": "sheets.rename(sheet, name)",
+		"summary": "Benennt ein Blatt um.",
+		"details": "Parameter — sheet: umzubenennendes Blatt; name: neuer Name. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.rename{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.replace": {
+		"signature": "sheets.replace(text, by, [sheet])",
+		"summary": "Ersetzt einen Text im ganzen Blatt und gibt die Anzahl der geänderten Zellen zurück.",
+		"details": "Parameter — text: gesuchter Text; by: Ersatztext; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.replace{text = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.set_choice": {
+		"signature": "sheets.set_choice(sheet, [value])",
+		"summary": "Stellt das Auswahlregister eines Blatts auf einen Wert (das angezeigte Jahr, den Monat, die Stadt); ohne Wert auf „(Alle)“.",
+		"details": "Das ist Navigation wie ein Registerwechsel: kein Rückgängig-Schritt. Das Blatt muss bereits ein Auswahlregister haben (sheets.choose_by). Parameter — sheet: Blatt mit Auswahlregister; value: anzuzeigender Wert; fehlt er: alle. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.set_choice{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.set_column_width": {
+		"signature": "sheets.set_column_width(col, width, [sheet])",
+		"summary": "Legt die Breite (Pixel) einer Spalte des Blatts fest; 0 stellt die Standardbreite wieder her.",
+		"details": "Parameter — col: Spalte des Blatts, ab 1; width: Breite in Pixeln; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.set_column_width{col = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.set_page_setup": {
+		"signature": "sheets.set_page_setup(setup, [reset], [sheet])",
+		"summary": "Ändert die Seiteneinrichtung eines Blatts: Nur die angegebenen Felder ändern sich (dieselben Namen wie sheets.page_setup).",
+		"details": "paper: A4, A3, A5, B5, Letter, Legal, Tabloid, Executive. orientation: \"portrait\" oder \"landscape\". margins: \"normal\", \"wide\", \"narrow\" oder eine Tabelle in cm. print_area: \"A1:F40\" (\"\": der ganze benutzte Bereich). title_rows: \"1:2\"; title_cols: \"A:B\" (\"\": keine). reset = true beginnt wieder bei den Standardeinstellungen. Datei › Drucken / PDF und die Exporte .xlsx und .ods verwenden sie. Parameter — setup: zu ändernde Felder; reset: bei den Standardeinstellungen neu beginnen; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.set_page_setup{setup = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.set_row_height": {
+		"signature": "sheets.set_row_height(row, height, [sheet])",
+		"summary": "Legt die Höhe (Pixel) einer Zeile des Blatts fest; 0 stellt die Standardhöhe wieder her.",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; height: Höhe in Pixeln; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.set_row_height{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.unprotect": {
+		"signature": "sheets.unprotect([sheet], [password])",
+		"summary": "Hebt den Schutz eines Blatts auf (mit seinem Kennwort, falls es eines gibt).",
+		"details": "Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt; password: beim Schützen angegebenes Kennwort. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.unprotect{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.unprotect_structure": {
+		"signature": "sheets.unprotect_structure([sheet], [password])",
+		"summary": "Hebt den Schutz der Struktur eines Blatts auf (mit seinem Kennwort, falls es eines gibt).",
+		"details": "Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt; password: beim Schützen angegebenes Kennwort. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.unprotect_structure{sheet = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"sheets.unprotect_workbook": {
+		"signature": "sheets.unprotect_workbook([password])",
+		"summary": "Hebt den Schutz der Struktur der Arbeitsmappe auf (mit seinem Kennwort, falls es eines gibt) und die mit ihm gesetzte Sperre des Inhalts der Blätter.",
+		"details": "Parameter — password: beim Schützen angegebenes Kennwort. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.add_index": {
+		"signature": "tables.add_index(table, columns, [unique])",
+		"summary": "Legt auf dem Server einen Index über Spalten einer geteilten Tabelle einer gemeinsamen Arbeitsmappe an (Besitzer oder Designer), um die Filter und Suchen anderer Werkzeuge zu beschleunigen; unique: Die Werte wiederholen sich nicht. Nicht mit Strg+Z rückgängig zu machen: tables.drop_index entfernt ihn. Gibt seinen Namen zurück.",
+		"details": "Parameter — table: Name der Tabelle; columns: Spalten des Index (1 bis 8); unique: eindeutiger Index. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.add_index{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.clear_filters": {
+		"signature": "tables.clear_filters(table)",
+		"summary": "Entfernt alle Filter einer Tabelle.",
+		"details": "Parameter — table: Name der Tabelle. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.clear_key": {
+		"signature": "tables.clear_key(table)",
+		"summary": "Entfernt den Schlüssel einer Tabelle.",
+		"details": "Parameter — table: Name der Tabelle. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.delete": {
+		"signature": "tables.delete(tables)",
+		"summary": "Löscht eine oder mehrere ganze Tabellen (Daten eingeschlossen).",
+		"details": "Parameter — tables: Name der Tabelle oder Liste von Namen. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.delete_row": {
+		"signature": "tables.delete_row(table, row)",
+		"summary": "Löscht die Datenzeile row; die Tabelle schrumpft.",
+		"details": "Um eine Zeile über ihren Schlüssel zu löschen, verwenden Sie db.delete. Parameter — table: Name der Tabelle; row: Datenzeile, ab 1. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.delete_row{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.drop_index": {
+		"signature": "tables.drop_index(table, name)",
+		"summary": "Entfernt einen auf dem Server angelegten Index (Name von tables.add_index oder tables.indexes zurückgegeben).",
+		"details": "Parameter — table: Name der Tabelle; name: Name des Index (lattis_ix_…). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.drop_index{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.duplicates": {
+		"signature": "tables.duplicates(table, [columns])",
+		"summary": "Zählt die doppelten Zeilen einer Tabelle nach bestimmten Spalten (fehlen sie: alle).",
+		"details": "Parameter — table: Name der Tabelle; columns: verglichene Spalten. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.duplicates{table = …}."
+	},
+	"tables.extract_columns": {
+		"signature": "tables.extract_columns(table, column, column2, row, col)",
+		"summary": "Verschiebt die Spalten column bis column2 einer Tabelle in eine neue Tabelle bei row, col.",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1); column2: letzte herausgelöste Spalte; row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.extract_columns{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.follow_choice": {
+		"signature": "tables.follow_choice(table, [follow]) → Meldung",
+		"summary": "Setzt oder entfernt das Häkchen „Dem Jahr folgen“ (dem Monat, der Stadt…) bei einer Tabelle eines Blatts mit Auswahlregister: Eine folgende Tabelle zeigt nur die Zeilen des gewählten Werts, und eine hinzugefügte Zeile erhält diesen Wert.",
+		"details": "follow = true (Standard): fügt die Kategoriespalte als letzte hinzu (ausgeblendet, solange ein Wert gewählt ist), gefüllt mit dem angezeigten Wert. follow = false: entfernt die Spalte, wenn sie nur einen Wert hat (nichts geht verloren); sonst bleibt sie, und die Tabelle folgt der Auswahl nicht mehr (Einstellung bei der Tabelle gespeichert). Bei der Quellspalte des Auswahlregisters lässt sich das Häkchen nicht entfernen. Ein Rückgängig-Schritt. Gibt die Meldung der Statusleiste zurück. Parameter — table: Tabelle des Blatts mit Auswahlregister; follow: true: folgen; false: nicht mehr folgen. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.follow_choice{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.from_range": {
+		"signature": "tables.from_range(row, col, [sheet])",
+		"summary": "Macht aus einem Bereich (durch tables.to_range umgewandelte Tabelle), der die Zelle enthält, wieder eine Tabelle: Seine erste Zeile liefert die Überschriften. Gibt den Namen der Tabelle zurück.",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.from_range{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.get": {
+		"signature": "tables.get(table)",
+		"summary": "Beschreibt eine Tabelle: Blatt, Position, Anzahl der Zeilen und Spalten (Typ, Formel, Schlüssel, Bezug: ref = \"Tabelle[Schlüssel]\" bei einer Spalte, deren Datenüberprüfung aus dem Schlüssel einer anderen Tabelle stammt).",
+		"details": "Parameter — table: Name der Tabelle."
+	},
+	"tables.header_to_title": {
+		"signature": "tables.header_to_title(table)",
+		"summary": "Die Überschrift der Tabelle war ein Titel: Sie wird eine freie Zelle darüber, und die erste Datenzeile wird zur Überschrift.",
+		"details": "Parameter — table: Name der Tabelle. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.indexes": {
+		"signature": "tables.indexes(table)",
+		"summary": "Listet die auf dem Server angelegten Indizes einer geteilten Tabelle einer gemeinsamen Arbeitsmappe auf (Besitzer oder Designer).",
+		"details": "Parameter — table: Name der Tabelle."
+	},
+	"tables.insert_row": {
+		"signature": "tables.insert_row(table, [row])",
+		"summary": "Fügt eine leere Zeile vor der Datenzeile row ein (fehlt sie: am Ende der Tabelle).",
+		"details": "Ein ganzzahliger Schlüssel erhält dort die nächste Nummer (die größte plus 1, ohne Neunummerierung); eine erste Spalte mit Ganzzahlen in regelmäßiger Folge (10, 20, 30…) die nächste Nummer, wenn die Zeile am Ende angefügt wird. Parameter — table: Name der Tabelle; row: Datenzeile, ab 1. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.insert_row{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.keep_row_numbers": {
+		"signature": "tables.keep_row_numbers(table)",
+		"summary": "Die Tabelle ohne Schlüssel bezeichnet ihre Zeilen mit ihrer Nummer (1 = erste, in der Reihenfolge der Tabelle; sie ändert sich, wenn man Zeilen sortiert oder einfügt): REFERENCE(T[Col]; n) liest die n-te Zeile, EXISTE(T; n) sagt, ob sie existiert, ein RECHERCHEV (SVERWEIS) wird zu INDEX/EQUIV (erste gefundene Zeile, Duplikate erlaubt). Lattis schlägt für diese Tabelle keinen Schlüssel mehr vor. Die andere Wahl ist tables.set_key.",
+		"details": "Parameter — table: Name der Tabelle. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.key_check": {
+		"signature": "tables.key_check(table, column)",
+		"summary": "Gibt an, ob eine Spalte der Schlüssel der Tabelle werden kann: gibt \"\" zurück, wenn ja, sonst den Grund.",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.key_check{table = …}."
+	},
+	"tables.last_row_out": {
+		"signature": "tables.last_row_out(table)",
+		"summary": "Die letzte Datenzeile verlässt die Tabelle: Sie bleibt direkt darunter als freie Zellen, außerhalb der Tabelle gehalten (eine Notiz oder eine Summe, wenn sie mit „Total“ beginnt).",
+		"details": "Parameter — table: Name der Tabelle. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.list": {
+		"signature": "tables.list() → { {name, kind, sheet, rows, columns, types, colsField, colsFrom}, ... } (colsField: Spaltenfeld einer PivotTable, deren Spalten ab der colsFrom-ten die Werte tragen)",
+		"summary": "Listet die Tabellen und PivotTables aller Blätter mit ihren Spalten auf."
+	},
+	"tables.merge_sheets": {
+		"signature": "tables.merge_sheets([tables], [options]) → {sheet, sheetName, table, rows, old, keyKept, keyNote, rewritten = { {kind, sheetName, where, formula, after}, ... }, pending = { {kind, sheetName, where, formula, why}, ... }, notes, notice, families = { {name, mode, tables, rows, follows, keyNote}, ... }, cells, perValue}",
+		"summary": "Fasst Tabellen mit denselben Spalten, jede auf ihrem Register (eines pro Monat, pro Jahr, pro Stadt…), zu einer einzigen Tabelle auf einem neuen Blatt zusammen, mit einer vorangestellten Kategoriespalte aus den Registernamen (Monat, Jahr, Stadt…) und ihrer Dropdownliste. Ein einziger Rückgängig-Schritt.",
+		"details": "tables: die Tabellen in Reihenfolge (fehlen sie: die größte von tables.similar gefundene Gruppe). options: {name (Name der Tabelle, sonst vorgeschlagen), sheet (Name des Blatts), category = {name, type = \"date\" | \"integer\" | \"text\", values = {ein Wert pro Tabelle}} (sonst aus den Registernamen abgeleitet), noCategory = true (keine Kategoriespalte), columns (Zuordnung, wie die von tables.similar), old = \"delete\" | \"hide\", categoryFrom = \"sheet\" | \"title\" | \"cell:A1\", families = { {tables, mode = \"merge\" | \"once\" | \"leave\", name, columns}, ... }, noCells = true}. Es werden ganze Blätter zusammengefasst: Jede andere Tabellenfamilie der Register (families; fehlt sie bei fehlendem tables: die der gefundenen Gruppe mit dem vorgeschlagenen Modus) wird ebenfalls eine gemeinsame Tabelle auf demselben Blatt (merge: mit der Kategoriespalte folgt sie dem Auswahlregister; once: ein einziges Exemplar, das des letzten Registers, für alle Werte gleich; leave: sie bleibt auf ihrem Register, das dann erhalten wird). Das Layout übernimmt das des neuesten Registers. Die freien Zellen der Register (Titel, Summen, Ziele) werden übernommen: eine überall gleiche Zelle einmal, eine von Register zu Register wechselnde Zelle wird eine Zelle pro Wert (sie zeigt die des gewählten Werts). Spalten vereinigt (leere Felder, wo eine Spalte fehlte), Typen erweitert, Formatierung und ungültige Eingaben erhalten. Der Schlüssel bleibt, wenn sich kein Wert von einem Register zum anderen wiederholt, sonst hat die gemeinsame Tabelle keinen Schlüssel (keyNote gibt ein Beispiel). Was die alten Tabellen zitierte, wird auf die nach der Kategorie gefilterte gemeinsame Tabelle übertragen, im selben Rückgängig-Schritt, und in rewritten aufgeführt (formula: vorher, after: nachher): SOMME(Janvier[Montant]) wird SOMME.SI.ENS(Ventes[Montant]; Ventes[Mois]; \"=Janvier\") (Formeln auf Französisch; ebenso MOYENNE, MAX, MIN; NBVAL wird NB.SI.ENS auf nicht leeren Feldern, NB zählt die Zahlen der gefilterten Spalte, die .SI- und .SI.ENS-Funktionen erhalten das Monatskriterium, LIGNES(Janvier) wird NB.SI.ENS(Ventes[Mois]; \"=Janvier\"), eine andere als Bereich gelesene ganze Spalte wird FILTRE(Ventes[X]; Ventes[Mois]=\"Janvier\")); eine PivotTable wechselt auf die gemeinsame Tabelle mit einem Berichtsfilter Monat = Januar, ein Diagramm mit einem Filter (config.filters). Was keine genaue Entsprechung hat (eine bestimmte Zeile Janvier[X][3], REFERENCE, RECHERCHEV, EXISTE, SOUS.TOTAL, die ganze Tabelle, ein Steuerelement, eine Abfrage; SQL-Text und Lua-Skripts werden nicht erkannt), wird in pending mit dem Grund (why) aufgeführt, und die alten Register bleiben dann ausgeblendet erhalten (Tabellen in Janvier_ancien umbenannt), statt gelöscht zu werden; ohne Kategoriespalte wird nichts übertragen. Abgelehnt bei einer auf einem Server geteilten Arbeitsmappe, einem geschützten Blatt, einer gefilterten oder von einer Abfrage geladenen Tabelle. Parameter — tables: zusammenzufassende Tabellen, in Reihenfolge (fehlen sie: die größte Gruppe ähnlicher Register); options: {name, sheet, category = {name, type, values}, noCategory, columns, old, categoryFrom, families, noCells}. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.merge_sheets{tables = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.move": {
+		"signature": "tables.move(table, row, col)",
+		"summary": "Verschiebt eine Tabelle auf ihrem Blatt (obere linke Ecke der Überschrift bei row, col). Neben eine andere Tabelle gesetzt, schließt sie sich ihr an.",
+		"details": "Parameter — table: Name der Tabelle; row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.move{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.promote_header": {
+		"signature": "tables.promote_header(table)",
+		"summary": "Die erste Datenzeile liefert die Namen der Spalten (eine leere Zelle behält den Namen) und wird an ihrer Stelle zur Überschrift: Die alte Überschrift („Spalte n“ einer ohne Überschriften eingegebenen oder eingefügten Tabelle oder andere Namen) verschwindet, die Tabelle rückt eine Zeile nach unten, ihr unteres Ende bewegt sich nicht. Die Formeln folgen den Umbenennungen; eine wegen dieser Zeile zu Text gewordene Spalte erhält ihren Typ zurück. Abgelehnt bei einer gefilterten, von einer Abfrage geladenen Tabelle oder einer mit Überschriften in zwei Zeilen.",
+		"details": "Parameter — table: Name der Tabelle. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.remove_duplicates": {
+		"signature": "tables.remove_duplicates(table, [columns])",
+		"summary": "Löscht die doppelten Zeilen einer Tabelle (die erste bleibt) und gibt ihre Anzahl zurück.",
+		"details": "Parameter — table: Name der Tabelle; columns: verglichene Spalten (fehlen sie: alle). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.remove_duplicates{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.rename": {
+		"signature": "tables.rename(table, name)",
+		"summary": "Benennt eine Tabelle um; Formeln, die sie zitieren, folgen.",
+		"details": "Parameter — table: Name der Tabelle; name: neuer Name. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.rename{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.rows": {
+		"signature": "tables.rows(table, [first], [count]) → {table, columns, first, total, ids, rows}",
+		"summary": "Liest Zeilen einer Tabelle, wie sie angezeigt werden (Filter und berechnete Spalten eingeschlossen).",
+		"details": "first zählt ab 1; count ist standardmäßig 100 (höchstens 10.000). Zum Filtern oder Aggregieren ist db.query besser. Parameter — table: Name der Tabelle; first: erste Zeile, ab 1; count: Anzahl der Zeilen (standardmäßig 100). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.rows{table = …}."
+	},
+	"tables.set_key": {
+		"signature": "tables.set_key(table, column)",
+		"summary": "Macht eine Spalte mit eindeutigen Werten zum Schlüssel der Tabelle (UNIQUE-Index).",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.set_key{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.set_sort_lists": {
+		"signature": "tables.set_sort_lists(lists)",
+		"summary": "Ersetzt die benutzerdefinierten Listen der Arbeitsmappe (die vordefinierten Listen ändern sich nicht).",
+		"details": "Parameter — lists: Listen: { {name = \"Größen\", values = {\"S\", \"M\", \"L\"}}, ... }. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.similar": {
+		"signature": "tables.similar() → { {id, tables = { {table, sheet, sheetName, rows, key, hidden}, ... }, columns = { {name, type, from, paired, text}, ... }, category = {kind, column, type, values, labels, common}, key, name, score, propose, identical, dismissed, summary, notes, sheets = { {sheet, name, hidden, copied}, ... }, families = { {tables, columns, key, name, same, mode, note}, ... }, sources = { {source, label, category}, ... }, categoryFrom, stacked, dataColumn, copies}, ... }",
+		"summary": "Sucht ähnliche Register: Tabellen verschiedener Blätter mit denselben Spalten (ein Register pro Monat, pro Jahr, pro Stadt…), um sie mit tables.merge_sheets zu einer einzigen Tabelle zusammenzufassen. Liest nur die Struktur (Namen der Blätter, Tabellen und Spalten).",
+		"details": "Jede Gruppe liefert ihre Tabellen (in der Reihenfolge der Register), die Zuordnung der Spalten (from: die Spalte jeder Tabelle, \"\", wenn sie fehlt; paired: über einen ähnlichen Namen zugeordnet), die aus den Registernamen abgeleitete Kategorie (kind: month, month_year, year, quarter, week, date, number, letter, default, city, shape oder other; column: vorgeschlagener Name, Monat, Jahr, Los…; type; values), den gemeinsamen Schlüssel, den vorgeschlagenen Namen, den Vertrauenswert (score, propose: hoch genug, um es von sich aus vorzuschlagen) und dismissed („Nicht mehr vorschlagen“ gewählt). Die größte Gruppe zuerst. Es werden ganze Blätter zusammengefasst: sheets (die Register, copied: von einem anderen Register der Gruppe kopiert; copies: ihre Anzahl); families: die anderen Tabellen dieser Register, Familie für Familie zugeordnet, jede mit ihren Tabellen, ihren Spalten, same (überall dieselben Daten, eine kopierte Liste) und dem vorgeschlagenen Modus (merge: eine gemeinsame Tabelle, die der Kategorie folgt; once: ein einziges Exemplar; leave: bleibt auf ihrem Register, wenn sie nur auf einem Register ist). sources: woher die Kategorie kommen kann (sheet: Registernamen; title: Titel über jeder Tabelle; cell:A1: eine freie Zelle, die von Register zu Register wechselt), categoryFrom: die vorgeschlagene (durch category beschrieben). stacked: ähnliche Tabellen auf einem Blatt unter Titeln gestapelt. dataColumn: Eine Datumsspalte trägt die Kategorie bereits (ihre Werte fallen in den Monat jedes Registers): Die Kategoriespalte ist optional."
+	},
+	"tables.sort": {
+		"signature": "tables.sort(table, column, [descending])",
+		"summary": "Sortiert eine Tabelle nach einer Spalte.",
+		"details": "Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1); descending: absteigende Reihenfolge. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.sort{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.sort_custom": {
+		"signature": "tables.sort_custom(table, column, [values], [list], [descending])",
+		"summary": "Sortiert eine Tabelle nach einer Spalte in einer benutzerdefinierten Reihenfolge (Liste von Werten oder benannte Liste wie „Monate“ oder „Tage“).",
+		"details": "Die Werte der Liste kommen zuerst, in ihrer Reihenfolge (umgekehrt mit descending), mit dem angezeigten Text verglichen, ohne Beachtung der Groß-/Kleinschreibung; die anderen folgen aufsteigend, leere Zellen am Ende. Die Reihenfolge wird für die Spalte gespeichert und beim Aktualisieren einer von einer Abfrage geladenen Tabelle erneut angewendet. Vordefinierte Listen: Jours, Jours abrégés, Mois, Mois abrégés (Tage, Tage abgekürzt, Monate, Monate abgekürzt); die anderen werden mit tables.set_sort_lists definiert. Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1); values: Werte in der gewünschten Reihenfolge; list: Name einer benutzerdefinierten Liste (statt values); descending: Liste umgekehrt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.sort_custom{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.sort_lists": {
+		"signature": "tables.sort_lists() → { {name, values = {...}, builtin}, ... }",
+		"summary": "Listet die benutzerdefinierten Sortierlisten auf: vordefinierte (Tage, Monate…), dann die der Arbeitsmappe."
+	},
+	"tables.text_to_columns": {
+		"signature": "tables.text_to_columns(table, column, options)",
+		"summary": "Teilt den Text einer Spalte in Spalten auf, wie der Excel-Assistent Text in Spalten: Der erste Teil bleibt in der Spalte, die folgenden werden neue Spalten rechts davon. Gibt die Anzahl der importierten Spalten zurück.",
+		"details": "options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}. delims: Trennzeichen (\";\", \",\", \" \", \"\t\"…); merge = true: aufeinanderfolgende Trennzeichen zählen als eines; quote: Textqualifizierer (\"\\\"\" standardmäßig im Assistenten, \"'\" oder \"\" für keinen). fixed = true: feste Breite, breaks gibt die Positionen der Umbrüche an (in Zeichen). columns: Format jeder erzeugten Spalte, {format = \"\" (Standard), \"text\", \"date\" oder \"skip\" (nicht importiert), order = \"DMY\", \"MDY\", \"YMD\"… für Datumswerte}. decimal und thousands: Trennzeichen der Zahlen (\",\" und \" \" standardmäßig). dest: Zielzelle („E2“) in freien Zellen. Parameter — table: Name der Tabelle; column: Spalte (Name oder Position ab 1); options: {delims, merge, quote, fixed, breaks, columns, decimal, thousands}. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.text_to_columns{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.title_to_header": {
+		"signature": "tables.title_to_header(table)",
+		"summary": "Die Umkehrung von tables.header_to_title, für nach den Daten eingegebene Überschriften: Die freien Zellen direkt über der Tabelle, über ihren Spalten, werden die Namen der Spalten (eine leere Zelle behält den Namen); die aktuelle Überschrift wird die 1. Datenzeile (außer den Namen „Spalte n“), typisiert wie eine Eingabe. Die Formeln folgen den Umbenennungen. Abgelehnt bei Überschriften in zwei Zeilen, unter verbundenen Zellen oder einer Formel.",
+		"details": "Parameter — table: Name der Tabelle. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.to_range": {
+		"signature": "tables.to_range(table)",
+		"summary": "Wandelt eine Tabelle in einen Bereich freier Zellen um (wie Excel): Überschrift und Werte bleiben an derselben Stelle, mit ihrer Formatierung; eine berechnete Spalte liefert ihre Formel mit Zelladressen (Cell[B2]*Cell[C2]), wenn sie sich einfach übertragen lässt, sonst ihre Werte. Formeln, die die Tabelle in einem Aggregat zitierten, zielen auf ihre Zellen (Cell[B2:B9]); die anderen ergeben #REF!. Der Bereich bleibt ein Bereich: Hineinschreiben oder direkt daneben erzeugt keine Tabelle mehr.",
+		"details": "Parameter — table: Name der Tabelle. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"tables.two_level_headers": {
+		"signature": "tables.two_level_headers(table, on)",
+		"summary": "Zeigt (on = true) die Überschriften der Tabelle in zwei Zeilen: Der Name „Gruppe.Unter“ einer Spalte zeigt seine Gruppe in einem Band über der Überschrift, verbunden über die benachbarten Spalten derselben Gruppe; Formeln und SQL behalten den vollständigen Namen (T[Gruppe.Unter]). Beim Einschalten werden die freien Zellen der Zeile über der Überschrift (verbunden oder nicht) zu den Gruppen der Spalten, die sie überdecken; on = false behält die vollständigen Namen in einer Zeile. Eine Spalte mit einfachem Namen (ohne Punkt) liegt auf einer Ebene: Ihr Feld im Band und ihre Überschrift sind eine einzige Zelle. Beim Einschalten wird eine einzelne Gruppe über einer automatischen Überschrift („Spalte 17“) zum Namen der Spalte, eine Gruppe, die die Überschrift wiederholt, verschwindet. Zum Anpassen: columns.rename („Gruppe.Unter“ oder einfacher Name), cells.merge / cells.unmerge auf dem Band (siehe cells.merge), cells.set auf dem Band, um eine Gruppe zu setzen oder umzubenennen.",
+		"details": "Parameter — table: Name der Tabelle; on: true: zwei Zeilen; false: eine Zeile. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: tables.two_level_headers{table = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"ui.alert": {
+		"signature": "ui.alert(message, [title])",
+		"summary": "Zeigt eine Meldung in einem Dialogfeld an und wartet, bis der Benutzer es schließt.",
+		"details": "Parameter — message: Text der Meldung; title: Titel (standardmäßig Lattis). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: ui.alert{message = …}."
+	},
+	"ui.confirm": {
+		"signature": "ui.confirm(message, [title])",
+		"summary": "Stellt eine Ja/Nein-Frage; gibt true zurück, wenn der Benutzer bestätigt.",
+		"details": "Parameter — message: gestellte Frage; title: Titel (standardmäßig Lattis). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: ui.confirm{message = …}."
+	},
+	"ui.dialog": {
+		"signature": "ui.dialog(title, fields, [message], [ok], [cancel]) → { Name = Wert, ... } oder nil",
+		"summary": "Öffnet ein Dialogfeld mit Eingabefeldern und wartet auf die Antwort; gibt { Name = Wert } zurück oder nil, wenn der Benutzer abbricht.",
+		"details": "Feldtypen (type): \"text\" (Standard), \"textarea\", \"password\", \"number\", \"integer\", \"checkbox\", \"select\" und \"radio\" (mit options = {...}), \"date\" (als \"yyyy-mm-dd\" zurückgegeben) und \"color\" (\"#rrggbb\"). label ist die angezeigte Beschriftung (standardmäßig name), default der vorgeschlagene Wert, required verhindert das Bestätigen eines leeren Felds, min und max begrenzen eine Zahl. Ein Kontrollkästchen gibt true oder false zurück, eine Zahl eine Zahl, die anderen Felder einen Text. Die maximale Laufzeit des Skripts läuft nicht, solange das Dialogfeld offen ist. Parameter — title: Titel des Dialogfelds; fields: Felder: { {name, label, type, default, options, required, placeholder, min, max}, ... }; message: über den Feldern angezeigter Text; ok: Beschriftung der Bestätigungsschaltfläche (standardmäßig OK); cancel: Beschriftung der Abbrechen-Schaltfläche (standardmäßig Annuler). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: ui.dialog{title = …}."
+	},
+	"ui.notify": {
+		"signature": "ui.notify(message)",
+		"summary": "Zeigt eine Meldung in der Statusleiste an, ohne das Skript zu unterbrechen.",
+		"details": "Parameter — message: Text der Meldung."
+	},
+	"ui.prompt": {
+		"signature": "ui.prompt(message, [default], [title])",
+		"summary": "Fragt den Benutzer nach einem Text; gibt den eingegebenen Text zurück oder nil, wenn er abbricht.",
+		"details": "Parameter — message: gestellte Frage; default: vorgeschlagener Wert; title: Titel (standardmäßig Lattis). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: ui.prompt{message = …}."
+	},
+	"ui.select": {
+		"signature": "ui.select(row, col, [row2], [col2], [sheet]) → die neue Auswahl, wie ui.selection",
+		"summary": "Zeigt ein Blatt an und wählt darin einen Bereich (oder eine Zelle) aus.",
+		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; row2: letzte Zeile des Bereichs (fehlt sie: row); col2: letzte Spalte des Bereichs (fehlt sie: col); sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: ui.select{row = …}."
+	},
+	"ui.select_cells": {
+		"signature": "ui.select_cells(table, column, [row], [column2], [row2]) → die neue Auswahl, wie ui.selection",
+		"summary": "Wählt Zellen einer Tabelle nach Spalte und Zeilennummer aus.",
+		"details": "Ohne row die ganze Spalte (Datenzeilen); column2 und row2 erweitern den Bereich nach rechts und nach unten. Die Zeilen zählen ab 1 unter der Überschrift. Parameter — table: Name der Tabelle; column: Spalte (Name oder Position); row: Datenzeile, ab 1 (fehlt sie: die ganze Spalte); column2: letzte Spalte des Bereichs; row2: letzte Zeile des Bereichs. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: ui.select_cells{table = …}."
+	},
+	"ui.select_object": {
+		"signature": "ui.select_object(name) → {kind, sheet, row, col, row2, col2, ...}",
+		"summary": "Zeigt ein Objekt über seinen Namen an und wählt es aus: Tabelle, PivotTable, Diagramm (Titel), Schaltfläche (Beschriftung) oder benannte Zelle.",
+		"details": "Die Tabelle wird ganz ausgewählt, Überschrift eingeschlossen. Gibt die Auswahl zurück, mit kind: \"table\", \"pivot\", \"chart\", \"button\" oder \"name\". Parameter — name: Name des Objekts."
+	},
+	"ui.selection": {
+		"signature": "ui.selection() → {sheet, sheet_id, row, col, row2, col2, table, column, view}",
+		"summary": "Liefert das angezeigte Blatt und den im Raster ausgewählten Bereich.",
+		"details": "row, col ist die obere linke Ecke der Auswahl, row2, col2 die untere rechte Ecke (ab 1). table und column bezeichnen die Tabelle und die Spalte der Zelle oben links, falls vorhanden."
+	},
+	"ui.show_sheet": {
+		"signature": "ui.show_sheet(sheet)",
+		"summary": "Zeigt ein Blatt an (Rasteransicht) und behält die Auswahl der Zelle oben links bei.",
+		"details": "Parameter — sheet: Blatt (Name oder Kennung)."
+	},
+	"ui.show_view": {
+		"signature": "ui.show_view(view)",
+		"summary": "Zeigt eine Ansicht der Anwendung an: \"grid\" (Blätter), \"sql\" oder \"script\".",
+		"details": "Parameter — view: grid, sql oder script."
+	}
+}
