@@ -600,7 +600,25 @@
 		{@const ms = sheets.find((x) => x.id === m.id)}
 		<div class="menu" role="menu" style:left="{m.x}px" use:dismiss={closeMenu}>
 			<div class="menu-title" title={!group?.has(m.id) && clipped(ms?.name) ? ms?.name : undefined}>{group?.has(m.id) ? `${group.size} feuilles sélectionnées` : `Feuille « ${clip(ms?.name)} »`}</div>
-			<!-- Comme Excel : insérer ; la feuille (supprimer, renommer, déplacer) ; protection et couleur ; affichage. -->
+			<!-- Ordre (demande de Louis) : la situation (plusieurs onglets choisis : les regrouper) ; le plus courant
+			     (insérer ; renommer, déplacer, couleur) ; les données (choisir par, regrouper) ; protection et
+			     affichage ; la suppression en dernier. -->
+			{#snippet mergeItem()}
+				<button
+					role="menuitem"
+					title="Réunir les tableaux de ces onglets (mêmes colonnes) en un seul, avec une colonne de catégorie"
+					onclick={() => {
+						const ids = many ? [...(group ?? [])] : [m.id];
+						closeMenu();
+						if (many) picked = new Set();
+						onmergesheets?.(ids);
+					}}><span class="ic"><Icon name="append-queries" size={16} /></span>Regrouper des onglets…</button
+				>
+			{/snippet}
+			{#if many && onmergesheets}
+				{@render mergeItem()}
+				<hr />
+			{/if}
 			<Submenu label="Insérer" disabled={!oninsert && !onpage && !ondocpage}>
 				{#snippet icon()}<span class="ic"><Icon name="sheet" size={16} /></span>{/snippet}
 				<button
@@ -633,29 +651,6 @@
 					}}><span class="ic"><Icon name="document" size={16} /></span>Document</button
 				>
 			</Submenu>
-			<hr />
-			{#if many}
-				<button
-					role="menuitem"
-					disabled={(group?.size ?? 0) >= shown.length || !ondeletemany}
-					onclick={() => {
-						const ids = [...(group ?? [])];
-						closeMenu();
-						picked = new Set();
-						ondeletemany?.(ids);
-					}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer les {group?.size} feuilles</button
-				>
-			{:else}
-				<button
-					role="menuitem"
-					disabled={shown.length <= 1 || !ondelete}
-				onclick={() => {
-					const id = m.id;
-					closeMenu();
-					ondelete?.(id);
-				}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer</button
-				>
-			{/if}
 			<button
 				role="menuitem"
 				disabled={!onrename || many}
@@ -677,30 +672,6 @@
 					const i = sheets.findIndex((x) => x.id === id);
 					moving = { id, before: sheets[i + 1]?.id ?? null, copy: !onmove };
 				}}><span class="ic"><Icon name="move-sheet" size={16} /></span>Déplacer ou copier…</button
-			>
-			{#if onmergesheets}
-				<button
-					role="menuitem"
-					title="Réunir les tableaux de ces onglets (mêmes colonnes) en un seul, avec une colonne de catégorie"
-					onclick={() => {
-						const ids = many ? [...(group ?? [])] : [m.id];
-						closeMenu();
-						if (many) picked = new Set();
-						onmergesheets?.(ids);
-					}}><span class="ic"><Icon name="append-queries" size={16} /></span>Regrouper des onglets…</button
-				>
-			{/if}
-			<hr />
-			<button
-				role="menuitem"
-				disabled={!onprotect || many}
-				title={many ? ONE : undefined}
-				onclick={() => {
-					const id = m.id;
-					closeMenu();
-					onprotect?.(id);
-				}}
-				><span class="ic"><Icon name={ms?.protected ? 'unlock' : 'lock-sheet'} size={16} /></span>{ms?.protected ? 'Ôter la protection de la feuille…' : 'Protéger la feuille…'}</button
 			>
 			<Submenu label="Couleur d'onglet" disabled={!oncolor}>
 				{#snippet icon()}<span class="ic"><Icon name="tab-color" size={16} /></span>{/snippet}
@@ -734,6 +705,7 @@
 					}}><span class="ic"><Icon name="no-color" size={16} /></span>Aucune couleur</button
 				>
 			</Submenu>
+			{#if (onchoice && !ms?.kind) || (onmergesheets && !many)}<hr />{/if}
 			{#if onchoice && !ms?.kind}
 				<!-- Onglet à choix : une colonne d'un tableau de la feuille choisit ce qu'elle montre. -->
 				<Submenu label="Choisir par" disabled={many} title={many ? ONE : 'Une flèche sur l’onglet choisit la valeur affichée (année, mois, ville…)'}>
@@ -781,7 +753,19 @@
 					{/if}
 				</Submenu>
 			{/if}
+			{#if onmergesheets && !many}{@render mergeItem()}{/if}
 			<hr />
+			<button
+				role="menuitem"
+				disabled={!onprotect || many}
+				title={many ? ONE : undefined}
+				onclick={() => {
+					const id = m.id;
+					closeMenu();
+					onprotect?.(id);
+				}}
+				><span class="ic"><Icon name={ms?.protected ? 'unlock' : 'lock-sheet'} size={16} /></span>{ms?.protected ? 'Ôter la protection de la feuille…' : 'Protéger la feuille…'}</button
+			>
 			<button
 				role="menuitem"
 				disabled={!onhide || shown.length <= (many ? group?.size ?? 1 : 1)}
@@ -804,6 +788,29 @@
 					unhiding = hiddenSheets[0]?.id ?? null;
 				}}><span class="ic"><Icon name="show" size={16} /></span>Afficher…</button
 			>
+			<hr />
+			{#if many}
+				<button
+					role="menuitem"
+					disabled={(group?.size ?? 0) >= shown.length || !ondeletemany}
+					onclick={() => {
+						const ids = [...(group ?? [])];
+						closeMenu();
+						picked = new Set();
+						ondeletemany?.(ids);
+					}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer les {group?.size} feuilles</button
+				>
+			{:else}
+				<button
+					role="menuitem"
+					disabled={shown.length <= 1 || !ondelete}
+				onclick={() => {
+					const id = m.id;
+					closeMenu();
+					ondelete?.(id);
+				}}><span class="ic"><Icon name="trash" size={16} /></span>Supprimer</button
+				>
+			{/if}
 		</div>
 	{/if}
 	{#if choiceMenu}
