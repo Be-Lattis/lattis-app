@@ -55,6 +55,7 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 		return rep, err
 	}
 	var batches []canvas.RemoteTable
+	who := map[whoKey][2]string{} // dernier modificateur des lignes reçues
 	since := map[int64]string{}
 	probe := ""
 	reloaded := 0
@@ -92,6 +93,9 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 			if covered {
 				err = r.Changes(ctx, info.WorkbookID, t.remote, t.since, skipSince(sent, t.since), func(c workbook.Change) error {
 					rt.Rows = append(rt.Rows, t.toLocal(c))
+					if c.UpdatedBy != "" {
+						who[whoKey{tbl, c.ID}] = [2]string{c.UpdatedBy, c.UpdatedAt}
+					}
 					return nil
 				})
 			} else {
@@ -140,6 +144,12 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 		}
 	}
 	applied, err := e.model.ApplyRemote(ctx, batches, e.keep, func(tx *sql.Tx) error {
+		// Cellule en conflit modifiée encore par un collègue : la réception
+		// ne la touche pas (keep), mais le conflit prend la nouvelle valeur
+		// du serveur (« Garder la sienne » la remet, le volet la montre).
+		if err := refreshConflicts(ctx, tx, batches, who); err != nil {
+			return err
+		}
 		for tbl, sp := range since {
 			if _, err := tx.ExecContext(ctx, `UPDATE _lattis_remote_tables SET since = ? WHERE tbl = ?`, sp, tbl); err != nil {
 				return err
@@ -158,6 +168,55 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 		rep.notice(fmt.Sprintf("%d ligne(s) reçue(s) du serveur n'ont pas pu être appliquées : %s", len(applied.Failed), applied.Failed[0]))
 	}
 	return rep, err
+}
+
+// whoKey : une ligne d'un tableau (dernier modificateur reçu).
+type whoKey struct {
+	tbl int64
+	id  string
+}
+
+// refreshConflicts met à jour la valeur du serveur (et son auteur, sa date
+// quand on les connaît) des conflits ouverts sur les cellules reçues.
+func refreshConflicts(ctx context.Context, tx *sql.Tx, batches []canvas.RemoteTable, who map[whoKey][2]string) error {
+	type cell struct {
+		tbl int64
+		id  string
+		col int64
+	}
+	rs, err := tx.QueryContext(ctx, `SELECT tbl, row_id, col FROM _lattis_conflicts`)
+	if err != nil {
+		return err
+	}
+	open := map[cell]bool{}
+	for rs.Next() {
+		var c cell
+		if err := rs.Scan(&c.tbl, &c.id, &c.col); err != nil {
+			rs.Close()
+			return err
+		}
+		open[c] = true
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil || len(open) == 0 {
+		return err
+	}
+	for _, bt := range batches {
+		for _, row := range bt.Rows {
+			for col, v := range row.Values {
+				if !open[cell{bt.Table, row.ID, col}] {
+					continue
+				}
+				js, _ := json.Marshal(v)
+				w := who[whoKey{bt.Table, row.ID}]
+				if _, err := tx.ExecContext(ctx, `UPDATE _lattis_conflicts SET server = ?, author = coalesce(nullif(?, ''), author), at = coalesce(nullif(?, ''), at)
+					WHERE tbl = ? AND row_id = ? AND col = ?`, string(js), w[0], w[1], bt.Table, row.ID, col); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // --- Échos ----------------------------------------------------------------------------

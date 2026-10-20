@@ -28,6 +28,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Classeur partagé rouvert après un plantage pendant un travail hors ligne : la session interrompue est proposée en récupération au lieu d'être remplacée par la version du serveur ; une copie locale abîmée est mise de côté, jamais écrasée.
 - Classeur partagé hors ligne : si sa copie locale ne peut pas être enregistrée à la fermeture (disque plein, fichier bloqué), les modifications pas encore envoyées sont gardées et proposées en récupération, avec un message, au lieu d'être perdues.
 - Classeur partagé : une cellule libre ou un changement de mise en page fait juste avant d'ouvrir un autre classeur part maintenant au serveur (ou attend la reconnexion) au lieu d'être perdu.
+- Classeur partagé, volet Conflits : si un collègue modifie encore la cellule avant votre choix, le conflit montre sa nouvelle valeur et « Garder la sienne » reprend bien celle-ci, au lieu d'une valeur périmée qui ne se corrigeait plus.
+- Classeur partagé : un nombre décimal de plus de 17 chiffres écrit hors de Lattis (formulaire, SQL, pipeline) ne met plus chaque modification de la cellule en conflit sans fin.
 
 ## 0.1.0-beta.3.2 (20/10/2026)
 

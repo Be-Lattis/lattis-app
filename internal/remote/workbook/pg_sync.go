@@ -120,8 +120,16 @@ func (w pgWriter) Update(ctx context.Context, schema, table, id string, col Remo
 		return Wrote{}, err
 	}
 	c, typ := pgx.Identifier{col.Name}.Sanitize(), pgType(col.Type)
+	// Condition : la valeur que le poste avait lue. Un décimal est lu en
+	// float8 (selectExpr) : comparé en float8, sinon une valeur de plus de
+	// 17 chiffres écrite hors de Lattis ne serait jamais égale à sa lecture
+	// arrondie (conflit à chaque modification).
+	cond := c + ` IS NOT DISTINCT FROM $3::` + typ
+	if typ == "numeric" {
+		cond = c + `::float8 IS NOT DISTINCT FROM $3::float8`
+	}
 	return w.exec(ctx, `UPDATE `+pgx.Identifier{schema, table}.Sanitize()+` SET `+c+` = $1::`+typ+
-		` WHERE lattis_id = $2::uuid AND `+c+` IS NOT DISTINCT FROM $3::`+typ, []any{n, id, o})
+		` WHERE lattis_id = $2::uuid AND `+cond, []any{n, id, o})
 }
 
 // exec exécute une écriture et rend le nombre de lignes touchées.
