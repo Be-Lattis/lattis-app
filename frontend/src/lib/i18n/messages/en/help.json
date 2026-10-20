@@ -27,6 +27,7 @@
 	"fn": {
 		"english": "French name:",
 		"category": "Category:",
+		"otherCategory": "Other",
 		"arguments": "Arguments",
 		"optional": "optional",
 		"repeatable": "repeatable",

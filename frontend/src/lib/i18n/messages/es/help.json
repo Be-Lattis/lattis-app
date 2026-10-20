@@ -27,6 +27,7 @@
 	"fn": {
 		"english": "Nombre en inglés:",
 		"category": "Categoría:",
+		"otherCategory": "Otras",
 		"arguments": "Argumentos",
 		"optional": "opcional",
 		"repeatable": "repetible",

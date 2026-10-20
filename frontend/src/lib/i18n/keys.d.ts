@@ -1621,6 +1621,7 @@ export interface MessageParams {
 	'help.fn.example': Record<never, never>;
 	'help.fn.loading': Record<never, never>;
 	'help.fn.optional': Record<never, never>;
+	'help.fn.otherCategory': Record<never, never>;
 	'help.fn.repeatable': Record<never, never>;
 	'help.fn.seeAlso': Record<never, never>;
 	'help.fn.unavailable': Record<never, never>;

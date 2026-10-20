@@ -1077,7 +1077,7 @@ type FormulaHelp struct {
 // FormulaHelp renvoie le catalogue de l'aide à la saisie.
 func (s *DocumentService) FormulaHelp(ctx context.Context) (FormulaHelp, error) {
 	lang := s.sessionLang()
-	h := FormulaHelp{Functions: formula.Catalog(formula.ForLanguage(string(lang)), lang), Tables: []canvas.TableNames{}}
+	h := FormulaHelp{Functions: formula.HelpCatalog(formula.ForLanguage(string(lang)), lang), Tables: []canvas.TableNames{}}
 	d, err := s.current()
 	if err != nil {
 		return h, nil

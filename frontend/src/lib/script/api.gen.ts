@@ -473,7 +473,7 @@ export const apiReference: RefEntry[] = [
 		name: "help.search",
 		category: "workbook",
 		signature: "help.search([query], [page]) → { {page, title, text}, ... } ou {id, title, text} ou { {id, title}, ... }",
-		summary: "Cherche dans l'aide de Lattis (les pages du volet d'aide) : rend les sections qui parlent des mots donnés, ou une page entière, ou la liste des pages.",
+		summary: "Cherche dans l'aide de Lattis (les pages du volet d'aide, dans la langue de la session, le français à défaut) : rend les sections qui parlent des mots donnés, ou une page entière, ou la liste des pages.",
 		details: "query : mots à chercher (par exemple « en-têtes sur deux lignes », « sortir l'en-tête », « clé », « graphique filtre ») ; page : identifiant d'une page à lire en entier (voir la liste rendue sans paramètre). Sans query ni page : la liste des pages. Les procédures décrites (menus, clics) ont souvent une commande équivalente : tables.two_level_headers, tables.header_to_title, tables.set_key… Paramètres — query : mots à chercher ; page : identifiant d'une page (prise-en-main, formules, sql…). Arguments dans l'ordre, ou une table d'arguments nommés : help.search{query = …}.",
 		example: "for _, s in ipairs(help.search(\"en-têtes sur deux lignes\")) do\n  print(s.page, s.title)\nend",
 		args: [0, 2]

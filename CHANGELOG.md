@@ -10,6 +10,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Menus du clic droit réordonnés : en haut ce qui est propre à la cellule cliquée, puis le plus courant (tri et filtre, insertion et suppression de ligne, effacement, mise en forme, note), puis Couper, Copier, Coller. Les actions d'une colonne (renommer, type, validation, insérer ou supprimer la colonne) sont dans sa section « Colonne « Heure » », celles du tableau dans le sous-menu « Tableau « Relevés » », titrés du nom cliqué (plus de titre en tête du menu) ; de même pour la section « Tableau croisé » et le titre « Graphique « … » ». Onglets : insérer, renommer, déplacer, couleur d'abord, Supprimer en dernier ; avec plusieurs onglets choisis, Regrouper des onglets… en tête.
 - Fenêtre : la zone qui fait redimensionner par les bords gauche et droit est 30 % plus étroite (moins de redimensionnements involontaires près de la barre de défilement).
+- Aide des fonctions dans la langue choisie (anglais, allemand, espagnol, chinois) : descriptions, noms et descriptions des arguments, catégories et exemples, dans l'infobulle de signature, la liste des fonctions et les pages « fonction » de l'aide ; les noms de fonctions cités suivent la langue des formules. La recherche dans l'aide des scripts, de l'assistant et des clients MCP (`help.search`) parcourt les pages de la langue, puis les pages françaises si rien n'y répond.
 
 ### Nouveautés
 

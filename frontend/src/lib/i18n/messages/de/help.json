@@ -27,6 +27,7 @@
 	"fn": {
 		"english": "Englischer Name:",
 		"category": "Kategorie:",
+		"otherCategory": "Sonstige",
 		"arguments": "Argumente",
 		"optional": "optional",
 		"repeatable": "wiederholbar",

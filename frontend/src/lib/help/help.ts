@@ -1,6 +1,7 @@
 // Aide intégrée : pages (Markdown, lib/help/pages : le français embarqué,
 // les autres langues dans pages/<langue>/, chargées à la demande), catalogue des
-// fonctions (internal/formula/docs.go, servi par DocumentService.FormulaHelp),
+// fonctions (internal/formula/docs.go et docs_<langue>.go, servi par
+// DocumentService.FormulaHelp dans la langue de la session),
 // référence Lua (script/reference.ts), raccourcis (shell/shortcuts.ts) et
 // réglages (shell/settings.ts). Une cible d'aide est une chaîne : « sql »,
 // « sql#ancre », « fonction:SOMME.SI », « lua:db.query ».
@@ -126,7 +127,7 @@ export function findFunction(functions: readonly FunctionDoc[], name: string): F
 export function functionCategories(functions: readonly FunctionDoc[]): { name: string; functions: FunctionDoc[] }[] {
 	const out: { name: string; functions: FunctionDoc[] }[] = [];
 	for (const f of functions) {
-		const c = f.category || 'Autres';
+		const c = f.category || t('help.fn.otherCategory');
 		let g = out.find((x) => x.name === c);
 		if (!g) out.push((g = { name: c, functions: [] }));
 		g.functions.push(f);

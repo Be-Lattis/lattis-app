@@ -27,6 +27,7 @@
 	"fn": {
 		"english": "法语名称：",
 		"category": "类别：",
+		"otherCategory": "其他",
 		"arguments": "参数",
 		"optional": "可选",
 		"repeatable": "可重复",
