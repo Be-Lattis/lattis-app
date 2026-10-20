@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -85,8 +86,7 @@ func TestError(t *testing.T) {
 	if !errors.Is(e, kind) || !errors.Is(e, New("table.nameTaken", nil)) || errors.Is(e, New("sheet.nameTaken", nil)) {
 		t.Fatal("errors.Is")
 	}
-	catalogs[EN]["table.nameTaken"] = "table: “{name}” already exists"
-	t.Cleanup(func() { delete(catalogs[EN], "table.nameTaken") })
+	setEN(t, "table.nameTaken", "table: “{name}” already exists")
 	if got := Text(EN, e); got != "table: “Ventes” already exists" {
 		t.Errorf("Text = %q", got)
 	}
@@ -112,13 +112,12 @@ func (e typed) Msg() Message  { return M("table.nameTaken", Args{"name": e.name}
 // Paramètres qui sont eux-mêmes des messages ou des erreurs : écrits dans
 // la langue demandée ; erreurs typées traduites comme un *Error.
 func TestMessageArgs(t *testing.T) {
-	catalogs[EN]["table.nameTaken"] = "table: “{name}” already exists"
+	setEN(t, "table.nameTaken", "table: “{name}” already exists")
 	catalogs[EN]["test.wrap"] = "import failed: {err} ({what})"
 	fr["test.wrap"] = "import impossible : {err} ({what})"
 	fr["test.what"] = "le tableau"
 	catalogs[EN]["test.what"] = "the table"
 	t.Cleanup(func() {
-		delete(catalogs[EN], "table.nameTaken")
 		delete(catalogs[EN], "test.wrap")
 		delete(fr, "test.wrap")
 		delete(fr, "test.what")
@@ -202,4 +201,109 @@ func TestCatalogue(t *testing.T) {
 			t.Errorf("%s : accolades déséquilibrées", id)
 		}
 	}
+}
+
+// setEN remplace le temps du test le texte anglais de id (puis le rend).
+func setEN(t *testing.T, id ID, s string) {
+	old, had := catalogs[EN][id]
+	catalogs[EN][id] = s
+	t.Cleanup(func() {
+		if had {
+			catalogs[EN][id] = old
+		} else {
+			delete(catalogs[EN], id)
+		}
+	})
+}
+
+var paramName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// params : les paramètres de s, tels que render les lit ({nom}, et
+// « nom (plural) » pour {nom, plural, …}, avec ceux de ses branches) ; les
+// accolades qui ne nomment pas un paramètre ({ nom = valeur }, JSON) sont
+// du texte. Faux si une accolade n'est pas fermée ou qu'un pluriel n'a pas
+// de branche other.
+func params(s string, out map[string]bool) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == '}' {
+			return false
+		}
+		if s[i] != '{' {
+			continue
+		}
+		j := closing(s, i)
+		if j < 0 {
+			return false
+		}
+		name, rest, comma := strings.Cut(s[i+1:j], ",")
+		name = strings.TrimSpace(name)
+		if paramName.MatchString(name) {
+			kind, branches, _ := strings.Cut(rest, ",")
+			switch {
+			case !comma:
+				out[name] = true
+			case strings.TrimSpace(kind) == "plural":
+				out[name+" (plural)"] = true
+				cases := parseBranches(branches)
+				if _, ok := cases["other"]; !ok {
+					return false
+				}
+				for _, text := range cases {
+					if !params(text, out) {
+						return false
+					}
+				}
+			}
+		}
+		i = j
+	}
+	return true
+}
+
+// Chaque catalogue traduit (non vide) a exactement les identifiants du
+// français, et pour chacun les mêmes paramètres et pluriels.
+func TestCatalogueParity(t *testing.T) {
+	if len(en) == 0 {
+		t.Fatal("catalogue anglais vide")
+	}
+	for _, l := range Langs {
+		cat := catalogs[l]
+		if l == FR || len(cat) == 0 {
+			continue
+		}
+		for id := range fr {
+			if _, ok := cat[id]; !ok {
+				t.Errorf("%s : %s manque", l, id)
+			}
+		}
+		for id, s := range cat {
+			ref, ok := fr[id]
+			if !ok {
+				t.Errorf("%s : %s absent du catalogue français", l, id)
+				continue
+			}
+			if strings.TrimSpace(s) == "" && strings.TrimSpace(ref) != "" {
+				t.Errorf("%s : %s vide", l, id)
+			}
+			want, got := map[string]bool{}, map[string]bool{}
+			if !params(ref, want) {
+				t.Errorf("fr : %s mal formé", id)
+			}
+			if !params(s, got) {
+				t.Errorf("%s : %s mal formé (accolades, branche other)", l, id)
+			}
+			if fmt.Sprint(keys(want)) != fmt.Sprint(keys(got)) {
+				t.Errorf("%s : %s : paramètres %v, attendu %v", l, id, keys(got), keys(want))
+			}
+		}
+	}
+}
+
+func keys(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	slices.Sort(out)
+	return out
 }
