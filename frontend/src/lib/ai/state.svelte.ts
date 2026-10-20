@@ -6,6 +6,7 @@ import { DocumentService } from '#bindings/internal/bridge/index.js';
 import type { AIStatus } from '#bindings/internal/bridge/models.js';
 import { Events } from '@wailsio/runtime';
 import { modalOpen } from '#lib/ui/focus.js';
+import { errorText } from '#lib/i18n/index.js';
 import { applyEvent, dropRun, endRun, failedBeforeReply, markUndone, maxRun, reopenRun, replay, startRun, type ChatContext, type ChatEvent, type Item, type LogEntry } from './chat';
 
 export const chat = $state<{
@@ -97,7 +98,7 @@ export async function send(text: string, view: ChatContext) {
 	try {
 		await DocumentService.AISend(r, text, view);
 	} catch (e) {
-		error = String(e instanceof Error ? e.message : e);
+		error = errorText(e);
 	} finally {
 		chat.busy = false;
 	}
@@ -129,7 +130,7 @@ export async function resume(r: number) {
 	try {
 		await DocumentService.AIResume(r);
 	} catch (e) {
-		error = String(e instanceof Error ? e.message : e);
+		error = errorText(e);
 	} finally {
 		chat.busy = false;
 	}

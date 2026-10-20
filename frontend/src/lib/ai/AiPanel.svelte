@@ -27,7 +27,7 @@
 	import { openOutside } from './links';
 	import { sharingLabel } from './sharing';
 	import { chat, conversations, deleteConversation, load, newConversation, openConversation, refreshStatus, resume, send, stop, undoRun, type Conversation } from './state.svelte.js';
-	import { fmtDateTime } from '#lib/i18n/index.js';
+	import { errorText, fmtDateTime, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Un classeur est ouvert (sinon l'assistant n'a rien sur quoi agir). */
@@ -132,7 +132,7 @@
 			await setSetting('ai.enabled', on);
 			await refreshStatus();
 		} catch (e) {
-			enableError = String(e instanceof Error ? e.message : e);
+			enableError = errorText(e);
 		} finally {
 			enabling = false;
 		}
@@ -151,11 +151,11 @@
 	}
 	async function pickConv(id: number) {
 		convOpen = false;
-		await openConversation(id).catch((e) => (chat.error = String(e?.message ?? e)));
+		await openConversation(id).catch((e) => (chat.error = errorText(e)));
 	}
 	async function dropConv(id: number) {
 		confirmDel = null;
-		await deleteConversation(id).catch((e) => (chat.error = String(e?.message ?? e)));
+		await deleteConversation(id).catch((e) => (chat.error = errorText(e)));
 		convList = await conversations().catch(() => []);
 	}
 
@@ -201,7 +201,7 @@
 			await undoRun(r);
 			await onchanged();
 		} catch (e) {
-			chat.error = String(e instanceof Error ? e.message : e);
+			chat.error = errorText(e);
 		}
 	}
 
@@ -250,41 +250,41 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<aside class="ai-panel" class:over data-modal-exempt={over ? '' : undefined} use:resizePanel={{ key: 'assistant', min: 320 }} aria-label="Assistant IA" bind:offsetWidth={width} onkeydown={panelKey}>
+<aside class="ai-panel" class:over data-modal-exempt={over ? '' : undefined} use:resizePanel={{ key: 'assistant', min: 320 }} aria-label={t('ai.panel.title')} bind:offsetWidth={width} onkeydown={panelKey}>
 	<header>
 		<Icon name="sparkle" size={16} />
-		<strong>Assistant IA</strong>
-		{#if st?.enabled && connected && modelName && !st.managed}<span class="model" title="Modèle utilisé">{modelName}</span>{/if}
+		<strong>{t('ai.panel.title')}</strong>
+		{#if st?.enabled && connected && modelName && !st.managed}<span class="model" title={t('ai.panel.modelUsed')}>{modelName}</span>{/if}
 		<span class="spacer"></span>
 		{#if st?.enabled}
-			<button class="hd" class:on={showConnect} aria-pressed={showConnect} title="Connexion : clé d’API, abonnement Claude, modèle" onclick={() => (connectOpen = !showConnect)}
-				><Icon name="key" size={14} />Connexion</button
+			<button class="hd" class:on={showConnect} aria-pressed={showConnect} title={t('ai.panel.connect.tooltip')} onclick={() => (connectOpen = !showConnect)}
+				><Icon name="key" size={14} />{t('ai.panel.connect.label')}</button
 			>
-			<button class="hd" title="Nouvelle conversation (la conversation actuelle reste dans la liste)" disabled={chat.busy || !chat.items.length} onclick={() => newConversation().catch((e) => (chat.error = String(e?.message ?? e)))}
-				><Icon name="plus" size={14} />Nouvelle</button
+			<button class="hd" title={t('ai.panel.new.tooltip')} disabled={chat.busy || !chat.items.length} onclick={() => newConversation().catch((e) => (chat.error = errorText(e)))}
+				><Icon name="plus" size={14} />{t('ai.panel.new.label')}</button
 			>
-			<button class="hd icon" class:on={convOpen} aria-expanded={convOpen} title="Conversations" aria-label="Conversations" onclick={toggleConvs}><Icon name="list-bullet" size={14} /></button>
+			<button class="hd icon" class:on={convOpen} aria-expanded={convOpen} title={t('ai.panel.conversations')} aria-label={t('ai.panel.conversations')} onclick={toggleConvs}><Icon name="list-bullet" size={14} /></button>
 		{/if}
-		<button class="hd icon x" title="Fermer le volet (Échap)" aria-label="Fermer le volet" onclick={onclose}>✕</button>
+		<button class="hd icon x" title={t('ai.panel.close.tooltip')} aria-label={t('doc.panel.close')} onclick={onclose}>✕</button>
 	</header>
 	{#if convOpen}
-		<div class="convs" role="menu" aria-label="Conversations">
+		<div class="convs" role="menu" aria-label={t('ai.panel.conversations')}>
 			{#if !convList.length}
-				<p class="muted">Aucune conversation pour ce classeur.</p>
+				<p class="muted">{t('ai.panel.noConversation')}</p>
 			{/if}
 			{#each convList as c (c.id)}
 				<div class="conv" class:current={c.current}>
-					<button class="conv-open" role="menuitem" disabled={c.current || chat.busy} title={c.current ? 'Conversation en cours' : 'Reprendre cette conversation'} onclick={() => pickConv(c.id)}>
+					<button class="conv-open" role="menuitem" disabled={c.current || chat.busy} title={c.current ? t('ai.panel.conv.current') : t('ai.panel.conv.resume')} onclick={() => pickConv(c.id)}>
 						<span class="conv-title">{c.title}</span>
-						<span class="muted">{c.current ? 'en cours' : fmtDateTime(new Date(c.updated), { dateStyle: 'short', timeStyle: 'short' })}</span>
+						<span class="muted">{c.current ? t('ai.panel.conv.inProgress') : fmtDateTime(new Date(c.updated), { dateStyle: 'short', timeStyle: 'short' })}</span>
 					</button>
 					{#if confirmDel === c.id}
 						<span class="conv-confirm">
-							<button class="small danger" disabled={chat.busy} onclick={() => dropConv(c.id)}>Supprimer</button>
-							<button class="small" onclick={() => (confirmDel = null)}>Annuler</button>
+							<button class="small danger" disabled={chat.busy} onclick={() => dropConv(c.id)}>{t('common.delete')}</button>
+							<button class="small" onclick={() => (confirmDel = null)}>{t('common.cancel')}</button>
 						</span>
 					{:else}
-						<button class="conv-del" title="Supprimer cette conversation" aria-label="Supprimer « {c.title} »" disabled={chat.busy} onclick={() => (confirmDel = c.id)}><Icon name="trash" size={13} /></button>
+						<button class="conv-del" title={t('ai.panel.conv.delete')} aria-label={t('ai.panel.conv.deleteName', { title: c.title })} disabled={chat.busy} onclick={() => (confirmDel = c.id)}><Icon name="trash" size={13} /></button>
 					{/if}
 				</div>
 			{/each}
@@ -292,35 +292,33 @@
 	{/if}
 
 	{#if !st}
-		<p class="placeholder">{loaded ? 'L’assistant n’est pas disponible dans cette version.' : 'Chargement…'}</p>
+		<p class="placeholder">{loaded ? t('ai.panel.unavailable') : t('ai.panel.loading')}</p>
 	{:else if !st.enabled}
 		<div class="card">
-			<h3><Icon name="sparkle" size={18} /> Activer l’assistant</h3>
+			<h3><Icon name="sparkle" size={18} /> {t('ai.panel.enable.title')}</h3>
 			<p>
-				L’Assistant IA lit la structure de vos tableaux, propose une démarche et peut ajouter colonnes calculées, clés, tableaux croisés et
-				graphiques. Tout ce qu’il modifie dans une réponse s’annule d’un coup.
-			</p>
+				{t('ai.panel.enable.intro')}
+				</p>
 			<p class="muted">
-				Il passe par un fournisseur d’IA avec votre clé d’API, par un modèle installé sur ce poste, ou par Claude Desktop avec votre abonnement
-				Claude. Il ne reçoit jamais tout le classeur.
-			</p>
+			{t('ai.panel.enable.how')}
+				</p>
 			{#if st.locked}
-				<p class="note">🔒 L’assistant IA est désactivé par la stratégie de votre organisation.</p>
+				<p class="note">🔒 {t('ai.panel.enable.locked')}</p>
 			{:else}
 				<label class="check">
 					<input type="checkbox" checked={false} disabled={enabling} onchange={(e) => enable(e.currentTarget.checked)} />
-					Activer l’assistant IA
+					{t('ai.panel.enable.check')}
 				</label>
-				<p class="muted">Réglage aussi dans Fichier › Paramètres › Fonctionnalités.</p>
+				<p class="muted">{t('ai.panel.enable.settings')}</p>
 				{#if enableError}<p class="error">{enableError}</p>{/if}
 			{/if}
-			<button class="link" onclick={() => openHelp('assistant')}>En savoir plus (aide F1)</button>
+			<button class="link" onclick={() => openHelp('assistant')}>{t('ai.panel.enable.learnMore')}</button>
 		</div>
 	{:else}
 		{#if mcpClient}
-			<div class="source" role="tablist" aria-label="Conversation">
-				<button role="tab" aria-selected={source === 'lattis'} class:on={source === 'lattis'} onclick={() => (source = 'lattis')}>Dans Lattis</button>
-				<button role="tab" aria-selected={source === 'claude'} class:on={source === 'claude'} onclick={() => (source = 'claude')}>Depuis Claude</button>
+			<div class="source" role="tablist" aria-label={t('ai.panel.source.aria')}>
+				<button role="tab" aria-selected={source === 'lattis'} class:on={source === 'lattis'} onclick={() => (source = 'lattis')}>{t('ai.panel.source.lattis')}</button>
+				<button role="tab" aria-selected={source === 'claude'} class:on={source === 'claude'} onclick={() => (source = 'claude')}>{t('ai.panel.source.claude')}</button>
 			</div>
 		{/if}
 		{#if showConnect}
@@ -331,14 +329,13 @@
 			<div class="external"><ExternalActivity {ongoto} /></div>
 		{:else}
 			<!-- Lecteurs d'écran : la réponse est annoncée une fois finie (aria-busy pendant qu'elle arrive). -->
-			<div class="list" role="log" aria-live="polite" aria-busy={chat.busy} aria-label="Conversation avec l’assistant" bind:this={list}>
+			<div class="list" role="log" aria-live="polite" aria-busy={chat.busy} aria-label={t('ai.panel.log')} bind:this={list}>
 				{#if !chat.items.length}
 					<div class="empty">
 						<p>
-							Décrivez ce que vous voulez analyser : l’assistant lit la structure du classeur, propose une démarche et peut créer colonnes
-							calculées, clés, tableaux croisés et graphiques.
+							{t('ai.panel.empty')}
 						</p>
-						{#if !hasDoc}<p class="muted">Ouvrez ou créez d’abord un classeur (Fichier › Nouveau).</p>{/if}
+						{#if !hasDoc}<p class="muted">{t('ai.panel.noDoc')}</p>{/if}
 						<div class="suggest">
 							{#each suggestions as s (s)}
 								<button disabled={!canSend || chat.busy} onclick={() => ask(s)}>{s}</button>
@@ -369,10 +366,10 @@
 										{#if resultFoot(r)}<p class="muted">{resultFoot(r)}</p>{/if}
 									</figure>
 								{:else if seg.kind === 'notice'}
-									<div class="notice" class:error={seg.error} class:compact={seg.compact} title={seg.compact ? 'Les échanges précédents ont été résumés pour l’assistant ; ils restent affichés ici' : undefined}>{seg.text}</div>
+									<div class="notice" class:error={seg.error} class:compact={seg.compact} title={seg.compact ? t('ai.panel.compact') : undefined}>{seg.text}</div>
 								{:else}
 									{@const open = stepsOpen(it, seg.at)}
-									{@const running = seg.tools.find((t) => t.state === 'run')}
+									{@const running = seg.tools.find((tl) => tl.state === 'run')}
 									<div class="steps">
 										<button class="steps-head" aria-expanded={open} onclick={() => (toggled[`${it.run}:${seg.at}`] = !open)}>
 											<span class="chev" class:open><Icon name="chevron-down" size={12} /></span>
@@ -380,15 +377,15 @@
 										</button>
 										{#if open}
 											<ul>
-												{#each seg.tools as t, k (k)}
-													<li class="tool {t.state}" class:recovered={t.recovered} title={t.detail}>
+												{#each seg.tools as tl, k (k)}
+													<li class="tool {tl.state}" class:recovered={tl.recovered} title={tl.detail}>
 														<span class="dot"></span>
-														{#if t.target}
-															<button class="target" title="Aller à « {t.target} »" onclick={() => ongoto(t.target!)}>{t.label}</button>
+														{#if tl.target}
+															<button class="target" title={t('ai.goto.tooltip', { target: tl.target })} onclick={() => ongoto(tl.target!)}>{tl.label}</button>
 														{:else}
-															<span>{t.label}</span>
+															<span>{tl.label}</span>
 														{/if}
-														{#if t.detail}<span class="detail"> : {t.detail}</span>{/if}
+														{#if tl.detail}<span class="detail"> : {tl.detail}</span>{/if}
 													</li>
 												{/each}
 											</ul>
@@ -400,27 +397,27 @@
 							{#if it.done}
 								<div class="foot">
 									{#if it.undone}
-										<span class="badge">{it.changes === 1 ? 'Modification annulée' : 'Modifications annulées'}</span>
+										<span class="badge">{t('ai.panel.undone', { n: it.changes ?? 0 })}</span>
 									{:else if it.changes}
 										<span class="badge changes">{changesLabel(it.changes)}</span>
 										<button
 											class="small"
 											disabled={!it.undo || it.run !== lastRun || chat.busy}
-											title={it.undo && it.run === lastRun ? 'Annule tout ce que cette réponse a modifié' : 'D’autres modifications ont suivi : utilisez Ctrl+Z'}
-											onclick={() => undo(it.run)}><Icon name="undo" size={13} />Annuler cette réponse</button
+											title={it.undo && it.run === lastRun ? t('ai.panel.undo.tooltip') : t('ai.panel.undo.later')}
+											onclick={() => undo(it.run)}><Icon name="undo" size={13} />{t('ai.panel.undo.label')}</button
 										>
 									{/if}
 									{#if it.run === lastRun && !it.undone && stoppedAtLimit(it.parts)}
-										<button class="small" disabled={chat.busy} title="Reprend la réponse là où elle s’est arrêtée" onclick={() => retry(it.run)}><Icon name="play" size={13} />Continuer</button>
+										<button class="small" disabled={chat.busy} title={t('ai.panel.resume')} onclick={() => retry(it.run)}><Icon name="play" size={13} />{t('remote.login.continue')}</button>
 									{/if}
 									{#if it.run === lastRun && !it.undone && replyError(it.parts)}
 										{@const left = retryLeft(it.run, replyError(it.parts))}
-										<button class="small" disabled={chat.busy || left > 0} title="Reprend la réponse là où elle s’est arrêtée" onclick={() => retry(it.run)}><Icon name="redo" size={13} />{retryLabel(left)}</button>
+										<button class="small" disabled={chat.busy || left > 0} title={t('ai.panel.resume')} onclick={() => retry(it.run)}><Icon name="redo" size={13} />{retryLabel(left)}</button>
 									{/if}
 									<span class="spacer"></span>
 									{#if replyText(it.parts)}
-										<button class="small icon" title="Copier la réponse" aria-label="Copier la réponse" onclick={() => copy(i, it)}
-											><Icon name="copy" size={13} />{copied === i ? 'Copié' : ''}</button
+										<button class="small icon" title={t('ai.panel.copy')} aria-label={t('ai.panel.copy')} onclick={() => copy(i, it)}
+											><Icon name="copy" size={13} />{copied === i ? t('remote.rightsDialog.link.copied') : ''}</button
 										>
 									{/if}
 								</div>
@@ -431,12 +428,12 @@
 			</div>
 
 			{#if pendingLink}
-				<div class="link-confirm" role="alertdialog" aria-label="Ouvrir un lien">
-					<p>Ouvrir ce lien proposé par l’assistant ? Tout ce que contient son adresse part chez <strong>{linkHost(pendingLink)}</strong>.</p>
+				<div class="link-confirm" role="alertdialog" aria-label={t('ai.panel.link.aria')}>
+					<p>{t('ai.panel.link.question')} <strong>{linkHost(pendingLink)}</strong>.</p>
 					<code>{pendingLink}</code>
 					<div class="foot">
-						<button class="small" onclick={() => (openOutside(pendingLink), (pendingLink = ''))}><Icon name="web" size={13} />Ouvrir</button>
-						<button class="small" onclick={() => (pendingLink = '')}>Annuler</button>
+						<button class="small" onclick={() => (openOutside(pendingLink), (pendingLink = ''))}><Icon name="web" size={13} />{t('ai.panel.link.open')}</button>
+						<button class="small" onclick={() => (pendingLink = '')}>{t('common.cancel')}</button>
 					</div>
 				</div>
 			{/if}
@@ -450,29 +447,29 @@
 			{/if}
 
 			<footer>
-				{#if ctxText && hasDoc}<p class="context" title="Joint à chaque message : l’assistant sait ce que vous regardez">{ctxText}</p>{/if}
+				{#if ctxText && hasDoc}<p class="context" title={t('ai.panel.contextTooltip')}>{ctxText}</p>{/if}
 				<div class="compose">
 					<textarea
 						bind:this={input}
 						bind:value={chat.draft}
 						rows="3"
-						aria-label="Message à l’assistant"
-						placeholder={!ready ? 'Connectez d’abord l’assistant (Connexion)' : !hasDoc ? 'Ouvrez d’abord un classeur' : 'Votre message (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)'}
+						aria-label={t('ai.panel.message.aria')}
+						placeholder={!ready ? t('ai.panel.message.notReady') : !hasDoc ? t('ai.panel.message.noDoc') : t('ai.panel.message.placeholder')}
 						disabled={!canSend}
 						onkeydown={onKey}
 					></textarea>
 					{#if chat.busy}
-						<button class="stop" title="Arrêter la réponse (Échap)" onclick={stop}><Icon name="stop" size={14} />Arrêter</button>
+						<button class="stop" title={t('ai.panel.stop.tooltip')} onclick={stop}><Icon name="stop" size={14} />{t('ai.panel.stop.label')}</button>
 					{:else}
-						<button class="primary" disabled={!canSend || !chat.draft.trim()} onclick={() => ask(chat.draft)}><Icon name="play" size={14} />Envoyer</button>
+						<button class="primary" disabled={!canSend || !chat.draft.trim()} onclick={() => ask(chat.draft)}><Icon name="play" size={14} />{t('ai.panel.send')}</button>
 					{/if}
 				</div>
 				<div class="meta">
-					<button class="link" title="Données transmises à l’assistant (Fichier › Paramètres › Assistant IA)" onclick={onsettings}>
+					<button class="link" title={t('ai.panel.sharingTooltip')} onclick={onsettings}>
 						<Icon name="lock" size={12} />{shared}
 					</button>
 					<span class="spacer"></span>
-					{#if cost}<span title="Coût approché d’après les jetons consommés, facturé par le fournisseur">{cost}</span>{/if}
+					{#if cost}<span title={t('ai.panel.costTooltip')}>{cost}</span>{/if}
 				</div>
 			</footer>
 		{/if}

@@ -1,1 +1,230 @@
-{}
+{
+	"result": {
+		"none": "Aucune ligne",
+		"firstOf": "{n} premières lignes sur {total}",
+		"firstOfMore": "{n} premières lignes sur plus de {total}"
+	},
+	"steps": "{n, plural, one {# étape} other {# étapes}}",
+	"errors": "{n, plural, one {# erreur} other {# erreurs}}",
+	"changes": "{n, plural, one {# modification} other {# modifications}}",
+	"cost": {
+		"small": "< {min} $ cette conversation",
+		"about": "≈ {cost} $ cette conversation"
+	},
+	"context": {
+		"plain": "Contexte : {where}",
+		"selection": "Contexte : {where}, sélection {selection}"
+	},
+	"suggest": {
+		"repair": "Réparer les tableaux de cette feuille",
+		"name": "Nomme automatiquement tous les tableaux du classeur.",
+		"contents": "Que contient ce classeur ?",
+		"analysis": "Propose une analyse de mes données",
+		"pivot": "Crée un tableau croisé pertinent avec un graphique",
+		"explain": "Explique la sélection {selection} de {table}",
+		"pivotsFor": "Propose des tableaux croisés pour {table}",
+		"analyze": "Analyser {table} ({n, plural, one {# ligne} other {# lignes}})",
+		"types": "Vérifier les types de {table}",
+		"duplicates": "Trouver les doublons dans {table}"
+	},
+	"retryIn": "Réessayer dans {n} s",
+	"retry": "Réessayer",
+	"sharing": {
+		"label": {
+			"sample": "Structure et lignes d’exemple",
+			"full": "Tout le classeur",
+			"schema": "Structure seulement"
+		},
+		"summary": {
+			"sample": "il voit la structure du classeur et quelques lignes d’exemple à chaque lecture (20 au plus).",
+			"full": "il peut lire tout le contenu du classeur.",
+			"schema": "il voit la structure du classeur (feuilles, tableaux, colonnes, types), sans les valeurs des cellules."
+		}
+	},
+	"external": {
+		"changes": "{n, plural, one {# modification} other {# modifications}}",
+		"reads": "{n, plural, one {# lecture} other {# lectures}}",
+		"errors": "{n, plural, one {# erreur} other {# erreurs}}",
+		"connected": "{client} connecté",
+		"waiting": "En attente d’une connexion",
+		"undo": {
+			"nothing": "Aucune modification à annuler.",
+			"checking": "Vérification…",
+			"tooltip": "Annule en une fois ce que {client} a modifié dans cette série",
+			"running": "Annulation…",
+			"label": "Annuler ces modifications"
+		},
+		"intro": "Ouvrez Claude Desktop ou Claude Code et demandez par exemple « Que contient mon classeur Lattis ? » : chaque action apparaîtra ici.",
+		"confirm": {
+			"label": "Demander avant de modifier",
+			"help": "Lattis demande votre accord avant chaque modification du classeur ; les lectures passent sans demande."
+		}
+	},
+	"goto": {
+		"label": "Aller à",
+		"tooltip": "Aller à « {target} »"
+	},
+	"setup": {
+		"intro": "Avec un abonnement Claude (Pro, Max, Team), pas besoin de clé d’API : vous discutez dans Claude Desktop ou Claude Code, qui agit sur le classeur ouvert, et Lattis montre ce qui est fait.",
+		"sharing": {
+			"before": "Le réglage « Données transmises à l’assistant » (Fichier › Paramètres › Assistant IA) vaut aussi pour Claude :",
+			"after": "Après un changement, redémarrez Claude pour qu’il voie la nouvelle liste d’outils."
+		},
+		"badge": {
+			"connected": "Connecté",
+			"configured": "Configuré",
+			"installed": "Installé",
+			"notInstalled": "Non installé",
+			"notFound": "Introuvable"
+		},
+		"desktop": {
+			"help": "L’application de bureau de Claude. Lattis y apparaît dans les outils de la conversation.",
+			"done": "Configuré ✓ — redémarrez Claude Desktop (quittez-le complètement, puis rouvrez-le).",
+			"download": "Télécharger Claude Desktop",
+			"manual": "Configurer à la main",
+			"mergeInto": "À fusionner dans"
+		},
+		"configuring": "Configuration…",
+		"reconfigure": "Configurer à nouveau",
+		"configure": "Configurer",
+		"code": {
+			"help": "L’assistant de Claude dans le terminal (ou dans son application de bureau). Lattis est ajouté pour tous vos projets.",
+			"done": {
+				"before": "Configuré ✓ — ouvrez une nouvelle session de Claude Code :",
+				"after": "y montre Lattis."
+			},
+			"notFound": "Commande claude introuvable sur ce poste",
+			"install": "Installer Claude Code",
+			"manual": "Commande à lancer soi-même"
+		}
+	},
+	"connect": {
+		"claudeApps": "Claude Desktop ou Claude Code",
+		"keySaved": "Clé enregistrée dans le trousseau du système.",
+		"keyValid": "Clé valide : elle est enregistrée dans le trousseau du système.",
+		"aria": "Connexion de l’assistant",
+		"title": "Connecter l’assistant",
+		"close": "Fermer la connexion",
+		"managed": "Le fournisseur et le modèle sont choisis par votre organisation, qui fait passer l’assistant par sa passerelle.",
+		"gatewayNoKey": "Connecté par la passerelle de votre organisation : il n’y a pas de clé à saisir.",
+		"gatewayKeySaved": "Votre clé personnelle pour la passerelle est enregistrée dans le trousseau du système.",
+		"forgetKey": "Oublier la clé",
+		"gatewayPaste": "Collez la clé personnelle que votre organisation vous a remise pour sa passerelle.",
+		"personalKey": "Clé personnelle",
+		"pasteTooltip": "Coller depuis le presse-papiers",
+		"ways": "Voie de connexion",
+		"apiKey": "Clé d’API",
+		"recommended": "recommandé",
+		"desktop": {
+			"tooltip": "Piloter Lattis depuis Claude Desktop ou Claude Code (serveur MCP)",
+			"labelDialog": "Application de bureau…",
+			"label": "Application de bureau",
+			"help": "L’application de bureau d’un fournisseur pilote Lattis avec votre abonnement chez lui, sans clé d’API.",
+			"claude": {
+				"before": "Un abonnement Claude ne s’utilise pas directement dans une autre application, mais",
+				"and": "et",
+				"after": "savent piloter Lattis. Vous parlez à Claude dans son application ; Lattis montre ce qu’il fait (« Depuis Claude ») et peut tout annuler."
+			},
+			"needsDesktop": "Cette voie demande l’application de bureau de Lattis.",
+			"maxTeam": "Abonnés Max ou Team : vos crédits d’API mensuels paient aussi une clé d’API (onglet « Clé d’API »), qui garde la conversation dans Lattis."
+		},
+		"providerModel": "Fournisseur et modèle",
+		"provider": "Fournisseur",
+		"model": "Modèle",
+		"defaultModel": "modèle par défaut",
+		"local": {
+			"help": "Le modèle tourne sur ce poste (Ollama, LM Studio…) : aucune donnée ne quitte l’ordinateur, et il n’y a pas de clé.",
+			"url": "Adresse du modèle local",
+			"experimental": "Expérimental : les petits modèles appellent moins bien les outils de Lattis."
+		},
+		"keyStored": "Une clé d’API de {provider} est enregistrée dans le trousseau du système.",
+		"step1": {
+			"create": "Créez une clé",
+			"console": "sur la console de {provider}.",
+			"open": "Ouvrir la console",
+			"credits": "Une clé neuve ne marche qu’avec des crédits : ajoutez-en dans",
+			"billing": "Facturation",
+			"maxTeam": "Abonné Claude Max ou Team ? Liez cette organisation dans claude.ai › Paramètres › Facturation pour recevoir vos crédits d’API mensuels (100 à 500 $).",
+			"other": "Selon le fournisseur, il faut des crédits ou un moyen de paiement sur le compte."
+		},
+		"step2": "Collez-la ici.",
+		"keyHint": "Une clé de {provider} commence d’habitude par « {hint} ».",
+		"step3": {
+			"verify": "Vérifier et enregistrer",
+			"keychain": "La clé est gardée dans le trousseau du système, jamais dans le classeur."
+		},
+		"start": "Commencer",
+		"providerApp": "Fournisseur et application"
+	},
+	"panel": {
+		"title": "Assistant IA",
+		"modelUsed": "Modèle utilisé",
+		"connect": {
+			"label": "Connexion",
+			"tooltip": "Connexion : clé d’API, abonnement Claude, modèle"
+		},
+		"new": {
+			"label": "Nouvelle",
+			"tooltip": "Nouvelle conversation (la conversation actuelle reste dans la liste)"
+		},
+		"conversations": "Conversations",
+		"close": {
+			"tooltip": "Fermer le volet (Échap)"
+		},
+		"noConversation": "Aucune conversation pour ce classeur.",
+		"conv": {
+			"current": "Conversation en cours",
+			"resume": "Reprendre cette conversation",
+			"inProgress": "en cours",
+			"delete": "Supprimer cette conversation",
+			"deleteName": "Supprimer « {title} »"
+		},
+		"unavailable": "L’assistant n’est pas disponible dans cette version.",
+		"loading": "Chargement…",
+		"enable": {
+			"title": "Activer l’assistant",
+			"intro": "L’Assistant IA lit la structure de vos tableaux, propose une démarche et peut ajouter colonnes calculées, clés, tableaux croisés et graphiques. Tout ce qu’il modifie dans une réponse s’annule d’un coup.",
+			"how": "Il passe par un fournisseur d’IA avec votre clé d’API, par un modèle installé sur ce poste, ou par Claude Desktop avec votre abonnement Claude. Il ne reçoit jamais tout le classeur.",
+			"locked": "L’assistant IA est désactivé par la stratégie de votre organisation.",
+			"check": "Activer l’assistant IA",
+			"settings": "Réglage aussi dans Fichier › Paramètres › Fonctionnalités.",
+			"learnMore": "En savoir plus (aide F1)"
+		},
+		"source": {
+			"aria": "Conversation",
+			"lattis": "Dans Lattis",
+			"claude": "Depuis Claude"
+		},
+		"log": "Conversation avec l’assistant",
+		"empty": "Décrivez ce que vous voulez analyser : l’assistant lit la structure du classeur, propose une démarche et peut créer colonnes calculées, clés, tableaux croisés et graphiques.",
+		"noDoc": "Ouvrez ou créez d’abord un classeur (Fichier › Nouveau).",
+		"compact": "Les échanges précédents ont été résumés pour l’assistant ; ils restent affichés ici",
+		"undone": "{n, plural, =1 {Modification annulée} other {Modifications annulées}}",
+		"undo": {
+			"tooltip": "Annule tout ce que cette réponse a modifié",
+			"later": "D’autres modifications ont suivi : utilisez Ctrl+Z",
+			"label": "Annuler cette réponse"
+		},
+		"resume": "Reprend la réponse là où elle s’est arrêtée",
+		"copy": "Copier la réponse",
+		"link": {
+			"aria": "Ouvrir un lien",
+			"question": "Ouvrir ce lien proposé par l’assistant ? Tout ce que contient son adresse part chez",
+			"open": "Ouvrir"
+		},
+		"contextTooltip": "Joint à chaque message : l’assistant sait ce que vous regardez",
+		"message": {
+			"aria": "Message à l’assistant",
+			"notReady": "Connectez d’abord l’assistant (Connexion)",
+			"noDoc": "Ouvrez d’abord un classeur",
+			"placeholder": "Votre message (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"
+		},
+		"stop": {
+			"label": "Arrêter",
+			"tooltip": "Arrêter la réponse (Échap)"
+		},
+		"send": "Envoyer",
+		"sharingTooltip": "Données transmises à l’assistant (Fichier › Paramètres › Assistant IA)",
+		"costTooltip": "Coût approché d’après les jetons consommés, facturé par le fournisseur"
+	}
+}

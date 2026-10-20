@@ -16,6 +16,7 @@
 	import { findSetting } from '#lib/shell/settings.js';
 	import { userSettings } from '#lib/shell/settings.svelte.js';
 	import { sharingLabel, sharingSummary } from './sharing';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Un client vient d'être configuré (le serveur MCP est alors activé). */
@@ -34,7 +35,7 @@
 	let justDone = $state<{ desktop: boolean; code: boolean }>({ desktop: false, code: false });
 	let copied = $state('');
 
-	const err = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const err = errorText;
 
 	async function load() {
 		try {
@@ -87,40 +88,39 @@
 
 <div class="setup">
 	<p class="intro">
-		Avec un abonnement Claude (Pro, Max, Team), pas besoin de clé d’API : vous discutez dans Claude Desktop ou Claude Code, qui agit sur le classeur
-		ouvert, et Lattis montre ce qui est fait.
+		{t('ai.setup.intro')}
 	</p>
 	<p class="hint sharing">
-		<Icon name="lock" size={12} />Le réglage « Données transmises à l’assistant » (Fichier › Paramètres › Assistant IA) vaut aussi pour Claude :
-		<strong>{sharingLabel(sharing)}</strong>, {sharingSummary(sharing)} Après un changement, redémarrez Claude pour qu’il voie la nouvelle liste d’outils.
+		<Icon name="lock" size={12} />{t('ai.setup.sharing.before')}
+		<strong>{sharingLabel(sharing)}</strong>, {sharingSummary(sharing)} {t('ai.setup.sharing.after')}
 	</p>
 	{#if c}
 		<div class="cards">
 			<section class="card">
 				<header>
 					<strong>Claude Desktop</strong>
-					{#if connected === 'Claude Desktop'}<span class="badge ok">Connecté</span>
-					{:else if c.desktopConfigured}<span class="badge ok">Configuré</span>
-					{:else if c.desktopInstalled}<span class="badge">Installé</span>
-					{:else}<span class="badge off">Non installé</span>{/if}
+					{#if connected === 'Claude Desktop'}<span class="badge ok">{t('ai.setup.badge.connected')}</span>
+					{:else if c.desktopConfigured}<span class="badge ok">{t('ai.setup.badge.configured')}</span>
+					{:else if c.desktopInstalled}<span class="badge">{t('ai.setup.badge.installed')}</span>
+					{:else}<span class="badge off">{t('ai.setup.badge.notInstalled')}</span>{/if}
 				</header>
-				<p class="hint">L’application de bureau de Claude. Lattis y apparaît dans les outils de la conversation.</p>
+				<p class="hint">{t('ai.setup.desktop.help')}</p>
 				{#if justDone.desktop}
-					<p class="done">Configuré ✓ — redémarrez Claude Desktop (quittez-le complètement, puis rouvrez-le).</p>
+					<p class="done">{t('ai.setup.desktop.done')}</p>
 				{:else}
 					<div class="row">
 						<button class="primary" disabled={busy !== ''} onclick={() => configure('desktop')}>
-							<Icon name="plug" size={16} />{busy === 'desktop' ? 'Configuration…' : c.desktopConfigured ? 'Configurer à nouveau' : 'Configurer'}
+							<Icon name="plug" size={16} />{busy === 'desktop' ? t('ai.setup.configuring') : c.desktopConfigured ? t('ai.setup.reconfigure') : t('ai.setup.configure')}
 						</button>
-						{#if !c.desktopInstalled}<button class="link" onclick={() => openOutside(DESKTOP_URL)}>Télécharger Claude Desktop</button>{/if}
+						{#if !c.desktopInstalled}<button class="link" onclick={() => openOutside(DESKTOP_URL)}>{t('ai.setup.desktop.download')}</button>{/if}
 					</div>
 				{/if}
 				{#if desktopJson}
 					<details>
-						<summary>Configurer à la main</summary>
-						<p class="hint">À fusionner dans <code>{c.desktopConfig}</code> :</p>
+						<summary>{t('ai.setup.desktop.manual')}</summary>
+						<p class="hint">{t('ai.setup.desktop.mergeInto')} <code>{c.desktopConfig}</code> :</p>
 						<pre>{desktopJson}</pre>
-						<button class="ico" onclick={() => copy('desktop', desktopJson)}><Icon name="copy" size={14} />{copied === 'desktop' ? 'Copié' : 'Copier'}</button>
+						<button class="ico" onclick={() => copy('desktop', desktopJson)}><Icon name="copy" size={14} />{copied === 'desktop' ? t('remote.rightsDialog.link.copied') : t('common.copy')}</button>
 					</details>
 				{/if}
 			</section>
@@ -128,26 +128,26 @@
 			<section class="card">
 				<header>
 					<strong>Claude Code</strong>
-					{#if connected === 'Claude Code'}<span class="badge ok">Connecté</span>
-					{:else if c.codeConfigured}<span class="badge ok">Configuré</span>
-					{:else if c.codeFound}<span class="badge">Installé</span>
-					{:else}<span class="badge off">Introuvable</span>{/if}
+					{#if connected === 'Claude Code'}<span class="badge ok">{t('ai.setup.badge.connected')}</span>
+					{:else if c.codeConfigured}<span class="badge ok">{t('ai.setup.badge.configured')}</span>
+					{:else if c.codeFound}<span class="badge">{t('ai.setup.badge.installed')}</span>
+					{:else}<span class="badge off">{t('ai.setup.badge.notFound')}</span>{/if}
 				</header>
-				<p class="hint">L’assistant de Claude dans le terminal (ou dans son application de bureau). Lattis est ajouté pour tous vos projets.</p>
+				<p class="hint">{t('ai.setup.code.help')}</p>
 				{#if justDone.code}
-					<p class="done">Configuré ✓ — ouvrez une nouvelle session de Claude Code : <code>/mcp</code> y montre Lattis.</p>
+					<p class="done">{t('ai.setup.code.done.before')} <code>/mcp</code> {t('ai.setup.code.done.after')}</p>
 				{:else}
 					<div class="row">
-						<button class="primary" disabled={busy !== '' || !c.codeFound} title={c.codeFound ? '' : 'Commande claude introuvable sur ce poste'} onclick={() => configure('code')}>
-							<Icon name="plug" size={16} />{busy === 'code' ? 'Configuration…' : c.codeConfigured ? 'Configurer à nouveau' : 'Configurer'}
+						<button class="primary" disabled={busy !== '' || !c.codeFound} title={c.codeFound ? '' : t('ai.setup.code.notFound')} onclick={() => configure('code')}>
+							<Icon name="plug" size={16} />{busy === 'code' ? t('ai.setup.configuring') : c.codeConfigured ? t('ai.setup.reconfigure') : t('ai.setup.configure')}
 						</button>
-						{#if !c.codeFound}<button class="link" onclick={() => openOutside(CODE_URL)}>Installer Claude Code</button>{/if}
+						{#if !c.codeFound}<button class="link" onclick={() => openOutside(CODE_URL)}>{t('ai.setup.code.install')}</button>{/if}
 					</div>
 				{/if}
 				<details>
-					<summary>Commande à lancer soi-même</summary>
+					<summary>{t('ai.setup.code.manual')}</summary>
 					<pre>{c.codeCommand}</pre>
-					<button class="ico" onclick={() => copy('code', c?.codeCommand ?? '')}><Icon name="copy" size={14} />{copied === 'code' ? 'Copié' : 'Copier'}</button>
+					<button class="ico" onclick={() => copy('code', c?.codeCommand ?? '')}><Icon name="copy" size={14} />{copied === 'code' ? t('remote.rightsDialog.link.copied') : t('common.copy')}</button>
 				</details>
 			</section>
 		</div>

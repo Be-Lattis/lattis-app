@@ -13,6 +13,7 @@
 	import { setSetting, userSettings } from '#lib/shell/settings.svelte.js';
 	import { connectionLabel, seriesSummary, seriesTime, undoTitle, writeCount } from './external';
 	import { external, listenExternal, refreshClients, refreshUndo, undoSeries } from './external.svelte.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Va à la feuille ou au tableau visé par une action (facultatif : sans lui, la cible n'est pas cliquable). */
@@ -39,7 +40,7 @@
 			await setSetting('mcp.confirmWrites', on);
 			if (external.clients) external.clients.confirmWrites = on;
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		}
 	}
 
@@ -49,7 +50,7 @@
 		try {
 			await undoSeries(id);
 		} catch (e) {
-			error = String(e instanceof Error ? e.message : e);
+			error = errorText(e);
 		} finally {
 			undoing = 0;
 		}
@@ -62,14 +63,14 @@
 		<strong>{connectionLabel(external.connected)}</strong>
 	</div>
 	{#if !external.connected && !external.series.length}
-		<p class="muted">Ouvrez Claude Desktop ou Claude Code et demandez par exemple «&nbsp;Que contient mon classeur Lattis&nbsp;?&nbsp;» : chaque action apparaîtra ici.</p>
+		<p class="muted">{t('ai.external.intro')}</p>
 	{/if}
 
 	<label class="switch" title={confirmNote}>
 		<input type="checkbox" checked={confirmWrites} disabled={!!confirmSetting?.locked} onchange={(e) => toggleConfirm(e.currentTarget.checked)} />
-		<span>Demander avant de modifier</span>
+		<span>{t('ai.external.confirm.label')}</span>
 	</label>
-	<p class="hint">{confirmNote || 'Lattis demande votre accord avant chaque modification du classeur ; les lectures passent sans demande.'}</p>
+	<p class="hint">{confirmNote || t('ai.external.confirm.help')}</p>
 
 	{#if error || external.error}<p class="error">{error || external.error}</p>{/if}
 
@@ -86,7 +87,7 @@
 						<!-- Infobulle sur l'enveloppe : un bouton désactivé n'en montre pas partout. -->
 						<span title={undoTitle(s, st)}>
 							<button disabled={!canUndo || undoing !== 0} onclick={() => undo(s.id)}>
-								<Icon name="undo" size={14} />{undoing === s.id ? 'Annulation…' : 'Annuler ces modifications'}
+								<Icon name="undo" size={14} />{undoing === s.id ? t('ai.external.undo.running') : t('ai.external.undo.label')}
 							</button>
 						</span>
 					{/if}
@@ -97,7 +98,7 @@
 							<span class="pill"></span>
 							<span class="label">{a.label}</span>
 							{#if a.target && ongoto}
-								<button class="link" title="Aller à « {a.target} »" onclick={() => ongoto?.(a.target)}>Aller à</button>
+								<button class="link" title={t('ai.goto.tooltip', { target: a.target })} onclick={() => ongoto?.(a.target)}>{t('ai.goto.label')}</button>
 							{/if}
 							{#if a.error && a.detail}<span class="detail">{a.detail}</span>{/if}
 						</li>

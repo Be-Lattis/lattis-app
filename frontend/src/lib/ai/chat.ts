@@ -5,7 +5,7 @@
 // reconstruit à partir de DocumentService.AITranscript (replay) quand
 // l'interface est rechargée ou qu'un autre classeur s'ouvre.
 import type { Block, Inline } from '#lib/help/markdown.js';
-import { fmtNumber } from '#lib/i18n/index.js';
+import { fmtNumber, t } from '#lib/i18n/index.js';
 
 /** Usage d'un tour ou d'une conversation (ai.Usage). */
 export interface ChatUsage {
@@ -53,9 +53,10 @@ export interface ChatResult {
 
 /** Pied d'un résultat : « 50 premières lignes sur plus de 10 000 », « Aucune ligne » ; '' si tout est montré. */
 export function resultFoot(r: ChatResult): string {
-	if (!r.total) return 'Aucune ligne';
+	if (!r.total) return t('ai.result.none');
 	if (!r.truncated) return '';
-	return `${r.rows?.length ?? 0} premières lignes sur ${r.more ? 'plus de ' : ''}${fmtNumber(r.total)}`;
+	const n = String(r.rows?.length ?? 0);
+	return r.more ? t('ai.result.firstOfMore', { n, total: r.total }) : t('ai.result.firstOf', { n, total: r.total });
 }
 
 export type ToolPart = { kind: 'tool'; id: string; label: string; state: 'run' | 'ok' | 'error'; detail?: string; write?: boolean; target?: string };
@@ -266,8 +267,8 @@ export function segments(parts: readonly Part[]): Segment[] {
 /** Libellé d'une suite d'étapes : « 1 étape », « 6 étapes · 1 erreur ». */
 export function stepsLabel(tools: readonly { state: string; recovered?: boolean }[]): string {
 	const n = tools.length;
-	const errors = tools.filter((t) => t.state === 'error' && !t.recovered).length;
-	return `${n} étape${n > 1 ? 's' : ''}` + (errors ? ` · ${errors} erreur${errors > 1 ? 's' : ''}` : '');
+	const errors = tools.filter((x) => x.state === 'error' && !x.recovered).length;
+	return t('ai.steps', { n }) + (errors ? ` · ${t('ai.errors', { n: errors })}` : '');
 }
 
 /** Texte d'une réponse, pour le presse-papiers. */
@@ -280,13 +281,13 @@ export function replyText(parts: readonly Part[]): string {
 }
 
 /** Bilan d'une réponse : « 1 modification », « 4 modifications ». */
-export const changesLabel = (n: number) => `${n} modification${n > 1 ? 's' : ''}`;
+export const changesLabel = (n: number) => t('ai.changes', { n });
 
 /** Coût approché de la conversation, en dollars US (vide : rien à afficher). */
 export function costLabel(cost: number | undefined): string {
 	if (!cost || cost <= 0) return '';
-	if (cost < 0.01) return '< 0,01 $ cette conversation';
-	return `≈ ${fmtNumber(cost, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $ cette conversation`;
+	if (cost < 0.01) return t('ai.cost.small', { min: fmtNumber(0.01, { minimumFractionDigits: 2 }) });
+	return t('ai.cost.about', { cost: fmtNumber(cost, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) });
 }
 
 /** Ce que l'utilisateur regarde (bridge.AIContext). */
@@ -296,14 +297,19 @@ export interface ChatContext {
 	selection: string;
 }
 
+/** Sélection affichée : sans le nom du tableau qui la contient (« Montant[3:10] »). */
+function selectionLabel(c: ChatContext): string {
+	// La sélection dans un tableau commence par son nom : inutile de le répéter.
+	const sel = c.table && c.selection.startsWith(c.table + '[') ? c.selection.slice(c.table.length) : c.selection;
+	return c.table && sel.startsWith('[') ? sel.replace(/^\[([^\]]*)\]/, '$1') : sel;
+}
+
 /** Ligne discrète au-dessus de la saisie : « Contexte : Commandes, sélection Montant[3:10] ». */
 export function contextLabel(c: ChatContext | null | undefined): string {
 	if (!c || (!c.sheet && !c.table)) return '';
 	const where = c.table || c.sheet;
-	// La sélection dans un tableau commence par son nom : inutile de le répéter.
-	const sel = c.table && c.selection.startsWith(c.table + '[') ? c.selection.slice(c.table.length) : c.selection;
-	const shown = c.table && sel.startsWith('[') ? sel.replace(/^\[([^\]]*)\]/, '$1') : sel;
-	return `Contexte : ${where}${shown ? `, sélection ${shown}` : ''}`;
+	const shown = selectionLabel(c);
+	return shown ? t('ai.context.selection', { where, selection: shown }) : t('ai.context.plain', { where });
 }
 
 /** Tableau du classeur, pour les suggestions. */
@@ -315,16 +321,11 @@ export interface TableInfo {
 
 // Cas d'usage courant (choix de Louis) : une feuille dont les tableaux sont
 // mal reconnus (en-tête, titre ou total pris dedans, limites, types).
-export const REPAIR_SUGGESTION = 'Réparer les tableaux de cette feuille';
+export const repairSuggestion = () => t('ai.suggest.repair');
 // Nommer les tableaux (demande de Louis), toujours proposé.
-export const NAME_SUGGESTION = 'Nomme automatiquement tous les tableaux du classeur.';
+export const nameSuggestion = () => t('ai.suggest.name');
 
-const DEFAULT_SUGGESTIONS = [
-	REPAIR_SUGGESTION,
-	'Que contient ce classeur ?',
-	'Propose une analyse de mes données',
-	'Crée un tableau croisé pertinent avec un graphique'
-];
+const defaultSuggestions = () => [repairSuggestion(), t('ai.suggest.contents'), t('ai.suggest.analysis'), t('ai.suggest.pivot')];
 
 /**
  * Suggestions tirées du classeur : le plus grand tableau à analyser, les
@@ -335,20 +336,19 @@ const DEFAULT_SUGGESTIONS = [
  * expliquer.
  */
 export function suggestionsFor(tables: readonly TableInfo[], context?: ChatContext | null, sharing = 'schema-only'): string[] {
-	const list = tables.filter((t) => t.kind !== 'pivot').toSorted((a, b) => b.rows - a.rows);
-	if (!list.length) return DEFAULT_SUGGESTIONS;
-	const fmt = (n: number) => `${fmtNumber(n)} ligne${n > 1 ? 's' : ''}`;
+	const list = tables.filter((x) => x.kind !== 'pivot').toSorted((a, b) => b.rows - a.rows);
+	if (!list.length) return defaultSuggestions();
 	const blind = sharing !== 'sample' && sharing !== 'full';
 	const out: string[] = [];
-	if (context?.table && context.selection && !blind) out.push(`Explique la sélection ${contextLabel(context).replace(/^.*, sélection /, '')} de ${context.table}`);
-	else if (context?.table && blind) out.push(`Propose des tableaux croisés pour ${context.table}`);
-	out.push(REPAIR_SUGGESTION);
-	out.push(NAME_SUGGESTION);
+	if (context?.table && context.selection && !blind) out.push(t('ai.suggest.explain', { selection: selectionLabel(context), table: context.table }));
+	else if (context?.table && blind) out.push(t('ai.suggest.pivotsFor', { table: context.table }));
+	out.push(repairSuggestion());
+	out.push(nameSuggestion());
 	const [big, second] = list;
-	out.push(`Analyser ${big.name} (${fmt(big.rows)})`);
-	out.push(`Vérifier les types de ${(second ?? big).name}`);
-	out.push(`Trouver les doublons dans ${big.name}`);
-	if (out.length < 4) out.push('Crée un tableau croisé pertinent avec un graphique');
+	out.push(t('ai.suggest.analyze', { table: big.name, n: big.rows }));
+	out.push(t('ai.suggest.types', { table: (second ?? big).name }));
+	out.push(t('ai.suggest.duplicates', { table: big.name }));
+	if (out.length < 4) out.push(t('ai.suggest.pivot'));
 	return out.slice(0, 4);
 }
 
@@ -417,7 +417,7 @@ export function retryDelay(text: string): number {
 }
 
 /** Libellé du bouton « Réessayer », avec le temps qui reste (secondes). */
-export const retryLabel = (left: number) => (left > 0 ? `Réessayer dans ${left} s` : 'Réessayer');
+export const retryLabel = (left: number) => (left > 0 ? t('ai.retryIn', { n: left }) : t('ai.retry'));
 
 /** La réponse s'est arrêtée au nombre maximal d'étapes : « Continuer » la reprend. */
 export function stoppedAtLimit(parts: Part[]): boolean {

@@ -3,6 +3,7 @@
 // mcp:activity ; les appels d'un même client sans pause de plus de deux
 // minutes forment une série (numérotée par le serveur), que l'on peut
 // annuler d'un coup (DocumentService.MCPUndoSeries).
+import { t } from '#lib/i18n/index.js';
 
 /** Un appel d'outil d'un client MCP (internal/bridge MCPActivity). */
 export interface McpActivity {
@@ -52,7 +53,6 @@ export function writeCount(s: McpSeries): number {
 	return s.items.filter((a) => a.write && !a.error).length;
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
 
 /** Résumé d'une série : « 3 modifications, 1 erreur » ou « 2 lectures ». */
 export function seriesSummary(s: McpSeries): string {
@@ -60,9 +60,9 @@ export function seriesSummary(s: McpSeries): string {
 	const errors = s.items.filter((a) => a.error).length;
 	const reads = s.items.filter((a) => !a.write && !a.error).length;
 	const parts: string[] = [];
-	if (w) parts.push(plural(w, 'modification', 'modifications'));
-	if (reads && !w) parts.push(plural(reads, 'lecture', 'lectures'));
-	if (errors) parts.push(plural(errors, 'erreur', 'erreurs'));
+	if (w) parts.push(t('ai.external.changes', { n: w }));
+	if (reads && !w) parts.push(t('ai.external.reads', { n: reads }));
+	if (errors) parts.push(t('ai.external.errors', { n: errors }));
 	return parts.join(', ');
 }
 
@@ -82,7 +82,7 @@ export function seriesTime(s: McpSeries): string {
 
 /** État de la connexion : « Claude Desktop connecté » ou l'attente. */
 export function connectionLabel(client: string): string {
-	return client ? `${client} connecté` : 'En attente d’une connexion';
+	return client ? t('ai.external.connected', { client }) : t('ai.external.waiting');
 }
 
 /** Ce que le serveur dit d'une série (DocumentService.MCPSeries). */
@@ -94,8 +94,8 @@ export interface SeriesUndoState {
 
 /** Infobulle du bouton « Annuler ces modifications ». */
 export function undoTitle(s: McpSeries, st: SeriesUndoState | undefined): string {
-	if (!writeCount(s)) return 'Aucune modification à annuler.';
-	if (!st) return 'Vérification…';
-	if (st.undo) return `Annule en une fois ce que ${s.client} a modifié dans cette série`;
+	if (!writeCount(s)) return t('ai.external.undo.nothing');
+	if (!st) return t('ai.external.undo.checking');
+	if (st.undo) return t('ai.external.undo.tooltip', { client: s.client });
 	return st.reason;
 }

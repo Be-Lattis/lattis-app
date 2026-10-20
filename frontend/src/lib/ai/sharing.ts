@@ -1,25 +1,26 @@
 // Partage des données avec l'assistant (réglage ai.dataSharing, Fichier ›
 // Paramètres › Assistant IA) : il vaut pour l'assistant intégré comme pour
 // Claude Desktop ou Claude Code par le serveur MCP (internal/sharing).
+import { t } from '#lib/i18n/index.js';
 
 /** Libellé court du partage (pied du volet, configuration de Claude). */
 export function sharingLabel(mode: unknown): string {
 	switch (mode) {
 		case 'sample':
-			return 'Structure et lignes d’exemple';
+			return t('ai.sharing.label.sample');
 		case 'full':
-			return 'Tout le classeur';
+			return t('ai.sharing.label.full');
 	}
-	return 'Structure seulement';
+	return t('ai.sharing.label.schema');
 }
 
 /** Ce que voit l'assistant avec ce partage, en une phrase. */
 export function sharingSummary(mode: unknown): string {
 	switch (mode) {
 		case 'sample':
-			return 'il voit la structure du classeur et quelques lignes d’exemple à chaque lecture (20 au plus).';
+			return t('ai.sharing.summary.sample');
 		case 'full':
-			return 'il peut lire tout le contenu du classeur.';
+			return t('ai.sharing.summary.full');
 	}
-	return 'il voit la structure du classeur (feuilles, tableaux, colonnes, types), sans les valeurs des cellules.';
+	return t('ai.sharing.summary.schema');
 }

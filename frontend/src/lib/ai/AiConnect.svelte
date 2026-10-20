@@ -20,6 +20,7 @@
 	import { modelLabel } from './chat';
 	import { openOutside } from './links';
 	import { chat, refreshStatus } from './state.svelte.js';
+	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
 		/** Ferme le panneau (absent : il reste ouvert, rien n'est connecté). */
@@ -44,7 +45,15 @@
 	// Application de bureau d'un fournisseur qui pilote Lattis par son serveur
 	// MCP (avec l'abonnement de la personne) : Claude pour l'instant, la liste
 	// accueillera les autres.
-	const DESKTOP_APPS = [{ id: 'claude', name: 'Claude (Pro, Max, Team)', apps: 'Claude Desktop ou Claude Code' }] as const;
+	const DESKTOP_APPS = [
+	{
+	id: 'claude',
+	name: 'Claude (Pro, Max, Team)',
+	get apps() {
+	return t('ai.connect.claudeApps');
+	}
+	}
+	] as const;
 	let desktopApp = $state<(typeof DESKTOP_APPS)[number]['id']>('claude');
 	let keyDraft = $state('');
 	let checking = $state(false);
@@ -53,7 +62,7 @@
 	let error = $state('');
 	let urlDraft = $state<string | null>(null);
 
-	const msg = (e: unknown) => String(e instanceof Error ? e.message : e);
+	const msg = errorText;
 
 	async function choose(path: 'ai.provider' | 'ai.model', value: string) {
 		error = '';
@@ -68,8 +77,8 @@
 
 	async function paste() {
 		try {
-			const t = (await navigator.clipboard.readText()).trim();
-			if (t) keyDraft = t;
+			const v = (await navigator.clipboard.readText()).trim();
+			if (v) keyDraft = v;
 		} catch {
 			// Presse-papiers refusé (navigateur, droits) : on colle à la main (Ctrl+V).
 		}
@@ -81,7 +90,7 @@
 		keyOk = keyError = '';
 		try {
 			chat.status = await DocumentService.AISetKey(provider.id, keyDraft.trim());
-			keyOk = st?.managed ? 'Clé enregistrée dans le trousseau du système.' : 'Clé valide : elle est enregistrée dans le trousseau du système.';
+			keyOk = st?.managed ? t('ai.connect.keySaved') : t('ai.connect.keyValid');
 			keyDraft = '';
 		} catch (e) {
 			// Clé refusée, crédits épuisés… ; ou réseau injoignable / trousseau
@@ -124,81 +133,81 @@
 	};
 </script>
 
-<section class="connect" aria-label="Connexion de l’assistant">
+<section class="connect" aria-label={t('ai.connect.aria')}>
 	<header>
-		<strong>Connecter l’assistant</strong>
-		{#if onclose}<button class="x" title="Fermer la connexion" aria-label="Fermer la connexion" onclick={onclose}>✕</button>{/if}
+		<strong>{t('ai.connect.title')}</strong>
+		{#if onclose}<button class="x" title={t('ai.connect.close')} aria-label={t('ai.connect.close')} onclick={onclose}>✕</button>{/if}
 	</header>
 
 	{#if st?.managed}
-		<p class="muted">Le fournisseur et le modèle sont choisis par votre organisation, qui fait passer l’assistant par sa passerelle.</p>
+		<p class="muted">{t('ai.connect.managed')}</p>
 		{#if st.gatewayNoKey}
-			<p class="ok"><Icon name="unlock" size={14} /> Connecté par la passerelle de votre organisation : il n’y a pas de clé à saisir.</p>
+			<p class="ok"><Icon name="unlock" size={14} /> {t('ai.connect.gatewayNoKey')}</p>
 		{:else if provider?.hasKey}
-			<p class="ok"><Icon name="unlock" size={14} /> Votre clé personnelle pour la passerelle est enregistrée dans le trousseau du système.</p>
+			<p class="ok"><Icon name="unlock" size={14} /> {t('ai.connect.gatewayKeySaved')}</p>
 			<div class="row">
-				<button onclick={forgetKey}><Icon name="trash" size={14} />Oublier la clé</button>
+				<button onclick={forgetKey}><Icon name="trash" size={14} />{t('ai.connect.forgetKey')}</button>
 			</div>
 		{:else if provider}
-			<p>Collez la clé personnelle que votre organisation vous a remise pour sa passerelle.</p>
+			<p>{t('ai.connect.gatewayPaste')}</p>
 			<div class="row">
 				<input
 					class="grow"
 					type="password"
 					autocomplete="off"
 					spellcheck="false"
-					aria-label="Clé personnelle"
-					placeholder="Clé personnelle"
+					aria-label={t('ai.connect.personalKey')}
+					placeholder={t('ai.connect.personalKey')}
 					bind:value={keyDraft}
 					onkeydown={(e) => {
 						keep(e);
 						if (e.key === 'Enter') saveKey();
 					}}
 				/>
-				<button onclick={paste} title="Coller depuis le presse-papiers"><Icon name="paste" size={14} />Coller</button>
-				<button class="primary" disabled={!keyDraft.trim() || checking} onclick={saveKey}><Icon name="key" size={14} />Enregistrer</button>
+				<button onclick={paste} title={t('ai.connect.pasteTooltip')}><Icon name="paste" size={14} />{t('common.paste')}</button>
+				<button class="primary" disabled={!keyDraft.trim() || checking} onclick={saveKey}><Icon name="key" size={14} />{t('remote.formDialog.save')}</button>
 			</div>
 		{/if}
 		{#if keyOk}<p class="ok" role="status"><Icon name="unlock" size={14} /> {keyOk}</p>{/if}
 		{#if keyError}<p class="error" role="alert">{keyError}</p>{/if}
 	{:else if st}
-		<div class="ways" role="tablist" aria-label="Voie de connexion">
+		<div class="ways" role="tablist" aria-label={t('ai.connect.ways')}>
 			<button role="tab" aria-selected={way === 'key'} class:on={way === 'key'} onclick={() => (way = 'key')}>
-				<Icon name="key" size={14} />Clé d’API <span class="tag">recommandé</span>
+				<Icon name="key" size={14} />{t('ai.connect.apiKey')} <span class="tag">{t('ai.connect.recommended')}</span>
 			</button>
 			{#if ondesktop && mcpAvailable()}
-				<button title="Piloter Lattis depuis Claude Desktop ou Claude Code (serveur MCP)" aria-haspopup="dialog" onclick={ondesktop}>
-					<Icon name="user" size={14} />Application de bureau…
+				<button title={t('ai.connect.desktop.tooltip')} aria-haspopup="dialog" onclick={ondesktop}>
+					<Icon name="user" size={14} />{t('ai.connect.desktop.labelDialog')}
 				</button>
 			{:else}
 				<button role="tab" aria-selected={way === 'desktop'} class:on={way === 'desktop'} onclick={() => (way = 'desktop')}>
-					<Icon name="user" size={14} />Application de bureau
+					<Icon name="user" size={14} />{t('ai.connect.desktop.label')}
 				</button>
 			{/if}
 		</div>
 
 		{#if way === 'key'}
 			<!-- Un seul champ coupé en deux : fournisseur à gauche, modèle à droite. -->
-			<div class="split" role="group" aria-label="Fournisseur et modèle">
-				<select aria-label="Fournisseur" title="Fournisseur" value={st.provider} disabled={chat.busy || checking} onchange={(e) => choose('ai.provider', e.currentTarget.value)}>
+			<div class="split" role="group" aria-label={t('ai.connect.providerModel')}>
+				<select aria-label={t('ai.connect.provider')} title={t('ai.connect.provider')} value={st.provider} disabled={chat.busy || checking} onchange={(e) => choose('ai.provider', e.currentTarget.value)}>
 					{#each providers as p (p.id)}
 						<option value={p.id}>{p.name}</option>
 					{/each}
 					{#if provider && !provider.available}<option value={provider.id}>{provider.name}</option>{/if}
 				</select>
 				{#if provider?.models?.length}
-					<select aria-label="Modèle" title="Modèle" value={st.model} disabled={chat.busy} onchange={(e) => choose('ai.model', e.currentTarget.value)}>
+					<select aria-label={t('ai.connect.model')} title={t('ai.connect.model')} value={st.model} disabled={chat.busy} onchange={(e) => choose('ai.model', e.currentTarget.value)}>
 						{#each provider.models as m (m.id)}
 							<option value={m.id}>{modelLabel(m)}</option>
 						{/each}
 						{#if !provider.models.some((m) => m.id === st.model)}<option value={st.model}>{st.model}</option>{/if}
 					</select>
 				{:else}
-					<span class="rest">modèle par défaut</span>
+					<span class="rest">{t('ai.connect.defaultModel')}</span>
 				{/if}
 			</div>
 			{#if provider && (provider.local || provider.needsKey === false)}
-				<p>Le modèle tourne sur ce poste (Ollama, LM Studio…) : aucune donnée ne quitte l’ordinateur, et il n’y a pas de clé.</p>
+				<p>{t('ai.connect.local.help')}</p>
 				<form
 					class="row"
 					onsubmit={(e) => {
@@ -207,60 +216,59 @@
 					}}
 				>
 					<label class="grow">
-						Adresse du modèle local
+						{t('ai.connect.local.url')}
 						<input type="url" spellcheck="false" placeholder="http://localhost:11434/v1" value={urlDraft ?? localUrl} oninput={(e) => (urlDraft = e.currentTarget.value)} onkeydown={keep} />
 					</label>
-					<button type="submit" disabled={urlDraft === null || urlDraft.trim() === localUrl}>Enregistrer</button>
+					<button type="submit" disabled={urlDraft === null || urlDraft.trim() === localUrl}>{t('remote.formDialog.save')}</button>
 				</form>
-				<p class="muted">Expérimental : les petits modèles appellent moins bien les outils de Lattis.</p>
+				<p class="muted">{t('ai.connect.local.experimental')}</p>
 			{:else if provider?.hasKey}
-				<p class="ok"><Icon name="unlock" size={14} /> Une clé d’API de {provider.name} est enregistrée dans le trousseau du système.</p>
+				<p class="ok"><Icon name="unlock" size={14} /> {t('ai.connect.keyStored', { provider: provider.name })}</p>
 				<div class="row">
-					<button onclick={forgetKey}><Icon name="trash" size={14} />Oublier la clé</button>
+					<button onclick={forgetKey}><Icon name="trash" size={14} />{t('ai.connect.forgetKey')}</button>
 				</div>
 			{:else if provider}
 				<ol class="steps">
 					<li>
 						<span class="n">1</span>
 						<div>
-							<p><strong>Créez une clé</strong> sur la console de {provider.name}.</p>
-							{#if keyUrl}<button class="primary" onclick={() => openOutside(keyUrl)}><Icon name="web" size={14} />Ouvrir la console</button>{/if}
+							<p><strong>{t('ai.connect.step1.create')}</strong> {t('ai.connect.step1.console', { provider: provider.name })}</p>
+							{#if keyUrl}<button class="primary" onclick={() => openOutside(keyUrl)}><Icon name="web" size={14} />{t('ai.connect.step1.open')}</button>{/if}
 							{#if anthropic}
 								<p class="muted">
-									Une clé neuve ne marche qu’avec des crédits : ajoutez-en dans
-									<button class="link" onclick={() => openOutside(ANTHROPIC_BILLING)}>Facturation</button>.
+									{t('ai.connect.step1.credits')}
+									<button class="link" onclick={() => openOutside(ANTHROPIC_BILLING)}>{t('ai.connect.step1.billing')}</button>.
 								</p>
 								<p class="muted">
-									Abonné Claude Max ou Team ? Liez cette organisation dans claude.ai › Paramètres › Facturation pour recevoir vos crédits d’API
-									mensuels (100 à 500 $).
+									{t('ai.connect.step1.maxTeam')}
 								</p>
 							{:else}
-								<p class="muted">Selon le fournisseur, il faut des crédits ou un moyen de paiement sur le compte.</p>
+								<p class="muted">{t('ai.connect.step1.other')}</p>
 							{/if}
 						</div>
 					</li>
 					<li>
 						<span class="n">2</span>
 						<div>
-							<p><strong>Collez-la ici.</strong></p>
+							<p><strong>{t('ai.connect.step2')}</strong></p>
 							<div class="row">
 								<input
 									class="grow"
 									type="password"
 									autocomplete="off"
 									spellcheck="false"
-									aria-label="Clé d’API"
-									placeholder={provider.keyHint ? `${provider.keyHint}…` : 'Clé d’API'}
+									aria-label={t('ai.connect.apiKey')}
+									placeholder={provider.keyHint ? `${provider.keyHint}…` : t('ai.connect.apiKey')}
 									bind:value={keyDraft}
 									onkeydown={(e) => {
 										keep(e);
 										if (e.key === 'Enter') saveKey();
 									}}
 								/>
-								<button onclick={paste} title="Coller depuis le presse-papiers"><Icon name="paste" size={14} />Coller</button>
+								<button onclick={paste} title={t('ai.connect.pasteTooltip')}><Icon name="paste" size={14} />{t('common.paste')}</button>
 							</div>
 							{#if keyDraft && provider.keyHint && !keyDraft.trim().startsWith(provider.keyHint)}
-								<p class="muted">Une clé de {provider.name} commence d’habitude par « {provider.keyHint} ».</p>
+								<p class="muted">{t('ai.connect.keyHint', { provider: provider.name, hint: provider.keyHint })}</p>
 							{/if}
 						</div>
 					</li>
@@ -268,42 +276,41 @@
 						<span class="n">3</span>
 						<div>
 							<button class="primary" disabled={!keyDraft.trim() || checking} onclick={saveKey}>
-								<Icon name="key" size={14} />{checking ? 'Vérification…' : 'Vérifier et enregistrer'}
+								<Icon name="key" size={14} />{checking ? t('ai.external.undo.checking') : t('ai.connect.step3.verify')}
 							</button>
-							<p class="muted">La clé est gardée dans le trousseau du système, jamais dans le classeur.</p>
+							<p class="muted">{t('ai.connect.step3.keychain')}</p>
 						</div>
 					</li>
 				</ol>
 			{/if}
 			{#if keyOk}
 				<p class="ok" role="status"><Icon name="unlock" size={14} /> {keyOk}</p>
-				{#if onclose && !keyError}<div class="row"><button class="primary" onclick={onclose}>Commencer</button></div>{/if}
+				{#if onclose && !keyError}<div class="row"><button class="primary" onclick={onclose}>{t('ai.connect.start')}</button></div>{/if}
 			{/if}
 			{#if keyError}<p class="error" role="alert">{keyError}</p>{/if}
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 		{:else}
-			<div class="split" role="group" aria-label="Fournisseur et application">
-				<select aria-label="Fournisseur" title="Fournisseur" bind:value={desktopApp}>
+			<div class="split" role="group" aria-label={t('ai.connect.providerApp')}>
+				<select aria-label={t('ai.connect.provider')} title={t('ai.connect.provider')} bind:value={desktopApp}>
 					{#each DESKTOP_APPS as a (a.id)}
 						<option value={a.id}>{a.name}</option>
 					{/each}
 				</select>
 				<span class="rest">{DESKTOP_APPS.find((a) => a.id === desktopApp)?.apps}</span>
 			</div>
-			<p class="muted">L’application de bureau d’un fournisseur pilote Lattis avec votre abonnement chez lui, sans clé d’API.</p>
+			<p class="muted">{t('ai.connect.desktop.help')}</p>
 			{#if desktopApp === 'claude'}
 				<p>
-					Un abonnement Claude ne s’utilise pas directement dans une autre application, mais <strong>Claude Desktop</strong> et
-					<strong>Claude Code</strong> savent piloter Lattis. Vous parlez à Claude dans son application ; Lattis montre ce qu’il fait (« Depuis Claude »)
-					et peut tout annuler.
+					{t('ai.connect.desktop.claude.before')} <strong>Claude Desktop</strong> {t('ai.connect.desktop.claude.and')}
+					<strong>Claude Code</strong> {t('ai.connect.desktop.claude.after')}
 				</p>
 				{#if mcpAvailable()}
 					<ClaudeSetup />
 				{:else}
-					<p class="muted">Cette voie demande l’application de bureau de Lattis.</p>
+					<p class="muted">{t('ai.connect.desktop.needsDesktop')}</p>
 				{/if}
 				<p class="muted">
-					Abonnés Max ou Team : vos crédits d’API mensuels paient aussi une clé d’API (onglet « Clé d’API »), qui garde la conversation dans Lattis.
+					{t('ai.connect.desktop.maxTeam')}
 				</p>
 			{/if}
 		{/if}
