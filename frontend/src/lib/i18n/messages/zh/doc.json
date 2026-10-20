@@ -1,1 +1,175 @@
-{}
+{
+	"consent": {
+		"warning": "仅在您信任向您提供此工作簿的人时才允许。如有疑问，请选择“不运行”：工作簿的其余部分仍可使用。",
+		"site": "“{name}”选项卡显示外部网站 {url}，此前从未在此计算机上的此工作簿中被允许过（收到的工作簿，或选项卡在别处被更改）。此网站在选项卡中运行，无法访问工作簿。",
+		"page": "“{name}”选项卡包含一个网页（HTML 和 JavaScript），此前从未在此计算机上被允许过（收到的工作簿，或网页在别处被更改）。网页可以读取和更改工作簿、运行其按钮的操作、向您提问，并在您同意后联系网站。",
+		"title": "运行工作簿中的网页？",
+		"ok": "允许",
+		"cancel": "不运行",
+		"code": "网页代码"
+	},
+	"web": {
+		"lost": "与 Lattis 引擎的连接已断开",
+		"canceled": "调用已取消",
+		"pick": {
+			"title": "选择文件",
+			"help": "所选文件将发送到 Lattis 服务器。",
+			"choose": "选择文件…"
+		},
+		"pdf": {
+			"windows": "“Microsoft Print to PDF”打印机",
+			"browser": "“另存为 PDF”目标"
+		}
+	},
+	"pivot": {
+		"expand": "展开",
+		"collapse": "折叠",
+		"expandName": "展开 {name}",
+		"collapseName": "折叠 {name}",
+		"error": "数据透视表：{error}",
+		"empty": "“{source}”的数据透视表：请选择字段（右键单击 › 编辑…）。"
+	},
+	"chart": {
+		"error": "图表“{name}”：{error}"
+	},
+	"button": {
+		"default": "按钮",
+		"runs": "运行{what}",
+		"noAction": "没有链接的操作",
+		"nothing": "此按钮不运行任何内容：右键单击可为其链接脚本。",
+		"noActionOption": "（无操作）",
+		"run": "运行",
+		"wholeScript": "整个脚本",
+		"function": "函数 {name}()",
+		"script": "脚本",
+		"background": "填充",
+		"text": "文本",
+		"help": "单击按钮会运行其操作；右键单击可返回此处。",
+		"try": "试用"
+	},
+	"rightClickEdit": "右键单击：编辑",
+	"control": {
+		"linked": "链接单元格：{cell}",
+		"kept": "值保存在控件中",
+		"deleted": "控件已删除",
+		"choice": "选项 {n}",
+		"gone": "此控件已不存在：请将其从文本中删除。",
+		"insertTitle": "插入：{kind}",
+		"editTitle": "编辑：{kind}",
+		"type": "类型",
+		"name": "名称（供脚本使用）",
+		"auto": "自动",
+		"label": "标签",
+		"buttonText": "按钮文本",
+		"placeholder": "提示文本（可选）",
+		"keptIn": "值保存在",
+		"inControl": "控件中（无链接单元格）",
+		"sheet": "工作表 {name}",
+		"cell": "单元格",
+		"choices": {
+			"source": "选项来源",
+			"typed": "手动输入",
+			"column": "表格列",
+			"from": "选项取自（不重复值）",
+			"list": "选项（每行一个）"
+		},
+		"script": "脚本（每次更改时）",
+		"help": "控件的值就是链接单元格的值（位于此文档中，或位于工作表上以便在公式中读取）。脚本通过 controls.get / controls.set 和 controls.on(\"change\", …) 操控它。"
+	},
+	"page": {
+		"escapes": "该网页不断尝试打开其他地址：已将其停止。",
+		"navBlocked": "网页“{name}”：已阻止导航到其他地址，网页已重新加载。",
+		"urlSet": "选项卡“{name}”：网页 {url}（按 Ctrl+Z 撤消）",
+		"saved": "网页“{name}”已保存（按 Ctrl+Z 撤消）",
+		"save": "保存",
+		"preview": {
+			"label": "预览",
+			"tooltip": "在预览中显示草稿，但不保存 (Ctrl+Enter)"
+		},
+		"show": {
+			"label": "显示",
+			"tooltip": "返回网页（草稿仍需保存）"
+		},
+		"discard": "放弃更改",
+		"keys": "Ctrl+S：保存 · Ctrl+Enter：预览",
+		"edit": {
+			"label": "编辑",
+			"html": "HTML 网页",
+			"tooltip": "编辑网页的 HTML、CSS 和 JavaScript"
+		},
+		"site": {
+			"label": "网站…",
+			"tooltip": "在此选项卡中显示外部网页"
+		},
+		"reload": {
+			"label": "重新加载",
+			"tooltip": "重新加载网页"
+		},
+		"openBrowser": "在浏览器中打开",
+		"blank": "空白页：该网站可能拒绝在框架中显示（请在浏览器中打开）。",
+		"unsaved": "未保存的更改",
+		"blocked": {
+			"title": "此网页未运行。",
+			"help": "它此前从未在此计算机上被允许过（收到的工作簿，或网页在别处被更改）。仅在您信任向您提供此工作簿的人时才允许。",
+			"preview": "预览 (Ctrl+Enter) 会运行编辑器中显示的代码。",
+			"decide": "决定…"
+		},
+		"frame": "网页 {name}",
+		"pasteHint": "粘贴：请在文本中使用 Ctrl+V",
+		"noTableChart": "工作簿中没有表格：请在工作表上创建一个表格，以便在此处绘制图表。",
+		"noTablePivot": "工作簿中没有表格：请在工作表上创建一个表格，以便在此处进行分析。",
+		"placeholder": "在此输入…（插入：图表和按钮）",
+		"aria": "文档 {name}",
+		"grip": "拖动以调整大小"
+	},
+	"clip": {
+		"chartPasted": "图表已粘贴",
+		"pivotPasted": "数据透视表已粘贴",
+		"chartCopied": "图表已复制：在文本中或工作表上按 Ctrl+V",
+		"pivotCopied": "数据透视表已复制：在文本中或工作表上按 Ctrl+V",
+		"cutAnywhere": "项目已剪切：在文本中或工作表上按 Ctrl+V",
+		"copiedAnywhere": "项目已复制：在文本中或工作表上按 Ctrl+V",
+		"cutText": "项目已剪切：在文本中右键单击 › 粘贴",
+		"copiedText": "项目已复制：在文本中右键单击 › 粘贴"
+	},
+	"panel": {
+		"source": "源表格",
+		"missing": "{name}（未找到）",
+		"height": "高度 (px)",
+		"deleteChart": "删除图表",
+		"help": "按钮和控件帮助",
+		"close": "关闭窗格",
+		"insert": "插入",
+		"save": "保存"
+	},
+	"link": {
+		"title": "链接",
+		"address": "地址",
+		"selection": "所选文本将变为链接。",
+		"inserted": "地址将作为链接插入。",
+		"ctrlClick": "按住 Ctrl 并单击链接可在浏览器中打开。",
+		"apply": "应用",
+		"remove": "删除链接"
+	},
+	"menu": {
+		"pasteItem": "粘贴项目（{what}）",
+		"what": {
+			"chart": "图表",
+			"pivot": "数据透视表",
+			"control": "控件",
+			"button": "按钮"
+		},
+		"spelling": "Shift + 右键单击：拼写建议",
+		"pivot": "数据透视表",
+		"field": "字段（文本、复选框、列表、文件）…",
+		"image": "图像…",
+		"link": "链接…",
+		"title": {
+			"pivot": "数据透视表",
+			"control": "控件"
+		},
+		"pasteAfter": "在后面粘贴项目",
+		"runAction": "运行操作",
+		"edit": "编辑…"
+	}
+}

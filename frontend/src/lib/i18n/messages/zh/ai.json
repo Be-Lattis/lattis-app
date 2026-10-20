@@ -1,1 +1,230 @@
-{}
+{
+	"result": {
+		"none": "没有行",
+		"firstOf": "前 {n} 行（共 {total} 行）",
+		"firstOfMore": "前 {n} 行（共超过 {total} 行）"
+	},
+	"steps": "{n, plural, one {# 个步骤} other {# 个步骤}}",
+	"errors": "{n, plural, one {# 个错误} other {# 个错误}}",
+	"changes": "{n, plural, one {# 处更改} other {# 处更改}}",
+	"cost": {
+		"small": "本次对话 < ${min}",
+		"about": "本次对话 ≈ ${cost}"
+	},
+	"context": {
+		"plain": "上下文：{where}",
+		"selection": "上下文：{where}，选定区域 {selection}"
+	},
+	"suggest": {
+		"repair": "修复此工作表上的表格",
+		"name": "自动为工作簿中的所有表格命名。",
+		"contents": "这个工作簿包含什么？",
+		"analysis": "为我的数据提出一个分析方案",
+		"pivot": "创建一个合适的数据透视表并配上图表",
+		"explain": "解释 {table} 的选定区域 {selection}",
+		"pivotsFor": "为 {table} 建议数据透视表",
+		"analyze": "分析 {table}（{n, plural, one {# 行} other {# 行}}）",
+		"types": "检查 {table} 的类型",
+		"duplicates": "查找 {table} 中的重复项"
+	},
+	"retryIn": "{n} 秒后重试",
+	"retry": "重试",
+	"sharing": {
+		"label": {
+			"sample": "结构和示例行",
+			"full": "整个工作簿",
+			"schema": "仅结构"
+		},
+		"summary": {
+			"sample": "每次读取时它能看到工作簿的结构和若干示例行（最多 20 行）。",
+			"full": "它可以读取工作簿的全部内容。",
+			"schema": "它能看到工作簿的结构（工作表、表格、列、类型），但看不到单元格的值。"
+		}
+	},
+	"external": {
+		"changes": "{n, plural, one {# 处更改} other {# 处更改}}",
+		"reads": "{n, plural, one {# 次读取} other {# 次读取}}",
+		"errors": "{n, plural, one {# 个错误} other {# 个错误}}",
+		"connected": "{client} 已连接",
+		"waiting": "正在等待连接",
+		"undo": {
+			"nothing": "没有可撤消的更改。",
+			"checking": "正在检查…",
+			"tooltip": "一次性撤消 {client} 在这一系列中所做的更改",
+			"running": "正在撤消…",
+			"label": "撤消这些更改"
+		},
+		"intro": "打开 Claude Desktop 或 Claude Code，然后提问，例如“我的 Lattis 工作簿包含什么？”：每个操作都会显示在这里。",
+		"confirm": {
+			"label": "更改前询问",
+			"help": "每次更改工作簿前，Lattis 都会征求您的同意；读取操作无需询问。"
+		}
+	},
+	"goto": {
+		"label": "转到",
+		"tooltip": "转到“{target}”"
+	},
+	"setup": {
+		"intro": "使用 Claude 订阅（Pro、Max、Team）无需 API 密钥：您在 Claude Desktop 或 Claude Code 中对话，由它操作打开的工作簿，Lattis 显示所做的操作。",
+		"sharing": {
+			"before": "“发送给助手的数据”设置（文件 › 设置 › AI 助手）同样适用于 Claude：",
+			"after": "更改后，请重新启动 Claude，使其看到新的工具列表。"
+		},
+		"badge": {
+			"connected": "已连接",
+			"configured": "已配置",
+			"installed": "已安装",
+			"notInstalled": "未安装",
+			"notFound": "未找到"
+		},
+		"desktop": {
+			"help": "Claude 的桌面应用。Lattis 会出现在对话的工具中。",
+			"done": "已配置 ✓ — 请重新启动 Claude Desktop（完全退出后再重新打开）。",
+			"download": "下载 Claude Desktop",
+			"manual": "手动配置",
+			"mergeInto": "合并到"
+		},
+		"configuring": "正在配置…",
+		"reconfigure": "重新配置",
+		"configure": "配置",
+		"code": {
+			"help": "终端中（或其桌面应用中）的 Claude 助手。Lattis 会添加到您的所有项目中。",
+			"done": {
+				"before": "已配置 ✓ — 打开新的 Claude Code 会话：",
+				"after": "会在其中显示 Lattis。"
+			},
+			"notFound": "在此计算机上找不到 claude 命令",
+			"install": "安装 Claude Code",
+			"manual": "需自行运行的命令"
+		}
+	},
+	"connect": {
+		"claudeApps": "Claude Desktop 或 Claude Code",
+		"keySaved": "密钥已保存到系统钥匙串。",
+		"keyValid": "密钥有效：已保存到系统钥匙串。",
+		"aria": "助手连接",
+		"title": "连接助手",
+		"close": "关闭连接",
+		"managed": "提供商和模型由您的组织选择，助手通过组织的网关访问。",
+		"gatewayNoKey": "已通过您组织的网关连接：无需输入密钥。",
+		"gatewayKeySaved": "您用于网关的个人密钥已保存到系统钥匙串。",
+		"forgetKey": "忘记密钥",
+		"gatewayPaste": "粘贴您的组织为其网关提供给您的个人密钥。",
+		"personalKey": "个人密钥",
+		"pasteTooltip": "从剪贴板粘贴",
+		"ways": "连接方式",
+		"apiKey": "API 密钥",
+		"recommended": "推荐",
+		"desktop": {
+			"tooltip": "从 Claude Desktop 或 Claude Code 操控 Lattis（MCP 服务器）",
+			"labelDialog": "桌面应用…",
+			"label": "桌面应用",
+			"help": "提供商的桌面应用使用您在该提供商处的订阅操控 Lattis，无需 API 密钥。",
+			"claude": {
+				"before": "Claude 订阅不能直接在其他应用中使用，但",
+				"and": "和",
+				"after": "可以操控 Lattis。您在 Claude 的应用中与它对话；Lattis 显示它所做的操作（“来自 Claude”），并可全部撤消。"
+			},
+			"needsDesktop": "此方式需要 Lattis 桌面应用。",
+			"maxTeam": "Max 或 Team 订阅用户：每月的 API 额度也可用于 API 密钥（“API 密钥”选项卡），让对话保留在 Lattis 中。"
+		},
+		"providerModel": "提供商和模型",
+		"provider": "提供商",
+		"model": "模型",
+		"defaultModel": "默认模型",
+		"local": {
+			"help": "模型在此计算机上运行（Ollama、LM Studio…）：数据不会离开计算机，也不需要密钥。",
+			"url": "本地模型地址",
+			"experimental": "实验性：小模型调用 Lattis 工具的效果较差。"
+		},
+		"keyStored": "{provider} 的 API 密钥已保存到系统钥匙串。",
+		"step1": {
+			"create": "创建密钥",
+			"console": "（在 {provider} 控制台中）。",
+			"open": "打开控制台",
+			"credits": "新密钥只有在有额度时才能使用：请在以下位置添加额度：",
+			"billing": "账单",
+			"maxTeam": "您是 Claude Max 或 Team 订阅用户？请在 claude.ai › 设置 › 账单 中关联此组织，以获得每月的 API 额度（100 至 500 美元）。",
+			"other": "根据提供商的不同，账户需要有额度或付款方式。"
+		},
+		"step2": "将其粘贴到此处。",
+		"keyHint": "{provider} 的密钥通常以“{hint}”开头。",
+		"step3": {
+			"verify": "验证并保存",
+			"keychain": "密钥保存在系统钥匙串中，绝不会保存在工作簿中。"
+		},
+		"start": "开始",
+		"providerApp": "提供商和应用"
+	},
+	"panel": {
+		"title": "AI 助手",
+		"modelUsed": "所用模型",
+		"connect": {
+			"label": "连接",
+			"tooltip": "连接：API 密钥、Claude 订阅、模型"
+		},
+		"new": {
+			"label": "新建",
+			"tooltip": "新建对话（当前对话保留在列表中）"
+		},
+		"conversations": "对话",
+		"close": {
+			"tooltip": "关闭窗格 (Esc)"
+		},
+		"noConversation": "此工作簿没有对话。",
+		"conv": {
+			"current": "当前对话",
+			"resume": "继续此对话",
+			"inProgress": "进行中",
+			"delete": "删除此对话",
+			"deleteName": "删除“{title}”"
+		},
+		"unavailable": "此版本中助手不可用。",
+		"loading": "正在加载…",
+		"enable": {
+			"title": "启用助手",
+			"intro": "AI 助手读取表格的结构，提出处理思路，并可添加计算列、键、数据透视表和图表。它在一次回答中所做的所有更改都可一次性撤消。",
+			"how": "它通过使用您 API 密钥的 AI 提供商、安装在此计算机上的模型，或使用您 Claude 订阅的 Claude Desktop 工作。它绝不会收到整个工作簿。",
+			"locked": "AI 助手已被您组织的策略禁用。",
+			"check": "启用 AI 助手",
+			"settings": "也可在 文件 › 设置 › 功能 中设置。",
+			"learnMore": "了解详细信息（F1 帮助）"
+		},
+		"source": {
+			"aria": "对话",
+			"lattis": "在 Lattis 中",
+			"claude": "来自 Claude"
+		},
+		"log": "与助手的对话",
+		"empty": "描述您想分析的内容：助手会读取工作簿的结构，提出处理思路，并可创建计算列、键、数据透视表和图表。",
+		"noDoc": "请先打开或创建工作簿（文件 › 新建）。",
+		"compact": "之前的消息已为助手做了摘要；它们仍显示在这里",
+		"undone": "{n, plural, =1 {已撤消更改} other {已撤消更改}}",
+		"undo": {
+			"tooltip": "撤消此回答所做的所有更改",
+			"later": "之后还有其他更改：请使用 Ctrl+Z",
+			"label": "撤消此回答"
+		},
+		"resume": "从中断处继续回答",
+		"copy": "复制回答",
+		"link": {
+			"aria": "打开链接",
+			"question": "打开助手建议的此链接？其地址中的所有内容都会发送到",
+			"open": "打开"
+		},
+		"contextTooltip": "附加到每条消息：助手知道您正在查看的内容",
+		"message": {
+			"aria": "发给助手的消息",
+			"notReady": "请先连接助手（连接）",
+			"noDoc": "请先打开工作簿",
+			"placeholder": "您的消息（Enter 发送，Shift+Enter 换行）"
+		},
+		"stop": {
+			"label": "停止",
+			"tooltip": "停止回答 (Esc)"
+		},
+		"send": "发送",
+		"sharingTooltip": "发送给助手的数据（文件 › 设置 › AI 助手）",
+		"costTooltip": "根据所用令牌估算的费用，由提供商计费"
+	}
+}

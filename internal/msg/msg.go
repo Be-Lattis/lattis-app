@@ -96,7 +96,7 @@ type Args map[string]any
 // catalogs : textes par langue ; le français et l'anglais sont complets, les
 // autres se remplissent au fil des traductions (une clé absente rend le
 // français ; TestCatalogueParity vérifie les identifiants et paramètres).
-var catalogs = map[Lang]map[ID]string{FR: fr, EN: en, DE: {}, ES: {}, ZH: {}}
+var catalogs = map[Lang]map[ID]string{FR: fr, EN: en, DE: {}, ES: {}, ZH: zh}
 
 // Has dit si le catalogue français connaît id.
 func Has(id ID) bool {

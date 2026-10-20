@@ -1,1 +1,258 @@
-{}
+{
+	"chart": "图表",
+	"kind": {
+		"bar": {
+			"label": "柱形图",
+			"hint": "垂直柱形"
+		},
+		"column": {
+			"label": "条形图",
+			"hint": "水平条形"
+		},
+		"line": {
+			"label": "折线图",
+			"hint": "折线"
+		},
+		"area": {
+			"label": "面积图",
+			"hint": "面积"
+		},
+		"pie": {
+			"label": "饼图",
+			"hint": "扇区"
+		},
+		"doughnut": {
+			"label": "圆环图",
+			"hint": "圆环"
+		},
+		"scatter": {
+			"label": "散点图",
+			"hint": "散点图"
+		},
+		"combo": {
+			"label": "组合图",
+			"hint": "柱形和折线位于同一图表（可使用次坐标轴）"
+		},
+		"bar3d": {
+			"label": "三维柱形图",
+			"hint": "透视效果的柱形"
+		},
+		"pie3d": {
+			"label": "三维饼图",
+			"hint": "透视效果的饼图"
+		},
+		"map": {
+			"label": "地图",
+			"hint": "根据纬度和经度列，在 OpenStreetMap 地图上显示点或密度"
+		},
+		"waterfall": {
+			"label": "瀑布图",
+			"hint": "逐步的增加和减少，直至总计"
+		},
+		"treemap": {
+			"label": "树状图",
+			"hint": "与数值成比例的矩形（treemap）"
+		},
+		"radar": {
+			"label": "雷达图",
+			"hint": "每个类别一条轴线，每个系列一个多边形"
+		},
+		"funnel": {
+			"label": "漏斗图",
+			"hint": "流程的逐个阶段"
+		},
+		"boxplot": {
+			"label": "箱形图",
+			"hint": "每个系列的中位数、四分位数和极值"
+		},
+		"histogram": {
+			"label": "直方图",
+			"hint": "频率直方图：数值按箱分布"
+		},
+		"gauge": {
+			"label": "仪表图",
+			"hint": "在表盘上显示一个介于最小值和最大值之间的数值"
+		}
+	},
+	"note": {
+		"truncated": "前 {max} 个点（共 {total} 个）",
+		"sampled": "折线已缩减为 {max} 个点（共 {total} 个，保留极值）",
+		"negativeIgnored": "{n, plural, =1 {已忽略 1 个负值。} other {已忽略 # 个负值。}}",
+		"negativeAbs": "{n, plural, =1 {1 个负值按绝对值计算。} other {# 个负值按绝对值计算。}}",
+		"scatterRank": "X 轴既不是数字也不是日期：每个点按其序号放置。",
+		"firstSeries": "此类型只绘制第一个系列。"
+	},
+	"summary": {
+		"series": "{name}，{n, plural, =1 {1 个系列} other {# 个系列}}",
+		"points": "{n} 个点，从“{first}”到“{last}”",
+		"range": "{name}：从 {min} 到 {max}"
+	},
+	"box": {
+		"stats": "最小值 {min}，Q1 {q1}，中位数 {median}，Q3 {q3}，最大值 {max}，平均值 {mean}",
+		"values": "{n} 个值",
+		"outliers": "{n} 个离群值"
+	},
+	"legend": {
+		"more": "及其他 {n} 项"
+	},
+	"table": {
+		"group": "组",
+		"category": "类别",
+		"median": "中位数 {value}"
+	},
+	"waterfall": {
+		"up": "增加",
+		"down": "减少",
+		"total": "总计"
+	},
+	"radarMin": "雷达图至少需要三个类别",
+	"map": {
+		"pending": {
+			"aria": "地图：待选择坐标",
+			"text": "请在窗格中选择坐标"
+		},
+		"density": "密度",
+		"offline": {
+			"tooltip": "底图来自 tile.openstreetmap.org：请允许此主机（脚本选项卡 › 网络访问）或检查网络连接。",
+			"label": "底图不可用"
+		},
+		"noPoint": "没有点：需要纬度和经度",
+		"clickHint": "单击：转到该行",
+		"legend": "图例：{name}",
+		"legendItem": "{label}：{n, plural, one {# 个点} other {# 个点}}",
+		"zoomIn": {
+			"tooltip": "放大 (+)",
+			"aria": "放大"
+		},
+		"zoomOut": {
+			"tooltip": "缩小 (−)",
+			"aria": "缩小"
+		},
+		"recenter": "以各点为中心重新定位"
+	},
+	"panel": {
+		"shape": {
+			"bar": "柱形",
+			"line": "折线",
+			"area": "面积"
+		},
+		"choose": "（选择）",
+		"help": "图表帮助",
+		"type": "类型",
+		"stacked": "堆积",
+		"data": "数据",
+		"coords": {
+			"label": "坐标",
+			"pair": {
+				"label": "2 列",
+				"tooltip": "一列纬度，一列经度"
+			},
+			"single": {
+				"label": "1 列",
+				"tooltip": "纬度和经度位于同一单元格，可使用任何标准写法"
+			},
+			"pairHelp": "小数（48.8566 或 48,8566），或度数 48°51'24\"N。",
+			"singleHelp": "任何标准写法：48.8566, 2.3522 · 48,8566;2,3522 · 48°51'24\"N 2°21'03\"E · 48°51.4'N 2°21.05'E · N48.85 E2.35 · POINT(2.3522 48.8566) · geo:48.8566,2.3522"
+		},
+		"latitude": "纬度",
+		"longitude": "经度",
+		"position": "位置",
+		"draft": {
+			"proposed": "已建议列：请检查后再显示地图。",
+			"choose": "请选择坐标列：随后将绘制地图。",
+			"show": "显示地图"
+		},
+		"invalid": "{n, plural, =1 {已忽略 1 个无法读取的值} other {已忽略 # 个无法读取的值}}",
+		"name": "名称",
+		"noneM": "（无）",
+		"value": "值",
+		"noneF": "（无）",
+		"display": "显示",
+		"points": "点",
+		"heat": "密度（热力）",
+		"colorBy": {
+			"label": "颜色依据",
+			"heatTooltip": "密度是单一的热力层：切换到“点”才能按值着色",
+			"pointsOnly": "（仅限点）",
+			"tooltip": "该列的每个不同值各有一种颜色，分布在整个色谱上",
+			"single": "（单一颜色）"
+		},
+		"colorLegend": "颜色图例",
+		"pointSize": {
+			"label": "点大小",
+			"tooltip": "放大点的尺寸；“值”列已决定各点的相对大小"
+		},
+		"hidden": {
+			"label": "被筛选隐藏的行",
+			"mapTooltip": "默认情况下，与 Excel 一样，地图只显示表格筛选后显示的行",
+			"tooltip": "默认情况下，与 Excel 一样，图表只显示表格筛选后显示的行"
+		},
+		"view": {
+			"label": "视图",
+			"saved": "已保存（缩放 {zoom}）",
+			"recenterTooltip": "返回适合各点的视图",
+			"recenter": "重新居中",
+			"fitted": "适合各点"
+		},
+		"mapHelp": "已选中地图：滚轮缩放，拖动可移动地图（Alt+拖动可移动图表），双击或 + / − 缩放；单击某个点可转到表格中的对应行。",
+		"mapTiles": "底图 © OpenStreetMap（tile.openstreetmap.org），受工作簿网络权限限制。值决定点的大小，或每个点在密度中的权重。",
+		"source": {
+			"label": "源",
+			"tooltip": "图表所绘数据来自的表格或数据透视表",
+			"pivot": "{name}（数据透视表）"
+		},
+		"filter": {
+			"tooltip": "图表只读取 {field} 为 {values} 的行",
+			"or": " 或 ",
+			"label": "筛选",
+			"remove": "删除筛选：表格的所有行"
+		},
+		"axisX": "X 轴",
+		"axisY": "Y 轴",
+		"axisY2": "Y 轴 2",
+		"singleSeries": "此类型只绘制一个系列",
+		"series": {
+			"up": {
+				"tooltip": "上移系列（绘制和图例顺序）",
+				"aria": "上移系列 {name}"
+			},
+			"down": {
+				"tooltip": "下移系列",
+				"aria": "下移系列 {name}"
+			},
+			"color": "系列颜色",
+			"shape": "系列形状",
+			"secondaryOn": "系列位于次坐标轴（右侧）：单击可放回主坐标轴",
+			"secondaryOff": "在右侧的次坐标轴上绘制系列，使用独立刻度",
+			"axis2": "坐标轴 2"
+		},
+		"bins": "箱",
+		"blanks": {
+			"label": "空单元格",
+			"tooltip": "与 Excel 一样：空单元格使折线断开（空距）、按零计算，或用直线连接相邻数据点",
+			"gap": "空距",
+			"zero": "零值",
+			"span": "用直线连接数据点"
+		},
+		"colors": "颜色",
+		"paletteRepeat": "以下类别重复使用调色板。",
+		"titles": "标题",
+		"elements": "元素",
+		"legend": {
+			"label": "图例",
+			"bottom": "底部",
+			"top": "顶部",
+			"right": "右侧",
+			"none": "无"
+		},
+		"dataLabels": "数据标签",
+		"grid": "网格线",
+		"moveHelp": "拖动图表可移动它，拖动控制点可调整大小。右键单击：剪切、复制、删除。",
+		"keyboardHelp": "使用键盘：方向键移动，Shift+方向键调整大小，Tab 转到下一个图表，Del 删除。"
+	},
+	"image": {
+		"unreadable": "无法读取的图像",
+		"noCanvas": "无法绘制",
+		"empty": "空图像"
+	}
+}
