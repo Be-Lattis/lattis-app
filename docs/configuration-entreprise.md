@@ -88,6 +88,14 @@ Les thèmes de l'organisation s'ajoutent à ceux que l'utilisateur garde dans so
 
 `configUrl` et `remote.*` sont réservés aux couches posées par un administrateur (stratégie, `HKLM`, fichier machine protégé) dès que l'une d'elles les définit. Sur un poste sans configuration d'entreprise, l'environnement peut les poser (tests).
 
+### Langue
+
+| Clé | Rôle | Défaut |
+|---|---|---|
+| `ui.language` | langue de l'interface : `auto` (celle du système, ou du navigateur en version web ; l'anglais si elle n'est pas proposée), `fr`, `en`, `de`, `es` ou `zh` (chinois simplifié) | `auto` |
+
+L'utilisateur la choisit dans Fichier › Paramètres › Affichage ; posée dans la stratégie, elle est imposée. Elle règle aussi l'affichage des nombres et des dates, et la lecture des nombres écrits en texte par les fonctions (« 1,234 ») ; l'écriture des formules la suivra (séparateurs `;` et décimale `,` en français, allemand et espagnol ; `,` et `.` en anglais et en chinois). Le classeur enregistré n'en dépend pas (docs/i18n.md). Les traductions sont en cours : l'interface reste en français pour les textes pas encore traduits.
+
 ### Registre et environnement
 
 - Registre : le nom de chaque valeur est le chemin pointé (`connections.erp.config.host`) ; une sous-clé ajoute son nom au chemin. `REG_SZ` est lu comme du JSON quand c'en est (`true`, `12`, `{...}`), comme du texte sinon ; `REG_DWORD` 0/1 vaut faux/vrai pour un booléen ; `REG_MULTI_SZ` donne une liste. La valeur `ConfigFile` désigne un fichier JSON lu au même rang.
