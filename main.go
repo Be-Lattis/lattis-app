@@ -128,6 +128,10 @@ func main() {
 	// main) ; l'installeur et le paquet MSIX le déclarent eux-mêmes.
 	registerProtocol(noProtocol || os.Getenv("LATTIS_NO_REGISTER_PROTOCOL") == "1")
 
+	// Mise à jour (barre d'état) : recherche sur GitHub, téléchargement
+	// vérifié au clic, installation à la fermeture (PostShutdown).
+	updates := bridge.NewUpdateService()
+
 	app := application.New(application.Options{
 		Name:        "Lattis",
 		Description: "Tableur relationnel local-first",
@@ -152,7 +156,9 @@ func main() {
 		Services: []application.Service{
 			application.NewService(&bridge.GridService{}),
 			application.NewService(documents),
+			application.NewService(updates),
 		},
+		PostShutdown: func() { bridge.ApplyPendingUpdate(updates) },
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(ui),
 		},

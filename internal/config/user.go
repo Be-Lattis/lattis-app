@@ -24,7 +24,7 @@ import (
 // UserEditable liste les clés que l'interface peut écrire.
 var UserEditable = []string{"features.htmlTabs", "features.sharedWorkbooks", "features.coEditing", "ai.enabled", "ai.dataSharing", "ai.provider", "ai.model", "ai.keepConversation", "ai.localUrl", "mcp.confirmWrites",
 	"limits.undoDepth", "limits.scriptSeconds", "limits.sqlReadSeconds", "limits.sqlWriteSeconds",
-	"ui.theme", "ui.themes", "ui.language"}
+	"ui.theme", "ui.themes", "ui.language", "updates.check"}
 
 // UserVisible liste les clés que l'interface lit sans les écrire.
 var UserVisible = []string{"ui.builtinThemes"}

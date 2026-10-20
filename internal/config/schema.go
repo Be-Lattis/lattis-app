@@ -26,6 +26,22 @@ type Settings struct {
 	Features            Features                     `json:"features,omitempty"`
 	Limits              Limits                       `json:"limits,omitempty"`
 	UI                  UI                           `json:"ui,omitempty"`
+	Updates             Updates                      `json:"updates,omitempty"`
+}
+
+// Updates règle la mise à jour de l'application de bureau
+// (docs/conception/mise-a-jour-automatique.md) ; sans objet en édition web.
+type Updates struct {
+	// Check : chercher les nouvelles versions sur GitHub (activé par défaut) ;
+	// faux dans une stratégie : plus aucune requête ni proposition de mise à
+	// jour, et le réglage est grisé.
+	Check *bool `json:"check,omitempty"`
+}
+
+// UpdateCheck dit si l'application de bureau cherche les nouvelles versions
+// (updates.check, activé par défaut).
+func UpdateCheck(c *Config) bool {
+	return c.Bool("updates.check", true)
 }
 
 // Limits borne ce qui peut tenir l'application ou la mémoire (audit 6,
@@ -206,6 +222,8 @@ func Defaults() Tree {
 		// Thème de couleur par défaut des classeurs (décision 0017). Langue :
 		// auto suit le système (docs/i18n.md).
 		"ui": Tree{"theme": DefaultTheme, "builtinThemes": true, "language": "auto"},
+		// Recherche des nouvelles versions (bureau seulement).
+		"updates": Tree{"check": true},
 		"limits": Tree{
 			"undoDepth":       float64(LimitRanges["limits.undoDepth"].Default),
 			"scriptSeconds":   float64(LimitRanges["limits.scriptSeconds"].Default),
@@ -216,7 +234,7 @@ func Defaults() Tree {
 }
 
 var topLevel = []string{"version", "organization", "configUrl", "remote", "allowPolicyOverride",
-	"identity", "connections", "ai", "mcp", "features", "limits", "ui"}
+	"identity", "connections", "ai", "mcp", "features", "limits", "ui", "updates"}
 
 func knownTopLevel(k string) bool {
 	for _, t := range topLevel {
@@ -310,7 +328,7 @@ func coerce(path string, v any) (any, bool) {
 
 var boolPaths = []string{"allowPolicyOverride", "features.mcp.enabled", "features.allowUserConnections",
 	"features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.coEditing", "features.luaHttp.restrict", "ai.enabled",
-	"ai.keepConversation", "mcp.confirmWrites", "ui.builtinThemes"}
+	"ai.keepConversation", "mcp.confirmWrites", "ui.builtinThemes", "updates.check"}
 
 func boolPath(path string) bool {
 	for _, p := range boolPaths {
@@ -349,6 +367,7 @@ var validators = []struct {
 	{"ui.theme", isIdent},
 	{"ui.language", oneOf("auto", "fr", "en", "de", "es", "zh")},
 	{"ui.builtinThemes", isBool},
+	{"updates.check", isBool},
 	{"ui.themes", isThemes},
 	{"ui.themes.*", isTheme},
 	{"limits.*", inLimitRange},

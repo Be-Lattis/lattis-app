@@ -3,9 +3,11 @@
 
 import * as DocumentService from "./documentservice.js";
 import * as GridService from "./gridservice.js";
+import * as UpdateService from "./updateservice.js";
 export {
     DocumentService,
-    GridService
+    GridService,
+    UpdateService
 };
 
 export type {

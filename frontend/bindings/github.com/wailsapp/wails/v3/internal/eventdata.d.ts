@@ -8,6 +8,9 @@ import type { Events } from "@wailsio/runtime";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import type * as bridge$0 from "../../../../lalamefine/lattis/internal/bridge/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as update$0 from "../../../../lalamefine/lattis/internal/update/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {
@@ -18,6 +21,7 @@ declare module "@wailsio/runtime" {
             "doc:open-file": string;
             "script:print": string;
             "ui:command": bridge$0.UICommand;
+            "update:status": update$0.Status;
             "window:close-request": void;
         }
     }
