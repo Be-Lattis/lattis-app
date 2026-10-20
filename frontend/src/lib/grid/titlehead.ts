@@ -1,6 +1,7 @@
 // « Utiliser comme en-têtes » (TitleToHeader, internal/canvas/titlehead.go) :
 // des en-têtes tapés après les données, sur la ligne juste au-dessus d'un
 // tableau, deviennent les noms de ses colonnes.
+import { t } from '#lib/i18n/index.js';
 
 /** Ce qu'il faut d'un tableau pour situer la ligne au-dessus de son en-tête. */
 export interface TitleTable {
@@ -26,4 +27,4 @@ export function titleAboveFilled(t: TitleTable, raw: (row: number, col: number) 
 }
 
 /** Texte de la proposition de la barre d'état, après la saisie. */
-export const headerOfferText = (table: string) => `Cette ligne ressemble aux en-têtes de « ${table} »`;
+export const headerOfferText = (table: string) => t('grid.titleHead.offer', { table });

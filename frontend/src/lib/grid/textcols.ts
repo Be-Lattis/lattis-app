@@ -1,6 +1,7 @@
 // Assistant « Convertir le texte en colonnes » (Données › Convertir), comme
 // Excel : modèle et calculs de l'aperçu. La conversion elle-même est faite par
 // le backend (canvas.TextToColumns), qui donne aussi les parties de l'aperçu.
+import { t } from '#lib/i18n/index.js';
 
 /** Format d'une colonne produite : Standard (''), Texte, Date ou non importée. */
 export type ColFormat = '' | 'text' | 'date' | 'skip';
@@ -37,12 +38,42 @@ export interface TextColumnsPreview {
 
 /** Ordres des dates, libellés comme Excel en français (J, M, A). */
 export const DATE_ORDERS = [
-	{ value: 'DMY', label: 'JMA' },
-	{ value: 'MDY', label: 'MJA' },
-	{ value: 'YMD', label: 'AMJ' },
-	{ value: 'DYM', label: 'JAM' },
-	{ value: 'MYD', label: 'MAJ' },
-	{ value: 'YDM', label: 'AJM' }
+	{
+		value: 'DMY',
+		get label() {
+			return t('grid.textCols.dateOrder.DMY');
+		}
+	},
+	{
+		value: 'MDY',
+		get label() {
+			return t('grid.textCols.dateOrder.MDY');
+		}
+	},
+	{
+		value: 'YMD',
+		get label() {
+			return t('grid.textCols.dateOrder.YMD');
+		}
+	},
+	{
+		value: 'DYM',
+		get label() {
+			return t('grid.textCols.dateOrder.DYM');
+		}
+	},
+	{
+		value: 'MYD',
+		get label() {
+			return t('grid.textCols.dateOrder.MYD');
+		}
+	},
+	{
+		value: 'YDM',
+		get label() {
+			return t('grid.textCols.dateOrder.YDM');
+		}
+	}
 ];
 
 export interface Delims {
@@ -107,13 +138,13 @@ export function addBreak(breaks: number[], pos: number, max: number): number[] {
 export function formatLabel(f: TextColumnFormat | undefined): string {
 	switch (f?.format) {
 		case 'text':
-			return 'Texte';
+			return t('grid.textCols.format.text');
 		case 'date':
-			return DATE_ORDERS.find((o) => o.value === f.order)?.label ?? 'JMA';
+			return DATE_ORDERS.find((o) => o.value === f.order)?.label ?? t('grid.textCols.dateOrder.DMY');
 		case 'skip':
-			return 'Ignorer la colonne';
+			return t('grid.textCols.format.skip');
 	}
-	return 'Standard';
+	return t('grid.textCols.format.general');
 }
 
 /** Longueur en caractères (et non en unités UTF-16) de la plus longue ligne. */

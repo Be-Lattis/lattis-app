@@ -3,6 +3,8 @@
 // Go, internal/formula/parse.go), parenthèses fermées d'office, références
 // repérées pour être colorées dans l'éditeur et encadrées sur la grille, et
 // références de plage insérées au glissé.
+// (t est ici un jeton : la traduction s'appelle tr.)
+import { t as tr } from '#lib/i18n/index.js';
 
 /** La saisie est-elle une formule ? */
 export const isFormula = (text: string) => /^\s*=/.test(text) && text.trim().length > 1;
@@ -73,7 +75,7 @@ function lex(src: string, base: number, sep: string): Tok[] {
 		if (c === '"') {
 			i++;
 			for (;;) {
-				if (i >= src.length) throw new SyntaxErr(base + start, base + start + 1, 'guillemet non fermé');
+				if (i >= src.length) throw new SyntaxErr(base + start, base + start + 1, tr('grid.syntax.unclosedQuote'));
 				if (src[i] === '"') {
 					if (src[i + 1] === '"') {
 						i += 2;
@@ -94,14 +96,14 @@ function lex(src: string, base: number, sep: string): Tok[] {
 				if (src[i] === '+' || src[i] === '-') i++;
 				while (i < src.length && isDigit(src[i])) i++;
 			}
-			if (src.slice(start, i).split(dec).length > 2) throw new SyntaxErr(base + start, base + i, 'nombre invalide');
+			if (src.slice(start, i).split(dec).length > 2) throw new SyntaxErr(base + start, base + i, tr('grid.syntax.badNumber'));
 			push('num', src.slice(start, i), start);
 			continue;
 		}
 		if (c === '#') {
 			const up = src.slice(i).toUpperCase();
 			const name = ERRORS.find((e) => up.startsWith(e));
-			if (!name) throw new SyntaxErr(base + start, base + start + 1, 'erreur inconnue');
+			if (!name) throw new SyntaxErr(base + start, base + start + 1, tr('grid.syntax.unknownError'));
 			i += name.length;
 			push('err', name, start);
 			continue;
@@ -113,7 +115,7 @@ function lex(src: string, base: number, sep: string): Tok[] {
 				if (src[j] === '[') depth++;
 				else if (src[j] === ']' && --depth === 0) break;
 			}
-			if (j >= src.length) throw new SyntaxErr(base + start, base + start + 1, 'crochet non fermé');
+			if (j >= src.length) throw new SyntaxErr(base + start, base + start + 1, tr('grid.syntax.unclosedBracket'));
 			i = j + 1;
 			push('ref', src.slice(start + 1, j), start);
 			continue;
@@ -170,11 +172,11 @@ function lex(src: string, base: number, sep: string): Tok[] {
 			)
 				i++;
 			const text = src.slice(start, i);
-			if (text.includes('$') && !a1Address(text.replaceAll('$', ''))) throw new SyntaxErr(base + start, base + i, 'caractère inattendu « $ »');
+			if (text.includes('$') && !a1Address(text.replaceAll('$', ''))) throw new SyntaxErr(base + start, base + i, tr('grid.syntax.unexpectedChar', { char: '$' }));
 			push('ident', text, start);
 			continue;
 		}
-		throw new SyntaxErr(base + start, base + start + 1, `caractère inattendu « ${c} »`);
+		throw new SyntaxErr(base + start, base + start + 1, tr('grid.syntax.unexpectedChar', { char: c }));
 	}
 	toks.push({ k: 'eof', text: '', pos: base + src.length, end: base + src.length });
 	return toks;
@@ -243,8 +245,8 @@ class Checker {
 				this.comparison();
 				const e = this.next();
 				if (e.k !== 'rp') {
-					if (e.k === 'eof') throw new SyntaxErr(t.pos, t.end, 'il manque une parenthèse fermante « ) »');
-					throw new SyntaxErr(e.pos, e.end, `il manque un opérateur ou « ) » avant « ${this.word(e)} »`);
+					if (e.k === 'eof') throw new SyntaxErr(t.pos, t.end, tr('grid.syntax.missingCloseParen'));
+					throw new SyntaxErr(e.pos, e.end, tr('grid.syntax.missingOperatorOrParen', { word: this.word(e) }));
 				}
 				return;
 			}
@@ -257,7 +259,7 @@ class Checker {
 					if (word.toLowerCase() === 'cell') {
 						const parts = inner.text.split(':');
 						if (parts.length > 2 || !parts.every((x) => CELL.test(x)))
-							throw new SyntaxErr(t.pos, inner.end, `adresse de cellule invalide : Cell[${inner.text}]`);
+							throw new SyntaxErr(t.pos, inner.end, tr('grid.syntax.badCellAddress', { addr: inner.text }));
 						return;
 					}
 					return this.item();
@@ -275,12 +277,12 @@ class Checker {
 		const span = /^\s*(\d+)\s*:\s*(\d+)\s*$/.exec(kt.text);
 		if (span) {
 			if (Math.min(Number(span[1]), Number(span[2])) < 1)
-				throw new SyntaxErr(kt.pos, kt.end, "les lignes d'un tableau se comptent à partir de 1");
+				throw new SyntaxErr(kt.pos, kt.end, tr('grid.syntax.rowFromOne'));
 			return;
 		}
 		const sub = new Checker(lex(kt.text, kt.pos + 1, this.sep), this.sep);
 		sub.comparison();
-		if (sub.peek().k !== 'eof') throw new SyntaxErr(kt.pos, kt.end, 'ligne attendue entre crochets');
+		if (sub.peek().k !== 'eof') throw new SyntaxErr(kt.pos, kt.end, tr('grid.syntax.rowExpected'));
 	}
 
 	call(name: Tok) {
@@ -294,31 +296,32 @@ class Checker {
 			if (k !== 'sep' && k !== 'rp') this.comparison();
 			const t = this.next();
 			if (t.k === 'rp') return;
-			if (t.k === 'eof') throw new SyntaxErr(t.pos, t.end, `il manque une parenthèse fermante « ) » à ${name.text.toUpperCase()}`);
-			if (t.k !== 'sep') throw new SyntaxErr(t.pos, t.end, `il manque « ${this.sep} » ou « ) » avant « ${this.word(t)} »`);
+			if (t.k === 'eof') throw new SyntaxErr(t.pos, t.end, tr('grid.syntax.missingCloseParenOf', { name: name.text.toUpperCase() }));
+			if (t.k !== 'sep') throw new SyntaxErr(t.pos, t.end, tr('grid.syntax.missingSepOrParen', { sep: this.sep, word: this.word(t) }));
 		}
 	}
 
 	missing(t: Tok): SyntaxErr {
 		const prev = this.i >= 2 ? this.toks[this.i - 2] : undefined;
-		const after = prev && (prev.k === 'op' || prev.k === 'lp' || prev.k === 'sep') ? ` après « ${prev.text} »` : '';
+		const after = prev && (prev.k === 'op' || prev.k === 'lp' || prev.k === 'sep') ? prev.text : null;
+		const missingValue = () => (after !== null ? tr('grid.syntax.missingValueAfter', { word: after }) : tr('grid.syntax.missingValue'));
 		// La faute est montrée à l'endroit où la valeur manque.
 		const at = (msg: string) => (t.k === 'eof' && prev ? new SyntaxErr(prev.pos, prev.end, msg) : new SyntaxErr(t.pos, Math.max(t.end, t.pos + 1), msg));
 		switch (t.k) {
 			case 'eof':
-				return prev ? at('il manque une valeur' + after) : new SyntaxErr(t.pos, t.pos, 'la formule est vide');
+				return prev ? at(missingValue()) : new SyntaxErr(t.pos, t.pos, tr('grid.syntax.empty'));
 			case 'rp':
 			case 'sep':
 			case 'op':
-				return at(after ? 'il manque une valeur' + after : `il manque une valeur avant « ${this.word(t)} »`);
+				return at(after !== null ? missingValue() : tr('grid.syntax.missingValueBefore', { word: this.word(t) }));
 		}
-		return at(`« ${this.word(t)} » inattendu`);
+		return at(tr('grid.syntax.unexpected', { word: this.word(t) }));
 	}
 
 	extra(t: Tok): SyntaxErr {
-		if (t.k === 'rp') return new SyntaxErr(t.pos, t.end, 'parenthèse fermante « ) » en trop');
-		if (t.k === 'sep') return new SyntaxErr(t.pos, t.end, `« ${this.sep} » hors des parenthèses d'une fonction`);
-		return new SyntaxErr(t.pos, t.end, `il manque un opérateur avant « ${this.word(t)} »`);
+		if (t.k === 'rp') return new SyntaxErr(t.pos, t.end, tr('grid.syntax.extraCloseParen'));
+		if (t.k === 'sep') return new SyntaxErr(t.pos, t.end, tr('grid.syntax.sepOutside', { sep: this.sep }));
+		return new SyntaxErr(t.pos, t.end, tr('grid.syntax.missingOperator', { word: this.word(t) }));
 	}
 }
 

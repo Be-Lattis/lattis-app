@@ -3,6 +3,7 @@
 // référence vers ce tableau. « Basculer sur » va à la ligne citée, Alt+←
 // revient (pile de retours) ; sur la clé, « Lignes qui citent » fait le
 // chemin inverse.
+import { t } from '#lib/i18n/index.js';
 
 /** Tableau du classeur tel que la feuille le connaît (key : rang de la colonne clé, -1 ou absent : aucune). */
 export interface RefTable {
@@ -69,11 +70,11 @@ export function popBack(stack: readonly RefSpot[]): { spot: RefSpot | undefined;
 
 /** Message de la barre d'état quand une validation fait d'une colonne une référence. */
 export function refMessage(column: string, table: string): string {
-	return `« ${column} » devient une référence vers « ${table} » : Ctrl+clic ou clic droit › Basculer sur…`;
+	return t('grid.refLink.becomes', { column, table });
 }
 
 /** Libellé de l'entrée « Lignes qui citent » d'une valeur de clé. */
 export function citeLabel(value: string, cites: readonly Citation[]): string {
 	const n = cites.reduce((s, c) => s + c.count, 0);
-	return n ? `Lignes qui citent « ${value} » (${n})` : `Aucune ligne ne cite « ${value} »`;
+	return n ? t('grid.refLink.cites', { value, n }) : t('grid.refLink.noCites', { value });
 }

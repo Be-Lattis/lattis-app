@@ -5,6 +5,7 @@
 // coin haut gauche du tableau croisé, sur la feuille affichée. Échap annule.
 // Ce qu'il recouvre ou touche (tableau, autre tableau croisé) s'écarte vers
 // la droite, une colonne vide entre eux (le moteur : makeRoom).
+import { t } from '#lib/i18n/index.js';
 
 export type Placement<C = unknown> =
 	/** Nouveau tableau croisé de cette configuration. */
@@ -21,8 +22,8 @@ export type PlaceOp<C = unknown> =
 /** Texte de la barre d'état pendant la pose. */
 export function placeHint(p: Placement): string {
 	return p.kind === 'create'
-		? 'Cliquez sur la cellule où placer le tableau croisé (Échap : annuler)'
-		: `Cliquez sur la cellule où déplacer le tableau croisé « ${p.name} » (Échap : annuler)`;
+		? t('grid.pivot.place.create')
+		: t('grid.pivot.place.move', { name: p.name });
 }
 
 /** Ce que fait un clic sur la cellule (row, col) de la feuille sheet. */
@@ -46,9 +47,9 @@ export function placeKey(key: string): 'cancel' | 'pass' {
 export function placedMessage(op: PlaceOp): string {
 	switch (op.op) {
 		case 'create':
-			return 'Tableau croisé créé (Ctrl+Z pour annuler)';
+			return t('grid.pivot.place.created');
 		case 'move':
-			return 'Tableau croisé déplacé (Ctrl+Z pour annuler)';
+			return t('grid.pivot.place.moved');
 	}
-	return 'Le tableau croisé est déjà à cette place';
+	return t('grid.pivot.place.same');
 }

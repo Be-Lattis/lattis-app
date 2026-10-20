@@ -9,7 +9,7 @@
 
 import type { CellStyle } from './style';
 import { ICON_SETS, type IconSetId } from './cficons';
-import { compareText, lower } from '#lib/i18n/index.js';
+import { compareText, lower, t } from '#lib/i18n/index.js';
 
 export type RuleOp =
 	| '>'
@@ -102,69 +102,77 @@ export interface Rule {
 export type DateWhen = 'yesterday' | 'today' | 'tomorrow' | 'last7' | 'lastweek' | 'thisweek' | 'nextweek' | 'lastmonth' | 'thismonth' | 'nextmonth';
 
 export const DATE_WHENS: { value: DateWhen; label: string }[] = [
-	{ value: 'yesterday', label: 'Hier' },
-	{ value: 'today', label: 'Aujourd’hui' },
-	{ value: 'tomorrow', label: 'Demain' },
-	{ value: 'last7', label: 'Au cours des 7 derniers jours' },
-	{ value: 'lastweek', label: 'La semaine dernière' },
-	{ value: 'thisweek', label: 'Cette semaine' },
-	{ value: 'nextweek', label: 'La semaine prochaine' },
-	{ value: 'lastmonth', label: 'Le mois dernier' },
-	{ value: 'thismonth', label: 'Ce mois-ci' },
-	{ value: 'nextmonth', label: 'Le mois prochain' }
+	{ value: 'yesterday', get label() { return t('grid.cf.date.yesterday'); } },
+	{ value: 'today', get label() { return t('grid.cf.date.today'); } },
+	{ value: 'tomorrow', get label() { return t('grid.cf.date.tomorrow'); } },
+	{ value: 'last7', get label() { return t('grid.cf.date.last7'); } },
+	{ value: 'lastweek', get label() { return t('grid.cf.date.lastweek'); } },
+	{ value: 'thisweek', get label() { return t('grid.cf.date.thisweek'); } },
+	{ value: 'nextweek', get label() { return t('grid.cf.date.nextweek'); } },
+	{ value: 'lastmonth', get label() { return t('grid.cf.date.lastmonth'); } },
+	{ value: 'thismonth', get label() { return t('grid.cf.date.thismonth'); } },
+	{ value: 'nextmonth', get label() { return t('grid.cf.date.nextmonth'); } }
 ];
 
 /** Conditions sur la valeur (dialogue « Nouvelle règle »), avec leur nombre de valeurs. */
 export const RULE_OPS: { op: RuleOp; label: string; args: 0 | 1 | 2 }[] = [
-	{ op: 'between', label: 'comprise entre', args: 2 },
-	{ op: 'notbetween', label: 'non comprise entre', args: 2 },
-	{ op: '=', label: 'égale à', args: 1 },
-	{ op: '<>', label: 'différente de', args: 1 },
-	{ op: '>', label: 'supérieure à', args: 1 },
-	{ op: '<', label: 'inférieure à', args: 1 },
-	{ op: '>=', label: 'supérieure ou égale à', args: 1 },
-	{ op: '<=', label: 'inférieure ou égale à', args: 1 }
+	{ op: 'between', get label() { return t('grid.cf.op.between'); }, args: 2 },
+	{ op: 'notbetween', get label() { return t('grid.cf.op.notbetween'); }, args: 2 },
+	{ op: '=', get label() { return t('grid.cf.op.eq'); }, args: 1 },
+	{ op: '<>', get label() { return t('grid.cf.op.ne'); }, args: 1 },
+	{ op: '>', get label() { return t('grid.cf.op.gt'); }, args: 1 },
+	{ op: '<', get label() { return t('grid.cf.op.lt'); }, args: 1 },
+	{ op: '>=', get label() { return t('grid.cf.op.ge'); }, args: 1 },
+	{ op: '<=', get label() { return t('grid.cf.op.le'); }, args: 1 }
 ];
 
 /** Conditions sur le texte. */
 export const TEXT_OPS: { op: RuleOp; label: string }[] = [
-	{ op: 'contains', label: 'contenant' },
-	{ op: 'notcontains', label: 'ne contenant pas' },
-	{ op: 'begins', label: 'commençant par' },
-	{ op: 'ends', label: 'se terminant par' }
+	{ op: 'contains', get label() { return t('grid.cf.textOp.contains'); } },
+	{ op: 'notcontains', get label() { return t('grid.cf.textOp.notcontains'); } },
+	{ op: 'begins', get label() { return t('grid.cf.textOp.begins'); } },
+	{ op: 'ends', get label() { return t('grid.cf.textOp.ends'); } }
 ];
 
 /** Mises en forme prédéfinies, comme celles d'Excel. */
 export const RULE_STYLES: { label: string; style: CellStyle }[] = [
 	{
-		label: 'Remplissage rouge clair avec texte rouge foncé',
+		get label() {
+			return t('grid.cf.style.lightRedDarkRed');
+		},
 		style: { bg: '#ffc7ce', fg: '#9c0006' }
 	},
 	{
-		label: 'Remplissage jaune avec texte jaune foncé',
+		get label() {
+			return t('grid.cf.style.yellowDarkYellow');
+		},
 		style: { bg: '#ffeb9c', fg: '#9c5700' }
 	},
 	{
-		label: 'Remplissage vert avec texte vert foncé',
+		get label() {
+			return t('grid.cf.style.greenDarkGreen');
+		},
 		style: { bg: '#c6efce', fg: '#006100' }
 	},
-	{ label: 'Remplissage rouge clair', style: { bg: '#ffc7ce' } },
-	{ label: 'Texte rouge', style: { fg: '#c00000' } },
+	{ get label() { return t('grid.cf.style.lightRedFill'); }, style: { bg: '#ffc7ce' } },
+	{ get label() { return t('grid.cf.style.redText'); }, style: { fg: '#c00000' } },
 	{
-		label: 'Bordure rouge',
+		get label() {
+			return t('grid.cf.style.redBorder');
+		},
 		style: { bt: true, bb: true, bl: true, br: true, bc: '#c00000' }
 	},
-	{ label: 'Gras', style: { b: true } }
+	{ get label() { return t('grid.cf.style.bold'); }, style: { b: true } }
 ];
 
 /** Couleurs des barres de données de la galerie (Excel). */
 export const BAR_COLORS: { label: string; color: string }[] = [
-	{ label: 'Bleu', color: '#638ec6' },
-	{ label: 'Vert', color: '#63c384' },
-	{ label: 'Rouge', color: '#ff555a' },
-	{ label: 'Orange', color: '#ffb628' },
-	{ label: 'Bleu clair', color: '#008aef' },
-	{ label: 'Violet', color: '#d6007b' }
+	{ get label() { return t('grid.cf.barColor.blue'); }, color: '#638ec6' },
+	{ get label() { return t('grid.cf.barColor.green'); }, color: '#63c384' },
+	{ get label() { return t('grid.cf.barColor.red'); }, color: '#ff555a' },
+	{ get label() { return t('grid.cf.barColor.orange'); }, color: '#ffb628' },
+	{ get label() { return t('grid.cf.barColor.lightBlue'); }, color: '#008aef' },
+	{ get label() { return t('grid.cf.barColor.purple'); }, color: '#d6007b' }
 ];
 
 const G = '#63be7b';
@@ -175,18 +183,18 @@ const B = '#5a8ac6';
 
 /** Nuances de couleurs de la galerie (de la plus petite valeur à la plus grande). */
 export const SCALE_PRESETS: { label: string; colors: string[] }[] = [
-	{ label: 'Vert - Jaune - Rouge', colors: [R, Y, G] },
-	{ label: 'Rouge - Jaune - Vert', colors: [G, Y, R] },
-	{ label: 'Vert - Blanc - Rouge', colors: [R, W, G] },
-	{ label: 'Rouge - Blanc - Vert', colors: [G, W, R] },
-	{ label: 'Bleu - Blanc - Rouge', colors: [R, W, B] },
-	{ label: 'Rouge - Blanc - Bleu', colors: [B, W, R] },
-	{ label: 'Blanc - Rouge', colors: [R, W] },
-	{ label: 'Rouge - Blanc', colors: [W, R] },
-	{ label: 'Vert - Blanc', colors: [W, G] },
-	{ label: 'Blanc - Vert', colors: [G, W] },
-	{ label: 'Vert - Jaune', colors: [Y, G] },
-	{ label: 'Jaune - Vert', colors: [G, Y] }
+	{ get label() { return t('grid.cf.scale.greenYellowRed'); }, colors: [R, Y, G] },
+	{ get label() { return t('grid.cf.scale.redYellowGreen'); }, colors: [G, Y, R] },
+	{ get label() { return t('grid.cf.scale.greenWhiteRed'); }, colors: [R, W, G] },
+	{ get label() { return t('grid.cf.scale.redWhiteGreen'); }, colors: [G, W, R] },
+	{ get label() { return t('grid.cf.scale.blueWhiteRed'); }, colors: [R, W, B] },
+	{ get label() { return t('grid.cf.scale.redWhiteBlue'); }, colors: [B, W, R] },
+	{ get label() { return t('grid.cf.scale.whiteRed'); }, colors: [R, W] },
+	{ get label() { return t('grid.cf.scale.redWhite'); }, colors: [W, R] },
+	{ get label() { return t('grid.cf.scale.greenWhite'); }, colors: [W, G] },
+	{ get label() { return t('grid.cf.scale.whiteGreen'); }, colors: [G, W] },
+	{ get label() { return t('grid.cf.scale.greenYellow'); }, colors: [Y, G] },
+	{ get label() { return t('grid.cf.scale.yellowGreen'); }, colors: [G, Y] }
 ];
 
 /** Nuance de la galerie : 2 ou 3 couleurs, minimum, centile 50, maximum. */
@@ -742,58 +750,59 @@ const opText: Partial<Record<RuleOp, string>> = {
 	'<>': '<>'
 };
 
-const q = (s?: string) => `« ${s ?? ''} »`;
-
 /** Texte lisible d'une règle (gestionnaire des règles). */
 export function describeRule(r: Rule): string {
-	if (opText[r.op]) return `Valeur de la cellule ${opText[r.op]} ${r.value ?? ''}`;
+	if (opText[r.op]) return t('grid.cf.describe.compare', { op: opText[r.op]!, value: r.value ?? '' });
 	switch (r.op) {
 		case 'between':
-			return `Valeur de la cellule entre ${r.value ?? ''} et ${r.to ?? ''}`;
+			return t('grid.cf.describe.between', { from: r.value ?? '', to: r.to ?? '' });
 		case 'notbetween':
-			return `Valeur de la cellule non comprise entre ${r.value ?? ''} et ${r.to ?? ''}`;
+			return t('grid.cf.describe.notBetween', { from: r.value ?? '', to: r.to ?? '' });
 		case 'contains':
-			return `Texte qui contient ${q(r.value)}`;
+			return t('grid.cf.describe.contains', { value: r.value ?? '' });
 		case 'notcontains':
-			return `Texte qui ne contient pas ${q(r.value)}`;
+			return t('grid.cf.describe.notContains', { value: r.value ?? '' });
 		case 'begins':
-			return `Texte qui commence par ${q(r.value)}`;
+			return t('grid.cf.describe.begins', { value: r.value ?? '' });
 		case 'ends':
-			return `Texte qui se termine par ${q(r.value)}`;
+			return t('grid.cf.describe.ends', { value: r.value ?? '' });
 		case 'empty':
-			return 'Cellule vide';
+			return t('grid.cf.describe.empty');
 		case 'notempty':
-			return 'Cellule non vide';
+			return t('grid.cf.describe.notEmpty');
 		case 'error':
-			return 'Valeur en erreur';
+			return t('grid.cf.describe.error');
 		case 'noerror':
-			return 'Sans erreur';
+			return t('grid.cf.describe.noError');
 		case 'date':
-			return `Date : ${DATE_WHENS.find((d) => d.value === r.value)?.label.toLowerCase() ?? r.value}`;
+			{
+			const when = DATE_WHENS.find((d) => d.value === r.value)?.label;
+			return t('grid.cf.describe.date', { when: when ? lower(when) : (r.value ?? '') });
+		}
 		case 'dup':
-			return 'Valeurs en double';
+			return t('grid.cf.describe.dup');
 		case 'unique':
-			return 'Valeurs uniques';
+			return t('grid.cf.describe.unique');
 		case 'top':
-			return `${r.value ?? 10}${r.pct ? ' %' : ''} ${r.pct ? 'les plus élevés' : 'valeurs les plus élevées'}`;
+			return t(r.pct ? 'grid.cf.describe.topPct' : 'grid.cf.describe.top', { n: r.value ?? 10 });
 		case 'bottom':
-			return `${r.value ?? 10}${r.pct ? ' %' : ''} ${r.pct ? 'les moins élevés' : 'valeurs les moins élevées'}`;
+			return t(r.pct ? 'grid.cf.describe.bottomPct' : 'grid.cf.describe.bottom', { n: r.value ?? 10 });
 		case 'above':
 		case 'below': {
 			const up = r.op === 'above';
 			const sd = Number(r.value);
-			if (r.value && sd > 0) return `${sd} écart${sd > 1 ? 's' : ''} type ${up ? 'au-dessus' : 'en dessous'} de la moyenne`;
-			if (r.value === '=') return `${up ? 'Supérieur' : 'Inférieur'} ou égal à la moyenne`;
-			return `${up ? 'Supérieur' : 'Inférieur'} à la moyenne`;
+			if (r.value && sd > 0) return t(up ? 'grid.cf.describe.stdDevAbove' : 'grid.cf.describe.stdDevBelow', { n: sd });
+			if (r.value === '=') return t(up ? 'grid.cf.describe.aboveOrEqual' : 'grid.cf.describe.belowOrEqual');
+			return t(up ? 'grid.cf.describe.above' : 'grid.cf.describe.below');
 		}
 		case 'formula':
-			return `Formule : ${r.value ?? ''}`;
+			return t('grid.cf.describe.formula', { formula: r.value ?? '' });
 		case 'bar':
-			return 'Barre de données';
+			return t('grid.cf.describe.bar');
 		case 'scale':
-			return `Échelle à ${r.scale?.length ?? 2} couleurs`;
+			return t('grid.cf.describe.scale', { n: r.scale?.length ?? 2 });
 		case 'icons':
-			return `Jeu d’icônes : ${ICON_SETS[r.icons?.set ?? '3arrows']?.label ?? ''}`;
+			return t('grid.cf.describe.icons', { set: ICON_SETS[r.icons?.set ?? '3arrows']?.label ?? '' });
 	}
 	return r.op;
 }

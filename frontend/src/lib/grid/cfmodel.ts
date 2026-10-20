@@ -5,6 +5,7 @@
 // l'ordre de priorité, puis réécrit les listes des emplacements changés.
 
 import type { Rule } from './rules';
+import { t } from '#lib/i18n/index.js';
 
 /** Emplacement d'une règle. */
 export type Loc = { k: 'tbl'; t: number; c: number } | { k: 'row'; i: number } | { k: 'col'; i: number } | { k: 'cell'; r: number; c: number };
@@ -261,7 +262,7 @@ export function rectLocs(r0: number, c0: number, r1: number, c1: number, tables:
 		}
 		for (let r = r0; r <= r1; r++) {
 			if (covering.some((t) => r >= t.row && r <= t.row + t.rows)) continue;
-			if (++free > MAX_RULE_CELLS) return `Plage trop grande (plus de ${MAX_RULE_CELLS} cellules) : sélectionnez des lignes ou des colonnes entières`;
+			if (++free > MAX_RULE_CELLS) return t('grid.cf.range.tooBig', { max: MAX_RULE_CELLS });
 			out.push({ k: 'cell', r, c });
 		}
 	}
@@ -277,19 +278,19 @@ export function parseLocs(text: string, tables: RuleTable[]): Loc[] | string {
 		.split(/[;,]/)
 		.map((s) => s.trim())
 		.filter(Boolean);
-	if (!items.length) return 'Indiquez une plage';
+	if (!items.length) return t('grid.cf.range.missing');
 	for (const it of items) {
 		let m = /^(.+?)\[(.+)\]$/.exec(it);
 		if (m) {
-			const t = tables.find((x) => x.name.toLowerCase() === m![1].trim().toLowerCase());
-			const c = t?.columns.findIndex((x) => x.toLowerCase() === m![2].trim().toLowerCase()) ?? -1;
-			if (!t || c < 0) return `Colonne introuvable : ${it}`;
-			out.push({ k: 'tbl', t: t.id, c });
+			const tb = tables.find((x) => x.name.toLowerCase() === m![1].trim().toLowerCase());
+			const c = tb?.columns.findIndex((x) => x.toLowerCase() === m![2].trim().toLowerCase()) ?? -1;
+			if (!tb || c < 0) return t('grid.cf.range.noColumn', { ref: it });
+			out.push({ k: 'tbl', t: tb.id, c });
 			continue;
 		}
-		const t = tables.find((x) => x.name.toLowerCase() === it.toLowerCase());
-		if (t) {
-			t.columns.forEach((_, c) => out.push({ k: 'tbl', t: t.id, c }));
+		const tb = tables.find((x) => x.name.toLowerCase() === it.toLowerCase());
+		if (tb) {
+			tb.columns.forEach((_, c) => out.push({ k: 'tbl', t: tb.id, c }));
 			continue;
 		}
 		if ((m = /^\$?([A-Z]{1,3}):\$?([A-Z]{1,3})$/i.exec(it))) {
@@ -299,7 +300,7 @@ export function parseLocs(text: string, tables: RuleTable[]): Loc[] | string {
 		}
 		if ((m = /^\$?(\d+):\$?(\d+)$/.exec(it))) {
 			const [a, b] = [+m[1] - 1, +m[2] - 1].sort((x, y) => x - y);
-			if (a < 0) return `Plage invalide : ${it}`;
+			if (a < 0) return t('grid.cf.range.invalid', { ref: it });
 			for (let i = a; i <= b; i++) out.push({ k: 'row', i });
 			continue;
 		}
@@ -308,13 +309,13 @@ export function parseLocs(text: string, tables: RuleTable[]): Loc[] | string {
 			const ca = colIndex(m[1]);
 			const rb = m[3] ? +m[4] - 1 : ra;
 			const cb = m[3] ? colIndex(m[3]) : ca;
-			if (ra < 0 || rb < 0) return `Plage invalide : ${it}`;
+			if (ra < 0 || rb < 0) return t('grid.cf.range.invalid', { ref: it });
 			const got = rectLocs(Math.min(ra, rb), Math.min(ca, cb), Math.max(ra, rb), Math.max(ca, cb), tables);
 			if (typeof got === 'string') return got;
 			out.push(...got);
 			continue;
 		}
-		return `Référence non reconnue : ${it}`;
+		return t('grid.cf.range.unknown', { ref: it });
 	}
 	const seen = new Set<string>();
 	return out.filter((l) => !seen.has(locKey(l)) && !!seen.add(locKey(l)));

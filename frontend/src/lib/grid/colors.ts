@@ -8,6 +8,7 @@
 // cellules. Les couleurs standard et « Autres couleurs… » restent #rrggbb.
 // paint() rend la couleur à dessiner pour le thème appliqué.
 import { BUILTIN_THEMES, fromHsl, isHex, THEME_SLOTS, themeColors, toHsl, type ThemeColors, type ThemeSlot } from './theme';
+import { t } from '#lib/i18n/index.js';
 
 /** Couleur variée d'un pourcentage, à la manière d'Excel (sur la luminosité TSL) : t > 0 plus claire (L + (1 − L)·t), t < 0 plus foncée (L·(1 + t)). */
 export function tintShade(hex: string, pct: number): string {
@@ -74,51 +75,71 @@ export function paint<T extends string | null | undefined>(v: T): T | string {
 
 // --- Noms ----------------------------------------------------------------------
 
-/** Couleurs standard (fixes, quel que soit le thème) : celles d'Excel. */
+/** Couleurs standard (fixes, quel que soit le thème) : celles d'Excel ; noms lus à chaque usage (langue). */
 export const STANDARD_COLORS: { hex: string; name: string }[] = [
-	{ hex: '#c00000', name: 'Rouge foncé' },
-	{ hex: '#ff0000', name: 'Rouge' },
-	{ hex: '#ffc000', name: 'Orange' },
-	{ hex: '#ffff00', name: 'Jaune' },
-	{ hex: '#92d050', name: 'Vert clair' },
-	{ hex: '#00b050', name: 'Vert' },
-	{ hex: '#00b0f0', name: 'Bleu clair' },
-	{ hex: '#0070c0', name: 'Bleu' },
-	{ hex: '#002060', name: 'Bleu foncé' },
-	{ hex: '#7030a0', name: 'Violet' }
+	{ hex: '#c00000', get name() { return t('grid.color.standard.darkRed'); } },
+	{ hex: '#ff0000', get name() { return t('grid.color.standard.red'); } },
+	{ hex: '#ffc000', get name() { return t('grid.color.standard.orange'); } },
+	{ hex: '#ffff00', get name() { return t('grid.color.standard.yellow'); } },
+	{ hex: '#92d050', get name() { return t('grid.color.standard.lightGreen'); } },
+	{ hex: '#00b050', get name() { return t('grid.color.standard.green'); } },
+	{ hex: '#00b0f0', get name() { return t('grid.color.standard.lightBlue'); } },
+	{ hex: '#0070c0', get name() { return t('grid.color.standard.blue'); } },
+	{ hex: '#002060', get name() { return t('grid.color.standard.darkBlue'); } },
+	{ hex: '#7030a0', get name() { return t('grid.color.standard.purple'); } }
 ];
 
 export const SLOT_NAMES: Record<ThemeSlot, string> = {
-	lt1: 'Arrière-plan 1',
-	dk1: 'Texte 1',
-	lt2: 'Arrière-plan 2',
-	dk2: 'Texte 2',
-	accent1: 'Accent 1',
-	accent2: 'Accent 2',
-	accent3: 'Accent 3',
-	accent4: 'Accent 4',
-	accent5: 'Accent 5',
-	accent6: 'Accent 6'
+	get lt1() {
+		return t('grid.color.slot.lt1');
+	},
+	get dk1() {
+		return t('grid.color.slot.dk1');
+	},
+	get lt2() {
+		return t('grid.color.slot.lt2');
+	},
+	get dk2() {
+		return t('grid.color.slot.dk2');
+	},
+	get accent1() {
+		return t('grid.color.slot.accent1');
+	},
+	get accent2() {
+		return t('grid.color.slot.accent2');
+	},
+	get accent3() {
+		return t('grid.color.slot.accent3');
+	},
+	get accent4() {
+		return t('grid.color.slot.accent4');
+	},
+	get accent5() {
+		return t('grid.color.slot.accent5');
+	},
+	get accent6() {
+		return t('grid.color.slot.accent6');
+	}
 };
 
 /** Nom courant d'une couleur (Blanc, Noir, Gris, Rouge, Orange, Jaune, Vert, Sarcelle, Bleu, Violet, Rose). */
 export function hueName(hex: string): string {
 	const [h, s, l] = toHsl(hex);
-	if (l >= 0.97) return 'Blanc';
-	if (l <= 0.06) return 'Noir';
-	if (s < 0.15) return 'Gris';
-	if (h < 15 || h >= 345) return 'Rouge';
-	if (h < 45) return 'Orange';
-	if (h < 70) return 'Jaune';
-	if (h < 160) return 'Vert';
-	if (h < 195) return 'Sarcelle';
-	if (h < 255) return 'Bleu';
-	if (h < 300) return 'Violet';
-	return 'Rose';
+	if (l >= 0.97) return t('grid.color.hue.white');
+	if (l <= 0.06) return t('grid.color.hue.black');
+	if (s < 0.15) return t('grid.color.hue.gray');
+	if (h < 15 || h >= 345) return t('grid.color.hue.red');
+	if (h < 45) return t('grid.color.hue.orange');
+	if (h < 70) return t('grid.color.hue.yellow');
+	if (h < 160) return t('grid.color.hue.green');
+	if (h < 195) return t('grid.color.hue.teal');
+	if (h < 255) return t('grid.color.hue.blue');
+	if (h < 300) return t('grid.color.hue.purple');
+	return t('grid.color.hue.pink');
 }
 
 /** Libellé d'une variation (« plus clair 40 % »). */
-const pctName = (pct: number) => (pct > 0 ? `plus clair ${pct} %` : `plus foncé ${-pct} %`);
+const pctName = (pct: number) => (pct > 0 ? t('grid.color.lighter', { pct }) : t('grid.color.darker', { pct: -pct }));
 
 /** Nom d'une couleur de style (infobulles, lecteurs d'écran) : « Vert, Accent 1, plus clair 40 % », « Rouge », « #12AB34 ». */
 export function colorName(v: string | null | undefined, colors: ThemeColors = current): string {

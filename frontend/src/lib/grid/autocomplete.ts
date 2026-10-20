@@ -1,6 +1,7 @@
 // Aide à la saisie des formules : suggestions de fonctions, de tableaux et
 // de colonnes selon ce qui précède le curseur, et signature de la fonction
 // en cours.
+import { t } from '#lib/i18n/index.js';
 
 /** Argument d'une fonction (nom français, description, facultatif). */
 export interface ArgInfo {
@@ -67,17 +68,17 @@ export function suggest(text: string, caret: number, cat: Catalog, currentTable?
 	if (open >= 0 && before.indexOf(']', open) < 0) {
 		const explicit = /[\p{L}_][\p{L}\p{N}_.]*$/u.exec(before.slice(0, open))?.[0];
 		const table = explicit ?? currentTable;
-		const t = cat.tables.find((x) => fold(x.name) === fold(table ?? ''));
-		if (!t) return null;
+		const tb = cat.tables.find((x) => fold(x.name) === fold(table ?? ''));
+		if (!tb) return null;
 		let prefix = before.slice(open + 1);
 		if (prefix.startsWith('@')) prefix = prefix.slice(1); // forme Excel, acceptée
-		const cols = (t.columns ?? []).filter((c) => fold(c).startsWith(fold(prefix)));
+		const cols = (tb.columns ?? []).filter((c) => fold(c).startsWith(fold(prefix)));
 		// Nomenclature de Lattis : [Colonne] dans le tableau est la valeur de
 		// la ligne ; Tableau[Colonne] toute la colonne.
 		const row = !explicit && !!currentTable;
 		const items = cols
 			.slice(0, max)
-			.map((c) => ({ label: c, insert: c + ']', kind: 'column' as const, detail: row ? 'valeur de la ligne' : t.name }));
+			.map((c) => ({ label: c, insert: c + ']', kind: 'column' as const, detail: row ? t('grid.autocomplete.rowValue') : tb.name }));
 		return items.length ? { from: open + 1, items } : null;
 	}
 
@@ -89,11 +90,11 @@ export function suggest(text: string, caret: number, cat: Catalog, currentTable?
 	for (const f of cat.functions) {
 		if (fold(f.name).startsWith(prefix)) items.push({ label: f.name, insert: f.name + '(', kind: 'function', detail: f.description || f.arity });
 	}
-	for (const t of cat.tables) {
-		if (fold(t.name).startsWith(prefix)) items.push({ label: t.name, insert: t.name + '[', kind: 'table', detail: 'tableau' });
+	for (const tb of cat.tables) {
+		if (fold(tb.name).startsWith(prefix)) items.push({ label: tb.name, insert: tb.name + '[', kind: 'table', detail: t('grid.autocomplete.table') });
 	}
 	for (const n of cat.names ?? []) {
-		if (fold(n).startsWith(prefix)) items.push({ label: n, insert: n, kind: 'name', detail: 'cellule nommée' });
+		if (fold(n).startsWith(prefix)) items.push({ label: n, insert: n, kind: 'name', detail: t('grid.autocomplete.name') });
 	}
 	// Un nom déjà complet n'a pas besoin de suggestion.
 	const exact = items.length === 1 && fold(items[0].label) === prefix;
@@ -249,7 +250,7 @@ function pairsParts(fn: FunctionDoc, args: ArgInfo[], index: number): { parts: S
 	if (index === 0) arg = nom;
 	else if (index === 1) arg = valeur;
 	else if (value) arg = { ...valeur, name: vk };
-	else arg = { ...calcul, name: `${calcul.name} ou ${nk}`, desc: `${calcul.desc} Ou un nom de plus (${nk}), suivi de sa valeur.` };
+	else arg = { ...calcul, name: t('grid.autocomplete.letNameOrCalc', { calc: calcul.name, name: nk }), desc: t('grid.autocomplete.letNameOrCalc.help', { desc: calcul.desc, name: nk }) };
 	return { parts, arg };
 }
 

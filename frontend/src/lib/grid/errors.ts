@@ -2,6 +2,7 @@
 // cellule active est en erreur (Excel le fait par une infobulle).
 
 import { freeKind } from './freecell';
+import { t } from '#lib/i18n/index.js';
 
 const A1 = /(?:^|[^\p{L}\p{N}_@[\]."])(\$?[A-Za-z]{1,3}\$?\d{1,7})(?![\p{L}\p{N}_(])/u;
 
@@ -25,36 +26,36 @@ export function explainError(code: string, formula = '', cellText?: (row: number
 		case '#NOM?': {
 			const ref = A1.exec(formula)?.[1];
 			if (ref)
-				return `#NOM? : ${ref.toUpperCase()} n'existe pas. Écrivez Cell[${ref.toUpperCase().replaceAll('$', '')}] pour une cellule libre, [Colonne] pour la valeur de la ligne dans un tableau, Tableau[Colonne] pour une colonne entière, ou Tableau[Colonne][ligne] pour une valeur.`;
-			return "#NOM? : nom inconnu. Vérifiez le nom de la fonction, du tableau, de la colonne ou de la cellule nommée.";
+				return t('grid.formulaError.name.ref', { ref: ref.toUpperCase(), cell: ref.toUpperCase().replaceAll('$', '') });
+			return t('grid.formulaError.name.unknown');
 		}
 		case '#VALEUR!': {
 			for (const m of formula.matchAll(CELL)) {
 				const [r, c] = cellPos(m[1], m[2]);
-				const t = cellText?.(r, c);
-				if (t && freeKind(t) === 'text' && !t.startsWith('#'))
-					return `#VALEUR! : Cell[${m[1].toUpperCase()}${m[2]}] contient du texte, pas un nombre ni une date.`;
+				const text = cellText?.(r, c);
+				if (text && freeKind(text) === 'text' && !text.startsWith('#'))
+					return t('grid.formulaError.value.text', { cell: `${m[1].toUpperCase()}${m[2]}` });
 			}
 			// Les adresses Cell[A1] ne sont pas des colonnes de tableau.
 			const refs = formula.replace(/cell\[[^\]]*\]/giu, '0');
 			if (/[\p{L}\p{N}_]\[[^\]]+\](?!\[)/u.test(refs) && !/^=\s*[\p{L}.]+\(/u.test(refs))
-				return '#VALEUR! : une colonne entière Tableau[Colonne] est utilisée là où une seule valeur est attendue. Écrivez Tableau[Colonne][ligne], ou [Colonne] dans une ligne du tableau.';
-			return '#VALEUR! : type de valeur inattendu (texte là où un nombre est attendu, ou argument invalide).';
+				return t('grid.formulaError.value.column');
+			return t('grid.formulaError.value.type');
 		}
 		case '#DIV/0!':
-			return '#DIV/0! : division par zéro (ou par une cellule vide).';
+			return t('grid.formulaError.div0');
 		case '#REF!':
-			return '#REF! : référence invalide, le tableau ou la colonne a été supprimé ou renommé.';
+			return t('grid.formulaError.ref');
 		case '#CIRC!':
-			return "#CIRC! : référence circulaire, la formule dépend de sa propre valeur (par exemple SOMME(Tableau[X]) dans la colonne X). Faites-la lire d'autres cellules ou colonnes ; pour un total cumulé, lisez la ligne précédente : [Cumul][-1].";
+			return t('grid.formulaError.circ');
 		case '#N/A':
-			return '#N/A : valeur introuvable (REFERENCE, EQUIV…) ; vérifiez la clé cherchée.';
+			return t('grid.formulaError.na');
 		case '#NOMBRE!':
-			return '#NOMBRE! : nombre invalide ou hors limites.';
+			return t('grid.formulaError.num');
 		case '#DEVERSEMENT!':
-			return '#DEVERSEMENT! : le tableau dynamique ne peut pas se déverser, des cellules sont déjà remplies sur son chemin.';
+			return t('grid.formulaError.spill');
 		case '#CALC!':
-			return '#CALC! : le tableau dynamique est vide (aucune ligne ne correspond).';
+			return t('grid.formulaError.calc');
 	}
 	return '';
 }

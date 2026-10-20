@@ -5,6 +5,7 @@
 // qui le retire quand l'onglet filtre déjà par elle. Mêmes conditions que
 // « Choisir par… » : une colonne saisie (pas calculée), avec au moins une
 // valeur et au plus MAX_CHOICE_VALUES valeurs différentes.
+import { t } from '#lib/i18n/index.js';
 
 /** Borne de « Choisir par… » (canvas.MaxChoiceValues). */
 export const MAX_CHOICE_VALUES = 100;
@@ -40,28 +41,24 @@ export function tabChoiceItem(o: {
 	choice?: { name: string } | null;
 	candidates?: readonly ChoiceCandidate[] | null;
 }): TabChoiceItem {
-	const what = o.field ? 'ce champ' : 'cette colonne';
 	if (o.choice && same(o.choice.name, o.column))
 		return {
-			label: "Ne plus filtrer l'onglet",
-			title: `L'onglet perd son ▾ « ${o.choice.name} » : les tableaux et tableaux croisés de la feuille montrent de nouveau toutes leurs lignes (Ctrl+Z pour annuler)`,
+			label: t('grid.tabChoice.clear'),
+			title: t('grid.tabChoice.clear.tooltip', { name: o.choice.name }),
 			disabled: false,
 			clear: true
 		};
-	const label = `Filtrer l'onglet par ${what}`;
+	const label = o.field ? t('grid.tabChoice.byField') : t('grid.tabChoice.byColumn');
 	const no = (title: string): TabChoiceItem => ({ label, title, disabled: true, clear: false });
-	if (o.formula) return no("Une colonne calculée ne peut pas servir de choix d'onglet : prenez une colonne saisie (Année, Mois, Ville…)");
+	if (o.formula) return no(t('grid.tabChoice.computed'));
 	if (o.candidates) {
 		const c = o.candidates.find((x) => same(x.table, o.table) && same(x.column, o.column));
-		if (!c) return no(`« ${o.column} » est vide, ou a plus de ${MAX_CHOICE_VALUES} valeurs différentes : trop pour la liste de l'onglet ; prenez une colonne comme Année, Mois ou Ville`);
+		if (!c) return no(t('grid.tabChoice.tooMany', { column: o.column, max: MAX_CHOICE_VALUES }));
 	}
-	const follow = o.field
-		? `ce tableau croisé, les autres tableaux croisés de la feuille construits sur un tableau qui a « ${o.column} » et les tableaux de la feuille qui l'ont ne montrent que les lignes de cette valeur (le tableau source, s'il est sur une autre feuille, n'est pas filtré)`
-		: `chaque tableau de la feuille qui a la colonne « ${o.column} », et les tableaux croisés construits sur eux, ne montrent que les lignes de cette valeur`;
-	const replace = o.choice ? ` Remplace le choix par « ${o.choice.name} ».` : '';
+	const title = o.field ? t('grid.tabChoice.byField.tooltip', { column: o.column }) : t('grid.tabChoice.byColumn.tooltip', { column: o.column });
 	return {
 		label,
-		title: `L'onglet de la feuille reçoit un ▾ pour choisir une valeur de « ${o.column} » : ${follow}. Il commence sur toutes les valeurs.${replace} Ctrl+Z pour annuler.`,
+		title: o.choice ? t('grid.tabChoice.replaces', { text: title, name: o.choice.name }) : title,
 		disabled: false,
 		clear: false
 	};
@@ -70,6 +67,6 @@ export function tabChoiceItem(o: {
 /** Message de la barre d'état après « Filtrer l'onglet par… ». */
 export function tabChoiceNotice(column: string, clear: boolean): string {
 	return clear
-		? `L'onglet ne filtre plus par « ${column} » : toutes les lignes sont de nouveau affichées (Ctrl+Z pour annuler)`
-		: `L'onglet filtre par « ${column} » : sa flèche ▾ choisit la valeur affichée (Alt+↓) ; Ctrl+Z pour annuler`;
+		? t('grid.tabChoice.notice.cleared', { column })
+		: t('grid.tabChoice.notice.set', { column });
 }

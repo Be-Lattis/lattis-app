@@ -3,6 +3,7 @@
 // fonctions), case à cocher, liste déroulante, zone de saisie et sélecteur
 // de fichier (leur valeur est écrite dans la cellule liée). Des écouteurs
 // (controls.on dans un script) s'ajoutent à l'action du contrôle.
+import { t } from '#lib/i18n/index.js';
 
 /** Genre de contrôle : bouton (''), case à cocher, liste, saisie sur une ligne, sur plusieurs, fichier. */
 export type ControlKind = '' | 'checkbox' | 'select' | 'input' | 'textarea' | 'file';
@@ -63,14 +64,26 @@ export function choicesOf(b: { config: ButtonConfig; choices?: string[] | null }
 export const BUTTON_W = 120;
 export const BUTTON_H = 32;
 
-/** Noms des genres de contrôles. */
+/** Noms des genres de contrôles (dans la langue de l'interface, lus à chaque usage). */
 export const CONTROL_KINDS: Record<ControlKind, string> = {
-	'': 'Bouton',
-	input: 'Champ texte',
-	textarea: 'Zone de texte',
-	checkbox: 'Case à cocher',
-	select: 'Liste déroulante',
-	file: 'Fichier'
+	get ''() {
+		return t('grid.controls.kind.button');
+	},
+	get input() {
+		return t('grid.controls.kind.input');
+	},
+	get textarea() {
+		return t('grid.controls.kind.textarea');
+	},
+	get checkbox() {
+		return t('grid.controls.kind.checkbox');
+	},
+	get select() {
+		return t('grid.controls.kind.select');
+	},
+	get file() {
+		return t('grid.controls.kind.file');
+	}
 };
 
 /** Contrôles liés à une cellule (Insertion › Champ), dans l'ordre du choix du type. */
@@ -97,10 +110,10 @@ export function handlerLabel(h: { script: string; function?: string }): string {
 /** Info-bulle d'un contrôle : nom, cellule liée, action et écouteurs. */
 export function controlTitle(cfg: ButtonConfig): string {
 	const lines = [cfg.name ?? ''];
-	if (cfg.kind) lines.push(cfg.link ? `Cellule liée : ${cfg.link}` : 'Valeur gardée dans le contrôle');
+	if (cfg.kind) lines.push(cfg.link ? t('grid.controls.title.link', { cell: cfg.link }) : t('grid.controls.title.value'));
 	const all = [...handlers(cfg, 'click'), ...handlers(cfg, 'change')];
-	if (!all.length) lines.push(cfg.kind ? '' : 'Aucune action liée');
-	for (const h of all) lines.push(`${h.action ? 'Action' : 'Écouteur'} (${controlEvent(cfg.kind)}) : ${handlerLabel(h)}`);
+	if (!all.length) lines.push(cfg.kind ? '' : t('grid.controls.title.noAction'));
+	for (const h of all) lines.push(t(h.action ? 'grid.controls.title.action' : 'grid.controls.title.listener', { event: controlEvent(cfg.kind), handler: handlerLabel(h) }));
 	return lines.filter(Boolean).join('\n');
 }
 

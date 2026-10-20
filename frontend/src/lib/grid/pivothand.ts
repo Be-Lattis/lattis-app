@@ -2,6 +2,7 @@
 // internal/canvas/pivothand.go) : les dernières colonnes de ses cellules,
 // dessinées dans son cadre avec un en-tête vert, modifiables (valeurs par
 // ligne, ou une formule pour toute la colonne).
+import { t } from '#lib/i18n/index.js';
 
 /** Ce qu'il faut d'un TCD affiché (SheetPivot). */
 export interface HandPivot {
@@ -45,7 +46,5 @@ export function handAlign(text: string): 'left' | 'right' {
 export function handKeptNote(kept: number | undefined, note: string | undefined): string {
 	if (note) return note;
 	if (!kept) return '';
-	return kept > 1
-		? `Valeurs saisies de ${kept} lignes absentes du tableau croisé, mises de côté : elles reviendront avec leurs étiquettes.`
-		: `Valeurs saisies d'une ligne absente du tableau croisé, mises de côté : elles reviendront avec son étiquette.`;
+	return t('grid.pivot.handKept', { n: kept });
 }

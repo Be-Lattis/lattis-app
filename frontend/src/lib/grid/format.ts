@@ -1,6 +1,6 @@
 // Affichage des valeurs selon le type logique de la colonne, dans la langue de
 // l'interface (#lib/i18n) ; la valeur stockée ne change pas.
-import { decimalSep, numberFormat } from '#lib/i18n/index.js';
+import { decimalSep, numberFormat, t, tAny } from '#lib/i18n/index.js';
 
 export type ColumnType = 'integer' | 'decimal' | 'text' | 'boolean' | 'date' | 'formula';
 
@@ -110,14 +110,14 @@ export function typeIcon(type: ColumnType): string {
  * récent, textes de A à Z. result : type du résultat d'une colonne calculée.
  */
 export function sortLabels(type: ColumnType | string, result?: string): [string, string] {
-	const t = type === 'formula' ? (result ?? 'text') : type;
-	if (t === 'integer' || t === 'decimal') return ['Trier par ordre croissant', 'Trier par ordre décroissant'];
-	if (t === 'date') return ['Trier du plus ancien au plus récent', 'Trier du plus récent au plus ancien'];
-	return ['Trier de A à Z', 'Trier de Z à A'];
+	const k = type === 'formula' ? (result ?? 'text') : type;
+	if (k === 'integer' || k === 'decimal') return [t('grid.sort.number.asc'), t('grid.sort.number.desc')];
+	if (k === 'date') return [t('grid.sort.date.asc'), t('grid.sort.date.desc')];
+	return [t('grid.sort.text.asc'), t('grid.sort.text.desc')];
 }
 
 export function typeLabel(type: ColumnType): string {
-	return { integer: 'Entier', decimal: 'Décimal', text: 'Texte', boolean: 'Booléen', date: 'Date', formula: 'Calculée' }[type];
+	return tAny(`grid.type.${type}`);
 }
 
 /** Largeur initiale d'une colonne, en pixels CSS. */

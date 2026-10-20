@@ -2,6 +2,7 @@
 // invisible pour un lecteur d'écran. Ce module construit ce qu'on lui dit de
 // la cellule active (GridA11y.svelte le porte dans une cellule cachée,
 // désignée par aria-activedescendant, et dans une région aria-live).
+import { t } from '#lib/i18n/index.js';
 
 /** Ce que l'on sait de la cellule active. */
 export interface CellSpeech {
@@ -30,29 +31,27 @@ export function cellLabel(s: CellSpeech): string {
 	const parts = [s.addr];
 	if (s.name) parts.push(s.name);
 	if (s.table && s.column) {
-		if (s.header) parts.push(`en-tête de colonne ${s.column}`, `tableau ${s.table}`);
+		if (s.header) parts.push(t('grid.a11y.header', { column: s.column }), t('grid.a11y.table', { table: s.table }));
 		else parts.push(s.column);
 	}
 	const value = s.value.trim();
-	if (!s.header) parts.push(value === '' ? 'vide' : value);
-	if (s.computed && !s.header) parts.push('colonne calculée');
-	if (s.error) parts.push('erreur de formule');
+	if (!s.header) parts.push(value === '' ? t('grid.a11y.empty') : value);
+	if (s.computed && !s.header) parts.push(t('grid.a11y.computed'));
+	if (s.error) parts.push(t('grid.a11y.error'));
 	return parts.join(', ');
 }
 
 /** Taille de la sélection, quand elle dépasse une cellule. */
 export function selectionLabel(range: string, rows: number, cols: number): string {
 	if (rows <= 1 && cols <= 1) return '';
-	const l = `${rows} ligne${rows > 1 ? 's' : ''}`;
-	const c = `${cols} colonne${cols > 1 ? 's' : ''}`;
-	return `Sélection ${range}, ${l} sur ${c}`;
+	return t('grid.a11y.selection', { range, rows, cols });
 }
 
 /** Ce que la région aria-live annonce : le mode, puis la sélection ou le tableau. */
 export function announcement(s: CellSpeech, editing: boolean, selection = '', previousTable?: string): string {
-	if (editing) return `Modification de ${s.addr}`;
+	if (editing) return t('grid.a11y.editing', { addr: s.addr });
 	if (selection) return selection;
 	// Entrée dans un tableau : son nom une fois, pas à chaque déplacement.
-	if (s.table && s.table !== previousTable && !s.header) return `Tableau ${s.table}`;
+	if (s.table && s.table !== previousTable && !s.header) return t('grid.a11y.enterTable', { table: s.table });
 	return '';
 }

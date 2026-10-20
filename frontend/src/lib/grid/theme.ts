@@ -8,7 +8,7 @@
 // prédéfinis (sauf ui.builtinThemes = false), ceux de l'organisation et
 // ceux de l'utilisateur (ui.themes, un objet par identifiant).
 import type { SettingState } from '#lib/shell/settings.js';
-import { compareText } from '#lib/i18n/index.js';
+import { compareText, t } from '#lib/i18n/index.js';
 
 // Comme findSetting (settings.ts, qui importe ce fichier).
 const findSetting = (list: readonly SettingState[], path: string) => list.find((s) => s.path.toLowerCase() === path.toLowerCase());
@@ -254,7 +254,7 @@ export function resolveTheme(wb: WorkbookTheme | null | undefined, list: readonl
 		// Accents absents (classeur d'avant les palettes) : ceux du thème de la liste aux mêmes couleurs.
 		const own = themeExtras(wb);
 		const extras = own.accents || own.dark || own.light ? own : themeExtras(match);
-		return { id: match?.id ?? null, name: wb.name || match?.name || 'Personnalisé', table: family(wb.table), source: family(wb.source), colors: themeColors({ ...extras, table: wb.table, source: wb.source }) };
+		return { id: match?.id ?? null, name: wb.name || match?.name || t('grid.theme.custom'), table: family(wb.table), source: family(wb.source), colors: themeColors({ ...extras, table: wb.table, source: wb.source }) };
 	}
 	const d = defaultTheme(list, catalog);
 	return { id: d.id, name: d.name, table: family(d.table), source: family(d.source), colors: themeColors(d) };

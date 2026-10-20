@@ -1,1 +1,454 @@
-{}
+{
+	"a11y": {
+		"header": "en-tête de colonne {column}",
+		"table": "tableau {table}",
+		"empty": "vide",
+		"computed": "colonne calculée",
+		"error": "erreur de formule",
+		"selection": "Sélection {range}, {rows, plural, one {# ligne} other {# lignes}} sur {cols, plural, one {# colonne} other {# colonnes}}",
+		"editing": "Modification de {addr}",
+		"enterTable": "Tableau {table}"
+	},
+	"autocomplete": {
+		"rowValue": "valeur de la ligne",
+		"table": "tableau",
+		"name": "cellule nommée",
+		"letNameOrCalc": "{calc} ou {name}",
+		"letNameOrCalc.help": "{desc} Ou un nom de plus ({name}), suivi de sa valeur."
+	},
+	"controls": {
+		"kind": {
+			"button": "Bouton",
+			"input": "Champ texte",
+			"textarea": "Zone de texte",
+			"checkbox": "Case à cocher",
+			"select": "Liste déroulante",
+			"file": "Fichier"
+		},
+		"title": {
+			"link": "Cellule liée : {cell}",
+			"value": "Valeur gardée dans le contrôle",
+			"noAction": "Aucune action liée",
+			"action": "Action ({event}) : {handler}",
+			"listener": "Écouteur ({event}) : {handler}"
+		}
+	},
+	"cf": {
+		"iconSet": {
+			"3arrows": "3 flèches (couleur)",
+			"3arrowsgray": "3 flèches (gris)",
+			"3triangles": "3 triangles",
+			"4arrows": "4 flèches (couleur)",
+			"4arrowsgray": "4 flèches (gris)",
+			"5arrows": "5 flèches (couleur)",
+			"5arrowsgray": "5 flèches (gris)",
+			"3traffic": "3 feux de signalisation (sans bordure)",
+			"3trafficrim": "3 feux de signalisation (avec bordure)",
+			"3signs": "3 signes",
+			"4traffic": "4 feux de signalisation",
+			"4redblack": "Rouge à noir",
+			"3symbols": "3 symboles (cerclés)",
+			"3symbols2": "3 symboles (non cerclés)",
+			"3flags": "3 drapeaux",
+			"3stars": "3 étoiles",
+			"4rating": "4 évaluations",
+			"5rating": "5 évaluations",
+			"5quarters": "5 quartiers",
+			"5boxes": "5 cases"
+		},
+		"iconGroup": {
+			"directional": "Directionnel",
+			"shapes": "Formes",
+			"indicators": "Indicateurs",
+			"ratings": "Évaluations"
+		},
+		"range": {
+			"tooBig": "Plage trop grande (plus de {max} cellules) : sélectionnez des lignes ou des colonnes entières",
+			"missing": "Indiquez une plage",
+			"noColumn": "Colonne introuvable : {ref}",
+			"invalid": "Plage invalide : {ref}",
+			"unknown": "Référence non reconnue : {ref}"
+		},
+		"date": {
+			"yesterday": "Hier",
+			"today": "Aujourd’hui",
+			"tomorrow": "Demain",
+			"last7": "Au cours des 7 derniers jours",
+			"lastweek": "La semaine dernière",
+			"thisweek": "Cette semaine",
+			"nextweek": "La semaine prochaine",
+			"lastmonth": "Le mois dernier",
+			"thismonth": "Ce mois-ci",
+			"nextmonth": "Le mois prochain"
+		},
+		"op": {
+			"between": "comprise entre",
+			"notbetween": "non comprise entre",
+			"eq": "égale à",
+			"ne": "différente de",
+			"gt": "supérieure à",
+			"lt": "inférieure à",
+			"ge": "supérieure ou égale à",
+			"le": "inférieure ou égale à"
+		},
+		"textOp": {
+			"contains": "contenant",
+			"notcontains": "ne contenant pas",
+			"begins": "commençant par",
+			"ends": "se terminant par"
+		},
+		"style": {
+			"lightRedDarkRed": "Remplissage rouge clair avec texte rouge foncé",
+			"yellowDarkYellow": "Remplissage jaune avec texte jaune foncé",
+			"greenDarkGreen": "Remplissage vert avec texte vert foncé",
+			"lightRedFill": "Remplissage rouge clair",
+			"redText": "Texte rouge",
+			"redBorder": "Bordure rouge",
+			"bold": "Gras"
+		},
+		"barColor": {
+			"blue": "Bleu",
+			"green": "Vert",
+			"red": "Rouge",
+			"orange": "Orange",
+			"lightBlue": "Bleu clair",
+			"purple": "Violet"
+		},
+		"scale": {
+			"greenYellowRed": "Vert - Jaune - Rouge",
+			"redYellowGreen": "Rouge - Jaune - Vert",
+			"greenWhiteRed": "Vert - Blanc - Rouge",
+			"redWhiteGreen": "Rouge - Blanc - Vert",
+			"blueWhiteRed": "Bleu - Blanc - Rouge",
+			"redWhiteBlue": "Rouge - Blanc - Bleu",
+			"whiteRed": "Blanc - Rouge",
+			"redWhite": "Rouge - Blanc",
+			"greenWhite": "Vert - Blanc",
+			"whiteGreen": "Blanc - Vert",
+			"greenYellow": "Vert - Jaune",
+			"yellowGreen": "Jaune - Vert"
+		},
+		"describe": {
+			"compare": "Valeur de la cellule {op} {value}",
+			"between": "Valeur de la cellule entre {from} et {to}",
+			"notBetween": "Valeur de la cellule non comprise entre {from} et {to}",
+			"contains": "Texte qui contient « {value} »",
+			"notContains": "Texte qui ne contient pas « {value} »",
+			"begins": "Texte qui commence par « {value} »",
+			"ends": "Texte qui se termine par « {value} »",
+			"empty": "Cellule vide",
+			"notEmpty": "Cellule non vide",
+			"error": "Valeur en erreur",
+			"noError": "Sans erreur",
+			"date": "Date : {when}",
+			"dup": "Valeurs en double",
+			"unique": "Valeurs uniques",
+			"top": "{n} valeurs les plus élevées",
+			"topPct": "{n} % les plus élevés",
+			"bottom": "{n} valeurs les moins élevées",
+			"bottomPct": "{n} % les moins élevés",
+			"stdDevAbove": "{n, plural, one {# écart type} other {# écarts type}} au-dessus de la moyenne",
+			"stdDevBelow": "{n, plural, one {# écart type} other {# écarts type}} en dessous de la moyenne",
+			"aboveOrEqual": "Supérieur ou égal à la moyenne",
+			"belowOrEqual": "Inférieur ou égal à la moyenne",
+			"above": "Supérieur à la moyenne",
+			"below": "Inférieur à la moyenne",
+			"formula": "Formule : {formula}",
+			"bar": "Barre de données",
+			"scale": "Échelle à {n} couleurs",
+			"icons": "Jeu d’icônes : {set}"
+		}
+	},
+	"color": {
+		"standard": {
+			"darkRed": "Rouge foncé",
+			"red": "Rouge",
+			"orange": "Orange",
+			"yellow": "Jaune",
+			"lightGreen": "Vert clair",
+			"green": "Vert",
+			"lightBlue": "Bleu clair",
+			"blue": "Bleu",
+			"darkBlue": "Bleu foncé",
+			"purple": "Violet"
+		},
+		"slot": {
+			"lt1": "Arrière-plan 1",
+			"dk1": "Texte 1",
+			"lt2": "Arrière-plan 2",
+			"dk2": "Texte 2",
+			"accent1": "Accent 1",
+			"accent2": "Accent 2",
+			"accent3": "Accent 3",
+			"accent4": "Accent 4",
+			"accent5": "Accent 5",
+			"accent6": "Accent 6"
+		},
+		"hue": {
+			"white": "Blanc",
+			"black": "Noir",
+			"gray": "Gris",
+			"red": "Rouge",
+			"orange": "Orange",
+			"yellow": "Jaune",
+			"green": "Vert",
+			"teal": "Sarcelle",
+			"blue": "Bleu",
+			"purple": "Violet",
+			"pink": "Rose"
+		},
+		"lighter": "plus clair {pct} %",
+		"darker": "plus foncé {pct} %"
+	},
+	"customSort": {
+		"summary": {
+			"list": "liste « {name} »",
+			"reversed": "{order} (à rebours)"
+		}
+	},
+	"defaultName": {
+		"hint": "Nom par défaut : renommez le tableau"
+	},
+	"formulaError": {
+		"name": {
+			"ref": "#NOM? : {ref} n'existe pas. Écrivez Cell[{cell}] pour une cellule libre, [Colonne] pour la valeur de la ligne dans un tableau, Tableau[Colonne] pour une colonne entière, ou Tableau[Colonne][ligne] pour une valeur.",
+			"unknown": "#NOM? : nom inconnu. Vérifiez le nom de la fonction, du tableau, de la colonne ou de la cellule nommée."
+		},
+		"value": {
+			"text": "#VALEUR! : Cell[{cell}] contient du texte, pas un nombre ni une date.",
+			"column": "#VALEUR! : une colonne entière Tableau[Colonne] est utilisée là où une seule valeur est attendue. Écrivez Tableau[Colonne][ligne], ou [Colonne] dans une ligne du tableau.",
+			"type": "#VALEUR! : type de valeur inattendu (texte là où un nombre est attendu, ou argument invalide)."
+		},
+		"div0": "#DIV/0! : division par zéro (ou par une cellule vide).",
+		"ref": "#REF! : référence invalide, le tableau ou la colonne a été supprimé ou renommé.",
+		"circ": "#CIRC! : référence circulaire, la formule dépend de sa propre valeur (par exemple SOMME(Tableau[X]) dans la colonne X). Faites-la lire d'autres cellules ou colonnes ; pour un total cumulé, lisez la ligne précédente : [Cumul][-1].",
+		"na": "#N/A : valeur introuvable (REFERENCE, EQUIV…) ; vérifiez la clé cherchée.",
+		"num": "#NOMBRE! : nombre invalide ou hors limites.",
+		"spill": "#DEVERSEMENT! : le tableau dynamique ne peut pas se déverser, des cellules sont déjà remplies sur son chemin.",
+		"calc": "#CALC! : le tableau dynamique est vide (aucune ligne ne correspond)."
+	},
+	"filter": {
+		"cond": {
+			"kind": {
+				"number": "Filtres numériques",
+				"date": "Filtres chronologiques",
+				"text": "Filtres textuels"
+			},
+			"op": {
+				"eq": "Est égal à",
+				"ne": "Est différent de",
+				"begins": "Commence par",
+				"ends": "Se termine par",
+				"contains": "Contient",
+				"notcontains": "Ne contient pas",
+				"gt": "Est supérieur à",
+				"ge": "Est supérieur ou égal à",
+				"lt": "Est inférieur à",
+				"le": "Est inférieur ou égal à",
+				"between": "Entre",
+				"top": "10 premiers",
+				"bottom": "10 derniers",
+				"above": "Au-dessus de la moyenne",
+				"below": "En dessous de la moyenne"
+			},
+			"date": {
+				"lt": "Avant",
+				"gt": "Après",
+				"le": "Avant ou le",
+				"ge": "Après ou le"
+			},
+			"topN": "{n} premiers",
+			"bottomN": "{n} derniers",
+			"between": "{op} {from} et {to}",
+			"one": "{op} « {value} »",
+			"joinOr": "{a} ou {b}",
+			"joinAnd": "{a} et {b}"
+		},
+		"values": {
+			"noMatch": "Aucune valeur ne correspond à la recherche",
+			"noneChecked": "Cochez au moins une valeur"
+		}
+	},
+	"find": {
+		"count": "{k} sur {total}",
+		"replaced": {
+			"all": "{n, plural, one {# cellule remplacée} other {# cellules remplacées}} (Ctrl+Z pour annuler)",
+			"selection": "{n, plural, one {# cellule remplacée} other {# cellules remplacées}} dans la sélection (Ctrl+Z pour annuler)"
+		},
+		"notFound": {
+			"all": "Aucune cellule trouvée",
+			"selection": "Aucune cellule trouvée dans la sélection"
+		}
+	},
+	"sort": {
+		"number": {
+			"asc": "Trier par ordre croissant",
+			"desc": "Trier par ordre décroissant"
+		},
+		"date": {
+			"asc": "Trier du plus ancien au plus récent",
+			"desc": "Trier du plus récent au plus ancien"
+		},
+		"text": {
+			"asc": "Trier de A à Z",
+			"desc": "Trier de Z à A"
+		}
+	},
+	"type": {
+		"integer": "Entier",
+		"decimal": "Décimal",
+		"text": "Texte",
+		"boolean": "Booléen",
+		"date": "Date",
+		"formula": "Calculée"
+	},
+	"syntax": {
+		"unclosedQuote": "guillemet non fermé",
+		"badNumber": "nombre invalide",
+		"unknownError": "erreur inconnue",
+		"unclosedBracket": "crochet non fermé",
+		"unexpectedChar": "caractère inattendu « {char} »",
+		"missingCloseParen": "il manque une parenthèse fermante « ) »",
+		"missingOperatorOrParen": "il manque un opérateur ou « ) » avant « {word} »",
+		"badCellAddress": "adresse de cellule invalide : Cell[{addr}]",
+		"rowFromOne": "les lignes d'un tableau se comptent à partir de 1",
+		"rowExpected": "ligne attendue entre crochets",
+		"missingCloseParenOf": "il manque une parenthèse fermante « ) » à {name}",
+		"missingSepOrParen": "il manque « {sep} » ou « ) » avant « {word} »",
+		"missingValue": "il manque une valeur",
+		"missingValueAfter": "il manque une valeur après « {word} »",
+		"missingValueBefore": "il manque une valeur avant « {word} »",
+		"empty": "la formule est vide",
+		"unexpected": "« {word} » inattendu",
+		"extraCloseParen": "parenthèse fermante « ) » en trop",
+		"sepOutside": "« {sep} » hors des parenthèses d'une fonction",
+		"missingOperator": "il manque un opérateur avant « {word} »"
+	},
+	"hidden": {
+		"band": {
+			"choice": "⧩ {n, plural, one {# ligne} other {# lignes}} d'autres valeurs de « {category} » (choix de l'onglet) : saisir ici ajoute une ligne",
+			"filter": "⧩ {n, plural, one {# ligne masquée} other {# lignes masquées}} par le filtre"
+		},
+		"refusal": "Lignes masquées par le filtre du tableau « {table} » : effacez le filtre pour les modifier"
+	},
+	"pivot": {
+		"zone": {
+			"filters": "Filtres",
+			"filters.hint": "Glissez ici un champ pour filtrer tout le rapport",
+			"cols": "Colonnes",
+			"cols.hint": "Ses valeurs deviennent des colonnes (un champ)",
+			"rows": "Lignes",
+			"rows.hint": "Glissez ici les champs qui regroupent les lignes",
+			"values": "Valeurs",
+			"values.hint": "Glissez ici les champs à synthétiser"
+		},
+		"agg": {
+			"sum": "Somme",
+			"count": "Nombre",
+			"countDistinct": "Nombre distinct",
+			"avg": "Moyenne",
+			"min": "Min",
+			"max": "Max"
+		},
+		"show": {
+			"none": "Aucun calcul",
+			"pctTotal": "% du total général",
+			"pctCol": "% du total de la colonne",
+			"pctRow": "% du total de la ligne"
+		},
+		"format": {
+			"auto": "Automatique (format de la source)",
+			"number": "Nombre (1 235)",
+			"number2": "Nombre, 2 décimales (1 234,50)",
+			"currency": "Monétaire (1 235 €)",
+			"currency2": "Monétaire, 2 décimales (1 234,50 €)",
+			"percent": "Pourcentage (12,3 %)"
+		},
+		"rowCount": "Nombre de lignes",
+		"valueLabel": "{agg} de {field}",
+		"move": {
+			"up": "Monter",
+			"down": "Descendre",
+			"first": "Placer au début",
+			"last": "Placer à la fin",
+			"to": "Déplacer vers {zone}"
+		},
+		"handKept": "{n, plural, one {Valeurs saisies d'une ligne absente du tableau croisé, mises de côté : elles reviendront avec son étiquette.} other {Valeurs saisies de # lignes absentes du tableau croisé, mises de côté : elles reviendront avec leurs étiquettes.}}",
+		"place": {
+			"create": "Cliquez sur la cellule où placer le tableau croisé (Échap : annuler)",
+			"move": "Cliquez sur la cellule où déplacer le tableau croisé « {name} » (Échap : annuler)",
+			"created": "Tableau croisé créé (Ctrl+Z pour annuler)",
+			"moved": "Tableau croisé déplacé (Ctrl+Z pour annuler)",
+			"same": "Le tableau croisé est déjà à cette place"
+		}
+	},
+	"readFail": "Le tableau « {table} » n'a pas pu être relu ; il sera rechargé.",
+	"refLink": {
+		"becomes": "« {column} » devient une référence vers « {table} » : Ctrl+clic ou clic droit › Basculer sur…",
+		"cites": "Lignes qui citent « {value} » ({n})",
+		"noCites": "Aucune ligne ne cite « {value} »"
+	},
+	"validation": {
+		"notAllowed": "« {value} » n'est pas permis ici : choisissez dans la liste ({list}), Alt+↓ pour l'ouvrir",
+		"missingSource": "Indiquez la plage source : Tableau[Colonne], Cell[A1:A10] ou Feuille2!Cell[A1:A10] (« Sélectionner » pour la désigner)",
+		"missingValues": "Indiquez au moins une valeur (une par ligne, ou séparées par « ; »)",
+		"preview": {
+			"notFound": "Source introuvable : {error}",
+			"empty": "La plage ne contient aucune valeur",
+			"values": "{n, plural, one {# valeur} other {# valeurs}} : {list}"
+		},
+		"sourceError": "« {value} » ne peut pas être vérifié : la source de la liste ({src}) ne se lit pas ({error})",
+		"sourceEmpty": "« {value} » n'est pas permis ici : la plage de la liste ({src}) est vide",
+		"target": {
+			"onSheet": "{what} ({sheet})",
+			"col": "colonne {col}",
+			"cols": "colonnes {range}",
+			"row": "ligne {row}",
+			"rows": "lignes {range}",
+			"tableCol": "colonne « {column} » du tableau {table}",
+			"tableCols": "colonnes « {from} » à « {to} » du tableau {table}",
+			"cell": "cellule {addr}",
+			"cells": "cellules {range}",
+			"tableCells": "cellules {range} du tableau {table}"
+		}
+	},
+	"spill": {
+		"tip": "Résultat déversé de la formule en {addr} — clic droit : convertir en tableau"
+	},
+	"tabChoice": {
+		"clear": "Ne plus filtrer l'onglet",
+		"clear.tooltip": "L'onglet perd son ▾ « {name} » : les tableaux et tableaux croisés de la feuille montrent de nouveau toutes leurs lignes (Ctrl+Z pour annuler)",
+		"byField": "Filtrer l'onglet par ce champ",
+		"byColumn": "Filtrer l'onglet par cette colonne",
+		"computed": "Une colonne calculée ne peut pas servir de choix d'onglet : prenez une colonne saisie (Année, Mois, Ville…)",
+		"tooMany": "« {column} » est vide, ou a plus de {max} valeurs différentes : trop pour la liste de l'onglet ; prenez une colonne comme Année, Mois ou Ville",
+		"byField.tooltip": "L'onglet de la feuille reçoit un ▾ pour choisir une valeur de « {column} » : ce tableau croisé, les autres tableaux croisés de la feuille construits sur un tableau qui a « {column} » et les tableaux de la feuille qui l'ont ne montrent que les lignes de cette valeur (le tableau source, s'il est sur une autre feuille, n'est pas filtré). Il commence sur toutes les valeurs. Ctrl+Z pour annuler.",
+		"byColumn.tooltip": "L'onglet de la feuille reçoit un ▾ pour choisir une valeur de « {column} » : chaque tableau de la feuille qui a la colonne « {column} », et les tableaux croisés construits sur eux, ne montrent que les lignes de cette valeur. Il commence sur toutes les valeurs. Ctrl+Z pour annuler.",
+		"replaces": "{text} Remplace le choix par « {name} ».",
+		"notice": {
+			"cleared": "L'onglet ne filtre plus par « {column} » : toutes les lignes sont de nouveau affichées (Ctrl+Z pour annuler)",
+			"set": "L'onglet filtre par « {column} » : sa flèche ▾ choisit la valeur affichée (Alt+↓) ; Ctrl+Z pour annuler"
+		}
+	},
+	"textCols": {
+		"dateOrder": {
+			"DMY": "JMA",
+			"MDY": "MJA",
+			"YMD": "AMJ",
+			"DYM": "JAM",
+			"MYD": "MAJ",
+			"YDM": "AJM"
+		},
+		"format": {
+			"text": "Texte",
+			"skip": "Ignorer la colonne",
+			"general": "Standard"
+		}
+	},
+	"theme": {
+		"custom": "Personnalisé"
+	},
+	"titleHead": {
+		"offer": "Cette ligne ressemble aux en-têtes de « {table} »"
+	}
+}

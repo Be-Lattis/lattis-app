@@ -4,16 +4,20 @@
 // Fonctions pures : chacune rend une nouvelle configuration.
 
 import type { PivotConfig, PivotValue } from './Sheet.svelte';
-import { lower } from '#lib/i18n/index.js';
+import { lower, t, tAny } from '#lib/i18n/index.js';
 
 export type Zone = 'filters' | 'cols' | 'rows' | 'values';
 
-export const ZONES: { zone: Zone; title: string; hint: string }[] = [
-	{ zone: 'filters', title: 'Filtres', hint: 'Glissez ici un champ pour filtrer tout le rapport' },
-	{ zone: 'cols', title: 'Colonnes', hint: 'Ses valeurs deviennent des colonnes (un champ)' },
-	{ zone: 'rows', title: 'Lignes', hint: 'Glissez ici les champs qui regroupent les lignes' },
-	{ zone: 'values', title: 'Valeurs', hint: 'Glissez ici les champs à synthétiser' }
-];
+/** Les quatre zones ; titre et aide lus à chaque usage (langue). */
+export const ZONES: { zone: Zone; title: string; hint: string }[] = (['filters', 'cols', 'rows', 'values'] as const).map((zone) => ({
+	zone,
+	get title() {
+		return tAny(`grid.pivot.zone.${zone}`);
+	},
+	get hint() {
+		return tAny(`grid.pivot.zone.${zone}.hint`);
+	}
+}));
 
 export const zoneTitle = (z: Zone) => ZONES.find((x) => x.zone === z)!.title;
 
@@ -26,30 +30,25 @@ export interface PivotField {
 /** Pseudo-champ « Nombre de lignes » : une valeur sans colonne (count). */
 export const ROW_COUNT = '';
 
-export const AGGS: [PivotValue['agg'], string][] = [
-	['sum', 'Somme'],
-	['count', 'Nombre'],
-	['countDistinct', 'Nombre distinct'],
-	['avg', 'Moyenne'],
-	['min', 'Min'],
-	['max', 'Max']
-];
+/** Synthèses d'une valeur : [agrégat, libellé]. */
+export const aggs = (): [PivotValue['agg'], string][] => (['sum', 'count', 'countDistinct', 'avg', 'min', 'max'] as const).map((a) => [a, tAny(`grid.pivot.agg.${a}`)]);
 
-export const SHOWS: [string, string][] = [
-	['', 'Aucun calcul'],
-	['pctTotal', '% du total général'],
-	['pctCol', '% du total de la colonne'],
-	['pctRow', '% du total de la ligne']
+/** Calculs « Afficher les valeurs » : [valeur, libellé]. */
+export const shows = (): [string, string][] => [
+	['', t('grid.pivot.show.none')],
+	['pctTotal', t('grid.pivot.show.pctTotal')],
+	['pctCol', t('grid.pivot.show.pctCol')],
+	['pctRow', t('grid.pivot.show.pctRow')]
 ];
 
 /** Formats de nombre proposés pour une valeur (style JSON, voir numfmt.ts). */
-export const FORMATS: [string, string][] = [
-	['', 'Automatique (format de la source)'],
-	['{"nf":"0,00","dp":0}', 'Nombre (1 235)'],
-	['{"nf":"0,00","dp":2}', 'Nombre, 2 décimales (1 234,50)'],
-	['{"nf":"€","dp":0}', 'Monétaire (1 235 €)'],
-	['{"nf":"€","dp":2}', 'Monétaire, 2 décimales (1 234,50 €)'],
-	['{"nf":"%","dp":1}', 'Pourcentage (12,3 %)']
+export const formats = (): [string, string][] => [
+	['', t('grid.pivot.format.auto')],
+	['{"nf":"0,00","dp":0}', t('grid.pivot.format.number')],
+	['{"nf":"0,00","dp":2}', t('grid.pivot.format.number2')],
+	['{"nf":"€","dp":0}', t('grid.pivot.format.currency')],
+	['{"nf":"€","dp":2}', t('grid.pivot.format.currency2')],
+	['{"nf":"%","dp":1}', t('grid.pivot.format.percent')]
 ];
 
 export const isNumericType = (type: string) => type === 'integer' || type === 'decimal';
@@ -87,8 +86,8 @@ export function defaultValue(field: string, fields: PivotField[]): PivotValue {
 /** Nom affiché d'une valeur (comme pivotLabel côté Go, sans le pourcentage). */
 export function valueLabel(v: PivotValue): string {
 	if (v.label?.trim()) return v.label.trim();
-	if (!v.field) return 'Nombre de lignes';
-	return `${AGGS.find(([a]) => a === v.agg)?.[1] ?? v.agg} de ${v.field}`;
+	if (!v.field) return t('grid.pivot.rowCount');
+	return t('grid.pivot.valueLabel', { agg: aggs().find(([a]) => a === v.agg)?.[1] ?? v.agg, field: v.field });
 }
 
 /** Champs d'une zone, dans l'ordre (Valeurs : ROW_COUNT pour un nombre de lignes). */
@@ -262,14 +261,14 @@ export function moveCommands(cfg: PivotConfig, z: Zone, i: number): MoveCommand[
 	const n = zoneItems(cfg, z).length;
 	const field = zoneItems(cfg, z)[i];
 	const out: MoveCommand[] = [
-		{ label: 'Monter', to: z, at: i - 1, disabled: i === 0 },
-		{ label: 'Descendre', to: z, at: i + 2, disabled: i >= n - 1 },
-		{ label: 'Placer au début', to: z, at: 0, disabled: i === 0 },
-		{ label: 'Placer à la fin', to: z, disabled: i >= n - 1 }
+		{ label: t('grid.pivot.move.up'), to: z, at: i - 1, disabled: i === 0 },
+		{ label: t('grid.pivot.move.down'), to: z, at: i + 2, disabled: i >= n - 1 },
+		{ label: t('grid.pivot.move.first'), to: z, at: 0, disabled: i === 0 },
+		{ label: t('grid.pivot.move.last'), to: z, disabled: i >= n - 1 }
 	];
 	for (const { zone, title } of ZONES) {
 		if (zone === z) continue;
-		out.push({ label: `Déplacer vers ${title}`, to: zone, disabled: !accepts(zone, field) });
+		out.push({ label: t('grid.pivot.move.to', { zone: title }), to: zone, disabled: !accepts(zone, field) });
 	}
 	return out;
 }

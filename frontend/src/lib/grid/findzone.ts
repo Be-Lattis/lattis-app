@@ -1,6 +1,7 @@
 // Rechercher / remplacer dans la sélection, comme Excel : une sélection de
 // plusieurs cellules borne la recherche (suivant, précédent, remplacer,
 // remplacer tout) ; une seule cellule (ou sa fusion) : toute la feuille.
+import { t } from '#lib/i18n/index.js';
 
 export interface Zone {
 	r0: number;
@@ -60,7 +61,7 @@ export function nextHit(hits: readonly Hit[], from: Hit | null, back: boolean): 
 
 /** Compteur affiché dans le champ : « 3 sur 12 » (« 5000+ » au-delà de la limite lue). */
 export function hitCount(k: number, total: number, limit = 5000): string {
-	return `${k + 1} sur ${total}${total >= limit ? '+' : ''}`;
+	return t('grid.find.count', { k: String(k + 1), total: `${total}${total >= limit ? '+' : ''}` });
 }
 
 /** Adresse A1 d'une zone (0-based) : B2:D10, ou B2 pour une seule cellule. */
@@ -76,8 +77,8 @@ export function zoneLabel(z: Zone): string {
 
 /** Bilan de Remplacer tout. */
 export function replacedLabel(n: number, inSelection: boolean): string {
-	const where = inSelection ? ' dans la sélection' : '';
-	return n ? `${n} cellule${n > 1 ? 's' : ''} remplacée${n > 1 ? 's' : ''}${where} (Ctrl+Z pour annuler)` : `Aucune cellule trouvée${where}`;
+	if (inSelection) return n ? t('grid.find.replaced.selection', { n }) : t('grid.find.notFound.selection');
+	return n ? t('grid.find.replaced.all', { n }) : t('grid.find.notFound.all');
 }
 
 export type FinderAction = 'next' | 'prev' | 'close' | 'focusFind' | 'openReplace' | null;

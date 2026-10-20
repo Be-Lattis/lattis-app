@@ -3,7 +3,7 @@
 // valeurs se comparent sans tenir compte de la casse, comme le backend
 // (canvas/customsort.go) ; les vides ne s'y rangent pas : ils restent
 // toujours à la fin.
-import { lower } from '#lib/i18n/index.js';
+import { lower, t } from '#lib/i18n/index.js';
 
 /** Ordre personnalisé (canvas.CustomOrder). */
 export interface CustomOrder {
@@ -112,8 +112,8 @@ export function orderOf(items: OrderItem[], list: CustomList | null, desc: boole
 /** Résumé d'un ordre pour un menu : « Mois », ou les premières valeurs. */
 export function orderSummary(o: CustomOrder | null | undefined): string {
 	if (!o) return '';
-	const head = o.list ? `liste « ${o.list} »` : o.values.slice(0, 3).join(', ') + (o.values.length > 3 ? '…' : '');
-	return head + (o.desc ? ' (à rebours)' : '');
+	const head = o.list ? t('grid.customSort.summary.list', { name: o.list }) : o.values.slice(0, 3).join(', ') + (o.values.length > 3 ? '…' : '');
+	return o.desc ? t('grid.customSort.summary.reversed', { order: head }) : head;
 }
 
 /** Retire de la configuration d'un TCD le tri d'un champ (asc/desc) ou son ordre personnalisé. */

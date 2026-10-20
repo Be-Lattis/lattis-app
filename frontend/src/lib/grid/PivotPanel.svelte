@@ -25,10 +25,10 @@
 	import RowFormulaDialog from '#lib/ui/RowFormulaDialog.svelte';
 	import type { RowFormulaHelp, RowFormulaPreview } from '#lib/ui/rowformula.js';
 	import {
-		AGGS,
-		FORMATS,
+		aggs,
+		formats,
 		ROW_COUNT,
-		SHOWS,
+		shows,
 		ZONES,
 		addField,
 		clone,
@@ -378,7 +378,7 @@
 		if (zone === 'values') {
 			const v = draft.values![i];
 			items.push({ label: 'Synthétiser par', head: true });
-			for (const [agg, label] of AGGS)
+			for (const [agg, label] of aggs())
 				items.push({ label: `${label}`, checked: v.agg === agg, disabled: !v.field && agg !== 'count', run: () => change(setValue(draft, i, { agg })) });
 			items.push({ label: 'Paramètres des champs de valeurs…', run: () => openSettings(zone, i) });
 			items.push({ label: '', sep: true });
@@ -660,7 +660,7 @@
 							<button
 								class="chip-btn"
 								aria-haspopup="menu"
-								title={v ? `${valueLabel(v)}${v.show ? ' · ' + SHOWS.find(([s]) => s === v.show)?.[1] : ''}` : name}
+								title={v ? `${valueLabel(v)}${v.show ? ' · ' + shows().find(([s]) => s === v.show)?.[1] : ''}` : name}
 								onclick={(e) => chipMenu(z.zone, i, e.currentTarget, e.detail === 0)}
 								oncontextmenu={(e) => {
 									e.preventDefault();
@@ -790,13 +790,13 @@
 			>Synthétiser par<Select
 				value={s.agg}
 				width="100%"
-				options={AGGS.map(([a, label]) => ({ value: a as string, label, disabled: !s.field && a !== 'count' }))}
+				options={aggs().map(([a, label]) => ({ value: a as string, label, disabled: !s.field && a !== 'count' }))}
 				onchange={(a) => (s.agg = a)}
 			/></label
 		>
-		<label class="line">Afficher les valeurs<Select value={s.show} width="100%" options={SHOWS.map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.show = v)} /></label>
+		<label class="line">Afficher les valeurs<Select value={s.show} width="100%" options={shows().map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.show = v)} /></label>
 		<label class="line"
-			>Format de nombre<Select value={s.show ? '' : s.format} width="100%" disabled={!!s.show} options={FORMATS.map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.format = v)} /></label
+			>Format de nombre<Select value={s.show ? '' : s.format} width="100%" disabled={!!s.show} options={formats().map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.format = v)} /></label
 		>
 		{#if s.show}<p class="pop-note">Un pourcentage garde son propre format.</p>{/if}
 		<div class="foot">

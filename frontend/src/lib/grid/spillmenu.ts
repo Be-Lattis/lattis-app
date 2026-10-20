@@ -2,6 +2,7 @@
 // couvre, son infobulle et le choix du clic droit « Convertir en tableau
 // lié / (valeurs) » (canvas.Model.ConvertSpill, voir spilltable.go).
 import { colLetters } from './cfmodel';
+import { t } from '#lib/i18n/index.js';
 
 /** Un déversement affiché : ancre (cellule de la formule) et valeurs. */
 export interface SpillArea {
@@ -22,5 +23,5 @@ export function spillAnchor(s: SpillArea): string {
 
 /** Infobulle de la zone déversée. */
 export function spillTip(s: SpillArea): string {
-	return `Résultat déversé de la formule en ${spillAnchor(s)} — clic droit : convertir en tableau`;
+	return t('grid.spill.tip', { addr: spillAnchor(s) });
 }

@@ -1,5 +1,6 @@
 // Jeux d'icônes de la mise en forme conditionnelle (comme ceux d'Excel),
 // dessinés sur le canvas de la grille et dans les aperçus du ruban.
+import { t } from '#lib/i18n/index.js';
 
 export type IconSetId =
 	| '3arrows'
@@ -48,15 +49,21 @@ const arrow = (n: number, color: string): IconSpec => ({
 /** Jeux d'icônes, icônes de la plus basse à la plus haute valeur. */
 export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> = {
 	'3arrows': {
-		label: '3 flèches (couleur)',
+		get label() {
+			return t('grid.cf.iconSet.3arrows');
+		},
 		icons: [arrow(-90, RED), arrow(0, YEL), arrow(90, GRN)]
 	},
 	'3arrowsgray': {
-		label: '3 flèches (gris)',
+		get label() {
+			return t('grid.cf.iconSet.3arrowsgray');
+		},
 		icons: [arrow(-90, GRAY), arrow(0, GRAY), arrow(90, GRAY)]
 	},
 	'3triangles': {
-		label: '3 triangles',
+		get label() {
+			return t('grid.cf.iconSet.3triangles');
+		},
 		icons: [
 			{ shape: 'tri', n: -1, color: RED },
 			{ shape: 'dash', color: YEL },
@@ -64,23 +71,33 @@ export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> 
 		]
 	},
 	'4arrows': {
-		label: '4 flèches (couleur)',
+		get label() {
+			return t('grid.cf.iconSet.4arrows');
+		},
 		icons: [arrow(-90, RED), arrow(-45, YEL), arrow(45, YEL), arrow(90, GRN)]
 	},
 	'4arrowsgray': {
-		label: '4 flèches (gris)',
+		get label() {
+			return t('grid.cf.iconSet.4arrowsgray');
+		},
 		icons: [arrow(-90, GRAY), arrow(-45, GRAY), arrow(45, GRAY), arrow(90, GRAY)]
 	},
 	'5arrows': {
-		label: '5 flèches (couleur)',
+		get label() {
+			return t('grid.cf.iconSet.5arrows');
+		},
 		icons: [arrow(-90, RED), arrow(-45, YEL), arrow(0, YEL), arrow(45, YEL), arrow(90, GRN)]
 	},
 	'5arrowsgray': {
-		label: '5 flèches (gris)',
+		get label() {
+			return t('grid.cf.iconSet.5arrowsgray');
+		},
 		icons: [arrow(-90, GRAY), arrow(-45, GRAY), arrow(0, GRAY), arrow(45, GRAY), arrow(90, GRAY)]
 	},
 	'3traffic': {
-		label: '3 feux de signalisation (sans bordure)',
+		get label() {
+			return t('grid.cf.iconSet.3traffic');
+		},
 		icons: [
 			{ shape: 'circle', color: RED },
 			{ shape: 'circle', color: YEL },
@@ -88,7 +105,9 @@ export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> 
 		]
 	},
 	'3trafficrim': {
-		label: '3 feux de signalisation (avec bordure)',
+		get label() {
+			return t('grid.cf.iconSet.3trafficrim');
+		},
 		icons: [
 			{ shape: 'rim', color: RED },
 			{ shape: 'rim', color: YEL },
@@ -96,7 +115,9 @@ export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> 
 		]
 	},
 	'3signs': {
-		label: '3 signes',
+		get label() {
+			return t('grid.cf.iconSet.3signs');
+		},
 		icons: [
 			{ shape: 'diamond', color: RED },
 			{ shape: 'warn', color: YEL },
@@ -104,7 +125,9 @@ export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> 
 		]
 	},
 	'4traffic': {
-		label: '4 feux de signalisation',
+		get label() {
+			return t('grid.cf.iconSet.4traffic');
+		},
 		icons: [
 			{ shape: 'circle', color: BLACK },
 			{ shape: 'circle', color: RED },
@@ -113,7 +136,9 @@ export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> 
 		]
 	},
 	'4redblack': {
-		label: 'Rouge à noir',
+		get label() {
+			return t('grid.cf.iconSet.4redblack');
+		},
 		icons: [
 			{ shape: 'circle', color: BLACK },
 			{ shape: 'circle', color: GRAY },
@@ -122,7 +147,9 @@ export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> 
 		]
 	},
 	'3symbols': {
-		label: '3 symboles (cerclés)',
+		get label() {
+			return t('grid.cf.iconSet.3symbols');
+		},
 		icons: [
 			{ shape: 'ccross', color: RED },
 			{ shape: 'cexcl', color: YEL },
@@ -130,7 +157,9 @@ export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> 
 		]
 	},
 	'3symbols2': {
-		label: '3 symboles (non cerclés)',
+		get label() {
+			return t('grid.cf.iconSet.3symbols2');
+		},
 		icons: [
 			{ shape: 'cross', color: RED },
 			{ shape: 'excl', color: YEL },
@@ -138,7 +167,9 @@ export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> 
 		]
 	},
 	'3flags': {
-		label: '3 drapeaux',
+		get label() {
+			return t('grid.cf.iconSet.3flags');
+		},
 		icons: [
 			{ shape: 'flag', color: RED },
 			{ shape: 'flag', color: YEL },
@@ -146,7 +177,9 @@ export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> 
 		]
 	},
 	'3stars': {
-		label: '3 étoiles',
+		get label() {
+			return t('grid.cf.iconSet.3stars');
+		},
 		icons: [
 			{ shape: 'star', n: 0 },
 			{ shape: 'star', n: 0.5 },
@@ -154,36 +187,52 @@ export const ICON_SETS: Record<IconSetId, { label: string; icons: IconSpec[] }> 
 		]
 	},
 	'4rating': {
-		label: '4 évaluations',
+		get label() {
+			return t('grid.cf.iconSet.4rating');
+		},
 		icons: [1, 2, 3, 4].map((n) => ({ shape: 'bars' as const, n }))
 	},
 	'5rating': {
-		label: '5 évaluations',
+		get label() {
+			return t('grid.cf.iconSet.5rating');
+		},
 		icons: [0, 1, 2, 3, 4].map((n) => ({ shape: 'bars' as const, n }))
 	},
 	'5quarters': {
-		label: '5 quartiers',
+		get label() {
+			return t('grid.cf.iconSet.5quarters');
+		},
 		icons: [0, 1, 2, 3, 4].map((n) => ({ shape: 'quarter' as const, n }))
 	},
 	'5boxes': {
-		label: '5 cases',
+		get label() {
+			return t('grid.cf.iconSet.5boxes');
+		},
 		icons: [0, 1, 2, 3, 4].map((n) => ({ shape: 'boxes' as const, n }))
 	}
 };
 
-/** Galerie du ruban, par famille (comme Excel). */
+/** Galerie du ruban, par famille (comme Excel) ; libellés lus à chaque usage (langue). */
 export const ICON_GROUPS: { label: string; sets: IconSetId[] }[] = [
 	{
-		label: 'Directionnel',
+		get label() {
+			return t('grid.cf.iconGroup.directional');
+		},
 		sets: ['3arrows', '3arrowsgray', '3triangles', '4arrows', '4arrowsgray', '5arrows', '5arrowsgray']
 	},
 	{
-		label: 'Formes',
+		get label() {
+			return t('grid.cf.iconGroup.shapes');
+		},
 		sets: ['3traffic', '3trafficrim', '3signs', '4traffic', '4redblack']
 	},
-	{ label: 'Indicateurs', sets: ['3symbols', '3symbols2', '3flags'] },
+	{ get label() {
+			return t('grid.cf.iconGroup.indicators');
+		}, sets: ['3symbols', '3symbols2', '3flags'] },
 	{
-		label: 'Évaluations',
+		get label() {
+			return t('grid.cf.iconGroup.ratings');
+		},
 		sets: ['3stars', '4rating', '5quarters', '5rating', '5boxes']
 	}
 ];

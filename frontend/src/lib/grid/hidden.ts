@@ -3,7 +3,7 @@
 // sans filtre) : une bande grisée « N lignes masquées » les représente sous
 // les lignes affichées et refuse la saisie ; les cellules libres commencent
 // sous la dernière ligne réelle du tableau.
-import { fmtNumber } from '#lib/i18n/index.js';
+import { fmtNumber, t } from '#lib/i18n/index.js';
 
 export interface FilteredTable {
 	name: string;
@@ -35,9 +35,8 @@ export function bandAt<T extends FilteredTable>(tables: T[], r: number, c: numbe
  * l'onglet (onglet à choix), qu'on remplit comme un onglet neuf.
  */
 export function bandLabel(n: number, category?: string): string {
-	const s = n > 1 ? 's' : '';
-	if (category) return `⧩ ${fmtNumber(n)} ligne${s} d'autres valeurs de « ${category} » (choix de l'onglet) : saisir ici ajoute une ligne`;
-	return `⧩ ${fmtNumber(n)} ligne${s} masquée${s} par le filtre`;
+	if (category) return t('grid.hidden.band.choice', { n, category });
+	return t('grid.hidden.band.filter', { n });
 }
 
 /**
@@ -51,5 +50,5 @@ export function bandOpen(t: { follows?: boolean; columns: readonly { filter?: un
 
 /** Message affiché quand une saisie vise la bande. */
 export function bandRefusal(table: string): string {
-	return `Lignes masquées par le filtre du tableau « ${table} » : effacez le filtre pour les modifier`;
+	return t('grid.hidden.refusal', { table });
 }

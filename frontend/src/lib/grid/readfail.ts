@@ -2,10 +2,11 @@
 // tableau » : la mise en page de la grille en annonçait plus qu'il n'en a).
 // Plutôt qu'un message technique répété, la grille relit sa mise en page et
 // recharge le tableau, une fois ; le détail reste dans la console.
+import { t } from '#lib/i18n/index.js';
 
 /** Message de la barre d'état. */
 export function readFailNotice(table: string): string {
-	return `Le tableau « ${table} » n'a pas pu être relu ; il sera rechargé.`;
+	return t('grid.readFail', { table });
 }
 
 /** Délai pendant lequel un tableau déjà rechargé ne l'est plus (pas de boucle). */
