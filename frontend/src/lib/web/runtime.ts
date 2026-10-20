@@ -136,6 +136,21 @@ function toError(e: RpcError): Error {
 }
 
 /**
+ * Session expirée ? La page de l'application (servie par lattisd après
+ * contrôle de la session) répond alors par une redirection vers la
+ * connexion, ou 401/403. Faux si le serveur ne répond pas (simple coupure).
+ */
+async function sessionExpired(): Promise<boolean> {
+	if (typeof fetch === 'undefined' || typeof location === 'undefined') return false;
+	try {
+		const r = await fetch(location.pathname, { method: 'GET', redirect: 'manual', cache: 'no-store', credentials: 'same-origin' });
+		return r.type === 'opaqueredirect' || r.status === 401 || r.status === 403;
+	} catch {
+		return false;
+	}
+}
+
+/**
  * Client JSON-RPC sur WebSocket : file d'attente tant que la connexion
  * n'est pas ouverte, reconnexion automatique, évènements poussés vers
  * dispatch.
@@ -150,10 +165,20 @@ export class RpcClient {
 	#retry = 0;
 	#connectedOnce = false;
 	#closed = false;
+	// Coupure en cours (host:disconnected envoyé), session expirée dite.
+	#down = false;
+	#expired = false;
+	#probe: () => Promise<boolean>;
 
-	constructor(url: string, open: (url: string) => SocketLike = (u) => new WebSocket(u) as unknown as SocketLike) {
+	/**
+	 * probe dit si la session de l'utilisateur a expiré (la page n'est plus
+	 * servie sans se reconnecter) ; essayé après quelques reconnexions
+	 * manquées.
+	 */
+	constructor(url: string, open: (url: string) => SocketLike = (u) => new WebSocket(u) as unknown as SocketLike, probe: () => Promise<boolean> = sessionExpired) {
 		this.#url = url;
 		this.#open = open;
+		this.#probe = probe;
 	}
 
 	#connect() {
@@ -162,6 +187,7 @@ export class RpcClient {
 		this.#ws = ws;
 		ws.onopen = () => {
 			this.#retry = 0;
+			this.#down = this.#expired = false;
 			for (const m of this.#queue.splice(0)) ws.send(m);
 			if (this.#connectedOnce) {
 				// Reconnecté : la page relit le classeur (il a pu changer).
@@ -177,6 +203,22 @@ export class RpcClient {
 			for (const p of this.#pending.values()) p.reject(new RuntimeError('Connexion au moteur Lattis perdue'));
 			this.#pending.clear();
 			if (this.#closed) return;
+			// La page le montre (bandeau) : les appels suivants attendent la
+			// reconnexion dans la file.
+			if (this.#connectedOnce && !this.#down) {
+				this.#down = true;
+				dispatch('host:disconnected', null);
+			}
+			if (this.#retry >= 3 && !this.#expired) {
+				this.#probe()
+					.then((gone) => {
+						if (gone && this.#down && !this.#expired) {
+							this.#expired = true;
+							dispatch('host:expired', null);
+						}
+					})
+					.catch(() => {});
+			}
 			const delay = Math.min(10_000, 250 * 2 ** this.#retry++);
 			setTimeout(() => this.#connect(), delay);
 		};

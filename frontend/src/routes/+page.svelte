@@ -176,6 +176,8 @@
 	let recent = $state<RecentFile[]>([]);
 	// Fermer un classeur modifié : enregistrer d'abord ?
 	let closing = $state(false);
+	// Édition web : lien avec le moteur perdu (« lost ») ou session expirée.
+	let webLink = $state<'' | 'lost' | 'expired'>('');
 	// Classeur collaboratif du serveur fermé avec des modifications pas
 	// encore parties (hors ligne) : leur nombre, pour la question.
 	let unsentClose = $state(0);
@@ -1254,6 +1256,14 @@
 		const offOpen = Events.On('doc:open-file', (e: { data: string }) => {
 			openPath(e.data).catch((x) => (notice = err(x)));
 		});
+		// Édition web : lien avec le moteur Lattis perdu (réseau du téléphone,
+		// serveur redémarré) ou session expirée ; bandeau tant qu'il dure.
+		const offDown = Events.On('host:disconnected', () => (webLink = 'lost'));
+		const offExpired = Events.On('host:expired', () => (webLink = 'expired'));
+		const offBack = Events.On('host:reconnected', () => {
+			if (webLink) notice = 'Connexion au serveur rétablie';
+			webLink = '';
+		});
 		// Lien lattis:// reçu pendant que l'application tourne.
 		const offLink = Events.On('doc:open-link', (e: { data: string }) => {
 			openLink(e.data).catch((x) => (notice = err(x)));
@@ -1387,6 +1397,9 @@
 			offOpen();
 			offQuit();
 			offLink();
+			offDown();
+			offExpired();
+			offBack();
 			offShare();
 			offSync();
 			offCoEdit();
@@ -2318,6 +2331,17 @@
 		ontheme={mode === 'doc' && !docState.readOnly ? chooseTheme : undefined}
 	/>
 
+	{#if webLink}
+		<!-- Édition web : le moteur ne répond plus ; les actions attendent la reconnexion. -->
+		<div class="weblink" class:expired={webLink === 'expired'} role="alert">
+			{#if webLink === 'expired'}
+				<span>Votre session a expiré : reconnectez-vous pour continuer (vos modifications déjà faites sont gardées sur le serveur).</span>
+				<button onclick={() => location.reload()}>Se reconnecter</button>
+			{:else}
+				<span>Connexion au serveur perdue : nouvelle tentative… Ce que vous faites maintenant attend la reconnexion.</span>
+			{/if}
+		</div>
+	{/if}
 	{#if mode === 'doc'}
 		<ShareBanner
 			{share}
@@ -3231,7 +3255,33 @@
 		padding: 24px;
 		color: #4b5563;
 	}
+	.weblink {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 3px 12px;
+		font-size: 12px;
+		background: #fdf3e1;
+		color: #7c4a03;
+		border-bottom: 1px solid #e3e5e8;
+	}
+	.weblink.expired {
+		background: #fde8e8;
+		color: #7f1d1d;
+	}
+	.weblink span {
+		flex: 1;
+	}
+	.weblink button {
+		font: inherit;
+		padding: 1px 10px;
+		border: 1px solid #c4c8cc;
+		border-radius: 3px;
+		background: #fff;
+		cursor: pointer;
+	}
 	.statusbar {
+
 		display: flex;
 		align-items: center;
 		gap: 14px;

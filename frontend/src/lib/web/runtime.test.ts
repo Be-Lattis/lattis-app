@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Call, Events, RpcClient, setClient, type SocketLike } from './runtime';
 import { keyLabel } from './platform';
 import { shortcutGroups, webGroups } from '#lib/shell/shortcuts.js';
@@ -87,6 +87,44 @@ describe('transport web (JSON-RPC sur WebSocket)', () => {
 		const q = Call.ByID(8);
 		sockets[0].close();
 		await expect(q).rejects.toThrow('Connexion au moteur Lattis perdue');
+	});
+
+	it('dit la coupure, la session expirée et la reconnexion', async () => {
+		vi.useFakeTimers();
+		try {
+			const sockets: FakeSocket[] = [];
+			let expired = false;
+			const c = new RpcClient(
+				'ws://test/ws',
+				() => {
+					const s = new FakeSocket();
+					sockets.push(s);
+					return s;
+				},
+				async () => expired
+			);
+			setClient(c);
+			const seen: string[] = [];
+			const offs = ['host:disconnected', 'host:expired', 'host:reconnected'].map((n) => Events.On(n, () => seen.push(n)));
+			Call.ByID(1).catch(() => {});
+			sockets[0].open();
+			sockets[0].close();
+			expect(seen).toEqual(['host:disconnected']);
+			// Reconnexions manquées : la session est essayée.
+			expired = true;
+			for (let i = 0; i < 4; i++) {
+				await vi.advanceTimersByTimeAsync(10_000);
+				sockets[sockets.length - 1].close();
+			}
+			await vi.advanceTimersByTimeAsync(0);
+			expect(seen).toEqual(['host:disconnected', 'host:expired']);
+			await vi.advanceTimersByTimeAsync(10_000);
+			sockets[sockets.length - 1].open();
+			expect(seen).toEqual(['host:disconnected', 'host:expired', 'host:reconnected']);
+			offs.forEach((off) => off());
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
 
