@@ -40,7 +40,7 @@ func copyTree(t *testing.T, from, to string) {
 func TestShareOpenAfterCrash(t *testing.T) {
 	ctx := context.Background()
 	root := workRoot(t)
-	s, h, fake, _, tbl, id, cache := offlineSetup(t)
+	s, h, fake, ad, tbl, id, cache := offlineSetup(t)
 
 	// Session 1 : hors ligne, saisie A, fermeture : le cache garde la file.
 	fake.SetDown(true)
@@ -84,12 +84,28 @@ func TestShareOpenAfterCrash(t *testing.T) {
 	if string(after) != string(before) {
 		t.Error("le cache a été réécrit")
 	}
-	// La session récupérée garde ses deux saisies et sa file.
+	// La session récupérée garde ses deux saisies et sa file. Le serveur est
+	// revenu : la file peut partir aussitôt (machine rapide), et Pending
+	// tomber à 0 avant d'être lu ; c'est donc sur le serveur qu'on vérifie
+	// qu'elle n'a pas été perdue.
+	server := func() (any, any) {
+		a, _, _, _ := fake.Value(id, "Feuille1", rowAt(t, ad, tbl, 0), "Prix")
+		b, _, _, _ := fake.Value(id, "Feuille1", rowAt(t, ad, tbl, 1), "Prix")
+		return a, b
+	}
+	if a, b := server(); a == 5.0 || b == 9.0 {
+		t.Fatalf("saisies hors ligne déjà sur le serveur avant la récupération : %v, %v", a, b)
+	}
 	_, err = s3.Recover(ctx, r.Recoverable.Dir)
 	mustShare(t, err)
-	if st := s3.ShareState(); st.Pending == 0 {
-		t.Errorf("file perdue après récupération : %+v", st)
+	if got := prices(t, s3, tbl); got != "[[5] [9]]" {
+		t.Errorf("saisies après récupération : %s", got)
 	}
+	waitFor(t, "file perdue après récupération : saisies jamais arrivées sur le serveur", func() bool {
+		a, b := server()
+		return a == 5.0 && b == 9.0
+	})
+	waitFor(t, "file vide", func() bool { return s3.ShareState().Pending == 0 })
 }
 
 // freeCell lit une cellule libre de la feuille 1 du classeur ouvert.

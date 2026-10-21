@@ -42,6 +42,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -1137,8 +1138,47 @@ func readManifest(f *zip.File) (Manifest, error) {
 func (d *Doc) Close() error {
 	err := d.DB.Close()
 	d.Unlock()
+	// Rien à récupérer : marqué avant la suppression. Sous Windows, une
+	// connexion encore tenue un instant par un fil qui s'arrête (database/sql
+	// la ferme quand il la rend) ou un antivirus empêchent de supprimer la
+	// base : on réessaie sous le verrou ; si elle reste, la marque fait
+	// purger le répertoire au prochain lancement au lieu de le proposer en
+	// récupération.
+	marker := filepath.Join(d.Dir, pristineName)
+	os.WriteFile(marker, nil, 0o644)
+	var rerr error
+	for i := range 10 {
+		if rerr = removeExcept(d.Dir, lockName, pristineName); rerr == nil {
+			break
+		}
+		time.Sleep(time.Duration(i+1) * 20 * time.Millisecond)
+	}
 	d.lock.Close()
+	if rerr != nil {
+		return errors.Join(err, rerr)
+	}
 	return errors.Join(err, os.RemoveAll(d.Dir))
+}
+
+// removeExcept supprime le contenu du répertoire dir sauf les fichiers keep.
+func removeExcept(dir string, keep ...string) error {
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for _, e := range entries {
+		if slices.Contains(keep, e.Name()) {
+			continue
+		}
+		if err := os.RemoveAll(filepath.Join(dir, e.Name())); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // Release ferme le document en gardant son répertoire de travail (échec

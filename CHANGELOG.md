@@ -9,6 +9,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Corrections
 
 - Travail à plusieurs sur un dossier partagé : un poste coupé du dossier plus de 30 secondes (Wi-Fi, veille) pendant qu'un collègue enregistrait retrouvait, à son retour, son journal supprimé : ses saisies ne partaient plus et la barre d'état restait sur « Dossier partagé injoignable ». Son journal est maintenant gardé et ses saisies arrivent chez les autres.
+- Windows : un classeur partagé fermé pendant que sa synchronisation travaillait encore pouvait laisser son répertoire de travail, proposé à tort en récupération au lancement suivant.
 
 ## 0.3.7-beta (21/10/2026)
 
