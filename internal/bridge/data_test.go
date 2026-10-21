@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -28,9 +29,25 @@ type deltaSpy struct {
 	mu    sync.Mutex
 	full  []bool
 	since []string
+	// direct : seuls les relevés appelés par l'essai (contexte sans fin)
+	// atteignent le serveur ; le suivi en direct (contexte annulable),
+	// lancé par le premier chargement, n'en fait aucun.
+	direct bool
+}
+
+var errFollowOff = errors.New("suivi en direct coupé pour l'essai")
+
+func (s *deltaSpy) DataCatalog(ctx context.Context) (protocol.DataCatalog, error) {
+	if s.direct && ctx.Done() != nil {
+		return protocol.DataCatalog{}, errFollowOff
+	}
+	return s.Server.DataCatalog(ctx)
 }
 
 func (s *deltaSpy) DatasetDelta(ctx context.Context, id, sqlName, since string) (workbook.DataDelta, error) {
+	if s.direct && ctx.Done() != nil {
+		return workbook.DataDelta{}, errFollowOff
+	}
 	d, err := s.Server.DatasetDelta(ctx, id, sqlName, since)
 	s.mu.Lock()
 	s.full = append(s.full, d.Full)
@@ -59,9 +76,16 @@ type dataFixture struct {
 
 func newDataFixture(t *testing.T, share func(s *DocumentService)) *dataFixture {
 	t.Helper()
+	return newDataFixtureWith(t, share, false)
+}
+
+// newDataFixtureWith : direct, le suivi en direct ne relève rien (les
+// relevés sont faits par l'essai seul, deltaSpy.direct).
+func newDataFixtureWith(t *testing.T, share func(s *DocumentService), direct bool) *dataFixture {
+	t.Helper()
 	ctx := context.Background()
 	f := &dataFixture{fake: workbooktest.New()}
-	f.srv = &deltaSpy{Server: f.fake.As("bob")}
+	f.srv = &deltaSpy{Server: f.fake.As("bob"), direct: direct}
 	old, oldRetry := shareServer, dataRetry
 	shareServer = func(ctx context.Context, server string) (workbook.Server, auth.User, string, error) {
 		return f.srv, auth.User{PGRole: "bob"}, "Serveur de test", nil
@@ -150,8 +174,10 @@ func (f *dataFixture) undo(t *testing.T) string {
 }
 
 func TestDatasetIncremental(t *testing.T) {
-	f := newDataFixture(t, nil)
-	// Relevés appelés ici, pas par le suivi en direct.
+	// Relevés appelés ici, pas par le suivi en direct : lancé par le premier
+	// chargement, il pouvait faire le premier relevé avant d'être arrêté
+	// (machine rapide : « premier relevé : since "1003" »).
+	f := newDataFixtureWith(t, nil, true)
 	f.s.watchData(nil)
 	undo := f.undo(t)
 	if undo == "" {
