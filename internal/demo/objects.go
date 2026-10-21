@@ -64,6 +64,11 @@ type QuerySpec struct {
 // ScriptSpec est un script de la bibliothèque.
 type ScriptSpec struct{ Name, Source string }
 
+// FavoriteSpec est une requête favorite de l'onglet SQL : son nom et son
+// texte (noms affichés). Une page web l'exécute par son nom
+// (lattis.query(nom)), en lecture seule.
+type FavoriteSpec struct{ Name, SQL string }
+
 // DocBlock est un paragraphe d'un onglet Document. Kind : "h1", "h2", "h3",
 // "p", "bullet", "number", "quote", ou un objet seul sur sa ligne : "chart",
 // "pivot". Le texte accepte **gras** et *italique*. Un paragraphe se

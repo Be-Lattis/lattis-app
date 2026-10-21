@@ -120,7 +120,12 @@
 		"noTablePivot": "Aucun tableau dans le classeur : créez-en un sur une feuille pour l’analyser ici.",
 		"placeholder": "Écrivez ici… (Insertion : graphiques et boutons)",
 		"aria": "Document {name}",
-		"grip": "Tirer pour redimensionner"
+		"grip": "Tirer pour redimensionner",
+		"refused": {
+			"scripting": "Cette page utilise des scripts, coupés ici : {command}. Elle ne peut que lire le classeur.",
+			"org": "Les pages web sont désactivées par votre organisation : cette page ne peut pas lire le classeur.",
+			"page": "{command} : commande non disponible dans une page web."
+		}
 	},
 	"clip": {
 		"chartPasted": "Graphique collé",

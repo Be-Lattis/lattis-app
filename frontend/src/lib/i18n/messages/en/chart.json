@@ -113,8 +113,13 @@
 		},
 		"density": "Density",
 		"offline": {
-			"tooltip": "The base map comes from tile.openstreetmap.org: allow this host (Script tab › Network access) or check your connection.",
-			"label": "Base map unavailable"
+			"tooltip": "The base map comes from tile.openstreetmap.org: allow this host or check the connection.",
+			"label": "Base map unavailable",
+			"demo": "Base map unavailable in the demo",
+			"refused": "Base map not allowed",
+			"allow": "Show the base map",
+			"allowTooltip": "Allow tile.openstreetmap.org for this workbook: the tiles of the area shown are downloaded from OpenStreetMap.",
+			"failed": "Base map unavailable: {error}"
 		},
 		"noPoint": "No points: latitude and longitude expected",
 		"clickHint": "Click: go to the row",

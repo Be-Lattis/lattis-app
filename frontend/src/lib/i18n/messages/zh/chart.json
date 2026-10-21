@@ -113,8 +113,13 @@
 		},
 		"density": "密度",
 		"offline": {
-			"tooltip": "底图来自 tile.openstreetmap.org：请允许此主机（脚本选项卡 › 网络访问）或检查网络连接。",
-			"label": "底图不可用"
+			"tooltip": "底图来自 tile.openstreetmap.org：请允许此主机或检查网络连接。",
+			"label": "底图不可用",
+			"demo": "演示中无法使用底图",
+			"refused": "未允许底图",
+			"allow": "显示底图",
+			"allowTooltip": "为此工作簿允许 tile.openstreetmap.org：所显示区域的图块将从 OpenStreetMap 下载。",
+			"failed": "底图不可用：{error}"
 		},
 		"noPoint": "没有点：需要纬度和经度",
 		"clickHint": "单击：转到该行",

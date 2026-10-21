@@ -21,13 +21,18 @@ Fonctionnalité à activer dans Fichier › Paramètres › Fonctionnalités (vo
 Une page web écrite par vous (HTML, CSS, JavaScript), affichée dans un cadre isolé : elle n'a accès ni au disque, ni au reste de l'application, et ses accès au réseau passent par Lattis. Elle parle au classeur par un petit objet `lattis` :
 
 ```
+lattis.sql("SELECT * FROM Commandes WHERE Montant > ?", [50])
+lattis.query("Top villes")
+lattis.on("change", () => rafraichir())
 lattis.call("sheets.list")
 lattis.call("cells.set", {row: 1, col: 1, value: 42})
-lattis.query("SELECT * FROM Commandes WHERE Montant > ?", [50])
-lattis.on("change", () => rafraichir())
 ```
 
+`lattis.sql` exécute une requête SQL de lecture (SELECT ou WITH) et `lattis.query` une requête favorite de l'[onglet SQL](sql), par son nom ; toutes deux rendent un tableau d'objets, une propriété par colonne. `lattis.queries()` liste les requêtes favorites.
+
 Les commandes de `lattis.call` sont celles des [scripts Lua](lua). Une page ne joint un site que par `lattis.call("http.get", …)`, avec votre accord. Une page qui tente d'ouvrir elle-même une autre adresse (`location.href = …`) est aussitôt rechargée ; la demande vers cette adresse peut toutefois être partie : c'est une raison de plus de n'autoriser que les pages de personnes de confiance.
+
+**Sans scripts** (version web dont le serveur ne permet pas les scripts, démo publique), une page garde la lecture : `lattis.sql`, `lattis.query`, `lattis.on` et les commandes de lecture de `lattis.call` (`sheets.list`, `tables.rows`, `cells.get`…). Une commande qui modifie le classeur, joint un site ou lance un script est refusée, et un bandeau le dit au-dessus de la page.
 
 Une page web reçue avec un classeur (ou modifiée ailleurs) ne s'exécute pas d'emblée : l'onglet demande **Autoriser** ou **Ne pas exécuter**, avec **Voir le code**. Une page peut lire et modifier le classeur : n'autorisez que si vous faites confiance à la personne qui vous a fourni ce classeur. L'accord vaut pour cette version de la page, sur ce poste ; les pages que vous créez ou modifiez ici sont autorisées d'office. Après « Ne pas exécuter », le bouton **Décider…** de l'onglet repose la question.
 

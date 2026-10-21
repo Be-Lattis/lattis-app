@@ -4,20 +4,33 @@
 // classeur que par messages (postMessage), avec un petit objet lattis
 // injecté en tête de page :
 //
+//   lattis.sql("SELECT * FROM Commandes WHERE Montant > ?", [50])
+//                                                  → [{Client, Montant…}, …]
+//   lattis.query("Top villes", [params])           → requête favorite de l'onglet SQL, par son nom
+//   lattis.queries()                               → [{id, name, sql}, …] : les requêtes favorites
+//   lattis.on("change", () => …)                   → le classeur a changé
 //   lattis.call("sheets.list")                     → promesse du résultat
 //   lattis.call("cells.set", {row: 1, col: 1, value: 42})
-//   lattis.query("SELECT * FROM Commandes WHERE Montant > ?", [50])
-//                                                  → [{Client, Montant…}, …]
-//   lattis.on("change", () => …)                   → le classeur a changé
+//
+// lattis.sql et lattis.query rendent un tableau d'objets (une propriété par
+// colonne), qui porte aussi columns (noms des colonnes) et truncated (plus
+// de 10 000 lignes). lattis.query accepte encore un texte SQL (SELECT,
+// WITH, VALUES), comme avant les requêtes favorites.
 //
 // Les commandes sont une liste autorisée de celles des scripts Lua
 // (internal/api/cmd_pages.go, DocumentService.PageCall) : lecture,
 // valeurs, interface, réseau ; ni fichiers, ni code, ni structure, ni
-// protections. Une règle de sécurité du
+// protections. Sans scripting (version web sans web_scripting, démo
+// publique), une page garde la lecture seule : lattis.sql, lattis.query,
+// lattis.queries, lattis.on et les commandes de lecture (sheets.list,
+// tables.rows, cells.get…) ; une autre commande est refusée, et l'onglet
+// le dit au-dessus de la page (HtmlPage.svelte). Une règle de sécurité du
 // contenu (CSP) coupe tout accès direct au réseau : une page ne joint un
 // site que par lattis.call("http.get", …), avec l'accord de l'utilisateur.
 // La CSP n'empêche pas le cadre de naviguer lui-même (location.href) :
 // HtmlPage le recharge aussitôt (stayHome), mais la requête est partie.
+
+import { msgCause } from '#lib/i18n/errors.js';
 
 /** Règle de sécurité du contenu d'une page : rien hors de la page elle-même. */
 export const PAGE_CSP =
@@ -50,11 +63,27 @@ export const BRIDGE_SCRIPT = `(() => {
 			waiting.set(id, { resolve, reject });
 			parent.postMessage({ lattis: 1, id, name: String(name), args: args == null ? {} : args }, '*');
 		});
+	const rowsOf = (r) => {
+		const columns = (r && r.columns) || [];
+		const out = ((r && r.rows) || []).map((row) => Object.fromEntries(columns.map((c, i) => [c, row[i]])));
+		Object.defineProperty(out, 'columns', { value: columns });
+		Object.defineProperty(out, 'truncated', { value: !!(r && r.truncated) });
+		return out;
+	};
+	const withParams = (o, params) => (params == null ? o : Object.assign(o, { params: Array.isArray(params) ? params : [params] }));
+	const isSQL = (s) => /^\\s*(--[^\\n]*\\n\\s*|\\/\\*[\\s\\S]*?\\*\\/\\s*)*\\(*\\s*(select|with|values)\\b/i.test(s);
 	const lattis = Object.freeze({
 		call,
-		async query(sql, params) {
-			const r = await call('db.query', params ? { sql, params } : { sql });
-			return (r.rows || []).map((row) => Object.fromEntries(r.columns.map((c, i) => [c, row[i]])));
+		async sql(sql, params) {
+			return rowsOf(await call('db.query', withParams({ sql: String(sql) }, params)));
+		},
+		async query(name, params) {
+			const s = String(name);
+			if (isSQL(s)) return rowsOf(await call('db.query', withParams({ sql: s }, params)));
+			return rowsOf(await call('favorites.run', withParams({ name: s }, params)));
+		},
+		queries() {
+			return call('favorites.list');
 		},
 		on(event, f) {
 			(handlers[event] = handlers[event] || []).push(f);
@@ -119,6 +148,33 @@ export function parseCall(data: unknown): BridgeCall | null {
 /** Réponse à un appel. */
 export function replyOf(id: number, result: { ok: true; value: unknown } | { ok: false; error: string }) {
 	return result.ok ? { lattis: 1, id, ok: true, result: result.value ?? null } : { lattis: 1, id, ok: false, error: result.error };
+}
+
+/** Appel refusé à une page, à dire dans l'onglet (au-dessus de la page). */
+export interface PageRefusal {
+	/** scripting : scripts coupés ici (lecture seule) ; org : pages coupées par l'organisation ; page : commande hors des pages. */
+	kind: 'scripting' | 'org' | 'page';
+	command: string;
+}
+
+/**
+ * Refus d'un appel de la page par le moteur (DocumentService.PageCall) :
+ * commande hors de la lecture quand le scripting est coupé
+ * (page.needsScripting), pages coupées par l'organisation
+ * (page.disabledByOrg), commande que les pages n'ont pas (api.notInPage).
+ * null pour une autre erreur (SQL invalide, feuille protégée…), que la page
+ * reçoit seulement.
+ */
+export function refusalOf(command: string, e: unknown): PageRefusal | null {
+	switch (msgCause(e)?.id) {
+		case 'page.needsScripting':
+			return { kind: 'scripting', command };
+		case 'page.disabledByOrg':
+			return { kind: 'org', command };
+		case 'api.notInPage':
+			return { kind: 'page', command };
+	}
+	return null;
 }
 
 /** Événement envoyé à la page (« change » : le classeur a changé). */

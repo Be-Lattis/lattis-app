@@ -105,7 +105,8 @@ sheets:
     charts:
       - {cell: E1, source: ParType, kind: funnel, x: Type, series: [Heures], title: Heures par type}
 
-  # Page HTML : lit le classeur par lattis.call.
+  # Page HTML : lit le classeur en SQL (lattis.sql, lattis.query), en lecture
+  # seule : elle fonctionne aussi sans scripts (version web, démo publique).
   - name: Page
     html: |
       <!doctype html>
@@ -115,8 +116,8 @@ sheets:
         <p>Total : <b id="total">…</b> €</p>
         <script>
           async function maj() {
-            const r = await lattis.call("db.query", {sql: 'SELECT round(sum(Montant), 2) FROM "Réparations"'});
-            document.getElementById("total").textContent = r.rows[0][0];
+            const [r] = await lattis.query("Total des réparations");
+            document.getElementById("total").textContent = r.total;
           }
           lattis.on("change", maj);
           maj();
@@ -140,3 +141,8 @@ scripts:
 # Écouteurs des évènements du classeur (events.on).
 events:
   - {event: change, script: Outils, function: saisie}
+
+# Requêtes favorites de l'onglet SQL : la page les lit par leur nom (lattis.query).
+favorites:
+  - name: Total des réparations
+    sql: SELECT round(sum(Montant), 2) AS total FROM "Réparations"

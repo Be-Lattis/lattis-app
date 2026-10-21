@@ -86,6 +86,9 @@ type Plan struct {
 	Scripts []ScriptSpec
 	// Events : écouteurs des évènements du classeur (events.on).
 	Events []canvas.Listener
+	// Favorites : requêtes favorites de l'onglet SQL (lues par les pages web
+	// avec lattis.query(nom)).
+	Favorites []FavoriteSpec
 	// Seed : graine d'un plan lu d'un fichier (0 : celle des options).
 	Seed uint64
 }

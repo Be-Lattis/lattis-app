@@ -1,15 +1,66 @@
 // Tuiles OpenStreetMap des cartes. L'interface ne les demande pas au réseau
 // elle-même : elles passent par le classeur (commande charts.tile), soumises
-// à la même autorisation par hôte que le module http des scripts. Sans
-// accord, ou hors ligne, la carte garde un fond neutre.
+// à la même autorisation par hôte que le module http des scripts (accord de
+// l'utilisateur, indépendant du scripting). Sans accord, ou hors ligne, la
+// carte garde un fond neutre et dit pourquoi (tileProblem) : démo publique
+// sans connexion sortante, hôte non autorisé (bouton pour l'autoriser,
+// allowTiles), ou erreur du réseau.
 //
 // Deux demandes au plus à la fois : la première peut attendre la réponse de
 // l'utilisateur (autoriser l'hôte), et cette réponse doit pouvoir passer
 // (un navigateur ne garde que quelques connexions ouvertes par serveur).
 
+import { errorText, msgCause } from '#lib/i18n/errors.js';
+
 export type TileFetcher = (z: number, x: number, y: number) => Promise<string>;
 
+/** Pourquoi les tuiles manquent : démo publique, hôte non autorisé, autre échec (text). */
+export interface TileProblem {
+	kind: 'demo' | 'refused' | 'failed';
+	text: string;
+}
+
 let fetcher: TileFetcher | null = null;
+let allower: (() => Promise<unknown>) | null = null;
+let problem: TileProblem | null = null;
+
+/** Lit l'échec d'une demande de tuile (erreur du moteur, charts.tile). */
+export function problemOf(e: unknown): TileProblem {
+	const id = msgCause(e)?.id ?? '';
+	if (id === 'api.tileDemoOffline') return { kind: 'demo', text: errorText(e) };
+	if (id.startsWith('http.host')) return { kind: 'refused', text: errorText(e) };
+	return { kind: 'failed', text: errorText(e) };
+}
+
+/** Dernier échec des tuiles (null : la dernière est arrivée). */
+export function tileProblem(): TileProblem | null {
+	return problem;
+}
+
+/** Branche l'autorisation de l'hôte des tuiles (bouton de la carte, au démarrage). */
+export function setTileAllower(f: (() => Promise<unknown>) | null) {
+	allower = f;
+}
+
+/** Une autorisation des tuiles est branchée (pas dans la démo publique). */
+export function canAllowTiles(): boolean {
+	return !!allower;
+}
+
+/**
+ * Autorise l'hôte des tuiles (réponse de l'utilisateur au bouton de la
+ * carte) et oublie les échecs : les tuiles se redemandent tout de suite.
+ */
+export async function allowTiles() {
+	if (!allower) return;
+	await allower();
+	problem = null;
+	for (const k of failed) cache.delete(k);
+	failed.clear();
+}
+
+// Tuiles en échec gardées dans cache (jusqu'à RETRY_MS) : allowTiles les oublie.
+const failed = new Set<string>();
 // undefined : demande abandonnée avant d'être partie (plus personne ne voulait la tuile).
 const cache = new Map<string, Promise<string | null | undefined>>();
 // Tuiles reçues, lisibles tout de suite (une carte qui renaît les affiche sans attendre).
@@ -43,6 +94,8 @@ export function setTileFetcher(f: TileFetcher | null) {
 	cache.clear();
 	ready.clear();
 	wanters.clear();
+	failed.clear();
+	problem = null;
 }
 
 /** Délai avant de redemander une tuile qui a échoué (refus, hors ligne). */
@@ -78,8 +131,15 @@ export function loadTile(z: number, x: number, y: number, wanted: () => boolean 
 					}
 					return f(z, x, y)
 						.then(
-							(s) => (typeof s === 'string' && s.startsWith('data:image/') ? s : null),
-							() => null
+							(s) => {
+								if (typeof s !== 'string' || !s.startsWith('data:image/')) return null;
+								problem = null;
+								return s;
+							},
+							(e) => {
+								problem = problemOf(e);
+								return null;
+							}
 						)
 						.finally(done);
 				})
@@ -88,7 +148,14 @@ export function loadTile(z: number, x: number, y: number, wanted: () => boolean 
 		q.then((s) => {
 			if (cache.get(k) !== q) return;
 			if (s === undefined) cache.delete(k);
-			else if (s === null) setTimeout(() => cache.get(k) === q && cache.delete(k), RETRY_MS);
+			else if (s === null) {
+				failed.add(k);
+				setTimeout(() => {
+					if (cache.get(k) !== q) return;
+					cache.delete(k);
+					failed.delete(k);
+				}, RETRY_MS);
+			}
 			else {
 				ready.set(k, s);
 				// Mémoire bornée : les plus anciennes s'en vont (le classeur les garde aussi).

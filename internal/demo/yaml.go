@@ -26,10 +26,16 @@ import (
 // Format : docs/demo.md ; exemple : docs/demo/exemple.yaml.
 
 type yPlan struct {
-	Seed    uint64    `yaml:"seed"`
-	Sheets  []ySheet  `yaml:"sheets"`
-	Scripts []yScript `yaml:"scripts"`
-	Events  []yEvent  `yaml:"events"`
+	Seed      uint64      `yaml:"seed"`
+	Sheets    []ySheet    `yaml:"sheets"`
+	Scripts   []yScript   `yaml:"scripts"`
+	Events    []yEvent    `yaml:"events"`
+	Favorites []yFavorite `yaml:"favorites"`
+}
+
+type yFavorite struct {
+	Name string `yaml:"name"`
+	SQL  string `yaml:"sql"`
 }
 
 type yScript struct {
@@ -290,6 +296,12 @@ func ParsePlan(name string, b []byte) (Plan, error) {
 			return Plan{}, f.errf([]any{"events", i}, "un écouteur a un évènement (event), un script et une fonction (function)")
 		}
 		p.Events = append(p.Events, canvas.Listener{Event: e.Event, Script: e.Script, Function: e.Function})
+	}
+	for i, q := range y.Favorites {
+		if strings.TrimSpace(q.Name) == "" || strings.TrimSpace(q.SQL) == "" {
+			return Plan{}, f.errf([]any{"favorites", i}, "une requête favorite a un nom (name) et un texte SQL (sql)")
+		}
+		p.Favorites = append(p.Favorites, FavoriteSpec{Name: q.Name, SQL: q.SQL})
 	}
 	return p, nil
 }

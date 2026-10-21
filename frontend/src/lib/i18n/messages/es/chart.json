@@ -113,8 +113,13 @@
 		},
 		"density": "Densidad",
 		"offline": {
-			"tooltip": "El mapa base viene de tile.openstreetmap.org: permita este host (pestaña Script › Acceso a la red) o compruebe su conexión.",
-			"label": "Mapa base no disponible"
+			"tooltip": "El mapa base proviene de tile.openstreetmap.org: autorice este host o compruebe la conexión.",
+			"label": "Mapa base no disponible",
+			"demo": "Mapa base no disponible en la demo",
+			"refused": "Mapa base no autorizado",
+			"allow": "Mostrar el mapa base",
+			"allowTooltip": "Autorizar tile.openstreetmap.org para este libro: las teselas de la zona mostrada se descargan de OpenStreetMap.",
+			"failed": "Mapa base no disponible: {error}"
 		},
 		"noPoint": "Ningún punto: se esperan latitud y longitud",
 		"clickHint": "Clic: ir a la fila",

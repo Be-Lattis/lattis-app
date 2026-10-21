@@ -21,13 +21,18 @@
 网页由您自己编写（HTML、CSS、JavaScript），显示在隔离的框架中：它既不能访问磁盘，也不能访问应用程序的其他部分，其网络访问都经由 Lattis。它通过一个小小的 `lattis` 对象与工作簿通信：
 
 ```
+lattis.sql("SELECT * FROM Orders WHERE Amount > ?", [50])
+lattis.query("Top cities")
+lattis.on("change", () => refresh())
 lattis.call("sheets.list")
 lattis.call("cells.set", {row: 1, col: 1, value: 42})
-lattis.query("SELECT * FROM Orders WHERE Amount > ?", [50])
-lattis.on("change", () => refresh())
 ```
 
+`lattis.sql` 执行只读 SQL 查询（SELECT 或 WITH），`lattis.query` 按名称执行 [SQL 标签](sql)中收藏的查询；两者都返回对象数组，每列一个属性。`lattis.queries()` 列出收藏的查询。
+
 `lattis.call` 的命令与 [Lua 脚本](lua)的命令相同。网页只能通过 `lattis.call("http.get", …)` 访问网站，并且需要您的同意。试图自行打开其他地址（`location.href = …`）的网页会被立即重新加载；不过，发往该地址的请求可能已经发出：这也是只允许来自可信人员的网页的又一个理由。
+
+**没有脚本时**（服务器不允许脚本的网页版、公开演示），网页仍可读取：`lattis.sql`、`lattis.query`、`lattis.on` 以及 `lattis.call` 的读取命令（`sheets.list`、`tables.rows`、`cells.get`…）。修改工作簿、访问网站或运行脚本的命令会被拒绝，网页上方的横幅会说明这一点。
 
 随工作簿收到的网页（或在别处修改过的网页）不会立即运行：选项卡会询问**允许**还是**不运行**，并提供**查看代码**。网页可以读取和修改工作簿：只有在信任向您提供此工作簿的人时才允许运行。同意仅对此版本的网页、在本机上有效；您在本机上创建或修改的网页会自动获得允许。选择“不运行”之后，选项卡上的**决定…**按钮可以再次询问。
 

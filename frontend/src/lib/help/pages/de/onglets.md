@@ -21,13 +21,18 @@ Eine Funktion, die unter Datei › Einstellungen › Funktionen aktiviert wird (
 Eine von Ihnen geschriebene Webseite (HTML, CSS, JavaScript), in einem isolierten Rahmen angezeigt: Sie hat weder Zugriff auf den Datenträger noch auf den Rest der Anwendung, und ihr Netzwerkzugriff läuft über Lattis. Sie kommuniziert mit der Arbeitsmappe über ein kleines Objekt `lattis`:
 
 ```
+lattis.sql("SELECT * FROM Bestellungen WHERE Betrag > ?", [50])
+lattis.query("Top-Städte")
+lattis.on("change", () => refresh())
 lattis.call("sheets.list")
 lattis.call("cells.set", {row: 1, col: 1, value: 42})
-lattis.query("SELECT * FROM Bestellungen WHERE Betrag > ?", [50])
-lattis.on("change", () => refresh())
 ```
 
+`lattis.sql` führt eine lesende SQL-Abfrage aus (SELECT oder WITH) und `lattis.query` eine gespeicherte Abfrage (Favorit) des [Registers SQL](sql) über ihren Namen; beide geben ein Array von Objekten zurück, eine Eigenschaft pro Spalte. `lattis.queries()` listet die gespeicherten Abfragen.
+
 Die Befehle von `lattis.call` sind die der [Lua-Skripte](lua). Eine Seite erreicht eine Website nur über `lattis.call("http.get", …)`, mit Ihrer Zustimmung. Eine Seite, die von selbst versucht, eine andere Adresse zu öffnen (`location.href = …`), wird sofort neu geladen; die Anfrage an diese Adresse kann trotzdem hinausgegangen sein: ein Grund mehr, nur Seiten von Personen zuzulassen, denen Sie vertrauen.
+
+**Ohne Skripte** (Webversion, deren Server keine Skripte erlaubt, öffentliche Demo) behält eine Seite das Lesen: `lattis.sql`, `lattis.query`, `lattis.on` und die lesenden Befehle von `lattis.call` (`sheets.list`, `tables.rows`, `cells.get`…). Ein Befehl, der die Arbeitsmappe ändert, eine Website erreicht oder ein Skript startet, wird abgelehnt, und ein Hinweis über der Seite sagt es.
 
 Eine mit einer Arbeitsmappe erhaltene (oder anderswo geänderte) Webseite wird nicht sofort ausgeführt: Das Register fragt **Zulassen** oder **Nicht ausführen**, mit **Code anzeigen**. Eine Seite kann die Arbeitsmappe lesen und ändern: Lassen Sie sie nur zu, wenn Sie der Person vertrauen, die Ihnen diese Arbeitsmappe gegeben hat. Die Zustimmung gilt für diese Version der Seite, auf diesem Computer; Seiten, die Sie hier erstellen oder ändern, werden automatisch zugelassen. Nach „Nicht ausführen“ stellt die Schaltfläche **Entscheiden…** des Registers die Frage erneut.
 

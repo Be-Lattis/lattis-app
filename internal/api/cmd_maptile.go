@@ -3,16 +3,45 @@ package api
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/lalamefine/lattis/internal/msg"
 	"net/url"
 	"strings"
 	"sync"
+
+	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/query"
 )
 
 // Tuiles des cartes (graphiques de type « map ») : l'interface les demande
 // ici plutôt qu'au réseau directement, pour qu'elles passent par la même
 // autorisation par hôte que le module http des scripts (première tuile :
 // question à l'utilisateur ; refus : la carte garde un fond neutre).
+// L'accord ne dépend pas du scripting : en version web sans scripting,
+// l'utilisateur autorise lui-même tile.openstreetmap.org. La démo publique
+// n'a aucune connexion sortante (query.Guard.Offline) : la tuile est
+// refusée sans question (api.tileDemoOffline), et la carte le dit.
+
+// ErrTileOffline refuse les tuiles quand l'hôte n'a pas de réseau (démo
+// publique).
+var ErrTileOffline = msg.New("api.tileDemoOffline", nil)
+
+// tileAsk est la question posée avant la première tuile, dans la langue de
+// la session.
+func tileAsk(h string) Dialog {
+	l := msg.Current()
+	return Dialog{
+		Title:   msg.Format(l, "api.tileAskTitle", nil),
+		Message: msg.Format(l, "api.tileAsk", msg.Args{"host": h}),
+		Fields:  []Field{{Name: "remember", Label: msg.Format(l, "api.tileRemember", nil), Type: "checkbox"}},
+		OK:      msg.Format(l, "api.tileAllow", nil),
+		Cancel:  msg.Format(l, "api.tileRefuse", nil),
+	}
+}
+
+// tilesOffline dit si l'hôte de l'application refuse tout réseau.
+func (c *Call) tilesOffline() bool {
+	g, ok := c.Host.(query.Guarded)
+	return ok && g.QueryGuard() != nil && g.QueryGuard().Offline
+}
 
 // tileURL est l'adresse des tuiles (OpenStreetMap) ; les tests la changent.
 var tileURL = "https://tile.openstreetmap.org/%d/%d/%d.png"
@@ -58,7 +87,10 @@ func (c *Call) mapTile(z, x, y int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := c.allowHost(u.Host); err != nil {
+	if c.tilesOffline() {
+		return "", ErrTileOffline
+	}
+	if err := c.allowHostAsk(u.Host, tileAsk); err != nil {
 		return "", err
 	}
 	if v, ok := tileGet(raw); ok {

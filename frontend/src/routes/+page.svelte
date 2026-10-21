@@ -99,7 +99,7 @@
 	import { syncCall } from '#lib/shell/busy.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { groupSessions, olderLabel, sessionName } from '#lib/shell/recovery.js';
-	import { setTileFetcher } from '#lib/chart/tiles.js';
+	import { setTileAllower, setTileFetcher } from '#lib/chart/tiles.js';
 	import HelpPanel from '#lib/help/HelpPanel.svelte';
 	import { functionAt, viewTarget } from '#lib/help/help.js';
 	import { helpState, openHelp } from '#lib/help/state.svelte.js';
@@ -1194,6 +1194,10 @@
 
 	// Tuiles des cartes : par le classeur, soumises à l'autorisation de l'hôte.
 	setTileFetcher((z, x, y) => DocumentService.Call('charts.tile', { z, x, y }) as Promise<string>);
+	// Bouton « Afficher le fond de carte » d'une carte dont l'hôte a été
+	// refusé : l'accord de l'utilisateur, mémorisé pour le classeur (sans
+	// lien avec le scripting ; la démo publique n'a pas de réseau).
+	setTileAllower(() => DocumentService.AllowHTTPHost('tile.openstreetmap.org'));
 
 	/**
 	 * F5 : dans un tableau chargé par une requête, la relance ; ailleurs,

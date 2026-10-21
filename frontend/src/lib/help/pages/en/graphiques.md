@@ -34,7 +34,7 @@ Column, bar, line, area, pie, doughnut, scatter, combo (columns and lines, secon
 
 ## Maps {#cartes}
 
-A map reads either two columns (latitude, longitude), or a single column that contains both. Base maps come from OpenStreetMap: they need a connection, and access to the tile server requires your approval.
+A map reads either two columns (latitude, longitude), or a single column that contains both. Base maps come from OpenStreetMap: they need a connection, and access to the tile server requires your approval. This approval does not depend on scripts (it also applies in the web edition); after a refusal, the map's **Show the base map** button gives it. The public demo has no base map: it connects to nothing, and the map says so.
 
 To zoom, select the map (one click): the mouse wheel zooms around the pointer, dragging moves the map, a double-click zooms in (Shift+double-click zooms out), and the **+** and **−** keys zoom too. As long as the map isn't selected, the mouse wheel scrolls the sheet or the document; Alt+drag moves the selected chart. The **+**, **−** and **recenter** buttons appear at the top right on hover. The chosen view is saved with the workbook (Ctrl+Z undoes it); **recenter**, here or in the chart pane, goes back to the view fitted to the points.
 

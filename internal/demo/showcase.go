@@ -161,11 +161,14 @@ const medPage = `<!doctype html>
   th, td { padding: 6px 10px; border-bottom: 1px solid #eee; text-align: left; }
   td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
   .bar { height: 8px; background: #63c384; border-radius: 4px; }
+  .erreur { color: #b42318; }
 </style>
 </head>
 <body>
 <h1>Tableau de bord des ventes</h1>
-<p class="muted">Page HTML qui lit le classeur (lattis.call) et se met à jour à chaque modification.</p>
+<p class="muted">Page HTML qui lit le classeur en SQL (lattis.query, lattis.sql) et se met à jour à chaque modification.
+Lecture seule : elle fonctionne aussi sans scripts (version web, démo).</p>
+<p id="erreur" class="erreur" hidden></p>
 <div class="kpis">
   <div class="kpi">Chiffre d'affaires HT<b id="ca">…</b></div>
   <div class="kpi">Commandes<b id="nb">…</b></div>
@@ -177,17 +180,39 @@ const medPage = `<!doctype html>
 <script>
   const eur = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
   const set = (id, v) => (document.getElementById(id).textContent = v);
+  const cell = (tr, text, cls) => {
+    const td = tr.insertCell();
+    td.textContent = text;
+    if (cls) td.className = cls;
+    return td;
+  };
   async function refresh() {
-    const k = await lattis.call("db.query", { sql: 'SELECT sum("Montant HT"), count(*), avg("Montant HT"), avg("Payé") FROM Commandes' });
-    const [ca, nb, panier, paye] = k.rows[0];
-    set("ca", eur.format(ca)); set("nb", nb.toLocaleString("fr-FR"));
-    set("panier", eur.format(panier)); set("paye", Math.round(paye * 100) + " %");
-    const v = await lattis.call("db.query", { sql: 'SELECT Ville, "Région", "CA HT" FROM Villes ORDER BY "CA HT" DESC LIMIT 8' });
-    const max = Math.max(...v.rows.map((r) => r[2]), 1);
-    document.getElementById("villes").innerHTML = v.rows
-      .map((r) => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td class="n">' + eur.format(r[2]) +
-        '</td><td style="width:160px"><div class="bar" style="width:' + Math.round((100 * r[2]) / max) + '%"></div></td></tr>')
-      .join("");
+    try {
+      // Requête favorite de l'onglet SQL, par son nom.
+      const [k] = await lattis.query("Indicateurs des ventes");
+      set("ca", eur.format(k.ca)); set("nb", k.nb.toLocaleString("fr-FR"));
+      set("panier", eur.format(k.panier)); set("paye", Math.round(k.paye * 100) + " %");
+      // SQL de lecture, avec un paramètre.
+      const villes = await lattis.sql('SELECT Ville, "Région", "CA HT" AS ca FROM Villes ORDER BY "CA HT" DESC LIMIT ?', [8]);
+      const max = Math.max(...villes.map((v) => v.ca), 1);
+      const body = document.getElementById("villes");
+      body.replaceChildren();
+      for (const v of villes) {
+        const tr = body.insertRow();
+        cell(tr, v.Ville); cell(tr, v["Région"]); cell(tr, eur.format(v.ca), "n");
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.width = Math.round((100 * v.ca) / max) + "%";
+        const td = cell(tr, "");
+        td.style.width = "160px";
+        td.append(bar);
+      }
+      document.getElementById("erreur").hidden = true;
+    } catch (e) {
+      const p = document.getElementById("erreur");
+      p.textContent = e.message;
+      p.hidden = false;
+    }
   }
   lattis.on("change", refresh);
   refresh();
@@ -389,5 +414,11 @@ func med() Plan {
 		}},
 		Scripts: []ScriptSpec{{Name: "Démo", Source: medScript}},
 		Events:  []canvas.Listener{{Event: "change", Script: "Démo", Function: "saisie"}},
+		// Lue par la page « Tableau de bord » (lattis.query) ; visible dans
+		// les favoris de l'onglet SQL.
+		Favorites: []FavoriteSpec{{
+			Name: "Indicateurs des ventes",
+			SQL:  `SELECT sum("Montant HT") AS ca, count(*) AS nb, avg("Montant HT") AS panier, avg("Payé") AS paye FROM Commandes`,
+		}},
 	}
 }

@@ -12,11 +12,10 @@ import (
 
 // AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
 // et renvoie son identifiant. Les pages web sont une fonctionnalité à
-// activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs).
+// activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs),
+// avec ou sans scripting : sans scripting (version web sans web_scripting,
+// démo publique), une page ne fait que lire le classeur (PageCall).
 func (s *DocumentService) AddPage(ctx context.Context, before int64) (int64, error) {
-	if err := s.scripting(); err != nil {
-		return 0, err
-	}
 	if !config.Current().Bool("features.htmlTabs", false) {
 		return 0, msg.New("pages.disabled", nil)
 	}
@@ -154,12 +153,27 @@ func (s *DocumentService) SavePage(ctx context.Context, sheet int64, source stri
 
 // PageCall exécute une commande demandée par une page HTML (pont
 // postMessage du cadre isolé) : les commandes de la liste autorisée aux
-// pages (api.PageCall).
+// pages (api.PageCall). Sans scripting (version web sans web_scripting,
+// démo publique), la page garde la lecture des données (api.PageReadCall :
+// SQL en lecture seule, requêtes favorites, feuilles, tableaux) ; le reste
+// est refusé avec un message que l'interface montre dans la page. Pages web
+// coupées et verrouillées par l'organisation (features.htmlTabs) : rien.
 func (s *DocumentService) PageCall(ctx context.Context, name string, args map[string]any) (any, error) {
-	if err := s.scripting(); err != nil {
-		return nil, err
+	if pagesOffByOrg() {
+		return nil, msg.New("page.disabledByOrg", nil)
+	}
+	if s.scripting() != nil {
+		return api.PageReadCall(ctx, host{s}, name, args)
 	}
 	return api.PageCall(ctx, host{s}, name, args)
+}
+
+// pagesOffByOrg dit si l'organisation a coupé les pages web (réglage
+// features.htmlTabs faux et verrouillé). Coupées par l'utilisateur, les
+// pages déjà posées s'affichent toujours : le réglage n'ôte que l'ajout.
+func pagesOffByOrg() bool {
+	c := config.Current()
+	return c.Locked("features.htmlTabs") && !c.Bool("features.htmlTabs", false)
 }
 
 // HTTPHosts liste les hôtes que les scripts et pages du classeur peuvent

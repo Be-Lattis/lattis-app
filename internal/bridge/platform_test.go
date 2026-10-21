@@ -21,8 +21,10 @@ func TestScriptingOptIn(t *testing.T) {
 	if _, err := s.RunScript(ctx, "x", "print(1)"); !errors.Is(err, errNoScripting) {
 		t.Fatalf("RunScript sans scripting : %v", err)
 	}
-	if _, err := s.AddPage(ctx, 0); !errors.Is(err, errNoScripting) {
-		t.Fatalf("AddPage sans scripting : %v", err)
+	// Pages web : sans scripting, seulement le réglage features.htmlTabs
+	// (coupé par défaut) ; la page ne fait alors que lire (pageread_test.go).
+	if _, err := s.AddPage(ctx, 0); err == nil || errors.Is(err, errNoScripting) {
+		t.Fatalf("AddPage sans scripting, pages web coupées : %v", err)
 	}
 	if _, err := s.SetMCPEnabled(true); !errors.Is(err, errNoMCPWeb) {
 		t.Fatalf("SetMCPEnabled en web : %v", err)

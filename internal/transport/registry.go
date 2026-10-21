@@ -128,7 +128,13 @@ type Error struct {
 	// Data.kind reprend les genres d'erreur du runtime Wails
 	// (ReferenceError, TypeError, RuntimeError).
 	Data *ErrorData `json:"data,omitempty"`
+	// err : l'erreur rendue par la méthode, que le Hub traduit
+	// (Hub.Translate : message de internal/msg dans la langue de la session).
+	err error
 }
+
+// Unwrap donne l'erreur rendue par la méthode (nil pour une erreur du transport).
+func (e *Error) Unwrap() error { return e.err }
 
 // ErrorData précise une erreur.
 type ErrorData struct {
@@ -195,7 +201,9 @@ func (m *Method) Call(ctx context.Context, params []json.RawMessage) (result any
 		if errors.As(e, &ce) {
 			return nil, ce
 		}
-		return nil, callError(CodeServer, "RuntimeError", e.Error())
+		ce = callError(CodeServer, "RuntimeError", e.Error())
+		ce.err = e
+		return nil, ce
 	}
 	switch len(out) {
 	case 0:

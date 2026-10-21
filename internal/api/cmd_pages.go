@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"fmt"
+
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/sqltext"
 )
 
 // Onglets « page HTML » (canvas/pages.go) : une page affichée dans un cadre
@@ -29,6 +31,7 @@ var pageAllowed = map[string]bool{
 	"cells.get": true, "cells.dependencies": true,
 	"controls.list": true, "controls.get": true, "buttons.list": true,
 	"db.query": true, "formulas.functions": true, "doc.state": true, "pages.get": true, "queries.list": true,
+	"favorites.list": true, "favorites.run": true,
 	// Valeurs et présentation (annulables).
 	"cells.set": true, "cells.clear": true, "cells.paste": true, "cells.style": true, "cells.note": true,
 	"tables.insert_row": true, "tables.delete_row": true, "tables.sort": true, "tables.clear_filters": true,
@@ -45,6 +48,67 @@ var pageAllowed = map[string]bool{
 
 // PageCommand dit si une page HTML peut appeler la commande name.
 func PageCommand(name string) bool { return registry[name] != nil && pageAllowed[name] }
+
+// pageRead : les commandes d'une page web quand le scripting est coupé
+// (version web sans web_scripting, démo publique) : la lecture des données
+// seulement. Une page y lit le classeur (SQL en lecture seule, requêtes
+// favorites, feuilles, tableaux, cellules) et suit ses changements
+// (lattis.on("change"), côté interface) ; elle ne modifie rien, ne joint
+// aucun site, ne lance ni script ni bouton et ne pose pas de question.
+// L'accord par version d'une page reçue s'applique toujours avant que son
+// code ne s'exécute (frontend/src/lib/page/consent.ts). Ni doc.state ni
+// queries.list : chemins, sources et connexions du serveur.
+var pageRead = map[string]bool{
+	"sheets.list": true, "sheets.get": true, "sheets.find": true,
+	"tables.list": true, "tables.get": true, "tables.rows": true,
+	"columns.values": true, "cells.get": true,
+	"controls.list": true, "controls.get": true,
+	"db.query": true, "favorites.list": true, "favorites.run": true, "pages.get": true,
+}
+
+// PageReadCommand dit si une page web peut appeler la commande name sans
+// le scripting (lecture seule).
+func PageReadCommand(name string) bool { return PageCommand(name) && pageRead[name] }
+
+// ErrPageNeedsScripting refuse à une page, scripting coupé, une commande
+// hors de la lecture (modification, réseau, boutons, boîtes de dialogue) ;
+// l'interface l'affiche dans la page (HtmlPage.svelte).
+var ErrPageNeedsScripting = msg.New("page.needsScripting", nil)
+
+// ReadOnlySQL refuse une requête qui ne commence pas par SELECT, WITH ou
+// VALUES (après d'éventuels commentaires). La lecture est de toute façon
+// garantie par la connexion (query_only, autorisateur : grid.QueryArgs) ;
+// ce contrôle donne un message clair.
+func ReadOnlySQL(q string) error {
+	switch w, _ := sqltext.Word(q, sqltext.SkipBlank(q, 0)); w {
+	case "select", "with", "values":
+		return nil
+	case "":
+		return msg.New("api.sqlEmpty", nil)
+	default:
+		return msg.New("api.sqlReadOnly", msg.Args{"keyword": w})
+	}
+}
+
+// PageReadCall exécute une commande demandée par une page web quand le
+// scripting est coupé : les commandes de lecture (pageRead) seulement, le
+// SQL de db.query limité à SELECT, WITH et VALUES. Une autre commande des
+// pages est refusée (ErrPageNeedsScripting, avec son nom).
+func PageReadCall(ctx context.Context, host Host, name string, args map[string]any) (any, error) {
+	if !PageCommand(name) {
+		return PageCall(ctx, host, name, args) // commande inconnue ou hors des pages
+	}
+	if !pageRead[name] {
+		return nil, msg.Wrap(ErrPageNeedsScripting, "page.needsScripting", msg.Args{"command": name})
+	}
+	if name == "db.query" {
+		q, _ := args["sql"].(string)
+		if err := ReadOnlySQL(q); err != nil {
+			return nil, err
+		}
+	}
+	return Invoke(ctx, host, name, args)
+}
 
 // PageCall exécute une commande demandée par une page HTML (pont
 // postMessage de l'interface), si elle est dans la liste autorisée
@@ -77,7 +141,7 @@ func init() {
 			Name:    "pages.add",
 			Label:   "Nouvelle page web",
 			Summary: "Ajoute une page web (HTML, CSS et JavaScript affichés dans un cadre isolé), ou un document (kind = \"doc\" : texte riche), et renvoie {id, name, kind}.",
-			Details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (une liste autorisée des commandes des scripts : lecture comme sheets.list ou db.query, valeurs comme cells.set ou db.execute, ui.*, http.*, buttons.run ; ni fichiers, ni scripts, ni structure, ni protections), et lattis.on(\"change\", fonction), appelée quand le classeur change. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin.",
+			Details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (une liste autorisée des commandes des scripts : lecture comme sheets.list ou db.query, valeurs comme cells.set ou db.execute, ui.*, http.*, buttons.run ; ni fichiers, ni scripts, ni structure, ni protections), et lattis.on(\"change\", fonction), appelée quand le classeur change. Elle lit aussi le classeur avec lattis.sql(\"SELECT …\", {paramètres}) et lattis.query(\"nom d'une requête favorite\"), qui rendent un tableau d'objets ; sans scripting (version web, démo publique), elle n'a que la lecture. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin.",
 			Returns: "{id, name, kind}",
 			Params: []Param{
 				{Name: "name", Type: String, Desc: "nom de l'onglet (Page1… par défaut)", Optional: true},
@@ -91,8 +155,8 @@ func init() {
 <p>Total : <b id="total">…</b></p>
 <script>
   async function maj() {
-    const r = await lattis.call("db.query", {sql: "SELECT sum(Montant) AS t FROM Commandes"});
-    document.getElementById("total").textContent = r.rows[0][0];
+    const [r] = await lattis.sql("SELECT sum(Montant) AS t FROM Commandes");
+    document.getElementById("total").textContent = r.t;
   }
   lattis.on("change", maj);
   maj();

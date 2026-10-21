@@ -120,7 +120,12 @@
 		"noTablePivot": "No table in the workbook: create one on a sheet to analyze it here.",
 		"placeholder": "Type here… (Insert: charts and buttons)",
 		"aria": "Document {name}",
-		"grip": "Drag to resize"
+		"grip": "Drag to resize",
+		"refused": {
+			"scripting": "This page uses scripts, which are off here: {command}. It can only read the workbook.",
+			"org": "Web pages are turned off by your organization: this page cannot read the workbook.",
+			"page": "{command}: command not available in a web page."
+		}
 	},
 	"clip": {
 		"chartPasted": "Chart pasted",

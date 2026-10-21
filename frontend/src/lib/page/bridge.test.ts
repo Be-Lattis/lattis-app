@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_SCRIPT, PAGE_CSP, buildSrcdoc, eventOf, navigationGuard, pageUrl, parseCall, replyOf, urlSource } from './bridge';
+import { BRIDGE_SCRIPT, PAGE_CSP, buildSrcdoc, eventOf, navigationGuard, pageUrl, parseCall, refusalOf, replyOf, urlSource } from './bridge';
 import { hostOf } from './hosts';
 
 describe('navigationGuard', () => {
@@ -73,7 +73,9 @@ function frame() {
 	);
 	const lattis = win.lattis as {
 		call: (n: string, a?: object) => Promise<unknown>;
-		query: (sql: string, params?: unknown[]) => Promise<Record<string, unknown>[]>;
+		query: (sql: string, params?: unknown) => Promise<Record<string, unknown>[] & { columns: string[]; truncated: boolean }>;
+		sql: (sql: string, params?: unknown) => Promise<Record<string, unknown>[] & { columns: string[]; truncated: boolean }>;
+		queries: () => Promise<unknown>;
 		on: (ev: string, f: (d: unknown) => void) => () => void;
 	};
 	const receive = (data: unknown, source: unknown = parent) => listener?.({ source, data });
@@ -102,6 +104,33 @@ describe('pont dans la page', () => {
 			{ a: 2, b: 'y' }
 		]);
 	});
+	it('lattis.sql : lignes, colonnes et troncature', async () => {
+		const f = frame();
+		const p = f.lattis.sql('SELECT a FROM T LIMIT ?', 5);
+		expect(f.sent[0]).toMatchObject({ name: 'db.query', args: { sql: 'SELECT a FROM T LIMIT ?', params: [5] } });
+		f.receive({ lattis: 1, id: 1, ok: true, result: { columns: ['a'], rows: [[1]], truncated: true } });
+		const rows = await p;
+		expect(rows).toEqual([{ a: 1 }]);
+		expect(rows.columns).toEqual(['a']);
+		expect(rows.truncated).toBe(true);
+		expect(Object.keys(rows)).toEqual(['0']); // columns et truncated ne s'énumèrent pas
+		f.lattis.sql('SELECT 1');
+		expect(f.sent[1]).toMatchObject({ name: 'db.query', args: { sql: 'SELECT 1' } });
+		expect((f.sent[1] as { args: object }).args).not.toHaveProperty('params');
+	});
+	it('lattis.query : une requête favorite par son nom, ou du SQL', () => {
+		const f = frame();
+		f.lattis.query('Top villes', [3]);
+		expect(f.sent[0]).toMatchObject({ name: 'favorites.run', args: { name: 'Top villes', params: [3] } });
+		f.lattis.query('  -- commentaire\n  with x as (select 1) select * from x');
+		expect(f.sent[1]).toMatchObject({ name: 'db.query' });
+		f.lattis.query('(SELECT 1)');
+		expect(f.sent[2]).toMatchObject({ name: 'db.query' });
+		f.lattis.query('Sélection du mois'); // un nom qui commence comme SELECT
+		expect(f.sent[3]).toMatchObject({ name: 'favorites.run', args: { name: 'Sélection du mois' } });
+		f.lattis.queries();
+		expect(f.sent[4]).toMatchObject({ name: 'favorites.list', args: {} });
+	});
 	it('prévient des changements', () => {
 		const f = frame();
 		let n = 0;
@@ -110,6 +139,19 @@ describe('pont dans la page', () => {
 		off();
 		f.receive(eventOf('change'));
 		expect(n).toBe(1);
+	});
+});
+
+describe('refusalOf', () => {
+	const engineError = (id: string) => Object.assign(new Error('x'), { cause: { id, message: 'texte' } });
+	it('reconnaît les refus à montrer dans l’onglet', () => {
+		expect(refusalOf('cells.set', engineError('page.needsScripting'))).toEqual({ kind: 'scripting', command: 'cells.set' });
+		expect(refusalOf('db.query', engineError('page.disabledByOrg'))).toEqual({ kind: 'org', command: 'db.query' });
+		expect(refusalOf('scripts.run', engineError('api.notInPage'))).toEqual({ kind: 'page', command: 'scripts.run' });
+	});
+	it('laisse à la page les autres erreurs', () => {
+		expect(refusalOf('db.query', engineError('api.sqlReadOnly'))).toBeNull();
+		expect(refusalOf('db.query', new Error('no such table: T'))).toBeNull();
 	});
 });
 

@@ -34,7 +34,7 @@ Säule, Balken, Linie, Fläche, Kreis, Ring, Punkt (XY), Kombination (Säulen un
 
 ## Karten {#cartes}
 
-Eine Karte liest entweder zwei Spalten (Breitengrad, Längengrad) oder eine einzige Spalte, die beides enthält. Die Grundkarten stammen von OpenStreetMap: Sie benötigen eine Verbindung, und der Zugriff auf den Kachelserver erfordert Ihre Zustimmung.
+Eine Karte liest entweder zwei Spalten (Breitengrad, Längengrad) oder eine einzige Spalte, die beides enthält. Die Grundkarten stammen von OpenStreetMap: Sie benötigen eine Verbindung, und der Zugriff auf den Kachelserver erfordert Ihre Zustimmung. Diese Zustimmung hängt nicht von Skripten ab (sie gilt auch in der Webversion); nach einer Ablehnung erteilt sie die Schaltfläche **Hintergrundkarte anzeigen** der Karte. Die öffentliche Demo hat keine Hintergrundkarte: Sie stellt keine Verbindung her, und die Karte sagt es.
 
 Zum Zoomen wählen Sie die Karte aus (ein Klick): Das Mausrad zoomt um den Mauszeiger, Ziehen verschiebt die Karte, ein Doppelklick vergrößert (Umschalt+Doppelklick verkleinert), und die Tasten **+** und **−** zoomen ebenfalls. Solange die Karte nicht ausgewählt ist, scrollt das Mausrad das Blatt oder das Dokument; Alt+Ziehen verschiebt das ausgewählte Diagramm. Die Schaltflächen **+**, **−** und **Zentrieren** erscheinen beim Darüberfahren oben rechts. Die gewählte Ansicht wird mit der Arbeitsmappe gespeichert (Strg+Z macht sie rückgängig); **Zentrieren**, hier oder im Diagrammbereich, kehrt zur an die Punkte angepassten Ansicht zurück.
 

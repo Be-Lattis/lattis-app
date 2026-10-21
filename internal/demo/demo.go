@@ -144,6 +144,11 @@ func BuildPlan(ctx context.Context, m *canvas.Model, p Plan, opt Options) (Resul
 			return out, err
 		}
 	}
+	for _, f := range p.Favorites {
+		if _, err := m.AddFavorite(ctx, f.Name, f.SQL); err != nil {
+			return out, err
+		}
+	}
 	for k, s := range p.Sheets {
 		if s.Query == nil {
 			continue
@@ -203,8 +208,9 @@ func BuildPlan(ctx context.Context, m *canvas.Model, p Plan, opt Options) (Resul
 // New crée un classeur neuf (jamais enregistré) rempli avec le preset name
 // (ou le fichier YAML name). L'onglet vide d'un classeur neuf est retiré, et
 // le classeur est considéré comme « propre » : le fermer sans enregistrer ne
-// demande rien et ne laisse rien à récupérer. Ses scripts sont autorisés sur
-// ce poste, comme s'ils y avaient été écrits : ils ne demandent pas l'accord.
+// demande rien et ne laisse rien à récupérer. Ses scripts et ses pages web
+// sont autorisés sur ce poste, comme s'ils y avaient été écrits : ils ne
+// demandent pas l'accord.
 func New(ctx context.Context, name string, opt Options) (*doc.Document, Result, error) {
 	p, err := Resolve(name)
 	if err != nil {
@@ -239,6 +245,10 @@ func New(ctx context.Context, name string, opt Options) (*doc.Document, Result, 
 	}
 	if err == nil && len(plan.Scripts) > 0 {
 		err = d.AllowAllScripts(ctx)
+	}
+	if err == nil {
+		// Ses pages web aussi : elles s'affichent sans demander l'accord.
+		err = d.AllowAllPages(ctx)
 	}
 	if err == nil && plan.hasMap() {
 		// Les fonds de carte (OpenStreetMap) s'affichent sans demander

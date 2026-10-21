@@ -166,8 +166,26 @@ func TestEngineCallAndEvent(t *testing.T) {
 	if _, err := c.call("DocumentService.AddDoc"); err == nil || err.Code != transport.CodeInvalidParams {
 		t.Fatalf("paramètres manquants : %+v", err)
 	}
-	if _, err := c.call("DocumentService.RunScript", "x", "print(1)"); err == nil || !strings.Contains(err.Message, "scripts sont désactivés") {
+	// (texte dans la langue de la session : celle du système ici)
+	if _, err := c.call("DocumentService.RunScript", "x", "print(1)"); err == nil || err.Data == nil || !strings.Contains(fmt.Sprint(err.Data.Cause), "script.disabled") {
 		t.Fatalf("script sans scripting : %+v", err)
+	}
+	// Une erreur du moteur porte sa cause (identifiant du message) : l'interface
+	// la reconnaît (bandeau d'une page web) et l'affiche dans sa langue.
+	_, err := c.call("DocumentService.PageCall", "cells.set", map[string]any{"row": 1, "col": 1, "value": 1})
+	if err == nil || err.Data == nil {
+		t.Fatalf("écriture d'une page sans scripting : %+v", err)
+	}
+	if cause, _ := err.Data.Cause.(map[string]any); cause == nil || cause["id"] != "page.needsScripting" || cause["message"] != err.Message {
+		t.Fatalf("cause %#v", err.Data.Cause)
+	}
+	// Sans scripting, une page lit le classeur.
+	var q struct {
+		Rows [][]any `json:"rows"`
+	}
+	json.Unmarshal(c.mustCall("DocumentService.PageCall", "db.query", map[string]any{"sql": "SELECT 6 * 7"}), &q)
+	if len(q.Rows) != 1 || q.Rows[0][0] != float64(42) {
+		t.Fatalf("db.query d'une page sans scripting : %+v", q)
 	}
 }
 

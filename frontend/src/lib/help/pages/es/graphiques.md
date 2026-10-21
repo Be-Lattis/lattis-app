@@ -34,7 +34,7 @@ Columnas, barras, líneas, áreas, circular, anillo, dispersión, combinado (col
 
 ## Mapas {#cartes}
 
-Un mapa lee dos columnas (latitud, longitud), o una sola columna que contiene ambas. Los mapas base vienen de OpenStreetMap: necesitan conexión, y el acceso al servidor de teselas requiere su aprobación.
+Un mapa lee dos columnas (latitud, longitud), o una sola columna que contiene ambas. Los mapas base vienen de OpenStreetMap: necesitan conexión, y el acceso al servidor de teselas requiere su aprobación. Esta aprobación no depende de los scripts (también vale en la versión web); tras un rechazo, el botón **Mostrar el mapa base** del mapa la concede. La demo pública no tiene mapa base: no se conecta a nada, y el mapa lo indica.
 
 Para hacer zoom, seleccione el mapa (un clic): la rueda del mouse acerca alrededor del puntero, arrastrar mueve el mapa, un doble clic acerca (Mayús+doble clic aleja), y las teclas **+** y **−** también hacen zoom. Mientras el mapa no está seleccionado, la rueda del mouse desplaza la hoja o el documento; Alt+arrastrar mueve el gráfico seleccionado. Los botones **+**, **−** y **recentrar** aparecen arriba a la derecha al pasar el puntero. La vista elegida se guarda con el libro (Ctrl+Z la deshace); **recentrar**, aquí o en el panel del gráfico, vuelve a la vista ajustada a los puntos.
 

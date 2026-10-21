@@ -7,6 +7,9 @@
 	// le permettent), affichée dans un cadre, sans pont vers le classeur.
 	// Une version de page jamais autorisée sur ce poste (classeur reçu) ne
 	// s'exécute pas : l'onglet demande l'accord de l'utilisateur (consent.ts).
+	// Un appel refusé (scripts coupés ici : la page ne fait que lire ; pages
+	// coupées par l'organisation) est dit dans un bandeau au-dessus de la page,
+	// pas seulement à la page elle-même (refusalOf).
 	import { onMount, untrack } from 'svelte';
 	import { EditorState } from '@codemirror/state';
 	import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
@@ -15,8 +18,8 @@
 	import { closeBrackets } from '@codemirror/autocomplete';
 	import { html } from '@codemirror/lang-html';
 	import Icon from '#lib/icons/Icon.svelte';
-	import { buildSrcdoc, eventOf, navigationGuard, pageUrl, parseCall, replyOf, urlSource } from './bridge';
-	import { htmlTabsEnabled } from '#lib/shell/settings.svelte.js';
+	import { buildSrcdoc, eventOf, navigationGuard, pageUrl, parseCall, refusalOf, replyOf, urlSource, type PageRefusal } from './bridge';
+	import { htmlTabsEnabled, platform } from '#lib/shell/settings.svelte.js';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
 	import { declinedPages, pageConsent } from './consent';
 	import { errorText, t } from '#lib/i18n/index.js';
@@ -131,9 +134,22 @@
 	let asking = $state<string | null>(null);
 
 	// Pointer l'onglet vers une page web externe : seulement si Fichier ›
-	// Paramètres › Fonctionnalités le permet (coupé par défaut). Une page web
-	// déjà posée s'affiche dans tous les cas.
-	const htmlTabs = $derived(htmlTabsEnabled());
+	// Paramètres › Fonctionnalités le permet (coupé par défaut), et jamais
+	// dans la démo publique. Une page web déjà posée s'affiche dans tous les cas.
+	const htmlTabs = $derived(htmlTabsEnabled() && !platform.demo);
+
+	// Appels refusés par le moteur (bandeau) ; oubliés à chaque nouvelle page.
+	let refused = $state<PageRefusal | null>(null);
+	$effect(() => {
+		shown;
+		reloads;
+		untrack(() => (refused = null));
+	});
+	function refusalText(r: PageRefusal): string {
+		if (r.kind === 'org') return t('doc.page.refused.org');
+		if (r.kind === 'page') return t('doc.page.refused.page', { command: r.command });
+		return t('doc.page.refused.scripting', { command: r.command });
+	}
 
 	async function setUrl() {
 		const u = (asking ?? '').trim();
@@ -167,7 +183,11 @@
 		const target = frame.contentWindow;
 		call(c.name, c.args).then(
 			(value) => target?.postMessage(replyOf(c.id, { ok: true, value }), '*'),
-			(x) => target?.postMessage(replyOf(c.id, { ok: false, error: errorText(x) }), '*')
+			(x) => {
+				const r = refusalOf(c.name, x);
+				if (r && !refused) refused = r;
+				target?.postMessage(replyOf(c.id, { ok: false, error: errorText(x) }), '*');
+			}
 		);
 	}
 
@@ -281,7 +301,7 @@
 			<button onclick={preview} title={t('doc.page.preview.tooltip')}><Icon name="play" size={14} />{t('doc.page.preview.label')}</button>
 			<button onclick={() => stopEdit(true)} title={t('doc.page.show.tooltip')}><Icon name="web" size={14} />{t('doc.page.show.label')}</button>
 			{#if dirty}<button onclick={() => stopEdit(false)}>{t('doc.page.discard')}</button>{/if}
-			<span class="muted">{t('doc.page.keys')} · lattis.call("sheets.list"), lattis.query(sql), lattis.on("change", f)</span>
+			<span class="muted">{t('doc.page.keys')} · lattis.sql(sql), lattis.query(name), lattis.call("sheets.list"), lattis.on("change", f)</span>
 		{:else}
 			<button onclick={startEdit} disabled={!!locked} title={locked || t('doc.page.edit.tooltip')}><Icon name="edit" size={14} />{url ? t('doc.page.edit.html') : t('doc.page.edit.label')}</button>
 			{#if !htmlTabs}
@@ -323,6 +343,13 @@
 		{/if}
 		{#if error}<span class="error">{error}</span>{/if}
 	</div>
+	{#if refused && runs && !url}
+		<div class="refused" role="alert">
+			<Icon name="warning" size={14} />
+			<span>{refusalText(refused)}</span>
+			<button onclick={() => (refused = null)} title={t('common.close')} aria-label={t('common.close')}>×</button>
+		</div>
+	{/if}
 	<div class="body" class:split={editing}>
 		{#if editing}<div class="editor" bind:this={host}></div>{/if}
 		<!-- Cadre isolé : scripts permis, mais ni même origine, ni formulaires, ni fenêtres. -->
@@ -425,6 +452,29 @@
 		min-width: 0;
 		overflow: auto;
 		border-right: 1px solid #d4d7db;
+	}
+	.refused {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 10px;
+		background: #fff8e6;
+		border-bottom: 1px solid #f0d58c;
+		color: #7a4d00;
+		--icon-accent: #b7791f;
+	}
+	.refused span {
+		flex: 1;
+	}
+	.refused button {
+		font: inherit;
+		font-size: 16px;
+		line-height: 1;
+		padding: 0 4px;
+		border: none;
+		background: none;
+		color: inherit;
+		cursor: pointer;
 	}
 	.blocked {
 		flex: 1;

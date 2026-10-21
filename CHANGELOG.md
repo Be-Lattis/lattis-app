@@ -10,6 +10,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Barre de titre d'un classeur partagé : une seule pastille « en ligne sur … | Rôle », cliquable, qui ouvre l'accès au classeur.
 - Écran d'erreur : « Réinitialiser les paramètres par défaut » (après confirmation, puis rechargement) pour sortir d'un réglage qui fait planter ; ses libellés restent lisibles en anglais à côté de la traduction.
+- Pages web : `lattis.sql("SELECT …", [paramètres])` lit le classeur en SQL et `lattis.query("nom")` exécute une requête favorite de l'onglet SQL, toutes deux en lecture seule, avec un tableau d'objets pour résultat. Ces lectures fonctionnent aussi sans scripts : dans la version web et la démo publique, les pages web s'affichent et lisent le classeur (le réglage « Pages web » suffit pour en ajouter) ; ce qu'une page ne peut pas faire ici (modifier le classeur, joindre un site, lancer un script) est dit dans un bandeau au-dessus de la page.
+- Démonstration : la page « Tableau de bord » lit le classeur par une requête favorite et `lattis.sql`, et fonctionne dans la version web et la démo publique.
 
 ### Changements
 
@@ -19,6 +21,9 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Corrections
 
+- Version web et démo publique : la page « Tableau de bord » de la démonstration restait vide (« … »), ses lectures du classeur étant refusées avec les scripts, sans rien dire.
+- Version web : les messages d'erreur du moteur suivent la langue de l'interface (ils restaient en français).
+- Cartes : le fond OpenStreetMap s'autorise aussi dans la version web, indépendamment des scripts, par une question propre aux cartes ; après un refus, le bouton « Afficher le fond de carte » de la carte le permet. Dans la démo publique, qui n'a aucune connexion sortante, la carte dit « Fond de carte indisponible dans la démo » au lieu de rester vide ; un autre échec (réseau du serveur) est dit sur la carte avec sa raison.
 - Windows : la mise à jour téléchargée s'installe vraiment à la fermeture de Lattis (croix de la fenêtre, Alt+F4, « Redémarrez l'application… »). Jusqu'ici, fermer la fenêtre sans classeur modifié ne lançait pas l'installeur et « Redémarrez l'application pour appliquer la mise à jour » revenait à chaque lancement. Les versions 0.3.3-beta et antérieures restent concernées : installez celle-ci une fois depuis sa page de version.
 - Mise à jour qui n'aboutit pas : au lancement suivant, la barre d'état dit « La mise à jour … n'a pas pu s'installer — Installer manuellement », avec la raison (lattis.exe encore ouvert, droits d'administration refusés, installeur arrêté, aucune trace de l'installeur…) et un lien vers la page de la version ; « Installer manuellement » lance l'installeur avec son interface. Après deux échecs, Lattis n'essaie plus de l'installer à la fermeture.
 - Installeur Windows : un lattis.exe qui n'a pas pu être remplacé fait échouer l'installation au lieu de la dire réussie avec l'ancienne version ; aucune boîte de dialogue ne bloque plus une installation silencieuse.

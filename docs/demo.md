@@ -18,6 +18,7 @@ seed: 7          # graine du générateur (facultative ; --seed l'emporte, 1 par
 sheets: [...]    # les onglets, dans l'ordre
 scripts: [...]   # scripts Lua de la bibliothèque (onglet Script)
 events: [...]    # écouteurs des évènements du classeur
+favorites: [...] # requêtes favorites de l'onglet SQL (lues par les pages web)
 ```
 
 Les adresses s'écrivent comme dans la grille : `cell: B3` (coin haut gauche d'un tableau,
@@ -174,12 +175,25 @@ Graphiques et tableaux croisés d'un document se recalculent comme sur une feuil
   html: |
     <h1>Total</h1><b id="t"></b>
     <script>
-      lattis.call("db.query", {sql: "SELECT sum(Montant) FROM Commandes"})
-        .then((r) => (document.getElementById("t").textContent = r.rows[0][0]));
+      lattis.query("Total des ventes")
+        .then(([r]) => (document.getElementById("t").textContent = r.total));
     </script>
 ```
 
-La page lit le classeur par `lattis.call` (voir [scripting-lua.md](scripting-lua.md)).
+La page lit le classeur en SQL : `lattis.sql(requête, paramètres)` (SELECT ou WITH) et
+`lattis.query(nom)`, une requête favorite (voir plus bas) ; ces lectures fonctionnent aussi
+sans scripts (version web, démo publique). Les autres commandes passent par `lattis.call`
+(voir [scripting-lua.md](scripting-lua.md)).
+
+### Requêtes favorites
+
+```yaml
+favorites:
+  - name: Total des ventes
+    sql: SELECT sum(Montant) AS total FROM Commandes
+```
+
+Elles apparaissent dans les favoris de l'onglet SQL ; une page les exécute par leur nom.
 
 ## Scripts et évènements
 

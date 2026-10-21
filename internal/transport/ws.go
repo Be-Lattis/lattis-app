@@ -243,9 +243,12 @@ func (h *Hub) handle(c *conn, req request) {
 		var ce *Error
 		if err != nil && !errors.As(err, &ce) {
 			ce = callError(CodeServer, "RuntimeError", err.Error())
-			if h.Translate != nil {
-				ce.Message, ce.Data.Cause = h.Translate(err)
-			}
+			ce.err = err
+		}
+		// Erreur rendue par la méthode : texte dans la langue de la session,
+		// et la cause d'un message de internal/msg (errorText, msgCause).
+		if ce != nil && ce.err != nil && h.Translate != nil {
+			ce.Message, ce.Data.Cause = h.Translate(ce.err)
 		}
 		h.reply(c, req.ID, res, ce)
 	}()

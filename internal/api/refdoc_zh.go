@@ -120,7 +120,7 @@ var apiDocZH = func() apiDoc {
 			"http.request": {S: "发送任意 HTTP 请求（GET、POST、PUT、PATCH、DELETE…）并返回响应。",
 				D: "json 将表编码为 JSON 正文（并带上相应的 Content-Type 标头）；body 按原样发送文本。" + http, R: "{status, ok, url, headers, body, json}"},
 			"pages.add": {S: "添加一个网页（在隔离框架中显示的 HTML、CSS 和 JavaScript）或一个文档（kind = \"doc\"：富文本），并返回 {id, name, kind}。",
-				D: "页面通过 lattis.call(\"命令\", {参数}) 与工作簿通信，它返回一个 Promise（允许的脚本命令列表：读取类如 sheets.list 或 db.query，写值类如 cells.set 或 db.execute，ui.*、http.*、buttons.run；不能访问文件、脚本、结构或保护），并通过 lattis.on(\"change\", 函数) 在工作簿变化时得到调用。没有 source 时，页面使用示例模板。没有 before 时，标签添加在末尾。",
+				D: "页面通过 lattis.call(\"命令\", {参数}) 与工作簿通信，它返回一个 Promise（允许的脚本命令列表：读取类如 sheets.list 或 db.query，写值类如 cells.set 或 db.execute，ui.*、http.*、buttons.run；不能访问文件、脚本、结构或保护），并通过 lattis.on(\"change\", 函数) 在工作簿变化时得到调用。页面还可以通过 lattis.sql(\"SELECT …\", {参数}) 和 lattis.query(\"收藏查询的名称\") 读取工作簿，它们返回对象数组；没有脚本功能时（网页版、公开演示），页面只能读取。没有 source 时，页面使用示例模板。没有 before 时，标签添加在末尾。",
 				R: "{id, name, kind}"},
 			"pages.get":      {S: "返回网页的 HTML 内容。", R: "HTML 文本"},
 			"pages.set":      {S: "替换网页的 HTML 内容。"},

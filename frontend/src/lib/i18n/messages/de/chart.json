@@ -113,8 +113,13 @@
 		},
 		"density": "Dichte",
 		"offline": {
-			"tooltip": "Die Hintergrundkarte stammt von tile.openstreetmap.org: Erlauben Sie diesen Host (Registerkarte Script › Netzwerkzugriff) oder prüfen Sie die Verbindung.",
-			"label": "Hintergrundkarte nicht verfügbar"
+			"tooltip": "Die Hintergrundkarte stammt von tile.openstreetmap.org: Erlauben Sie diesen Host oder prüfen Sie die Verbindung.",
+			"label": "Hintergrundkarte nicht verfügbar",
+			"demo": "Hintergrundkarte in der Demo nicht verfügbar",
+			"refused": "Hintergrundkarte nicht erlaubt",
+			"allow": "Hintergrundkarte anzeigen",
+			"allowTooltip": "tile.openstreetmap.org für diese Arbeitsmappe erlauben: Die Kacheln des gezeigten Bereichs werden von OpenStreetMap geladen.",
+			"failed": "Hintergrundkarte nicht verfügbar: {error}"
 		},
 		"noPoint": "Keine Punkte: Breiten- und Längengrad erwartet",
 		"clickHint": "Klick: zur Zeile wechseln",
@@ -193,7 +198,7 @@
 			"fitted": "An die Punkte angepasst"
 		},
 		"mapHelp": "Mausrad: Zoom · Ziehen: Karte verschieben (Alt+Ziehen: das Diagramm) · Klick auf einen Punkt: seine Zeile",
-		"mapTiles": "Kartenhintergrund © OpenStreetMap (tile.openstreetmap.org), abhängig von der Netzwerkfreigabe der Arbeitsmappe.",
+		"mapTiles": "Hintergrundkarte © OpenStreetMap (tile.openstreetmap.org), abhängig von der Netzwerkfreigabe der Arbeitsmappe.",
 		"source": {
 			"label": "Quelle",
 			"tooltip": "Tabelle oder PivotTable, deren Daten das Diagramm darstellt",

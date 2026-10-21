@@ -292,7 +292,7 @@
 	"pages.add": {
 		"signature": "pages.add([name], [source], [before], [kind]) → {id, name, kind}",
 		"summary": "添加一个网页（在隔离框架中显示的 HTML、CSS 和 JavaScript）或一个文档（kind = \"doc\"：富文本），并返回 {id, name, kind}。",
-		"details": "页面通过 lattis.call(\"命令\", {参数}) 与工作簿通信，它返回一个 Promise（允许的脚本命令列表：读取类如 sheets.list 或 db.query，写值类如 cells.set 或 db.execute，ui.*、http.*、buttons.run；不能访问文件、脚本、结构或保护），并通过 lattis.on(\"change\", 函数) 在工作簿变化时得到调用。没有 source 时，页面使用示例模板。没有 before 时，标签添加在末尾。参数 — name：标签名称（默认 Page1…）；source：页面的 HTML 内容；before：插入到其前面的工作表；kind：\"html\"（默认）或 \"doc\"：文档，其内容是 JSON 格式的 Quill Delta。可按顺序传参，或使用命名参数表：pages.add{name = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+		"details": "页面通过 lattis.call(\"命令\", {参数}) 与工作簿通信，它返回一个 Promise（允许的脚本命令列表：读取类如 sheets.list 或 db.query，写值类如 cells.set 或 db.execute，ui.*、http.*、buttons.run；不能访问文件、脚本、结构或保护），并通过 lattis.on(\"change\", 函数) 在工作簿变化时得到调用。页面还可以通过 lattis.sql(\"SELECT …\", {参数}) 和 lattis.query(\"收藏查询的名称\") 读取工作簿，它们返回对象数组；没有脚本功能时（网页版、公开演示），页面只能读取。没有 source 时，页面使用示例模板。没有 before 时，标签添加在末尾。参数 — name：标签名称（默认 Page1…）；source：页面的 HTML 内容；before：插入到其前面的工作表；kind：\"html\"（默认）或 \"doc\"：文档，其内容是 JSON 格式的 Quill Delta。可按顺序传参，或使用命名参数表：pages.add{name = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
 	},
 	"pages.get": {
 		"signature": "pages.get([sheet]) → HTML 文本",

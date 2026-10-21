@@ -113,8 +113,13 @@
 		},
 		"density": "Densité",
 		"offline": {
-			"tooltip": "Le fond de carte vient de tile.openstreetmap.org : autorisez cet hôte (onglet Script › Accès réseau) ou vérifiez la connexion.",
-			"label": "Fond de carte indisponible"
+			"tooltip": "Le fond de carte vient de tile.openstreetmap.org : autorisez cet hôte ou vérifiez la connexion.",
+			"label": "Fond de carte indisponible",
+			"demo": "Fond de carte indisponible dans la démo",
+			"refused": "Fond de carte non autorisé",
+			"allow": "Afficher le fond de carte",
+			"allowTooltip": "Autoriser tile.openstreetmap.org pour ce classeur : les tuiles de la zone montrée sont téléchargées depuis OpenStreetMap.",
+			"failed": "Fond de carte indisponible : {error}"
 		},
 		"noPoint": "Aucun point : latitude et longitude attendues",
 		"clickHint": "Clic : aller à la ligne",

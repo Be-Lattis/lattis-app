@@ -33,7 +33,7 @@
 	import { fitView, heatColor, heatGrid, project, viewTiles, type MapView } from './shapes';
 	import { colorCategories, groupColor } from './categories';
 	import { ZOOM_STEP, camView, fallbackTiles, heatRadius, hitPoint, panBy, parseCam, roundCam, viewCam, wheelZoom, zoomAt, MAX_ZOOM, MIN_ZOOM, type MapCam } from './mapview';
-	import { loadTile, tileNow } from './tiles';
+	import { allowTiles, canAllowTiles, loadTile, tileNow, tileProblem } from './tiles';
 	import { fmtNumber, t } from '#lib/i18n/index.js';
 
 	interface Props {
@@ -154,8 +154,10 @@
 	let alive = true;
 	let wantedKeys = new Set<string>();
 	const key = (z: number, x: number, y: number) => `${z}/${x}/${y}`;
+	let retry = $state(0); // fond de carte autorisé (allowBase) : redemander les tuiles
 	$effect(() => {
 		const want = wantedTiles;
+		void retry;
 		let live = true;
 		wantedKeys = new Set(want.map((t) => key(t.z, t.x, t.y)));
 		for (const t of want) {
@@ -173,6 +175,21 @@
 	// Pendant le chargement : tuiles déjà là d'un autre niveau (parente agrandie ou filles réduites).
 	const stand = $derived(fallbackTiles(tiles, view, has));
 	const offline = $derived(wantedTiles.length > 0 && wantedTiles.every((t) => images[key(t.z, t.x, t.y)] === null));
+	// Pourquoi le fond manque (démo publique, hôte refusé, réseau) : dit sur la carte.
+	const problem = $derived(offline ? tileProblem() : null);
+	let allowing = $state(false);
+	async function allowBase() {
+		allowing = true;
+		try {
+			await allowTiles();
+			images = Object.fromEntries(Object.entries(images).filter(([, v]) => v !== null));
+			retry++;
+		} catch {
+			// L'échec reste dit sur la carte (tuiles toujours absentes).
+		} finally {
+			allowing = false;
+		}
+	}
 
 	// --- Zoom et déplacement ------------------------------------------------
 
@@ -220,7 +237,7 @@
 		const k = scale();
 		return { x: (e.clientX - r.left) / k, y: (e.clientY - r.top) / k - top };
 	}
-	const onControls = (e: Event) => !!(e.target as Element | null)?.closest?.('.mapctl');
+	const onControls = (e: Event) => !!(e.target as Element | null)?.closest?.('.mapctl, .mapnote');
 	const onLegend = (e: Event) => !!(e.target as Element | null)?.closest?.('.maplegend');
 
 	// Écouteurs natifs : la molette doit pouvoir empêcher le défilement
@@ -410,13 +427,28 @@
 	{#if shown.length || stand.length}
 		<rect x={w - 98} y={top + h - 16} width="98" height="16" fill="#fff" fill-opacity="0.75" />
 		<text x={w - 4} y={top + h - 4} text-anchor="end" class="attr">© OpenStreetMap</text>
-	{:else if offline}
+	{:else if offline && !problem}
 		<text x={w - 6} y={top + h - 6} text-anchor="end" class="attr"><title>{t('chart.map.offline.tooltip')}</title>{t('chart.map.offline.label')}</text>
 	{/if}
 	{#if !pts.length}
 		<text x={w / 2} y={top + h / 2} text-anchor="middle" class="small halo">{t('chart.map.noPoint')}</text>
 	{/if}
 </svg>
+{#if problem && !shown.length && !stand.length}
+	<!-- Fond de carte absent : pourquoi, et l'autoriser quand c'est possible. -->
+	<div class="mapnote" style:top="{top + 8}px" role="status">
+		{#if problem.kind === 'demo'}
+			{t('chart.map.offline.demo')}
+		{:else if problem.kind === 'refused'}
+			<span>{t('chart.map.offline.refused')}</span>
+			{#if canAllowTiles()}
+				<button type="button" disabled={allowing} title={t('chart.map.offline.allowTooltip')} onclick={allowBase}>{t('chart.map.offline.allow')}</button>
+			{/if}
+		{:else}
+			<span title={problem.text}>{t('chart.map.offline.failed', { error: problem.text })}</span>
+		{/if}
+	</div>
+{/if}
 {#if hotPt && !dragging}
 	{@const g = groups?.[hotPt.i]}
 	{@const left = hotPt.x + hotPt.r + 8}
@@ -464,6 +496,45 @@
 	}
 	.mapbox.point {
 		cursor: pointer;
+	}
+	.mapnote {
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 2;
+		width: max-content;
+		max-width: calc(100% - 24px);
+		box-sizing: border-box;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 5px 10px;
+		border: 1px solid #c4c8cd;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.95);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+		font: 12px/1.35 'Segoe UI', system-ui, sans-serif;
+		color: #1f2328;
+		cursor: default;
+	}
+	.mapnote span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.mapnote button {
+		font: inherit;
+		padding: 2px 8px;
+		border: 1px solid #217346;
+		border-radius: 3px;
+		background: #217346;
+		color: #fff;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.mapnote button:disabled {
+		opacity: 0.6;
+		cursor: default;
 	}
 	.maptip {
 		position: absolute;

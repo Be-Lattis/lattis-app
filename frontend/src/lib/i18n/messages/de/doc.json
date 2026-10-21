@@ -120,7 +120,12 @@
 		"noTablePivot": "Keine Tabelle in der Arbeitsmappe: Erstellen Sie eine auf einem Tabellenblatt, um sie hier zu analysieren.",
 		"placeholder": "Hier schreiben… (Einfügen: Diagramme und Schaltflächen)",
 		"aria": "Dokument {name}",
-		"grip": "Ziehen, um die Größe zu ändern"
+		"grip": "Ziehen, um die Größe zu ändern",
+		"refused": {
+			"scripting": "Diese Seite verwendet Skripte, die hier deaktiviert sind: {command}. Sie kann die Arbeitsmappe nur lesen.",
+			"org": "Webseiten wurden von Ihrer Organisation deaktiviert: Diese Seite kann die Arbeitsmappe nicht lesen.",
+			"page": "{command}: Befehl auf einer Webseite nicht verfügbar."
+		}
 	},
 	"clip": {
 		"chartPasted": "Diagramm eingefügt",

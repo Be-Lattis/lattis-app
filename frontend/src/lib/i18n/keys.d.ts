@@ -212,7 +212,12 @@ export interface MessageParams {
 	'chart.map.legend': { name: number | string };
 	'chart.map.legendItem': { label: number | string; n: number | string };
 	'chart.map.noPoint': Record<never, never>;
+	'chart.map.offline.allow': Record<never, never>;
+	'chart.map.offline.allowTooltip': Record<never, never>;
+	'chart.map.offline.demo': Record<never, never>;
+	'chart.map.offline.failed': { error: number | string };
 	'chart.map.offline.label': Record<never, never>;
+	'chart.map.offline.refused': Record<never, never>;
 	'chart.map.offline.tooltip': Record<never, never>;
 	'chart.map.pending.aria': Record<never, never>;
 	'chart.map.pending.text': Record<never, never>;
@@ -426,6 +431,9 @@ export interface MessageParams {
 	'doc.page.placeholder': Record<never, never>;
 	'doc.page.preview.label': Record<never, never>;
 	'doc.page.preview.tooltip': Record<never, never>;
+	'doc.page.refused.org': Record<never, never>;
+	'doc.page.refused.page': { command: number | string };
+	'doc.page.refused.scripting': { command: number | string };
 	'doc.page.reload.label': Record<never, never>;
 	'doc.page.reload.tooltip': Record<never, never>;
 	'doc.page.save': Record<never, never>;

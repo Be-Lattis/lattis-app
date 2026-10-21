@@ -17,6 +17,28 @@ import (
 // QueryLimit borne les lignes renvoyées par db.query (serveur MCP).
 const QueryLimit = 10_000
 
+// readSQL exécute une requête de lecture avec les noms affichés (db.query,
+// favorites.run) : pool de lecture en query_only, sous l'autorisateur des
+// requêtes de l'utilisateur (ni écriture, ni ATTACH, ni PRAGMA qui
+// modifie), dans le délai limits.sqlReadSeconds (grid.QueryArgs).
+func (c *Call) readSQL(q string, params []any) (any, error) {
+	d, err := c.Doc()
+	if err != nil {
+		return nil, err
+	}
+	if q, err = d.ReadCTE(c, q); err != nil {
+		return nil, err
+	}
+	if q, err = script.Rewrite(c, d.DB().Read(), q); err != nil {
+		return nil, err
+	}
+	res, err := grid.QueryArgs(c, d.DB().Read(), q, QueryLimit, params...)
+	if err != nil {
+		return nil, fmt.Errorf("%s", script.SQLError(err))
+	}
+	return res, nil
+}
+
 // DocState décrit le classeur ouvert.
 type DocState struct {
 	Open  bool   `json:"open"`
@@ -227,26 +249,12 @@ func init() {
 			Params:  []Param{{Name: "sql", Type: String, Desc: "requête SELECT ou WITH"}, {Name: "params", Type: Array, Desc: "valeurs des ?", Optional: true}},
 			NoLua:   true,
 			Run: func(c *Call) (any, error) {
-				d, err := c.Doc()
-				if err != nil {
-					return nil, err
-				}
 				q, _ := c.Str("sql")
 				var params []any
 				if err := c.Decode("params", &params); err != nil {
 					return nil, err
 				}
-				if q, err = d.ReadCTE(c, q); err != nil {
-					return nil, err
-				}
-				if q, err = script.Rewrite(c, d.DB().Read(), q); err != nil {
-					return nil, err
-				}
-				res, err := grid.QueryArgs(c, d.DB().Read(), q, QueryLimit, params...)
-				if err != nil {
-					return nil, fmt.Errorf("%s", script.SQLError(err))
-				}
-				return res, nil
+				return c.readSQL(q, params)
 			},
 		},
 		&Command{

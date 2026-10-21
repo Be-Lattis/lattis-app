@@ -66,9 +66,15 @@ async function applyLanguage() {
 	}
 }
 
-/** Les pages web sont proposés (ajout, « Site web… »). */
+/**
+ * Les pages web sont proposées (ajout, « Site web… »), avec ou sans
+ * scripting : sans scripting (version web sans web_scripting, démo
+ * publique), une page ne fait que lire le classeur (SQL en lecture seule,
+ * requêtes favorites, DocumentService.PageCall). Les pages déjà posées
+ * s'affichent dans tous les cas.
+ */
 export function htmlTabsEnabled(): boolean {
-	return platform.scripting && boolSetting(userSettings.list, 'features.htmlTabs');
+	return boolSetting(userSettings.list, 'features.htmlTabs');
 }
 
 /** Lua, boutons d'action et pages web sont permis (toujours sur le bureau). */

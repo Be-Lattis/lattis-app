@@ -96,6 +96,20 @@ func (c *Call) allowHost(host string) error {
 
 // allowHostFor est allowHost avec le message de la demande (%s : l'hôte).
 func (c *Call) allowHostFor(host, message string) error {
+	return c.allowHostAsk(host, func(h string) Dialog {
+		return Dialog{
+			Title:   "Accès au réseau",
+			Message: fmt.Sprintf(message, h),
+			Fields:  []Field{{Name: "remember", Label: "Mémoriser pour ce classeur", Type: "checkbox"}},
+			OK:      "Autoriser",
+			Cancel:  "Refuser",
+		}
+	})
+}
+
+// allowHostAsk est allowHost avec la boîte de la demande (ask : pour l'hôte
+// normalisé ; la case « remember » mémorise l'accord pour le classeur).
+func (c *Call) allowHostAsk(host string, ask func(h string) Dialog) error {
 	d, err := c.Doc()
 	if err != nil {
 		return err
@@ -132,13 +146,7 @@ func (c *Call) allowHostFor(host, message string) error {
 	if ok, err := check(); ok || err != nil { // réponse donnée pendant l'attente
 		return err
 	}
-	vals, err := c.dialog(Dialog{
-		Title:   "Accès au réseau",
-		Message: fmt.Sprintf(message, h),
-		Fields:  []Field{{Name: "remember", Label: "Mémoriser pour ce classeur", Type: "checkbox"}},
-		OK:      "Autoriser",
-		Cancel:  "Refuser",
-	})
+	vals, err := c.dialog(ask(h))
 	if err != nil {
 		return err
 	}
