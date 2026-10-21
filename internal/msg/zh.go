@@ -13,6 +13,7 @@ var zh = map[ID]string{
 	"doc.closeCancelledByScript": "关闭已被脚本取消（before_close 事件）",
 	"doc.downloadServer":         "此工作簿位于服务器上：无需下载即可保留（“另存为”会创建单独的副本）",
 	"doc.downloadWebOnly":        "“下载副本”仅在网页版中提供：工作簿已是此计算机上的文件",
+	"doc.demoDownloaded":         "演示：工作簿已下载",
 	"doc.downloaded":             "副本已下载：{file}",
 	"doc.invalidHost":            "主机无效：应为域名（可带端口）",
 	"doc.lockFailed":             "无法在“{file}”旁创建锁文件（文件夹只读？）：其他计算机打开它时将不会收到警告。",
@@ -552,6 +553,7 @@ var zh = map[ID]string{
 
 	// Queries
 	"query.accessDenied":          "访问被拒绝",
+	"query.demoOffline":           "演示：不允许网络连接（“{host}”）",
 	"query.accessInternalAddress": "访问被拒绝：“{host}”是服务器的内部地址（{ip}）",
 	"query.accessUploadsOnly":     "访问被拒绝：在此服务器上，查询只能读取从浏览器上传的文件（{file}）",
 	"query.averageType":           "“{column}”的平均值：列的类型为 {type}",
@@ -986,6 +988,7 @@ var zh = map[ID]string{
 	"share.detachReadOnly":      "工作簿以只读方式打开：请改用“使用本地副本”",
 	"share.detachReopenFailed":  "已分离的工作簿已保存在 {path}，但重新打开失败：{err}",
 	"share.detached":            "工作簿已从服务器分离：“{name}”现在是本地工作簿，不再同步。",
+	"demo.unavailable":          "演示中不可用",
 	"share.disabled":            "共享工作簿已禁用：文件 › 设置 › 功能 › 共享工作簿（Lattis 服务器）",
 	"share.invalidWorkbookId":   "工作簿标识符无效：{id}",
 	"share.localCopyNotSaved":   "无法保存“{title}”的本地副本：尚未发送的更改已保留，可供恢复（文件 › 打开，或下次启动 Lattis 时）",

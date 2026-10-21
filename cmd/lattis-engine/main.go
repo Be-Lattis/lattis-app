@@ -14,6 +14,12 @@
 //     et s'arrête quand l'entrée standard se ferme ou après --idle sans
 //     onglet connecté.
 //
+//   - démo publique, lancée par le Serveur Lattis (/demo/, sans connexion) :
+//     --public-demo, avec --addr, --dir, --base-path et --idle. Même cycle de
+//     vie que le mode serveur ; ni session, ni scripting, ni connexion
+//     sortante ; Enregistrer télécharge le classeur ; à l'arrêt, --dir est
+//     effacé (démo jetable).
+//
 // Voir docs/collaboration/version-web.md.
 package main
 
@@ -31,6 +37,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/lalamefine/lattis/engine"
@@ -65,10 +72,17 @@ Mode serveur (lancé par lattisd) :
 
 En mode serveur, « LISTENING hôte:port » est écrit sur la sortie standard dès
 l'écoute, et le moteur s'arrête quand l'entrée standard se ferme.
+
+Démo publique (lancée par le Serveur Lattis, /demo/) :
+  --public-demo      classeur vide, rien n'est gardé : pas de Serveur Lattis, de
+                     scripting, d'assistant IA ni de connexion sortante (bases de
+                     données, API web) ; Enregistrer télécharge le classeur ;
+                     réglages en mémoire ; --dir effacé à l'arrêt. Même cycle de
+                     vie que le mode serveur (LISTENING, entrée standard, --idle).
 `
 
 func main() {
-	addr, static, dir, base, scripting := "", "", "", "", false
+	addr, static, dir, base, scripting, publicDemo := "", "", "", "", false, false
 	server, tokenURL, workbook := "", "", ""
 	var internal []string
 	idle := 30 * time.Minute
@@ -101,6 +115,8 @@ func main() {
 			}
 		case "--scripting", "-scripting":
 			scripting = true
+		case "--public-demo", "-public-demo":
+			publicDemo = true
 		case "--internal-hosts", "-internal-hosts":
 			for _, h := range strings.Split(val(), ",") {
 				if h = strings.TrimSpace(h); h != "" {
@@ -132,7 +148,22 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
+	if publicDemo {
+		switch {
+		case server != "" || tokenURL != "" || workbook != "":
+			fail(errors.New("--public-demo exclut --server, --token-url et --workbook"))
+		case scripting:
+			fail(errors.New("--public-demo exclut --scripting"))
+		case len(internal) > 0:
+			fail(errors.New("--public-demo exclut --internal-hosts (aucune connexion sortante)"))
+		case preset != "":
+			fail(errors.New("--public-demo exclut --demo (les démonstrations sont dans Fichier › Ouvrir › Récents)"))
+		}
+	}
 	serverMode := server != ""
+	// managed : lancé par lattisd (session web ou démo publique) : écoute
+	// annoncée sur la sortie standard, arrêt à sa fermeture ou après --idle.
+	managed := serverMode || publicDemo
 	if serverMode && tokenURL == "" {
 		fail(errors.New("--server demande --token-url"))
 	}
@@ -141,17 +172,38 @@ func main() {
 	}
 	if addr == "" {
 		addr = "127.0.0.1:8102"
-		if serverMode {
+		if managed {
 			addr = "127.0.0.1:0"
 		}
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if dir == "" {
 		if dir, err = os.MkdirTemp("", "lattis-engine-"); err != nil {
 			fail(err)
 		}
+	}
+	if publicDemo {
+		if dir, err = filepath.Abs(dir); err != nil {
+			fail(err)
+		}
+		// Tout ce que la démo écrit reste dans --dir, effacé à l'arrêt :
+		// copies de travail, et le profil (dossiers de configuration et de
+		// cache de l'utilisateur) qui n'est pas celui du compte du serveur.
+		if err := isolateProfile(filepath.Join(dir, "profil")); err != nil {
+			fail(err)
+		}
+		os.Setenv(archive.WorkEnv, filepath.Join(dir, "work"))
+		bridge.SetShareCacheDir(filepath.Join(dir, "partages"))
+		bridge.HidePaths = true
+	}
+	if managed {
+		// L'entrée standard fermée (lattisd arrêté ou session finie) : arrêt.
+		go func() {
+			io.Copy(io.Discard, os.Stdin)
+			stop()
+		}()
 	}
 	if serverMode {
 		// Tout ce que la session écrit reste dans son répertoire : copies de
@@ -170,16 +222,12 @@ func main() {
 			Server: server,
 			Fetch:  bridge.TokenURL(tokenURL, os.Getenv("LATTIS_ENGINE_SECRET"), nil),
 		})
-		// L'entrée standard fermée (lattisd arrêté ou session finie) : arrêt.
-		go func() {
-			io.Copy(io.Discard, os.Stdin)
-			stop()
-		}()
 	}
-	config.Init(ctx, nil)
+	// Démo publique : réglages en mémoire (pas de config.json).
+	config.InitLoader(ctx, &config.Loader{Memory: publicDemo})
 
-	opts := engine.Options{Dir: dir, BasePath: base, Scripting: scripting, Demo: preset, Seed: seed, InternalHosts: internal}
-	if !serverMode {
+	opts := engine.Options{Dir: dir, BasePath: base, Scripting: scripting, Demo: preset, Seed: seed, InternalHosts: internal, PublicDemo: publicDemo}
+	if !managed {
 		opts.OriginPatterns = []string{"localhost:*", "127.0.0.1:*"}
 	}
 	switch {
@@ -190,7 +238,7 @@ func main() {
 		opts.Static = os.DirFS(static)
 	case embeddedWeb() != nil:
 		opts.Static = embeddedWeb()
-	case !serverMode:
+	case !managed:
 		if st, err := os.Stat(filepath.Join("frontend", "dist-web", "index.html")); err == nil && !st.IsDir() {
 			opts.Static = os.DirFS(filepath.Join("frontend", "dist-web"))
 		}
@@ -222,7 +270,7 @@ func main() {
 		<-ctx.Done()
 		srv.Close()
 	}()
-	if serverMode {
+	if managed {
 		fmt.Fprintf(os.Stdout, "LISTENING %s\n", ln.Addr())
 		go watchIdle(ctx, e, idle, stop)
 	} else {
@@ -231,6 +279,28 @@ func main() {
 	if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fail(err)
 	}
+}
+
+// isolateProfile fait pointer les dossiers de configuration et de cache de
+// l'utilisateur (os.UserConfigDir, os.UserCacheDir) sous dir : la démo
+// publique ne lit ni n'écrit rien du compte qui fait tourner le serveur.
+func isolateProfile(dir string) error {
+	cfg, cache := filepath.Join(dir, "config"), filepath.Join(dir, "cache")
+	for _, d := range []string{cfg, cache} {
+		if err := os.MkdirAll(d, 0o700); err != nil {
+			return err
+		}
+	}
+	for k, v := range map[string]string{
+		"APPDATA": cfg, "LOCALAPPDATA": cache, // Windows
+		"XDG_CONFIG_HOME": cfg, "XDG_CACHE_HOME": cache, // Linux
+		"HOME": dir, // macOS (~/Library/…), et Linux sans XDG
+	} {
+		if err := os.Setenv(k, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // idleTick : fréquence du contrôle d'inactivité.

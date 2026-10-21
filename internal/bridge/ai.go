@@ -205,6 +205,9 @@ func (s *DocumentService) refreshModels(id, endpoint string) {
 // fournisseur injoignable : elle l'est quand même, et l'erreur le dit. Si
 // le trousseau la refuse, elle sert pendant la session et l'erreur le dit.
 func (s *DocumentService) AISetKey(ctx context.Context, provider, key string) (AIStatus, error) {
+	if publicDemo.Load() {
+		return s.AIState(), errDemo
+	}
 	p := ai.Lookup(provider)
 	if p == nil {
 		return s.AIState(), msg.New("ai.providerUnavailable", nil)
@@ -266,6 +269,9 @@ func (s *DocumentService) AIResume(ctx context.Context, run int) error {
 // des données.
 func (s *DocumentService) aiTurn() (ai.Turn, string, error) {
 	c := config.Current()
+	if publicDemo.Load() {
+		return ai.Turn{}, "", errDemo
+	}
 	if !c.Bool("ai.enabled", false) {
 		return ai.Turn{}, "", msg.New("ai.disabled", nil)
 	}

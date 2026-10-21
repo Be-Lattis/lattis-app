@@ -36,6 +36,9 @@ type RecentFile struct {
 	ServerName string `json:"serverName,omitempty"`
 	WorkbookID string `json:"workbookId,omitempty"`
 	Link       string `json:"link,omitempty"`
+	// Demo : classeur de démonstration de la démo publique (preset de
+	// internal/demo, voir DemoPresets) ; Title donne alors sa taille.
+	Demo string `json:"demo,omitempty"`
 }
 
 // remote : classeur du serveur.
@@ -89,6 +92,10 @@ func readRecent() []RecentFile {
 }
 
 func writeRecent(list []RecentFile) {
+	// Démo publique : la liste du poste n'est ni lue ni écrite.
+	if publicDemo.Load() {
+		return
+	}
 	p, err := recentFile()
 	if err != nil {
 		return
@@ -147,6 +154,9 @@ func addRecentDoc(d *doc.Document) {
 // noté par son chemin (versions précédentes) devient son classeur du
 // serveur.
 func (s *DocumentService) Recent(ctx context.Context) []RecentFile {
+	if publicDemo.Load() {
+		return demoRecent()
+	}
 	list := []RecentFile{}
 	for _, r := range readRecent() {
 		if !r.remote() {

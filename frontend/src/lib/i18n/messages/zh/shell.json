@@ -339,7 +339,9 @@
 		"close": "关闭",
 		"save": "保存（Ctrl+S）",
 		"undo": "撤消（Ctrl+Z）",
-		"redo": "恢复（Ctrl+Y）"
+		"redo": "恢复（Ctrl+Y）",
+		"demo": "演示",
+		"demoDetail": "演示：不会保留任何内容；Ctrl+S 下载工作簿"
 	},
 	"untitled": "未命名工作簿",
 	"about": {
@@ -903,7 +905,9 @@
 		"generating": "正在创建演示：{done} / {total} 行",
 		"opening": "正在打开演示…",
 		"openingShort": "正在打开…",
-		"readOnly": "演示：只能编辑表格单元格"
+		"readOnly": "演示：只能编辑表格单元格",
+		"recent": "演示 {name}",
+		"recentDetail": "演示工作簿"
 	},
 	"web": {
 		"reconnected": "已恢复与服务器的连接",

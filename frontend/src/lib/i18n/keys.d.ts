@@ -3611,6 +3611,8 @@ export interface MessageParams {
 	'shell.demo.openingShort': Record<never, never>;
 	'shell.demo.preset': { name: number | string };
 	'shell.demo.readOnly': Record<never, never>;
+	'shell.demo.recent': { name: number | string };
+	'shell.demo.recentDetail': Record<never, never>;
 	'shell.demo.sample': Record<never, never>;
 	'shell.doc.offline': { server: number | string };
 	'shell.doc.online': { server: number | string };
@@ -4347,6 +4349,8 @@ export interface MessageParams {
 	'shell.theme.title': Record<never, never>;
 	'shell.titleBar.close': Record<never, never>;
 	'shell.titleBar.comingSoon': { action: number | string };
+	'shell.titleBar.demo': Record<never, never>;
+	'shell.titleBar.demoDetail': Record<never, never>;
 	'shell.titleBar.maximize': Record<never, never>;
 	'shell.titleBar.minimize': Record<never, never>;
 	'shell.titleBar.redo': Record<never, never>;

@@ -339,7 +339,9 @@
 		"close": "Fermer",
 		"save": "Enregistrer (Ctrl+S)",
 		"undo": "Annuler (Ctrl+Z)",
-		"redo": "Rétablir (Ctrl+Y)"
+		"redo": "Rétablir (Ctrl+Y)",
+		"demo": "Démo",
+		"demoDetail": "Démo : rien n’est gardé ; Ctrl+S télécharge le classeur"
 	},
 	"untitled": "Classeur sans titre",
 	"about": {
@@ -903,7 +905,9 @@
 		"generating": "Création de la démo : {done} / {total} lignes",
 		"opening": "Ouverture de la démo…",
 		"openingShort": "Ouverture…",
-		"readOnly": "Démo : seules les cellules du tableau sont modifiables"
+		"readOnly": "Démo : seules les cellules du tableau sont modifiables",
+		"recent": "Démo {name}",
+		"recentDetail": "Classeur de démonstration"
 	},
 	"web": {
 		"reconnected": "Connexion au serveur rétablie",

@@ -339,7 +339,9 @@
 		"close": "Schließen",
 		"save": "Speichern (Strg+S)",
 		"undo": "Rückgängig (Strg+Z)",
-		"redo": "Wiederholen (Strg+Y)"
+		"redo": "Wiederholen (Strg+Y)",
+		"demo": "Demo",
+		"demoDetail": "Demo: Nichts wird gespeichert; Strg+S lädt die Arbeitsmappe herunter"
 	},
 	"untitled": "Unbenannte Arbeitsmappe",
 	"about": {
@@ -903,7 +905,9 @@
 		"generating": "Demo wird erstellt: {done} / {total} Zeilen",
 		"opening": "Demo wird geöffnet…",
 		"openingShort": "Wird geöffnet…",
-		"readOnly": "Demo: nur die Tabellenzellen können bearbeitet werden"
+		"readOnly": "Demo: nur die Tabellenzellen können bearbeitet werden",
+		"recent": "Demo {name}",
+		"recentDetail": "Demo-Arbeitsmappe"
 	},
 	"web": {
 		"reconnected": "Verbindung zum Server wiederhergestellt",

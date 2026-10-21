@@ -821,6 +821,13 @@ export interface Platform {
      * ui.language « auto » ; vide en web (celle du navigateur).
      */
     "locale"?: string;
+
+    /**
+     * Demo : démo publique (lattis-engine --public-demo) : pas de Serveur
+     * Lattis ni de connexion sortante, Enregistrer télécharge le classeur,
+     * rien n'est gardé.
+     */
+    "demo"?: boolean;
 }
 
 /**
@@ -872,6 +879,12 @@ export interface RecentFile {
     "serverName"?: string;
     "workbookId"?: string;
     "link"?: string;
+
+    /**
+     * Demo : classeur de démonstration de la démo publique (preset de
+     * internal/demo, voir DemoPresets) ; Title donne alors sa taille.
+     */
+    "demo"?: string;
 }
 
 /**

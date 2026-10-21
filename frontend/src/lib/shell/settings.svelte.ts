@@ -13,8 +13,10 @@ export const userSettings = $state<{ list: SettingState[] }>({ list: [] });
  * L'hôte (DocumentService.Platform) : version web, scripting permis. En
  * web, le scripting (Lua, boutons, pages web) est coupé tant que le serveur
  * ne l'a pas autorisé (web_scripting) ; le serveur MCP local n'existe pas.
+ * demo : démo publique (lattis-engine --public-demo), jetable : ni Serveur
+ * Lattis, ni connexion sortante, ni assistant ; Enregistrer télécharge.
  */
-export const platform = $state<{ web: boolean; scripting: boolean; locale?: string }>({ web: isWeb, scripting: !isWeb });
+export const platform = $state<{ web: boolean; scripting: boolean; locale?: string; demo?: boolean }>({ web: isWeb, scripting: !isWeb });
 
 /** Charge les réglages (silencieux en cas d'échec : valeurs par défaut). */
 export async function loadSettings() {
@@ -82,10 +84,15 @@ export function mcpAvailable(): boolean {
 
 /** Classeurs partagés (Serveur Lattis) activés : menu Compte, connexions lattis. */
 export function sharedWorkbooksEnabled(): boolean {
-	return boolSetting(userSettings.list, 'features.sharedWorkbooks', true);
+	return !platform.demo && boolSetting(userSettings.list, 'features.sharedWorkbooks', true);
 }
 
-/** L'Assistant IA est activé (opt-in, coupé par défaut). */
+/** L'Assistant IA est activé (opt-in, coupé par défaut ; jamais dans la démo publique). */
 export function aiEnabled(): boolean {
-	return boolSetting(userSettings.list, 'ai.enabled');
+	return !platform.demo && boolSetting(userSettings.list, 'ai.enabled');
+}
+
+/** Sources jointes par le réseau (bases de données, API web) : pas dans la démo publique. */
+export function networkSourcesEnabled(): boolean {
+	return !platform.demo;
 }

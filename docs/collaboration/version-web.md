@@ -191,6 +191,21 @@ LATTIS_ENGINE_SECRET=<secret> lattis-engine \
 - **Chemins** : `DocState.Path` ne donne que le nom du fichier (`bridge.HidePaths`) ; tout ce que la session écrit reste dans `--dir`.
 - La découverte (`/.well-known/lattis.json`) du serveur est lue une fois, pour les points PostgreSQL.
 
+### 6.2 Démo publique (`lattis-engine --public-demo`)
+
+Case « Démo publique » de l'administration du Serveur Lattis : `/demo/` sans connexion, un moteur par navigateur (le serveur borne le nombre de moteurs, la durée et les sessions par adresse IP). Le moteur est jetable :
+
+```
+lattis-engine --public-demo --addr 127.0.0.1:0 --dir <répertoire de session> --base-path /demo --idle 10m
+```
+
+- **Cycle de vie** : celui du mode serveur (`LISTENING 127.0.0.1:<port>` sur la sortie standard, arrêt à la fermeture de l'entrée standard, après `--idle` sans onglet, ou sur SIGINT/SIGTERM). À l'arrêt, le moteur **efface `--dir`** : classeur, copies de travail, fichiers envoyés et téléchargés, profil. Un moteur tué (SIGKILL) laisse `--dir` au serveur.
+- **Rien du compte du serveur** : les dossiers de configuration et de cache de l'utilisateur (`APPDATA`, `LOCALAPPDATA`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `HOME`) pointent sous `<dir>/profil` ; les réglages (Fichier › Paramètres) restent en mémoire (`config.Loader.Memory`, pas de `config.json`) ; mots de passe et clés d'API en mémoire, sans trousseau ; pas de liste des récents écrite, pas de récupération proposée au démarrage, pas d'accueil du premier lancement.
+- **Coupé** : session et menu Compte, « Ouvrir depuis un serveur », partage et publication, Data Lake (pas de Serveur Lattis) ; scripting (Lua, boutons, pages web) et assistant IA ; toute connexion sortante (`query.Guard.Offline` : bases de données PostgreSQL, MySQL, SQL Server, API web, module `http` des scripts). Les fichiers envoyés par le navigateur s'importent (sous `--dir`). Les options `--server`, `--token-url`, `--workbook`, `--scripting`, `--internal-hosts` et `--demo` sont refusées avec `--public-demo`.
+- **Enregistrer** (Ctrl+S, Enregistrer sous, F12) télécharge le classeur dans le navigateur, à chaque fois (« Démo : le classeur est téléchargé ») ; « Télécharger une copie » disparaît.
+- **Fichier › Ouvrir › Récents** propose « Démo small » et « Démo medium » (presets `sml` et `med`, `DocumentService.OpenPreset`) ; le moteur démarre sur un classeur vide. La barre de titre porte un badge « Démo ».
+- `Platform.demo` (DocumentService.Platform) le dit à l'interface.
+
 Points d'attention pour `lattisd` :
 
 1. **Une session par processus**, au moins pour commencer. Le moteur garde encore des états globaux au processus : configuration (`config.Current`), fichiers récents et sessions interrompues (dans les dossiers de l'utilisateur système), arrêt de script (`api.StopScript`), réglages MCP. Plusieurs moteurs dans un même processus partageraient ces états ; la spécification serveur (§ 18) permet l'isolation par processus : `lattisd` lance alors un processus moteur par session (par exemple `lattis-engine --addr 127.0.0.1:0 --dir …` derrière un relais), ou l'on retire ces états globaux avant de mutualiser.

@@ -122,21 +122,9 @@ func (l *Loader) SetUser(ctx context.Context, path string, v any) (*Config, erro
 	if l.Load(ctx).Locked(path) {
 		return nil, msg.New("config.locked", msg.Args{"path": path})
 	}
-	file := l.userFile()
-	if file == "" {
-		return nil, msg.New("config.userDirNotFound", nil)
-	}
-	t := Tree{}
-	b, err := os.ReadFile(file)
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-	case err != nil:
+	t, err := l.readUser()
+	if err != nil {
 		return nil, err
-	default:
-		if t, err = parseTree(b); err != nil {
-			// Ne pas écraser un fichier écrit à la main et cassé.
-			return nil, fmt.Errorf("%s : %w", file, err)
-		}
 	}
 	if remove {
 		// Retiré du fichier (null y masquerait un thème de l'organisation).
@@ -150,11 +138,7 @@ func (l *Loader) SetUser(ctx context.Context, path string, v any) (*Config, erro
 	} else {
 		setPath(t, path, v)
 	}
-	out, err := json.MarshalIndent(t, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	if err := writeFileAtomic(file, append(out, '\n')); err != nil {
+	if err := l.writeUser(t); err != nil {
 		return nil, err
 	}
 	c := l.Load(ctx)
@@ -190,23 +174,20 @@ func (l *Loader) ResetUser(ctx context.Context, paths []string) (*Config, error)
 	userMu.Lock()
 	defer userMu.Unlock()
 	cur := l.Load(ctx)
-	file := l.userFile()
-	if file == "" {
-		return nil, msg.New("config.userDirNotFound", nil)
+	if !l.Memory {
+		file := l.userFile()
+		if file == "" {
+			return nil, msg.New("config.userDirNotFound", nil)
+		}
+		if _, err := os.Stat(file); errors.Is(err, fs.ErrNotExist) {
+			// Rien d'écrit : déjà les valeurs par défaut.
+			SetCurrent(cur)
+			return cur, nil
+		}
 	}
-	b, err := os.ReadFile(file)
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		// Rien d'écrit : déjà les valeurs par défaut.
-		SetCurrent(cur)
-		return cur, nil
-	case err != nil:
-		return nil, err
-	}
-	t, err := parseTree(b)
+	t, err := l.readUser()
 	if err != nil {
-		// Ne pas écraser un fichier écrit à la main et cassé.
-		return nil, fmt.Errorf("%s : %w", file, err)
+		return nil, err
 	}
 	changed := false
 	for _, p := range paths {
@@ -215,11 +196,7 @@ func (l *Loader) ResetUser(ctx context.Context, paths []string) (*Config, error)
 		}
 	}
 	if changed {
-		out, err := json.MarshalIndent(t, "", "  ")
-		if err != nil {
-			return nil, err
-		}
-		if err := writeFileAtomic(file, append(out, '\n')); err != nil {
+		if err := l.writeUser(t); err != nil {
 			return nil, err
 		}
 	}
@@ -255,6 +232,57 @@ func deletePath(t Tree, path string) bool {
 		delete(t, k)
 	}
 	return true
+}
+
+// readUser lit les réglages de l'utilisateur : son config.json (absent :
+// aucun), ou la mémoire (Loader.Memory).
+func (l *Loader) readUser() (Tree, error) {
+	if l.Memory {
+		return l.memUser(), nil
+	}
+	file := l.userFile()
+	if file == "" {
+		return nil, msg.New("config.userDirNotFound", nil)
+	}
+	b, err := os.ReadFile(file)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return Tree{}, nil
+	case err != nil:
+		return nil, err
+	}
+	t, err := parseTree(b)
+	if err != nil {
+		// Ne pas écraser un fichier écrit à la main et cassé.
+		return nil, fmt.Errorf("%s : %w", file, err)
+	}
+	return t, nil
+}
+
+// writeUser écrit les réglages de l'utilisateur (config.json, ou la
+// mémoire).
+func (l *Loader) writeUser(t Tree) error {
+	if l.Memory {
+		l.memMu.Lock()
+		l.mem = deepCopy(t)
+		l.memMu.Unlock()
+		return nil
+	}
+	out, err := json.MarshalIndent(t, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeFileAtomic(l.userFile(), append(out, '\n'))
+}
+
+// memUser : copie des réglages gardés en mémoire (Loader.Memory).
+func (l *Loader) memUser() Tree {
+	l.memMu.Lock()
+	defer l.memMu.Unlock()
+	if l.mem == nil {
+		return Tree{}
+	}
+	return deepCopy(l.mem)
 }
 
 // writeFileAtomic écrit un fichier par un fichier temporaire renommé : une

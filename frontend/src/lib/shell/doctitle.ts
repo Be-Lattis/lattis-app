@@ -76,17 +76,25 @@ export function recentRemote(r: RecentFile): boolean {
 	return !!r.workbookId;
 }
 
+/** Classeur de démonstration des récents de la démo publique (RecentFile.demo : son preset). */
+export function recentDemo(r: RecentFile): string {
+	return r.demo ?? '';
+}
+
 /** Clé d'un récent (liste Svelte). */
 export function recentKey(r: RecentFile): string {
+	if (recentDemo(r)) return `demo\u0000${r.demo}`;
 	return recentRemote(r) ? `${r.server}\u0000${r.workbookId}` : r.path;
 }
 
-/** Nom d'un récent : titre d'un classeur du serveur, nom d'un fichier local. */
+/** Nom d'un récent : « Démo small » (démo publique), titre d'un classeur du serveur, nom d'un fichier local. */
 export function recentLabel(r: RecentFile): string {
+	if (recentDemo(r)) return t('shell.demo.recent', { name: r.title || r.demo || '' });
 	return recentRemote(r) ? r.title || t('shell.doc.sharedUntitled') : baseName(r.path);
 }
 
 /** Infobulle d'un récent : « En ligne sur LPO : https://…/w/<id> », ou le chemin du fichier. */
 export function recentDetail(r: RecentFile): string {
+	if (recentDemo(r)) return t('shell.demo.recentDetail');
 	return recentRemote(r) ? (r.link ? t('shell.doc.recentOnlineLink', { server: serverLabel(r), link: r.link }) : t('shell.doc.recentOnline', { server: serverLabel(r) })) : r.path;
 }

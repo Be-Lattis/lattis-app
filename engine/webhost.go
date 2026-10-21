@@ -60,6 +60,7 @@ type WebHost struct {
 	dir       string // répertoire de la session
 	base      string // préfixe des URL du moteur (« /engine »)
 	scripting bool
+	demo      bool // démo publique
 	secrets   bridge.SecretStore
 	clip      bridge.MemClipboard
 	guard     *query.Guard // sources des requêtes : fichiers de dir, pas d'adresse interne
@@ -258,7 +259,7 @@ func (h *WebHost) Window() bridge.WindowControl { return bridge.NoWindow() }
 // que les fichiers envoyés et ne joignent pas son réseau interne.
 func (h *WebHost) QueryGuard() *query.Guard { return h.guard }
 
-// Platform : version web, scripting selon le serveur.
+// Platform : version web, scripting selon le serveur, démo publique.
 func (h *WebHost) Platform() bridge.Platform {
-	return bridge.Platform{Web: true, Scripting: h.scripting}
+	return bridge.Platform{Web: true, Scripting: h.scripting, Demo: h.demo}
 }

@@ -51,6 +51,9 @@ func lattisPolicy() auth.Policy {
 var errSharedOff = msg.New("share.disabled", nil)
 
 func lattisOn() (*auth.Manager, error) {
+	if publicDemo.Load() {
+		return nil, errDemo
+	}
 	if !config.SharedWorkbooks(config.Current()) {
 		return nil, errSharedOff
 	}
@@ -168,12 +171,18 @@ func (s *DocumentService) LattisDeviceWait(ctx context.Context, url string) (aut
 
 // LattisCancelLogin abandonne la connexion en cours à un serveur.
 func (s *DocumentService) LattisCancelLogin(url string) {
+	if publicDemo.Load() {
+		return
+	}
 	lattisManager().Cancel(url)
 }
 
 // LattisSignOut ferme la session d'un serveur (jeton révoqué et oublié du
 // trousseau) et rend l'état à jour.
 func (s *DocumentService) LattisSignOut(ctx context.Context, url string) (LattisState, error) {
+	if publicDemo.Load() {
+		return s.LattisState(), errDemo
+	}
 	if n, err := auth.NormalizeURL(url); err == nil {
 		closeSharePools(n)
 	}

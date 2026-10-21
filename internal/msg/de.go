@@ -12,6 +12,7 @@ var de = map[ID]string{
 	"doc.closeCancelledByScript": "Schließen von einem Script abgebrochen (Ereignis before_close)",
 	"doc.downloadServer":         "Diese Arbeitsmappe liegt auf dem Server: Zum Behalten muss nichts heruntergeladen werden (Speichern unter erstellt eine separate Kopie)",
 	"doc.downloadWebOnly":        "Eine Kopie herunterladen gibt es nur in der Webversion: Die Arbeitsmappe ist bereits eine Datei auf diesem Computer",
+	"doc.demoDownloaded":         "Demo: Arbeitsmappe heruntergeladen",
 	"doc.downloaded":             "Kopie heruntergeladen: {file}",
 	"doc.invalidHost":            "ungültiger Host: Domänenname (und optionaler Port) erwartet",
 	"doc.lockFailed":             "Die Sperre neben „{file}“ konnte nicht erstellt werden (schreibgeschützter Ordner?): Ein anderer Computer, der die Datei öffnet, wird nicht gewarnt.",
@@ -551,6 +552,7 @@ var de = map[ID]string{
 
 	// Queries
 	"query.accessDenied":          "Zugriff verweigert",
+	"query.demoOffline":           "Demo: keine Netzwerkverbindungen („{host}“)",
 	"query.accessInternalAddress": "Zugriff verweigert: „{host}“ ist eine interne Adresse des Servers ({ip})",
 	"query.accessUploadsOnly":     "Zugriff verweigert: Auf diesem Server liest eine Abfrage nur Dateien, die aus dem Browser hochgeladen wurden ({file})",
 	"query.averageType":           "Mittelwert von „{column}“: Spalte vom Typ {type}",
@@ -985,6 +987,7 @@ var de = map[ID]string{
 	"share.detachReadOnly":      "Arbeitsmappe schreibgeschützt geöffnet: Verwenden Sie stattdessen „An einer lokalen Kopie arbeiten“",
 	"share.detachReopenFailed":  "Getrennte Arbeitsmappe in {path} gespeichert, aber das erneute Öffnen ist fehlgeschlagen: {err}",
 	"share.detached":            "Arbeitsmappe vom Server getrennt: „{name}“ ist jetzt eine lokale Arbeitsmappe und wird nicht mehr synchronisiert.",
+	"demo.unavailable":          "in der Demo nicht verfügbar",
 	"share.disabled":            "Geteilte Arbeitsmappen deaktiviert: Datei › Einstellungen › Funktionen › Geteilte Arbeitsmappen (Lattis Server)",
 	"share.invalidWorkbookId":   "ungültiger Bezeichner der Arbeitsmappe: {id}",
 	"share.localCopyNotSaved":   "Die lokale Kopie von „{title}“ konnte nicht gespeichert werden: Ihre noch nicht gesendeten Änderungen werden aufbewahrt und zur Wiederherstellung angeboten (Datei › Öffnen oder beim nächsten Start von Lattis)",

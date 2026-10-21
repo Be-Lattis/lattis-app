@@ -339,7 +339,9 @@
 		"close": "Close",
 		"save": "Save (Ctrl+S)",
 		"undo": "Undo (Ctrl+Z)",
-		"redo": "Redo (Ctrl+Y)"
+		"redo": "Redo (Ctrl+Y)",
+		"demo": "Demo",
+		"demoDetail": "Demo: nothing is kept; Ctrl+S downloads the workbook"
 	},
 	"untitled": "Untitled workbook",
 	"about": {
@@ -903,7 +905,9 @@
 		"generating": "Creating the demo: {done} / {total} rows",
 		"opening": "Opening the demo…",
 		"openingShort": "Opening…",
-		"readOnly": "Demo: only the table cells can be edited"
+		"readOnly": "Demo: only the table cells can be edited",
+		"recent": "Demo {name}",
+		"recentDetail": "Demo workbook"
 	},
 	"web": {
 		"reconnected": "Connection to the server restored",

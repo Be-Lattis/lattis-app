@@ -19,7 +19,7 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode, type Size } from './fit';
-	import { platform, scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
+	import { networkSourcesEnabled, platform, scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
 	import { lattis } from '#lib/remote/lattis.svelte.js';
 	import { keyLabel, pdfPrinterHint } from '#lib/web/platform.js';
 	import { isNarrow, revealX } from '#lib/ui/mobile.js';
@@ -713,9 +713,10 @@
 							{ label: t('ribbon.cmd.otherFiles.sqlite'), run: data('sqlite') }
 						]
 					},
-					{
+					// Démo publique : pas de base de données ni d'API web (aucune connexion sortante).
+					...(networkSourcesEnabled() ? [{
 						label: t('ribbon.cmd.database.label'), size: 'small' as const,
-						icon: 'database',
+						icon: 'database' as const,
 						run: ondata ? openItems : undefined,
 						hint: t('ribbon.cmd.database.tooltip'),
 						items: [
@@ -723,10 +724,10 @@
 							{ label: 'MySQL / MariaDB', run: data('mysql') },
 							{ label: 'SQL Server', run: data('sqlserver') }
 						]
-					},
+					}] : []),
 					// Serveur Lattis : bouton à lui, à côté des bases de données (comme les sources propres d'Excel).
 					...(sharedWorkbooksEnabled() && !lattisSignedIn ? [{ label: t('ribbon.cmd.lattisServer.label'), icon: 'link' as const, size: 'small' as const, run: data('lattis'), hint: t('ribbon.cmd.lattisServer.tooltip') }] : []),
-					{ label: t('ribbon.cmd.web.label'), icon: 'web', size: 'small' as const, run: data('web'), hint: t('ribbon.cmd.web.tooltip') },
+					...(networkSourcesEnabled() ? [{ label: t('ribbon.cmd.web.label'), icon: 'web' as const, size: 'small' as const, run: data('web'), hint: t('ribbon.cmd.web.tooltip') }] : []),
 				])
 			},
 			{
@@ -1458,7 +1459,7 @@
 						<button role="menuitem" disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
-					{#each [['save', t('ribbon.file.save'), 'Ctrl+S'], ['saveAs', t('ribbon.file.saveAs'), 'F12'], ...(platform.web && !shared ? [['download', t('ribbon.file.download'), '']] : []), ...(sharedWorkbooksEnabled() && !shared ? [['share', t('ribbon.file.share'), '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', t('ribbon.file.rights'), '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', t('ribbon.file.republish'), '']] : []), ...(sharedWorkbooksEnabled() && reconnect ? [['reconnect', t('ribbon.file.reconnect'), '']] : []), ...(sharedWorkbooksEnabled() && detach ? [['detach', t('ribbon.file.detach'), '']] : []), ['import', t('ribbon.file.import'), '']] as [a, label, keys] (a)}
+					{#each [['save', t('ribbon.file.save'), 'Ctrl+S'], ['saveAs', t('ribbon.file.saveAs'), 'F12'], ...(platform.web && !platform.demo && !shared ? [['download', t('ribbon.file.download'), '']] : []), ...(sharedWorkbooksEnabled() && !shared ? [['share', t('ribbon.file.share'), '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', t('ribbon.file.rights'), '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', t('ribbon.file.republish'), '']] : []), ...(sharedWorkbooksEnabled() && reconnect ? [['reconnect', t('ribbon.file.reconnect'), '']] : []), ...(sharedWorkbooksEnabled() && detach ? [['detach', t('ribbon.file.detach'), '']] : []), ['import', t('ribbon.file.import'), '']] as [a, label, keys] (a)}
 						<button role="menuitem" disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />

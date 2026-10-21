@@ -339,7 +339,9 @@
 		"close": "Cerrar",
 		"save": "Guardar (Ctrl+S)",
 		"undo": "Deshacer (Ctrl+Z)",
-		"redo": "Rehacer (Ctrl+Y)"
+		"redo": "Rehacer (Ctrl+Y)",
+		"demo": "Demo",
+		"demoDetail": "Demo: no se guarda nada; Ctrl+S descarga el libro"
 	},
 	"untitled": "Libro sin título",
 	"about": {
@@ -903,7 +905,9 @@
 		"generating": "Creando la demo: {done} / {total} filas",
 		"opening": "Abriendo la demo…",
 		"openingShort": "Abriendo…",
-		"readOnly": "Demo: solo se pueden modificar las celdas de las tablas"
+		"readOnly": "Demo: solo se pueden modificar las celdas de las tablas",
+		"recent": "Demo {name}",
+		"recentDetail": "Libro de demostración"
 	},
 	"web": {
 		"reconnected": "Conexión con el servidor restablecida",

@@ -11,6 +11,7 @@ var es = map[ID]string{
 	"doc.closeCancelledByScript": "Cierre cancelado por un script (evento before_close)",
 	"doc.downloadServer":         "Este libro está en el servidor: no hay nada que descargar para conservarlo (Guardar como hace una copia aparte)",
 	"doc.downloadWebOnly":        "Descargar una copia solo existe en la edición web: el libro ya es un archivo en este equipo",
+	"doc.demoDownloaded":         "Demo: libro descargado",
 	"doc.downloaded":             "Copia descargada: {file}",
 	"doc.invalidHost":            "host no válido: se espera un nombre de dominio (y un puerto opcional)",
 	"doc.lockFailed":             "No se pudo crear el bloqueo junto a «{file}» (¿carpeta de solo lectura?): otro equipo que lo abra no será avisado.",
@@ -550,6 +551,7 @@ var es = map[ID]string{
 
 	// Consultas
 	"query.accessDenied":          "acceso denegado",
+	"query.demoOffline":           "demo: sin conexiones de red («{host}»)",
 	"query.accessInternalAddress": "acceso denegado: «{host}» es una dirección interna del servidor ({ip})",
 	"query.accessUploadsOnly":     "acceso denegado: en este servidor, una consulta solo lee los archivos cargados desde el navegador ({file})",
 	"query.averageType":           "promedio de «{column}»: columna de tipo {type}",
@@ -984,6 +986,7 @@ var es = map[ID]string{
 	"share.detachReadOnly":      "libro abierto en solo lectura: use «Trabajar en una copia local»",
 	"share.detachReopenFailed":  "libro desvinculado guardado en {path}, pero no se ha podido volver a abrir: {err}",
 	"share.detached":            "Libro desvinculado del servidor: «{name}» es ahora un libro local, ya no se sincroniza.",
+	"demo.unavailable":          "no disponible en la demo",
 	"share.disabled":            "libros compartidos desactivados: Archivo › Configuración › Funciones › Libros compartidos (Servidor Lattis)",
 	"share.invalidWorkbookId":   "identificador de libro no válido: {id}",
 	"share.localCopyNotSaved":   "No se ha podido guardar la copia local de «{title}»: sus cambios todavía no enviados se conservan y se proponen para recuperarlos (Archivo › Abrir, o en el próximo inicio de Lattis)",

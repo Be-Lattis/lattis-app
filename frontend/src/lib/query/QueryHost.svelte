@@ -18,9 +18,9 @@
 	import PasswordDialog from './PasswordDialog.svelte';
 	import { newQuery } from './steps';
 	import { kindIcon, refreshedLabel } from './listview';
-	import { CONN_LABELS, describe, isDbKind, type ConnKind } from './sources';
+	import { CONN_LABELS, describe, isDbKind, NETWORK_KINDS, type ConnKind } from './sources';
 	import { requestLogin } from '#lib/remote/lattis.svelte.js';
-	import { sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
+	import { networkSourcesEnabled, sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
 	import { errorText, t } from '#lib/i18n/index.js';
 
 	interface Props {
@@ -80,7 +80,9 @@
 	// « Nouvelle connexion… » : toutes les sources, comme Données › Obtenir des
 	// données. Une base de données s'enregistre comme connexion ; les autres
 	// ouvrent l'éditeur de requête sur la source choisie.
-	const SOURCES: { group: string; items: { what: DataAction; label: string; icon: IconName }[] }[] = $derived([
+	// Démo publique : pas de source jointe par le réseau (bases de données, API web).
+	type SourceGroup = { group: string; items: { what: DataAction; label: string; icon: IconName }[] };
+	const ALL_SOURCES: SourceGroup[] = $derived([
 		{
 			group: t('query.host.group.file'),
 			items: [
@@ -108,6 +110,9 @@
 			]
 		}
 	]);
+	const SOURCES: SourceGroup[] = $derived(
+		ALL_SOURCES.map((g) => ({ ...g, items: g.items.filter((i) => networkSourcesEnabled() || !NETWORK_KINDS.includes(i.what)) })).filter((g) => g.items.length)
+	);
 	let picking = $state(false);
 	// Menu ⋯ ouvert : « q<id> » (requête) ou « c<id> » (connexion).
 	let menuFor = $state<string | null>(null);

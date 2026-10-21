@@ -12,7 +12,7 @@
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, OpenResult, RecentFile } from '#bindings/internal/bridge/models.js';
-	import { docFile, docFileName, recentDetail, recentKey, recentLabel, recentRemote, remoteBadge, savedNotice, shareBadge } from '#lib/shell/doctitle.js';
+	import { docFile, docFileName, recentDemo, recentDetail, recentKey, recentLabel, recentRemote, remoteBadge, savedNotice, shareBadge } from '#lib/shell/doctitle.js';
 	import type { Layout, RuleChanges } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
@@ -48,7 +48,7 @@
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { htmlTabsEnabled, loadSettings, mcpAvailable, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
+	import { htmlTabsEnabled, loadSettings, mcpAvailable, platform, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
 	import ThemeDialog from '#lib/shell/ThemeDialog.svelte';
 	import { resolveTheme, themeCatalog, themeExtras, themeId, themeLabel, workbookTheme, type WorkbookTheme } from '#lib/grid/theme.js';
 	import { isThemeRef } from '#lib/grid/colors.js';
@@ -816,6 +816,7 @@
 	 * s'ouvre (hors ligne, lecture seule).
 	 */
 	async function openRecent(r: RecentFile) {
+		if (recentDemo(r)) return openDemoPreset(r);
 		if (!recentRemote(r)) return openPath(r.path);
 		const server = r.server ?? '';
 		const where = serverLabel({ server, serverName: r.serverName ?? '' });
@@ -1072,6 +1073,13 @@
 	/** Ouvre le classeur de démonstration demandé au lancement (--demo preset). */
 	async function startPresetDemo(preset: string) {
 		await buildDemo(t('shell.demo.preset', { name: preset }), () => DocumentService.OpenDemo());
+	}
+
+	/** Démo publique : classeur de démonstration des récents (Démo small, Démo medium), à la place du classeur ouvert. */
+	async function openDemoPreset(r: RecentFile) {
+		queryHost?.closePanel();
+		await buildDemo(recentLabel(r), () => DocumentService.OpenPreset(recentDemo(r)));
+		workbookReady();
 	}
 
 	/** Classeur d'exemple de l'accueil : la vitrine, jamais enregistrée d'elle-même. */
@@ -2308,7 +2316,7 @@
 		undo={mode === 'doc' ? docState.undo : ''}
 		redo={mode === 'doc' ? docState.redo : ''}
 		ai={aiChat.open}
-		onai={() => (aiChat.open ? (aiChat.open = false) : openAssistant())}
+		onai={platform.demo ? undefined : () => (aiChat.open ? (aiChat.open = false) : openAssistant())}
 		onview={(v) => {
 			if (v !== view) sheet?.closeOverlays();
 			view = v;

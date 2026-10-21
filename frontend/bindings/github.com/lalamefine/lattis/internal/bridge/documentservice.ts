@@ -1291,6 +1291,16 @@ export function OpenLocked(path: string, readOnly: boolean): $CancellablePromise
 }
 
 /**
+ * OpenPreset ouvre un classeur de démonstration des récents de la démo
+ * publique (DemoPresets), à la place du classeur ouvert ; comme OpenSample,
+ * il n'est jamais enregistré de lui-même. Hors démo publique, ou un autre
+ * preset : refusé (pas de gros classeur fabriqué à la demande d'une page).
+ */
+export function OpenPreset(preset: string): $CancellablePromise<$models.DemoResult> {
+    return $Call.ByID(1504397485, preset);
+}
+
+/**
  * OpenSample ouvre le classeur d'exemple depuis l'accueil (audit 6, I8), à
  * la place du classeur ouvert (l'interface l'a fermé avant). Comme une
  * démonstration, il n'est jamais enregistré de lui-même et ne laisse rien

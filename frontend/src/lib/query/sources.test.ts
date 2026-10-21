@@ -43,6 +43,15 @@ group('sources des requêtes', () => {
 		expect(sourceKinds(false, 'formula').some((k) => k.value === 'formula')).toBe(true);
 	});
 
+	it('démo publique : pas de source jointe par le réseau', () => {
+		const kinds = sourceKinds(true, undefined, false).map((k) => k.value);
+		for (const k of ['postgres', 'mysql', 'sqlserver', 'web', 'lattis']) expect(kinds).not.toContain(k);
+		for (const k of ['csv', 'xlsx', 'json', 'parquet', 'sqlite', 'table', 'query', 'sql']) expect(kinds).toContain(k);
+		// Celle d'une requête reçue reste affichée (elle échoue à l'actualisation).
+		expect(sourceKinds(true, 'postgres', false).map((k) => k.value)).toContain('postgres');
+		expect(sourceKinds(true).map((k) => k.value)).toContain('web');
+	});
+
 	it('lit et écrit les en-têtes HTTP', () => {
 		const hs = parseHeaders('Accept: application/json\n\n  X-Trace : a:b \nsans deux-points');
 		expect(hs).toEqual([

@@ -11,7 +11,7 @@
 	import type { Connection, DBTable, PasswordNeed, Source, XLSXTable } from '#bindings/internal/query/models.js';
 	import { clone } from './steps';
 	import { CONN_LABELS, FILE_DB_KINDS, FILE_KINDS, describe, headersText, isDbKind, parseHeaders, sourceKinds, type ConnKind } from './sources';
-	import { sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
+	import { networkSourcesEnabled, sharedWorkbooksEnabled } from '#lib/shell/settings.svelte.js';
 	import { count } from '#lib/sql/result.js';
 	import { errorText, t } from '#lib/i18n/index.js';
 
@@ -168,7 +168,7 @@
 	>
 		<header>{t('query.source.title')}</header>
 		<div class="body">
-			<label class="field">{t('query.source.kind')} <Select value={s.kind} options={sourceKinds(sharedWorkbooksEnabled(), source.kind)} width="100%" onchange={changeKind} /></label>
+			<label class="field">{t('query.source.kind')} <Select value={s.kind} options={sourceKinds(sharedWorkbooksEnabled(), source.kind, networkSourcesEnabled())} width="100%" onchange={changeKind} /></label>
 			{#if isFile}
 				<div class="field">
 					{t('query.source.file.label')}

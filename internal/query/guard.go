@@ -27,6 +27,9 @@ type Guard struct {
 	// Hosts : hôtes permis même s'ils désignent une adresse interne
 	// (liste de l'administrateur, « hôte » ou « hôte:port »).
 	Hosts []string
+	// Offline refuse toute connexion réseau, Hosts compris (démo publique :
+	// pas de connexion sortante) ; les fichiers de Dir restent lisibles.
+	Offline bool
 	// resolve remplace la résolution DNS (tests).
 	resolve func(ctx context.Context, host string) ([]net.IP, error)
 }
@@ -66,6 +69,9 @@ func (g *Guard) Check(ctx context.Context, a Access) error {
 	if a.Path != "" {
 		return g.CheckPath(a.Path)
 	}
+	if g.Offline {
+		return g.offline(a.Host)
+	}
 	if a.Host == "" {
 		return nil
 	}
@@ -81,6 +87,12 @@ func (g *Guard) Check(ctx context.Context, a Access) error {
 		return fmt.Errorf("%s : %w", host, err)
 	}
 	return checkIPs(host, ips)
+}
+
+// offline refuse une connexion (Guard.Offline) ; host peut être vide (base
+// de données sans hôte : celui du pilote par défaut).
+func (g *Guard) offline(host string) error {
+	return msg.Wrap(ErrDenied, "query.demoOffline", msg.Args{"host": host})
 }
 
 // CheckPath vérifie qu'un fichier est sous Dir.
@@ -165,6 +177,9 @@ func (g *Guard) DialContext(ctx context.Context, network, addr string) (net.Conn
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, err
+	}
+	if g.Offline {
+		return nil, g.offline(addr)
 	}
 	d := &net.Dialer{Timeout: 30 * time.Second}
 	if g.listed(host, port) {

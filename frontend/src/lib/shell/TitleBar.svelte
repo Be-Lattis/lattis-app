@@ -19,6 +19,7 @@
 	import { isWeb } from '#lib/web/platform.js';
 	import type { IconName } from '#lib/icons/icons.js';
 	import AccountMenu from '#lib/remote/AccountMenu.svelte';
+	import { platform } from './settings.svelte.js';
 	import { windowTitle } from './doctitle.js';
 	import { t } from '#lib/i18n/index.js';
 
@@ -98,6 +99,8 @@
 		<span class="name">{title}</span>{#if dirty}<span class="muted" title={t('shell.titleBar.unsaved')}>&nbsp;•</span>{/if}
 		{#if badge}<span class="badge" class:offline title={badgeTitle || undefined}><Icon name={offline ? 'cloud-off' : 'cloud'} size={14} />{badge}</span>{/if}
 		{#if role}<button class="badge role" title={role.detail} onclick={onrole}>{role.label}</button>{/if}
+		<!-- Démo publique : rien n'est gardé (Ctrl+S télécharge le classeur). -->
+		{#if platform.demo}<span class="badge demo" title={t('shell.titleBar.demoDetail')}>{t('shell.titleBar.demo')}</span>{/if}
 		<span class="muted">{title ? '\u00a0– Lattis' : 'Lattis'}</span>
 	</div>
 	<AccountMenu />
@@ -231,6 +234,12 @@
 	}
 	.badge.role:hover {
 		background: rgba(255, 255, 255, 0.22);
+	}
+	.badge.demo {
+		padding: 1px 7px;
+		background: #f2c14e;
+		color: #3d2e00;
+		font-weight: 600;
 	}
 	.badge.offline {
 		background: rgba(0, 0, 0, 0.22);

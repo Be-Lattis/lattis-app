@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DocState, RecentFile } from '#bindings/internal/bridge/models.js';
 import type { State } from '#bindings/internal/remote/workbook/models.js';
-import { docFile, docFileName, recentDetail, recentKey, recentLabel, remoteBadge, savedNotice, serverLabel, shareBadge, windowTitle } from './doctitle';
+import { docFile, docFileName, recentDemo, recentDetail, recentKey, recentLabel, remoteBadge, savedNotice, serverLabel, shareBadge, windowTitle } from './doctitle';
 
 const cache = 'C:\\Users\\a\\AppData\\Local\\Lattis\\partages\\srv.test\\480f6888-5ec4-45ee-801b-b0891115cf3f.lattis';
 
@@ -77,6 +77,20 @@ describe('récents', () => {
 		expect(recentLabel(local)).toBe('Ventes.lattis');
 		expect(recentDetail(local)).toBe('D:\\Docs\\Ventes.lattis');
 		expect(recentKey(local)).toBe('D:\\Docs\\Ventes.lattis');
+	});
+});
+
+describe('récents de la démo publique', () => {
+	it('les classeurs de démonstration par leur taille', () => {
+		const small: RecentFile = { path: '', demo: 'sml', title: 'small' };
+		const medium: RecentFile = { path: '', demo: 'med', title: 'medium' };
+		expect(recentDemo(small)).toBe('sml');
+		expect(recentDemo({ path: 'D:\\a.lattis' })).toBe('');
+		expect(recentLabel(small)).toBe('Démo small');
+		expect(recentLabel(medium)).toBe('Démo medium');
+		expect(recentDetail(small)).toBe('Classeur de démonstration');
+		expect(recentKey(small)).not.toBe(recentKey(medium));
+		expect(recentKey(small)).not.toBe('');
 	});
 });
 

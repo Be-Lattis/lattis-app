@@ -165,7 +165,13 @@ func (s *DocumentService) ServiceShutdown() error {
 }
 
 // Orphans liste les sessions interrompues à proposer au démarrage.
-func (s *DocumentService) Orphans() ([]archive.Orphan, error) { return archive.Orphans() }
+func (s *DocumentService) Orphans() ([]archive.Orphan, error) {
+	// Démo publique : jetable, rien à récupérer.
+	if publicDemo.Load() {
+		return []archive.Orphan{}, nil
+	}
+	return archive.Orphans()
+}
 
 func (s *DocumentService) replace(d *doc.Document) error {
 	s.mu.Lock()
@@ -368,6 +374,9 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 		}
 	}
 	switch {
+	case publicDemo.Load():
+		// Démo publique : le classeur est téléchargé, jamais gardé.
+		return s.demoSave(ctx, d)
 	case d.ReadOnly():
 		// Ouvert en lecture seule : une copie, sous un autre nom.
 		return s.saveAs(ctx, d, docCopyName(d))

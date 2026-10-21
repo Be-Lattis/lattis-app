@@ -38,6 +38,12 @@ type Loader struct {
 	// UserFile remplace le config.json de l'utilisateur écrit par SetUser
 	// (tests ; Local doit alors le lire).
 	UserFile string
+	// Memory : réglages de l'utilisateur en mémoire, perdus à l'arrêt
+	// (démo publique) : son config.json n'est ni lu ni écrit.
+	Memory bool
+
+	memMu sync.Mutex
+	mem   Tree
 
 	mu            sync.Mutex
 	url           string
@@ -79,7 +85,15 @@ func (l *Loader) local() []Source {
 	if l.Local != nil {
 		return l.Local()
 	}
-	return localSources(l.SetFlags, l.Environ)
+	src := localSources(l.SetFlags, l.Environ)
+	if l.Memory {
+		for i, s := range src {
+			if f, ok := s.(*FileSource); ok && f.R == RankUser {
+				src[i] = &TreeSource{N: "réglages de la session (mémoire)", R: RankUser, T: l.memUser()}
+			}
+		}
+	}
+	return src
 }
 
 // Load résout la configuration, avec la configuration distante en cache.
@@ -221,7 +235,12 @@ func SetCurrent(c *Config) { current.Store(c) }
 // Init résout la configuration de l'application au démarrage (sans réseau)
 // et lance le rafraîchissement de la configuration distante.
 func Init(ctx context.Context, setFlags []string) *Loader {
-	l := &Loader{SetFlags: setFlags}
+	return InitLoader(ctx, &Loader{SetFlags: setFlags})
+}
+
+// InitLoader fait de l (Init) le Loader de l'application : avec Memory,
+// les réglages de l'utilisateur restent en mémoire (démo publique).
+func InitLoader(ctx context.Context, l *Loader) *Loader {
 	active.Store(l)
 	SetCurrent(l.Load(ctx))
 	l.StartRefresh(ctx, nil)

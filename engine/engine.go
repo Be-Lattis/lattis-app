@@ -19,6 +19,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/coder/websocket"
 	"github.com/lalamefine/lattis/internal/bridge"
@@ -55,6 +56,10 @@ type Options struct {
 	// OriginPatterns : origines permises pour le WebSocket en plus de la
 	// même origine (développement : « localhost:* »).
 	OriginPatterns []string
+	// PublicDemo : démo publique, jetable (lattis-engine --public-demo) :
+	// ni scripting, ni connexion sortante (InternalHosts ignoré), ni Serveur
+	// Lattis ; Enregistrer télécharge le classeur ; Close efface Dir.
+	PublicDemo bool
 }
 
 // Engine est un moteur Lattis : un classeur ouvert, ses services et leurs
@@ -65,6 +70,9 @@ type Engine struct {
 	host *WebHost
 	hub  *transport.Hub
 	mux  *http.ServeMux
+	// dispose : répertoire de la session à effacer à la fermeture (démo
+	// publique).
+	dispose string
 }
 
 // New crée et démarre un moteur.
@@ -89,10 +97,18 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 	if secrets == nil {
 		secrets = &bridge.MemSecrets{}
 	}
+	guard := &query.Guard{Dir: o.Dir, Hosts: o.InternalHosts}
+	if o.PublicDemo {
+		// Rien ne sort d'une démo publique : ni script, ni connexion.
+		o.Scripting = false
+		guard = &query.Guard{Dir: o.Dir, Offline: true}
+		bridge.UsePublicDemo(true)
+		e.dispose = o.Dir
+	}
 	e.host = &WebHost{
-		hub: e.hub, dir: o.Dir, base: base, scripting: o.Scripting, secrets: secrets,
+		hub: e.hub, dir: o.Dir, base: base, scripting: o.Scripting, demo: o.PublicDemo, secrets: secrets,
 		picks: map[string]chan pickResult{}, downloads: map[string]string{},
-		guard: &query.Guard{Dir: o.Dir, Hosts: o.InternalHosts},
+		guard: guard,
 	}
 	e.hub.OnIdle = e.host.cancelPicks
 	bridge.UseHost(e.host, e.grid, e.docs)
@@ -136,10 +152,28 @@ func (e *Engine) Emit(name string, data any) bool { return e.hub.Emit(name, data
 func (e *Engine) Connected() bool { return e.hub.Connected() }
 
 // Close ferme le classeur et les services. Un classeur modifié et non
-// enregistré reste dans le répertoire de travail (récupération).
+// enregistré reste dans le répertoire de travail (récupération), sauf en
+// démo publique : tout le répertoire de la session est effacé.
 func (e *Engine) Close() error {
 	e.host.cancelPicks()
-	return errors.Join(e.docs.ServiceShutdown(), e.grid.ServiceShutdown())
+	err := errors.Join(e.docs.ServiceShutdown(), e.grid.ServiceShutdown())
+	if e.dispose != "" {
+		err = errors.Join(err, removeAll(e.dispose))
+	}
+	return err
+}
+
+// removeAll efface dir ; quelques essais, le temps qu'un fichier tout juste
+// fermé soit relâché (Windows).
+func removeAll(dir string) error {
+	var err error
+	for i := 0; i < 10; i++ {
+		if err = os.RemoveAll(dir); err == nil {
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return err
 }
 
 // spa sert les fichiers du frontend, et index.html pour les autres chemins

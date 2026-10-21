@@ -88,6 +88,10 @@ type Platform struct {
 	// Locale : langue du système (« fr-FR ») sur le bureau, pour le réglage
 	// ui.language « auto » ; vide en web (celle du navigateur).
 	Locale string `json:"locale,omitempty"`
+	// Demo : démo publique (lattis-engine --public-demo) : pas de Serveur
+	// Lattis ni de connexion sortante, Enregistrer télécharge le classeur,
+	// rien n'est gardé.
+	Demo bool `json:"demo,omitempty"`
 }
 
 // errNoScripting refuse un script quand l'hôte ne le permet pas.

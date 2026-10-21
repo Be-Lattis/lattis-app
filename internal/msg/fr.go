@@ -13,6 +13,7 @@ var fr = map[ID]string{
 	"doc.closeCancelledByScript": "Fermeture annulée par un script (évènement before_close)",
 	"doc.downloadServer":         "Ce classeur est sur le serveur : il n'y a rien à télécharger pour le garder (Enregistrer sous en fait une copie à part)",
 	"doc.downloadWebOnly":        "Télécharger une copie n'existe que dans l'édition web : le classeur est déjà un fichier de ce poste",
+	"doc.demoDownloaded":         "Démo : le classeur est téléchargé",
 	"doc.downloaded":             "Copie téléchargée : {file}",
 	"doc.invalidHost":            "hôte invalide : nom de domaine (et port éventuel) attendu",
 	"doc.lockFailed":             "Impossible de poser le verrou à côté de « {file} » (dossier en lecture seule ?) : un autre poste qui l'ouvre ne sera pas prévenu.",
@@ -552,6 +553,7 @@ var fr = map[ID]string{
 
 	// Requêtes
 	"query.accessDenied":          "accès refusé",
+	"query.demoOffline":           "démo : aucune connexion réseau (« {host} »)",
 	"query.accessInternalAddress": "accès refusé : « {host} » désigne une adresse interne du serveur ({ip})",
 	"query.accessUploadsOnly":     "accès refusé : sur ce serveur, une requête ne lit que les fichiers envoyés depuis le navigateur ({file})",
 	"query.averageType":           "moyenne de « {column} » : colonne de type {type}",
@@ -986,6 +988,7 @@ var fr = map[ID]string{
 	"share.detachReadOnly":      "classeur ouvert en lecture seule : « Travailler sur une copie locale » à la place",
 	"share.detachReopenFailed":  "classeur détaché enregistré dans {path}, mais sa réouverture a échoué : {err}",
 	"share.detached":            "Classeur détaché du serveur : « {name} » est maintenant un classeur local, il ne se synchronise plus.",
+	"demo.unavailable":          "indisponible dans la démo",
 	"share.disabled":            "classeurs partagés désactivés : Fichier › Paramètres › Fonctionnalités › Classeurs partagés (Serveur Lattis)",
 	"share.invalidWorkbookId":   "identifiant de classeur invalide : {id}",
 	"share.localCopyNotSaved":   "La copie locale de « {title} » n'a pas pu être enregistrée : ses modifications pas encore envoyées sont gardées et proposées en récupération (Fichier › Ouvrir, ou au prochain lancement de Lattis)",

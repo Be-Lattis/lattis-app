@@ -10,6 +10,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Fichier › Paramètres › Mises à jour : la version installée et la dernière recherche d'une nouvelle version, avec son résultat (« à jour », la version disponible, ou la raison d'un échec : hors ligne, proxy, limite de GitHub), ou ce qui empêche la recherche (compilation de développement, installation MSIX mise à jour par Windows, recherche coupée par l'organisation ou désactivée). « Rechercher maintenant » cherche aussitôt, sans attendre les 12 heures entre deux recherches ; une nouvelle version trouvée est proposée dans la barre d'état.
 - Ruban Données : connecté à un Serveur Lattis, son bouton passe en grand, à côté de « À partir du tableau ».
+- Démo publique (`lattis-engine --public-demo`, servie par le Serveur Lattis sur /demo/ sans connexion) : Lattis s'essaie dans le navigateur sans rien installer. Enregistrer (Ctrl+S) télécharge le classeur ; Fichier › Ouvrir › Récents propose « Démo small » et « Démo medium » ; un badge « Démo » dans la barre de titre. Pas de Serveur Lattis, de scripts, d'assistant IA ni de connexion à une base de données ou à une API web ; rien n'est gardé à la fermeture.
 
 ### Changements
 

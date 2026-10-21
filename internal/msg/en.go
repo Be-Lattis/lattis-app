@@ -11,6 +11,7 @@ var en = map[ID]string{
 	"doc.closeCancelledByScript": "Close cancelled by a script (before_close event)",
 	"doc.downloadServer":         "This workbook is on the server: there is nothing to download to keep it (Save As makes a separate copy)",
 	"doc.downloadWebOnly":        "Download a copy only exists in the web edition: the workbook is already a file on this computer",
+	"doc.demoDownloaded":         "Demo: workbook downloaded",
 	"doc.downloaded":             "Copy downloaded: {file}",
 	"doc.invalidHost":            "invalid host: domain name (and optional port) expected",
 	"doc.lockFailed":             "Could not create the lock next to “{file}” (read-only folder?): another computer opening it will not be warned.",
@@ -550,6 +551,7 @@ var en = map[ID]string{
 
 	// Queries
 	"query.accessDenied":          "access denied",
+	"query.demoOffline":           "demo: no network connections (“{host}”)",
 	"query.accessInternalAddress": "access denied: “{host}” is an internal address of the server ({ip})",
 	"query.accessUploadsOnly":     "access denied: on this server, a query only reads files uploaded from the browser ({file})",
 	"query.averageType":           "average of “{column}”: column of type {type}",
@@ -984,6 +986,7 @@ var en = map[ID]string{
 	"share.detachReadOnly":      "workbook opened read-only: “Work on a local copy” instead",
 	"share.detachReopenFailed":  "detached workbook saved in {path}, but reopening it failed: {err}",
 	"share.detached":            "Workbook detached from the server: “{name}” is now a local workbook, it no longer syncs.",
+	"demo.unavailable":          "not available in the demo",
 	"share.disabled":            "shared workbooks disabled: File › Settings › Features › Shared workbooks (Lattis Server)",
 	"share.invalidWorkbookId":   "invalid workbook identifier: {id}",
 	"share.localCopyNotSaved":   "The local copy of “{title}” could not be saved: its changes not yet sent are kept and offered for recovery (File › Open, or at the next launch of Lattis)",
