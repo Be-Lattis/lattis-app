@@ -328,7 +328,9 @@
 		"uiTitle": "Fehler der Oberfläche",
 		"uiDetail": "Die Details (Stapel, letzte Aktionen) stehen im Fehlerprotokoll. Die Arbeitsmappe ist nicht verloren.",
 		"retry": "Erneut versuchen",
-		"reloadUi": "Oberfläche neu laden"
+		"reloadUi": "Oberfläche neu laden",
+		"reset": "Einstellungen zurücksetzen",
+		"resetConfirm": "Alle Einstellungen auf die Standardwerte zurücksetzen und neu laden?"
 	},
 	"titleBar": {
 		"comingSoon": "{action}: in Kürze verfügbar",

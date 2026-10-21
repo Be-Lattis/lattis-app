@@ -328,7 +328,9 @@
 		"uiTitle": "Erreur de l’interface",
 		"uiDetail": "Le détail (pile, dernières actions) est dans le journal des erreurs. Le classeur n’est pas perdu.",
 		"retry": "Réessayer",
-		"reloadUi": "Recharger l’interface"
+		"reloadUi": "Recharger l’interface",
+		"reset": "Réinitialiser les paramètres par défaut",
+		"resetConfirm": "Remettre tous les paramètres à leur valeur par défaut, puis recharger ?"
 	},
 	"titleBar": {
 		"comingSoon": "{action} : à venir",

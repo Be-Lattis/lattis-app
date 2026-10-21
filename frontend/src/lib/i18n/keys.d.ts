@@ -3583,6 +3583,8 @@ export interface MessageParams {
 	'shell.crash.logged': { path: number | string };
 	'shell.crash.reload': Record<never, never>;
 	'shell.crash.reloadUi': Record<never, never>;
+	'shell.crash.reset': Record<never, never>;
+	'shell.crash.resetConfirm': Record<never, never>;
 	'shell.crash.retry': Record<never, never>;
 	'shell.crash.status': { status: number | string };
 	'shell.crash.title': Record<never, never>;

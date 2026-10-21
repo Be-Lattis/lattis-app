@@ -328,7 +328,9 @@
 		"uiTitle": "Interface error",
 		"uiDetail": "The details (stack, last actions) are in the error log. The workbook is not lost.",
 		"retry": "Try again",
-		"reloadUi": "Reload the interface"
+		"reloadUi": "Reload the interface",
+		"reset": "Reset settings to defaults",
+		"resetConfirm": "Reset all settings to their defaults, then reload?"
 	},
 	"titleBar": {
 		"comingSoon": "{action}: coming soon",

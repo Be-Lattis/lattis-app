@@ -328,7 +328,9 @@
 		"uiTitle": "界面错误",
 		"uiDetail": "详细信息（堆栈、最近的操作）在错误日志中。工作簿没有丢失。",
 		"retry": "重试",
-		"reloadUi": "重新加载界面"
+		"reloadUi": "重新加载界面",
+		"reset": "恢复默认设置",
+		"resetConfirm": "将所有设置恢复为默认值，然后重新加载？"
 	},
 	"titleBar": {
 		"comingSoon": "{action}：即将推出",

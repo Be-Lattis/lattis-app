@@ -328,7 +328,9 @@
 		"uiTitle": "Error de la interfaz",
 		"uiDetail": "Los detalles (pila, últimas acciones) están en el registro de errores. El libro no se ha perdido.",
 		"retry": "Reintentar",
-		"reloadUi": "Volver a cargar la interfaz"
+		"reloadUi": "Volver a cargar la interfaz",
+		"reset": "Restablecer la configuración predeterminada",
+		"resetConfirm": "¿Restablecer toda la configuración predeterminada y volver a cargar?"
 	},
 	"titleBar": {
 		"comingSoon": "{action}: próximamente",

@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Écran d'erreur : « Réinitialiser les paramètres par défaut » (après confirmation, puis rechargement) pour sortir d'un réglage qui fait planter ; ses libellés restent lisibles en anglais à côté de la traduction.
+
 ## 0.3.3-beta (21/10/2026)
 
 ### Nouveautés
