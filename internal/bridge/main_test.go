@@ -17,6 +17,8 @@ func TestMain(m *testing.M) {
 	recentFile = func() (string, error) { return filepath.Join(dir, "recent.json"), nil }
 	// Ni l'index des serveurs ni le trousseau de l'utilisateur.
 	serverLabelOf = func(string) string { return "" }
+	// Essais rédigés en français, quelle que soit la langue de la machine (CI en anglais).
+	os.Setenv("LATTIS_SYSTEM_LOCALE", "fr-FR")
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)

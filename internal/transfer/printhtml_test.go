@@ -3,6 +3,7 @@ package transfer
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -95,7 +96,8 @@ func TestPrintPageSetup(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	info := PrintInfo{Path: `C:\docs\Stock.lattis`, Now: time.Date(2026, 10, 19, 9, 5, 0, 0, time.UTC)}
+	// Chemin du système : le nom du fichier se lit de même sous Windows et Linux.
+	info := PrintInfo{Path: filepath.Join("docs", "Stock.lattis"), Now: time.Date(2026, 10, 19, 9, 5, 0, 0, time.UTC)}
 	print := func() string {
 		t.Helper()
 		html, err := PrintHTML(ctx, d.Model, 1, info)

@@ -18,6 +18,8 @@ concurrency:
 
 env:
   WAILS_VERSION: v3.0.0-beta.30
+  # Essais rédigés en français : la langue du système des machines GitHub (anglais) n'y joue pas.
+  LATTIS_SYSTEM_LOCALE: fr-FR
 
 jobs:
   go:
