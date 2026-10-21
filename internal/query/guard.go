@@ -123,18 +123,35 @@ func (g *Guard) CheckPath(p string) error {
 	if err != nil {
 		return deny
 	}
-	if d, err := filepath.EvalSymlinks(dir); err == nil {
-		dir = d
-	}
-	f := filepath.Clean(p)
-	if e, err := filepath.EvalSymlinks(f); err == nil {
-		f = e
-	}
+	dir = resolveExisting(dir)
+	f := resolveExisting(filepath.Clean(p))
 	rel, err := filepath.Rel(dir, f)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
 		return deny
 	}
 	return nil
+}
+
+// resolveExisting suit les liens de p, ou de son plus proche parent qui
+// existe (un fichier pas encore créé) : les deux chemins comparés par
+// CheckPath sont alors écrits de même (Windows : nom court « RUNNER~1 »
+// d'un dossier temporaire contre son nom long).
+func resolveExisting(p string) string {
+	rest := ""
+	for cur := p; ; {
+		if e, err := filepath.EvalSymlinks(cur); err == nil {
+			if rest == "" {
+				return e
+			}
+			return filepath.Join(e, rest)
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return p
+		}
+		rest = filepath.Join(filepath.Base(cur), rest)
+		cur = parent
+	}
 }
 
 func (g *Guard) listed(host, port string) bool {

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -138,6 +139,12 @@ func TestCloseKeepsQueueWhenCacheFails(t *testing.T) {
 	mustShare(t, err)
 	mustShare(t, os.Chmod(cache, 0o444))
 	t.Cleanup(func() { os.Chmod(cache, 0o644) })
+	// Hors Windows, un fichier en lecture seule se remplace encore (écriture
+	// dans un fichier voisin puis renommage) : c'est son dossier qui l'empêche.
+	if runtime.GOOS != "windows" {
+		mustShare(t, os.Chmod(filepath.Dir(cache), 0o555))
+		t.Cleanup(func() { os.Chmod(filepath.Dir(cache), 0o755) })
+	}
 	err = s.CloseDocument(ctx)
 	if err == nil {
 		t.Fatal("aucun message alors que le cache n'a pas pu être enregistré")
