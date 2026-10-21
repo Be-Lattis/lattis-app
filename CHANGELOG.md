@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Changements
+
+- Barre d'état : moyenne et somme de la sélection à deux décimales, les trois indicateurs séparés par « • ».
+
 ## 0.3.5-beta (21/10/2026)
 
 ### Changements

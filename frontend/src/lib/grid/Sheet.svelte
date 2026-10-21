@@ -5233,14 +5233,13 @@
 		const parts = [];
 		// Comme Excel : au format de la cellule active, sinon arrondies.
 		let st = styleAt(active.row, active.col);
-		const e = tableAt(active.row, active.col);
-		const col = e?.t.columns[active.col - e.t.col];
-		// Colonne décimale sans format : deux décimales, comme ses cellules.
-		if (col && st?.nf === undefined && st?.dp === undefined && (col.type === 'decimal' || (col.type === 'formula' && col.result === 'decimal'))) st = { ...st, dp: 2 };
+		// Moyenne et somme à deux décimales (demande de Louis, 21/10), sauf
+		// nombre de décimales fixé par le format de la cellule.
+		if (st?.dp === undefined) st = { ...st, dp: 2 };
 		if (nums) parts.push(tr('grid.status.average', { value: formatStat(sum / nums, st) }));
 		parts.push(tr('grid.status.count', { n: count }));
 		if (nums) parts.push(tr('grid.status.sum', { value: formatStat(sum, st) }));
-		return parts.join('   ');
+		return parts.join('  •  ');
 	}
 
 	/** Totaux de la sélection par le moteur (SQL) : cellules libres et en-têtes ici, données là-bas. */
