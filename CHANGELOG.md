@@ -18,6 +18,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Corrections
 
+- AppImage : démarre sur Fedora et les distributions hors Debian, et sur Debian/Ubuntu sans WebKitGTK installé, au lieu de s'arrêter aussitôt ; le bac à sable de WebKit (bubblewrap) n'y est pas utilisé, les paquets .deb et .rpm le gardent.
 - Interface en chinois : elle ne plante plus au démarrage (deux commandes du ruban portaient le même libellé traduit).
 - Source d'une requête : les tables internes de Lattis (lattis_meta_*, _lattis_*, schéma lattis d'un Serveur Lattis) ne sont plus listées.
 - Édition web : le lien « Ouvrir dans le navigateur » d'un classeur partagé (/w/…) ouvre bien ce classeur, au lieu d'un classeur vide ; le menu Compte affiche le nom ou l'e-mail de l'utilisateur au lieu de « ? ».

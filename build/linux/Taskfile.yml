@@ -119,7 +119,11 @@ tasks:
       - cp "{{.APP_BINARY}}" "{{.APP_NAME}}"
       - cp ../../appicon.png "{{.APP_NAME}}.png"
       - wails3 generate appimage -binary "{{.APP_NAME}}" -icon {{.ICON}} -desktopfile {{.DESKTOP_FILE}} -outputdir {{.OUTPUT_DIR}} -builddir {{.ROOT_DIR}}/build/linux/appimage/build
+      # Auxiliaires de WebKit exécutables et trouvés hors Debian (Fedora…),
+      # nouvel AppRun, puis AppImage reconstruite au même endroit.
+      - bash patch-appdir.sh "{{.ROOT_DIR}}/build/linux/appimage/build/{{.APP_NAME}}-{{.APPIMAGE_ARCH}}.AppDir" "{{.OUTPUT_DIR}}/{{.APP_NAME}}-{{.APPIMAGE_ARCH}}.AppImage"
     vars:
+      APPIMAGE_ARCH: '{{if eq ARCH "arm64"}}aarch64{{else}}x86_64{{end}}'
       APP_NAME: '{{.APP_NAME}}'
       APP_BINARY: '../../../bin/{{.APP_NAME}}'
       ICON: '{{.APP_NAME}}.png'

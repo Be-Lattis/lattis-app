@@ -282,8 +282,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # glib-networking et patchelf : build/linux/appimage/patch-appdir.sh
+      # (module TLS de GIO embarqué, RUNPATH des auxiliaires de WebKit).
       - name: Dépendances (GTK 4, WebKitGTK 6, AppImage)
-        run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev file desktop-file-utils
+        run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev file desktop-file-utils glib-networking patchelf
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
       - name: Version
         run: build/release/set-version.sh "$VERSION"
