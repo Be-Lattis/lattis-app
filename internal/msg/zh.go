@@ -1148,6 +1148,8 @@ var zh = map[ID]string{
 	"collab.structureOffline":               "无法访问服务器，结构更改已撤消：{errText}",
 	"collab.tableAdded":                     "表格“{table}”已添加到共享工作簿：其他成员将收到它",
 	"collab.tableArrived":                   "设计者已将表格“{table}”添加到共享工作簿",
+	"collab.tableNotAdded":                  "表格“{table}”仅保留在本机：未能添加到共享工作簿（{err}）",
+	"collab.tableStaysLocal":                "表格“{table}”仅保留在本机：只有所有者和设计者可以向共享工作簿添加表格",
 	"collab.tableDeletedOnServer":           "表格“{table}”已在服务器上删除",
 	"collab.tableDeletedOnServerForgot":     "表格“{table}”已在服务器上删除：撤消历史记录已清除",
 	"collab.tableError":                     "表格“{table}”：{err}",

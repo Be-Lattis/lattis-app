@@ -1516,5 +1516,9 @@
 	"keys": {
 		"enter": "Entrar",
 		"escape": "Esc"
+	},
+	"local": {
+		"badge": "en este equipo",
+		"tooltip": "Esta tabla solo está en este equipo: los demás miembros no la ven. Una tabla creada por el propietario o un diseñador se agrega sola al libro compartido (sin conexión: al reconectarse). Haga clic para agregarla al libro compartido"
 	}
 }

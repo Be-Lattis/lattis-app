@@ -1146,6 +1146,8 @@ var en = map[ID]string{
 	"collab.structureOffline":               "Server unreachable, structure change undone: {errText}",
 	"collab.tableAdded":                     "Table “{table}” added to the shared workbook: the other members receive it",
 	"collab.tableArrived":                   "Table “{table}” added to the shared workbook by a designer",
+	"collab.tableNotAdded":                  "Table “{table}” kept on this computer: it could not be added to the shared workbook ({err})",
+	"collab.tableStaysLocal":                "Table “{table}” kept on this computer: only the owner and designers add tables to the shared workbook",
 	"collab.tableDeletedOnServer":           "Table “{table}” deleted on the server",
 	"collab.tableDeletedOnServerForgot":     "Table “{table}” deleted on the server: undo history cleared",
 	"collab.tableError":                     "table “{table}”: {err}",

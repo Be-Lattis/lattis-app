@@ -11,6 +11,12 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Barre de titre d'un classeur partagé : une seule pastille « en ligne sur … | Rôle », cliquable, qui ouvre l'accès au classeur.
 - Écran d'erreur : « Réinitialiser les paramètres par défaut » (après confirmation, puis rechargement) pour sortir d'un réglage qui fait planter ; ses libellés restent lisibles en anglais à côté de la traduction.
 
+### Changements
+
+- Classeur partagé en direct : un tableau créé par le propriétaire ou un concepteur (saisi, collé, inséré, converti d'une plage…) est ajouté de lui-même au classeur partagé, sans passer par « Ajouter au classeur partagé » ; hors ligne, il l'est à la reconnexion. Jusqu'ici il restait sur le poste de son auteur sans que rien ne le dise, et chacun ne voyait que ses propres tableaux.
+- Un tableau qui reste sur le poste (chargé par une requête, refusé par le serveur, créé par un éditeur) porte une pastille ambre « sur ce poste » au-dessus de son cadre ; un clic propose de l'ajouter au classeur partagé. Un éditeur est prévenu une fois que seuls le propriétaire et les concepteurs ajoutent des tableaux.
+- Ctrl+Z de la création d'un tableau partagé le supprime aussi du serveur, pour tous (comme « Supprimer le tableau ») au lieu d'être refusé ; Ctrl+Y le recrée et l'ajoute de nouveau.
+
 ### Corrections
 
 - Windows : la mise à jour téléchargée s'installe vraiment à la fermeture de Lattis (croix de la fenêtre, Alt+F4, « Redémarrez l'application… »). Jusqu'ici, fermer la fenêtre sans classeur modifié ne lançait pas l'installeur et « Redémarrez l'application pour appliquer la mise à jour » revenait à chaque lancement. Les versions 0.3.3-beta et antérieures restent concernées : installez celle-ci une fois depuis sa page de version.

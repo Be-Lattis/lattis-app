@@ -207,6 +207,16 @@ func (w *worker) cycle(ctx context.Context) {
 		ev.Sync = true
 	}
 	if err == nil {
+		// Tableaux nés sur ce poste (saisis, collés, insérés…, ici ou hors
+		// ligne) : ajoutés au classeur partagé (partage automatique).
+		var r Report
+		r, err = w.e.AutoShare(ctx)
+		rep.add(r)
+		if len(r.Shared) > 0 {
+			ev.State = true // tableaux partagés : marque « sur ce poste » retirée
+		}
+	}
+	if err == nil {
 		// Catégorie d'un onglet à choix posée, changée ou retirée ici par un
 		// concepteur ; à la connexion, celles changées hors ligne.
 		err = w.e.PublishChoices(ctx, full)

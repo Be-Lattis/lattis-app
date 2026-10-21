@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/remote/collab"
-	"github.com/lalamefine/lattis/internal/remote/oplog"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -147,22 +146,26 @@ func TestAddTableToSharedWorkbook(t *testing.T) {
 		t.Fatalf("place chez Carol : ligne %d", row)
 	}
 
-	// La création du tableau ne s'annule plus : ce serait le supprimer pour
-	// tous (oplog.ErrImplicitDrop).
-	for {
-		var un string
-		un, err = alice.d.Bus.Undo(ctx)
+	// Ctrl+Z jusqu'à la création du tableau : il est supprimé du serveur,
+	// comme par « Supprimer le tableau » (partage automatique : un tableau
+	// créé par erreur s'annule) ; les autres ne l'ont plus.
+	for alive(t, alice, tbl) {
+		un, err := alice.d.Bus.Undo(ctx)
 		t.Logf("annulé %q : %v", un, err)
-		if err != nil {
-			break
-		}
-		if !alive(t, alice, tbl) {
-			t.Fatal("annulation : le tableau partagé a disparu")
-		}
+		must(t, err)
 	}
-	var drop oplog.ErrImplicitDrop
-	if !errors.As(err, &drop) || !alive(t, alice, tbl) {
-		t.Fatalf("annulation de la création : %v", err)
+	if r := alice.send(); r.Rejected != 0 {
+		t.Fatalf("envoi de l'annulation : %+v", r)
+	}
+	if _, _, _, tables := f.Book(id); strings.Join(tables, ",") != "Ventes" {
+		t.Fatalf("tableaux du serveur après annulation : %v", tables)
+	}
+	for _, c := range []*client{bob, carol} {
+		_, err = c.e.ReceiveStructure(ctx, nil, nil)
+		must(t, err)
+		if hasTable(c, "Stock") {
+			t.Fatalf("Stock toujours chez %s", c.name)
+		}
 	}
 }
 
@@ -182,14 +185,15 @@ func TestAddTableFollowed(t *testing.T) {
 		_, err := tx.Exec(`INSERT INTO _lattis_cells (sheet, row, col, raw) VALUES (1, 11, 1, 'note de Bob')`)
 		return err
 	}))
-	tbl := newLocalTable(t, alice, "Stock", 10)
-	_, err := alice.e.AddTable(ctx, tbl)
-	must(t, err)
+	// Partage automatique : le tableau collé part de lui-même (suivi), sans
+	// « Ajouter au classeur partagé ».
+	newLocalTable(t, alice, "Stock", 10)
+	alice.e.Kick()
 	waitFor(t, "Stock chez Bob", func() bool { return hasTable(bob, "Stock") })
 	if _, row := anchorOf(t, bob, "Stock"); row <= 11 {
 		t.Fatalf("Stock recouvre la cellule de Bob : ligne %d", row)
 	}
-	_, err = alice.d.SetCell(ctx, 1, 11, 1, "121")
+	_, err := alice.d.SetCell(ctx, 1, 11, 1, "121")
 	must(t, err)
 	alice.e.Kick()
 	waitFor(t, "valeur d'Alice chez Bob", func() bool { return values(t, bob, "Stock", "Stock")[0] == "121" })

@@ -42,10 +42,15 @@ type Report struct {
 	Choices bool
 	// Layout : mise en page reçue du serveur (cellules libres, feuilles…).
 	Layout bool
+	// Shared : tableaux nés sur ce poste ajoutés au classeur partagé
+	// (AutoShare).
+	Shared []int64
 }
 
 // Changed : des données locales ont changé (la grille est à relire).
-func (r Report) Changed() bool { return len(r.Applied.Tables) > 0 || r.Choices || r.Layout }
+func (r Report) Changed() bool {
+	return len(r.Applied.Tables) > 0 || r.Choices || r.Layout || len(r.Shared) > 0
+}
 
 func (r *Report) notice(msg string) {
 	if msg != "" && !slices.Contains(r.Notices, msg) {
@@ -62,6 +67,7 @@ func (r *Report) add(o Report) {
 	r.Reloaded += o.Reloaded
 	r.Choices = r.Choices || o.Choices
 	r.Layout = r.Layout || o.Layout
+	r.Shared = append(r.Shared, o.Shared...)
 	r.Applied.Inserted += o.Applied.Inserted
 	r.Applied.Updated += o.Applied.Updated
 	r.Applied.Deleted += o.Applied.Deleted

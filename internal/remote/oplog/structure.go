@@ -327,7 +327,10 @@ func (s *session) structure(fn StructureFunc, w *writer, kind string, ops []comm
 		return nil
 	}
 	for _, c := range ch {
-		if c.Action == DropTable && !dropWanted(ops, c.Table) {
+		// Une annulation qui fait disparaître un tableau partagé défait sa
+		// création (il n'existait pas avant l'action annulée) : il est
+		// supprimé du serveur, comme par « Supprimer le tableau ».
+		if c.Action == DropTable && kind != command.KindUndo && !dropWanted(ops, c.Table) {
 			return ErrImplicitDrop{Table: c.Name}
 		}
 	}

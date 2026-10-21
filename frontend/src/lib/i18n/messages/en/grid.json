@@ -1516,5 +1516,9 @@
 	"keys": {
 		"enter": "Enter",
 		"escape": "Esc"
+	},
+	"local": {
+		"badge": "on this computer",
+		"tooltip": "This table is only on this computer: the other members don't see it. A table created by the owner or a designer is added to the shared workbook automatically (offline: on reconnection). Click to add it to the shared workbook"
 	}
 }

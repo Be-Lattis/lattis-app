@@ -25,12 +25,12 @@ Un classeur ouvert depuis un dossier partagé est signalé aux autres postes par
 
 ## Ajouter un tableau à un classeur partagé en direct
 
-Dans un classeur collaboratif (partagé en direct sur un Serveur Lattis), un tableau créé après la publication n'est d'abord que sur votre poste. Clic droit sur le tableau › **Ajouter au classeur partagé…** le crée dans le classeur du serveur, avec ses lignes : les autres membres le reçoivent aussitôt (à la même place sur la feuille, ou dessous si la place est prise chez eux), avec un message dans la barre d'état, et il se synchronise ensuite comme les autres tableaux partagés (saisies, conflits, droits). La même action est proposée par **Partager au Data Lake Lattis…** (« Ajouter ce tableau au classeur partagé », en premier) et dans **Gérer l'accès** › Rôles et droits, sous la liste des tableaux.
+Dans un classeur collaboratif (partagé en direct sur un Serveur Lattis), un tableau créé après la publication par un propriétaire ou un concepteur (saisi, collé, inséré, converti d'une plage…) est ajouté de lui-même au classeur partagé, aussitôt créé ; hors ligne, il l'est à la reconnexion. Un tableau qui reste sur votre poste (chargé par une requête, refusé par le serveur, ou créé par un éditeur) porte la pastille ambre **sur ce poste** au-dessus de son cadre : les autres membres ne le voient pas. Un clic sur la pastille, ou clic droit sur le tableau › **Ajouter au classeur partagé…**, le crée dans le classeur du serveur, avec ses lignes : les autres membres le reçoivent aussitôt (à la même place sur la feuille, ou dessous si la place est prise chez eux), avec un message dans la barre d'état, et il se synchronise ensuite comme les autres tableaux partagés (saisies, conflits, droits). La même action est proposée par **Partager au Data Lake Lattis…** (« Ajouter ce tableau au classeur partagé », en premier) et dans **Gérer l'accès** › Rôles et droits, sous la liste des tableaux.
 
 - Réservé aux propriétaires et concepteurs du classeur, et seulement en ligne : la boîte le dit sinon.
 - Les types des colonnes sont figés comme pour les autres tableaux partagés ; les colonnes calculées restent calculées sur chaque poste. Les saisies invalides sont à corriger d'abord.
 - Un refus du serveur (nom déjà pris par un autre tableau du classeur, par exemple) s'affiche dans la barre d'état et ne change rien.
-- L'ajout ne s'annule pas par `Ctrl+Z` (la boîte de confirmation le rappelle) : pour retirer le tableau du classeur partagé, **Supprimer le tableau** le supprime pour tous.
+- L'ajout ne s'annule pas par `Ctrl+Z` (la boîte de confirmation le rappelle) : pour retirer le tableau du classeur partagé, **Supprimer le tableau** le supprime pour tous. Annuler (`Ctrl+Z`) la création même du tableau le supprime aussi du serveur, pour tous ; `Ctrl+Y` le recrée et l'ajoute de nouveau.
 
 ## Gérer l'accès à un classeur partagé
 

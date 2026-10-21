@@ -16,6 +16,7 @@ import (
 	"github.com/lalamefine/lattis/internal/meta"
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/order"
+	"github.com/lalamefine/lattis/internal/remote/oplog"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -432,6 +433,12 @@ func (c *copySource) Err() error             { return c.err }
 // correspondance des colonnes, identifiants partagés, types figés (§9),
 // description du classeur partagé, mise en page publiée.
 func (p *published) record(ctx context.Context, tx *sql.Tx) error {
+	// Tableaux nés avant cette publication (classeur partagé auparavant) :
+	// le choix des tableaux publiés fait foi, aucun n'est ajouté ensuite
+	// d'office (oplog.BornKey).
+	if err := oplog.ForgetBornTx(ctx, tx); err != nil {
+		return err
+	}
 	// Tableaux qui ne sont plus publiés : ils redeviennent privés.
 	keep := map[int64]bool{}
 	for _, t := range p.tables {

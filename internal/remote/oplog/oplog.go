@@ -276,6 +276,13 @@ func (s *session) Finish(c command.Commit) error {
 			return err
 		}
 	}
+	// Classeur collaboratif suivi : les tableaux nés ici iront au classeur
+	// partagé (born.go).
+	if fn != nil && (c.Kind == command.KindDo || c.Kind == command.KindRedo) {
+		if err := s.births(); err != nil {
+			return err
+		}
+	}
 	if len(s.pub) == 0 {
 		return nil
 	}

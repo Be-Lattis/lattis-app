@@ -3,9 +3,11 @@ package collab
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/remote/oplog"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -70,7 +72,7 @@ func (e *Engine) AddTable(ctx context.Context, tbl int64) (string, error) {
 		return addSkip(ctx, tx, xid)
 	})
 	if err != nil {
-		if _, ok := workbook.Rejected(err); ok {
+		if _, ok := workbook.Refusal(err); ok {
 			return "", &RefusedError{Kind: command.KindDo, Text: workbook.ServerMessage(err)}
 		}
 		return "", err
@@ -83,6 +85,90 @@ func (e *Engine) AddTable(ctx context.Context, tbl int64) (string, error) {
 		return added.Name, nil // relu à la prochaine connexion
 	}
 	return added.Name, nil
+}
+
+// AutoShare ajoute au classeur partagé les tableaux nés sur ce poste
+// (oplog.Born : saisis, collés, insérés, convertis, importés…) : partage
+// automatique, sans confirmation, comme « Ajouter au classeur partagé ».
+// Propriétaires et concepteurs, en ligne : hors ligne, ils attendent la
+// reconnexion (la liste est gardée dans le classeur). Restent sur ce
+// poste, avec leur marque « sur ce poste » et l'action à la main : un
+// tableau chargé par une requête (choix de l'actualisation à faire à la
+// main), celui d'un éditeur (un message, une fois par session), celui que
+// le serveur ou les vérifications refusent (un message). Une erreur
+// passagère (coupure) le laisse dans la liste et est rendue.
+func (e *Engine) AutoShare(ctx context.Context) (Report, error) {
+	var rep Report
+	info, srv := e.active()
+	if info == nil || srv == nil {
+		return rep, nil
+	}
+	born, err := oplog.Born(ctx, e.db)
+	if err != nil || len(born) == 0 {
+		return rep, err
+	}
+	var done []int64
+	defer func() {
+		if len(done) > 0 {
+			_ = oplog.ForgetBorn(context.WithoutCancel(ctx), e.db, done...)
+		}
+	}()
+	for _, tbl := range born {
+		var name, query string
+		err := e.db.Read().QueryRowContext(ctx, `SELECT t.name, coalesce((SELECT q.name FROM _lattis_queries q WHERE q.target = t.id), '')
+			FROM _lattis_tables t WHERE t.id = ?`, tbl).Scan(&name, &query)
+		if errors.Is(err, sql.ErrNoRows) {
+			done = append(done, tbl) // supprimé ou annulé depuis
+			continue
+		}
+		if err != nil {
+			return rep, err
+		}
+		switch {
+		case e.link.TableShare(tbl) == "published" || query != "":
+			done = append(done, tbl)
+			continue
+		case !info.CanDesign():
+			done = append(done, tbl)
+			e.mu.Lock()
+			told := e.toldLocal
+			e.toldLocal = true
+			e.mu.Unlock()
+			if !told {
+				rep.notice(e.say("collab.tableStaysLocal", msg.Args{"table": name}))
+			}
+			continue
+		case !e.link.Online():
+			continue // à la reconnexion
+		}
+		added, err := e.AddTable(ctx, tbl)
+		if added != "" {
+			done = append(done, tbl)
+			rep.notice(AddedNotice(e.lang(), added))
+			rep.Shared = append(rep.Shared, tbl)
+			continue
+		}
+		if !definitive(err) {
+			return rep, err
+		}
+		done = append(done, tbl)
+		rep.notice(e.say("collab.tableNotAdded", msg.Args{"table": name, "err": msg.Text(e.lang(), err)}))
+	}
+	return rep, nil
+}
+
+// definitive : l'ajout d'un tableau est refusé pour de bon (serveur,
+// vérifications locales), pas seulement remis (coupure, ajout concurrent).
+func definitive(err error) bool {
+	var refused *RefusedError
+	if errors.As(err, &refused) {
+		return true
+	}
+	if errors.Is(err, ErrAddOffline) || errors.Is(err, workbook.ErrAddBusy) {
+		return false
+	}
+	var m *msg.Error
+	return errors.As(err, &m) && m.Err == nil
 }
 
 // receiveArrivals crée en local les tableaux du serveur qu'aucun tableau

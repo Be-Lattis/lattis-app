@@ -1516,5 +1516,9 @@
 	"keys": {
 		"enter": "Entrée",
 		"escape": "Échap"
+	},
+	"local": {
+		"badge": "sur ce poste",
+		"tooltip": "Ce tableau n'est que sur ce poste : les autres membres ne le voient pas. Un tableau créé par le propriétaire ou un concepteur s'ajoute de lui-même au classeur partagé (hors ligne : à la reconnexion). Cliquer pour l'ajouter au classeur partagé"
 	}
 }

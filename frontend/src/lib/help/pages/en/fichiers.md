@@ -25,12 +25,12 @@ A workbook opened from a shared folder is signaled to other computers by a small
 
 ## Add a table to a live shared workbook {#ajouter-un-tableau-a-un-classeur-partage-en-direct}
 
-In a collaborative workbook (shared live on a Lattis Server), a table created after publishing is at first only on your computer. Right-click the table › **Add to shared workbook…** creates it in the server's workbook, with its rows: the other members receive it right away (in the same place on the sheet, or below if the place is taken on their side), with a message in the status bar, and it then syncs like the other shared tables (entries, conflicts, rights). The same action is offered by **Share to Lattis Data Lake…** (“Add this table to the shared workbook”, first) and in **Manage access** › Roles and rights, under the list of tables.
+In a collaborative workbook (shared live on a Lattis Server), a table created after publishing by an owner or a designer (typed, pasted, inserted, converted from a range…) is added to the shared workbook automatically, as soon as it is created; offline, on reconnection. A table that stays on your computer (loaded by a query, refused by the server, or created by an editor) carries the amber **on this computer** badge above its frame: the other members don't see it. Clicking the badge, or right-clicking the table › **Add to shared workbook…**, creates it in the server's workbook, with its rows: the other members receive it right away (in the same place on the sheet, or below if the place is taken on their side), with a message in the status bar, and it then syncs like the other shared tables (entries, conflicts, rights). The same action is offered by **Share to Lattis Data Lake…** (“Add this table to the shared workbook”, first) and in **Manage access** › Roles and rights, under the list of tables.
 
 - Reserved for the workbook's owners and designers, and only online: otherwise the dialog says so.
 - Column types are fixed as for the other shared tables; calculated columns stay calculated on each computer. Invalid entries must be fixed first.
 - A refusal from the server (name already taken by another table of the workbook, for example) shows in the status bar and changes nothing.
-- Adding can't be undone with `Ctrl+Z` (the confirmation box reminds you): to remove the table from the shared workbook, **Delete table** deletes it for everyone.
+- Adding can't be undone with `Ctrl+Z` (the confirmation box reminds you): to remove the table from the shared workbook, **Delete table** deletes it for everyone. Undoing (`Ctrl+Z`) the creation of the table itself also deletes it from the server, for everyone; `Ctrl+Y` recreates it and adds it again.
 
 ## Manage access to a shared workbook {#gerer-l-acces-a-un-classeur-partage}
 

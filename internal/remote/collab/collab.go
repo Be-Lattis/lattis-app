@@ -70,6 +70,9 @@ type Engine struct {
 	// rereads : tableaux à relire en entier, droits de lecture changés
 	// (RefreshRights) ; sous mu.
 	rereads map[int64]bool
+	// toldLocal : le message « tableau resté sur ce poste » d'un éditeur
+	// est déjà dit (AutoShare, une fois par session) ; sous mu.
+	toldLocal bool
 }
 
 // SetBackoff règle les nouveaux essais de connexion du suivi (délais

@@ -1516,5 +1516,9 @@
 	"keys": {
 		"enter": "Eingabe",
 		"escape": "Esc"
+	},
+	"local": {
+		"badge": "auf diesem Rechner",
+		"tooltip": "Diese Tabelle ist nur auf diesem Rechner: Die anderen Mitglieder sehen sie nicht. Eine vom Besitzer oder einem Designer erstellte Tabelle wird der geteilten Arbeitsmappe automatisch hinzugefügt (offline: bei der Wiederverbindung). Klicken, um sie der geteilten Arbeitsmappe hinzuzufügen"
 	}
 }

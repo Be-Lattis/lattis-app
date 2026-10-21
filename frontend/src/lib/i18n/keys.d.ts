@@ -1169,6 +1169,8 @@ export interface MessageParams {
 	'grid.lines.insert': Record<never, never>;
 	'grid.lines.insertCols': { n: number | string };
 	'grid.lines.insertRows': { n: number | string };
+	'grid.local.badge': Record<never, never>;
+	'grid.local.tooltip': Record<never, never>;
 	'grid.menu.addShared': Record<never, never>;
 	'grid.menu.addShared.tooltip': Record<never, never>;
 	'grid.menu.asGroups': Record<never, never>;

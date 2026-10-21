@@ -259,6 +259,15 @@ func (f *Fake) Grant(workbookID, user, role string) error {
 	return nil
 }
 
+// Revoke retire un rôle à un membre d'un classeur.
+func (f *Fake) Revoke(workbookID, user, role string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if b := f.books[workbookID]; b != nil {
+		b.roles[user] = slices.DeleteFunc(b.roles[user], func(r string) bool { return r == role })
+	}
+}
+
 // SetTitle renomme un classeur (titre relu par my_capabilities ; pas de
 // notification).
 func (f *Fake) SetTitle(workbookID, title string) {

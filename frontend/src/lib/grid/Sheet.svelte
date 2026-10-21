@@ -770,6 +770,9 @@
 		// Pastille du nom d'un tableau : nommé (couleur du thème, plus claire), ou nom par défaut (gris, à renommer).
 		nameBadge: '#2f7d55',
 		unnamedBadge: '#8a9099',
+		// Pastille « sur ce poste » : tableau d'un classeur collaboratif pas
+		// (encore) dans le classeur partagé (ambre : à remarquer).
+		localBadge: '#a15c07',
 		headText: '#14532d',
 		icon: '#6b8f78',
 		border: '#8fbc9f',
@@ -2969,6 +2972,17 @@
 					followBadges.push({ kind: 'follow', e, label, radii: b.radii, x0: b.x, x1: b.x + bw, y0: b.y, y1: b.y + bh, clip });
 					room -= bw + 4;
 				}
+				// Classeur collaboratif : tableau resté sur ce poste (pas dans
+				// le classeur partagé) ; un clic propose de l'y ajouter.
+				if (e.t.shared === 'private' && onaddshared) {
+					const label = tr('grid.local.badge');
+					const bw = Math.ceil(ctx.measureText(label).width) + 10;
+					if (room >= bw + 30) {
+						const b = placeFollowBadge({ x, y, w: room, bw, bh, paneTop: p.y0, strip: p.y0 === TOP_H, aboveFree });
+						followBadges.push({ kind: 'local', e, label, radii: b.radii, x0: b.x, x1: b.x + bw, y0: b.y, y1: b.y + bh, clip });
+						room -= bw + 4;
+					}
+				}
 				if (e.t.name && room >= 30 && showNameBadge(e.t.name, sheetName)) {
 					const dflt = isDefaultTableName(e.t.name);
 					const label = fitText(e.t.name + (dflt ? ' ✎' : ''), room - 10);
@@ -3846,7 +3860,7 @@
 	// pastille avec la valeur choisie (« 2025 ») ; un tableau sans pastille est
 	// le même pour toutes les valeurs. Un clic sur la pastille ouvre son menu
 	// (« Suivre l'année », à décocher).
-	let followBadges: { kind: 'follow' | 'name' | 'unnamed'; e: Entry; label: string; radii: number[]; x0: number; x1: number; y0: number; y1: number; clip: { x0: number; x1: number; y0: number; y1: number } }[] = [];
+	let followBadges: { kind: 'follow' | 'name' | 'unnamed' | 'local'; e: Entry; label: string; radii: number[]; x0: number; x1: number; y0: number; y1: number; clip: { x0: number; x1: number; y0: number; y1: number } }[] = [];
 	// Champ du nom du tableau (barre de formule) : la pastille du nom l'ouvre.
 	let tableNameEl = $state<HTMLInputElement>();
 	/** Volet en cours de dessin (découpe des pastilles). */
@@ -3859,7 +3873,7 @@
 			ctx.beginPath();
 			ctx.rect(Math.max(b.clip.x0, MARGIN), b.clip.y0, b.clip.x1 - Math.max(b.clip.x0, MARGIN), b.clip.y1 - b.clip.y0);
 			ctx.clip();
-			ctx.fillStyle = b.kind === 'follow' ? C.followBadge : b.kind === 'name' ? C.nameBadge : C.unnamedBadge;
+			ctx.fillStyle = b.kind === 'follow' ? C.followBadge : b.kind === 'name' ? C.nameBadge : b.kind === 'local' ? C.localBadge : C.unnamedBadge;
 			ctx.beginPath();
 			ctx.roundRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, b.radii);
 			ctx.fill();
@@ -3884,7 +3898,12 @@
 	/** Pastille du nom d'un tableau sous la souris : son tableau. */
 	function nameBadgeAt(ev: MouseEvent): Entry | null {
 		const b = badgeAt(ev);
-		return b && b.kind !== 'follow' ? b.e : null;
+		return b && (b.kind === 'name' || b.kind === 'unnamed') ? b.e : null;
+	}
+	/** Pastille « sur ce poste » sous la souris : son tableau. */
+	function localBadgeAt(ev: MouseEvent): Entry | null {
+		const b = badgeAt(ev);
+		return b?.kind === 'local' ? b.e : null;
 	}
 
 	/** Texte coupé (…) pour tenir en w pixels (police courante). */
@@ -7788,6 +7807,16 @@
 			void renameFromBadge(ne);
 			return;
 		}
+		if (e.button === 0 && !formulaMode && localBadgeAt(e)) {
+			// « Sur ce poste » : propose de l'ajouter au classeur partagé
+			// (confirmation, ou pourquoi pas maintenant).
+			e.preventDefault();
+			if (!commitEditor()) return;
+			const le = localBadgeAt(e)!;
+			closeMenus();
+			if (!le.t.query) onaddshared?.(le.t.name);
+			return;
+		}
 		if (e.button === 0 && !formulaMode && followBadgeAt(e)) {
 			e.preventDefault();
 			if (!commitEditor()) return;
@@ -10121,6 +10150,11 @@
 					? tr('grid.nameBadge.default.tooltip', { name: nb.t.name })
 					: tr('grid.nameBadge.tooltip', { name: nb.t.name });
 			tipCell = 'name:' + nb.t.name;
+			return;
+		}
+		if (localBadgeAt(ev)) {
+			if (tipCell !== 'local') scroller.title = tr('grid.local.tooltip');
+			tipCell = 'local';
 			return;
 		}
 		if (followBadgeAt(ev)) {

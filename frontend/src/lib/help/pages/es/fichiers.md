@@ -25,12 +25,12 @@ Un libro abierto desde una carpeta compartida se señala a los demás equipos me
 
 ## Agregar una tabla a un libro compartido en directo {#ajouter-un-tableau-a-un-classeur-partage-en-direct}
 
-En un libro colaborativo (compartido en directo en un Servidor Lattis), una tabla creada después de publicar está al principio solo en su equipo. Clic derecho en la tabla › **Agregar al libro compartido…** la crea en el libro del servidor, con sus filas: los demás miembros la reciben de inmediato (en el mismo lugar de la hoja, o debajo si el lugar está ocupado en su lado), con un mensaje en la barra de estado, y después se sincroniza como las demás tablas compartidas (entradas, conflictos, derechos). La misma acción se ofrece en **Compartir en el Data Lake de Lattis…** («Agregar esta tabla al libro compartido», primero) y en **Administrar acceso** › Roles y derechos, bajo la lista de tablas.
+En un libro colaborativo (compartido en directo en un Servidor Lattis), una tabla creada después de publicar por el propietario o un diseñador (escrita, pegada, insertada, convertida de un rango…) se agrega sola al libro compartido en cuanto se crea; sin conexión, al reconectarse. Una tabla que se queda en su equipo (cargada por una consulta, rechazada por el servidor o creada por un editor) lleva la etiqueta ámbar **en este equipo** encima de su marco: los demás miembros no la ven. Un clic en la etiqueta, o clic derecho en la tabla › **Agregar al libro compartido…**, la crea en el libro del servidor, con sus filas: los demás miembros la reciben de inmediato (en el mismo lugar de la hoja, o debajo si el lugar está ocupado en su lado), con un mensaje en la barra de estado, y después se sincroniza como las demás tablas compartidas (entradas, conflictos, derechos). La misma acción se ofrece en **Compartir en el Data Lake de Lattis…** («Agregar esta tabla al libro compartido», primero) y en **Administrar acceso** › Roles y derechos, bajo la lista de tablas.
 
 - Reservado a los propietarios y diseñadores del libro, y solo con conexión: si no, el cuadro de diálogo lo indica.
 - Los tipos de columna se fijan como para las demás tablas compartidas; las columnas calculadas siguen calculándose en cada equipo. Primero hay que corregir las entradas no válidas.
 - Un rechazo del servidor (nombre ya usado por otra tabla del libro, por ejemplo) aparece en la barra de estado y no cambia nada.
-- Agregar no se puede deshacer con `Ctrl+Z` (el cuadro de confirmación lo recuerda): para quitar la tabla del libro compartido, **Eliminar tabla** la elimina para todos.
+- Agregar no se puede deshacer con `Ctrl+Z` (el cuadro de confirmación lo recuerda): para quitar la tabla del libro compartido, **Eliminar tabla** la elimina para todos. Deshacer (`Ctrl+Z`) la creación misma de la tabla también la elimina del servidor, para todos; `Ctrl+Y` la vuelve a crear y a agregar.
 
 ## Administrar el acceso a un libro compartido {#gerer-l-acces-a-un-classeur-partage}
 

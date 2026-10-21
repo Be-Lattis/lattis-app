@@ -1147,6 +1147,8 @@ var de = map[ID]string{
 	"collab.structureOffline":               "Server nicht erreichbar, Strukturänderung rückgängig gemacht: {errText}",
 	"collab.tableAdded":                     "Tabelle „{table}“ der geteilten Arbeitsmappe hinzugefügt: Die anderen Mitglieder erhalten sie",
 	"collab.tableArrived":                   "Tabelle „{table}“ von einem Designer der geteilten Arbeitsmappe hinzugefügt",
+	"collab.tableNotAdded":                  "Tabelle „{table}“ bleibt auf diesem Rechner: Sie konnte der geteilten Arbeitsmappe nicht hinzugefügt werden ({err})",
+	"collab.tableStaysLocal":                "Tabelle „{table}“ bleibt auf diesem Rechner: Nur der Besitzer und die Designer fügen der geteilten Arbeitsmappe Tabellen hinzu",
 	"collab.tableDeletedOnServer":           "Tabelle „{table}“ auf dem Server gelöscht",
 	"collab.tableDeletedOnServerForgot":     "Tabelle „{table}“ auf dem Server gelöscht: Rückgängig-Verlauf gelöscht",
 	"collab.tableError":                     "Tabelle „{table}“: {err}",

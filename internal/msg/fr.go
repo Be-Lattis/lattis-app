@@ -1148,6 +1148,8 @@ var fr = map[ID]string{
 	"collab.structureOffline":               "Serveur injoignable, modification de structure annulée : {errText}",
 	"collab.tableAdded":                     "Tableau « {table} » ajouté au classeur partagé : les autres membres le reçoivent",
 	"collab.tableArrived":                   "Tableau « {table} » ajouté au classeur partagé par un concepteur",
+	"collab.tableNotAdded":                  "Tableau « {table} » resté sur ce poste : il ne s'est pas ajouté au classeur partagé ({err})",
+	"collab.tableStaysLocal":                "Tableau « {table} » resté sur ce poste : seuls le propriétaire et les concepteurs ajoutent des tableaux au classeur partagé",
 	"collab.tableDeletedOnServer":           "Tableau « {table} » supprimé sur le serveur",
 	"collab.tableDeletedOnServerForgot":     "Tableau « {table} » supprimé sur le serveur : historique d'annulation effacé",
 	"collab.tableError":                     "tableau « {table} » : {err}",

@@ -1146,6 +1146,8 @@ var es = map[ID]string{
 	"collab.structureOffline":               "Servidor inaccesible, cambio de estructura deshecho: {errText}",
 	"collab.tableAdded":                     "Tabla «{table}» agregada al libro compartido: los demás miembros la reciben",
 	"collab.tableArrived":                   "Tabla «{table}» agregada al libro compartido por un diseñador",
+	"collab.tableNotAdded":                  "Tabla «{table}» conservada en este equipo: no se pudo agregar al libro compartido ({err})",
+	"collab.tableStaysLocal":                "Tabla «{table}» conservada en este equipo: solo el propietario y los diseñadores agregan tablas al libro compartido",
 	"collab.tableDeletedOnServer":           "Tabla «{table}» eliminada en el servidor",
 	"collab.tableDeletedOnServerForgot":     "Tabla «{table}» eliminada en el servidor: historial de deshacer borrado",
 	"collab.tableError":                     "tabla «{table}»: {err}",
