@@ -122,10 +122,9 @@
 		"aria": "Document {name}",
 		"grip": "Tirer pour redimensionner",
 		"refused": {
-			"scripting": "Cette page utilise des scripts, coupés ici : {command}. Elle ne peut que lire le classeur.",
-			"org": "Les pages web sont désactivées par votre organisation : cette page ne peut pas lire le classeur.",
 			"page": "{command} : commande non disponible dans une page web."
-		}
+		},
+		"off": "Les pages web sont désactivées. Le contenu est conservé dans le classeur."
 	},
 	"clip": {
 		"chartPasted": "Graphique collé",

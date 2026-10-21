@@ -171,10 +171,17 @@ type Features struct {
 	MCP                  Toggle  `json:"mcp,omitempty"`
 	LuaHTTP              LuaHTTP `json:"luaHttp,omitempty"`
 	AllowUserConnections *bool   `json:"allowUserConnections,omitempty"`
-	// HtmlTabs : les pages web (pages HTML, CSS et JavaScript, ou page web
-	// externe) sont proposés. Fonctionnalité à activer (choix de Louis,
-	// 18/10/2026) ; les classeurs qui en contiennent déjà les affichent et les
-	// gardent utilisables quand même.
+	// HtmlPages : les pages web des classeurs (onglets HTML, CSS et
+	// JavaScript, ou site externe) s'affichent et se créent. Coupées par
+	// défaut, sans case dans Fichier › Paramètres (choix de Louis,
+	// 21/10/2026 : le JavaScript d'une page peut faire sortir des données en
+	// faisant naviguer son cadre, ce qu'aucune règle ne bloque) ; activées à
+	// la main seulement (config.json, LATTIS_FEATURES__HTMLPAGES, stratégie
+	// de l'organisation, verrouillable). Jamais dans la version navigateur ni
+	// la démo publique, quel que soit ce réglage.
+	HtmlPages *bool `json:"htmlPages,omitempty"`
+	// HtmlTabs : ancien réglage des pages web (case des paramètres jusqu'à
+	// la 0.3.4-beta), toléré dans les fichiers existants mais sans effet.
 	HtmlTabs *bool `json:"htmlTabs,omitempty"`
 	// SharedWorkbooks : classeurs partagés sur un Serveur Lattis (connexion
 	// au serveur, menu Compte). Fonctionnalité à activer.
@@ -209,8 +216,8 @@ func Defaults() Tree {
 		"features": Tree{
 			"mcp":                  Tree{"enabled": false},
 			"allowUserConnections": true,
-			"htmlTabs":             false,
-			"sharedWorkbooks":      true, // activé par défaut (choix de Louis, 18/10/2026)
+			"htmlPages":            false, // à activer à la main (HtmlPages)
+			"sharedWorkbooks":      true,  // activé par défaut (choix de Louis, 18/10/2026)
 			// Ajout de Serveurs Lattis par l'utilisateur.
 			"allowUserLattisServers": true,
 			// Travail à plusieurs sur un dossier partagé (décision 0011).
@@ -327,7 +334,7 @@ func coerce(path string, v any) (any, bool) {
 }
 
 var boolPaths = []string{"allowPolicyOverride", "features.mcp.enabled", "features.allowUserConnections",
-	"features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.coEditing", "features.luaHttp.restrict", "ai.enabled",
+	"features.htmlPages", "features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.coEditing", "features.luaHttp.restrict", "ai.enabled",
 	"ai.keepConversation", "mcp.confirmWrites", "ui.builtinThemes", "updates.check"}
 
 func boolPath(path string) bool {
@@ -350,7 +357,8 @@ var validators = []struct {
 	{"allowPolicyOverride", isBool},
 	{"features.mcp.enabled", isBool},
 	{"features.allowUserConnections", isBool},
-	{"features.htmlTabs", isBool},
+	{"features.htmlPages", isBool},
+	{"features.htmlTabs", isBool}, // ancien réglage, sans effet
 	{"features.sharedWorkbooks", isBool},
 	{"features.coEditing", isBool},
 	{"features.allowUserLattisServers", isBool},

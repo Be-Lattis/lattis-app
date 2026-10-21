@@ -786,8 +786,6 @@ var en = map[ID]string{
 	"api.favoriteNotFound":        "saved query “{name}” not found (SQL tab › Favorites)",
 	"api.sqlEmpty":                "empty SQL query",
 	"api.sqlReadOnly":             "read only: SELECT or WITH expected, not {keyword}",
-	"page.needsScripting":         "{command}: this page uses scripts, which are off here (the page can only read the workbook)",
-	"page.disabledByOrg":          "web pages are turned off by your organization",
 	"api.tileDemoOffline":         "base map unavailable in the demo (no outgoing connections)",
 	"api.tileAskTitle":            "Base map",
 	"api.tileAsk":                 "The base map comes from OpenStreetMap (“{host}”). To show it, Lattis downloads the tiles of the area shown: that site learns which region the map displays, nothing else from the workbook.",
@@ -908,7 +906,7 @@ var en = map[ID]string{
 	"mcp.unknownBatch":        "unknown batch of actions",
 
 	// Web pages
-	"pages.disabled":       "web pages are disabled: turn them on in File › Settings › Features",
+	"pages.disabled":       "web pages are turned off: they can be turned on in the configuration (features.htmlPages), never in the browser edition",
 	"pages.scriptNotFound": "script “{script}” not found (Script tab)",
 
 	// Grid

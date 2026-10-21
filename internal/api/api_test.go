@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -288,7 +289,12 @@ func TestExamplesRun(t *testing.T) {
 		if c.Example == "" || c.NoLua {
 			continue
 		}
-		t.Run(c.Name, func(t *testing.T) { run(t, sample(t), c.Example) })
+		t.Run(c.Name, func(t *testing.T) {
+			if slices.Contains(PageCommands, c.Name) {
+				withHTMLPages(t) // pages web coupées par défaut
+			}
+			run(t, sample(t), c.Example)
+		})
 	}
 }
 

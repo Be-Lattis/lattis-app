@@ -788,8 +788,6 @@ var zh = map[ID]string{
 	"api.favoriteNotFound":        "未找到收藏的查询“{name}”（SQL 标签 › 收藏）",
 	"api.sqlEmpty":                "SQL 查询为空",
 	"api.sqlReadOnly":             "只读：应为 SELECT 或 WITH，而不是 {keyword}",
-	"page.needsScripting":         "{command}：此网页使用脚本，而此处已关闭脚本（网页只能读取工作簿）",
-	"page.disabledByOrg":          "您的组织已禁用网页",
 	"api.tileDemoOffline":         "演示中无法使用底图（不允许对外连接）",
 	"api.tileAskTitle":            "底图",
 	"api.tileAsk":                 "地图底图来自 OpenStreetMap（“{host}”）。为显示底图，Lattis 会下载所显示区域的图块：该网站只会知道地图显示的区域，不会获得工作簿的其他内容。",
@@ -910,7 +908,7 @@ var zh = map[ID]string{
 	"mcp.unknownBatch":        "未知的操作批次",
 
 	// Web pages
-	"pages.disabled":       "网页已禁用：请在 文件 › 设置 › 功能 中启用",
+	"pages.disabled":       "网页已禁用：可在配置中启用（features.htmlPages），浏览器版中始终禁用",
 	"pages.scriptNotFound": "未找到脚本“{script}”（“脚本”选项卡）",
 
 	// Grid

@@ -788,8 +788,6 @@ var fr = map[ID]string{
 	"api.favoriteNotFound":        "requête favorite « {name} » introuvable (onglet SQL › Favoris)",
 	"api.sqlEmpty":                "requête SQL vide",
 	"api.sqlReadOnly":             "lecture seule : SELECT ou WITH attendu, pas {keyword}",
-	"page.needsScripting":         "{command} : cette page utilise des scripts, coupés ici (la page ne peut que lire le classeur)",
-	"page.disabledByOrg":          "les pages web sont désactivées par votre organisation",
 	"api.tileDemoOffline":         "fond de carte indisponible dans la démo (aucune connexion sortante)",
 	"api.tileAskTitle":            "Fond de carte",
 	"api.tileAsk":                 "Le fond des cartes vient d'OpenStreetMap (« {host} »). Pour l'afficher, Lattis télécharge les tuiles de la zone montrée : ce site apprend quelle région la carte affiche, rien d'autre du classeur.",
@@ -910,7 +908,7 @@ var fr = map[ID]string{
 	"mcp.unknownBatch":        "série d'actions inconnue",
 
 	// Pages web
-	"pages.disabled":       "les pages web sont désactivés : activez-les dans Fichier › Paramètres › Fonctionnalités",
+	"pages.disabled":       "les pages web sont désactivées : elles s'activent par la configuration (features.htmlPages), jamais dans la version navigateur",
 	"pages.scriptNotFound": "script « {script} » introuvable (onglet Script)",
 
 	// Grille

@@ -145,12 +145,11 @@ describe('pont dans la page', () => {
 describe('refusalOf', () => {
 	const engineError = (id: string) => Object.assign(new Error('x'), { cause: { id, message: 'texte' } });
 	it('reconnaît les refus à montrer dans l’onglet', () => {
-		expect(refusalOf('cells.set', engineError('page.needsScripting'))).toEqual({ kind: 'scripting', command: 'cells.set' });
-		expect(refusalOf('db.query', engineError('page.disabledByOrg'))).toEqual({ kind: 'org', command: 'db.query' });
 		expect(refusalOf('scripts.run', engineError('api.notInPage'))).toEqual({ kind: 'page', command: 'scripts.run' });
 	});
 	it('laisse à la page les autres erreurs', () => {
 		expect(refusalOf('db.query', engineError('api.sqlReadOnly'))).toBeNull();
+		expect(refusalOf('db.query', engineError('pages.disabled'))).toBeNull();
 		expect(refusalOf('db.query', new Error('no such table: T'))).toBeNull();
 	});
 });

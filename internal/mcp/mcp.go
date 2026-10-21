@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -187,7 +188,7 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 			"protocolVersion": v,
 			"capabilities":    map[string]any{"tools": map[string]any{"listChanged": false}},
 			"serverInfo":      map[string]any{"name": s.name(), "version": s.Version},
-			"instructions":    instructions + sharingNote(s.mode()),
+			"instructions":    instructions + pagesNote() + sharingNote(s.mode()),
 		}, nil
 	case "ping":
 		return struct{}{}, nil
@@ -290,8 +291,7 @@ const instructions = `Lattis est un tableur relationnel : chaque tableau d'une f
 	"\n- Ligne de groupes au-dessus des en-têtes (BOISEMENT sur Nom, Statut…) : tables_two_level_headers(table, true) ; les colonnes s'appellent alors « Groupe.Sous », sauf celles sur un niveau (nom simple : groupe seul au-dessus d'un en-tête automatique ou répété)." +
 	"\n- Clé d'un tableau (valeurs uniques, recherches REFERENCE) : tables_key_check puis tables_set_key, ou tables_keep_row_numbers pour chercher par numéro de ligne." +
 	"\n- Colonne calculée : columns_insert puis une formule par nom de colonne (=[Prix]*[Quantité]) ; formules d'Excel traduites (RECHERCHEV devient REFERENCE)." +
-	"\n- Tableau croisé : pivots_create ; graphique : charts_create ; mise en page et impression : sheets_set_page_setup." +
-	"\n- Tableau de bord sur mesure, quand graphiques et tableaux croisés ne suffisent pas : pages_add crée une page web (HTML, CSS, JavaScript) qui lit le classeur par lattis.sql(\"SELECT …\", [paramètres]) (tableau d'objets, lecture seule : marche aussi sans scripts) et se met à jour par lattis.on(\"change\", f) ; pages_set la corrige. Permis même si les pages web sont coupées dans les paramètres de l'utilisateur."
+	"\n- Tableau croisé : pivots_create ; graphique : charts_create ; mise en page et impression : sheets_set_page_setup."
 
 func toolResult(v any, isErr bool) map[string]any {
 	var text string
@@ -332,12 +332,26 @@ type Tool struct {
 	Annotations map[string]any `json:"annotations,omitempty"`
 }
 
-// ToolsFor décrit les outils proposés pour ce partage des données.
+// pagesHint : la page web sur mesure, dans les consignes seulement quand
+// les pages web sont permises (api.HTMLPagesConfigured ; le serveur MCP
+// n'existe que sur le bureau).
+const pagesHint = "\n- Tableau de bord sur mesure, quand graphiques et tableaux croisés ne suffisent pas : pages_add crée une page web (HTML, CSS, JavaScript) qui lit le classeur par lattis.sql(\"SELECT …\", [paramètres]) (tableau d'objets, lecture seule) et se met à jour par lattis.on(\"change\", f) ; pages_set la corrige."
+
+func pagesNote() string {
+	if api.HTMLPagesConfigured() {
+		return pagesHint
+	}
+	return ""
+}
+
+// ToolsFor décrit les outils proposés pour ce partage des données ; sans
+// pages_add ni pages_set quand les pages web sont coupées.
 func ToolsFor(mode string) []Tool {
+	pages := api.HTMLPagesConfigured()
 	var out []Tool
 	for _, t := range Tools() {
 		c := commandOf(t.Name)
-		if c == nil || !sharing.Exposed(c.Name, mode) {
+		if c == nil || !sharing.Exposed(c.Name, mode) || (!pages && slices.Contains(api.PageCommands, c.Name)) {
 			continue
 		}
 		t.Description += sharing.Note(c.Name, mode)

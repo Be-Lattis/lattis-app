@@ -110,11 +110,18 @@ func TestToolsBySharing(t *testing.T) {
 			t.Errorf("partage complet : %s absent", n)
 		}
 	}
-	if len(tools) != len(Tools()) {
-		t.Errorf("partage complet : %d outils sur %d", len(tools), len(Tools()))
+	// Tous, sauf les pages web (coupées par défaut : features.htmlPages).
+	all := len(Tools()) - len(api.PageCommands)
+	if len(tools) != all {
+		t.Errorf("partage complet : %d outils sur %d", len(tools), all)
+	}
+	for _, n := range []string{"pages_add", "pages_set"} {
+		if _, ok := tools[n]; ok {
+			t.Errorf("%s proposé, pages web coupées", n)
+		}
 	}
 	// Sans réglage (serveur de test, intégration) : partage complet.
-	if len(toolList(t, newServer(t))) != len(Tools()) {
+	if len(toolList(t, newServer(t))) != all {
 		t.Error("serveur sans réglage")
 	}
 }

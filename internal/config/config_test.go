@@ -413,30 +413,54 @@ func TestCLISignAndCheck(t *testing.T) {
 	}
 }
 
-func TestHtmlTabsSetting(t *testing.T) {
+// Pages web : coupées par défaut, sans case dans les paramètres, activées à
+// la main (fichier, variable, stratégie qui peut les verrouiller).
+func TestHtmlPagesSetting(t *testing.T) {
+	if Editable("features.htmlPages") || Editable("features.htmlTabs") {
+		t.Fatal("pages web modifiables depuis les paramètres")
+	}
 	c := resolve(t, Options{}, src("défaut", RankDefault, false, Defaults()))
-	if v, ok := c.Lookup("features.htmlTabs"); !ok || v != false {
-		t.Fatalf("features.htmlTabs par défaut = %v, %v", v, ok)
+	if v, ok := c.Lookup("features.htmlPages"); !ok || v != false {
+		t.Fatalf("features.htmlPages par défaut = %v, %v", v, ok)
 	}
 	c = resolve(t, Options{},
 		src("défaut", RankDefault, false, Defaults()),
-		src("env", RankEnv, false, Tree{"features": Tree{"htmlTabs": "1"}}),
+		src("env", RankEnv, false, Tree{"features": Tree{"htmlPages": "1"}}),
 	)
-	if !c.Bool("features.htmlTabs", false) {
-		t.Fatal("features.htmlTabs = \"1\" non converti")
+	if !c.Bool("features.htmlPages", false) {
+		t.Fatal("features.htmlPages = \"1\" non converti")
 	}
 	c = resolve(t, Options{},
 		src("défaut", RankDefault, false, Defaults()),
-		src("user", RankUser, false, Tree{"features": Tree{"htmlTabs": "peut-être"}}),
+		src("user", RankUser, false, Tree{"features": Tree{"htmlPages": "peut-être"}}),
 	)
-	if c.Bool("features.htmlTabs", true) || len(c.Warnings) != 1 {
+	if c.Bool("features.htmlPages", true) || len(c.Warnings) != 1 {
 		t.Fatalf("valeur invalide gardée : %v", c.Warnings)
 	}
 	var s Settings
 	c = resolve(t, Options{}, src("défaut", RankDefault, false, Defaults()),
+		src("user", RankUser, false, Tree{"features": Tree{"htmlPages": true}}))
+	if err := c.Decode("", &s); err != nil || s.Features.HtmlPages == nil || !*s.Features.HtmlPages {
+		t.Fatalf("Settings.Features.HtmlPages = %v, %v", s.Features.HtmlPages, err)
+	}
+	// Variable d'environnement (nom en majuscules).
+	c = resolve(t, Options{}, src("défaut", RankDefault, false, Defaults()),
+		&EnvSource{Environ: func() []string { return []string{"LATTIS_FEATURES__HTMLPAGES=true"} }})
+	if !c.Bool("features.htmlPages", false) {
+		t.Fatalf("LATTIS_FEATURES__HTMLPAGES : %v", c.Explain())
+	}
+	// Stratégie de l'organisation : l'emporte et verrouille.
+	c = resolve(t, Options{}, src("défaut", RankDefault, false, Defaults()),
+		src("user", RankUser, false, Tree{"features": Tree{"htmlPages": true}}),
+		src("stratégie", RankPolicy, true, Tree{"features": Tree{"htmlPages": false}}))
+	if c.Bool("features.htmlPages", true) || !c.Locked("features.htmlPages") {
+		t.Fatalf("stratégie : %v", c.Explain())
+	}
+	// L'ancienne case des paramètres (features.htmlTabs) n'active plus rien.
+	c = resolve(t, Options{}, src("défaut", RankDefault, false, Defaults()),
 		src("user", RankUser, false, Tree{"features": Tree{"htmlTabs": true}}))
-	if err := c.Decode("", &s); err != nil || s.Features.HtmlTabs == nil || !*s.Features.HtmlTabs {
-		t.Fatalf("Settings.Features.HtmlTabs = %v, %v", s.Features.HtmlTabs, err)
+	if c.Bool("features.htmlPages", false) || len(c.Warnings) != 0 {
+		t.Fatalf("features.htmlTabs : %v %v", c.Explain(), c.Warnings)
 	}
 }
 
@@ -456,34 +480,34 @@ func TestSetUser(t *testing.T) {
 			return out
 		},
 	}
-	if l.Load(ctx).Bool("features.htmlTabs", true) {
-		t.Fatal("features.htmlTabs activé par défaut")
+	if !l.Load(ctx).Bool("features.sharedWorkbooks", false) {
+		t.Fatal("features.sharedWorkbooks coupé par défaut")
 	}
 	// Fichier et dossier créés ; la configuration courante suit.
-	c, err := l.SetUser(ctx, "features.htmlTabs", true)
+	c, err := l.SetUser(ctx, "features.sharedWorkbooks", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !c.Bool("features.htmlTabs", false) || !Current().Bool("features.htmlTabs", false) {
+	if c.Bool("features.sharedWorkbooks", true) || Current().Bool("features.sharedWorkbooks", true) {
 		t.Fatal("réglage non pris en compte")
 	}
 	st := UserSettings(c)
-	if len(st) != len(UserEditable)+len(UserVisible) || st[0].Value != true || st[0].Locked || st[0].Fixed || st[0].Source != file {
+	if len(st) != len(UserEditable)+len(UserVisible) || st[0].Path != "features.sharedWorkbooks" || st[0].Value != false || st[0].Locked || st[0].Fixed || st[0].Source != file {
 		t.Fatalf("UserSettings = %+v", st)
 	}
 	// Les autres clés du fichier sont gardées.
-	os.WriteFile(file, []byte(`{"organization":"ACME","features":{"htmlTabs":true,"mcp":{"enabled":true}}}`), 0o600)
-	if c, err = l.SetUser(ctx, "features.htmlTabs", false); err != nil {
+	os.WriteFile(file, []byte(`{"organization":"ACME","features":{"sharedWorkbooks":false,"mcp":{"enabled":true}}}`), 0o600)
+	if c, err = l.SetUser(ctx, "features.sharedWorkbooks", true); err != nil {
 		t.Fatal(err)
 	}
-	if c.Bool("features.htmlTabs", true) || c.String("organization", "") != "ACME" || !c.Bool("features.mcp.enabled", false) {
+	if !c.Bool("features.sharedWorkbooks", false) || c.String("organization", "") != "ACME" || !c.Bool("features.mcp.enabled", false) {
 		t.Fatalf("fichier mal réécrit : %v", c.Explain())
 	}
 	// Clé hors de la liste, valeur invalide : refusées.
 	if _, err := l.SetUser(ctx, "features.mcp.enabled", true); err == nil {
 		t.Fatal("clé hors de la liste acceptée")
 	}
-	if _, err := l.SetUser(ctx, "features.htmlTabs", "peut-être"); err == nil {
+	if _, err := l.SetUser(ctx, "features.sharedWorkbooks", "peut-être"); err == nil {
 		t.Fatal("valeur invalide acceptée")
 	}
 	// Onglet IA : fournisseur et modèle sont des identifiants, le partage
@@ -518,7 +542,7 @@ func TestSetUser(t *testing.T) {
 	}
 	// Fichier illisible : pas écrasé.
 	os.WriteFile(file, []byte(`{cassé`), 0o600)
-	if _, err := l.SetUser(ctx, "features.htmlTabs", true); err == nil {
+	if _, err := l.SetUser(ctx, "features.sharedWorkbooks", false); err == nil {
 		t.Fatal("fichier cassé écrasé")
 	}
 	if b, _ := os.ReadFile(file); string(b) != `{cassé` {
@@ -526,8 +550,8 @@ func TestSetUser(t *testing.T) {
 	}
 	os.Remove(file)
 	// Stratégie : verrouillé, refusé, rien d'écrit.
-	policy = Tree{"features": Tree{"htmlTabs": false}}
-	if _, err := l.SetUser(ctx, "features.htmlTabs", true); err == nil {
+	policy = Tree{"features": Tree{"sharedWorkbooks": true}}
+	if _, err := l.SetUser(ctx, "features.sharedWorkbooks", false); err == nil {
 		t.Fatal("réglage verrouillé modifié")
 	}
 	if st := UserSettings(l.Load(ctx)); !st[0].Locked {

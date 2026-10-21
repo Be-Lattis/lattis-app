@@ -828,6 +828,14 @@ export interface Platform {
      * rien n'est gardé.
      */
     "demo"?: boolean;
+
+    /**
+     * HTMLPages : pages web des classeurs permises (réglage
+     * features.htmlPages, coupé par défaut ; jamais en web ni dans la démo).
+     * Coupées, l'interface n'en propose pas et montre un onglet existant
+     * sans l'exécuter. Rempli par DocumentService.Platform.
+     */
+    "htmlPages"?: boolean;
 }
 
 /**

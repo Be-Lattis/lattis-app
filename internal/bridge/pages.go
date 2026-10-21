@@ -5,19 +5,28 @@ import (
 
 	"github.com/lalamefine/lattis/internal/api"
 	"github.com/lalamefine/lattis/internal/canvas"
-	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/msg"
 )
 
+// htmlPages dit si les pages web des classeurs sont permises : réglage
+// features.htmlPages (coupé par défaut, sans case dans les paramètres :
+// configuration à la main ou stratégie de l'organisation), et jamais dans
+// la version web ni la démo publique, où rien n'empêche le JavaScript
+// d'une page de faire sortir des données en faisant naviguer son cadre.
+// Coupées, les onglets existants restent dans le classeur mais
+// l'interface ne les affiche pas.
+func (s *DocumentService) htmlPages() bool {
+	p := s.sys().Platform()
+	return !p.Web && !p.Demo && !publicDemo.Load() && api.HTMLPagesConfigured()
+}
+
 // AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
-// et renvoie son identifiant. Les pages web sont une fonctionnalité à
-// activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs),
-// avec ou sans scripting : sans scripting (version web sans web_scripting,
-// démo publique), une page ne fait que lire le classeur (PageCall).
+// et renvoie son identifiant ; refusé quand les pages web sont coupées
+// (htmlPages).
 func (s *DocumentService) AddPage(ctx context.Context, before int64) (int64, error) {
-	if !config.Current().Bool("features.htmlTabs", false) {
-		return 0, msg.New("pages.disabled", nil)
+	if !s.htmlPages() {
+		return 0, api.ErrPagesDisabled
 	}
 	d, err := s.current()
 	if err != nil {
@@ -146,34 +155,31 @@ func (s *DocumentService) AllowPage(ctx context.Context, sheet int64, source str
 	return d.AllowPage(ctx, sheet, source)
 }
 
-// SavePage remplace le contenu d'un onglet page HTML (annulable).
+// SavePage remplace le contenu d'un onglet page HTML ou Document
+// (annulable) ; une page web, seulement quand elles sont permises.
 func (s *DocumentService) SavePage(ctx context.Context, sheet int64, source string) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.SetPage(ctx, sheet, source) })
+	return s.act(ctx, func(d *doc.Document) error {
+		if k, err := d.PageKind(ctx, sheet); err != nil {
+			return err
+		} else if k == canvas.KindHTML && !s.htmlPages() {
+			return api.ErrPagesDisabled
+		}
+		return d.SetPage(ctx, sheet, source)
+	})
 }
 
 // PageCall exécute une commande demandée par une page HTML (pont
 // postMessage du cadre isolé) : les commandes de la liste autorisée aux
-// pages (api.PageCall). Sans scripting (version web sans web_scripting,
-// démo publique), la page garde la lecture des données (api.PageReadCall :
-// SQL en lecture seule, requêtes favorites, feuilles, tableaux) ; le reste
-// est refusé avec un message que l'interface montre dans la page. Pages web
-// coupées et verrouillées par l'organisation (features.htmlTabs) : rien.
+// pages (api.PageCall). Pages web coupées (htmlPages, toujours dans la
+// version web et la démo publique) : tout est refusé.
 func (s *DocumentService) PageCall(ctx context.Context, name string, args map[string]any) (any, error) {
-	if pagesOffByOrg() {
-		return nil, msg.New("page.disabledByOrg", nil)
+	if !s.htmlPages() {
+		return nil, api.ErrPagesDisabled
 	}
-	if s.scripting() != nil {
-		return api.PageReadCall(ctx, host{s}, name, args)
+	if err := s.scripting(); err != nil {
+		return nil, err
 	}
 	return api.PageCall(ctx, host{s}, name, args)
-}
-
-// pagesOffByOrg dit si l'organisation a coupé les pages web (réglage
-// features.htmlTabs faux et verrouillé). Coupées par l'utilisateur, les
-// pages déjà posées s'affichent toujours : le réglage n'ôte que l'ajout.
-func pagesOffByOrg() bool {
-	c := config.Current()
-	return c.Locked("features.htmlTabs") && !c.Bool("features.htmlTabs", false)
 }
 
 // HTTPHosts liste les hôtes que les scripts et pages du classeur peuvent

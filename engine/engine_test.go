@@ -170,22 +170,32 @@ func TestEngineCallAndEvent(t *testing.T) {
 	if _, err := c.call("DocumentService.RunScript", "x", "print(1)"); err == nil || err.Data == nil || !strings.Contains(fmt.Sprint(err.Data.Cause), "script.disabled") {
 		t.Fatalf("script sans scripting : %+v", err)
 	}
-	// Une erreur du moteur porte sa cause (identifiant du message) : l'interface
-	// la reconnaît (bandeau d'une page web) et l'affiche dans sa langue.
-	_, err := c.call("DocumentService.PageCall", "cells.set", map[string]any{"row": 1, "col": 1, "value": 1})
-	if err == nil || err.Data == nil {
-		t.Fatalf("écriture d'une page sans scripting : %+v", err)
+	// Une erreur du moteur porte sa cause (identifiant du message), que
+	// l'interface affiche dans sa langue. Pages web : jamais dans la version
+	// web (ni ajout, ni appel d'une page, même en lecture).
+	for _, m := range []struct {
+		method string
+		args   []any
+	}{
+		{"DocumentService.PageCall", []any{"db.query", map[string]any{"sql": "SELECT 6 * 7"}}},
+		{"DocumentService.PageCall", []any{"cells.set", map[string]any{"row": 1, "col": 1, "value": 1}}},
+		{"DocumentService.AddPage", []any{0}},
+	} {
+		_, err := c.call(m.method, m.args...)
+		if err == nil || err.Data == nil {
+			t.Fatalf("%s en web : %+v", m.method, err)
+		}
+		if cause, _ := err.Data.Cause.(map[string]any); cause == nil || cause["id"] != "pages.disabled" || cause["message"] != err.Message {
+			t.Fatalf("%s : cause %#v", m.method, err.Data.Cause)
+		}
 	}
-	if cause, _ := err.Data.Cause.(map[string]any); cause == nil || cause["id"] != "page.needsScripting" || cause["message"] != err.Message {
-		t.Fatalf("cause %#v", err.Data.Cause)
+	var plat struct {
+		Web       bool `json:"web"`
+		HTMLPages bool `json:"htmlPages"`
 	}
-	// Sans scripting, une page lit le classeur.
-	var q struct {
-		Rows [][]any `json:"rows"`
-	}
-	json.Unmarshal(c.mustCall("DocumentService.PageCall", "db.query", map[string]any{"sql": "SELECT 6 * 7"}), &q)
-	if len(q.Rows) != 1 || q.Rows[0][0] != float64(42) {
-		t.Fatalf("db.query d'une page sans scripting : %+v", q)
+	json.Unmarshal(c.mustCall("DocumentService.Platform"), &plat)
+	if !plat.Web || plat.HTMLPages {
+		t.Fatalf("Platform %+v", plat)
 	}
 }
 

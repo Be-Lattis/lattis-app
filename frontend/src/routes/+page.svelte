@@ -48,7 +48,7 @@
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { htmlTabsEnabled, loadSettings, mcpAvailable, platform, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
+	import { htmlPagesEnabled, loadSettings, mcpAvailable, platform, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
 	import ThemeDialog from '#lib/shell/ThemeDialog.svelte';
 	import { resolveTheme, themeCatalog, themeExtras, themeId, themeLabel, workbookTheme, type WorkbookTheme } from '#lib/grid/theme.js';
 	import { isThemeRef } from '#lib/grid/colors.js';
@@ -58,6 +58,7 @@
 	import { withoutWorkbookParam, workbookParam } from '#lib/web/workbooklink.js';
 	import { followViewport, installLongPress } from '#lib/ui/mobile.js';
 	import HtmlPage from '#lib/page/HtmlPage.svelte';
+	import PageOff from '#lib/page/PageOff.svelte';
 	import DocPage from '#lib/doc/DocPage.svelte';
 	import type { DocFormat } from '#lib/doc/format.js';
 	import QueryHost from '#lib/query/QueryHost.svelte';
@@ -2618,7 +2619,7 @@
 							onnotice={(m) => (notice = m)}
 							onrowlink={gotoRow}
 						/>
-						{:else}
+						{:else if htmlPagesEnabled()}
 						<HtmlPage
 							name={activeInfo?.name ?? ''}
 							source={activePage.source}
@@ -2633,6 +2634,9 @@
 							stamp={layout}
 							onnotice={(m) => (notice = m)}
 						/>
+						{:else}
+						<!-- Pages web coupées (par défaut, toujours en web) : ni cadre ni exécution. -->
+						<PageOff name={activeInfo?.name ?? ''} />
 						{/if}
 					</div>
 				{/key}
@@ -2800,7 +2804,7 @@
 		onselect={selectSheet}
 		onadd={mode === 'doc' ? () => sheetAction(async () => selectSheet(await DocumentService.AddSheet())) : undefined}
 		oninsert={mode === 'doc' ? (before) => sheetAction(async () => selectSheet(await DocumentService.InsertSheet(before))) : undefined}
-		onpage={mode === 'doc' && htmlTabsEnabled() ? (before) => addPage(before) : undefined}
+		onpage={mode === 'doc' && htmlPagesEnabled() ? (before) => addPage(before) : undefined}
 		ondocpage={mode === 'doc' ? (before) => addDoc(before) : undefined}
 		onmove={mode === 'doc' ? (id, to) => sheetAction(() => DocumentService.MoveSheet(id, to)) : undefined}
 		onrename={mode === 'doc' ? async (id, name) => {

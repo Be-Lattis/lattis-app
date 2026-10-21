@@ -11,10 +11,6 @@
 			"limits": "Limites",
 			"updates": "Mises à jour"
 		},
-		"htmlTabs": {
-			"label": "Pages web",
-			"help": "Ajouter au classeur des pages HTML ou des pages d'un site."
-		},
 		"sharedWorkbooks": {
 			"label": "Classeurs partagés (Serveur Lattis)",
 			"help": "Se connecter au Serveur Lattis de votre organisation."

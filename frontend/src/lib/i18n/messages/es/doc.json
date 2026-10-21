@@ -122,10 +122,9 @@
 		"aria": "Documento {name}",
 		"grip": "Arrastrar para cambiar el tamaño",
 		"refused": {
-			"scripting": "Esta página usa scripts, desactivados aquí: {command}. Solo puede leer el libro.",
-			"org": "Su organización ha desactivado las páginas web: esta página no puede leer el libro.",
 			"page": "{command}: comando no disponible en una página web."
-		}
+		},
+		"off": "Las páginas web están desactivadas. El contenido se conserva en el libro."
 	},
 	"clip": {
 		"chartPasted": "Gráfico pegado",

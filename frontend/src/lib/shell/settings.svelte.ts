@@ -5,7 +5,7 @@
 import { DocumentService } from '#bindings/internal/bridge/index.js';
 import { isWeb } from '#lib/web/platform.js';
 import { languageFor, setLang, setSystemLocale } from '#lib/i18n/index.js';
-import { boolSetting, findSetting, resetPaths, type SettingState } from './settings';
+import { boolSetting, findSetting, htmlPagesOn, resetPaths, type SettingState } from './settings';
 
 export const userSettings = $state<{ list: SettingState[] }>({ list: [] });
 
@@ -15,8 +15,9 @@ export const userSettings = $state<{ list: SettingState[] }>({ list: [] });
  * ne l'a pas autorisé (web_scripting) ; le serveur MCP local n'existe pas.
  * demo : démo publique (lattis-engine --public-demo), jetable : ni Serveur
  * Lattis, ni connexion sortante, ni assistant ; Enregistrer télécharge.
+ * htmlPages : pages web permises (features.htmlPages, jamais en web).
  */
-export const platform = $state<{ web: boolean; scripting: boolean; locale?: string; demo?: boolean }>({ web: isWeb, scripting: !isWeb });
+export const platform = $state<{ web: boolean; scripting: boolean; locale?: string; demo?: boolean; htmlPages?: boolean }>({ web: isWeb, scripting: !isWeb });
 
 /** Charge les réglages (silencieux en cas d'échec : valeurs par défaut). */
 export async function loadSettings() {
@@ -67,14 +68,12 @@ async function applyLanguage() {
 }
 
 /**
- * Les pages web sont proposées (ajout, « Site web… »), avec ou sans
- * scripting : sans scripting (version web sans web_scripting, démo
- * publique), une page ne fait que lire le classeur (SQL en lecture seule,
- * requêtes favorites, DocumentService.PageCall). Les pages déjà posées
- * s'affichent dans tous les cas.
+ * Les pages web sont permises (htmlPagesOn) : ajout, affichage et
+ * « Site web… ». Coupées (par défaut), un onglet page existant montre
+ * seulement qu'elles sont désactivées, sans exécuter la page.
  */
-export function htmlTabsEnabled(): boolean {
-	return boolSetting(userSettings.list, 'features.htmlTabs');
+export function htmlPagesEnabled(): boolean {
+	return htmlPagesOn(platform);
 }
 
 /** Lua, boutons d'action et pages web sont permis (toujours sur le bureau). */

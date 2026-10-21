@@ -292,7 +292,7 @@
 	"pages.add": {
 		"signature": "pages.add([name], [source], [before], [kind]) → {id, name, kind}",
 		"summary": "Adds a web page (HTML, CSS and JavaScript displayed in an isolated frame), or a document (kind = \"doc\": rich text), and returns {id, name, kind}.",
-		"details": "The page talks to the workbook with lattis.call(\"command\", {arguments}), which returns a promise (an allowed list of the script commands: reading like sheets.list or db.query, values like cells.set or db.execute, ui.*, http.*, buttons.run; no files, no scripts, no structure, no protections), and lattis.on(\"change\", function), called when the workbook changes. It also reads the workbook with lattis.sql(\"SELECT …\", {parameters}) and lattis.query(\"name of a saved query\"), which return an array of objects; without scripting (web edition, public demo), it can only read. Without source, the page receives a sample template. Without before, the tab is added at the end. Parameters — name: name of the tab (Page1… by default); source: HTML content of the page; before: sheet before which to insert it; kind: \"html\" (default) or \"doc\": document, whose content is a Quill Delta in JSON. Arguments in order, or a table of named arguments: pages.add{name = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+		"details": "The page talks to the workbook with lattis.call(\"command\", {arguments}), which returns a promise (an allowed list of the script commands: reading like sheets.list or db.query, values like cells.set or db.execute, ui.*, http.*, buttons.run; no files, no scripts, no structure, no protections), and lattis.on(\"change\", function), called when the workbook changes. It also reads the workbook with lattis.sql(\"SELECT …\", {parameters}) and lattis.query(\"name of a saved query\"), which return an array of objects. Web pages are off by default (features.htmlPages configuration setting, never in the browser edition); documents (kind = \"doc\") remain allowed. Without source, the page receives a sample template. Without before, the tab is added at the end. Parameters — name: name of the tab (Page1… by default); source: HTML content of the page; before: sheet before which to insert it; kind: \"html\" (default) or \"doc\": document, whose content is a Quill Delta in JSON. Arguments in order, or a table of named arguments: pages.add{name = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
 	},
 	"pages.get": {
 		"signature": "pages.get([sheet]) → HTML text",
@@ -302,7 +302,7 @@
 	"pages.set": {
 		"signature": "pages.set(sheet, source)",
 		"summary": "Replaces the HTML content of a web page.",
-		"details": "Parameters — sheet: web page (name or identifier); source: new HTML content. Arguments in order, or a table of named arguments: pages.set{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+		"details": "Web pages are off by default (features.htmlPages configuration setting). Parameters — sheet: web page (name or identifier); source: new HTML content. Arguments in order, or a table of named arguments: pages.set{sheet = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
 	},
 	"pivots.create": {
 		"signature": "pivots.create(config) → {id, name} (the sheet)",

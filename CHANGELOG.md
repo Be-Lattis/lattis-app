@@ -9,6 +9,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Changements
 
 - Démo publique : le fond de carte OpenStreetMap s'affiche (seule connexion sortante permise), sans question.
+- Pages web des classeurs désactivées par défaut, partout : leur JavaScript pourrait faire sortir des données du classeur. La case « Pages web » disparaît des paramètres, la démonstration n'a plus de page « Tableau de bord » (sa requête favorite « Indicateurs des ventes » reste dans l'onglet SQL), et ni l'assistant ni les scripts n'en créent. Un onglet page web existant est conservé dans le classeur mais affiche seulement « Les pages web sont désactivées » ; on peut le supprimer. Une organisation peut les réactiver dans l'application de bureau par sa configuration (`features.htmlPages`) ; la version web et la démo publique ne les affichent jamais.
 
 ## 0.3.4-beta (21/10/2026)
 

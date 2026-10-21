@@ -26,7 +26,7 @@ func TestMedVitrine(t *testing.T) {
 	for _, s := range l.Sheets {
 		names = append(names, s.Name+":"+s.Kind)
 	}
-	want := "À découvrir:doc Ventes: Villes: Synthèse: Ventes mensuelles: Impayés: Tableau de bord:html Clients: Employés: Analyse:"
+	want := "À découvrir:doc Ventes: Villes: Synthèse: Ventes mensuelles: Impayés: Clients: Employés: Analyse:"
 	if got := strings.Join(names, " "); got != want {
 		t.Fatalf("onglets :\n got %s\nwant %s", got, want)
 	}
@@ -92,7 +92,7 @@ func TestExemple(t *testing.T) {
 			t.Errorf("exemple : %s absent de %s", w, got)
 		}
 	}
-	if len(res.Sheets) != 6 {
+	if len(res.Sheets) != 5 {
 		t.Errorf("%d onglets", len(res.Sheets))
 	}
 	sl, _ := d.Layout(context.Background(), res.Sheets[2])
@@ -181,5 +181,33 @@ func TestYAMLErreurs(t *testing.T) {
 	}
 	if _, err := Resolve(filepath.Join(dir, "absent.yaml")); err == nil || !strings.Contains(err.Error(), "introuvable") {
 		t.Errorf("fichier absent : %v", err)
+	}
+}
+
+// Aucune démonstration fournie n'a de page web (coupées par défaut,
+// features.htmlPages ; jamais dans la démo publique) ; la requête favorite
+// de la vitrine reste.
+func TestPresetsSansPage(t *testing.T) {
+	for _, p := range Presets() {
+		if p.Plan == nil {
+			continue
+		}
+		plan := p.Plan()
+		for _, s := range plan.Sheets {
+			if s.HTML != "" {
+				t.Errorf("%s : page web %q", p.Name, s.Name)
+			}
+		}
+		if p.Name == "med" && (len(plan.Favorites) != 1 || plan.Favorites[0].Name != "Indicateurs des ventes") {
+			t.Errorf("med : favorites %+v", plan.Favorites)
+		}
+	}
+	path := filepath.Join("..", "..", "docs", "demo", "exemple.yaml")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "html:") {
+		t.Error("exemple.yaml : page web")
 	}
 }

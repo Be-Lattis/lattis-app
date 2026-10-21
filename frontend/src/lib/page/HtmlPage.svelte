@@ -3,13 +3,14 @@
 	// (bridge.ts), et son éditeur (HTML, CSS, JavaScript) avec un aperçu.
 	// Afficher / Modifier basculent entre les deux ; Ctrl+S enregistre (une
 	// étape d'annulation), Ctrl+Entrée met l'aperçu à jour sans enregistrer.
-	// Ou une page web externe : son adresse (« Site web… », si les paramètres
-	// le permettent), affichée dans un cadre, sans pont vers le classeur.
+	// Ou une page web externe : son adresse (« Site web… »), affichée dans un
+	// cadre, sans pont vers le classeur. Affiché seulement quand les pages web
+	// sont permises (htmlPagesEnabled : réglage features.htmlPages, jamais en
+	// web) ; sinon l'onglet montre PageOff.svelte.
 	// Une version de page jamais autorisée sur ce poste (classeur reçu) ne
 	// s'exécute pas : l'onglet demande l'accord de l'utilisateur (consent.ts).
-	// Un appel refusé (scripts coupés ici : la page ne fait que lire ; pages
-	// coupées par l'organisation) est dit dans un bandeau au-dessus de la page,
-	// pas seulement à la page elle-même (refusalOf).
+	// Un appel refusé (commande que les pages n'ont pas) est dit dans un
+	// bandeau au-dessus de la page, pas seulement à la page elle-même (refusalOf).
 	import { onMount, untrack } from 'svelte';
 	import { EditorState } from '@codemirror/state';
 	import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
@@ -19,7 +20,6 @@
 	import { html } from '@codemirror/lang-html';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { buildSrcdoc, eventOf, navigationGuard, pageUrl, parseCall, refusalOf, replyOf, urlSource, type PageRefusal } from './bridge';
-	import { htmlTabsEnabled, platform } from '#lib/shell/settings.svelte.js';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
 	import { declinedPages, pageConsent } from './consent';
 	import { errorText, t } from '#lib/i18n/index.js';
@@ -133,11 +133,6 @@
 	const url = $derived(editing ? null : pageUrl(shown));
 	let asking = $state<string | null>(null);
 
-	// Pointer l'onglet vers une page web externe : seulement si Fichier ›
-	// Paramètres › Fonctionnalités le permet (coupé par défaut), et jamais
-	// dans la démo publique. Une page web déjà posée s'affiche dans tous les cas.
-	const htmlTabs = $derived(htmlTabsEnabled() && !platform.demo);
-
 	// Appels refusés par le moteur (bandeau) ; oubliés à chaque nouvelle page.
 	let refused = $state<PageRefusal | null>(null);
 	$effect(() => {
@@ -146,14 +141,12 @@
 		untrack(() => (refused = null));
 	});
 	function refusalText(r: PageRefusal): string {
-		if (r.kind === 'org') return t('doc.page.refused.org');
-		if (r.kind === 'page') return t('doc.page.refused.page', { command: r.command });
-		return t('doc.page.refused.scripting', { command: r.command });
+		return t('doc.page.refused.page', { command: r.command });
 	}
 
 	async function setUrl() {
 		const u = (asking ?? '').trim();
-		if (!u || !htmlTabs) return;
+		if (!u) return;
 		asking = null;
 		const src = urlSource(u);
 		try {
@@ -304,9 +297,7 @@
 			<span class="muted">{t('doc.page.keys')} · lattis.sql(sql), lattis.query(name), lattis.call("sheets.list"), lattis.on("change", f)</span>
 		{:else}
 			<button onclick={startEdit} disabled={!!locked} title={locked || t('doc.page.edit.tooltip')}><Icon name="edit" size={14} />{url ? t('doc.page.edit.html') : t('doc.page.edit.label')}</button>
-			{#if !htmlTabs}
-				<!-- Pages web coupés (Fichier › Paramètres › Fonctionnalités) : la page déjà posée s'affiche quand même. -->
-			{:else if asking !== null}
+			{#if asking !== null}
 				<!-- svelte-ignore a11y_autofocus -->
 				<input
 					class="url"

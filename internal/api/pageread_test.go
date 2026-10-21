@@ -11,9 +11,9 @@ import (
 	"github.com/lalamefine/lattis/internal/query"
 )
 
-// Page web sans scripting (version web sans web_scripting, démo publique) :
-// lecture seule des données.
-func TestPageReadCall(t *testing.T) {
+// Requêtes favorites lues par une page web (lattis.query) : par leur nom,
+// en lecture seule.
+func TestFavoritesRun(t *testing.T) {
 	h := sample(t)
 	ctx := context.Background()
 	if _, err := h.d.AddFavorite(ctx, "Grosses ventes", `SELECT Client, Montant FROM Commandes WHERE Montant > ? ORDER BY Montant DESC`); err != nil {
@@ -23,18 +23,10 @@ func TestPageReadCall(t *testing.T) {
 		t.Fatal(err)
 	}
 	read := func(name string, args map[string]any) (string, error) {
-		res, err := PageReadCall(ctx, h, name, args)
+		res, err := Invoke(ctx, h, name, args)
 		return asJSON(res), err
 	}
-
-	// SQL de lecture, avec paramètres.
-	if got, err := read("db.query", map[string]any{"sql": `SELECT sum(Montant) FROM Commandes WHERE Montant > ?`, "params": []any{float64(50)}}); err != nil || !strings.Contains(got, `"rows":[[200.5]]`) {
-		t.Fatalf("db.query %s %v", got, err)
-	}
-	if got, err := read("db.query", map[string]any{"sql": "-- total\nWITH t AS (SELECT Montant FROM Commandes) SELECT count(*) FROM t"}); err != nil || !strings.Contains(got, `"rows":[[3]]`) {
-		t.Fatalf("WITH %s %v", got, err)
-	}
-	// Requête favorite par son nom (la casse ne compte pas), et la liste.
+	// Par son nom (la casse ne compte pas), et la liste.
 	if got, err := read("favorites.run", map[string]any{"name": "grosses ventes", "params": []any{float64(50)}}); err != nil || !strings.Contains(got, `"columns":["Client","Montant"]`) || !strings.Contains(got, `["Durand",120]`) {
 		t.Fatalf("favorites.run %s %v", got, err)
 	}
@@ -44,64 +36,12 @@ func TestPageReadCall(t *testing.T) {
 	if _, err := read("favorites.run", map[string]any{"name": "Inconnue"}); !msgIs(err, "api.favoriteNotFound") {
 		t.Fatalf("favorite inconnue : %v", err)
 	}
-	// Métadonnées des feuilles et tableaux.
-	for _, name := range []string{"sheets.list", "tables.list"} {
-		if _, err := read(name, nil); err != nil {
-			t.Fatalf("%s : %v", name, err)
-		}
-	}
-	if got, err := read("tables.rows", map[string]any{"table": "Commandes"}); err != nil || !strings.Contains(got, "Durand") {
-		t.Fatalf("tables.rows %s %v", got, err)
-	}
-
-	// Rien ne s'écrit : écritures, structure, ATTACH, PRAGMA, et favorite qui modifie.
-	for _, q := range []string{
-		`UPDATE Commandes SET Montant = 0`,
-		`DELETE FROM Commandes`,
-		`INSERT INTO Commandes (Client) VALUES ('x')`,
-		`DROP TABLE Commandes`,
-		`CREATE TABLE x (a)`,
-		`ATTACH DATABASE 'x.db' AS x`,
-		`PRAGMA query_only = 0`,
-		`/* commentaire */ PRAGMA writable_schema = 1`,
-		`WITH x AS (SELECT 1) DELETE FROM Commandes`,
-		`SELECT 1; DELETE FROM Commandes`,
-	} {
-		if _, err := read("db.query", map[string]any{"sql": q}); err == nil {
-			t.Errorf("accepté : %s", q)
-		}
-	}
+	// Une favorite qui modifie est refusée ; rien ne change.
 	if _, err := read("favorites.run", map[string]any{"name": "Remise à zéro"}); !msgIs(err, "api.sqlReadOnly") {
 		t.Fatalf("favorite d'écriture : %v", err)
 	}
 	if got := asJSON(call(t, h, "db.query", map[string]any{"sql": `SELECT count(*), sum(Montant) FROM Commandes`})); !strings.Contains(got, `[[3,240.5]]`) {
 		t.Fatalf("classeur modifié : %s", got)
-	}
-
-	// Commandes des pages hors de la lecture : refusées, avec leur nom.
-	for _, name := range []string{"cells.set", "db.execute", "tables.insert_row", "buttons.run", "controls.fire",
-		"http.get", "ui.alert", "ui.prompt", "doc.state", "queries.list", "queries.refresh"} {
-		_, err := read(name, map[string]any{"row": float64(1), "col": float64(1), "value": "x", "sql": "UPDATE Commandes SET Montant = 0"})
-		var me *msg.Error
-		if !errors.Is(err, ErrPageNeedsScripting) || !errors.As(err, &me) || me.Args["command"] != name {
-			t.Fatalf("%s : %v", name, err)
-		}
-	}
-	// Commandes qu'aucune page n'a : même refus qu'avec le scripting.
-	if _, err := read("scripts.run", nil); err == nil || !strings.Contains(err.Error(), "non disponible") {
-		t.Fatalf("scripts.run : %v", err)
-	}
-	if _, err := read("rien.du.tout", nil); !errors.Is(err, ErrUnknown) {
-		t.Fatalf("commande inconnue : %v", err)
-	}
-	// La lecture est une partie des commandes des pages.
-	for name := range pageRead {
-		if !PageCommand(name) {
-			t.Errorf("%s : lecture sans être une commande des pages", name)
-		}
-	}
-	if len(h.dialogs) != 0 {
-		t.Fatalf("une page en lecture seule a posé une question : %+v", h.dialogs)
 	}
 }
 

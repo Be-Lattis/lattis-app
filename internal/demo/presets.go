@@ -86,8 +86,8 @@ type Plan struct {
 	Scripts []ScriptSpec
 	// Events : écouteurs des évènements du classeur (events.on).
 	Events []canvas.Listener
-	// Favorites : requêtes favorites de l'onglet SQL (lues par les pages web
-	// avec lattis.query(nom)).
+	// Favorites : requêtes favorites de l'onglet SQL (une page web, quand
+	// elles sont permises, les lit avec lattis.query(nom)).
 	Favorites []FavoriteSpec
 	// Seed : graine d'un plan lu d'un fichier (0 : celle des options).
 	Seed uint64
@@ -170,7 +170,7 @@ func Presets() []Preset {
 	}
 	return append(out,
 		Preset{"sml", "100 lignes × 10 colonnes, 1 onglet", func() Plan { return Plan{Sheets: []SheetSpec{small()}} }, ""},
-		Preset{"med", "vitrine : document, ventes, carte, TCD en arborescence, requêtes SQL et d'import, scripts, page HTML (10 onglets)", med, ""},
+		Preset{"med", "vitrine : document, ventes, carte, TCD en arborescence, requêtes SQL et d'import, scripts (9 onglets)", med, ""},
 		Preset{"big", "med + 8 onglets de 5 à 50 colonnes et 100 à 100K lignes", big, ""},
 		Preset{"refs", "5 tableaux sur 3 onglets reliés par de nombreuses REFERENCE et formules", refs, ""},
 	)

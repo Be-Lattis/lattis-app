@@ -134,7 +134,7 @@ Liens « Ouvrir dans Lattis » de la page web de Lattis Server en développement
 | `1Kx10`, `10Kx10`, `100Kx10`, `1Mx10`, `10Mx10` | 1 onglet de commandes, de 1 000 à 10 M lignes × 10 colonnes |
 | `1Kx100`, `10Kx100`, `100Kx100`, `1Mx100`, `10Mx100` | 1 onglet de relevés météo (stations et capteurs), × 100 colonnes |
 | `sml` | 100 lignes × 10 colonnes, 1 onglet |
-| `med` | la vitrine (10 onglets) : un Document « À découvrir » (texte, graphique et TCD vivants, bouton Lua, champ lié), Ventes (2 000 commandes à clé, REFERENCE, mise en forme conditionnelle, liste qui pilote des formules, boutons), Villes (carte OpenStreetMap), Synthèse (TCD en arborescence avec sous-totaux, compartimentage, radar), Ventes mensuelles (requête SQL avec fonctions de fenêtre, actualisable par F5 ; combiné, jauge, cascade), Impayés (requête façon Power Query), une page HTML, Clients, Employés et Analyse |
+| `med` | la vitrine (9 onglets) : un Document « À découvrir » (texte, graphique et TCD vivants, bouton Lua, champ lié), Ventes (2 000 commandes à clé, REFERENCE, mise en forme conditionnelle, liste qui pilote des formules, boutons), Villes (carte OpenStreetMap), Synthèse (TCD en arborescence avec sous-totaux, compartimentage, radar), Ventes mensuelles (requête SQL avec fonctions de fenêtre, actualisable par F5 ; combiné, jauge, cascade), Impayés (requête façon Power Query), Clients, Employés et Analyse |
 | `big` | `med`, plus 8 onglets de 5 à 50 colonnes et de 100 à 100 000 lignes |
 | `refs` | 5 tableaux sur 3 onglets reliés par des `REFERENCE` en chaîne, `SOMME.SI` et `NB.SI` |
 

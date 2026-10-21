@@ -92,6 +92,11 @@ type Platform struct {
 	// Lattis ni de connexion sortante, Enregistrer télécharge le classeur,
 	// rien n'est gardé.
 	Demo bool `json:"demo,omitempty"`
+	// HTMLPages : pages web des classeurs permises (réglage
+	// features.htmlPages, coupé par défaut ; jamais en web ni dans la démo).
+	// Coupées, l'interface n'en propose pas et montre un onglet existant
+	// sans l'exécuter. Rempli par DocumentService.Platform.
+	HTMLPages bool `json:"htmlPages,omitempty"`
 }
 
 // errNoScripting refuse un script quand l'hôte ne le permet pas.
@@ -239,6 +244,7 @@ func (s *DocumentService) Platform() Platform {
 	if !p.Web {
 		p.Locale = msg.SystemLocale()
 	}
+	p.HTMLPages = s.htmlPages()
 	return p
 }
 

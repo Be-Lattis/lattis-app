@@ -24,7 +24,7 @@ func TestResetUser(t *testing.T) {
 			return out
 		},
 	}
-	paths := []string{"features.htmlTabs", "features.coEditing", "ui.language", "ui.theme", "limits.undoDepth", "ai.enabled"}
+	paths := []string{"features.sharedWorkbooks", "features.coEditing", "ui.language", "ui.theme", "limits.undoDepth", "ai.enabled"}
 
 	// Pas de fichier : rien à faire, rien d'écrit.
 	if _, err := l.ResetUser(ctx, paths); err != nil {
@@ -37,7 +37,7 @@ func TestResetUser(t *testing.T) {
 	os.MkdirAll(dir, 0o755)
 	os.WriteFile(file, []byte(`{
   "organization": "ACME",
-  "features": {"HtmlTabs": true, "coEditing": false},
+  "features": {"SharedWorkbooks": false, "coEditing": false},
   "ui": {"language": "de", "theme": "mine", "themes": {"mine": {"name": "Le mien", "table": "#112233", "source": "#445566"}}},
   "limits": {"undoDepth": 50},
   "ai": {"enabled": true, "provider": "anthropic", "model": "claude-x"},
@@ -52,7 +52,7 @@ func TestResetUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	def := Resolve(ctx, Options{}, src("défaut", RankDefault, false, Defaults()))
-	for _, p := range []string{"features.htmlTabs", "features.coEditing", "ui.language", "ui.theme", "ai.enabled"} {
+	for _, p := range []string{"features.sharedWorkbooks", "features.coEditing", "ui.language", "ui.theme", "ai.enabled"} {
 		got, _ := c.Lookup(p)
 		want, _ := def.Lookup(p)
 		if got != want {

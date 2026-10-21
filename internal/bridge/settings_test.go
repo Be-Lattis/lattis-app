@@ -2,27 +2,28 @@ package bridge
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
-func TestSettingsHtmlTabsOffByDefault(t *testing.T) {
+// Pages web : aucune case dans les paramètres (réglage à la main,
+// features.htmlPages ; l'ancien features.htmlTabs n'y est plus).
+func TestSettingsWithoutHtmlPages(t *testing.T) {
 	s := &DocumentService{}
-	list := s.Settings(context.Background())
-	for _, st := range list {
-		if st.Path == "features.htmlTabs" {
-			if st.Value != false || st.Locked {
-				t.Fatalf("features.htmlTabs = %+v", st)
-			}
-			return
+	for _, st := range s.Settings(context.Background()) {
+		if strings.HasPrefix(strings.ToLower(st.Path), "features.html") {
+			t.Fatalf("réglage des pages web dans les paramètres : %+v", st)
 		}
 	}
-	t.Fatalf("features.htmlTabs absent : %+v", list)
+	if _, err := s.SetSetting(context.Background(), "features.htmlPages", true); err == nil {
+		t.Fatal("features.htmlPages modifiable depuis les paramètres")
+	}
 }
 
 func TestResetSettingsRefusesUnknownKey(t *testing.T) {
 	s := &DocumentService{}
 	for _, p := range []string{"connections", "ui.themes", "ai.apiKey"} {
-		if _, err := s.ResetSettings(context.Background(), []string{"features.htmlTabs", p}); err == nil {
+		if _, err := s.ResetSettings(context.Background(), []string{"features.coEditing", p}); err == nil {
 			t.Fatalf("%s accepté", p)
 		}
 	}

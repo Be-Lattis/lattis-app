@@ -122,10 +122,9 @@
 		"aria": "Dokument {name}",
 		"grip": "Ziehen, um die Größe zu ändern",
 		"refused": {
-			"scripting": "Diese Seite verwendet Skripte, die hier deaktiviert sind: {command}. Sie kann die Arbeitsmappe nur lesen.",
-			"org": "Webseiten wurden von Ihrer Organisation deaktiviert: Diese Seite kann die Arbeitsmappe nicht lesen.",
 			"page": "{command}: Befehl auf einer Webseite nicht verfügbar."
-		}
+		},
+		"off": "Webseiten sind deaktiviert. Der Inhalt bleibt in der Arbeitsmappe erhalten."
 	},
 	"clip": {
 		"chartPasted": "Diagramm eingefügt",

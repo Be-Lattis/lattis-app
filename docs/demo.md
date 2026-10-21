@@ -18,7 +18,7 @@ seed: 7          # graine du générateur (facultative ; --seed l'emporte, 1 par
 sheets: [...]    # les onglets, dans l'ordre
 scripts: [...]   # scripts Lua de la bibliothèque (onglet Script)
 events: [...]    # écouteurs des évènements du classeur
-favorites: [...] # requêtes favorites de l'onglet SQL (lues par les pages web)
+favorites: [...] # requêtes favorites de l'onglet SQL
 ```
 
 Les adresses s'écrivent comme dans la grille : `cell: B3` (coin haut gauche d'un tableau,
@@ -180,10 +180,14 @@ Graphiques et tableaux croisés d'un document se recalculent comme sur une feuil
     </script>
 ```
 
+Les pages web sont coupées par défaut : l'onglet est créé, mais ne s'affiche que si la
+configuration les active (`features.htmlPages`, voir
+[configuration-entreprise.md](configuration-entreprise.md)), et jamais dans la version web ni
+la démo publique. Aucune démonstration fournie n'en contient.
+
 La page lit le classeur en SQL : `lattis.sql(requête, paramètres)` (SELECT ou WITH) et
-`lattis.query(nom)`, une requête favorite (voir plus bas) ; ces lectures fonctionnent aussi
-sans scripts (version web, démo publique). Les autres commandes passent par `lattis.call`
-(voir [scripting-lua.md](scripting-lua.md)).
+`lattis.query(nom)`, une requête favorite (voir plus bas). Les autres commandes passent par
+`lattis.call` (voir [scripting-lua.md](scripting-lua.md)).
 
 ### Requêtes favorites
 

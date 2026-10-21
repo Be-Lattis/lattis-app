@@ -11,10 +11,6 @@
 			"limits": "限制",
 			"updates": "更新"
 		},
-		"htmlTabs": {
-			"label": "网页",
-			"help": "向工作簿添加 HTML 页面或网站页面。"
-		},
 		"sharedWorkbooks": {
 			"label": "共享工作簿（Lattis 服务器）",
 			"help": "登录到您组织的 Lattis 服务器。"

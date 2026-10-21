@@ -1,6 +1,6 @@
 # Documentos y páginas web
 
-Además de las hojas, un libro puede contener otros dos tipos de pestañas: los **Documentos**, para redactar un informe, y las **Páginas web**, para crear una pequeña aplicación. Ambos se agregan con un clic derecho en el «+» de las pestañas de abajo, o en una pestaña (Insertar).
+Además de las hojas, un libro puede contener **Documentos**, para redactar un informe. Se agregan con un clic derecho en el «+» de las pestañas de abajo, o en una pestaña (Insertar).
 
 ## Documento {#document}
 
@@ -16,28 +16,4 @@ Clic derecho en un elemento insertado: el mismo menú que en la hoja; en otro lu
 
 ## Página web {#page-web}
 
-Una función que se activa en Archivo › Configuración › Funciones (consulte [Configuración](parametres)); un libro que ya contiene páginas web las muestra y las usa incluso sin ella.
-
-Una página web escrita por usted (HTML, CSS, JavaScript), mostrada en un marco aislado: no tiene acceso ni al disco ni al resto de la aplicación, y su acceso a la red pasa por Lattis. Se comunica con el libro mediante un pequeño objeto `lattis`:
-
-```
-lattis.sql("SELECT * FROM Pedidos WHERE Importe > ?", [50])
-lattis.query("Mejores ciudades")
-lattis.on("change", () => actualizar())
-lattis.call("sheets.list")
-lattis.call("cells.set", {row: 1, col: 1, value: 42})
-```
-
-`lattis.sql` ejecuta una consulta SQL de lectura (SELECT o WITH) y `lattis.query` una consulta favorita de la [pestaña SQL](sql), por su nombre; ambas devuelven una matriz de objetos, una propiedad por columna. `lattis.queries()` lista las consultas favoritas.
-
-Los comandos de `lattis.call` son los de los [scripts Lua](lua). Una página solo llega a un sitio web mediante `lattis.call("http.get", …)`, con su aprobación. Una página que intenta abrir por sí misma otra dirección (`location.href = …`) se vuelve a cargar de inmediato; aun así, la solicitud a esa dirección puede haber salido: un motivo más para permitir solo páginas de personas de confianza.
-
-**Sin scripts** (versión web cuyo servidor no permite scripts, demo pública), una página conserva la lectura: `lattis.sql`, `lattis.query`, `lattis.on` y los comandos de lectura de `lattis.call` (`sheets.list`, `tables.rows`, `cells.get`…). Un comando que modifica el libro, contacta un sitio o ejecuta un script se rechaza, y un aviso encima de la página lo indica.
-
-Una página web recibida con un libro (o modificada en otro lugar) no se ejecuta de entrada: la pestaña pregunta **Permitir** o **No ejecutar**, con **Ver el código**. Una página puede leer y modificar el libro: permítala solo si confía en la persona que le dio este libro. La aprobación se aplica a esta versión de la página, en este equipo; las páginas que usted crea o modifica aquí se permiten automáticamente. Después de «No ejecutar», el botón **Decidir…** de la pestaña vuelve a hacer la pregunta.
-
-El editor de la página está junto a la vista previa: `Ctrl+S` guarda, `Ctrl+Entrar` actualiza la vista previa sin guardar.
-
-## Páginas web externas {#pages-web-externes}
-
-Una página web también puede mostrar una página de un sitio web («Sitio web…»), cuando las páginas web están activadas.
+Las páginas web (HTML, CSS y JavaScript en una pestaña) están desactivadas: su JavaScript podría sacar datos del libro. Una pestaña de página web de un libro existente se conserva, sin mostrarse; puede eliminarla. Su organización puede reactivarlas en la aplicación de escritorio, nunca en la versión de navegador.

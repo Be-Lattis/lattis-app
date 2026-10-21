@@ -11,10 +11,6 @@
 			"limits": "Grenzen",
 			"updates": "Updates"
 		},
-		"htmlTabs": {
-			"label": "Webseiten",
-			"help": "HTML-Seiten oder Webseiten zur Arbeitsmappe hinzufügen."
-		},
 		"sharedWorkbooks": {
 			"label": "Freigegebene Arbeitsmappen (Lattis-Server)",
 			"help": "Beim Lattis-Server Ihrer Organisation anmelden."

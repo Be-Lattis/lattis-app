@@ -5,9 +5,59 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/lalamefine/lattis/internal/config"
 )
 
+// withHTMLPages active les pages web (features.htmlPages) le temps d'un essai.
+func withHTMLPages(t *testing.T) {
+	t.Helper()
+	old := config.Current()
+	config.SetCurrent(config.Resolve(context.Background(), config.Options{},
+		&config.TreeSource{N: "défaut", R: config.RankDefault, T: config.Defaults()},
+		&config.TreeSource{N: "user", R: config.RankUser, T: config.Tree{"features": config.Tree{"htmlPages": true}}}))
+	t.Cleanup(func() { config.SetCurrent(old) })
+}
+
+// Pages web coupées (par défaut) : ni création, ni modification, ni appel
+// d'une page ; les documents restent, et une page déjà là se lit encore.
+func TestPagesDisabledByDefault(t *testing.T) {
+	if HTMLPagesConfigured() {
+		t.Fatal("pages web activées par défaut")
+	}
+	h := sample(t)
+	ctx := context.Background()
+	for _, args := range []map[string]any{nil, {"kind": "html"}, {"name": "P", "source": "<h1>x</h1>"}} {
+		if _, err := Invoke(ctx, h, "pages.add", args); !errors.Is(err, ErrPagesDisabled) {
+			t.Fatalf("pages.add %v : %v", args, err)
+		}
+	}
+	if _, err := PageCall(ctx, h, "db.query", map[string]any{"sql": "SELECT 1"}); !errors.Is(err, ErrPagesDisabled) {
+		t.Fatalf("PageCall : %v", err)
+	}
+	doc := call(t, h, "pages.add", map[string]any{"kind": "doc", "name": "Notes"}).(sheetRef)
+	if doc.Kind != "doc" {
+		t.Fatalf("document %+v", doc)
+	}
+	call(t, h, "pages.set", map[string]any{"sheet": "Notes", "source": `{"ops":[{"insert":"x\n"}]}`})
+	// Une page d'un classeur existant : gardée, lisible, pas modifiable.
+	id, err := h.d.AddPage(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.d.SetPage(ctx, id, "<h1>avant</h1>"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Invoke(ctx, h, "pages.set", map[string]any{"sheet": float64(id), "source": "<h1>après</h1>"}); !errors.Is(err, ErrPagesDisabled) {
+		t.Fatalf("pages.set : %v", err)
+	}
+	if got := call(t, h, "pages.get", map[string]any{"sheet": float64(id)}); got != "<h1>avant</h1>" {
+		t.Fatalf("page %q", got)
+	}
+}
+
 func TestPages(t *testing.T) {
+	withHTMLPages(t)
 	h := sample(t)
 	ctx := context.Background()
 	run(t, h, `
@@ -60,6 +110,7 @@ pages.set("Tableau de bord", pages.get("Tableau de bord") .. "<p>suite</p>")
 
 // Le pont des pages HTML passe par les commandes de l'API.
 func TestPageCall(t *testing.T) {
+	withHTMLPages(t)
 	h := sample(t)
 	ctx := context.Background()
 	res, err := PageCall(ctx, h, "db.query", map[string]any{"sql": `SELECT sum(Montant) FROM Commandes`})

@@ -20,11 +20,11 @@
 // Les commandes sont une liste autorisée de celles des scripts Lua
 // (internal/api/cmd_pages.go, DocumentService.PageCall) : lecture,
 // valeurs, interface, réseau ; ni fichiers, ni code, ni structure, ni
-// protections. Sans scripting (version web sans web_scripting, démo
-// publique), une page garde la lecture seule : lattis.sql, lattis.query,
-// lattis.queries, lattis.on et les commandes de lecture (sheets.list,
-// tables.rows, cells.get…) ; une autre commande est refusée, et l'onglet
-// le dit au-dessus de la page (HtmlPage.svelte). Une règle de sécurité du
+// protections ; une commande que les pages n'ont pas est refusée, et
+// l'onglet le dit au-dessus de la page (HtmlPage.svelte). Les pages web sont
+// coupées par défaut (réglage features.htmlPages de la configuration) et
+// toujours dans la version web et la démo publique : rien de ceci ne
+// s'exécute alors (PageOff.svelte). Une règle de sécurité du
 // contenu (CSP) coupe tout accès direct au réseau : une page ne joint un
 // site que par lattis.call("http.get", …), avec l'accord de l'utilisateur.
 // La CSP n'empêche pas le cadre de naviguer lui-même (location.href) :
@@ -152,29 +152,18 @@ export function replyOf(id: number, result: { ok: true; value: unknown } | { ok:
 
 /** Appel refusé à une page, à dire dans l'onglet (au-dessus de la page). */
 export interface PageRefusal {
-	/** scripting : scripts coupés ici (lecture seule) ; org : pages coupées par l'organisation ; page : commande hors des pages. */
-	kind: 'scripting' | 'org' | 'page';
+	/** page : commande que les pages n'ont pas. */
+	kind: 'page';
 	command: string;
 }
 
 /**
  * Refus d'un appel de la page par le moteur (DocumentService.PageCall) :
- * commande hors de la lecture quand le scripting est coupé
- * (page.needsScripting), pages coupées par l'organisation
- * (page.disabledByOrg), commande que les pages n'ont pas (api.notInPage).
- * null pour une autre erreur (SQL invalide, feuille protégée…), que la page
- * reçoit seulement.
+ * commande que les pages n'ont pas (api.notInPage). null pour une autre
+ * erreur (SQL invalide, feuille protégée…), que la page reçoit seulement.
  */
 export function refusalOf(command: string, e: unknown): PageRefusal | null {
-	switch (msgCause(e)?.id) {
-		case 'page.needsScripting':
-			return { kind: 'scripting', command };
-		case 'page.disabledByOrg':
-			return { kind: 'org', command };
-		case 'api.notInPage':
-			return { kind: 'page', command };
-	}
-	return null;
+	return msgCause(e)?.id === 'api.notInPage' ? { kind: 'page', command } : null;
 }
 
 /** Événement envoyé à la page (« change » : le classeur a changé). */

@@ -184,8 +184,8 @@ export function AddFavorite(name: string, sql: string): $CancellablePromise<numb
 
 /**
  * AddPage ajoute un onglet page HTML avant l'onglet before (0 : à la fin)
- * et renvoie son identifiant. Les pages web sont une fonctionnalité à
- * activer (Fichier › Paramètres › Fonctionnalités, features.htmlTabs).
+ * et renvoie son identifiant ; refusé quand les pages web sont coupées
+ * (htmlPages).
  */
 export function AddPage(before: number): $CancellablePromise<number> {
     return $Call.ByID(1783811502, before);
@@ -1364,7 +1364,8 @@ export function PageBreaks(sheet: number): $CancellablePromise<transfer$0.PageBr
 /**
  * PageCall exécute une commande demandée par une page HTML (pont
  * postMessage du cadre isolé) : les commandes de la liste autorisée aux
- * pages (api.PageCall).
+ * pages (api.PageCall). Pages web coupées (htmlPages, toujours dans la
+ * version web et la démo publique) : tout est refusé.
  */
 export function PageCall(name: string, args: { [_ in string]?: any } | null): $CancellablePromise<any> {
     return $Call.ByID(65243337, name, args);
@@ -1817,7 +1818,8 @@ export function SaveConnection(c: query$0.Connection, password: string, remember
 }
 
 /**
- * SavePage remplace le contenu d'un onglet page HTML (annulable).
+ * SavePage remplace le contenu d'un onglet page HTML ou Document
+ * (annulable) ; une page web, seulement quand elles sont permises.
  */
 export function SavePage(sheet: number, source: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3759416528, sheet, source);

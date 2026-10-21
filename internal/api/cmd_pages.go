@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/lalamefine/lattis/internal/config"
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/sqltext"
 )
@@ -49,34 +50,9 @@ var pageAllowed = map[string]bool{
 // PageCommand dit si une page HTML peut appeler la commande name.
 func PageCommand(name string) bool { return registry[name] != nil && pageAllowed[name] }
 
-// pageRead : les commandes d'une page web quand le scripting est coupé
-// (version web sans web_scripting, démo publique) : la lecture des données
-// seulement. Une page y lit le classeur (SQL en lecture seule, requêtes
-// favorites, feuilles, tableaux, cellules) et suit ses changements
-// (lattis.on("change"), côté interface) ; elle ne modifie rien, ne joint
-// aucun site, ne lance ni script ni bouton et ne pose pas de question.
-// L'accord par version d'une page reçue s'applique toujours avant que son
-// code ne s'exécute (frontend/src/lib/page/consent.ts). Ni doc.state ni
-// queries.list : chemins, sources et connexions du serveur.
-var pageRead = map[string]bool{
-	"sheets.list": true, "sheets.get": true, "sheets.find": true,
-	"tables.list": true, "tables.get": true, "tables.rows": true,
-	"columns.values": true, "cells.get": true,
-	"controls.list": true, "controls.get": true,
-	"db.query": true, "favorites.list": true, "favorites.run": true, "pages.get": true,
-}
-
-// PageReadCommand dit si une page web peut appeler la commande name sans
-// le scripting (lecture seule).
-func PageReadCommand(name string) bool { return PageCommand(name) && pageRead[name] }
-
-// ErrPageNeedsScripting refuse à une page, scripting coupé, une commande
-// hors de la lecture (modification, réseau, boutons, boîtes de dialogue) ;
-// l'interface l'affiche dans la page (HtmlPage.svelte).
-var ErrPageNeedsScripting = msg.New("page.needsScripting", nil)
-
 // ReadOnlySQL refuse une requête qui ne commence pas par SELECT, WITH ou
-// VALUES (après d'éventuels commentaires). La lecture est de toute façon
+// VALUES (après d'éventuels commentaires) : requêtes favorites lues par une
+// page (favorites.run). La lecture est de toute façon
 // garantie par la connexion (query_only, autorisateur : grid.QueryArgs) ;
 // ce contrôle donne un message clair.
 func ReadOnlySQL(q string) error {
@@ -90,31 +66,51 @@ func ReadOnlySQL(q string) error {
 	}
 }
 
-// PageReadCall exécute une commande demandée par une page web quand le
-// scripting est coupé : les commandes de lecture (pageRead) seulement, le
-// SQL de db.query limité à SELECT, WITH et VALUES. Une autre commande des
-// pages est refusée (ErrPageNeedsScripting, avec son nom).
-func PageReadCall(ctx context.Context, host Host, name string, args map[string]any) (any, error) {
-	if !PageCommand(name) {
-		return PageCall(ctx, host, name, args) // commande inconnue ou hors des pages
-	}
-	if !pageRead[name] {
-		return nil, msg.Wrap(ErrPageNeedsScripting, "page.needsScripting", msg.Args{"command": name})
-	}
-	if name == "db.query" {
-		q, _ := args["sql"].(string)
-		if err := ReadOnlySQL(q); err != nil {
-			return nil, err
-		}
-	}
-	return Invoke(ctx, host, name, args)
+// HTMLPagesKey : réglage qui active les pages web des classeurs (onglets
+// HTML, CSS et JavaScript, ou site externe). Coupé par défaut et absent de
+// Fichier › Paramètres : le JavaScript d'une page peut faire sortir des
+// données du classeur en faisant naviguer son cadre, ce qu'aucune règle du
+// navigateur ne bloque. Il s'active à la main (config.json de
+// l'utilisateur, LATTIS_FEATURES__HTMLPAGES, stratégie de l'organisation,
+// qui peut le verrouiller) ; docs/configuration-entreprise.md.
+const HTMLPagesKey = "features.htmlPages"
+
+// PagesHost : un hôte qui décide lui-même des pages web (bureau, version
+// web). Sans lui, le réglage HTMLPagesKey seul.
+type PagesHost interface {
+	HTMLPages() bool
 }
+
+// HTMLPagesConfigured dit si la configuration active les pages web
+// (HTMLPagesKey ; la version web les refuse en plus : PagesHost).
+func HTMLPagesConfigured() bool { return config.Current().Bool(HTMLPagesKey, false) }
+
+// HTMLPages dit si les pages web sont permises pour cet hôte.
+func HTMLPages(h Host) bool {
+	if p, ok := h.(PagesHost); ok {
+		return p.HTMLPages()
+	}
+	return HTMLPagesConfigured()
+}
+
+// ErrPagesDisabled refuse de créer, modifier ou faire parler une page web
+// quand elles sont coupées.
+var ErrPagesDisabled = msg.New("pages.disabled", nil)
+
+// PageCommands : commandes qui créent ou modifient une page web, retirées
+// de l'assistant et du serveur MCP quand les pages sont coupées (pages.add
+// crée aussi les documents, mais l'assistant ne s'en sert pas pour cela).
+var PageCommands = []string{"pages.add", "pages.set"}
 
 // PageCall exécute une commande demandée par une page HTML (pont
 // postMessage de l'interface), si elle est dans la liste autorisée
 // (pageAllowed) ; chaque modification forme une étape d'annulation, et
 // l'utilisateur est consulté avant une requête HTTP vers un hôte inconnu.
+// Pages web coupées (HTMLPages) : tout est refusé.
 func PageCall(ctx context.Context, host Host, name string, args map[string]any) (any, error) {
+	if !HTMLPages(host) {
+		return nil, ErrPagesDisabled
+	}
 	if !PageCommand(name) {
 		if registry[name] != nil {
 			return nil, msg.New("api.notInPage", msg.Args{"command": name})
@@ -141,7 +137,7 @@ func init() {
 			Name:    "pages.add",
 			Label:   "Nouvelle page web",
 			Summary: "Ajoute une page web (HTML, CSS et JavaScript affichés dans un cadre isolé), ou un document (kind = \"doc\" : texte riche), et renvoie {id, name, kind}.",
-			Details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (une liste autorisée des commandes des scripts : lecture comme sheets.list ou db.query, valeurs comme cells.set ou db.execute, ui.*, http.*, buttons.run ; ni fichiers, ni scripts, ni structure, ni protections), et lattis.on(\"change\", fonction), appelée quand le classeur change. Elle lit aussi le classeur avec lattis.sql(\"SELECT …\", {paramètres}) et lattis.query(\"nom d'une requête favorite\"), qui rendent un tableau d'objets ; sans scripting (version web, démo publique), elle n'a que la lecture. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin.",
+			Details: "La page parle au classeur avec lattis.call(\"commande\", {arguments}), qui renvoie une promesse (une liste autorisée des commandes des scripts : lecture comme sheets.list ou db.query, valeurs comme cells.set ou db.execute, ui.*, http.*, buttons.run ; ni fichiers, ni scripts, ni structure, ni protections), et lattis.on(\"change\", fonction), appelée quand le classeur change. Elle lit aussi le classeur avec lattis.sql(\"SELECT …\", {paramètres}) et lattis.query(\"nom d'une requête favorite\"), qui rendent un tableau d'objets. Les pages web sont coupées par défaut (réglage features.htmlPages de la configuration, jamais dans la version navigateur) ; les documents (kind = \"doc\") restent permis. Sans source, la page reçoit un modèle d'exemple. Sans before, l'onglet s'ajoute à la fin.",
 			Returns: "{id, name, kind}",
 			Params: []Param{
 				{Name: "name", Type: String, Desc: "nom de l'onglet (Page1… par défaut)", Optional: true},
@@ -182,6 +178,8 @@ print(p.name, p.kind)`,
 					add, kind = d.AddDoc, k
 				} else if k != "" && k != "html" {
 					return nil, msg.New("api.pageKind", msg.Args{"kind": k})
+				} else if !HTMLPages(c.Host) {
+					return nil, ErrPagesDisabled
 				}
 				id, err := add(c, before)
 				if err != nil {
@@ -228,6 +226,7 @@ end`,
 			Name:    "pages.set",
 			Label:   "Modifier la page HTML",
 			Summary: "Remplace le contenu HTML d'une page web.",
+			Details: "Les pages web sont coupées par défaut (réglage features.htmlPages de la configuration).",
 			Params: []Param{
 				{Name: "sheet", Type: Ref, Desc: "page web (nom ou identifiant)"},
 				{Name: "source", Type: String, Desc: "nouveau contenu HTML"},
@@ -239,6 +238,9 @@ pages.set(p.name, "<h1>Bonjour</h1>")`,
 				s, err := c.page("sheet")
 				if err != nil {
 					return nil, err
+				}
+				if s.Kind == "html" && !HTMLPages(c.Host) {
+					return nil, ErrPagesDisabled
 				}
 				src, _ := c.Str("source")
 				d, _ := c.Doc()

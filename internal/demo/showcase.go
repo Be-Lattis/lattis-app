@@ -145,82 +145,6 @@ SELECT mois AS "Mois",
 FROM m
 ORDER BY mois`
 
-// medPage : la page HTML « Tableau de bord ».
-const medPage = `<!doctype html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<style>
-  body { font: 14px system-ui, sans-serif; margin: 24px; color: #1f2328; background: #fff; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  .muted { color: #6b7280; margin: 0 0 20px; }
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 24px; }
-  .kpi { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
-  .kpi b { display: block; font-size: 22px; margin-top: 4px; color: #217346; }
-  table { border-collapse: collapse; min-width: 420px; }
-  th, td { padding: 6px 10px; border-bottom: 1px solid #eee; text-align: left; }
-  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
-  .bar { height: 8px; background: #63c384; border-radius: 4px; }
-  .erreur { color: #b42318; }
-</style>
-</head>
-<body>
-<h1>Tableau de bord des ventes</h1>
-<p class="muted">Page HTML qui lit le classeur en SQL (lattis.query, lattis.sql) et se met à jour à chaque modification.
-Lecture seule : elle fonctionne aussi sans scripts (version web, démo).</p>
-<p id="erreur" class="erreur" hidden></p>
-<div class="kpis">
-  <div class="kpi">Chiffre d'affaires HT<b id="ca">…</b></div>
-  <div class="kpi">Commandes<b id="nb">…</b></div>
-  <div class="kpi">Panier moyen HT<b id="panier">…</b></div>
-  <div class="kpi">Commandes payées<b id="paye">…</b></div>
-</div>
-<h2 style="font-size:16px">Top 8 des villes</h2>
-<table><thead><tr><th>Ville</th><th>Région</th><th class="n">CA HT</th><th></th></tr></thead><tbody id="villes"></tbody></table>
-<script>
-  const eur = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
-  const set = (id, v) => (document.getElementById(id).textContent = v);
-  const cell = (tr, text, cls) => {
-    const td = tr.insertCell();
-    td.textContent = text;
-    if (cls) td.className = cls;
-    return td;
-  };
-  async function refresh() {
-    try {
-      // Requête favorite de l'onglet SQL, par son nom.
-      const [k] = await lattis.query("Indicateurs des ventes");
-      set("ca", eur.format(k.ca)); set("nb", k.nb.toLocaleString("fr-FR"));
-      set("panier", eur.format(k.panier)); set("paye", Math.round(k.paye * 100) + " %");
-      // SQL de lecture, avec un paramètre.
-      const villes = await lattis.sql('SELECT Ville, "Région", "CA HT" AS ca FROM Villes ORDER BY "CA HT" DESC LIMIT ?', [8]);
-      const max = Math.max(...villes.map((v) => v.ca), 1);
-      const body = document.getElementById("villes");
-      body.replaceChildren();
-      for (const v of villes) {
-        const tr = body.insertRow();
-        cell(tr, v.Ville); cell(tr, v["Région"]); cell(tr, eur.format(v.ca), "n");
-        const bar = document.createElement("div");
-        bar.className = "bar";
-        bar.style.width = Math.round((100 * v.ca) / max) + "%";
-        const td = cell(tr, "");
-        td.style.width = "160px";
-        td.append(bar);
-      }
-      document.getElementById("erreur").hidden = true;
-    } catch (e) {
-      const p = document.getElementById("erreur");
-      p.textContent = e.message;
-      p.hidden = false;
-    }
-  }
-  lattis.on("change", refresh);
-  refresh();
-</script>
-</body>
-</html>
-`
-
 func med() Plan {
 	commandes := medCommandes()
 	villesT := medVilles()
@@ -360,7 +284,7 @@ func med() Plan {
 		{Kind: "bullet", Text: "**Synthèse** : tableau croisé en arborescence avec sous-totaux (cliquez sur + et −), compartimentage et radar par région."},
 		{Kind: "bullet", Text: "**Ventes mensuelles** : tableau produit par une requête SQL (GROUP BY, fonctions de fenêtre) ; **F5** dans le tableau la relance. Graphique combiné, jauge, cascade."},
 		{Kind: "bullet", Text: "**Impayés** : requête d'import façon Power Query (filtre, regroupement, tri), actualisable elle aussi."},
-		{Kind: "bullet", Text: "**Tableau de bord** : page HTML qui lit le classeur ; **Clients**, **Employés**, **Analyse** : tableaux plus gros, TCD, nuage de points, fréquences."},
+		{Kind: "bullet", Text: "**Clients**, **Employés**, **Analyse** : tableaux plus gros, TCD, nuage de points, fréquences."},
 		{Kind: "bullet", Text: "En haut, l'onglet **SQL** interroge les tableaux par leur nom ; l'onglet **Script** montre le code des boutons et de l'écouteur de saisie."},
 		{Kind: "h2", Text: "Vos ventes en direct"},
 		{Kind: "p", Text: "Objectif de chiffre d'affaires (€ HT) :", Control: &canvas.ButtonConfig{Name: "Objectif", Kind: "input", Label: "Objectif", Link: "Ventes!R9", Width: 120}},
@@ -386,7 +310,6 @@ func med() Plan {
 	return Plan{
 		Sheets: []SheetSpec{
 			accueil, ventes, villeSheet, synthese, mensuel, impayes,
-			{Name: "Tableau de bord", HTML: medPage},
 			one(Clients, medClients, 10), one(Employes, medEmployees, 10),
 		},
 		Pivots: []PivotSpec{{
@@ -414,8 +337,8 @@ func med() Plan {
 		}},
 		Scripts: []ScriptSpec{{Name: "Démo", Source: medScript}},
 		Events:  []canvas.Listener{{Event: "change", Script: "Démo", Function: "saisie"}},
-		// Lue par la page « Tableau de bord » (lattis.query) ; visible dans
-		// les favoris de l'onglet SQL.
+		// Dans les favoris de l'onglet SQL (la démo n'a pas de page web :
+		// elles sont coupées par défaut, features.htmlPages).
 		Favorites: []FavoriteSpec{{
 			Name: "Indicateurs des ventes",
 			SQL:  `SELECT sum("Montant HT") AS ca, count(*) AS nb, avg("Montant HT") AS panier, avg("Payé") AS paye FROM Commandes`,

@@ -11,10 +11,6 @@
 			"limits": "Límites",
 			"updates": "Actualizaciones"
 		},
-		"htmlTabs": {
-			"label": "Páginas web",
-			"help": "Añadir al libro páginas HTML o páginas de un sitio web."
-		},
 		"sharedWorkbooks": {
 			"label": "Libros compartidos (Servidor Lattis)",
 			"help": "Iniciar sesión en el Servidor Lattis de su organización."

@@ -426,14 +426,13 @@ export interface MessageParams {
 	'doc.page.navBlocked': { name: number | string };
 	'doc.page.noTableChart': Record<never, never>;
 	'doc.page.noTablePivot': Record<never, never>;
+	'doc.page.off': Record<never, never>;
 	'doc.page.openBrowser': Record<never, never>;
 	'doc.page.pasteHint': Record<never, never>;
 	'doc.page.placeholder': Record<never, never>;
 	'doc.page.preview.label': Record<never, never>;
 	'doc.page.preview.tooltip': Record<never, never>;
-	'doc.page.refused.org': Record<never, never>;
 	'doc.page.refused.page': { command: number | string };
-	'doc.page.refused.scripting': { command: number | string };
 	'doc.page.reload.label': Record<never, never>;
 	'doc.page.reload.tooltip': Record<never, never>;
 	'doc.page.save': Record<never, never>;
@@ -4037,8 +4036,6 @@ export interface MessageParams {
 	'shell.settings.dialog.title': Record<never, never>;
 	'shell.settings.fixed': { source: number | string };
 	'shell.settings.fixedOther': Record<never, never>;
-	'shell.settings.htmlTabs.help': Record<never, never>;
-	'shell.settings.htmlTabs.label': Record<never, never>;
 	'shell.settings.language.auto': { name: number | string };
 	'shell.settings.language.label': Record<never, never>;
 	'shell.settings.locked': Record<never, never>;

@@ -118,6 +118,10 @@ func (h host) QueryGuard() *query.Guard {
 	return nil
 }
 
+// HTMLPages : pages web permises (api.PagesHost) ; coupées dans la
+// version web et la démo publique quel que soit le réglage.
+func (h host) HTMLPages() bool { return h.s.htmlPages() }
+
 func (h host) Notify(msg string) { h.s.emitUI(UICommand{Kind: "notify", Message: msg}) }
 
 func (h host) Print(line string) {

@@ -11,10 +11,6 @@
 			"limits": "Limits",
 			"updates": "Updates"
 		},
-		"htmlTabs": {
-			"label": "Web pages",
-			"help": "Add HTML pages or website pages to the workbook."
-		},
 		"sharedWorkbooks": {
 			"label": "Shared workbooks (Lattis Server)",
 			"help": "Sign in to your organization's Lattis Server."

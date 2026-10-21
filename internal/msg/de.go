@@ -787,8 +787,6 @@ var de = map[ID]string{
 	"api.favoriteNotFound":        "Gespeicherte Abfrage „{name}“ nicht gefunden (Register SQL › Favoriten)",
 	"api.sqlEmpty":                "Leere SQL-Abfrage",
 	"api.sqlReadOnly":             "Nur Lesen: SELECT oder WITH erwartet, nicht {keyword}",
-	"page.needsScripting":         "{command}: Diese Seite verwendet Skripte, die hier deaktiviert sind (die Seite kann die Arbeitsmappe nur lesen)",
-	"page.disabledByOrg":          "Webseiten wurden von Ihrer Organisation deaktiviert",
 	"api.tileDemoOffline":         "Hintergrundkarte in der Demo nicht verfügbar (keine ausgehenden Verbindungen)",
 	"api.tileAskTitle":            "Hintergrundkarte",
 	"api.tileAsk":                 "Die Hintergrundkarte stammt von OpenStreetMap („{host}“). Um sie anzuzeigen, lädt Lattis die Kacheln des gezeigten Bereichs: Diese Website erfährt, welche Region die Karte zeigt, sonst nichts aus der Arbeitsmappe.",
@@ -909,7 +907,7 @@ var de = map[ID]string{
 	"mcp.unknownBatch":        "unbekannter Aktionsstapel",
 
 	// Web pages
-	"pages.disabled":       "Webseiten sind deaktiviert: Aktivieren Sie sie unter Datei › Einstellungen › Funktionen",
+	"pages.disabled":       "Webseiten sind deaktiviert: Sie lassen sich in der Konfiguration aktivieren (features.htmlPages), nie in der Browserversion",
 	"pages.scriptNotFound": "Script „{script}“ nicht gefunden (Registerkarte Script)",
 
 	// Grid

@@ -6,6 +6,17 @@ import { themeCatalog, themeLabel } from '#lib/grid/theme.js';
 import { LANG_NAMES, LANGS, systemLang, t } from '#lib/i18n/index.js';
 import { isWeb } from '#lib/web/platform.js';
 
+/**
+ * Pages web des classeurs permises : réglage features.htmlPages de la
+ * configuration (coupé par défaut, sans case dans les paramètres : à la main
+ * ou par l'organisation), rendu par DocumentService.Platform ; jamais dans la
+ * version web ni la démo publique (le JavaScript d'une page peut faire
+ * sortir des données en faisant naviguer son cadre).
+ */
+export function htmlPagesOn(p: { web: boolean; demo?: boolean; htmlPages?: boolean }): boolean {
+	return !!p.htmlPages && !p.web && !p.demo;
+}
+
 /** État d'un réglage rendu par DocumentService.Settings. */
 export interface SettingState {
 	path: string;
@@ -57,16 +68,6 @@ export const settingSections: SettingSection[] = [
 			return t('shell.settings.sections.features');
 		},
 		settings: [
-			{
-				path: 'features.htmlTabs',
-				kind: 'bool',
-				get label() {
-					return t('shell.settings.htmlTabs.label');
-				},
-				get help() {
-					return t('shell.settings.htmlTabs.help');
-				}
-			},
 			{
 				path: 'features.sharedWorkbooks',
 				kind: 'bool',

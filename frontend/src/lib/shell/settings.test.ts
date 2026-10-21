@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { boolSetting, findSetting, parseNumberSetting, resetPaths, settingNote, settingSections, visibleSections } from './settings';
+import { boolSetting, findSetting, htmlPagesOn, parseNumberSetting, resetPaths, settingNote, settingSections, visibleSections } from './settings';
 
 describe('paramètres', () => {
-	it('Pages web coupés sans réglage', () => {
-		expect(boolSetting([], 'features.htmlTabs')).toBe(false);
-		expect(boolSetting([{ path: 'features.htmlTabs', value: true }], 'features.htmlTabs')).toBe(true);
-		expect(boolSetting([{ path: 'features.htmltabs', value: 'oui' }], 'features.htmlTabs')).toBe(false);
+	it('réglage booléen', () => {
+		expect(boolSetting([], 'features.coEditing')).toBe(false);
+		expect(boolSetting([{ path: 'features.coEditing', value: true }], 'features.coEditing')).toBe(true);
+		expect(boolSetting([{ path: 'features.coediting', value: 'oui' }], 'features.coEditing')).toBe(false);
+	});
+
+	it('pages web : coupées par défaut, jamais en web ni dans la démo', () => {
+		expect(htmlPagesOn({ web: false })).toBe(false);
+		expect(htmlPagesOn({ web: false, htmlPages: true })).toBe(true);
+		expect(htmlPagesOn({ web: true, htmlPages: true })).toBe(false);
+		expect(htmlPagesOn({ web: false, demo: true, htmlPages: true })).toBe(false);
 	});
 
 	it('réglage verrouillé ou fixé ailleurs', () => {
@@ -18,10 +25,12 @@ describe('paramètres', () => {
 	it('liste déclarative', () => {
 		const f = settingSections.find((s) => s.id === 'features');
 		expect(f?.title).toBe('Fonctionnalités');
-		expect(f?.settings.map((s) => s.path)).toContain('features.htmlTabs');
+		// Pas de case des pages web : réglage à la main (features.htmlPages).
+		expect(settingSections.flatMap((s) => s.settings.map((d) => d.path.toLowerCase())).filter((p) => p.startsWith('features.html'))).toEqual([]);
+		expect(resetPaths(false).some((p) => p.toLowerCase().startsWith('features.html'))).toBe(false);
 		expect(f?.settings.find((s) => s.path === 'features.sharedWorkbooks')?.label).toBe('Classeurs partagés (Serveur Lattis)');
 		expect(boolSetting([], 'features.sharedWorkbooks')).toBe(false);
-		expect(findSetting([{ path: 'features.htmlTabs', value: false }], 'FEATURES.HTMLTABS')?.value).toBe(false);
+		expect(findSetting([{ path: 'features.coEditing', value: false }], 'FEATURES.COEDITING')?.value).toBe(false);
 	});
 });
 

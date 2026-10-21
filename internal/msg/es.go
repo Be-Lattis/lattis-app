@@ -786,8 +786,6 @@ var es = map[ID]string{
 	"api.favoriteNotFound":        "consulta favorita «{name}» no encontrada (pestaña SQL › Favoritos)",
 	"api.sqlEmpty":                "consulta SQL vacía",
 	"api.sqlReadOnly":             "solo lectura: se esperaba SELECT o WITH, no {keyword}",
-	"page.needsScripting":         "{command}: esta página usa scripts, desactivados aquí (la página solo puede leer el libro)",
-	"page.disabledByOrg":          "su organización ha desactivado las páginas web",
 	"api.tileDemoOffline":         "mapa base no disponible en la demo (sin conexiones salientes)",
 	"api.tileAskTitle":            "Mapa base",
 	"api.tileAsk":                 "El mapa base proviene de OpenStreetMap («{host}»). Para mostrarlo, Lattis descarga las teselas de la zona mostrada: ese sitio sabe qué región muestra el mapa, nada más del libro.",
@@ -908,7 +906,7 @@ var es = map[ID]string{
 	"mcp.unknownBatch":        "lote de acciones desconocido",
 
 	// Páginas web
-	"pages.disabled":       "las páginas web están desactivadas: actívelas en Archivo › Configuración › Funciones",
+	"pages.disabled":       "las páginas web están desactivadas: se activan en la configuración (features.htmlPages), nunca en la versión de navegador",
 	"pages.scriptNotFound": "script «{script}» no encontrado (pestaña Script)",
 
 	// Cuadrícula

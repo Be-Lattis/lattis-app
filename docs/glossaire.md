@@ -33,7 +33,7 @@ Ce document fixe les mots de l'interface, de l'aide intégrée (`frontend/src/li
 | **Serveur Lattis** | Le serveur d'une organisation (`lattisd`), où l'on se connecte par le menu Compte. Nom propre : majuscules aux deux mots. | serveur lattis, backend |
 | **classeur partagé** | Un classeur publié sur un Serveur Lattis (Fichier › Publier sur un serveur…), figé ou collaboratif, rouvert depuis le serveur. Nom commun : minuscule, sauf en début de libellé. | classeur en ligne, classeur distant |
 | **Data Lake Lattis** | Le catalogue des données d'un Serveur Lattis : des tableaux partagés pour être lus depuis d'autres classeurs (Insertion › Data Lake Lattis, clic droit › Partager au Data Lake Lattis…). Nom propre de la fonction, choisi tel quel (commit b3dc7bb) ; une « donnée du Data Lake » est un de ses tableaux. | donnée d'entreprise (ancien nom) |
-| **page web** | Un onglet HTML, CSS et JavaScript qui lit et modifie le classeur, ou qui affiche un site. | onglet HTML (sauf dans les raccourcis) |
+| **page web** | Un onglet HTML, CSS et JavaScript qui lit et modifie le classeur, ou qui affiche un site ; désactivée par défaut (`features.htmlPages`). | onglet HTML (sauf dans les raccourcis) |
 | **script** | Un programme Lua de la bibliothèque du classeur (onglet Script). | macro |
 | **contrôle** | Un bouton, une case, une liste… posé sur la grille ou dans un document, lié à une cellule et à un script. | widget |
 | **assistant** | L'assistant IA (bouton « Assistant ✦ »). | IA, chatbot, agent |
