@@ -65,8 +65,14 @@ func TestReturnAfterCompaction(t *testing.T) {
 	bob := join(t, "bob", path, alice)
 	bob.set(2, 1, "5")
 	settle(t, alice, bob)
+	// Alice voit le dernier battement de Bob avant la coupure : sinon, vu
+	// après, il le fait passer pour vivant et rien n'est compacté.
+	alice.sync()
 	time.Sleep(fast.Stale + 50*time.Millisecond)
 	alice.sync()
+	if st := alice.e.State(); len(st.Peers) != 0 {
+		t.Fatalf("Bob devrait être parti pour Alice : %+v", st)
+	}
 	must(t, alice.d.Save(ctx, ""))
 	for range 5 {
 		alice.sync()

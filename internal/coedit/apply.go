@@ -498,9 +498,14 @@ func (e *Engine) compact(live []Presence, entries []os.DirEntry) {
 	if saved == nil {
 		return
 	}
-	waiting := append(slices.Clone(live), e.roster.away(time.Now())...)
-	current := map[string]string{} // session vivante → segment en cours
-	for _, p := range live {
+	away := e.roster.away(time.Now())
+	waiting := append(slices.Clone(live), away...)
+	// Session vivante ou attendue → segment en cours : jamais supprimé. Une
+	// session coupée écrit encore dans le sien à son retour (supprimé, son
+	// journal était « raccourci par ailleurs » et ses saisies ne partaient
+	// plus).
+	current := map[string]string{}
+	for _, p := range waiting {
 		current[p.Session] = p.Journal
 	}
 	current[e.sid] = e.journal
