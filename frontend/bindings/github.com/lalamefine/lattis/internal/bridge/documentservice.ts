@@ -2327,6 +2327,16 @@ export function ShareInvite(email: string, roles: string[] | null): $Cancellable
 }
 
 /**
+ * ShareInvitePerson invite une personne (choisie dans ShareSearchPeople ou
+ * par son adresse) au classeur ouvert avec des rôles
+ * (lattis.invite_person) ; serveur sans la migration 0046 : comme
+ * ShareInvite.
+ */
+export function ShareInvitePerson(email: string, roles: string[] | null): $CancellablePromise<$models.InviteOutcome> {
+    return $Call.ByID(3959882709, email, roles);
+}
+
+/**
  * ShareLocalCopy enregistre une copie locale du classeur partagé ouvert,
  * détachée du serveur (boîte Enregistrer sous), puis l'ouvre.
  */
@@ -2416,6 +2426,15 @@ export function ShareRevokeInvitation(id: string): $CancellablePromise<$models.R
  */
 export function ShareRights(remote: boolean): $CancellablePromise<$models.RightsView> {
     return $Call.ByID(306207586, remote);
+}
+
+/**
+ * ShareSearchPeople cherche des utilisateurs du serveur du classeur ouvert
+ * par nom ou adresse (lattis.search_people, au moins 2 caractères) ; liste
+ * vide sur un serveur sans la migration 0046.
+ */
+export function ShareSearchPeople(query: string): $CancellablePromise<workbook$0.Person[] | null> {
+    return $Call.ByID(223170114, query);
 }
 
 /**

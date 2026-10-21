@@ -161,6 +161,96 @@ func TestFakeTeams(t *testing.T) {
 	}
 }
 
+// TestFakePeople : recherche de personnes et invitations (migration 0046)
+// sur le faux serveur : search_people par nom ou adresse, invite_person
+// (compte connu : rôles tout de suite ; sinon invitation, courriel ou lien,
+// rôles posés à la première connexion), workbook_invitations et retrait.
+func TestFakePeople(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	fake := workbooktest.New()
+	as := fake.As("alice")
+	info := publish(t, author(t), as, workbook.Collaborative, "Ventes")
+	fake.As("bob")
+	fake.SetName("bob", "Bob Martin")
+	fake.As("albert")
+
+	// Au moins 2 caractères ; nom ou adresse, sans casse ; tri par nom.
+	if p, err := as.SearchPeople(ctx, "a", 10); err != nil || len(p) != 0 {
+		t.Fatalf("recherche d'un caractère : %+v %v", p, err)
+	}
+	p, err := as.SearchPeople(ctx, "AL", 10)
+	must(t, err)
+	if len(p) != 2 || p[0].ID != "albert" || p[1].Email != "alice@example.test" {
+		t.Fatalf("recherche « AL » : %+v", p)
+	}
+	if p, _ := as.SearchPeople(ctx, "martin", 10); len(p) != 1 || p[0].DisplayName != "Bob Martin" || p[0].Email != "bob@example.test" {
+		t.Fatalf("recherche par nom : %+v", p)
+	}
+	if p, _ := as.SearchPeople(ctx, "example", 1); len(p) != 1 {
+		t.Fatalf("limite : %+v", p)
+	}
+
+	// Compte connu : rôles donnés tout de suite.
+	res, err := as.InvitePerson(ctx, info.WorkbookID, "Bob@example.test", []string{"editor"})
+	must(t, err)
+	if res.Status != workbook.InviteGranted || res.Mailed || res.InvitationID == "" {
+		t.Fatalf("Bob : %+v", res)
+	}
+	if caps, err := fake.As("bob").Capabilities(ctx, info.WorkbookID); err != nil || !slices.Contains(caps.Roles, "editor") {
+		t.Fatalf("capacités de Bob : %+v %v", caps, err)
+	}
+	// Sans compte, sans courriel : lien à transmettre.
+	res, err = as.InvitePerson(ctx, info.WorkbookID, "carol@example.test", []string{"reader"})
+	must(t, err)
+	if res.Status != workbook.InviteInvited || res.Mailed || res.LinkPath != "/w/"+info.WorkbookID {
+		t.Fatalf("Carol : %+v", res)
+	}
+	// Serveur qui envoie les courriels.
+	fake.Mailer = true
+	res, err = as.InvitePerson(ctx, info.WorkbookID, "dan@example.test", []string{"participant"})
+	must(t, err)
+	if res.Status != workbook.InviteInvited || !res.Mailed {
+		t.Fatalf("Dan : %+v", res)
+	}
+	inv, err := as.WorkbookInvitations(ctx, info.WorkbookID)
+	must(t, err)
+	if len(inv) != 2 || inv[0].Email != "carol@example.test" || !slices.Equal(inv[0].Roles, []string{"reader"}) || inv[0].InvitedBy != "alice@example.test" || inv[0].ExpiresAt == "" {
+		t.Fatalf("invitations : %+v", inv)
+	}
+	if _, err := fake.As("bob").WorkbookInvitations(ctx, info.WorkbookID); !workbook.Privilege(err) {
+		t.Fatalf("invitations lues par un éditeur : %v", err)
+	}
+	if _, err := fake.As("bob").InvitePerson(ctx, info.WorkbookID, "erin@example.test", []string{"reader"}); !workbook.Privilege(err) {
+		t.Fatalf("invitation par un éditeur : %v", err)
+	}
+	// Retrait d'une invitation ; première connexion de Carol : ses rôles.
+	must(t, as.RevokeInvitation(ctx, inv[1].ID))
+	caps, err := fake.As("carol").Capabilities(ctx, info.WorkbookID)
+	must(t, err)
+	if !slices.Contains(caps.Roles, "reader") {
+		t.Fatalf("capacités de Carol à sa première connexion : %+v", caps)
+	}
+	if inv, _ := as.WorkbookInvitations(ctx, info.WorkbookID); len(inv) != 0 {
+		t.Fatalf("invitations après connexion et retrait : %+v", inv)
+	}
+	if _, err := fake.As("dan").Capabilities(ctx, info.WorkbookID); err == nil {
+		t.Fatal("Dan a accès après le retrait de son invitation")
+	}
+
+	// Serveur sans la migration 0046.
+	fake.Before46 = true
+	if _, err := as.SearchPeople(ctx, "bob", 10); !errors.Is(err, workbook.ErrUnsupported) {
+		t.Fatalf("recherche sans 0046 : %v", err)
+	}
+	if _, err := as.InvitePerson(ctx, info.WorkbookID, "erin@example.test", []string{"reader"}); !errors.Is(err, workbook.ErrUnsupported) {
+		t.Fatalf("invitation sans 0046 : %v", err)
+	}
+	if _, err := as.WorkbookInvitations(ctx, info.WorkbookID); !errors.Is(err, workbook.ErrUnsupported) {
+		t.Fatalf("invitations sans 0046 : %v", err)
+	}
+}
+
 // Droits contre PostgreSQL 18 et les migrations du serveur : liste des
 // droits, rôle personnalisé avec filtre de lecture (une ligne invisible
 // n'est pas dans le cache), restriction, écarts, invitations, capacités
@@ -292,6 +382,11 @@ func TestPostgresACL(t *testing.T) {
 	} else if _, err := as.Teams(ctx); !errors.Is(err, workbook.ErrUnsupported) {
 		t.Fatalf("équipes sans 0012 : %v", err)
 	}
+	if hasMigration("0046") {
+		rights0046(t, as, info.WorkbookID)
+	} else if _, err := as.SearchPeople(ctx, "carol", 10); !errors.Is(err, workbook.ErrUnsupported) {
+		t.Fatalf("recherche sans 0046 : %v", err)
+	}
 
 	// Invitations.
 	inv, err := as.Invite(ctx, info.WorkbookID, "dan@example.test", []string{"reader"})
@@ -318,6 +413,29 @@ func TestPostgresACL(t *testing.T) {
 			}
 		}
 	}
+}
+
+// rights0046 : recherche de personnes et invitations (migration 0046) :
+// une adresse inconnue est invitée (pas de courriel sur le serveur
+// d'essai), listée par workbook_invitations, puis retirée.
+func rights0046(t *testing.T, as workbook.Server, wb string) {
+	t.Helper()
+	ctx := context.Background()
+	if _, err := as.SearchPeople(ctx, "example", 10); err != nil {
+		t.Fatalf("search_people : %v", err)
+	}
+	res, err := as.InvitePerson(ctx, wb, "zoe@example.test", []string{"reader"})
+	must(t, err)
+	if res.Status != workbook.InviteInvited || res.InvitationID == "" || !strings.HasPrefix(res.LinkPath, "/") {
+		t.Fatalf("invite_person : %+v", res)
+	}
+	inv, err := as.WorkbookInvitations(ctx, wb)
+	must(t, err)
+	i := slices.IndexFunc(inv, func(x workbook.Invitation) bool { return x.ID == res.InvitationID })
+	if i < 0 || inv[i].Email != "zoe@example.test" || !slices.Equal(inv[i].Roles, []string{"reader"}) {
+		t.Fatalf("workbook_invitations : %+v", inv)
+	}
+	must(t, as.RevokeInvitation(ctx, res.InvitationID))
 }
 
 func has0008() bool {

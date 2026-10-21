@@ -937,7 +937,17 @@
 			"submit": "Invitar",
 			"gives": "Podrá:",
 			"help": "Efectivo de inmediato o en su primer inicio de sesión.",
-			"custom": "Los roles personalizados se pueden asignar una vez que la persona es miembro."
+			"custom": "Los roles personalizados se pueden asignar una vez que la persona es miembro.",
+			"placeholder": "Nombre o correo electrónico",
+			"suggestions": "Personas del servidor",
+			"join": "Invitar a unirse: {email}",
+			"joinHint": "Escriba un correo para invitar",
+			"submitMail": "Invitar y enviar correo",
+			"submitLink": "Invitar (enlace para enviar)",
+			"granted": "Acceso dado a {who}",
+			"mailed": "Invitación enviada por correo a {email}",
+			"linkHelp": "Envíe este enlace a {email}, que se conectará con esta dirección.",
+			"linkAria": "Enlace de invitación"
 		},
 		"people": "Personas",
 		"search": "Buscar un miembro",
@@ -981,7 +991,8 @@
 			"submit": "Asignar el rol",
 			"help": "Los miembros de un equipo tienen sus roles mientras formen parte de él."
 		},
-		"noTeam": "No hay equipos en este servidor: los propietarios del servidor los crean en su administración («Equipos»)."
+		"noTeam": "No hay equipos en este servidor: los propietarios del servidor los crean en su administración («Equipos»).",
+		"invitedBy": "Invitado por {who}"
 	},
 	"roles": {
 		"teamCount": "{n, plural, one {# equipo} other {# equipos}}",

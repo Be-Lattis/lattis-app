@@ -10,7 +10,7 @@ import (
 
 // Droits d'un classeur par l'API SQL du serveur (contrat client de lattisd,
 // §5 et §7 ; schema/0005_advanced_rights.sql, 0006_admin.sql,
-// 0009_droits.sql, 0012_teams.sql). Écritures sur rw, une transaction par appel.
+// 0009_droits.sql, 0012_teams.sql, 0046). Écritures sur rw, une transaction par appel.
 
 func (s pgServer) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.with(ctx, usageWrite, func(c *pgx.Conn) error {
@@ -152,4 +152,43 @@ func (s pgServer) Members(ctx context.Context, workbookID string) ([]WorkbookMem
 
 func (s pgServer) Recompile(ctx context.Context, workbookID string) error {
 	return s.exec(ctx, `SELECT lattis.compile_acl($1::uuid)`, workbookID)
+}
+
+// SearchPeople : lattis.search_people (migration 0046) ; fonction absente
+// (42883) : ErrUnsupported.
+func (s pgServer) SearchPeople(ctx context.Context, query string, limit int) ([]Person, error) {
+	out := []Person{}
+	err := s.jsonCall(ctx, `SELECT coalesce(lattis.search_people($1, $2), '[]')::text`, &out, query, limit)
+	if code, ok := Rejected(err); ok && code == "42883" {
+		return nil, ErrUnsupported
+	}
+	return out, err
+}
+
+// InvitePerson : lattis.invite_person (migration 0046), dans une
+// transaction ; fonction absente (42883) : ErrUnsupported.
+func (s pgServer) InvitePerson(ctx context.Context, workbookID, email string, roles []string) (InviteResult, error) {
+	var out InviteResult
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var raw []byte
+		if err := tx.QueryRow(ctx, `SELECT lattis.invite_person($1, $2::uuid, $3::text[])::text`, email, workbookID, roles).Scan(&raw); err != nil {
+			return err
+		}
+		return json.Unmarshal(raw, &out)
+	})
+	if code, ok := Rejected(err); ok && code == "42883" {
+		return InviteResult{}, ErrUnsupported
+	}
+	return out, err
+}
+
+// WorkbookInvitations : lattis.workbook_invitations (migration 0046) ;
+// fonction absente (42883) : ErrUnsupported.
+func (s pgServer) WorkbookInvitations(ctx context.Context, workbookID string) ([]Invitation, error) {
+	out := []Invitation{}
+	err := s.jsonCall(ctx, `SELECT coalesce(lattis.workbook_invitations($1::uuid), '[]')::text`, &out, workbookID)
+	if code, ok := Rejected(err); ok && code == "42883" {
+		return nil, ErrUnsupported
+	}
+	return out, err
 }

@@ -937,7 +937,17 @@
 			"submit": "邀请",
 			"gives": "将能够：",
 			"help": "立即生效，或在其首次登录时生效。",
-			"custom": "此人成为成员后才能授予自定义角色。"
+			"custom": "此人成为成员后才能授予自定义角色。",
+			"placeholder": "姓名或电子邮件地址",
+			"suggestions": "服务器上的用户",
+			"join": "邀请加入：{email}",
+			"joinHint": "输入电子邮件地址以邀请",
+			"submitMail": "邀请并发送邮件",
+			"submitLink": "邀请（转发链接）",
+			"granted": "已授予 {who} 访问权限",
+			"mailed": "已通过邮件邀请 {email}",
+			"linkHelp": "请将此链接转给 {email}，对方用此地址登录。",
+			"linkAria": "邀请链接"
 		},
 		"people": "人员",
 		"search": "搜索成员",
@@ -981,7 +991,8 @@
 			"submit": "授予角色",
 			"help": "团队成员在属于该团队期间拥有其角色。"
 		},
-		"noTeam": "此服务器上没有团队：服务器所有者可在其管理界面（“团队”）中创建团队。"
+		"noTeam": "此服务器上没有团队：服务器所有者可在其管理界面（“团队”）中创建团队。",
+		"invitedBy": "邀请人：{who}"
 	},
 	"roles": {
 		"teamCount": "{n, plural, other {# 个团队}}",

@@ -79,6 +79,46 @@ type Rights interface {
 	// (lattis.compile_acl : propriétaires et concepteurs) : remet d'aplomb
 	// les écarts (les règles ajoutées à la main restent).
 	Recompile(ctx context.Context, workbookID string) error
+	// SearchPeople cherche des utilisateurs du serveur par nom ou adresse
+	// (lattis.search_people, migration 0046 : tout utilisateur ; au moins
+	// 2 caractères, comptes actifs déjà connectés) ; ErrUnsupported sans
+	// la migration.
+	SearchPeople(ctx context.Context, query string, limit int) ([]Person, error)
+	// InvitePerson invite une adresse au classeur avec des rôles
+	// (lattis.invite_person, migration 0046 : propriétaires) : compte connu,
+	// rôles donnés tout de suite ; sinon invitation, rôles posés à sa
+	// première connexion (courriel envoyé ou lien à transmettre) ;
+	// ErrUnsupported sans la migration (Invite reste).
+	InvitePerson(ctx context.Context, workbookID, email string, roles []string) (InviteResult, error)
+	// WorkbookInvitations liste les invitations en attente du classeur
+	// (lattis.workbook_invitations, migration 0046 : propriétaires) ;
+	// ErrUnsupported sans la migration (celles de ACL restent).
+	WorkbookInvitations(ctx context.Context, workbookID string) ([]Invitation, error)
+}
+
+// Person est un utilisateur du serveur trouvé par SearchPeople.
+type Person struct {
+	ID          string `json:"id"`
+	DisplayName string `json:"display_name"`
+	Email       string `json:"email"`
+}
+
+// Issues d'une invitation (InviteResult.Status).
+const (
+	// InviteGranted : compte existant, rôles donnés tout de suite.
+	InviteGranted = "granted"
+	// InviteInvited : pas de compte, rôles posés à sa première connexion.
+	InviteInvited = "invited"
+)
+
+// InviteResult est l'issue de InvitePerson : Mailed, le serveur a envoyé
+// le courriel ; sinon l'adresse du serveur suivie de LinkPath est le lien
+// à transmettre (la personne s'y connecte avec cette adresse).
+type InviteResult struct {
+	InvitationID string `json:"invitation_id"`
+	Status       string `json:"status"`
+	Mailed       bool   `json:"mailed"`
+	LinkPath     string `json:"link_path"`
 }
 
 // ErrUnsupported : le serveur ne propose pas cette fonction (migration
@@ -183,11 +223,14 @@ type RestrictionRule struct {
 	Label     string   `json:"label"`
 }
 
-// Invitation est une invitation en attente.
+// Invitation est une invitation en attente ; InvitedBy et CreatedAt :
+// lattis.workbook_invitations seulement (migration 0046).
 type Invitation struct {
 	ID        string   `json:"id"`
 	Email     string   `json:"email"`
 	Roles     []string `json:"roles"`
+	InvitedBy string   `json:"invited_by,omitempty"`
+	CreatedAt string   `json:"created_at,omitempty"`
 	ExpiresAt string   `json:"expires_at"`
 }
 

@@ -1,6 +1,8 @@
 <script lang="ts">
-	// Gérer l'accès › Membres : inviter (adresse et rôles, ce qu'ils
-	// permettent relu dessous), les personnes avec leurs rôles en pastilles
+	// Gérer l'accès › Membres : inviter (personne du serveur cherchée par
+	// nom ou adresse, ou « Inviter à rejoindre » une adresse, avec ses rôles,
+	// ce qu'ils permettent relu dessous ; e-mail du serveur ou lien à
+	// transmettre), les personnes avec leurs rôles en pastilles
 	// (✕ pour retirer un rôle donné en personne, « + Rôle » pour en donner
 	// un, rôles reçus par une équipe en pointillés), ce que chacun peut faire
 	// en une ligne, « Voir en tant que… » et « Retirer » ; le dernier
@@ -9,10 +11,10 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import Select from '#lib/ui/Select.svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
-	import type { RightsView } from '#bindings/internal/bridge/models.js';
-	import type { Role } from '#bindings/internal/remote/workbook/models.js';
+	import type { InviteOutcome, RightsView } from '#bindings/internal/bridge/models.js';
+	import type { Person, Role } from '#bindings/internal/remote/workbook/models.js';
 	import TableSourcesList from './TableSourcesList.svelte';
-	import { BUILTIN_LABELS, INVITE_ROLES, isPipeline, memberCount, members, ownerCount, roleLabel, teamRows, type MemberRow } from './rights';
+	import { BUILTIN_LABELS, INVITE_ROLES, inviteOptions, inviteSubmitLabel, isEmail, isPipeline, type InviteOption, memberCount, members, ownerCount, roleLabel, teamRows, type MemberRow } from './rights';
 	import { capsSummary, emailProblem, initial, memberCaps, NO_ACL, roleCaps, roleTone, type Run } from './access';
 	import { fmtDate, t } from '#lib/i18n/index.js';
 
@@ -68,18 +70,116 @@
 		inviteRoles = inviteRoles.includes(v) ? inviteRoles.filter((x) => x !== v) : [...inviteRoles, v];
 	}
 
+	// Recherche des personnes du serveur (lattis.search_people, 2 caractères
+	// au moins, après une courte pause de frappe) ; la dernière réponse seule
+	// compte.
+	let found = $state<Person[]>([]);
+	let listOpen = $state(false);
+	let active = $state(-1);
+	/** Personne choisie dans la liste (elle a un compte : rôles donnés tout de suite). */
+	let picked = $state<Person | null>(null);
+	let searchSeq = 0;
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+	const options = $derived(inviteOptions(email, found));
+	const sameEmail = (p: Person) => p.email.toLowerCase() === email.trim().toLowerCase();
+	const known = $derived((!!picked && sameEmail(picked)) || found.some(sameEmail));
+	const submitLabel = $derived(inviteSubmitLabel(known, view.mail));
+
+	function emailInput() {
+		result = null;
+		if (picked && !sameEmail(picked)) picked = null;
+		listOpen = true;
+		active = -1;
+		clearTimeout(searchTimer);
+		const q = email.trim();
+		const seq = ++searchSeq;
+		if (q.length < 2) {
+			found = [];
+			return;
+		}
+		searchTimer = setTimeout(async () => {
+			let r: Person[] = [];
+			try {
+				r = (await DocumentService.ShareSearchPeople(q)) ?? [];
+			} catch {
+				// Recherche indisponible : reste « Inviter à rejoindre ».
+			}
+			if (seq === searchSeq) found = r;
+		}, 250);
+	}
+
+	function choose(o: InviteOption) {
+		if (o.kind === 'join') {
+			if (o.disabled) return;
+			picked = null;
+			email = o.email;
+		} else {
+			picked = o.person;
+			email = o.person.email;
+		}
+		listOpen = false;
+		active = -1;
+	}
+
+	function emailKey(e: KeyboardEvent) {
+		if (!options.length) return;
+		if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+			e.preventDefault();
+			if (!listOpen) {
+				listOpen = true;
+				active = 0;
+			} else active = (active + (e.key === 'ArrowDown' ? 1 : options.length - 1)) % options.length;
+		} else if (listOpen && e.key === 'Enter' && active >= 0) {
+			e.preventDefault();
+			choose(options[active]);
+		} else if (listOpen && e.key === 'Escape') {
+			// La liste se ferme, pas la boîte.
+			e.preventDefault();
+			e.stopPropagation();
+			listOpen = false;
+		}
+	}
+
+	/** Issue de la dernière invitation, sous le formulaire. */
+	let result = $state<{ text: string; link?: string } | null>(null);
+	let linkCopied = $state(false);
+
 	async function invite(e: SubmitEvent) {
 		e.preventDefault();
 		if (busy) return;
+		listOpen = false;
 		if (emailErr || rolesErr) {
 			tried = true;
 			if (emailErr) emailEl?.focus();
 			return;
 		}
 		const to = email.trim();
-		if (await run(() => DocumentService.ShareInvite(to, inviteRoles), t('remote.members.invited', { email: to }))) {
-			email = '';
-			tried = false;
+		const who = picked?.display_name || to;
+		const res: { out?: InviteOutcome } = {};
+		result = null;
+		const ok = await run(async () => {
+			res.out = await DocumentService.ShareInvitePerson(to, inviteRoles);
+			return res.out.view;
+		});
+		if (!ok || !res.out) return;
+		const out = res.out;
+		if (out.status === 'granted') result = { text: t('remote.members.invite.granted', { who }) };
+		else if (out.status === 'invited' && out.mailed) result = { text: t('remote.members.invite.mailed', { email: to }) };
+		else if (out.status === 'invited' && out.link) result = { text: t('remote.members.invite.linkHelp', { email: to }), link: out.link };
+		else result = { text: t('remote.members.invited', { email: to }) };
+		email = '';
+		tried = false;
+		picked = null;
+		found = [];
+	}
+
+	async function copyInviteLink(link: string) {
+		try {
+			await navigator.clipboard.writeText(link);
+			linkCopied = true;
+			setTimeout(() => (linkCopied = false), 1500);
+		} catch {
+			// Presse-papiers refusé : le lien reste sélectionnable.
 		}
 	}
 
@@ -118,25 +218,74 @@
 	<form class="ac-card" onsubmit={invite} novalidate>
 		<div class="ac-section-head"><h3 id="am-invite">{t('remote.members.invite.title')}</h3></div>
 		<div class="ac-card-row">
-			<input
-				bind:this={emailEl}
-				class="sf-input"
-				type="email"
-				placeholder={t('remote.audience.email.placeholder')}
-				aria-label={t('remote.members.invite.email')}
-				aria-invalid={tried && !!emailErr}
-				aria-describedby="am-invite-hint"
-				bind:value={email}
-				disabled={busy}
-				autocomplete="off"
-			/>
+			<div class="am-combo">
+				<input
+					bind:this={emailEl}
+					class="sf-input"
+					type="text"
+					role="combobox"
+					placeholder={t('remote.members.invite.placeholder')}
+					aria-label={t('remote.members.invite.email')}
+					aria-invalid={tried && !!emailErr}
+					aria-describedby="am-invite-hint"
+					aria-autocomplete="list"
+					aria-expanded={listOpen && options.length > 0}
+					aria-controls="am-invite-list"
+					aria-activedescendant={listOpen && active >= 0 ? `am-invite-opt-${active}` : undefined}
+					bind:value={email}
+					oninput={emailInput}
+					onkeydown={emailKey}
+					onblur={() => (listOpen = false)}
+					disabled={busy}
+					autocomplete="off"
+					spellcheck="false"
+				/>
+				{#if listOpen && options.length}
+					<ul class="am-list" id="am-invite-list" role="listbox" aria-label={t('remote.members.invite.suggestions')}>
+						{#each options as o, i (o.kind === 'person' ? o.person.id : 'join')}
+							<!-- La souris choisit sans ôter le focus du champ ; le clavier passe par le champ (flèches, Entrée). -->
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<li
+								id="am-invite-opt-{i}"
+								role="option"
+								aria-selected={i === active}
+								aria-disabled={o.kind === 'join' && o.disabled}
+								class:on={i === active}
+								class:join={o.kind === 'join'}
+								onmousedown={(e) => e.preventDefault()}
+								onclick={() => choose(o)}
+							>
+								{#if o.kind === 'person'}
+									<span class="ac-avatar" aria-hidden="true">{initial(o.person.display_name || o.person.email)}</span>
+									<strong>{o.person.display_name || o.person.email}</strong>
+									{#if o.person.display_name}<span class="ac-sub">{o.person.email}</span>{/if}
+								{:else}
+									<span class="ac-avatar" aria-hidden="true"><Icon name="plus" size={12} /></span>
+									<span>{o.disabled && !isEmail(o.email) ? t('remote.members.invite.joinHint') : t('remote.members.invite.join', { email: o.email })}</span>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
 			<div class="ac-toggles" class:invalid={tried && !!rolesErr} role="group" aria-label={t('remote.members.invite.roles')}>
 				{#each invitable as i (i.value)}
 					<button type="button" class="ac-toggle" aria-pressed={inviteRoles.includes(i.value)} disabled={busy} title={i.role ? capsSummary(roleCaps(i.role, a, tables, collab)) : ''} onclick={() => toggleInvite(i.value)}>{i.label}</button>
 				{/each}
 			</div>
-			<button type="submit" class="sf-btn primary" disabled={busy}>{t('remote.members.invite.submit')}</button>
+			<button type="submit" class="sf-btn primary" disabled={busy}>{submitLabel}</button>
 		</div>
+		{#if result}
+			<div class="am-result" role="status">
+				<span>{result.text}</span>
+				{#if result.link}
+					<span class="am-link">
+						<input class="sf-input" readonly value={result.link} aria-label={t('remote.members.invite.linkAria')} onfocus={(e) => e.currentTarget.select()} />
+						<button type="button" class="sf-btn" onclick={() => copyInviteLink(result!.link!)}>{linkCopied ? t('remote.rightsDialog.link.copied') : t('remote.formQR.copy')}</button>
+					</span>
+				{/if}
+			</div>
+		{/if}
 		{#if tried && (emailErr || rolesErr)}
 			<p class="sf-error" id="am-invite-hint" role="alert">{emailErr || rolesErr}</p>
 		{:else}
@@ -219,7 +368,7 @@
 			{#each acl.invitations as i (i.id)}
 				<li class="ac-row">
 					<span class="ac-avatar" aria-hidden="true" style="background: #f1f3f5; color: #6b7280">{initial(i.email)}</span>
-					<div class="ac-who"><strong>{i.email}</strong><span class="ac-sub">{t('remote.members.until', { date: fmtDate(new Date(i.expires_at)) })}</span></div>
+					<div class="ac-who"><strong title={i.invited_by ? t('remote.members.invitedBy', { who: i.invited_by }) : undefined}>{i.email}</strong><span class="ac-sub">{t('remote.members.until', { date: fmtDate(new Date(i.expires_at)) })}</span></div>
 					<div class="ac-chips">
 						{#each i.roles ?? [] as r (r)}
 							{@const role = roles.find((x) => x.builtin === r || (!x.builtin && x.name.toLowerCase() === r.toLowerCase()))}
@@ -288,3 +437,78 @@
 </section>
 
 <TableSourcesList />
+
+<style>
+	.am-combo {
+		position: relative;
+		flex: 1 1 220px;
+		min-width: 180px;
+		display: flex;
+	}
+	.am-combo .sf-input {
+		flex: 1;
+		min-width: 0;
+	}
+	.am-list {
+		position: absolute;
+		top: calc(100% + 2px);
+		left: 0;
+		right: 0;
+		z-index: 5;
+		margin: 0;
+		padding: 4px 0;
+		list-style: none;
+		background: #fff;
+		border: 1px solid #d1d5db;
+		border-radius: 6px;
+		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+		max-height: 260px;
+		overflow-y: auto;
+	}
+	.am-list li {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 5px 10px;
+		cursor: pointer;
+		min-width: 0;
+	}
+	.am-list li .ac-sub {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.am-list li.on {
+		background: #eef6f1;
+	}
+	.am-list li.join {
+		border-top: 1px solid #eef0f2;
+		color: #14532d;
+		--icon-accent: #217346;
+	}
+	.am-list li[aria-disabled='true'] {
+		color: #9ca3af;
+		cursor: default;
+	}
+	.am-result {
+		margin-top: 8px;
+		color: #1b5e3a;
+		font-size: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.am-link {
+		display: flex;
+		gap: 8px;
+	}
+	.am-link .sf-input {
+		flex: 1;
+		min-width: 0;
+		height: 26px;
+		color: #374151;
+	}
+	.am-link .sf-btn {
+		height: 26px;
+	}
+</style>

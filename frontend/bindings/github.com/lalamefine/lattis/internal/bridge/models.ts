@@ -669,6 +669,20 @@ export interface ImportResult {
 }
 
 /**
+ * InviteOutcome est l'issue de ShareInvitePerson : la liste des droits à
+ * jour ; Status, workbook.InviteGranted (rôles donnés) ou InviteInvited
+ * (posés à sa première connexion), vide sur un serveur sans la migration
+ * 0046 (lattis.invite) ; Mailed, le serveur a envoyé le courriel ; Link,
+ * le lien à transmettre sinon (adresse du serveur et link_path).
+ */
+export interface InviteOutcome {
+    "view": RightsView;
+    "status": string;
+    "mailed": boolean;
+    "link": string;
+}
+
+/**
  * LattisState est l'état des Serveurs Lattis pour l'interface.
  */
 export interface LattisState {
@@ -995,6 +1009,12 @@ export interface RightsView {
      * d'équipes ni de filtre « mon équipe »).
      */
     "teams": workbook$0.Team[] | null;
+
+    /**
+     * Mail : le serveur envoie les courriels d'invitation (découverte,
+     * « mail » ; propriétaire, en ligne) ; sinon le lien est à transmettre.
+     */
+    "mail": boolean;
 
     /**
      * Error : le serveur n'a pas répondu (droits locaux seulement).

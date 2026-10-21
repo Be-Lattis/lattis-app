@@ -119,6 +119,15 @@ type Fake struct {
 	NoForms       bool
 	FormsPublic   bool
 	LastFormImage string
+	// Before46 imite un serveur sans la migration 0046 : ni search_people,
+	// ni invite_person, ni workbook_invitations (ErrUnsupported). Mailer :
+	// le serveur envoie les courriels d'invitation. names : noms affichés
+	// (SetName ; l'identifiant sinon) ; onLogin : invitations
+	// d'invite_person, appliquées à la première connexion (people.go).
+	Before46 bool
+	Mailer   bool
+	names    map[string]string
+	onLogin  map[string]bool
 }
 
 // check refuse (42501) l'écriture de value dans la colonne col d'un
@@ -205,7 +214,10 @@ func (f *Fake) AsDevice(user, device string) workbook.Server {
 	if f.users == nil {
 		f.users = map[string]bool{}
 	}
-	f.users[user] = true
+	if !f.users[user] {
+		f.users[user] = true
+		f.firstLogin(user)
+	}
 	f.mu.Unlock()
 	return &session{f: f, user: user, device: device}
 }

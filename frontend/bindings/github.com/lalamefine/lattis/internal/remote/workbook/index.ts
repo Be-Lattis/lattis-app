@@ -22,6 +22,7 @@ export type {
     Level,
     Listing,
     Member,
+    Person,
     PushReject,
     PushRun,
     PushedOrigin,

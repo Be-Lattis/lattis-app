@@ -937,7 +937,17 @@
 			"submit": "Einladen",
 			"gives": "Kann dann:",
 			"help": "Sofort wirksam oder bei der ersten Anmeldung.",
-			"custom": "Benutzerdefinierte Rollen können vergeben werden, sobald die Person Mitglied ist."
+			"custom": "Benutzerdefinierte Rollen können vergeben werden, sobald die Person Mitglied ist.",
+			"placeholder": "Name oder E-Mail-Adresse",
+			"suggestions": "Personen auf dem Server",
+			"join": "Zum Beitreten einladen: {email}",
+			"joinHint": "E-Mail-Adresse eingeben, um einzuladen",
+			"submitMail": "Einladen und E-Mail senden",
+			"submitLink": "Einladen (Link weitergeben)",
+			"granted": "Zugriff für {who} erteilt",
+			"mailed": "Einladung per E-Mail an {email} gesendet",
+			"linkHelp": "Geben Sie diesen Link an {email} weiter; die Anmeldung erfolgt mit dieser Adresse.",
+			"linkAria": "Einladungslink"
 		},
 		"people": "Personen",
 		"search": "Mitglied suchen",
@@ -981,7 +991,8 @@
 			"submit": "Rolle vergeben",
 			"help": "Teammitglieder haben die Rollen des Teams, solange sie dazugehören."
 		},
-		"noTeam": "Keine Teams auf diesem Server: Die Besitzer des Servers erstellen sie in seiner Verwaltung („Teams“)."
+		"noTeam": "Keine Teams auf diesem Server: Die Besitzer des Servers erstellen sie in seiner Verwaltung („Teams“).",
+		"invitedBy": "Eingeladen von {who}"
 	},
 	"roles": {
 		"teamCount": "{n, plural, one {# Team} other {# Teams}}",

@@ -24,14 +24,14 @@ import (
 func TestFormInfo(t *testing.T) {
 	ctx := context.Background()
 	fake := workbooktest.New()
-	oldServer, oldDir, oldRetry, oldDebounce, oldDisc := shareServer, shareCacheDir, shareRetry, collab.Debounce, formsDiscovery
+	oldServer, oldDir, oldRetry, oldDebounce, oldDisc := shareServer, shareCacheDir, shareRetry, collab.Debounce, serverDiscovery
 	cache := t.TempDir()
 	shareCacheDir = func() (string, error) { return cache, nil }
 	shareRetry, collab.Debounce = 20*time.Millisecond, 10*time.Millisecond
 	disc := protocol.Discovery{Name: "Serveur des nids", Forms: true}
-	formsDiscovery = func(ctx context.Context, server string) (protocol.Discovery, error) { return disc, nil }
+	serverDiscovery = func(ctx context.Context, server string) (protocol.Discovery, error) { return disc, nil }
 	t.Cleanup(func() {
-		shareServer, shareCacheDir, shareRetry, collab.Debounce, formsDiscovery = oldServer, oldDir, oldRetry, oldDebounce, oldDisc
+		shareServer, shareCacheDir, shareRetry, collab.Debounce, serverDiscovery = oldServer, oldDir, oldRetry, oldDebounce, oldDisc
 	})
 	user := "alice"
 	shareServer = func(ctx context.Context, server string) (workbook.Server, auth.User, string, error) {

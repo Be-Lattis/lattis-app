@@ -74,10 +74,13 @@ type Discovery struct {
 	PreviewEndpoint string `json:"preview_endpoint,omitempty"`
 	// Forms : le serveur sert les formulaires (/f/<code>) ; FormsPublic : le
 	// lien public y est permis (réglage forms_public, coupé par défaut).
-	Forms       bool       `json:"forms,omitempty"`
-	FormsPublic bool       `json:"forms_public,omitempty"`
-	Providers   []Provider `json:"providers"`
-	Postgres    Postgres   `json:"postgres"`
+	Forms       bool `json:"forms,omitempty"`
+	FormsPublic bool `json:"forms_public,omitempty"`
+	// Mail : le serveur envoie les courriels d'invitation (sinon le lien est
+	// à transmettre ; migration 0046).
+	Mail      bool       `json:"mail,omitempty"`
+	Providers []Provider `json:"providers"`
+	Postgres  Postgres   `json:"postgres"`
 }
 
 // Provider est un fournisseur d'identité actif, dans l'ordre du serveur.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -223,13 +224,15 @@ func (s *session) ACL(ctx context.Context, workbookID string) (workbook.ACL, err
 	out := workbook.ACL{
 		Workbook: workbook.ACLWorkbook{ID: b.id, Title: b.title, Mode: b.mode, State: b.state, Version: b.version, Schema: b.schema},
 		Tables:   []workbook.ACLTable{}, Roles: []workbook.Role{},
-		Restrictions: slices.Clone(a.restrictions), Invitations: slices.Clone(a.invitations),
+		Restrictions: slices.Clone(a.restrictions), Invitations: []workbook.Invitation{},
+	}
+	for _, i := range a.invitations {
+		// workbook_acl : sans auteur ni date d'envoi (workbook_invitations).
+		i.InvitedBy, i.CreatedAt = "", ""
+		out.Invitations = append(out.Invitations, i)
 	}
 	if out.Restrictions == nil {
 		out.Restrictions = []workbook.RestrictionRule{}
-	}
-	if out.Invitations == nil {
-		out.Invitations = []workbook.Invitation{}
 	}
 	for _, t := range b.schemas[b.schema].tables {
 		out.Tables = append(out.Tables, workbook.ACLTable{TableID: t.id, Name: t.name, SheetID: t.sheet})
@@ -279,14 +282,25 @@ func (s *session) Invite(ctx context.Context, workbookID, mail string, roles []s
 		s.f.mu.Unlock()
 		return "", err
 	}
-	b, err := s.owner(workbookID)
+	id, _, b, err := s.invite(workbookID, mail, roles)
+	s.f.mu.Unlock()
 	if err != nil {
-		s.f.mu.Unlock()
 		return "", err
 	}
+	s.aclChanged(b)
+	return id, nil
+}
+
+// invite : lattis.invite et lattis.invite_person (sous le verrou) ; un
+// utilisateur connu reçoit les rôles tout de suite (granted), une autre
+// adresse une invitation en attente.
+func (s *session) invite(workbookID, mail string, roles []string) (id string, granted bool, b *book, err error) {
+	b, err = s.owner(workbookID)
+	if err != nil {
+		return "", false, nil, err
+	}
 	if len(roles) == 0 {
-		s.f.mu.Unlock()
-		return "", ErrInvalid{"au moins un rôle"}
+		return "", false, nil, ErrInvalid{"au moins un rôle"}
 	}
 	a := s.f.acl(b)
 	var custom []*frole
@@ -296,39 +310,46 @@ func (s *session) Invite(ctx context.Context, workbookID, mail string, roles []s
 		}
 		i := slices.IndexFunc(a.roles, func(x *frole) bool { return x.builtin == "" && strings.EqualFold(x.name, r) })
 		if i < 0 || s.f.Before09 {
-			s.f.mu.Unlock()
-			return "", ErrInvalid{fmt.Sprintf("rôle « %s » inexistant sur ce classeur", r)}
+			return "", false, nil, ErrInvalid{fmt.Sprintf("rôle « %s » inexistant sur ce classeur", r)}
 		}
 		custom = append(custom, a.roles[i])
 	}
 	mail = strings.ToLower(strings.TrimSpace(mail))
-	id := uuid.NewString()
+	id = uuid.NewString()
 	user, ok := strings.CutSuffix(mail, "@example.test")
 	if ok && s.f.known(user) {
-		for _, r := range roles {
-			if slices.Contains(builtins, r) && !slices.Contains(b.roles[user], r) {
+		s.f.give(b, user, roles)
+		return id, true, b, nil
+	}
+	if ok && !s.f.Before09 {
+		// Compte en attente : grant_role vaut ensuite pour lui.
+		if s.f.pending == nil {
+			s.f.pending = map[string]bool{}
+		}
+		s.f.pending[user] = true
+	}
+	now := s.f.Clock().UTC()
+	a.invitations = append(a.invitations, workbook.Invitation{ID: id, Email: mail, Roles: slices.Clone(roles), InvitedBy: email(s.user),
+		CreatedAt: now.Format(time.RFC3339), ExpiresAt: now.Add(14 * 24 * time.Hour).Format(time.RFC3339)})
+	return id, false, b, nil
+}
+
+// give donne des rôles (fournis, ou personnalisés par leur nom, sans casse)
+// à un utilisateur.
+func (f *Fake) give(b *book, user string, roles []string) {
+	for _, r := range roles {
+		if slices.Contains(builtins, r) {
+			if !slices.Contains(b.roles[user], r) {
 				b.roles[user] = append(b.roles[user], r)
 			}
+			continue
 		}
-		for _, r := range custom {
-			if !slices.Contains(r.members, user) {
-				r.members = append(r.members, user)
+		for _, x := range f.acl(b).roles {
+			if x.builtin == "" && strings.EqualFold(x.name, r) && !slices.Contains(x.members, user) {
+				x.members = append(x.members, user)
 			}
 		}
-	} else {
-		if ok && !s.f.Before09 {
-			// Compte en attente : grant_role vaut ensuite pour lui.
-			if s.f.pending == nil {
-				s.f.pending = map[string]bool{}
-			}
-			s.f.pending[user] = true
-		}
-		a := s.f.acl(b)
-		a.invitations = append(a.invitations, workbook.Invitation{ID: id, Email: mail, Roles: slices.Clone(roles), ExpiresAt: "2099-01-01T00:00:00Z"})
 	}
-	s.f.mu.Unlock()
-	s.aclChanged(b)
-	return id, nil
 }
 
 // known : utilisateur déjà vu par le faux serveur (As ou rôle donné).

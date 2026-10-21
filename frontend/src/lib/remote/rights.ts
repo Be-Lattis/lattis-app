@@ -3,7 +3,7 @@
 // DocumentService.ShareRights (internal/bridge/rights.go) ; les niveaux, les
 // filtres et les restrictions suivent l'API SQL du serveur
 // (docs/collaboration/droits.md).
-import type { ACL, Grant, Member, Role, Team, WorkbookMember } from '#bindings/internal/remote/workbook/models.js';
+import type { ACL, Grant, Member, Person, Role, Team, WorkbookMember } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
 import { boolText, compareText, formulaDecimal, isoToShort, parseBool, parseNumberText, parseShortDate, t, tAny } from '#lib/i18n/index.js';
 
@@ -100,6 +100,39 @@ export function members(acl: ACL | null | undefined, list?: readonly WorkbookMem
 		}
 	}
 	return [...by.values()].sort((a, b) => a.email.localeCompare(b.email));
+}
+
+// --- Inviter (serveur 0046) ------------------------------------------------------
+
+/** Adresse e-mail plausible (même contrôle que access.emailProblem). */
+export function isEmail(s: string): boolean {
+	return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.trim());
+}
+
+/** Choix proposé sous « Inviter une personne » : une personne du serveur, ou « Inviter à rejoindre » l'adresse saisie. */
+export type InviteOption = { kind: 'person'; person: Person } | { kind: 'join'; email: string; disabled: boolean };
+
+/**
+ * Choix sous le champ (au moins 2 caractères) : les personnes trouvées par
+ * lattis.search_people, puis « Inviter à rejoindre », permis pour une
+ * adresse qui n'est pas déjà celle d'une personne trouvée.
+ */
+export function inviteOptions(query: string, people: readonly Person[] | null | undefined): InviteOption[] {
+	const q = query.trim();
+	if (q.length < 2) return [];
+	const found = people ?? [];
+	const known = found.some((p) => p.email.toLowerCase() === q.toLowerCase());
+	return [...found.map((person) => ({ kind: 'person' as const, person })), { kind: 'join', email: q, disabled: known || !isEmail(q) }];
+}
+
+/**
+ * Libellé du bouton d'invitation : une personne qui a déjà un compte
+ * (choisie dans la liste) reçoit ses rôles tout de suite ; sinon le serveur
+ * envoie un e-mail (mail, découverte) ou donne un lien à transmettre.
+ */
+export function inviteSubmitLabel(known: boolean, mail: boolean): string {
+	if (known) return t('remote.members.invite.submit');
+	return mail ? t('remote.members.invite.submitMail') : t('remote.members.invite.submitLink');
 }
 
 // --- Équipes (serveur 0012) ------------------------------------------------------

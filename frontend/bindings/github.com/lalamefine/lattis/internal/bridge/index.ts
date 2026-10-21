@@ -41,6 +41,7 @@ export type {
     FormulaHelp,
     GridStatus,
     ImportResult,
+    InviteOutcome,
     LattisState,
     LinkTarget,
     MCPClients,

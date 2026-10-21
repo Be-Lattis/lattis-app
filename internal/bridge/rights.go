@@ -17,6 +17,7 @@ import (
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/protocol"
 )
 
 // Droits d'un classeur partagé (docs/collaboration/droits.md) : écran
@@ -91,6 +92,9 @@ type RightsView struct {
 	// propriétaire du serveur). nil : serveur sans la migration 0012 (pas
 	// d'équipes ni de filtre « mon équipe »).
 	Teams []workbook.Team `json:"teams"`
+	// Mail : le serveur envoie les courriels d'invitation (découverte,
+	// « mail » ; propriétaire, en ligne) ; sinon le lien est à transmettre.
+	Mail bool `json:"mail"`
 	// Error : le serveur n'a pas répondu (droits locaux seulement).
 	Error string `json:"error,omitempty"`
 }
@@ -202,6 +206,14 @@ func (s *DocumentService) ShareRights(ctx context.Context, remote bool) (RightsV
 		if teams, err := srv.Teams(ctx); err == nil {
 			v.Teams = teams
 		}
+		// Invitations en attente avec leur auteur (0046) ; sinon celles de
+		// workbook_acl.
+		if inv, err := srv.WorkbookInvitations(ctx, info.WorkbookID); err == nil {
+			v.ACL.Invitations = inv
+		}
+		if disc, err := serverDiscovery(ctx, info.Server); err == nil {
+			v.Mail = disc.Mail
+		}
 	}
 	switch m, err := srv.Members(ctx, info.WorkbookID); {
 	case errors.Is(err, workbook.ErrUnsupported):
@@ -299,6 +311,99 @@ func (s *DocumentService) ShareInvite(ctx context.Context, email string, roles [
 		_, err := srv.Invite(ctx, info.WorkbookID, email, roles)
 		return err
 	})
+}
+
+// InviteOutcome est l'issue de ShareInvitePerson : la liste des droits à
+// jour ; Status, workbook.InviteGranted (rôles donnés) ou InviteInvited
+// (posés à sa première connexion), vide sur un serveur sans la migration
+// 0046 (lattis.invite) ; Mailed, le serveur a envoyé le courriel ; Link,
+// le lien à transmettre sinon (adresse du serveur et link_path).
+type InviteOutcome struct {
+	View   RightsView `json:"view"`
+	Status string     `json:"status"`
+	Mailed bool       `json:"mailed"`
+	Link   string     `json:"link"`
+}
+
+// ShareInvitePerson invite une personne (choisie dans ShareSearchPeople ou
+// par son adresse) au classeur ouvert avec des rôles
+// (lattis.invite_person) ; serveur sans la migration 0046 : comme
+// ShareInvite.
+func (s *DocumentService) ShareInvitePerson(ctx context.Context, email string, roles []string) (InviteOutcome, error) {
+	email = strings.TrimSpace(email)
+	if !strings.Contains(email, "@") {
+		return InviteOutcome{}, msg.New("rights.invalidAddress", msg.Args{"address": fmt.Sprintf("%q", email)})
+	}
+	if len(roles) == 0 {
+		return InviteOutcome{}, msg.New("rights.chooseRole", nil)
+	}
+	var out InviteOutcome
+	v, err := s.rightsDo(ctx, func(srv workbook.Server, info *workbook.Info) error {
+		res, err := srv.InvitePerson(ctx, info.WorkbookID, email, roles)
+		if errors.Is(err, workbook.ErrUnsupported) {
+			_, err = srv.Invite(ctx, info.WorkbookID, email, roles)
+			return err
+		}
+		if err != nil {
+			return err
+		}
+		out.Status, out.Mailed = res.Status, res.Mailed
+		if res.Status == workbook.InviteInvited && !res.Mailed {
+			out.Link = inviteLink(info.Server, info.WorkbookID, res.LinkPath)
+		}
+		return nil
+	})
+	if err != nil {
+		return InviteOutcome{}, err
+	}
+	out.View = v
+	return out, nil
+}
+
+// inviteLink : lien d'invitation à transmettre, adresse du serveur suivie
+// de link_path (lien du classeur si le serveur n'en donne pas ; adresse
+// complète gardée telle quelle).
+func inviteLink(server, workbookID, linkPath string) string {
+	if u, err := auth.NormalizeURL(server); err == nil {
+		server = u
+	}
+	switch {
+	case strings.HasPrefix(linkPath, "https://") || strings.HasPrefix(linkPath, "http://"):
+		return linkPath
+	case linkPath == "":
+		return protocol.WorkbookLink(server, workbookID)
+	}
+	return strings.TrimRight(server, "/") + "/" + strings.TrimLeft(linkPath, "/")
+}
+
+// ShareSearchPeople cherche des utilisateurs du serveur du classeur ouvert
+// par nom ou adresse (lattis.search_people, au moins 2 caractères) ; liste
+// vide sur un serveur sans la migration 0046.
+func (s *DocumentService) ShareSearchPeople(ctx context.Context, query string) ([]workbook.Person, error) {
+	query = strings.TrimSpace(query)
+	if len([]rune(query)) < 2 {
+		return []workbook.Person{}, nil
+	}
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	info := d.Share.Info()
+	if info == nil {
+		return nil, msg.New("rights.notShared", nil)
+	}
+	srv, _, _, err := remoteServer(ctx, info.Server)
+	if err != nil {
+		return nil, err
+	}
+	out, err := srv.SearchPeople(ctx, query, 8)
+	if errors.Is(err, workbook.ErrUnsupported) {
+		return []workbook.Person{}, nil
+	}
+	if err != nil {
+		return nil, errors.New(rightsError(err))
+	}
+	return out, nil
 }
 
 // ShareRevokeInvitation retire une invitation en attente.

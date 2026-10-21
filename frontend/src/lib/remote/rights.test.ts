@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ACL, Role } from '#bindings/internal/remote/workbook/models.js';
 import type { RightsTable, RightsView } from '#bindings/internal/bridge/models.js';
-import { checkFreeFilter, isPipeline, conditionSQL, filterPrompt, filterSentence, filterSQL, memberCount, members, opsFor, ownerCount, teamRows, parentLevel, parseFilter, rightsObjects, serverSheet, sheetLevel, tableLevel, tree, type Condition } from './rights';
+import { checkFreeFilter, inviteOptions, inviteSubmitLabel, isEmail, isPipeline, conditionSQL, filterPrompt, filterSentence, filterSQL, memberCount, members, opsFor, ownerCount, teamRows, parentLevel, parseFilter, rightsObjects, serverSheet, sheetLevel, tableLevel, tree, type Condition } from './rights';
 
 const types = { Produit: 'text', Quantité: 'integer', Prix: 'decimal', Livré: 'date', Payé: 'boolean', Commercial: 'text' };
 
@@ -221,6 +221,7 @@ describe("objets de l'onglet SQL", () => {
 		drift: [],
 		members: null,
 		customInvite: false,
+		mail: false,
 		teams: null,
 		...o
 	});
@@ -244,5 +245,30 @@ describe('membres techniques', () => {
 		expect(isPipeline('pipeline+ventes@lattis.invalid')).toBe(true);
 		expect(isPipeline('alice@exemple.fr')).toBe(false);
 		expect(isPipeline(undefined)).toBe(false);
+	});
+});
+
+describe('inviter une personne (serveur 0046)', () => {
+	const bob = { id: 'b', display_name: 'Bob Martin', email: 'bob@exemple.fr' };
+	it('reconnaît une adresse', () => {
+		expect(isEmail(' alice@exemple.fr ')).toBe(true);
+		expect(isEmail('alice')).toBe(false);
+		expect(isEmail('alice@exemple')).toBe(false);
+		expect(isEmail('a b@exemple.fr')).toBe(false);
+	});
+	it('propose les personnes trouvées, puis « Inviter à rejoindre »', () => {
+		expect(inviteOptions('b', [bob])).toEqual([]);
+		expect(inviteOptions('bo', [bob])).toEqual([
+			{ kind: 'person', person: bob },
+			{ kind: 'join', email: 'bo', disabled: true }
+		]);
+		expect(inviteOptions('carol@exemple.fr', null)).toEqual([{ kind: 'join', email: 'carol@exemple.fr', disabled: false }]);
+		// Adresse déjà celle d'une personne trouvée : on la choisit dans la liste.
+		expect(inviteOptions('BOB@exemple.fr', [bob]).at(-1)).toEqual({ kind: 'join', email: 'BOB@exemple.fr', disabled: true });
+	});
+	it('bouton selon le compte et les e-mails du serveur', () => {
+		expect(inviteSubmitLabel(true, false)).toBe('Inviter');
+		expect(inviteSubmitLabel(false, true)).toBe('Inviter et envoyer un e-mail');
+		expect(inviteSubmitLabel(false, false)).toBe('Inviter (lien à transmettre)');
 	});
 });

@@ -44,9 +44,9 @@ const (
 	FormNoServer = "noforms" // serveur sans les formulaires
 )
 
-// formsDiscovery lit la découverte d'un serveur (essais : remplacée ; nil
-// d'erreur et Forms faux : serveur sans les formulaires).
-var formsDiscovery = func(ctx context.Context, server string) (protocol.Discovery, error) {
+// serverDiscovery lit la découverte d'un serveur (formulaires, courriels
+// d'invitation ; essais : remplacée).
+var serverDiscovery = func(ctx context.Context, server string) (protocol.Discovery, error) {
 	m, err := sessions()
 	if err != nil {
 		return protocol.Discovery{}, err
@@ -232,7 +232,7 @@ func (s *DocumentService) FormInfo(ctx context.Context, table string) (FormInfo,
 		return out, nil
 	}
 	out.Public = set.FormsPublic
-	if disc, err := formsDiscovery(ctx, info.Server); err == nil {
+	if disc, err := serverDiscovery(ctx, info.Server); err == nil {
 		if disc.Name != "" {
 			out.ServerName = disc.Name
 		}

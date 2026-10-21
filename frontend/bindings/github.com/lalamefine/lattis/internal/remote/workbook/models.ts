@@ -250,12 +250,15 @@ export interface Grant {
 }
 
 /**
- * Invitation est une invitation en attente.
+ * Invitation est une invitation en attente ; InvitedBy et CreatedAt :
+ * lattis.workbook_invitations seulement (migration 0046).
  */
 export interface Invitation {
     "id": string;
     "email": string;
     "roles": string[] | null;
+    "invited_by"?: string;
+    "created_at"?: string;
     "expires_at": string;
 }
 
@@ -297,6 +300,15 @@ export interface Member {
     "user_id": string;
     "email": string;
     "display_name": string;
+}
+
+/**
+ * Person est un utilisateur du serveur trouvé par SearchPeople.
+ */
+export interface Person {
+    "id": string;
+    "display_name": string;
+    "email": string;
 }
 
 /**

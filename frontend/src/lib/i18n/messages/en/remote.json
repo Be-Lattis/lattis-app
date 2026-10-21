@@ -937,7 +937,17 @@
 			"submit": "Invite",
 			"gives": "Will be able to:",
 			"help": "Effective right away, or at their first sign-in.",
-			"custom": "Custom roles can be given once the person is a member."
+			"custom": "Custom roles can be given once the person is a member.",
+			"placeholder": "Name or email address",
+			"suggestions": "People on the server",
+			"join": "Invite to join: {email}",
+			"joinHint": "Type an email address to invite",
+			"submitMail": "Invite and send email",
+			"submitLink": "Invite (link to pass on)",
+			"granted": "Access given to {who}",
+			"mailed": "Invitation emailed to {email}",
+			"linkHelp": "Pass this link on to {email}, who signs in with this address.",
+			"linkAria": "Invitation link"
 		},
 		"people": "People",
 		"search": "Search for a member",
@@ -981,7 +991,8 @@
 			"submit": "Give the role",
 			"help": "Team members have its roles as long as they belong to it."
 		},
-		"noTeam": "No teams on this server: the server's owners create them in its administration (“Teams”)."
+		"noTeam": "No teams on this server: the server's owners create them in its administration (“Teams”).",
+		"invitedBy": "Invited by {who}"
 	},
 	"roles": {
 		"teamCount": "{n, plural, one {# team} other {# teams}}",
