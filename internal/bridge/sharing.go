@@ -769,6 +769,16 @@ func (s *DocumentService) shareReady(ctx context.Context, d *doc.Document) (work
 	return shownState(d), nil
 }
 
+// shareShown : classeur partagé d tout juste ouvert (ShareOpen, suivi déjà
+// lancé par replace) : interface prévenue.
+func (s *DocumentService) shareShown(ctx context.Context, d *doc.Document) (workbook.State, error) {
+	if _, err := s.changed(ctx); err != nil {
+		return shownState(d), err
+	}
+	s.sys().Emit(ShareEvent, shownState(d))
+	return shownState(d), nil
+}
+
 // ShareWorkbooks liste les classeurs accessibles sur un serveur (Fichier ›
 // Ouvrir depuis un serveur) ; brouillons écartés.
 func (s *DocumentService) ShareWorkbooks(ctx context.Context, server string) ([]workbook.Listing, error) {
@@ -911,11 +921,16 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 		d.Close()
 		return OpenResult{}, err
 	}
-	// Avant replace : un classeur supprimé n'est plus suivi (watchShare).
+	// Avant replace, qui lance le suivi (watchShare) : un classeur supprimé
+	// n'est plus suivi ; en ligne, pour qu'une coupure vue aussitôt par le
+	// suivi ne soit pas recouverte. Le suivi n'est lancé qu'une fois : un
+	// second, aussitôt arrêté, pouvait faire encore un tour (droits, file,
+	// réception) en même temps que le vrai.
 	d.Share.SetGone(gone)
+	d.Share.SetOnline(true, "")
 	s.replace(d)
 	addRecentDoc(d)
-	if _, err := s.shareReady(ctx, d); err != nil {
+	if _, err := s.shareShown(ctx, d); err != nil {
 		return OpenResult{}, err
 	}
 	st, err := s.State(ctx)

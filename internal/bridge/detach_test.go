@@ -67,6 +67,17 @@ func offlineSetup(t *testing.T) (*DocumentService, *saveHost, *workbooktest.Fake
 	r, err := s.ShareOpen(ctx, "https://lattis.example.test", info.WorkbookID, "")
 	mustShare(t, err)
 	waitShare(t, h, "en ligne", func(s workbook.State) bool { return s.Online })
+	// « En ligne » est noté dès l'ouverture, avant le premier tour du suivi
+	// (droits relus par my_capabilities, file, réception, mise en page) : un
+	// essai qui change aussitôt le serveur (classeur supprimé…) le verrait
+	// sinon tantôt par ce tour, tantôt au suivant. Ce tour finit par la mise
+	// en page, dont il note la date dans le cache (collab, layoutSynced).
+	d, err := s.current()
+	mustShare(t, err)
+	waitFor(t, "première synchronisation", func() bool {
+		var n int
+		return d.DB().Read().QueryRow(`SELECT count(*) FROM _lattis_info WHERE key = 'layout_synced'`).Scan(&n) == nil && n == 1
+	})
 	return s, sh, fake, ad, tbl, info.WorkbookID, r.State.Path
 }
 
