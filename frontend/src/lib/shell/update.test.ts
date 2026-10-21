@@ -35,6 +35,32 @@ describe('mise à jour dans la barre d’état', () => {
 		expect(refused).toMatchObject({ action: 'restart', warn: true, title: 'droits refusés' });
 	});
 
+	it('installation en échec : plus de « Redémarrez… », installer manuellement', () => {
+		const page = 'https://github.com/Be-Lattis/lattis-app/releases/tag/v0.3.3-beta';
+		const v = updateView({ phase: 'installFailed', version: '0.3.3-beta', page, error: 'lattis.exe était encore ouvert', failures: 1, installer: true });
+		expect(v?.text).toBe("La mise à jour 0.3.3-beta n'a pas pu s'installer — Installer manuellement");
+		expect(v).toMatchObject({ action: 'install', warn: true, link: { text: 'Page de la version', url: page } });
+		expect(v?.title).toContain('lattis.exe était encore ouvert');
+		expect(v?.title).not.toContain('échecs');
+		// Deux échecs : plus d'installation à la fermeture, l'infobulle le dit.
+		const stopped = updateView({ phase: 'installFailed', version: '0.3.3-beta', page, error: 'x', failures: 2, autoStopped: true, installer: true });
+		expect(stopped?.title).toContain('Après 2 échecs');
+		// Sans installeur (portable) : la page de la version.
+		const portable = updateView({ phase: 'installFailed', version: '0.3.3-beta', page, error: 'x', failures: 1 });
+		expect(portable).toMatchObject({ action: 'open', url: page, warn: true });
+		expect(portable?.text).toContain("n'a pas pu s'installer");
+	});
+
+	it('installation en échec, en anglais', async () => {
+		await setLang('en');
+		try {
+			const v = updateView({ phase: 'installFailed', version: '0.3.3-beta', error: 'x', failures: 1, installer: true });
+			expect(v?.text).toBe('Update 0.3.3-beta could not be installed — Install manually');
+		} finally {
+			await setLang('fr');
+		}
+	});
+
 	it('échec : avertissement, le clic réessaie', () => {
 		expect(updateView({ phase: 'failed', error: 'empreinte' })).toMatchObject({ warn: true, action: 'prepare', title: 'empreinte' });
 	});

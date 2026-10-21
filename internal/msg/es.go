@@ -1428,4 +1428,11 @@ var es = map[ID]string{
 	"update.sizeMismatch":     "«{name}»: el tamaño del archivo descargado no es el publicado",
 	"update.tooLarge":         "archivo de actualización demasiado grande",
 	"update.unsupported":      "la actualización automática no es compatible con este sistema",
+	// Échec de l'installation de la mise à jour (internal/update, installresult.go).
+	"update.install.notApplied": "la versión reiniciada sigue siendo la antigua",
+	"update.install.noTrace":    "el instalador no dejó ningún rastro: probablemente no se inició",
+	"update.install.otherDir":   "el instalador terminó, pero en otra carpeta: {dir}",
+	"update.install.locked":     "lattis.exe seguía abierto y no se pudo reemplazar",
+	"update.install.elevation":  "no se concedieron los derechos de administrador",
+	"update.install.failed":     "el instalador se detuvo antes de terminar (código {code})",
 }

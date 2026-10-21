@@ -1106,6 +1106,12 @@
 		"readyElevated": "重新启动应用程序以应用更新（Windows 将请求管理员权限）",
 		"readyTooltip": "Lattis {version} 已就绪：点击以关闭 Lattis、安装更新并重新打开",
 		"failed": "无法准备更新，点击此处重试",
+		"installFailed": "更新 {version} 无法安装 — 手动安装",
+		"installFailedPage": "更新 {version} 无法安装 — 下载",
+		"installFailedTooltip": "原因：{reason}。点击以带界面运行安装程序；Lattis 将关闭。",
+		"installFailedStopped": "原因：{reason}。失败 {count} 次后，退出时不再自动安装。点击以带界面运行安装程序；Lattis 将关闭。",
+		"installFailedPageTooltip": "原因：{reason}。点击打开该版本的页面。",
+		"releasePage": "版本页面",
 		"updated": "更新完成，请查看版本说明",
 		"updatedTooltip": "Lattis {version}：在 GitHub 上打开版本说明",
 		"check": {

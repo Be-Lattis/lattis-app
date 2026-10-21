@@ -341,8 +341,11 @@ Function .onInit
             StrCpy $lattisChildErr 740 ; ERROR_ELEVATION_REQUIRED
         ${EndIf}
         ${IfNot} ${Silent}
-            MessageBox MB_OK|MB_ICONSTOP "$(LATTIS_ELEVATION_REFUSED)"
+            MessageBox MB_OK|MB_ICONSTOP "$(LATTIS_ELEVATION_REFUSED)" /SD IDOK
         ${EndIf}
+        Push $lattisChildErr
+        Push elevation
+        Call lattis.writeResult
         SetErrorLevel $lattisChildErr
         Quit
     ${EndIf}
@@ -537,7 +540,7 @@ Function un.onInit
             StrCpy $lattisChildErr 740
         ${EndIf}
         ${IfNot} ${Silent}
-            MessageBox MB_OK|MB_ICONSTOP "$(LATTIS_UNINSTALL_REFUSED)"
+            MessageBox MB_OK|MB_ICONSTOP "$(LATTIS_UNINSTALL_REFUSED)" /SD IDOK
         ${EndIf}
         SetErrorLevel $lattisChildErr
         Quit

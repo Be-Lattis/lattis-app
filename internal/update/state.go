@@ -40,6 +40,65 @@ type Pending struct {
 	SHA256 string `json:"sha256"`
 	// Dir : dossier d'installation (installeurs : /D=).
 	Dir string `json:"dir,omitempty"`
+	// Attempts : les essais d'installation de cette version, dans l'ordre.
+	Attempts []Attempt `json:"attempts,omitempty"`
+}
+
+// Issue d'un essai d'installation.
+const (
+	// OutcomeLaunched : installeur lancé (silencieux) à la fermeture, ou
+	// exécutable portable remplacé ; jugé au lancement suivant.
+	OutcomeLaunched = "launched"
+	// OutcomeManual : installeur lancé avec son interface (« Installer
+	// manuellement ») ; jugé au lancement suivant.
+	OutcomeManual = "manual"
+	// OutcomeFailed : l'installation n'a pas pu partir, ou l'application
+	// relancée a toujours l'ancienne version.
+	OutcomeFailed = "failed"
+)
+
+// MaxAutoAttempts : après autant d'échecs, la mise à jour n'est plus
+// installée d'elle-même à la fermeture (reste « Installer manuellement »).
+const MaxAutoAttempts = 2
+
+// Attempt : un essai d'installation de la mise à jour en attente.
+type Attempt struct {
+	At      time.Time `json:"at"`
+	Outcome string    `json:"outcome"`
+	// Error : l'installation n'a pas pu partir (dans la langue d'alors).
+	Error string `json:"error,omitempty"`
+	// Result, Code, InstDir : la trace laissée par l'installeur
+	// (install-result.txt : ok, failed, locked, elevation ; « none » s'il
+	// n'en a laissé aucune), lue au lancement suivant.
+	Result  string `json:"result,omitempty"`
+	Code    string `json:"code,omitempty"`
+	InstDir string `json:"instDir,omitempty"`
+}
+
+// failures : nombre d'essais en échec.
+func (p *Pending) failures() int {
+	n := 0
+	if p != nil {
+		for _, a := range p.Attempts {
+			if a.Outcome == OutcomeFailed {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+// lastFailure : le dernier essai en échec (nil : aucun).
+func (p *Pending) lastFailure() *Attempt {
+	if p == nil {
+		return nil
+	}
+	for i := len(p.Attempts) - 1; i >= 0; i-- {
+		if p.Attempts[i].Outcome == OutcomeFailed {
+			return &p.Attempts[i]
+		}
+	}
+	return nil
 }
 
 // LoadState lit l'état ; un fichier absent ou illisible donne un état vide.

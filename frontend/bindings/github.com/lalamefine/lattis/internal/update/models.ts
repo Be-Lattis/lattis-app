@@ -39,6 +39,12 @@ export enum Phase {
      * téléchargement ou vérification en échec
      */
     PhaseFailed = "failed",
+
+    /**
+     * PhaseInstallFailed : prête, mais l'installation a déjà échoué (la
+     * version relancée est toujours l'ancienne) : « Installer manuellement ».
+     */
+    PhaseInstallFailed = "installFailed",
 };
 
 /**
@@ -70,6 +76,15 @@ export interface Status {
      */
     "updated"?: string;
     "updatedPage"?: string;
+
+    /**
+     * Échecs de l'installation (PhaseInstallFailed) : leur nombre, l'arrêt
+     * de l'installation automatique (MaxAutoAttempts atteint), et si
+     * l'installeur peut être lancé avec son interface (sinon : la page).
+     */
+    "failures"?: number;
+    "autoStopped"?: boolean;
+    "installer"?: boolean;
 
     /**
      * Paramètres › Mises à jour : la version installée, la dernière

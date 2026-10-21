@@ -23,6 +23,9 @@ const (
 	PhaseDownloading Phase = "downloading" // téléchargement et vérification
 	PhaseReady       Phase = "ready"       // prête : redémarrer pour l'appliquer
 	PhaseFailed      Phase = "failed"      // téléchargement ou vérification en échec
+	// PhaseInstallFailed : prête, mais l'installation a déjà échoué (la
+	// version relancée est toujours l'ancienne) : « Installer manuellement ».
+	PhaseInstallFailed Phase = "installFailed"
 )
 
 // Status est l'état montré par la barre d'état.
@@ -40,6 +43,12 @@ type Status struct {
 	// installée et la page de ses notes de version.
 	Updated     string `json:"updated,omitempty"`
 	UpdatedPage string `json:"updatedPage,omitempty"`
+	// Échecs de l'installation (PhaseInstallFailed) : leur nombre, l'arrêt
+	// de l'installation automatique (MaxAutoAttempts atteint), et si
+	// l'installeur peut être lancé avec son interface (sinon : la page).
+	Failures    int  `json:"failures,omitempty"`
+	AutoStopped bool `json:"autoStopped,omitempty"`
+	Installer   bool `json:"installer,omitempty"`
 
 	// Paramètres › Mises à jour : la version installée, la dernière
 	// recherche (RFC 3339, vide : jamais) et son échec éventuel (dans la
@@ -92,6 +101,11 @@ type Updater struct {
 	// OnChange : l'état a changé (évènement vers l'interface).
 	OnChange func(Status)
 	Now      func() time.Time
+	// Apply et Launch : installation silencieuse à la fermeture et
+	// installeur avec son interface (nil : ceux du système, apply et
+	// launchInstaller ; remplacés dans les tests).
+	Apply  func(p Pending, exe string, relaunch bool) error
+	Launch func(p Pending) error
 
 	mu        sync.Mutex
 	st        State
@@ -108,6 +122,10 @@ type Updater struct {
 	checkMu  sync.Mutex    // une recherche à la fois
 	loaded   chan struct{} // Loaded : l'interface est chargée
 	loadOnce sync.Once
+	// exited : ApplyOnExit déjà passé ; manual : installeur lancé par
+	// « Installer manuellement », rien à installer à la fermeture.
+	exited bool
+	manual bool
 }
 
 // New prépare la mise à jour de l'exécutable en cours : genre
@@ -191,9 +209,13 @@ func (u *Updater) Init() {
 	if p := u.st.Pending; p != nil && p.stale() {
 		u.st.Pending, u.st.ApplyError = nil, ""
 	}
-	if u.st.Pending != nil {
+	if p := u.st.Pending; p != nil {
+		// Toujours en attente : les essais lancés n'ont pas abouti.
+		u.judgeAttempts(p)
 		u.phase = PhaseReady
-		if u.st.ApplyError != "" {
+		if p.failures() > 0 {
+			u.phase = PhaseInstallFailed
+		} else if u.st.ApplyError != "" {
 			u.err = errors.New(u.st.ApplyError)
 		}
 	} else if u.st.Latest != "" {
@@ -234,16 +256,22 @@ func (u *Updater) status(l msg.Lang) Status {
 	phase := u.phase
 	// Recherche coupée (stratégie, réglage) : plus de proposition ; une
 	// mise à jour déjà téléchargée reste à appliquer.
-	if !u.enabled() && phase != PhaseReady {
+	if !u.enabled() && phase != PhaseReady && phase != PhaseInstallFailed {
 		phase = PhaseIdle
 	}
 	s.Phase = phase
 	switch phase {
 	case PhaseIdle:
-	case PhaseReady:
+	case PhaseReady, PhaseInstallFailed:
 		if p := u.st.Pending; p != nil {
 			s.Version, s.Page = p.Version, p.Page
 			s.Elevation = p.Kind.NeedsElevation()
+			if phase == PhaseInstallFailed {
+				s.Error = attemptReason(l, p.lastFailure())
+				s.Failures = p.failures()
+				s.AutoStopped = s.Failures >= MaxAutoAttempts
+				s.Installer = p.Kind == KindUser || p.Kind == KindMachine
+			}
 		}
 	default:
 		if v, ok := ParseVersion(u.st.Latest); ok {
@@ -267,6 +295,11 @@ func (u *Updater) status(l msg.Lang) Status {
 	s.Checking = u.checking
 	s.Unavailable = u.unavailable()
 	return s
+}
+
+// pendingPhase : une mise à jour téléchargée attend d'être installée.
+func (u *Updater) pendingPhase() bool {
+	return u.phase == PhaseReady || u.phase == PhaseInstallFailed
 }
 
 func (u *Updater) changed() {
@@ -380,7 +413,7 @@ func (u *Updater) Check(ctx context.Context) error {
 	u.st.LastCheck = u.now().UTC()
 	if best == nil {
 		u.st.Latest, u.st.LatestPage = "", ""
-		if u.phase != PhaseReady && u.phase != PhaseDownloading {
+		if !u.pendingPhase() && u.phase != PhaseDownloading {
 			u.phase = PhaseIdle
 		}
 	} else {
@@ -388,8 +421,8 @@ func (u *Updater) Check(ctx context.Context) error {
 		u.st.Latest, u.st.LatestPage = best.Tag, best.URL
 		switch {
 		case u.phase == PhaseDownloading:
-		case u.phase == PhaseReady && !changed:
-		case u.phase == PhaseReady:
+		case u.pendingPhase() && !changed:
+		case u.pendingPhase():
 			// Plus récente que celle déjà téléchargée : on la propose.
 			u.st.Pending, u.err = nil, nil
 			u.phase = u.offerPhase()
@@ -427,7 +460,7 @@ func checkError(ctx context.Context, err error) error {
 func (u *Updater) Prepare(ctx context.Context) error {
 	u.mu.Lock()
 	tag := u.st.Latest
-	if u.phase == PhaseDownloading || u.phase == PhaseReady || tag == "" || !u.Kind.Automatic() {
+	if u.phase == PhaseDownloading || u.pendingPhase() || tag == "" || !u.Kind.Automatic() {
 		u.mu.Unlock()
 		return nil
 	}
@@ -520,16 +553,23 @@ func (u *Updater) DismissUpdated() {
 }
 
 // ApplyOnExit installe la mise à jour prête, à la fermeture de
-// l'application : lance l'installeur (silencieux ; par machine, avec
-// l'invite UAC) ou remplace l'exécutable portable, puis relance
-// l'application si l'utilisateur a demandé à redémarrer. Un échec est
-// gardé pour être dit au lancement suivant.
+// l'application (une fois) : lance l'installeur (silencieux ; par machine,
+// avec l'invite UAC) ou remplace l'exécutable portable, puis relance
+// l'application si l'utilisateur a demandé à redémarrer. L'essai est noté
+// dans update.json et jugé au lancement suivant. Rien après
+// MaxAutoAttempts échecs, ni quand l'installeur a été lancé à la main.
 func (u *Updater) ApplyOnExit() error {
 	u.mu.Lock()
+	if u.exited {
+		u.mu.Unlock()
+		return nil
+	}
+	u.exited = true
 	p := u.st.Pending
 	relaunch := !u.restartAt.IsZero() && u.now().Sub(u.restartAt) < restartWindow
+	skip := u.manual || p.failures() >= MaxAutoAttempts
 	u.mu.Unlock()
-	if p == nil {
+	if p == nil || skip {
 		return nil
 	}
 	if p.stale() {
@@ -539,16 +579,73 @@ func (u *Updater) ApplyOnExit() error {
 		u.mu.Unlock()
 		return msg.New("update.fileChanged", nil)
 	}
-	err := apply(*p, u.Exe, relaunch)
+	if rp := u.resultPath(); rp != "" {
+		os.Remove(rp) // la trace d'un essai précédent
+	}
+	run := u.Apply
+	if run == nil {
+		run = apply
+	}
+	err := run(*p, u.Exe, relaunch)
+	u.record(p, OutcomeLaunched, err)
+	return err
+}
+
+// InstallManually : « Installer manuellement » : lance l'installeur de la
+// mise à jour prête avec son interface (ses erreurs se voient) ; Lattis
+// doit ensuite se fermer, sans relancer l'installation silencieuse.
+func (u *Updater) InstallManually() error {
 	u.mu.Lock()
+	p := u.st.Pending
+	u.mu.Unlock()
+	if p == nil {
+		return nil
+	}
+	if p.Kind != KindUser && p.Kind != KindMachine {
+		return msg.New("update.unsupported", nil)
+	}
+	if p.stale() {
+		u.mu.Lock()
+		u.st.Pending, u.phase = nil, u.offerPhase()
+		u.save()
+		u.mu.Unlock()
+		u.changed()
+		return msg.New("update.fileChanged", nil)
+	}
+	if rp := u.resultPath(); rp != "" {
+		os.Remove(rp)
+	}
+	run := u.Launch
+	if run == nil {
+		run = launchInstaller
+	}
+	err := run(*p)
+	u.mu.Lock()
+	if err == nil {
+		u.manual = true
+	}
+	u.mu.Unlock()
+	u.record(p, OutcomeManual, err)
+	u.changed()
+	return err
+}
+
+// record note un essai d'installation de p (err : il n'a pas pu partir).
+func (u *Updater) record(p *Pending, outcome string, err error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	a := Attempt{At: u.now().UTC(), Outcome: outcome}
 	if err != nil {
-		u.st.ApplyError = msg.Text(msg.Current(), err)
-	} else {
-		u.st.ApplyError = ""
+		a.Outcome, a.Error = OutcomeFailed, msg.Text(msg.Current(), err)
+	}
+	u.st.ApplyError = ""
+	if u.st.Pending == p {
+		p.Attempts = append(p.Attempts, a)
+		if err != nil {
+			u.phase, u.err = PhaseInstallFailed, nil
+		}
 	}
 	u.save()
-	u.mu.Unlock()
-	return err
 }
 
 // replaceExe met next à la place de exe, en cours d'exécution : Windows

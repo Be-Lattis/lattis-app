@@ -93,18 +93,27 @@ func (s *UpdateService) RequestRestart() {
 	s.u.RequestRestart()
 }
 
+// InstallManually : « Installer manuellement » (l'installation à la
+// fermeture a échoué) : lance l'installeur avec son interface, pour que
+// l'utilisateur voie ce qui bloque ; l'interface ferme ensuite la fenêtre
+// par le chemin habituel, sans relancer l'installation silencieuse.
+func (s *UpdateService) InstallManually() error {
+	return s.u.InstallManually()
+}
+
 // DismissUpdated ferme l'avis « Mise à jour effectuée ».
 func (s *UpdateService) DismissUpdated() {
 	s.u.DismissUpdated()
 }
 
 // ApplyPendingUpdate installe la mise à jour prête, une fois l'application
-// fermée (main.go, PostShutdown).
+// fermée (main.go, au retour de app.Run ; une seule fois).
 func ApplyPendingUpdate(s *UpdateService) {
 	if s == nil {
 		return
 	}
-	// Un échec est gardé dans update.json et dit au lancement suivant.
+	// L'essai (et son échec) est gardé dans update.json et jugé au
+	// lancement suivant.
 	if err := s.u.ApplyOnExit(); err != nil {
 		fmt.Fprintf(os.Stderr, "lattis : mise à jour : %v\n", err)
 	}

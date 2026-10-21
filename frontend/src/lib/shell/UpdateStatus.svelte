@@ -48,6 +48,17 @@
 				await UpdateService.RequestRestart().catch(() => {});
 				Window.Close().catch(() => {});
 				break;
+			case 'install':
+				// Installeur avec son interface (ses erreurs se voient), puis
+				// fermeture habituelle pour qu'il puisse remplacer lattis.exe.
+				try {
+					await UpdateService.InstallManually();
+				} catch {
+					// L'échec du lancement arrive aussi par update:status.
+					return;
+				}
+				Window.Close().catch(() => {});
+				break;
 		}
 	}
 </script>
@@ -58,6 +69,10 @@
 			<span class="spin" aria-hidden="true"></span><span class="text" title={view.title}>{view.text}</span>
 		{:else}
 			<button class="text" title={view.title} onclick={() => void act()}>{view.text}</button>
+		{/if}
+		{#if view.link}
+			{@const link = view.link}
+			<button class="link" onclick={() => openOutside(link.url)}>{link.text}</button>
 		{/if}
 		{#if view.dismissible}
 			<button class="close" title={t('common.close')} aria-label={t('common.close')} onclick={dismiss}>×</button>
@@ -100,6 +115,11 @@
 	button.text {
 		text-decoration: underline;
 		font-weight: 600;
+	}
+	button.link {
+		text-decoration: underline;
+		white-space: nowrap;
+		flex: none;
 	}
 	.close {
 		font-size: 14px;

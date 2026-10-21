@@ -129,7 +129,7 @@ func main() {
 	registerProtocol(noProtocol || os.Getenv("LATTIS_NO_REGISTER_PROTOCOL") == "1")
 
 	// Mise à jour (barre d'état) : recherche sur GitHub, téléchargement
-	// vérifié au clic, installation à la fermeture (PostShutdown).
+	// vérifié au clic, installation à la fermeture (au retour de app.Run).
 	updates := bridge.NewUpdateService()
 
 	app := application.New(application.Options{
@@ -158,7 +158,6 @@ func main() {
 			application.NewService(documents),
 			application.NewService(updates),
 		},
-		PostShutdown: func() { bridge.ApplyPendingUpdate(updates) },
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(ui),
 		},
@@ -217,7 +216,15 @@ func main() {
 		})
 	}
 
-	if err := app.Run(); err != nil {
+	err = app.Run()
+	// Installation de la mise à jour prête, l'application fermée. Pas dans
+	// PostShutdown : Wails (v3 beta.30, Windows) ne l'appelle que pour
+	// app.Quit ; fermer la dernière fenêtre (croix, Window.Close, Alt+F4,
+	// « Redémarrez… ») arrête la boucle de messages sans passer par
+	// App.cleanup, et l'installeur n'était jamais lancé. app.Run rend la
+	// main dans les deux cas.
+	bridge.ApplyPendingUpdate(updates)
+	if err != nil {
 		log.Fatal(err)
 	}
 }

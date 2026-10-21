@@ -15,6 +15,12 @@ export interface UpdateState {
 	error?: string;
 	updated?: string;
 	updatedPage?: string;
+	/** L'installation a échoué (phase 'installFailed') : nombre d'échecs. */
+	failures?: number;
+	/** Plus d'installation automatique à la fermeture (trop d'échecs). */
+	autoStopped?: boolean;
+	/** L'installeur peut être lancé avec son interface (sinon : la page). */
+	installer?: boolean;
 	/** Paramètres › Mises à jour : version installée. */
 	current?: string;
 	/** Dernière recherche (RFC 3339) ; absente : jamais. */
@@ -40,7 +46,7 @@ export function checkWhen(iso: string | undefined, now = Date.now()): string {
 }
 
 /** Une version plus récente est proposée (ou se prépare). */
-const OFFERED = new Set(['available', 'manual', 'downloading', 'ready', 'failed']);
+const OFFERED = new Set(['available', 'manual', 'downloading', 'ready', 'failed', 'installFailed']);
 
 /**
  * Ligne de Paramètres › Mises à jour : « Version 0.3.2-beta · dernière
@@ -69,9 +75,10 @@ export function checkLine(s: UpdateState | null | undefined, now = Date.now()): 
 
 /**
  * Action du clic : préparer (télécharger et vérifier), ouvrir la page de la
- * version, redémarrer pour appliquer, ouvrir les notes de version.
+ * version, redémarrer pour appliquer, ouvrir les notes de version, lancer
+ * l'installeur avec son interface (l'installation à la fermeture a échoué).
  */
-export type UpdateAction = 'prepare' | 'open' | 'restart' | 'notes' | null;
+export type UpdateAction = 'prepare' | 'open' | 'restart' | 'notes' | 'install' | null;
 
 export interface UpdateView {
 	text: string;
@@ -85,6 +92,8 @@ export interface UpdateView {
 	warn?: boolean;
 	/** L'avis se ferme (« Mise à jour effectuée »). */
 	dismissible?: boolean;
+	/** Second lien, vers une page (la page de la version). */
+	link?: { text: string; url: string };
 }
 
 /** Ce que montre la barre d'état pour un état de la mise à jour (null : rien). */
@@ -120,6 +129,28 @@ export function updateView(s: UpdateState | null | undefined): UpdateView | null
 			};
 		case 'failed':
 			return { text: t('shell.update.failed'), title: s.error ?? '', action: 'prepare', warn: true };
+		case 'installFailed': {
+			// Plus de « Redémarrez… » : l'installation n'a pas abouti.
+			const reason = s.error || '?';
+			if (!s.installer) {
+				return {
+					text: t('shell.update.installFailedPage', { version }),
+					title: t('shell.update.installFailedPageTooltip', { reason }),
+					action: 'open',
+					url: s.page,
+					warn: true
+				};
+			}
+			return {
+				text: t('shell.update.installFailed', { version }),
+				title: s.autoStopped
+					? t('shell.update.installFailedStopped', { reason, count: s.failures ?? 0 })
+					: t('shell.update.installFailedTooltip', { reason }),
+				action: 'install',
+				warn: true,
+				link: s.page ? { text: t('shell.update.releasePage'), url: s.page } : undefined
+			};
+		}
 	}
 	return null;
 }

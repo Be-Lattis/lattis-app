@@ -125,6 +125,51 @@ Function lattis.waitForExit
     ${Loop}
 FunctionEnd
 
+; Trace de l'installation lancee par Lattis (/UPDATE), lue au lancement
+; suivant pour dire pourquoi la mise a jour n'a pas abouti (internal/update,
+; installresult.go) : %LOCALAPPDATA%\Lattis\updates\install-result.txt de
+; l'utilisateur, en UTF-16LE (le dossier peut avoir des accents).
+; Pile : statut (ok, failed, locked, elevation) au sommet, puis le code.
+Var lattisFailStatus ; statut a ecrire par .onInstFailed (failed sinon)
+Function lattis.writeResult
+    Exch $0 ; statut
+    Exch
+    Exch $1 ; code
+    Push $2
+    ${If} $lattisUpdate == 1
+        SetShellVarContext current
+        CreateDirectory "$LOCALAPPDATA\Lattis\updates"
+        ClearErrors
+        FileOpen $2 "$LOCALAPPDATA\Lattis\updates\install-result.txt" w
+        ${IfNot} ${Errors}
+            FileWriteUTF16LE $2 "version=${INFO_PRODUCTVERSION}$\r$\n"
+            FileWriteUTF16LE $2 "status=$0$\r$\n"
+            FileWriteUTF16LE $2 "code=$1$\r$\n"
+            FileWriteUTF16LE $2 "dir=$INSTDIR$\r$\n"
+            FileClose $2
+        ${EndIf}
+        !insertmacro wails.setShellContext
+    ${EndIf}
+    Pop $2
+    Pop $1
+    Pop $0
+FunctionEnd
+
+Function .onInstSuccess
+    Push 0
+    Push ok
+    Call lattis.writeResult
+FunctionEnd
+
+Function .onInstFailed
+    ${If} $lattisFailStatus == ""
+        StrCpy $lattisFailStatus failed
+    ${EndIf}
+    Push 2
+    Push $lattisFailStatus
+    Call lattis.writeResult
+FunctionEnd
+
 Section
     !insertmacro wails.setShellContext
 
@@ -134,7 +179,14 @@ Section
 
     SetOutPath $INSTDIR
 
+    ; lattis.exe encore ouvert apres l'attente (ou fichier ignore en mode
+    ; silencieux) : echec dit, plutot qu'une installation qui garde l'ancien.
+    ClearErrors
     !insertmacro wails.files
+    ${If} ${Errors}
+        StrCpy $lattisFailStatus locked
+        Abort
+    ${EndIf}
 
     CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
     ${If} $lattisUpdate != 1

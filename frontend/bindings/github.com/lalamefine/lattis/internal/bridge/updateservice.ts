@@ -32,6 +32,16 @@ export function DismissUpdated(): $CancellablePromise<void> {
 }
 
 /**
+ * InstallManually : « Installer manuellement » (l'installation à la
+ * fermeture a échoué) : lance l'installeur avec son interface, pour que
+ * l'utilisateur voie ce qui bloque ; l'interface ferme ensuite la fenêtre
+ * par le chemin habituel, sans relancer l'installation silencieuse.
+ */
+export function InstallManually(): $CancellablePromise<void> {
+    return $Call.ByID(3767464108);
+}
+
+/**
  * Loaded : l'interface a fini de charger, la recherche part tout de suite.
  */
 export function Loaded(): $CancellablePromise<void> {

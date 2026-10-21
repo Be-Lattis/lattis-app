@@ -72,6 +72,13 @@ func installerArgs(k Kind, dir string, relaunch bool) string {
 	return args
 }
 
+// manualArgs : paramètres de l'installeur lancé avec son interface
+// (« Installer manuellement ») : ceux de la mise à jour, sans /S, avec
+// /RELAUNCH.
+func manualArgs(k Kind, dir string) string {
+	return strings.TrimPrefix(installerArgs(k, dir, true), "/S ")
+}
+
 // Automatic dit si l'application sait installer elle-même la mise à jour.
 func (k Kind) Automatic() bool {
 	_, ok := AssetFor(k)

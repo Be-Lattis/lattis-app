@@ -82,7 +82,7 @@ RequestExecutionLevel user
             SetErrorLevel 65
             Abort
         notSilentArch:
-            MessageBox MB_OK "${WAILS_ARCHITECTURE_NOT_SUPPORTED}"
+            MessageBox MB_OK "${WAILS_ARCHITECTURE_NOT_SUPPORTED}" /SD IDOK
             Quit
     ${else}
         IfSilent silentWin notSilentWin
@@ -90,7 +90,7 @@ RequestExecutionLevel user
             SetErrorLevel 64
             Abort
         notSilentWin:
-            MessageBox MB_OK "${WAILS_WIN10_REQUIRED}"
+            MessageBox MB_OK "${WAILS_WIN10_REQUIRED}" /SD IDOK
             Quit
     ${EndIf}
 

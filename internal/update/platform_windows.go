@@ -72,36 +72,9 @@ func SelfSigned(exe string) bool { return exe != "" && VerifySignature(exe) == n
 
 // apply installe la mise à jour p (voir Updater.ApplyOnExit).
 func apply(p Pending, exe string, relaunch bool) error {
-	args := installerArgs(p.Kind, p.Dir, relaunch)
 	switch p.Kind {
-	case KindUser:
-		// Pour l'utilisateur (/CurrentUser) : sans élévation, l'installeur
-		// attend la fin de l'application, s'installe et la relance (/RELAUNCH).
-		cmd := exec.Command(p.File)
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			CmdLine:       syscall.EscapeArg(p.File) + " " + args,
-			CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS,
-		}
-		if err := cmd.Start(); err != nil {
-			return msg.New("update.launchFailed", msg.Args{"err": err.Error()})
-		}
-		return cmd.Process.Release()
-	case KindMachine:
-		// Pour tous les utilisateurs (/AllUsers) : « runas » fait poser la
-		// question de l'UAC ici (l'installeur s'élèverait sinon lui-même) ;
-		// relancée par l'installeur (élevé), l'application l'est par
-		// l'Explorateur, sans les droits d'administration.
-		verb, _ := windows.UTF16PtrFromString("runas")
-		file, _ := windows.UTF16PtrFromString(p.File)
-		params, _ := windows.UTF16PtrFromString(args)
-		err := windows.ShellExecute(0, verb, file, params, nil, windows.SW_SHOWNORMAL)
-		if errors.Is(err, windows.ERROR_CANCELLED) {
-			return msg.New("update.elevationRefused", nil)
-		}
-		if err != nil {
-			return msg.New("update.launchFailed", msg.Args{"err": err.Error()})
-		}
-		return nil
+	case KindUser, KindMachine:
+		return startInstaller(p, installerArgs(p.Kind, p.Dir, relaunch))
 	case KindPortable:
 		if err := replaceExe(exe, p.File); err != nil {
 			return msg.New("update.replaceFailed", msg.Args{"err": err.Error()})
@@ -117,4 +90,46 @@ func apply(p Pending, exe string, relaunch bool) error {
 		return nil
 	}
 	return msg.New("update.unsupported", nil)
+}
+
+// launchInstaller : « Installer manuellement » : l'installeur de p avec son
+// interface (voir Updater.InstallManually).
+func launchInstaller(p Pending) error {
+	if p.Kind != KindUser && p.Kind != KindMachine {
+		return msg.New("update.unsupported", nil)
+	}
+	return startInstaller(p, manualArgs(p.Kind, p.Dir))
+}
+
+// startInstaller lance l'installeur p.File avec les paramètres args.
+func startInstaller(p Pending, args string) error {
+	if p.Kind == KindMachine {
+		// Pour tous les utilisateurs (/AllUsers) : « runas » fait poser la
+		// question de l'UAC ici (l'installeur s'élèverait sinon lui-même) ;
+		// relancée par l'installeur (élevé), l'application l'est par
+		// l'Explorateur, sans les droits d'administration.
+		verb, _ := windows.UTF16PtrFromString("runas")
+		file, _ := windows.UTF16PtrFromString(p.File)
+		params, _ := windows.UTF16PtrFromString(args)
+		err := windows.ShellExecute(0, verb, file, params, nil, windows.SW_SHOWNORMAL)
+		if errors.Is(err, windows.ERROR_CANCELLED) {
+			return msg.New("update.elevationRefused", nil)
+		}
+		if err != nil {
+			return msg.New("update.launchFailed", msg.Args{"err": err.Error()})
+		}
+		return nil
+	}
+	// Pour l'utilisateur (/CurrentUser) : sans élévation, l'installeur
+	// attend la fin de l'application, s'installe et la relance (/RELAUNCH).
+	// Processus détaché : il survit à la fin de Lattis (vérifié).
+	cmd := exec.Command(p.File)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CmdLine:       syscall.EscapeArg(p.File) + " " + args,
+		CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS,
+	}
+	if err := cmd.Start(); err != nil {
+		return msg.New("update.launchFailed", msg.Args{"err": err.Error()})
+	}
+	return cmd.Process.Release()
 }

@@ -1106,6 +1106,12 @@
 		"readyElevated": "Restart the application to apply the update (Windows will ask for administrator rights)",
 		"readyTooltip": "Lattis {version} is ready: click to close Lattis, install the update and reopen it",
 		"failed": "The update could not be prepared, click here to try again",
+		"installFailed": "Update {version} could not be installed — Install manually",
+		"installFailedPage": "Update {version} could not be installed — Download",
+		"installFailedTooltip": "Reason: {reason}. Click to run the installer with its window; Lattis closes.",
+		"installFailedStopped": "Reason: {reason}. After {count} failures, it is no longer installed on exit. Click to run the installer with its window; Lattis closes.",
+		"installFailedPageTooltip": "Reason: {reason}. Click to open the release page.",
+		"releasePage": "Release page",
 		"updated": "Update complete, see the release notes",
 		"updatedTooltip": "Lattis {version}: opens the release notes on GitHub",
 		"check": {

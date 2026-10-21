@@ -1430,4 +1430,11 @@ var zh = map[ID]string{
 	"update.sizeMismatch":     "“{name}”：下载文件的大小与发布的不一致",
 	"update.tooLarge":         "更新文件过大",
 	"update.unsupported":      "此系统不支持自动更新",
+	// Échec de l'installation de la mise à jour (internal/update, installresult.go).
+	"update.install.notApplied": "重新启动的仍是旧版本",
+	"update.install.noTrace":    "安装程序没有留下任何记录：它可能没有启动",
+	"update.install.otherDir":   "安装程序已完成，但安装在另一个文件夹：{dir}",
+	"update.install.locked":     "lattis.exe 仍处于打开状态，无法替换",
+	"update.install.elevation":  "未获得管理员权限",
+	"update.install.failed":     "安装程序在完成前停止（代码 {code}）",
 }

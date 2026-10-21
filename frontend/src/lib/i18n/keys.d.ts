@@ -4384,11 +4384,17 @@ export interface MessageParams {
 	'shell.update.downloading': Record<never, never>;
 	'shell.update.downloadingTooltip': { version: number | string };
 	'shell.update.failed': Record<never, never>;
+	'shell.update.installFailed': { version: number | string };
+	'shell.update.installFailedPage': { version: number | string };
+	'shell.update.installFailedPageTooltip': { reason: number | string };
+	'shell.update.installFailedStopped': { count: number | string; reason: number | string };
+	'shell.update.installFailedTooltip': { reason: number | string };
 	'shell.update.manual': Record<never, never>;
 	'shell.update.manualTooltip': { version: number | string };
 	'shell.update.ready': Record<never, never>;
 	'shell.update.readyElevated': Record<never, never>;
 	'shell.update.readyTooltip': { version: number | string };
+	'shell.update.releasePage': Record<never, never>;
 	'shell.update.updated': Record<never, never>;
 	'shell.update.updatedTooltip': { version: number | string };
 	'shell.web.expired': Record<never, never>;
