@@ -80,7 +80,7 @@ func TestShareFrozenWorkbook(t *testing.T) {
 	}
 
 	// L'auteur publie.
-	a, _ := shareService(t)
+	a, ha := shareService(t)
 	users["a"], users["b"] = "alice", "bob"
 	current.Store("a")
 	_, err := a.New(ctx)
@@ -153,6 +153,11 @@ func TestShareFrozenWorkbook(t *testing.T) {
 
 	// L'auteur republie : le lecteur est prévenu, puis recharge.
 	current.Store("a")
+	// Le suivi d'Alice a pu relire ses droits pendant que le faux serveur
+	// répondait pour Bob (lecteur) : on attend qu'il les relise pour elle.
+	if a.ShareState().ReadOnly != "" {
+		waitShare(t, ha, "auteur de nouveau en écriture", func(s workbook.State) bool { return s.ReadOnly == "" })
+	}
 	_, err = a.SetCell(ctx, 1, 1, 1, "5")
 	mustShare(t, err)
 	_, err = a.ShareRepublish(ctx, nil)

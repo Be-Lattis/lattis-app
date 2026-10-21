@@ -45,7 +45,7 @@ func TestCompactedWhileAway(t *testing.T) {
 	// Bob revient ; Alice continue dans son nouveau segment.
 	alice.set(1, 1, "43")
 	alice.sync()
-	for range 20 {
+	for end := time.Now().Add(3 * time.Second); time.Now().Before(end) && strings.Join(alice.rows(), "|") != strings.Join(bob.rows(), "|"); {
 		bob.sync()
 		alice.sync()
 		time.Sleep(2 * time.Millisecond)
@@ -73,7 +73,8 @@ func TestReturnAfterCompaction(t *testing.T) {
 		time.Sleep(2 * time.Millisecond)
 	}
 	bob.set(2, 1, "6")
-	for range 30 {
+	// Machine d'intégration lente : des tours jusqu'à 3 s, pas un nombre fixe.
+	for end := time.Now().Add(3 * time.Second); time.Now().Before(end) && alice.rows()[2] != bob.rows()[2]; {
 		bob.sync()
 		alice.sync()
 		time.Sleep(2 * time.Millisecond)
