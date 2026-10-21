@@ -1804,19 +1804,9 @@
 	.tab.ai.on {
 		--icon-accent: #d97706;
 	}
+	/* Aide : un onglet comme les autres, libellé « ? » (demande de Louis, 21/10). */
 	.tab.help {
-		align-self: center;
-		width: 22px;
-		height: 22px;
-		margin: 0 0 0 6px;
-		padding: 0;
-		border: 1px solid rgba(255, 255, 255, 0.6);
-		border-radius: 50%;
 		font-weight: 600;
-		color: #fff;
-	}
-	.tab.help::after {
-		content: none;
 	}
 	.sep {
 		flex: 1;
@@ -2223,19 +2213,11 @@
 		.sep {
 			flex: 1 0 6px;
 		}
-		.tab.help {
-			margin-right: 4px;
-		}
 	}
 	/* Doigt : onglets plus hauts (cibles d'au moins 32 px). */
 	@media (pointer: coarse) {
 		.tabs {
 			height: 40px;
-		}
-		.tab.help {
-			width: 28px;
-			height: 28px;
-			flex: none;
 		}
 	}
 </style>
