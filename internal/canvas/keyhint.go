@@ -2,6 +2,8 @@ package canvas
 
 import (
 	"context"
+
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // Suggestion de clé (choix de Louis du 18/10 : pas de clé primaire
@@ -16,12 +18,14 @@ import (
 // keyHint dit si la première colonne du tableau peut identifier chaque
 // ligne (la même règle que SetKey : keyCheck), avec au moins 2 lignes, et
 // si le tableau n'a ni clé ni refus (« Ne plus proposer »). Le résultat est
-// gardé tant que le tableau et les métadonnées ne changent pas (cachedOn).
+// gardé tant que les lignes du tableau, sa première colonne et les
+// métadonnées ne changent pas (cachedOn) : une saisie dans une autre
+// colonne ne relit pas tout le tableau.
 func (t *tx) keyHint(tb Table) (bool, error) {
 	if tb.Key != 0 || tb.Rows < 2 || len(tb.Cols) == 0 || tb.Cols[0].Formula != "" {
 		return false, nil
 	}
-	return cachedOn(t, "keyhint:"+tb.sql(), []string{tb.sql()}, func() (bool, error) {
+	return cachedOn(t, "keyhint:"+tb.sql(), []string{store.ColumnOf(tb.sql(), colSQL(tb.Cols[0].ID))}, func() (bool, error) {
 		var off bool
 		if err := t.row(`SELECT no_key_hint FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&off); err != nil || off {
 			return false, err

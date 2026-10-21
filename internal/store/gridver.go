@@ -67,6 +67,9 @@ func (s *Store) noteRow(op sqlite3.AuthorizerActionCode, schema, table string) {
 	}
 	// seen n'est lu et écrit que par la goroutine de l'écrivain (ici et
 	// dans settle) : pas de verrou pour les lignes suivantes.
+	if data {
+		s.rowAllColumns(table)
+	}
 	k := rowKey{op, table}
 	if s.seen[k] {
 		return

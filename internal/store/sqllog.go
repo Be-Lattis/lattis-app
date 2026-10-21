@@ -156,24 +156,26 @@ func logSQLRows(kind, q string, args []driver.NamedValue, d time.Duration, rows 
 // le journal SQL ; kind nomme la connexion dans le journal ; init configure
 // chaque nouvelle connexion (pragmas, fonctions).
 func OpenDB(dsn, kind string, init func(*sqlite3.Conn) error) (*sql.DB, error) {
-	return openDB(dsn, kind, init, nil)
+	return openDB(dsn, kind, init, nil, nil)
 }
 
 // openDB : OpenDB, et onWrite reçoit chaque requête exécutée (suivi des
-// tableaux modifiés, voir Store.TakeTouched).
-func openDB(dsn, kind string, init func(*sqlite3.Conn) error, onWrite func(string)) (*sql.DB, error) {
+// tableaux modifiés, voir Store.TakeTouched) ; beforeWrite la reçoit avant
+// son exécution (colonnes écrites, colver.go).
+func openDB(dsn, kind string, init func(*sqlite3.Conn) error, beforeWrite, onWrite func(string)) (*sql.DB, error) {
 	inner, err := (&sqlite.SQLite{}).OpenConnector(dsn)
 	if err != nil {
 		return nil, err
 	}
-	return sql.OpenDB(&logConnector{inner: inner, kind: kind, init: init, onWrite: onWrite}), nil
+	return sql.OpenDB(&logConnector{inner: inner, kind: kind, init: init, beforeWrite: beforeWrite, onWrite: onWrite}), nil
 }
 
 type logConnector struct {
-	inner   driver.Connector
-	kind    string
-	init    func(*sqlite3.Conn) error
-	onWrite func(string)
+	inner       driver.Connector
+	kind        string
+	init        func(*sqlite3.Conn) error
+	beforeWrite func(string)
+	onWrite     func(string)
 }
 
 func (c *logConnector) Driver() driver.Driver { return c.inner.Driver() }
@@ -194,15 +196,16 @@ func (c *logConnector) Connect(ctx context.Context) (driver.Conn, error) {
 			return nil, err
 		}
 	}
-	return &logConn{Conn: sc, kind: c.kind, onWrite: c.onWrite}, nil
+	return &logConn{Conn: sc, kind: c.kind, beforeWrite: c.beforeWrite, onWrite: c.onWrite}, nil
 }
 
 // logConn enveloppe une connexion du pilote : les exécutions directes et
 // les requêtes préparées passent par le journal.
 type logConn struct {
 	sqlite.Conn
-	kind    string
-	onWrite func(string)
+	kind        string
+	beforeWrite func(string)
+	onWrite     func(string)
 }
 
 func (c *logConn) Raw() *sqlite3.Conn { return c.Conn.Raw() }
@@ -211,6 +214,9 @@ func (c *logConn) ExecContext(ctx context.Context, q string, args []driver.Named
 	ex, ok := c.Conn.(driver.ExecerContext)
 	if !ok {
 		return nil, driver.ErrSkip
+	}
+	if c.beforeWrite != nil {
+		c.beforeWrite(q)
 	}
 	start := clock()
 	r, err := ex.ExecContext(ctx, q, args)
@@ -233,17 +239,21 @@ func (c *logConn) PrepareContext(ctx context.Context, q string) (driver.Stmt, er
 	if err != nil {
 		return nil, err
 	}
-	return &logStmt{Stmt: s, q: q, kind: c.kind, onWrite: c.onWrite}, nil
+	return &logStmt{Stmt: s, q: q, kind: c.kind, beforeWrite: c.beforeWrite, onWrite: c.onWrite}, nil
 }
 
 type logStmt struct {
 	driver.Stmt
-	q       string
-	kind    string
-	onWrite func(string)
+	q           string
+	kind        string
+	beforeWrite func(string)
+	onWrite     func(string)
 }
 
 func (s *logStmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
+	if s.beforeWrite != nil {
+		s.beforeWrite(s.q)
+	}
 	start := clock()
 	r, err := s.Stmt.(driver.StmtExecContext).ExecContext(ctx, args)
 	logSQLArgs(s.kind, s.q, args, since(start), err)

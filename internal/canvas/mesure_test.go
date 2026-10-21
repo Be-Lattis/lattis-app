@@ -54,6 +54,10 @@ func TestMesureOperations(t *testing.T) {
 	})
 	mesure("mise en page de la feuille", func() error { _, err := d.Layout(ctx, sheet); return err })
 	mesure("saisie d'une cellule", func() error { _, err := d.SetCell(ctx, sheet, 5000, 3, "12,5"); return err })
+	// Ce que l'interface relit après chaque saisie (suggestion de clé comprise).
+	mesure("mise en page après la saisie", func() error { _, err := d.Layout(ctx, sheet); return err })
+	mesure("saisie dans la 1re colonne", func() error { _, err := d.SetCell(ctx, sheet, 5000, 0, "Client 1"); return err })
+	mesure("mise en page après cette saisie", func() error { _, err := d.Layout(ctx, sheet); return err })
 	mesure("annuler la saisie", func() error { _, err := d.bus.Undo(ctx); return err })
 	mesure("insérer une ligne au milieu", func() error { return d.InsertRow(ctx, "Commandes", n/2) })
 	mesure("supprimer cette ligne", func() error { return d.DeleteRow(ctx, "Commandes", n/2) })
@@ -88,6 +92,13 @@ func TestMesureOperations(t *testing.T) {
 	})
 	mesure("mise en page du TCD (calcul)", func() error { _, err := d.Layout(ctx, pivotSheet); return err })
 	mesure("… la même, sans changement (cache)", func() error { _, err := d.Layout(ctx, pivotSheet); return err })
+	mesure("… après une saisie dans sa source", func() error {
+		if _, err := d.SetCell(ctx, sheet, 5000, 3, "13,5"); err != nil {
+			return err
+		}
+		_, err := d.Layout(ctx, pivotSheet)
+		return err
+	})
 	mesure("liste des objets (aide, onglet SQL)", func() error { _, err := d.AllTables(ctx); return err })
 	mesure("graphique Pays (somme du Montant)", func() error {
 		_, err := d.CreateChart(ctx, sheet, 0, 12, ChartConfig{Source: "Commandes", Kind: "bar", X: "Pays", Series: []string{"Montant"}})

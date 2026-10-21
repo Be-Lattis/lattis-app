@@ -635,8 +635,22 @@
 	}
 
 	async function reload() {
-		docState = await DocumentService.State();
-		layout = await DocumentService.Layout(sheetId);
+		// Appels indépendants lancés ensemble : en version web, chacun est un
+		// aller-retour réseau.
+		const side = Promise.all([
+			DocumentService.FormulaHelp(),
+			DocumentService.Scripts(),
+			DocumentService.Favorites(),
+			DocumentService.ShareState().catch(() => null),
+			DocumentService.CoEditState().catch(() => null),
+			// Onglets semblables : métadonnées seulement, relues à chaque action.
+			DocumentService.SimilarSheets().catch(() => null),
+			loadSources()
+		]);
+		side.catch(() => {}); // erreur rendue par l'await plus bas
+		const [st, first] = await Promise.all([DocumentService.State(), DocumentService.Layout(sheetId)]);
+		docState = st;
+		layout = first;
 		// Feuille affichée masquée ou disparue : la première feuille visible.
 		const shownId = visibleSheet(layout?.sheets ?? [], sheetId);
 		if (layout && shownId !== sheetId) {
@@ -649,15 +663,14 @@
 			const src = await DocumentService.Page(sheetId);
 			if (!pageSource || pageSource.sheet !== sheetId || pageSource.source !== src) pageSource = { sheet: sheetId, source: src };
 		} else pageSource = null;
-		help = await DocumentService.FormulaHelp();
-		scripts = (await DocumentService.Scripts()) ?? [];
-		favorites = (await DocumentService.Favorites()) ?? [];
-		share = await DocumentService.ShareState().catch(() => null);
-		coedit = await DocumentService.CoEditState().catch(() => null);
-		// Onglets semblables : métadonnées seulement, relues à chaque action.
-		similar = (await DocumentService.SimilarSheets().catch(() => null)) ?? [];
+		const [h, sc, fav, sh, co, sim] = await side;
+		help = h;
+		scripts = sc ?? [];
+		favorites = fav ?? [];
+		share = sh;
+		coedit = co;
+		similar = sim ?? [];
 		if (mergeOffer && !similar.some((g) => g.id === mergeOffer?.id && g.propose)) mergeOffer = null;
-		await loadSources();
 		// Volet Requêtes ouvert : ses listes suivent (Ctrl+Z, assistant, MCP, autre classeur).
 		queryHost?.reloadLists();
 	}

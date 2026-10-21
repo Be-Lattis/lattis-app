@@ -67,7 +67,18 @@ type Store struct {
 	// seen : (opération, table) déjà relevés par noteRow dans la tâche en
 	// cours (une fois suffit : settle fait encore avancer les versions).
 	seen map[rowKey]bool
-	busy atomic.Bool
+	// Écritures par colonne (colver.go) : cgen par colonne (« t_3.c_1 »),
+	// agen par tableau pour celles qui peuvent toucher toutes ses colonnes ;
+	// pendingCols, pendingAll : celles de la tâche en cours. curTable,
+	// curCols : tableau et colonnes qu'écrit la requête en cours ; allSeen :
+	// tableaux déjà comptés dans pendingAll par noteRow (goroutine de
+	// l'écrivain seulement).
+	cgen, agen              map[string]int64
+	pendingCols, pendingAll map[string]bool
+	curTable                string
+	curCols                 []string
+	allSeen                 map[string]bool
+	busy                    atomic.Bool
 	// writeConn : connexion SQLite de l'écrivain (autorisateur, AsUser).
 	writeConn atomic.Pointer[sqlite3.Conn]
 	// unmark : appelé avant la prochaine tâche de l'écrivain (voir Mark).
@@ -128,6 +139,7 @@ func (s *Store) watchedWrite(q string) {
 
 // noteWrite relève les tableaux qu'une requête de l'écrivain peut modifier.
 func (s *Store) noteWrite(q string) {
+	defer func() { s.curTable, s.curCols = "", nil }()
 	head := strings.ToUpper(strings.TrimSpace(q))
 	if strings.HasPrefix(head, "SELECT") || strings.HasPrefix(head, "PRAGMA") {
 		return
@@ -162,6 +174,7 @@ func (s *Store) noteWrite(q string) {
 	if s.pending == nil {
 		s.pending, s.pendingRows, s.sgen = map[string]bool{}, map[string]bool{}, map[string]int64{}
 	}
+	s.noteColumns(names)
 	for _, n := range names {
 		s.tgen[n]++
 		s.pending[n] = true
@@ -205,6 +218,10 @@ func (s *Store) Version(tables ...string) string {
 	for _, n := range tables {
 		if t, ok := strings.CutSuffix(n, rowsSuffix); ok {
 			b.WriteString("|" + n + ":" + strconv.FormatInt(s.sgen[t], 10))
+			continue
+		}
+		if t, c, ok := strings.Cut(n, "."); ok && isDataTable(t) {
+			b.WriteString("|" + n + ":" + s.columnVersion(t, c))
 			continue
 		}
 		b.WriteString("|" + n + ":" + strconv.FormatInt(s.tgen[n], 10))
@@ -258,6 +275,7 @@ func (s *Store) settle() {
 	if s.pendingData {
 		s.dataGen++
 	}
+	s.settleColumns()
 	clear(s.pending)
 	clear(s.pendingRows)
 	clear(s.seen)
@@ -308,7 +326,7 @@ func Open(path string, extra ...func(*sqlite3.Conn) error) (*Store, error) {
 			s.noteRow(op, schema, table)
 		})
 		return nil
-	}, s.noteWrite)
+	}, s.preWrite, s.noteWrite)
 	if err != nil {
 		return nil, err
 	}
