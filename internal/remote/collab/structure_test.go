@@ -191,12 +191,27 @@ func TestStructureFollowedByColleague(t *testing.T) {
 	if bob.d.Share.TableShare(tableOfAny(alice)) == "published" {
 		t.Fatal("tableau toujours publié chez Alice")
 	}
-	drain()
-	all := strings.Join(notices, " ; ")
-	for _, want := range []string{"Structure du tableau « Ventes » modifiée sur le serveur", "Tableau « Achats » supprimé sur le serveur"} {
-		if !strings.Contains(all, want) {
-			t.Fatalf("messages de Bob : %q (attendu %q)", all, want)
+	// Le message de la suppression peut suivre de peu le tableau disparu
+	// (événement du suivi) : attendu, pas seulement lu.
+	wants := []string{"Structure du tableau « Ventes » modifiée sur le serveur", "Tableau « Achats » supprimé sur le serveur"}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		drain()
+		all := strings.Join(notices, " ; ")
+		missing := ""
+		for _, want := range wants {
+			if !strings.Contains(all, want) {
+				missing = want
+				break
+			}
 		}
+		if missing == "" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("messages de Bob : %q (attendu %q)", all, missing)
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 
