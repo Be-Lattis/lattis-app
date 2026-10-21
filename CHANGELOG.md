@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.3.4-beta (21/10/2026)
+
 ### Nouveautés
 
 - Barre de titre d'un classeur partagé : une seule pastille « en ligne sur … | Rôle », cliquable, qui ouvre l'accès au classeur.
