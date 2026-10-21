@@ -6,6 +6,16 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.4.1-beta (22/10/2026)
+
+### Nouveautés
+
+- Gérer l'accès d'un classeur du Serveur Lattis : le champ « Inviter une personne » cherche les comptes du serveur par nom ou par e-mail. « Inviter à rejoindre » invite une adresse sans compte avec les droits choisis : le serveur envoie l'e-mail, ou Lattis donne le lien d'inscription à transmettre. Les droits s'appliquent à sa première connexion ; les invitations en attente se voient et s'annulent dans l'onglet Membres.
+
+### Corrections
+
+- Classeur partagé : à l'ouverture depuis le serveur, sa synchronisation pouvait démarrer deux fois.
+
 ## 0.4.0-beta (21/10/2026)
 
 ### Corrections
