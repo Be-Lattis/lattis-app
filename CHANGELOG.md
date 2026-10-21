@@ -10,6 +10,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Tableaux croisés : un TCD se lit dans les formules comme un tableau nommé, par son nom affiché dans une pastille bleue au-dessus de son cadre : `=SOMME(TCD1[Nombre])` (lignes de détail, sans sous-totaux ni total), `=TCD1[NID][2]`, ses colonnes saisies comprises. Pendant la saisie d'une formule, un clic dans le TCD écrit ces références au lieu d'une adresse `Cell[C3]` : `[Nombre]` sur la ligne d'une colonne calculée tapée à côté du TCD, qui suit ses lignes quand il est trié ou actualisé.
 - Tableaux croisés : une mise en forme (gras, couleurs, format de nombre, alignement…) posée sur une cellule d'un TCD vaut pour toute sa colonne, en-tête à part, comme dans un tableau ; elle suit la colonne quand le TCD est actualisé, trié ou s'élargit, et s'applique aussi à ses sous-totaux et à son total. Bordures et notes restent sur la cellule.
+- Démo publique : quand le Serveur Lattis fixe une fin à la démo, un bandeau prévient quelques minutes avant (« La démo se termine dans 2 minutes », compte à rebours, bouton « Télécharger ») ; à l'heure, la boîte « Démo terminée » bloque le classeur, qui ne se modifie plus mais se télécharge encore.
 
 ### Changements
 

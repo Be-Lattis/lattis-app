@@ -97,6 +97,15 @@ type Platform struct {
 	// Coupées, l'interface n'en propose pas et montre un onglet existant
 	// sans l'exécuter. Rempli par DocumentService.Platform.
 	HTMLPages bool `json:"htmlPages,omitempty"`
+	// DemoDeadline : fin de la démo publique annoncée par lattisd
+	// (LATTIS_DEMO_DEADLINE), en millisecondes depuis 1970 (UTC) ; 0 : pas
+	// de fin annoncée. DemoWarnBefore : préavis (bandeau avant la fin), en
+	// millisecondes. Now : heure du moteur à l'appel (millisecondes), pour
+	// corriger l'écart de l'horloge du navigateur. Remplis par
+	// DocumentService.Platform.
+	DemoDeadline   int64 `json:"demoDeadline,omitempty"`
+	DemoWarnBefore int64 `json:"demoWarnBefore,omitempty"`
+	Now            int64 `json:"now,omitempty"`
 }
 
 // errNoScripting refuse un script quand l'hôte ne le permet pas.
@@ -245,6 +254,7 @@ func (s *DocumentService) Platform() Platform {
 		p.Locale = msg.SystemLocale()
 	}
 	p.HTMLPages = s.htmlPages()
+	demoPlatform(&p)
 	return p
 }
 

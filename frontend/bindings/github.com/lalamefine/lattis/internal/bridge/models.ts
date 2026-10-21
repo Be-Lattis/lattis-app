@@ -836,6 +836,18 @@ export interface Platform {
      * sans l'exécuter. Rempli par DocumentService.Platform.
      */
     "htmlPages"?: boolean;
+
+    /**
+     * DemoDeadline : fin de la démo publique annoncée par lattisd
+     * (LATTIS_DEMO_DEADLINE), en millisecondes depuis 1970 (UTC) ; 0 : pas
+     * de fin annoncée. DemoWarnBefore : préavis (bandeau avant la fin), en
+     * millisecondes. Now : heure du moteur à l'appel (millisecondes), pour
+     * corriger l'écart de l'horloge du navigateur. Remplis par
+     * DocumentService.Platform.
+     */
+    "demoDeadline"?: number;
+    "demoWarnBefore"?: number;
+    "now"?: number;
 }
 
 /**

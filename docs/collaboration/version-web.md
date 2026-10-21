@@ -209,6 +209,11 @@ lattis-engine --public-demo --addr 127.0.0.1:0 --dir <répertoire de session> --
 - **Enregistrer** (Ctrl+S, Enregistrer sous, F12) télécharge le classeur dans le navigateur, à chaque fois (« Démo : le classeur est téléchargé ») ; « Télécharger une copie » disparaît.
 - **Fichier › Ouvrir › Récents** propose « Démo small » et « Démo medium » (presets `sml` et `med`, `DocumentService.OpenPreset`) ; le moteur démarre sur un classeur vide. La barre de titre porte un badge « Démo ».
 - `Platform.demo` (DocumentService.Platform) le dit à l'interface.
+- **Fin de la démo** (contrat avec `lattisd`). `lattisd` lance le moteur avec deux variables d'environnement (pas d'option) : `LATTIS_DEMO_DEADLINE`, l'heure de fin (RFC 3339, UTC, `2026-10-21T14:30:00Z`), et `LATTIS_DEMO_WARN_BEFORE`, le préavis (durée Go, `2m0s`). Lues en démo publique seulement ; une heure illisible est ignorée (ligne au journal, rien de particulier), un préavis absent, illisible ou négatif vaut 0 (ligne au journal, pas de bandeau, la fin reste). Sans ces variables (`lattisd` plus ancien), rien ne change.
+  - `Platform` (DocumentService.Platform) donne `demoDeadline` et `demoWarnBefore` (millisecondes) et `now`, l'heure du moteur : l'interface corrige l'écart de l'horloge du navigateur et fait son compte à rebours elle-même.
+  - À `DEADLINE − WARN_BEFORE` : bandeau qui ne bloque rien, « La démo se termine dans *n* minutes : enregistrez votre travail (Ctrl+S télécharge le classeur). » (minutes restantes, arrondies au-dessus), compte à rebours `mm:ss` et bouton « Télécharger » (Enregistrer de la démo).
+  - À `DEADLINE` : boîte « Démo terminée », qu'on ne ferme pas, avec « Télécharger » (et Ctrl+S). Le moteur refuse alors toute modification (`transport.Hub.Guard` → `bridge.DemoGuard`, message `demo.ended`) ; restent permis la lecture (état, mise en page, données, requêtes SQL en lecture), la vue (feuille affichée, sélection), Enregistrer (téléchargement) et les exports — liste fermée `demoAfterEnd`, toute autre méthode est refusée.
+  - `lattisd` arrête le moteur à `DEADLINE + 15 s` (entrée standard fermée, puis arrêt forcé) et sert ensuite sa propre page 410 « Démo terminée ». À la fermeture de l'entrée standard, le moteur efface `--dir` comme d'habitude.
 
 Points d'attention pour `lattisd` :
 

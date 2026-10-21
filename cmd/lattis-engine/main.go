@@ -79,6 +79,10 @@ Démo publique (lancée par le Serveur Lattis, /demo/) :
                      données, API web) ; Enregistrer télécharge le classeur ;
                      réglages en mémoire ; --dir effacé à l'arrêt. Même cycle de
                      vie que le mode serveur (LISTENING, entrée standard, --idle).
+  Environnement (posé par lattisd, facultatif) :
+  LATTIS_DEMO_DEADLINE     fin de la démo (RFC 3339, UTC) : passé l'heure, le
+                           classeur ne se modifie plus, il se télécharge
+  LATTIS_DEMO_WARN_BEFORE  préavis (durée, « 2m0s ») : bandeau et compte à rebours
 `
 
 func main() {
@@ -197,6 +201,12 @@ func main() {
 		os.Setenv(archive.WorkEnv, filepath.Join(dir, "work"))
 		bridge.SetShareCacheDir(filepath.Join(dir, "partages"))
 		bridge.HidePaths = true
+		// Fin de la démo annoncée par lattisd (LATTIS_DEMO_DEADLINE,
+		// LATTIS_DEMO_WARN_BEFORE) : bandeau, puis classeur bloqué.
+		if end, warn := demoDeadlineEnv(os.Getenv, log.Printf); !end.IsZero() {
+			bridge.SetDemoDeadline(end, warn)
+			log.Printf("lattis-engine : fin de la démo à %s (préavis %s)", end.Format(time.RFC3339), warn)
+		}
 	}
 	if managed {
 		// L'entrée standard fermée (lattisd arrêté ou session finie) : arrêt.

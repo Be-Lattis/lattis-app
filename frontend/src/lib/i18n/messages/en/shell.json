@@ -907,6 +907,13 @@
 		"recent": "Demo {name}",
 		"recentDetail": "Demo workbook"
 	},
+	"demoEnd": {
+		"warning": "The demo ends in {n, plural, one {# minute} other {# minutes}}: save your work (Ctrl+S downloads the workbook).",
+		"countdown": "Time remaining",
+		"download": "Download",
+		"title": "Demo over",
+		"ended": "The demo time is up: the workbook can no longer be changed. You can still download it."
+	},
 	"web": {
 		"reconnected": "Connection to the server restored",
 		"expired": "Your session has expired: sign in again to continue (the changes you already made are kept on the server).",

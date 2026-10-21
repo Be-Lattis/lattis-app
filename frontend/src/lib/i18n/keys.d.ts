@@ -3626,6 +3626,11 @@ export interface MessageParams {
 	'shell.demo.recent': { name: number | string };
 	'shell.demo.recentDetail': Record<never, never>;
 	'shell.demo.sample': Record<never, never>;
+	'shell.demoEnd.countdown': Record<never, never>;
+	'shell.demoEnd.download': Record<never, never>;
+	'shell.demoEnd.ended': Record<never, never>;
+	'shell.demoEnd.title': Record<never, never>;
+	'shell.demoEnd.warning': { n: number | string };
 	'shell.doc.offline': { server: number | string };
 	'shell.doc.online': { server: number | string };
 	'shell.doc.recentOnline': { server: number | string };

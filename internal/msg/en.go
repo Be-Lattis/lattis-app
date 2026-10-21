@@ -995,6 +995,7 @@ var en = map[ID]string{
 	"share.detachReadOnly":      "workbook opened read-only: “Work on a local copy” instead",
 	"share.detachReopenFailed":  "detached workbook saved in {path}, but reopening it failed: {err}",
 	"share.detached":            "Workbook detached from the server: “{name}” is now a local workbook, it no longer syncs.",
+	"demo.ended":                "the demo is over: the workbook can no longer be changed, download it",
 	"demo.unavailable":          "not available in the demo",
 	"share.disabled":            "shared workbooks disabled: File › Settings › Features › Shared workbooks (Lattis Server)",
 	"share.invalidWorkbookId":   "invalid workbook identifier: {id}",

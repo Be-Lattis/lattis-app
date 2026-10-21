@@ -907,6 +907,13 @@
 		"recent": "演示 {name}",
 		"recentDetail": "演示工作簿"
 	},
+	"demoEnd": {
+		"warning": "演示将在 {n, plural, other {# 分钟}}后结束：请保存您的工作（Ctrl+S 下载工作簿）。",
+		"countdown": "剩余时间",
+		"download": "下载",
+		"title": "演示已结束",
+		"ended": "演示时间已到：工作簿不能再修改。您仍可以下载它。"
+	},
 	"web": {
 		"reconnected": "已恢复与服务器的连接",
 		"expired": "你的会话已过期：请重新登录以继续（你已做的更改保存在服务器上）。",

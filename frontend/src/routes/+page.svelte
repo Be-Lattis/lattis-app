@@ -48,7 +48,7 @@
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { htmlPagesEnabled, loadSettings, mcpAvailable, platform, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
+	import { demoEnd, htmlPagesEnabled, loadSettings, mcpAvailable, platform, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
 	import ThemeDialog from '#lib/shell/ThemeDialog.svelte';
 	import { resolveTheme, themeCatalog, themeExtras, themeId, themeLabel, workbookTheme, type WorkbookTheme } from '#lib/grid/theme.js';
 	import { isThemeRef } from '#lib/grid/colors.js';
@@ -72,6 +72,7 @@
 	import ExportReportDialog from '#lib/shell/ExportReportDialog.svelte';
 	import { exportNotice, printNotice, type ExportReport } from '#lib/shell/exportReport.js';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
+	import DemoEnd from '#lib/shell/DemoEnd.svelte';
 	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
 	import CoEditPresence from '#lib/remote/CoEditPresence.svelte';
 	import type { State as CoEditState } from '#bindings/internal/coedit/models.js';
@@ -2429,6 +2430,10 @@
 			ondetach={askDetach}
 			onforget={shareForget}
 		/>
+	{/if}
+	{#if demoEnd.clock}
+		<!-- Démo publique : fin annoncée par lattisd (bandeau, puis boîte « Démo terminée »). -->
+		<DemoEnd clock={demoEnd.clock} ondownload={() => file('save').catch((e) => (notice = err(e)))} />
 	{/if}
 
 	<!-- Une erreur d’un composant ne remplace plus tout par un écran 500 : elle est journalisée (pile, dernières actions) et l’on peut réessayer. -->

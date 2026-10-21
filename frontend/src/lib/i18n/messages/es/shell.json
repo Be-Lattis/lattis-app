@@ -907,6 +907,13 @@
 		"recent": "Demo {name}",
 		"recentDetail": "Libro de demostración"
 	},
+	"demoEnd": {
+		"warning": "La demo termina en {n, plural, one {# minuto} other {# minutos}}: guarde su trabajo (Ctrl+S descarga el libro).",
+		"countdown": "Tiempo restante",
+		"download": "Descargar",
+		"title": "Demo terminada",
+		"ended": "El tiempo de la demo ha terminado: el libro ya no se puede modificar. Todavía puede descargarlo."
+	},
 	"web": {
 		"reconnected": "Conexión con el servidor restablecida",
 		"expired": "Su sesión ha caducado: vuelva a iniciar sesión para continuar (los cambios ya realizados se conservan en el servidor).",

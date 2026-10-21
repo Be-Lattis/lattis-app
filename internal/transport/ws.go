@@ -83,6 +83,9 @@ type Hub struct {
 	// session et sa cause (identifiant et paramètres d'un message traduit,
 	// nil sinon) ; nil : err.Error().
 	Translate func(err error) (message string, cause any)
+	// Guard refuse un appel avant de l'exécuter (fin d'une démo publique :
+	// plus de modification) ; nil : tout est permis.
+	Guard func(m *Method) error
 
 	mu    sync.Mutex
 	conns map[*conn]struct{}
@@ -211,6 +214,12 @@ func (h *Hub) handle(c *conn, req request) {
 		h.reply(c, req.ID, nil, callError(CodeNoMethod, "ReferenceError", "méthode inconnue : "+method))
 		return
 	}
+	if h.Guard != nil {
+		if err := h.Guard(m); err != nil {
+			h.reply(c, req.ID, nil, h.methodError(err))
+			return
+		}
+	}
 	var params []json.RawMessage
 	if len(req.Params) > 0 && string(req.Params) != "null" {
 		if err := json.Unmarshal(req.Params, &params); err != nil {
@@ -240,18 +249,26 @@ func (h *Hub) handle(c *conn, req request) {
 		if len(req.ID) == 0 {
 			return // notification : pas de réponse
 		}
-		var ce *Error
-		if err != nil && !errors.As(err, &ce) {
-			ce = callError(CodeServer, "RuntimeError", err.Error())
-			ce.err = err
-		}
-		// Erreur rendue par la méthode : texte dans la langue de la session,
-		// et la cause d'un message de internal/msg (errorText, msgCause).
-		if ce != nil && ce.err != nil && h.Translate != nil {
-			ce.Message, ce.Data.Cause = h.Translate(ce.err)
-		}
-		h.reply(c, req.ID, res, ce)
+		h.reply(c, req.ID, res, h.methodError(err))
 	}()
+}
+
+// methodError rend l'erreur d'une méthode (ou de Guard) au client : texte
+// dans la langue de la session, et la cause d'un message de internal/msg
+// (errorText, msgCause) ; nil sans erreur.
+func (h *Hub) methodError(err error) *Error {
+	if err == nil {
+		return nil
+	}
+	var ce *Error
+	if !errors.As(err, &ce) {
+		ce = callError(CodeServer, "RuntimeError", err.Error())
+		ce.err = err
+	}
+	if ce.err != nil && h.Translate != nil {
+		ce.Message, ce.Data.Cause = h.Translate(ce.err)
+	}
+	return ce
 }
 
 func (h *Hub) reply(c *conn, id json.RawMessage, res any, e *Error) {

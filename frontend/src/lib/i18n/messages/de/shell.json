@@ -907,6 +907,13 @@
 		"recent": "Demo {name}",
 		"recentDetail": "Demo-Arbeitsmappe"
 	},
+	"demoEnd": {
+		"warning": "Die Demo endet in {n, plural, one {# Minute} other {# Minuten}}: Speichern Sie Ihre Arbeit (Strg+S lädt die Arbeitsmappe herunter).",
+		"countdown": "Verbleibende Zeit",
+		"download": "Herunterladen",
+		"title": "Demo beendet",
+		"ended": "Die Demozeit ist abgelaufen: Die Arbeitsmappe kann nicht mehr geändert werden. Sie können sie noch herunterladen."
+	},
 	"web": {
 		"reconnected": "Verbindung zum Server wiederhergestellt",
 		"expired": "Ihre Sitzung ist abgelaufen: Melden Sie sich erneut an, um fortzufahren (Ihre bereits vorgenommenen Änderungen bleiben auf dem Server erhalten).",

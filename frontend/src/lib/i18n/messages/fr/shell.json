@@ -907,6 +907,13 @@
 		"recent": "Démo {name}",
 		"recentDetail": "Classeur de démonstration"
 	},
+	"demoEnd": {
+		"warning": "La démo se termine dans {n, plural, one {# minute} other {# minutes}} : enregistrez votre travail (Ctrl+S télécharge le classeur).",
+		"countdown": "Temps restant",
+		"download": "Télécharger",
+		"title": "Démo terminée",
+		"ended": "Le temps de la démo est écoulé : le classeur ne se modifie plus. Vous pouvez encore le télécharger."
+	},
 	"web": {
 		"reconnected": "Connexion au serveur rétablie",
 		"expired": "Votre session a expiré : reconnectez-vous pour continuer (vos modifications déjà faites sont gardées sur le serveur).",

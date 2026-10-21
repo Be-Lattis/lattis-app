@@ -109,6 +109,10 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 		guard = &query.Guard{Dir: o.Dir, Offline: true, OfflineExcept: []string{"tile.openstreetmap.org"}}
 		bridge.UsePublicDemo(true)
 		e.dispose = o.Dir
+		// Fin de la démo annoncée par lattisd (bridge.SetDemoDeadline) :
+		// passé l'heure, plus de modification, lecture et téléchargement
+		// seulement.
+		e.hub.Guard = func(m *transport.Method) error { return bridge.DemoGuard(m.Short) }
 	}
 	e.host = &WebHost{
 		hub: e.hub, dir: o.Dir, base: base, scripting: o.Scripting, demo: o.PublicDemo, secrets: secrets,

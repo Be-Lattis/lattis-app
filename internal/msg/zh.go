@@ -997,6 +997,7 @@ var zh = map[ID]string{
 	"share.detachReadOnly":      "工作簿以只读方式打开：请改用“使用本地副本”",
 	"share.detachReopenFailed":  "已分离的工作簿已保存在 {path}，但重新打开失败：{err}",
 	"share.detached":            "工作簿已从服务器分离：“{name}”现在是本地工作簿，不再同步。",
+	"demo.ended":                "演示已结束：工作簿不能再修改，请下载",
 	"demo.unavailable":          "演示中不可用",
 	"share.disabled":            "共享工作簿已禁用：文件 › 设置 › 功能 › 共享工作簿（Lattis 服务器）",
 	"share.invalidWorkbookId":   "工作簿标识符无效：{id}",

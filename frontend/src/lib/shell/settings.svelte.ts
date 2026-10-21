@@ -6,6 +6,7 @@ import { DocumentService } from '#bindings/internal/bridge/index.js';
 import { isWeb } from '#lib/web/platform.js';
 import { languageFor, setLang, setSystemLocale } from '#lib/i18n/index.js';
 import { boolSetting, findSetting, htmlPagesOn, resetPaths, type SettingState } from './settings';
+import { demoClock, type DemoClock } from './demoend';
 
 export const userSettings = $state<{ list: SettingState[] }>({ list: [] });
 
@@ -16,14 +17,22 @@ export const userSettings = $state<{ list: SettingState[] }>({ list: [] });
  * demo : démo publique (lattis-engine --public-demo), jetable : ni Serveur
  * Lattis, ni connexion sortante, ni assistant ; Enregistrer télécharge.
  * htmlPages : pages web permises (features.htmlPages, jamais en web).
+ * demoDeadline, demoWarnBefore, now : fin de la démo publique annoncée par
+ * lattisd, son préavis et l'heure du moteur (ms) ; voir demoEnd.
  */
-export const platform = $state<{ web: boolean; scripting: boolean; locale?: string; demo?: boolean; htmlPages?: boolean }>({ web: isWeb, scripting: !isWeb });
+export const platform = $state<{ web: boolean; scripting: boolean; locale?: string; demo?: boolean; htmlPages?: boolean; demoDeadline?: number; demoWarnBefore?: number; now?: number }>({ web: isWeb, scripting: !isWeb });
+
+/** Fin de la démo publique rapportée à l'horloge du navigateur (null : pas de fin annoncée). */
+export const demoEnd = $state<{ clock: DemoClock | null }>({ clock: null });
 
 /** Charge les réglages (silencieux en cas d'échec : valeurs par défaut). */
 export async function loadSettings() {
 	try {
 		const p = await DocumentService.Platform();
-		if (p) Object.assign(platform, p);
+		if (p) {
+			Object.assign(platform, p);
+			demoEnd.clock = demoClock(p, Date.now());
+		}
 	} catch {
 		// Pas de pont (tests) : valeurs de la construction.
 	}

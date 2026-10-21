@@ -996,6 +996,7 @@ var de = map[ID]string{
 	"share.detachReadOnly":      "Arbeitsmappe schreibgeschützt geöffnet: Verwenden Sie stattdessen „An einer lokalen Kopie arbeiten“",
 	"share.detachReopenFailed":  "Getrennte Arbeitsmappe in {path} gespeichert, aber das erneute Öffnen ist fehlgeschlagen: {err}",
 	"share.detached":            "Arbeitsmappe vom Server getrennt: „{name}“ ist jetzt eine lokale Arbeitsmappe und wird nicht mehr synchronisiert.",
+	"demo.ended":                "die Demo ist beendet: die Arbeitsmappe kann nicht mehr geändert werden, laden Sie sie herunter",
 	"demo.unavailable":          "in der Demo nicht verfügbar",
 	"share.disabled":            "Geteilte Arbeitsmappen deaktiviert: Datei › Einstellungen › Funktionen › Geteilte Arbeitsmappen (Lattis Server)",
 	"share.invalidWorkbookId":   "ungültiger Bezeichner der Arbeitsmappe: {id}",
