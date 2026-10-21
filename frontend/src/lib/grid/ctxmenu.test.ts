@@ -56,9 +56,9 @@ describe('cellule libre', () => {
 });
 
 describe('numéro de ligne, lettre de colonne', () => {
-	it('presse-papiers, mise en forme, puis le sous-menu de la ligne (et du tableau)', () => {
-		expect(flat(headerMenu({ format: true, rules: true, lines: true, table: true }))).toBe('cut copy paste | clear format rules | lines table');
-		expect(flat(headerMenu({ toNote: true, asGroups: true, lines: true }))).toBe('toNote asGroups | cut copy paste | clear | lines');
+	it('la ligne ou la colonne en tête (sans sous-menu), puis presse-papiers, mise en forme, tableau', () => {
+		expect(flat(headerMenu({ format: true, rules: true, lines: true, table: true }))).toBe('linesTop | cut copy paste | clear format rules | table');
+		expect(flat(headerMenu({ toNote: true, asGroups: true, lines: true }))).toBe('toNote asGroups | linesTop | cut copy paste | clear');
 	});
 
 	it('sous-menu des lignes ou colonnes : insertion, taille, affichage', () => {

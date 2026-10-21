@@ -11404,9 +11404,9 @@
 							<Submenu label={tr('grid.menu.column', { name: clip(col?.name) })} title={clipped(col?.name) ? col?.name : undefined}>
 								{#each columnGroups as g, gi (gi)}{#if gi}<hr />{/if}{#each g as id (id)}{@render columnItem(id)}{/each}{/each}
 							</Submenu>
-						{:else if id === 'lines'}
-							<!-- Numéro de ligne : la ligne de la feuille (insertion, suppression, hauteur, affichage). -->
-							<Submenu label={linesTitle('rows', m.e)}>{@render linesSub('rows', m.x, m.y)}</Submenu>
+						{:else if id === 'linesTop'}
+							<!-- Numéro de ligne : la ligne de la feuille (insertion, suppression, hauteur, affichage), en tête du menu. -->
+							{@render linesSub('rows', m.x, m.y)}
 						{:else if id === 'table'}
 							<!-- Le tableau, titré de son nom : en-têtes, requête, partage, conversion ; sa suppression en dernier. -->
 							<Submenu
@@ -11624,8 +11624,8 @@
 							clearSelection(selection(), true);
 						}}>{tr('common.delete')}</button
 					>
-				{:else if id === 'lines' && m.kind}
-					<Submenu label={linesTitle(m.kind)}>{@render linesSub(m.kind, m.x, m.y)}</Submenu>
+				{:else if id === 'linesTop' && m.kind}
+					{@render linesSub(m.kind, m.x, m.y)}
 				{:else if id === 'pivot' && pv}
 					<!-- Le tableau croisé, titré de son nom (ou de sa source) ; sa suppression en dernier. -->
 					{@const pname = pv.config.name ? tr('grid.pivot.menu.title', { name: clip(pv.config.name) }) : tr('grid.pivot.menu.titleOf', { source: clip(pv.config.source) })}

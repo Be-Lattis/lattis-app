@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Changements
+
+- Clic droit sur un numéro de ligne ou une lettre de colonne : les actions de la ligne ou de la colonne sont en tête du menu, sans sous-menu.
+
 ## 0.3.6-beta (21/10/2026)
 
 ### Nouveautés

@@ -131,12 +131,17 @@ export interface HeaderMenu {
 	table?: boolean;
 }
 
+// Gouttière (numéro de ligne, lettre de colonne) : on vise presque toujours
+// la ligne ou la colonne ; ses actions (insertion, taille, affichage) sont en
+// tête du menu, après la situation, sans sous-menu (demande de Louis, 21/10).
+// 'linesTop' : les groupes de linesSubmenu, montés tels quels.
 export function headerMenu(o: HeaderMenu): MenuGroups {
 	return groups(
 		[o.promote && 'promote', o.toNote && 'toNote', o.asGroups && 'asGroups'],
+		[o.lines && 'linesTop'],
 		[...CLIPBOARD, o.pasteChart && 'pasteChart', o.pasteButton && 'pasteButton'],
 		['clear', o.format && 'format', o.rules && 'rules'],
-		[o.lines && 'lines', o.table && 'table']
+		[o.table && 'table']
 	);
 }
 
