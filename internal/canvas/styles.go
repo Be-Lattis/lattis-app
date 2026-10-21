@@ -25,6 +25,7 @@ import (
 //	colonne d'un tableau    _lattis_styles (tbl, rid = 0, col)
 //	en-tête d'un tableau    _lattis_styles (tbl, rid = -1, col)
 //	cellule d'un tableau    _lattis_styles (tbl, rid, col)
+//	colonne d'un TCD        configuration du TCD, styles (pivotstyle.go)
 //	cellule libre ou de TCD _lattis_cell_styles (sheet, row, col)
 //
 // Une couche plus précise remplace propriété par propriété les couches
@@ -212,8 +213,9 @@ func (t *tx) ridsAt(tb *Table, first, last int) ([]int64, error) {
 // ApplyStyle met en forme le rectangle [r0, r1] × [c0, c1] d'une feuille.
 // Dans un tableau, une sélection qui couvre toutes les lignes d'une colonne
 // met en forme la colonne entière (y compris les lignes ajoutées ensuite) ;
-// sinon chaque cellule suit sa ligne (tri, insertion). Hors tableau (cellules
-// libres, tableaux croisés), la mise en forme suit la position. Une seule
+// sinon chaque cellule suit sa ligne (tri, insertion). Dans un tableau
+// croisé, elle vaut pour toute la colonne touchée (pivotstyle.go). Hors
+// tableau (cellules libres), la mise en forme suit la position. Une seule
 // étape d'annulation.
 func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int, patch Style) error {
 	if (r1-r0+1)*(c1-c0+1) > MaxStyleCells*4 {
@@ -238,6 +240,12 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		if err != nil {
 			return err
 		}
+		places, err := t.stylePivotPlaces(sheet)
+		if err != nil {
+			return err
+		}
+		colPatch, cellPatch := splitPivotPatch(patch)
+		edits := make([]*pivotStyleEdit, len(places))
 		cells := 0
 		for c := c0; c <= c1; c++ {
 			var tb *Table
@@ -253,6 +261,26 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				}
 				if cells++; cells > MaxStyleCells {
 					return msg.New("style.tooManyCells", msg.Args{"max": MaxStyleCells})
+				}
+				// Tableau croisé : la colonne (en-tête ou lignes) ; seuls notes,
+				// validation et bordures restent à la cellule.
+				if i := pivotPlaceAt(places, r, c); i >= 0 {
+					e := edits[i]
+					if e == nil {
+						e = &pivotStyleEdit{p: places[i], head: map[int]bool{}, body: map[int]bool{}}
+						edits[i] = e
+					}
+					if r == e.p.top {
+						e.head[c] = true
+					} else {
+						e.body[c] = true
+					}
+					if len(cellPatch) > 0 {
+						if err := t.styleFree(sheet, r, c, cellPatch, lines.at(r, c)); err != nil {
+							return err
+						}
+					}
+					continue
 				}
 				if err := t.styleFree(sheet, r, c, patch, lines.at(r, c)); err != nil {
 					return err
@@ -292,6 +320,13 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 					return msg.New("style.tooManyCells", msg.Args{"max": MaxStyleCells})
 				}
 				if err := t.styleTable(tb.ID, id, colID, patch, over(lines.at(first+i, c), colStyle)); err != nil {
+					return err
+				}
+			}
+		}
+		for _, e := range edits {
+			if e != nil {
+				if err := t.stylePivotColumns(sheet, e, colPatch, lines); err != nil {
 					return err
 				}
 			}
@@ -402,11 +437,19 @@ func (m *Model) ApplyLineStyle(ctx context.Context, sheet int64, rows bool, i0, 
 			}
 			return nil
 		}
+		places, err := t.stylePivotPlaces(sheet)
+		if err != nil {
+			return err
+		}
 		for c := i0; c <= i1; c++ {
 			if err := t.styleLine(sheet, false, c, patch, nil); err != nil {
 				return err
 			}
 			if err := t.stripFree(sheet, `col = ?`, c, patch); err != nil {
+				return err
+			}
+			// Les colonnes de TCD traversées reprennent la mise en forme de la colonne.
+			if err := t.stripPivotColumn(places, c, patch); err != nil {
 				return err
 			}
 			// Une ligne mise en forme l'emporte sur la colonne : à leur

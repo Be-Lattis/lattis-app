@@ -1294,6 +1294,15 @@ export interface PivotCalcField {
 }
 
 /**
+ * PivotColStyle est la mise en forme d'une colonne de TCD : ses lignes
+ * (Body) et son en-tête (Head).
+ */
+export interface PivotColStyle {
+    "head"?: Style;
+    "body"?: Style;
+}
+
+/**
  * PivotConfig décrit un tableau croisé dynamique, comme le volet « Champs de
  * tableau croisé » d'Excel : zones Lignes, Colonnes, Valeurs et Filtres. Les
  * champs sont désignés par le nom de leur colonne dans le tableau source.
@@ -1362,6 +1371,13 @@ export interface PivotConfig {
      * lignes dans _lattis_hand_kept (owner « pivot:<id> »).
      */
     "hand"?: PivotHandCol[] | null;
+
+    /**
+     * Styles : mise en forme des colonnes du TCD (pivotstyle.go), par
+     * colonne (champ des lignes, valeur, colonne saisie) : elle suit la
+     * colonne quand le TCD est actualisé, trié, s'élargit ou rétrécit.
+     */
+    "styles"?: { [_ in string]?: PivotColStyle } | null;
 
     /**
      * Choice : filtre imposé par l'onglet à choix de la feuille du TCD
@@ -1460,6 +1476,15 @@ export interface PivotInfo {
     "hand"?: PivotHandInfo[] | null;
     "handKept"?: number;
     "handNote"?: string;
+
+    /**
+     * Styles, HeadStyles : mise en forme de chaque colonne (style JSON, vide :
+     * aucune), de ses lignes et de son en-tête (pivotstyle.go) ; au-dessus
+     * de Formats et des lignes et colonnes de la feuille, sous les styles de
+     * cellule.
+     */
+    "styles"?: string[] | null;
+    "headStyles"?: string[] | null;
 }
 
 /**

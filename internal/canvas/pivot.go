@@ -36,6 +36,12 @@ type PivotInfo struct {
 	Hand     []PivotHandInfo `json:"hand,omitempty"`
 	HandKept int             `json:"handKept,omitempty"`
 	HandNote string          `json:"handNote,omitempty"`
+	// Styles, HeadStyles : mise en forme de chaque colonne (style JSON, vide :
+	// aucune), de ses lignes et de son en-tête (pivotstyle.go) ; au-dessus
+	// de Formats et des lignes et colonnes de la feuille, sous les styles de
+	// cellule.
+	Styles     []string `json:"styles,omitempty"`
+	HeadStyles []string `json:"headStyles,omitempty"`
 }
 
 // ErrPivot signale un tableau croisé impossible.
@@ -129,9 +135,10 @@ func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
 			if cfg.Name == "" {
 				cfg.Name = prev.Name
 			}
-			// Colonnes saisies : elles ne se changent que par la feuille
-			// (pivothand.go) ; le volet renvoie une configuration sans elles.
-			cfg.Hand = prev.Hand
+			// Colonnes saisies et mise en forme : elles ne se changent que
+			// par la feuille (pivothand.go, pivotstyle.go) ; le volet renvoie
+			// une configuration sans elles.
+			cfg.Hand, cfg.Styles = prev.Hand, prev.Styles
 		}
 		b, err := json.Marshal(cfg)
 		if err != nil {
@@ -250,6 +257,7 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 		if err := t.pivotHandAttach(&out[i], sheet, hand, names); err != nil {
 			return nil, err
 		}
+		pivotStylesAttach(&out[i], hand)
 	}
 	return out, nil
 }

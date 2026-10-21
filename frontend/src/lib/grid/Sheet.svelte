@@ -51,7 +51,7 @@
 	import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, splitGroup, tableTop } from './twolevel';
 	import { tableUnderTitle, titleAboveFilled } from './titlehead';
 	import { grown as growFrame, type Grown } from './grown';
-	import { pivotLayer, pivotValueText } from './pivotformat';
+	import { pivotColLayer, pivotLayer, pivotValueText } from './pivotformat';
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
 	import { fillSeries, shiftTableColumns } from './fill';
 	import { citeLabel, refMessage, refTarget, type Citation, type KeyRow } from './reflink';
@@ -211,6 +211,9 @@
 		rows?: PivotRowInfo[] | null;
 		/** Format de nombre par défaut de chaque colonne (style JSON, voir pivotformat.ts). */
 		formats?: string[] | null;
+		/** Mise en forme de chaque colonne, de ses lignes et de son en-tête (style JSON, voir pivotformat.ts). */
+		styles?: string[] | null;
+		headStyles?: string[] | null;
 		error: string;
 		/** Colonnes saisies à droite (les dernières de cells, voir pivothand.ts) : nom, formule (« = » compris). */
 		hand?: { name: string; formula?: string }[] | null;
@@ -2298,7 +2301,7 @@
 	function styleAt(r: number, c: number, e = tableAt(r, c)): CellStyle | undefined {
 		const col = sheetColStyles.get(c);
 		const row = sheetRowStyles.get(r);
-		if (!e) return resolveStyle(pivotLayer(pivots, r, c), col, row, freeStyles.get(key(r, c)));
+		if (!e) return resolveStyle(pivotLayer(pivots, r, c), col, row, pivotColLayer(pivots, r, c), freeStyles.get(key(r, c)));
 		const i = c - e.t.col;
 		if (r === e.t.row) return resolveStyle(col, row, headStyles.get(e.t.id)?.[i]);
 		return resolveStyle(col, row, colStyles.get(e.t.id)?.[i], parseStyle(e.cache.row(r - e.t.row - 1)?.sty?.get(i)));

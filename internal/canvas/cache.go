@@ -51,6 +51,7 @@ func (t *tx) pivotFlat(cfg PivotConfig) ([][]string, error) {
 // sinon (rows nil).
 func (t *tx) pivotCells(cfg PivotConfig) ([][]string, []PivotRowInfo, error) {
 	cfg.Hand = nil // colonnes saisies : ajoutées après le calcul (pivothand.go)
+	cfg.Styles = nil
 	calc := func() (pivotView, error) { return t.pivotViewRaw(cfg) }
 	var v pivotView
 	var err error

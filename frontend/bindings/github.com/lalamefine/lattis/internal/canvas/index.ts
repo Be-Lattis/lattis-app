@@ -51,6 +51,7 @@ export type {
     PageSetup,
     PendingRef,
     PivotCalcField,
+    PivotColStyle,
     PivotConfig,
     PivotFilter,
     PivotHandCol,

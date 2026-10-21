@@ -57,7 +57,8 @@ func (c PivotConfig) folded(path []string) bool {
 // plat (et son cache) n'en dépend pas.
 func (c PivotConfig) flat() PivotConfig {
 	c.Subtotals, c.CollapseAll, c.Collapsed, c.Expanded = "", false, nil, nil
-	c.Hand = nil // colonnes saisies : ajoutées après le calcul
+	c.Hand = nil   // colonnes saisies : ajoutées après le calcul
+	c.Styles = nil // mise en forme : sans effet sur le calcul (ni sur son cache)
 	return c
 }
 

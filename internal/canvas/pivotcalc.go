@@ -91,6 +91,11 @@ type PivotConfig struct {
 	// lignes dans _lattis_hand_kept (owner « pivot:<id> »).
 	Hand []PivotHandCol `json:"hand,omitempty"`
 
+	// Styles : mise en forme des colonnes du TCD (pivotstyle.go), par
+	// colonne (champ des lignes, valeur, colonne saisie) : elle suit la
+	// colonne quand le TCD est actualisé, trié, s'élargit ou rétrécit.
+	Styles map[string]PivotColStyle `json:"styles,omitempty"`
+
 	// Choice : filtre imposé par l'onglet à choix de la feuille du TCD
 	// (choice.go), posé à la lecture, jamais enregistré (stored le retire).
 	Choice *PivotFilter `json:"choice,omitempty"`

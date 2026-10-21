@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pivotLayer, pivotValueText } from './pivotformat';
+import { pivotColLayer, pivotLayer, pivotValueText } from './pivotformat';
 
 describe('valeurs entières du TCD', () => {
 	it('séparateur de milliers sur un nombre ou un total sans format', () => {
@@ -36,5 +36,29 @@ describe('format des valeurs de TCD', () => {
 	});
 	it('la décimale ajoutée sur la cellule l’emporte', () => {
 		expect(styledNumber(p.cells[1][1], resolveStyle(pivotLayer([p], 2, 2), { dp: 3 }))).toBe('3 979,080');
+	});
+});
+
+describe('mise en forme des colonnes de TCD', () => {
+	const p = {
+		row: 1,
+		col: 1,
+		cells: [
+			['NID', 'Nombre'],
+			['A', '2'],
+			['Total', '2']
+		],
+		styles: ['', '{"b":true}'],
+		headStyles: ['{"bg":"#ffff00"}', '']
+	};
+	it('les lignes (total compris) prennent le style de la colonne, l’en-tête le sien', () => {
+		expect(pivotColLayer([p], 2, 2)).toEqual({ b: true });
+		expect(pivotColLayer([p], 3, 2)).toEqual({ b: true });
+		expect(pivotColLayer([p], 1, 1)).toEqual({ bg: '#ffff00' });
+		expect(pivotColLayer([p], 1, 2)).toBeUndefined();
+		expect(pivotColLayer([p], 4, 2)).toBeUndefined(); // sous le TCD
+	});
+	it('un style de cellule l’emporte sur celui de la colonne', () => {
+		expect(resolveStyle(pivotColLayer([p], 2, 2), { b: null })).toBeUndefined();
 	});
 });
