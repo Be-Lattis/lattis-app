@@ -97,8 +97,13 @@
 	</div>
 	<div class="caption title" role="presentation" ondblclick={dblclick}>
 		<span class="name">{title}</span>{#if dirty}<span class="muted" title={t('shell.titleBar.unsaved')}>&nbsp;•</span>{/if}
-		{#if badge}<span class="badge" class:offline title={badgeTitle || undefined}><Icon name={offline ? 'cloud-off' : 'cloud'} size={14} />{badge}</span>{/if}
-		{#if role}<button class="badge role" title={role.detail} onclick={onrole}>{role.label}</button>{/if}
+		<!-- Classeur partagé : une seule pastille « en ligne sur … | Rôle », qui ouvre l'accès (demande de Louis, 21/10). -->
+		{#if badge && role}
+			<button class="badge role" class:offline title={[badgeTitle, role.detail].filter(Boolean).join(' · ')} onclick={onrole}
+				><Icon name={offline ? 'cloud-off' : 'cloud'} size={14} />{badge}<span class="sep" aria-hidden="true"></span>{role.label}</button
+			>
+		{:else if badge}<span class="badge" class:offline title={badgeTitle || undefined}><Icon name={offline ? 'cloud-off' : 'cloud'} size={14} />{badge}</span>
+		{:else if role}<button class="badge role" title={role.detail} onclick={onrole}>{role.label}</button>{/if}
 		<!-- Démo publique : rien n'est gardé (Ctrl+S télécharge le classeur). -->
 		{#if platform.demo}<span class="badge demo" title={t('shell.titleBar.demoDetail')}>{t('shell.titleBar.demo')}</span>{/if}
 		<span class="muted">{title ? '\u00a0– Lattis' : 'Lattis'}</span>
@@ -234,6 +239,12 @@
 	}
 	.badge.role:hover {
 		background: rgba(255, 255, 255, 0.22);
+	}
+	.badge .sep {
+		align-self: stretch;
+		width: 1px;
+		margin: 2px 3px;
+		background: rgba(255, 255, 255, 0.45);
 	}
 	.badge.demo {
 		padding: 1px 7px;

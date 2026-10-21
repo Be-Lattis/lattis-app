@@ -8,6 +8,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Nouveautés
 
+- Barre de titre d'un classeur partagé : une seule pastille « en ligne sur … | Rôle », cliquable, qui ouvre l'accès au classeur.
 - Écran d'erreur : « Réinitialiser les paramètres par défaut » (après confirmation, puis rechargement) pour sortir d'un réglage qui fait planter ; ses libellés restent lisibles en anglais à côté de la traduction.
 
 ## 0.3.3-beta (21/10/2026)
