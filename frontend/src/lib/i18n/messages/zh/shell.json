@@ -1110,6 +1110,13 @@
 		"releasePage": "版本页面",
 		"updated": "更新完成，请查看版本说明",
 		"updatedTooltip": "Lattis {version}：在 GitHub 上打开版本说明",
+		"duplicate": {
+			"text": "此计算机上有两个 Lattis 安装 — 移除旧的",
+			"userTooltip": "另一个安装 Lattis {version} 仅为您的帐户安装（{dir}）。点击将其卸载；当前这个保留。",
+			"machineTooltip": "另一个安装 Lattis {version} 为此计算机的所有用户安装（{dir}）。点击将其卸载（Windows 会请求管理员权限）；当前这个保留。",
+			"removing": "正在移除 Lattis 的另一个安装…",
+			"failed": "Lattis 的另一个安装未移除 — 重试"
+		},
 		"check": {
 			"line": "版本 {version} · {detail}",
 			"last": "上次检查：{when}",

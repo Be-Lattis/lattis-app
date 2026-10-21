@@ -1444,6 +1444,10 @@ var zh = map[ID]string{
 	"update.sizeMismatch":     "“{name}”：下载文件的大小与发布的不一致",
 	"update.tooLarge":         "更新文件过大",
 	"update.unsupported":      "此系统不支持自动更新",
+	// Seconde installation de Lattis sur le poste (internal/update, duplicate.go).
+	"update.duplicate.failed":     "无法移除另一个安装：{err}",
+	"update.duplicate.refused":    "另一个安装未移除：管理员权限被拒绝",
+	"update.duplicate.notRemoved": "另一个安装仍然存在：其卸载程序未完成",
 	// Échec de l'installation de la mise à jour (internal/update, installresult.go).
 	"update.install.notApplied": "重新启动的仍是旧版本",
 	"update.install.noTrace":    "安装程序没有留下任何记录：它可能没有启动",

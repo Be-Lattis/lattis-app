@@ -31,6 +31,47 @@ export interface UpdateState {
 	checking?: boolean;
 	/** Recherche impossible : 'dev', 'msix', 'policy', 'off'. */
 	unavailable?: string;
+	/** Une seconde installation de Lattis sur le poste (absente : une seule). */
+	duplicate?: DuplicateState | null;
+}
+
+/** L'autre installation (internal/update.Duplicate). */
+export interface DuplicateState {
+	/** Sa portée : 'user' (pour le compte) ou 'machine' (pour tous). */
+	scope: string;
+	dir: string;
+	version?: string;
+	/** Son retrait passe par l'invite UAC. */
+	elevation?: boolean;
+	/** Retrait en cours. */
+	removing?: boolean;
+	/** Échec du dernier retrait, dans la langue de la session. */
+	error?: string;
+}
+
+/** Avis « Deux installations de Lattis sur ce poste — Retirer l'ancienne ». */
+export interface DuplicateView {
+	text: string;
+	title: string;
+	/** Retrait en cours (indicateur, pas de clic). */
+	busy?: boolean;
+	/** Échec du retrait : avertissement, le clic réessaie. */
+	warn?: boolean;
+}
+
+/**
+ * Ce que montre la barre d'état quand deux installations de Lattis sont sur
+ * le poste (null : une seule). Le clic retire l'autre
+ * (UpdateService.RemoveDuplicate).
+ */
+export function duplicateView(s: UpdateState | null | undefined): DuplicateView | null {
+	const d = s?.duplicate;
+	if (!d) return null;
+	if (d.removing) return { text: t('shell.update.duplicate.removing'), title: d.dir, busy: true };
+	const args = { version: d.version || '?', dir: d.dir };
+	const tip = d.scope === 'machine' ? t('shell.update.duplicate.machineTooltip', args) : t('shell.update.duplicate.userTooltip', args);
+	if (d.error) return { text: t('shell.update.duplicate.failed'), title: `${d.error} — ${tip}`, warn: true };
+	return { text: t('shell.update.duplicate.text'), title: tip };
 }
 
 /** « aujourd'hui 23:08 », « hier 09:12 », « 18/10/2026 14:05 ». */

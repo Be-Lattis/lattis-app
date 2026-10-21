@@ -11,6 +11,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Ruban : l'aide est un onglet « ? » comme les autres, et non plus une bulle.
 - Barre d'état : moyenne et somme de la sélection à deux décimales, les trois indicateurs séparés par « • ».
 
+### Corrections
+
+- Windows : Lattis n'apparaît plus deux fois dans Applications installées. Installer « pour moi seulement » alors que Lattis est installé pour tous les utilisateurs (ou l'inverse) remplace l'installation existante, après confirmation, au lieu d'en ajouter une seconde ; la mise à jour automatique met toujours à jour l'installation en place. Si deux installations sont déjà là, la barre d'état le dit au lancement et propose « Retirer l'ancienne ». Les restes d'anciennes installations sont nettoyés, et la désinstallation ne laisse plus d'association de fichiers derrière elle ni ne retire les liens `lattis://` d'une autre installation.
+
 ## 0.3.5-beta (21/10/2026)
 
 ### Changements

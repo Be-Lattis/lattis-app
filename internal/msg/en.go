@@ -1442,6 +1442,10 @@ var en = map[ID]string{
 	"update.sizeMismatch":     "“{name}”: the downloaded file does not have the published size",
 	"update.tooLarge":         "update file too large",
 	"update.unsupported":      "automatic update is not supported on this system",
+	// Seconde installation de Lattis sur le poste (internal/update, duplicate.go).
+	"update.duplicate.failed":     "could not remove the other installation: {err}",
+	"update.duplicate.refused":    "the other installation was not removed: administrator rights were refused",
+	"update.duplicate.notRemoved": "the other installation is still there: its uninstaller did not complete",
 	// Échec de l'installation de la mise à jour (internal/update, installresult.go).
 	"update.install.notApplied": "the relaunched version is still the old one",
 	"update.install.noTrace":    "the installer left no trace: it probably did not start",

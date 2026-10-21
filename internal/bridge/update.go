@@ -31,6 +31,9 @@ func init() {
 type UpdateService struct {
 	u   *update.Updater
 	ctx context.Context
+	// AfterDuplicateRemoved : la seconde installation de Lattis a été
+	// retirée (main.go : liens lattis:// repris par celle-ci).
+	AfterDuplicateRemoved func()
 }
 
 // NewUpdateService prépare la mise à jour de l'exécutable en cours ; la
@@ -44,7 +47,13 @@ func NewUpdateService() *UpdateService {
 			app.Event.Emit(UpdateEvent, s)
 		}
 	}
-	return &UpdateService{u: u, ctx: context.Background()}
+	s := &UpdateService{u: u, ctx: context.Background()}
+	u.AfterRemove = func() {
+		if s.AfterDuplicateRemoved != nil {
+			s.AfterDuplicateRemoved()
+		}
+	}
+	return s
 }
 
 // ServiceStartup (Wails) : note le lancement (premier lancement après une
@@ -99,6 +108,15 @@ func (s *UpdateService) RequestRestart() {
 // par le chemin habituel, sans relancer l'installation silencieuse.
 func (s *UpdateService) InstallManually() error {
 	return s.u.InstallManually()
+}
+
+// RemoveDuplicate : « Retirer l'ancienne » (deux installations de Lattis
+// sur le poste) : lance le désinstalleur de l'autre installation (invite
+// UAC si elle est pour tous les utilisateurs) ; l'évènement update:status
+// suit le retrait jusqu'à sa fin (Status.Duplicate).
+func (s *UpdateService) RemoveDuplicate() error {
+	defer recoverPanic("mise à jour")
+	return s.u.RemoveDuplicate()
 }
 
 // DismissUpdated ferme l'avis « Mise à jour effectuée ».

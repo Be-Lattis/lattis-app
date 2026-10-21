@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setLang } from '#lib/i18n/index.js';
-import { checkLine, checkWhen, updateView } from './update';
+import { checkLine, checkWhen, duplicateView, updateView } from './update';
 
 describe('mise à jour dans la barre d’état', () => {
 	it('rien à signaler', () => {
@@ -110,5 +110,48 @@ describe('Paramètres › Mises à jour : la ligne de la dernière recherche', (
 	it('dans la langue de la session', async () => {
 		await setLang('en');
 		expect(checkLine({ phase: '', current: '0.3.2-beta', lastCheck: at(20, 9, 5) }, now)).toBe('Version 0.3.2-beta · last check: yesterday 09:05 AM — up to date');
+	});
+});
+
+describe('deux installations de Lattis sur le poste', () => {
+	afterEach(async () => {
+		await setLang('fr');
+	});
+
+	it('une seule : rien', () => {
+		expect(duplicateView(null)).toBeNull();
+		expect(duplicateView({ phase: '' })).toBeNull();
+		expect(duplicateView({ phase: '', duplicate: null })).toBeNull();
+	});
+
+	it("l'autre, pour tous : retirer l'ancienne, avec l'invite UAC", () => {
+		const v = duplicateView({ phase: '', duplicate: { scope: 'machine', dir: 'C:\\Program Files\\Lattis\\Lattis', version: '0.3.3-beta', elevation: true } });
+		expect(v?.text).toBe("Deux installations de Lattis sur ce poste — Retirer l'ancienne");
+		expect(v?.title).toContain('Lattis 0.3.3-beta');
+		expect(v?.title).toContain('tous les utilisateurs');
+		expect(v?.title).toContain('Program Files');
+		expect(v?.title).toContain("droits d'administrateur");
+		expect(v?.busy).toBeFalsy();
+		expect(v?.warn).toBeFalsy();
+	});
+
+	it("l'autre, pour le compte ; version inconnue", () => {
+		const v = duplicateView({ phase: '', duplicate: { scope: 'user', dir: 'C:\\Users\\x\\AppData\\Local\\Programs\\Lattis' } });
+		expect(v?.title).toContain('Lattis ?');
+		expect(v?.title).toContain('votre compte seulement');
+	});
+
+	it('retrait en cours, puis échec', () => {
+		const d = { scope: 'machine', dir: 'C:\\Program Files\\Lattis\\Lattis' };
+		expect(duplicateView({ phase: '', duplicate: { ...d, removing: true } })).toMatchObject({ busy: true, text: "Retrait de l'autre installation de Lattis…" });
+		const f = duplicateView({ phase: '', duplicate: { ...d, error: 'droits refusés' } });
+		expect(f).toMatchObject({ warn: true, text: "L'autre installation de Lattis n'a pas été retirée — Réessayer" });
+		expect(f?.title).toContain('droits refusés');
+	});
+
+	it('dans la langue de la session', async () => {
+		await setLang('en');
+		const v = duplicateView({ phase: '', duplicate: { scope: 'machine', dir: 'C:\\Program Files\\Lattis\\Lattis', version: '0.3.3-beta' } });
+		expect(v?.text).toBe('Two installations of Lattis on this computer — Remove the old one');
 	});
 });

@@ -27,6 +27,32 @@
 ; Les installations des installeurs de la 0.3.0-beta (par utilisateur et par
 ; machine) ont la meme cle de desinstallation (UNINST_KEY) et les memes
 ; dossiers : elles sont reconnues et mises a jour sur place.
+;
+; Une seule installation par utilisateur (jamais deux entrees « Lattis »
+; dans Applications installees) : l'installation de l'autre portee est
+; retiree par l'operation (lattis.findOther), apres confirmation avec
+; l'interface (« Lattis X est deja installe pour ... Il sera remplace. ») :
+;   - pour l'utilisateur, l'installation pour tous est retiree AVANT la copie
+;     des fichiers (lattis.replaceMachine) : sans droits, par une relance
+;     elevee de cet installeur avec /REMOVE=machine ; refusee, rien n'est
+;     installe si ce serait une seconde installation (sinon : mise a jour
+;     sur place de l'installation pour l'utilisateur, l'application
+;     proposera de retirer l'autre) ;
+;   - pour tous, l'installation pour l'utilisateur est retiree APRES
+;     (lattis.replaceUser), dans le compte de l'utilisateur : par cette
+;     instance si elle a deja les droits, sinon par l'instance non elevee
+;     une fois l'instance elevee terminee (lattis.afterElevatedInstall ;
+;     l'instance elevee peut tourner sous un autre compte, dont HKCU n'est
+;     pas celui de l'utilisateur) ;
+;   - en silencieux (/S, mise a jour par l'application), l'installation
+;     existante est mise a jour sur place, jamais une seconde creee ; l'autre
+;     n'est retiree que sans invite UAC (sauf /CurrentUser sans installation
+;     pour l'utilisateur, qui la demande).
+; Les restes sans desinstalleur ni cle (Program Files\Lattis\Lattis\lattis.exe
+; d'une installation ancienne) sont retires quand l'installeur en a le droit
+; (lattis.cleanLeftovers), fichiers connus seulement.
+; Parametre interne : /REMOVE=machine|user (instance elevee : retire cette
+; installation, silencieusement, et rend 0 si elle n'est plus inscrite).
 
 !include "LogicLib.nsh"
 !include "nsDialogs.nsh"
@@ -56,6 +82,12 @@ Var lattisChildProc
 Var lattisChildErr
 Var lattisRadioUser
 Var lattisRadioMachine
+Var lattisUserVer       ; version de l'installation pour l'utilisateur (DisplayVersion)
+Var lattisMachineVer    ; version de l'installation pour tous
+Var lattisOtherScope    ; installation de l'autre portee, a retirer ("" : aucune)
+Var lattisKeepData      ; desinstalleur : garder les donnees WebView2 (/KEEPDATA)
+Var lattisFailStatus    ; statut a ecrire par .onInstFailed (failed sinon, project.nsi)
+; lattisOtherVer (« 0.3.3-beta » precede d'une espace) : lattis_lang.nsh.
 
 ; Fonctions communes a l'installeur et au desinstalleur (prefixe un.).
 !macro LATTIS_COMMON_FUNCTIONS UN
@@ -149,6 +181,8 @@ Function ${UN}lattis.readInstalls
             Pop $lattisMachineDir
         ${EndIf}
     ${EndIf}
+    ReadRegStr $lattisUserVer HKCU "${UNINST_KEY}" "DisplayVersion"
+    ReadRegStr $lattisMachineVer HKLM "${UNINST_KEY}" "DisplayVersion"
 FunctionEnd
 
 ; Le dossier sur la pile est-il sous Program Files ? Rend 1 ou 0.
@@ -178,6 +212,318 @@ FunctionEnd
 
 !insertmacro LATTIS_COMMON_FUNCTIONS ""
 !insertmacro LATTIS_COMMON_FUNCTIONS "un."
+
+; Attend que le lattis.exe du dossier sur la pile soit libre (30 s au plus) :
+; Lattis lance la mise a jour en se fermant.
+Function lattis.waitFree
+    Exch $0
+    Push $1
+    Push $2
+    StrCpy $1 0
+    ${Do}
+        ${IfNot} ${FileExists} "$0\${PRODUCT_EXECUTABLE}"
+            ${Break}
+        ${EndIf}
+        ClearErrors
+        FileOpen $2 "$0\${PRODUCT_EXECUTABLE}" a
+        ${IfNot} ${Errors}
+            FileClose $2
+            ${Break}
+        ${EndIf}
+        IntOp $1 $1 + 1
+        ${If} $1 >= 60
+            ${Break}
+        ${EndIf}
+        Sleep 500
+    ${Loop}
+    Pop $2
+    Pop $1
+    Pop $0
+FunctionEnd
+
+; Fichiers connus d'un dossier Lattis sans desinstalleur : l'executable et
+; les restes d'une mise a jour, jamais autre chose ; puis le dossier s'il
+; est vide.
+Function lattis.cleanDir
+    Exch $0
+    Delete "$0\${PRODUCT_EXECUTABLE}"
+    Delete "$0\${PRODUCT_EXECUTABLE}.old"
+    Delete "$0\${PRODUCT_EXECUTABLE}.new"
+    RMDir "$0"
+    Pop $0
+FunctionEnd
+
+; Reste d'installation au dossier sur la pile : lattis.exe sans
+; desinstalleur, dossier ni inscrit ni celui de cette installation.
+Function lattis.cleanLeftoverAt
+    Exch $0
+    ${If} $0 != $INSTDIR
+    ${AndIf} $0 != $lattisUserDir
+    ${AndIf} $0 != $lattisMachineDir
+    ${AndIf} ${FileExists} "$0\${PRODUCT_EXECUTABLE}"
+    ${AndIfNot} ${FileExists} "$0\uninstall.exe"
+        DetailPrint "$(LATTIS_LEFTOVER)$0"
+        Push $0
+        Call lattis.cleanDir
+    ${EndIf}
+    Pop $0
+FunctionEnd
+
+; Restes des dossiers par defaut (Program Files\Lattis\Lattis,
+; %LOCALAPPDATA%\Programs\Lattis), retires quand l'installeur en a le droit
+; (Program Files : avec les droits d'administration seulement).
+Function lattis.cleanLeftovers
+    Push "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
+    Call lattis.cleanLeftoverAt
+    RMDir "$PROGRAMFILES64\${INFO_COMPANYNAME}"
+    SetShellVarContext current
+    Push "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
+    Call lattis.cleanLeftoverAt
+    !insertmacro wails.setShellContext
+FunctionEnd
+
+; Retire l'installation de la portee sur la pile (user ou machine), dans ce
+; processus (machine : il doit avoir les droits d'administration) : son
+; desinstalleur, silencieux, sinon (cle orpheline, desinstalleur absent) sa
+; cle et ses fichiers connus. Les donnees WebView2 de l'utilisateur
+; (%APPDATA%\lattis.exe), communes a toutes ses installations, sont mises de
+; cote pendant le retrait d'une installation pour l'utilisateur : ses
+; desinstalleurs jusqu'a la 0.3.5-beta les effacent sans condition ; si
+; c'est impossible (Lattis ouvert), rien n'est retire.
+; Rend 1 si la portee n'a plus d'installation inscrite, 0 sinon.
+Function lattis.removeInstall
+    Exch $0 ; portee
+    Push $1 ; dossier
+    Push $2 ; donnees WebView2 mises de cote
+    Push $3 ; resultat
+    StrCpy $2 ""
+    StrCpy $3 0
+    ${If} $0 == machine
+        StrCpy $1 $lattisMachineDir
+    ${Else}
+        StrCpy $1 $lattisUserDir
+    ${EndIf}
+    ${If} $1 == ""
+        StrCpy $3 1
+        Goto lattis_remove_done
+    ${EndIf}
+    DetailPrint "$(LATTIS_REMOVING)$1"
+    Push $1
+    Call lattis.waitFree
+    ${If} $0 == user
+        SetShellVarContext current
+        ${If} ${FileExists} "$APPDATA\${PRODUCT_EXECUTABLE}\*.*"
+            StrCpy $2 "$APPDATA\${PRODUCT_EXECUTABLE}"
+            ClearErrors
+            Rename "$2" "$2.lattis-keep"
+            ${If} ${Errors}
+                DetailPrint "$(LATTIS_REMOVE_KEPT)"
+                StrCpy $2 ""
+                Goto lattis_remove_done
+            ${EndIf}
+        ${EndIf}
+    ${EndIf}
+    ${If} ${FileExists} "$1\uninstall.exe"
+        ; _?= : le desinstalleur tourne sur place, attendu ; il ne se retire
+        ; pas lui-meme : retire ensuite s'il a abouti (cle partie).
+        ExecWait '"$1\uninstall.exe" /S /KEEPDATA _?=$1'
+        Call lattis.readInstalls
+        ${If} $0 == machine
+            StrCpy $3 $lattisMachineDir
+        ${Else}
+            StrCpy $3 $lattisUserDir
+        ${EndIf}
+        ${If} $3 == ""
+            Delete "$1\uninstall.exe"
+            RMDir "$1"
+        ${EndIf}
+        StrCpy $3 0
+    ${EndIf}
+    Call lattis.readInstalls
+    ${If} $0 == machine
+        StrCpy $1 $lattisMachineDir
+    ${Else}
+        StrCpy $1 $lattisUserDir
+    ${EndIf}
+    ${If} $1 != ""
+    ${AndIfNot} ${FileExists} "$1\uninstall.exe"
+        ; Cle orpheline (pas de desinstalleur) : la cle et les fichiers
+        ; connus du dossier.
+        Push $1
+        Call lattis.cleanDir
+        SetRegView 64
+        ${If} $0 == machine
+            DeleteRegKey HKLM "${UNINST_KEY}"
+        ${Else}
+            DeleteRegKey HKCU "${UNINST_KEY}"
+        ${EndIf}
+        Call lattis.readInstalls
+        ${If} $0 == machine
+            StrCpy $1 $lattisMachineDir
+        ${Else}
+            StrCpy $1 $lattisUserDir
+        ${EndIf}
+    ${EndIf}
+    ${If} $1 == ""
+        StrCpy $3 1
+    ${EndIf}
+    lattis_remove_done:
+    ${If} $2 != ""
+        ClearErrors
+        Rename "$2.lattis-keep" "$2"
+        ${If} ${Errors}
+            DetailPrint "$(LATTIS_LEFTOVER)$2.lattis-keep"
+        ${EndIf}
+    ${EndIf}
+    !insertmacro wails.setShellContext
+    StrCpy $0 $3
+    Pop $3
+    Pop $2
+    Pop $1
+    Exch $0
+FunctionEnd
+
+; Retire l'installation pour tous depuis une instance sans droits : relance
+; elevee de cet installeur avec /REMOVE=machine (invite UAC), attendue.
+; Rend 1 si elle n'est plus inscrite, 0 sinon (refus de l'UAC compris).
+Function lattis.removeMachineElevated
+    Push $0
+    StrCpy $lattisChildParams "/S /REMOVE=machine /LANGID=$LANGUAGE"
+    Call lattis.runElevated
+    ${If} $lattisChildProc != 0
+        Call lattis.waitChild
+    ${EndIf}
+    Call lattis.readInstalls
+    StrCpy $0 0
+    ${If} $lattisMachineDir == ""
+        StrCpy $0 1
+    ${EndIf}
+    Exch $0
+FunctionEnd
+
+; L'installation de l'autre portee que $lattisScope : $lattisOtherScope
+; (vide : aucune) et $lattisOtherVer, pour les messages.
+Function lattis.findOther
+    StrCpy $lattisOtherScope ""
+    StrCpy $lattisOtherVer ""
+    ${If} $lattisScope == user
+    ${AndIf} $lattisMachineDir != ""
+        StrCpy $lattisOtherScope machine
+        StrCpy $lattisOtherVer $lattisMachineVer
+    ${ElseIf} $lattisScope == machine
+    ${AndIf} $lattisUserDir != ""
+        StrCpy $lattisOtherScope user
+        StrCpy $lattisOtherVer $lattisUserVer
+    ${EndIf}
+    ; Le meme dossier inscrit des deux cotes : une seule installation.
+    ${If} $lattisUserDir == $lattisMachineDir
+        StrCpy $lattisOtherScope ""
+    ${EndIf}
+    ${If} $lattisOtherVer != ""
+        StrCpy $lattisOtherVer " $lattisOtherVer"
+    ${EndIf}
+FunctionEnd
+
+; Avec l'interface : « Lattis X est deja installe pour ... Il sera
+; remplace. » (pas dans l'instance elevee : celle qui l'a lancee a demande).
+; Rend 1 pour continuer, 0 si l'utilisateur annule.
+Function lattis.confirmOther
+    Push $0
+    StrCpy $0 1
+    ${If} $lattisOtherScope != ""
+    ${AndIfNot} ${Silent}
+    ${AndIf} $lattisElevated != 1
+        ${If} $lattisOtherScope == machine
+            MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "$(LATTIS_REPLACE_MACHINE)" IDOK lattis_confirm_ok
+        ${Else}
+            MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "$(LATTIS_REPLACE_USER)" IDOK lattis_confirm_ok
+        ${EndIf}
+        StrCpy $0 0
+        lattis_confirm_ok:
+    ${EndIf}
+    Exch $0
+FunctionEnd
+
+; Installation pour l'utilisateur : l'installation pour tous est retiree
+; avant la copie des fichiers. Sans droits, invite UAC (relance elevee),
+; sauf en silencieux quand l'installation pour l'utilisateur existe deja
+; (mise a jour sur place : l'application proposera de retirer l'autre).
+; Refus ou echec : rien n'est installe si ce serait une seconde
+; installation, sinon la mise a jour continue.
+Function lattis.replaceMachine
+    Push $0
+    ${If} $lattisOtherScope == machine
+        StrCpy $0 0
+        ${If} $lattisIsAdmin == 1
+            Push machine
+            Call lattis.removeInstall
+            Pop $0
+            Call lattis.cleanLeftovers
+        ${ElseIf} ${Silent}
+        ${AndIf} $lattisUserDir != ""
+            StrCpy $0 2
+        ${Else}
+            Call lattis.removeMachineElevated
+            Pop $0
+        ${EndIf}
+        ${If} $0 == 0
+            ${If} $lattisUserDir == ""
+                MessageBox MB_OK|MB_ICONSTOP "$(LATTIS_REMOVE_REFUSED)" /SD IDOK
+                StrCpy $lattisFailStatus elevation
+                Pop $0
+                Abort
+            ${EndIf}
+            DetailPrint "$(LATTIS_REMOVE_KEPT)"
+        ${ElseIf} $0 == 1
+            StrCpy $lattisOtherScope ""
+        ${EndIf}
+    ${EndIf}
+    Pop $0
+FunctionEnd
+
+; Installation pour tous : l'installation pour l'utilisateur est retiree
+; apres, si cette instance est dans le compte de l'utilisateur (pas
+; l'instance elevee par l'installeur : lattis.afterElevatedInstall).
+Function lattis.replaceUser
+    Push $0
+    ${If} $lattisOtherScope == user
+    ${AndIf} $lattisElevated != 1
+        Push user
+        Call lattis.removeInstall
+        Pop $0
+        ${If} $0 == 1
+            StrCpy $lattisOtherScope ""
+            ; Liens lattis:// : les desinstalleurs jusqu'a la 0.3.5-beta
+            ; retirent ceux de l'utilisateur, quelle que soit leur cible.
+            !insertmacro wails.associateCustomProtocols
+        ${Else}
+            DetailPrint "$(LATTIS_REMOVE_KEPT)"
+        ${EndIf}
+    ${EndIf}
+    Pop $0
+FunctionEnd
+
+; Instance non elevee, une fois l'installation pour tous faite par
+; l'instance elevee : l'installation pour l'utilisateur de CE compte est
+; retiree ici (l'instance elevee, peut-etre sous un autre compte, ne la
+; voit pas toujours).
+Function lattis.afterElevatedInstall
+    Push $0
+    Call lattis.readInstalls
+    ${If} $lattisUserDir != ""
+    ${AndIf} $lattisMachineDir != ""
+    ${AndIf} $lattisUserDir != $lattisMachineDir
+        StrCpy $lattisScope machine
+        Push user
+        Call lattis.removeInstall
+        Pop $0
+        ${If} $0 == 1
+            StrCpy $INSTDIR $lattisMachineDir
+            !insertmacro wails.associateCustomProtocols
+        ${EndIf}
+    ${EndIf}
+    Pop $0
+FunctionEnd
 
 ; Portee par defaut, sans /AllUsers ni /CurrentUser (voir en tete).
 Function lattis.guessScope
@@ -265,6 +611,9 @@ Function lattis.elevate
     ${EndIf}
     HideWindow
     Call lattis.waitChild
+    ${If} $lattisChildErr == 0
+        Call lattis.afterElevatedInstall
+    ${EndIf}
     SetErrorLevel $lattisChildErr
     Quit
 FunctionEnd
@@ -304,6 +653,27 @@ Function .onInit
     Call lattis.detectAdmin
     Call lattis.readInstalls
 
+    ; Instance elevee par lattis.removeMachineElevated : retire
+    ; l'installation demandee, rend 0 si elle n'est plus inscrite.
+    ClearErrors
+    ${GetOptions} $R0 "/REMOVE=" $R1
+    ${IfNot} ${Errors}
+        StrCpy $R2 0
+        ${If} $R1 == machine
+        ${OrIf} $R1 == user
+            Push $R1
+            Call lattis.removeInstall
+            Pop $R2
+            Call lattis.cleanLeftovers
+        ${EndIf}
+        ${If} $R2 == 1
+            SetErrorLevel 0
+        ${Else}
+            SetErrorLevel 1
+        ${EndIf}
+        Quit
+    ${EndIf}
+
     StrCpy $lattisScopeForced 0
     ClearErrors
     ${GetOptions} $R0 "/AllUsers" $R1
@@ -318,6 +688,34 @@ Function .onInit
             StrCpy $lattisScopeForced 1
         ${Else}
             Call lattis.guessScope
+        ${EndIf}
+    ${EndIf}
+
+    ; Silencieux, sans portee imposee : l'installation existante est mise a
+    ; jour sur place, jamais une seconde creee (meme avec un /D= nouveau).
+    ${If} ${Silent}
+    ${AndIf} $lattisScopeForced != 1
+        ${If} $lattisScope == user
+        ${AndIf} $lattisUserDir == ""
+        ${AndIf} $lattisMachineDir != ""
+            StrCpy $lattisScope machine
+            StrCpy $lattisCmdDir ""
+        ${ElseIf} $lattisScope == machine
+        ${AndIf} $lattisMachineDir == ""
+        ${AndIf} $lattisUserDir != ""
+            StrCpy $lattisScope user
+            StrCpy $lattisCmdDir ""
+        ${EndIf}
+    ${EndIf}
+
+    ; L'installation de l'autre portee, remplacee ; portee imposee avec
+    ; l'interface (pas de page de choix) : confirmation ici.
+    Call lattis.findOther
+    ${If} $lattisScopeForced == 1
+        Call lattis.confirmOther
+        Pop $R2
+        ${If} $R2 != 1
+            Quit
         ${EndIf}
     ${EndIf}
 
@@ -457,20 +855,12 @@ Function lattis.scopeLeave
         StrCpy $lattisScope user
     ${EndIf}
 
-    ; Deux copies cote a cote : prevenir.
-    ${If} $lattisScope == user
-    ${AndIf} $lattisMachineDir != ""
-    ${AndIf} $lattisUserDir == ""
-        MessageBox MB_YESNO|MB_ICONEXCLAMATION "$(LATTIS_OTHER_MACHINE)" IDYES lattis_keep_user
+    ; Jamais deux installations : celle de l'autre portee sera remplacee.
+    Call lattis.findOther
+    Call lattis.confirmOther
+    Pop $0
+    ${If} $0 != 1
         Abort
-        lattis_keep_user:
-    ${EndIf}
-    ${If} $lattisScope == machine
-    ${AndIf} $lattisUserDir != ""
-    ${AndIf} $lattisMachineDir == ""
-        MessageBox MB_YESNO|MB_ICONEXCLAMATION "$(LATTIS_OTHER_USER)" IDYES lattis_keep_machine
-        Abort
-        lattis_keep_machine:
     ${EndIf}
 
     ${If} $lattisScope == machine
@@ -502,6 +892,14 @@ Function un.onInit
     ${IfNot} ${Errors}
         StrCpy $lattisElevated 1
     ${EndIf}
+    ; /KEEPDATA : retrait par l'installeur ou l'application (autre
+    ; installation gardee), les donnees WebView2 restent.
+    StrCpy $lattisKeepData 0
+    ClearErrors
+    ${GetOptions} $R0 "/KEEPDATA" $R1
+    ${IfNot} ${Errors}
+        StrCpy $lattisKeepData 1
+    ${EndIf}
 
     Call un.lattis.detectAdmin
     Call un.lattis.readInstalls
@@ -522,11 +920,24 @@ Function un.onInit
         ${EndIf}
     ${EndIf}
 
+    ; Une autre installation reste (l'autre portee) : ses donnees WebView2,
+    ; communes, sont gardees.
+    ${If} $lattisScope == machine
+    ${AndIf} $lattisUserDir != ""
+        StrCpy $lattisKeepData 1
+    ${ElseIf} $lattisScope == user
+    ${AndIf} $lattisMachineDir != ""
+        StrCpy $lattisKeepData 1
+    ${EndIf}
+
     ${If} $lattisScope == machine
     ${AndIf} $lattisIsAdmin != 1
         ${If} $lattisElevated != 1
             ; _?= en dernier : le desinstalleur relance ne se recopie pas.
             StrCpy $lattisChildParams "/ELEVATED /LANGID=$LANGUAGE _?=$INSTDIR"
+            ${If} $lattisKeepData == 1
+                StrCpy $lattisChildParams "/KEEPDATA $lattisChildParams"
+            ${EndIf}
             ${If} ${Silent}
                 StrCpy $lattisChildParams "/S $lattisChildParams"
             ${EndIf}

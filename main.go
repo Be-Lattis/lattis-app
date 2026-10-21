@@ -126,11 +126,15 @@ func main() {
 	// Windows : schéma lattis:// déclaré pour l'utilisateur s'il manque ou
 	// vise un exécutable disparu (lancement depuis les sources, copie à la
 	// main) ; l'installeur et le paquet MSIX le déclarent eux-mêmes.
-	registerProtocol(noProtocol || os.Getenv("LATTIS_NO_REGISTER_PROTOCOL") == "1")
+	noRegister := noProtocol || os.Getenv("LATTIS_NO_REGISTER_PROTOCOL") == "1"
+	registerProtocol(noRegister)
 
 	// Mise à jour (barre d'état) : recherche sur GitHub, téléchargement
 	// vérifié au clic, installation à la fermeture (au retour de app.Run).
+	// Une seconde installation retirée a pu emporter les liens lattis:// :
+	// celle-ci les reprend.
 	updates := bridge.NewUpdateService()
+	updates.AfterDuplicateRemoved = func() { registerProtocol(noRegister) }
 
 	app := application.New(application.Options{
 		Name:        "Lattis",

@@ -4390,6 +4390,11 @@ export interface MessageParams {
 	'shell.update.check.yesterday': { time: number | string };
 	'shell.update.downloading': Record<never, never>;
 	'shell.update.downloadingTooltip': { version: number | string };
+	'shell.update.duplicate.failed': Record<never, never>;
+	'shell.update.duplicate.machineTooltip': { dir: number | string; version: number | string };
+	'shell.update.duplicate.removing': Record<never, never>;
+	'shell.update.duplicate.text': Record<never, never>;
+	'shell.update.duplicate.userTooltip': { dir: number | string; version: number | string };
 	'shell.update.failed': Record<never, never>;
 	'shell.update.installFailed': { version: number | string };
 	'shell.update.installFailedPage': { version: number | string };

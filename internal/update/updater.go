@@ -59,6 +59,10 @@ type Status struct {
 	LastError   string      `json:"lastError,omitempty"`
 	Checking    bool        `json:"checking,omitempty"`
 	Unavailable Unavailable `json:"unavailable,omitempty"`
+
+	// Duplicate : une seconde installation de Lattis sur le poste, à
+	// retirer (barre d'état) ; absente : une seule.
+	Duplicate *Duplicate `json:"duplicate,omitempty"`
 }
 
 // Unavailable : pourquoi la recherche des nouvelles versions est impossible.
@@ -106,6 +110,13 @@ type Updater struct {
 	// launchInstaller ; remplacés dans les tests).
 	Apply  func(p Pending, exe string, relaunch bool) error
 	Launch func(p Pending) error
+	// Installs : les installations inscrites au Registre, pour l'utilisateur
+	// et pour tous (nil : aucune ; New : celles du système). Remove lance le
+	// retrait de l'autre installation (nil : impossible) ; AfterRemove suit
+	// sa réussite (liens lattis:// repris par celle-ci).
+	Installs    func() (user, machine Entry)
+	Remove      func(d Duplicate) error
+	AfterRemove func()
 
 	mu        sync.Mutex
 	st        State
@@ -126,6 +137,8 @@ type Updater struct {
 	// « Installer manuellement », rien à installer à la fermeture.
 	exited bool
 	manual bool
+	// dup : une seconde installation de Lattis sur le poste (nil : aucune).
+	dup *Duplicate
 }
 
 // New prépare la mise à jour de l'exécutable en cours : genre
@@ -137,10 +150,12 @@ func New(current string) *Updater {
 		exe = r
 	}
 	u := &Updater{
-		Current: current,
-		Client:  &Client{HTTP: &http.Client{Timeout: 10 * time.Minute}, Version: current},
-		Exe:     exe,
-		Kind:    DetectKind(exe),
+		Current:  current,
+		Client:   &Client{HTTP: &http.Client{Timeout: 10 * time.Minute}, Version: current},
+		Exe:      exe,
+		Kind:     DetectKind(exe),
+		Installs: systemInstalls,
+		Remove:   removeOther,
 	}
 	if dir, err := os.UserConfigDir(); err == nil {
 		u.StateFile = filepath.Join(dir, "Lattis", "update.json")
@@ -225,6 +240,7 @@ func (u *Updater) Init() {
 	if u.st.Pending != nil {
 		keep = u.st.Pending.File
 	}
+	u.detectDuplicate()
 	st := u.st
 	u.mu.Unlock()
 	cleanup(u.Exe, u.Dir, keep)
@@ -294,6 +310,7 @@ func (u *Updater) status(l msg.Lang) Status {
 	}
 	s.Checking = u.checking
 	s.Unavailable = u.unavailable()
+	s.Duplicate = u.duplicateStatus(l)
 	return s
 }
 

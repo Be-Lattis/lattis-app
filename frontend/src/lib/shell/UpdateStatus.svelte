@@ -6,10 +6,11 @@
 	import { UpdateService } from '#bindings/internal/bridge/index.js';
 	import { openOutside } from '#lib/ai/links.js';
 	import { t } from '#lib/i18n/index.js';
-	import { updateView, type UpdateState } from './update';
+	import { duplicateView, updateView, type UpdateState } from './update';
 
 	let status = $state<UpdateState | null>(null);
 	const view = $derived(updateView(status));
+	const dup = $derived(duplicateView(status));
 
 	onMount(() => {
 		// Interface chargée : la recherche d'une nouvelle version part tout de suite.
@@ -21,6 +22,13 @@
 			if (e.data) status = e.data;
 		});
 	});
+
+	// Deux installations sur le poste : le désinstalleur de l'autre (invite
+	// UAC si elle est pour tous), suivi par update:status jusqu'à la fin.
+	function removeDuplicate() {
+		if (status?.duplicate) status = { ...status, duplicate: { ...status.duplicate, removing: true, error: '' } };
+		UpdateService.RemoveDuplicate().catch(() => {});
+	}
 
 	function dismiss() {
 		if (status) status = { ...status, updated: '' };
@@ -63,6 +71,15 @@
 	}
 </script>
 
+{#if dup}
+	<span class="update" class:warn={dup.warn} role="status" aria-live="polite">
+		{#if dup.busy}
+			<span class="spin" aria-hidden="true"></span><span class="text" title={dup.title}>{dup.text}</span>
+		{:else}
+			<button class="text" title={dup.title} onclick={removeDuplicate}>{dup.text}</button>
+		{/if}
+	</span>
+{/if}
 {#if view}
 	<span class="update" class:warn={view.warn} role="status" aria-live="polite">
 		{#if view.busy}

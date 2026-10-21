@@ -21,3 +21,8 @@ func SelfSigned(string) bool { return false }
 func apply(Pending, string, bool) error { return msg.New("update.unsupported", nil) }
 
 func launchInstaller(Pending) error { return msg.New("update.unsupported", nil) }
+
+// systemInstalls : pas de Registre hors Windows.
+func systemInstalls() (user, machine Entry) { return Entry{}, Entry{} }
+
+func removeOther(Duplicate) error { return msg.New("update.unsupported", nil) }

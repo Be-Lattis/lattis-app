@@ -103,34 +103,12 @@ ShowInstDetails show # This will always show the installation details.
 ## /D= : dossier d'installation, toujours en dernier, sans guillemets.
 !include "lattis_scope.nsh"
 
-; Lattis lance la mise a jour en se fermant : attendre que lattis.exe soit
-; libre (30 s au plus) avant de le remplacer.
-Function lattis.waitForExit
-    StrCpy $R3 0
-    ${Do}
-        ${IfNot} ${FileExists} "$INSTDIR\${PRODUCT_EXECUTABLE}"
-            ${Break}
-        ${EndIf}
-        ClearErrors
-        FileOpen $R4 "$INSTDIR\${PRODUCT_EXECUTABLE}" a
-        ${IfNot} ${Errors}
-            FileClose $R4
-            ${Break}
-        ${EndIf}
-        IntOp $R3 $R3 + 1
-        ${If} $R3 >= 60
-            ${Break}
-        ${EndIf}
-        Sleep 500
-    ${Loop}
-FunctionEnd
-
 ; Trace de l'installation lancee par Lattis (/UPDATE), lue au lancement
 ; suivant pour dire pourquoi la mise a jour n'a pas abouti (internal/update,
 ; installresult.go) : %LOCALAPPDATA%\Lattis\updates\install-result.txt de
 ; l'utilisateur, en UTF-16LE (le dossier peut avoir des accents).
 ; Pile : statut (ok, failed, locked, elevation) au sommet, puis le code.
-Var lattisFailStatus ; statut a ecrire par .onInstFailed (failed sinon)
+; $lattisFailStatus (lattis_scope.nsh) : statut a ecrire par .onInstFailed (failed sinon).
 Function lattis.writeResult
     Exch $0 ; statut
     Exch
@@ -175,7 +153,14 @@ Section
 
     !insertmacro wails.webview2runtime
 
-    Call lattis.waitForExit
+    ; Lattis lance la mise a jour en se fermant : attendre que lattis.exe soit
+    ; libre (30 s au plus) avant de le remplacer.
+    Push $INSTDIR
+    Call lattis.waitFree
+
+    ; Jamais deux installations : pour l'utilisateur, celle pour tous est
+    ; retiree d'abord (lattis_scope.nsh).
+    Call lattis.replaceMachine
 
     SetOutPath $INSTDIR
 
@@ -198,6 +183,11 @@ Section
 
     !insertmacro wails.writeUninstaller
 
+    ; Pour tous : celle pour l'utilisateur est retiree ensuite ; puis les
+    ; restes d'installations anciennes, sans desinstalleur (lattis_scope.nsh).
+    Call lattis.replaceUser
+    Call lattis.cleanLeftovers
+
     ${If} $lattisRelaunch == 1
         ${If} $lattisIsAdmin == 1
             ; Installeur eleve : relance par l'Explorateur, donc sans les droits
@@ -209,12 +199,23 @@ Section
     ${EndIf}
 SectionEnd
 
-Section "uninstall" 
+Section "uninstall"
     !insertmacro wails.setShellContext
 
-    RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
+    ; Donnees WebView2 de l'utilisateur, communes a toutes ses installations :
+    ; gardees si une autre installation reste ou sur /KEEPDATA (lattis_scope.nsh).
+    ${If} $lattisKeepData != 1
+        RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
+    ${EndIf}
 
     RMDir /r $INSTDIR
+    ; Pour tous : Program Files\Lattis, s'il est vide.
+    ${If} $lattisScope == machine
+        ${GetParent} $INSTDIR $0
+        ${If} $0 == "$PROGRAMFILES64\${INFO_COMPANYNAME}"
+            RMDir $0
+        ${EndIf}
+    ${EndIf}
 
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
     Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"

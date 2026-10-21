@@ -1110,6 +1110,13 @@
 		"releasePage": "Seite der Version",
 		"updated": "Update abgeschlossen, lesen Sie die Versionshinweise",
 		"updatedTooltip": "Lattis {version}: öffnet die Versionshinweise auf GitHub",
+		"duplicate": {
+			"text": "Zwei Installationen von Lattis auf diesem Computer — Die alte entfernen",
+			"userTooltip": "Die andere, Lattis {version}, ist nur für Ihr Konto installiert ({dir}). Klicken Sie, um sie zu deinstallieren; diese bleibt.",
+			"machineTooltip": "Die andere, Lattis {version}, ist für alle Benutzer dieses Computers installiert ({dir}). Klicken Sie, um sie zu deinstallieren (Windows fragt nach Administratorrechten); diese bleibt.",
+			"removing": "Die andere Installation von Lattis wird entfernt…",
+			"failed": "Die andere Installation von Lattis wurde nicht entfernt — Erneut versuchen"
+		},
 		"check": {
 			"line": "Version {version} · {detail}",
 			"last": "letzte Suche: {when}",

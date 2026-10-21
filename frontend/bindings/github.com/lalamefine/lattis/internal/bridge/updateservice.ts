@@ -57,6 +57,16 @@ export function Prepare(): $CancellablePromise<void> {
 }
 
 /**
+ * RemoveDuplicate : « Retirer l'ancienne » (deux installations de Lattis
+ * sur le poste) : lance le désinstalleur de l'autre installation (invite
+ * UAC si elle est pour tous les utilisateurs) ; l'évènement update:status
+ * suit le retrait jusqu'à sa fin (Status.Duplicate).
+ */
+export function RemoveDuplicate(): $CancellablePromise<void> {
+    return $Call.ByID(2376236987);
+}
+
+/**
  * RequestRestart : l'utilisateur redémarre pour appliquer la mise à jour ;
  * l'interface ferme ensuite la fenêtre par le chemin habituel (questions
  * d'enregistrement, écouteurs before_close), et l'application se relance

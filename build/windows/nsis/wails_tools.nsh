@@ -185,8 +185,12 @@ RequestExecutionLevel user
 # Copy of APP_ASSOCIATE and APP_UNASSOCIATE macros from here https://gist.github.com/nikku/281d0ef126dbc215dd58bfd5b3a5cd5b
 !macro APP_ASSOCIATE EXT FILECLASS DESCRIPTION ICON COMMANDTEXT COMMAND
   ; Backup the previously associated file class
+  ; Lattis : jamais la notre (mise a jour par-dessus une installation), que
+  ; le desinstalleur remettrait en place vers une classe retiree.
   ReadRegStr $R0 SHELL_CONTEXT "Software\Classes\.${EXT}" ""
-  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "${FILECLASS}_backup" "$R0"
+  ${If} $R0 != "${FILECLASS}"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "${FILECLASS}_backup" "$R0"
+  ${EndIf}
 
   WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "" "${FILECLASS}"
 
@@ -199,8 +203,22 @@ RequestExecutionLevel user
 
 !macro APP_UNASSOCIATE EXT FILECLASS
   ; Backup the previously associated file class
+  ; Lattis : si l'extension est encore a nous, la classe d'avant remise, ou
+  ; a defaut l'extension retiree (cle sans sous-cle) ; la valeur de
+  ; sauvegarde retiree dans tous les cas (rien ne reste derriere).
   ReadRegStr $R0 SHELL_CONTEXT "Software\Classes\.${EXT}" `${FILECLASS}_backup`
-  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "" "$R0"
+  ReadRegStr $R1 SHELL_CONTEXT "Software\Classes\.${EXT}" ""
+  ${If} $R1 == "${FILECLASS}"
+    ${If} $R0 != ""
+    ${AndIf} $R0 != "${FILECLASS}"
+      WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "" "$R0"
+    ${Else}
+      DeleteRegValue SHELL_CONTEXT "Software\Classes\.${EXT}" ""
+      DeleteRegValue SHELL_CONTEXT "Software\Classes\.${EXT}" `${FILECLASS}_backup`
+      DeleteRegKey /ifempty SHELL_CONTEXT "Software\Classes\.${EXT}"
+    ${EndIf}
+  ${EndIf}
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.${EXT}" `${FILECLASS}_backup`
 
   DeleteRegKey SHELL_CONTEXT `Software\Classes\${FILECLASS}`
 !macroend
@@ -243,5 +261,11 @@ RequestExecutionLevel user
 
 !macro wails.unassociateCustomProtocols
     ; Delete app custom protocol associations
-    DeleteRegKey HKCU "Software\Classes\lattis"
+    ; Lattis : seulement s'ils designent cette installation (une autre
+    ; installation, ou la version portable, a pu les reprendre).
+    ReadRegStr $R0 HKCU "Software\Classes\lattis\shell\open\command" ""
+    ${If} $R0 == "$\"$INSTDIR\${PRODUCT_EXECUTABLE}$\" $\"%1$\""
+    ${OrIf} $R0 == ""
+        DeleteRegKey HKCU "Software\Classes\lattis"
+    ${EndIf}
 !macroend

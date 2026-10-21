@@ -2,7 +2,11 @@ package update
 
 import (
 	"errors"
+	"io/fs"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -11,25 +15,28 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-// uninstallKey : clé de désinstallation écrite par les installeurs NSIS
-// (build/windows/nsis/wails_tools.nsh, UNINST_KEY), sous HKCU pour une
-// installation pour l'utilisateur, sous HKLM pour tous les utilisateurs.
-const uninstallKey = `Software\Microsoft\Windows\CurrentVersion\Uninstall\LattisLattis`
-
 // DetectKind : genre d'installation de l'exécutable exe.
 func DetectKind(exe string) Kind {
-	return kindFor(exe, Installs{User: readInstall(registry.CURRENT_USER), Machine: readInstall(registry.LOCAL_MACHINE)}, packaged())
+	user, machine := systemInstalls()
+	return kindFor(exe, Installs{User: user.Dir, Machine: machine.Dir}, packaged())
 }
 
-func readInstall(root registry.Key) string {
+// systemInstalls : les installations inscrites, pour l'utilisateur (HKCU)
+// et pour tous (HKLM).
+func systemInstalls() (user, machine Entry) {
+	return readEntry(registry.CURRENT_USER), readEntry(registry.LOCAL_MACHINE)
+}
+
+func readEntry(root registry.Key) Entry {
 	k, err := registry.OpenKey(root, uninstallKey, registry.QUERY_VALUE|registry.WOW64_64KEY)
 	if err != nil {
-		return ""
+		return Entry{}
 	}
 	defer k.Close()
 	loc, _, _ := k.GetStringValue("InstallLocation")
 	un, _, _ := k.GetStringValue("UninstallString")
-	return installDir(loc, un)
+	ver, _, _ := k.GetStringValue("DisplayVersion")
+	return entryFor(loc, un, ver)
 }
 
 // packaged : le processus tourne sous une identité de paquet (MSIX).
@@ -132,4 +139,96 @@ func startInstaller(p Pending, args string) error {
 		return msg.New("update.launchFailed", msg.Args{"err": err.Error()})
 	}
 	return cmd.Process.Release()
+}
+
+// removeOther lance le retrait de l'autre installation d (removalFor) ;
+// l'attente de sa disparition du Registre est faite par l'Updater.
+func removeOther(d Duplicate) error {
+	sys, _ := windows.GetSystemDirectory()
+	r := removalFor(d, fileExists, sys)
+	failed := func(err error) error {
+		return msg.New("update.duplicate.failed", msg.Args{"err": err.Error()})
+	}
+	switch {
+	case r.DeleteUserKey:
+		if err := registry.DeleteKey(registry.CURRENT_USER, uninstallKey); err != nil && !errors.Is(err, registry.ErrNotExist) {
+			return failed(err)
+		}
+		return nil
+	case r.OwnUser:
+		return removeUserInstall(d.Dir)
+	case r.Elevate:
+		// Pour tous : désinstalleur (ou reg.exe) avec l'invite UAC.
+		verb, _ := windows.UTF16PtrFromString("runas")
+		file, _ := windows.UTF16PtrFromString(r.File)
+		params, _ := windows.UTF16PtrFromString(r.Args)
+		err := windows.ShellExecute(0, verb, file, params, nil, windows.SW_HIDE)
+		if errors.Is(err, windows.ERROR_CANCELLED) {
+			return msg.New("update.duplicate.refused", nil)
+		}
+		if err != nil {
+			return failed(err)
+		}
+		return nil
+	}
+	cmd := exec.Command(r.File, strings.Fields(r.Args)...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NEW_PROCESS_GROUP}
+	if err := cmd.Start(); err != nil {
+		return failed(err)
+	}
+	return cmd.Process.Release()
+}
+
+func fileExists(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && !st.IsDir()
+}
+
+// removeUserInstall retire une installation pour l'utilisateur sans son
+// désinstalleur (removal.OwnUser) : ses fichiers connus et son dossier s'il
+// est vide, ses raccourcis (menu Démarrer, Bureau) qui la désignent, sa
+// classe de fichiers .lattis si elle l'ouvre, sa clé de désinstallation ;
+// jamais les données de l'utilisateur. Les liens lattis:// sont repris
+// ensuite par cette installation (Updater.AfterRemove).
+func removeUserInstall(dir string) error {
+	for _, f := range ownUserFiles(dir) {
+		if err := os.Remove(f); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			// lattis.exe encore ouvert : rien d'autre n'est touché.
+			return msg.New("update.duplicate.failed", msg.Args{"err": err.Error()})
+		}
+	}
+	_ = os.Remove(dir) // vide seulement
+	for _, id := range []*windows.KNOWNFOLDERID{windows.FOLDERID_Programs, windows.FOLDERID_Desktop} {
+		folder, err := windows.KnownFolderPath(id, 0)
+		if err != nil {
+			continue
+		}
+		lnk := filepath.Join(folder, "Lattis.lnk")
+		if b, err := os.ReadFile(lnk); err == nil && lnkMentions(b, dir) {
+			_ = os.Remove(lnk)
+		}
+	}
+	const class = `Software\Classes\Lattis.Classeur`
+	if k, err := registry.OpenKey(registry.CURRENT_USER, class+`\shell\open\command`, registry.QUERY_VALUE); err == nil {
+		cmd, _, _ := k.GetStringValue("")
+		k.Close()
+		if strings.Contains(strings.ToLower(cmd), strings.ToLower(strings.TrimRight(dir, `\`))+`\`) {
+			deleteTree(registry.CURRENT_USER, class)
+		}
+	}
+	if err := registry.DeleteKey(registry.CURRENT_USER, uninstallKey); err != nil && !errors.Is(err, registry.ErrNotExist) {
+		return msg.New("update.duplicate.failed", msg.Args{"err": err.Error()})
+	}
+	return nil
+}
+
+var procRegDeleteTree = windows.NewLazySystemDLL("advapi32.dll").NewProc("RegDeleteTreeW")
+
+// deleteTree supprime une clé et ses sous-clés.
+func deleteTree(root registry.Key, path string) {
+	p, err := windows.UTF16PtrFromString(path)
+	if err != nil || procRegDeleteTree.Find() != nil {
+		return
+	}
+	_, _, _ = procRegDeleteTree.Call(uintptr(root), uintptr(unsafe.Pointer(p)))
 }
