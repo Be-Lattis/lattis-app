@@ -44,9 +44,22 @@ print(pcall(charts.create, 40, 8, {source = tb, kind = "map", x = "Ville", serie
 	}
 }
 
+// resetTileCache vide le cache des tuiles, partagé par tout le processus
+// (sinon un essai relancé, -count=2, trouve sa tuile déjà là).
+func resetTileCache(t *testing.T) {
+	reset := func() {
+		tileMu.Lock()
+		tileCache, tileOrder = map[string]string{}, nil
+		tileMu.Unlock()
+	}
+	reset()
+	t.Cleanup(reset)
+}
+
 func TestMapTilePermissionAndCache(t *testing.T) {
 	old := httpTransport
 	t.Cleanup(func() { httpTransport = old })
+	resetTileCache(t)
 	fetched := 0
 	httpTransport = roundTrip(func(r *http.Request) (*http.Response, error) {
 		fetched++
