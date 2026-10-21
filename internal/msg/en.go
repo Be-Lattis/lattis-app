@@ -1392,6 +1392,9 @@ var en = map[ID]string{
 	"panic.interrupted": "Internal Lattis error ({where}): the operation was interrupted.",
 	"panic.logFile":     " Details are in {path}.",
 
+	// Trousseau du système (internal/keychain)
+	"keychain.unavailable": "No system keychain: sign-ins and passwords are kept until Lattis closes",
+
 	// Publishing checks
 	"check.columnProblem":  "column “{column}”: {problem}",
 	"check.invalidEntries": "“{table}”: {n} invalid entry(ies) to correct, or column to accept as text",

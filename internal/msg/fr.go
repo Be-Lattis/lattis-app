@@ -1394,6 +1394,9 @@ var fr = map[ID]string{
 	"panic.interrupted": "Erreur interne de Lattis ({where}) : l'opération a été interrompue.",
 	"panic.logFile":     " Le détail est dans {path}.",
 
+	// Trousseau du système (internal/keychain)
+	"keychain.unavailable": "Pas de trousseau système : connexions et mots de passe gardés jusqu'à la fermeture de Lattis",
+
 	// check
 	"check.columnProblem":  "colonne « {column} » : {problem}",
 	"check.invalidEntries": "« {table} » : {n} saisie(s) invalide(s) à corriger, ou colonne à accepter comme texte",

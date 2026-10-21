@@ -7,7 +7,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/zalando/go-keyring"
+	"github.com/lalamefine/lattis/internal/keychain"
 )
 
 // Les mots de passe des connexions ne sont jamais écrits dans le classeur :
@@ -15,7 +15,8 @@ import (
 // « Mémoriser », dans le trousseau du système (Gestionnaire d'identification
 // Windows, Trousseau macOS, Secret Service Linux), par compte
 // (genre://utilisateur@hôte:port/base) : à l'échelle de l'ordinateur. Un
-// trousseau absent ou en panne n'empêche rien : on retombe sur la mémoire.
+// trousseau absent, en panne ou qui ne répond pas n'empêche rien : on
+// retombe sur la mémoire jusqu'à la fermeture (internal/keychain).
 //
 // Un classeur ne s'en sert qu'avec l'accord de l'utilisateur : sinon un
 // classeur reçu par courriel, qui vise le même serveur et le même
@@ -88,7 +89,7 @@ func (s *Secrets) lookup(account string) (string, bool) {
 	if !s.v.keyring {
 		return "", false
 	}
-	pw, err := keyring.Get(keyringService, account)
+	pw, err := keychain.Get(keyringService, account)
 	if err != nil {
 		return "", false
 	}
@@ -189,7 +190,7 @@ func (s *Secrets) Set(account, pw string, remember bool) error {
 	s.v.mu.Unlock()
 	grantErr := s.Grant(account)
 	if remember && s.v.keyring {
-		if err := keyring.Set(keyringService, account, pw); err != nil {
+		if err := keychain.Set(keyringService, account, pw); err != nil {
 			return err
 		}
 	}
@@ -202,7 +203,7 @@ func (s *Secrets) Forget(account string) error {
 	delete(s.v.mem, account)
 	s.v.mu.Unlock()
 	if s.v.keyring {
-		if err := keyring.Delete(keyringService, account); err != nil && err != keyring.ErrNotFound {
+		if err := keychain.Delete(keyringService, account); err != nil {
 			return err
 		}
 	}
@@ -218,6 +219,6 @@ func (s *Secrets) Remembered(account string) bool {
 		s.v.mu.Unlock()
 		return ok && e.remember
 	}
-	_, err := keyring.Get(keyringService, account)
+	_, err := keychain.Get(keyringService, account)
 	return err == nil
 }

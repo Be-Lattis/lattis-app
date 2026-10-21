@@ -1393,6 +1393,9 @@ var de = map[ID]string{
 	"panic.interrupted": "Interner Fehler von Lattis ({where}): Der Vorgang wurde abgebrochen.",
 	"panic.logFile":     " Details stehen in {path}.",
 
+	// Trousseau du système (internal/keychain)
+	"keychain.unavailable": "Kein Schlüsselbund des Systems: Anmeldungen und Kennwörter bleiben bis zum Schließen von Lattis erhalten",
+
 	// Publishing checks
 	"check.columnProblem":  "Spalte „{column}“: {problem}",
 	"check.invalidEntries": "„{table}“: {n} ungültige Eingabe(n) zu korrigieren oder Spalte als Text zu akzeptieren",

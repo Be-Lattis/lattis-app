@@ -23,6 +23,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/lalamefine/lattis/internal/bridge"
+	"github.com/lalamefine/lattis/internal/keychain"
 	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/transport"
 )
@@ -97,6 +98,9 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 	if secrets == nil {
 		secrets = &bridge.MemSecrets{}
 	}
+	// Mots de passe des connexions et clés d'API : dans ce coffre, jamais
+	// dans le trousseau du compte système du serveur.
+	keychain.Use(sessionSecrets{secrets})
 	guard := &query.Guard{Dir: o.Dir, Hosts: o.InternalHosts}
 	if o.PublicDemo {
 		// Rien ne sort d'une démo publique : ni script, ni connexion.

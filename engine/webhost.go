@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/bridge"
+	"github.com/lalamefine/lattis/internal/keychain"
 	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/transport"
 )
@@ -251,6 +252,26 @@ func (h *WebHost) Clipboard() bridge.Clipboard { return &h.clip }
 
 // Secrets : fournis par lattisd (chiffrés côté serveur), en mémoire sinon.
 func (h *WebHost) Secrets() bridge.SecretStore { return h.secrets }
+
+// sessionSecrets présente le coffre de la session comme trousseau
+// (internal/keychain) : mots de passe des connexions et clés d'API.
+type sessionSecrets struct{ s bridge.SecretStore }
+
+func (k sessionSecrets) Get(service, account string) (string, error) {
+	v, err := k.s.Get(service, account)
+	if errors.Is(err, bridge.ErrSecretNotFound) {
+		return "", keychain.ErrNotFound
+	}
+	return v, err
+}
+
+func (k sessionSecrets) Set(service, account, secret string) error {
+	return k.s.Set(service, account, secret)
+}
+
+func (k sessionSecrets) Delete(service, account string) error {
+	return k.s.Delete(service, account)
+}
 
 // Window : pas de fenêtre en web.
 func (h *WebHost) Window() bridge.WindowControl { return bridge.NoWindow() }

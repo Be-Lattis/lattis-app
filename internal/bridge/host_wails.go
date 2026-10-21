@@ -7,10 +7,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/keychain"
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
-	"github.com/zalando/go-keyring"
 )
 
 // Hôte du bureau : Wails (boîtes de dialogue du système, évènements vers la
@@ -113,25 +113,24 @@ func (wailsClipboard) SetText(t string) bool {
 	return false
 }
 
+// keyringStore : trousseau du système, borné et replié sur la mémoire s'il
+// est indisponible (internal/keychain).
 type keyringStore struct{}
 
 func (keyringStore) Get(service, account string) (string, error) {
-	v, err := keyring.Get(service, account)
-	if errors.Is(err, keyring.ErrNotFound) {
+	v, err := keychain.Get(service, account)
+	if errors.Is(err, keychain.ErrNotFound) {
 		return "", ErrSecretNotFound
 	}
 	return v, err
 }
 
 func (keyringStore) Set(service, account, secret string) error {
-	return keyring.Set(service, account, secret)
+	return keychain.Set(service, account, secret)
 }
 
 func (keyringStore) Delete(service, account string) error {
-	if err := keyring.Delete(service, account); err != nil && !errors.Is(err, keyring.ErrNotFound) {
-		return err
-	}
-	return nil
+	return keychain.Delete(service, account)
 }
 
 type wailsWindow struct{}

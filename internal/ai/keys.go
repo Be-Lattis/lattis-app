@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/zalando/go-keyring"
+	"github.com/lalamefine/lattis/internal/keychain"
 )
 
 // Les clés d'API sont personnelles et à l'échelle de l'ordinateur : gardées
@@ -46,7 +46,7 @@ func (k *Keys) Get(provider string) (string, bool) {
 	if !k.keyring {
 		return "", false
 	}
-	v, err := keyring.Get(keyringService, account(provider))
+	v, err := keychain.Get(keyringService, account(provider))
 	if err != nil {
 		return "", false
 	}
@@ -70,7 +70,7 @@ func (k *Keys) Set(provider, key string) error {
 	if !k.keyring {
 		return nil
 	}
-	return keyring.Set(keyringService, account(provider), key)
+	return keychain.Set(keyringService, account(provider), key)
 }
 
 // Delete oublie la clé d'un fournisseur (mémoire et trousseau).
@@ -81,7 +81,7 @@ func (k *Keys) Delete(provider string) error {
 	if !k.keyring {
 		return nil
 	}
-	if err := keyring.Delete(keyringService, account(provider)); err != nil && !errors.Is(err, keyring.ErrNotFound) {
+	if err := keychain.Delete(keyringService, account(provider)); err != nil {
 		return err
 	}
 	return nil

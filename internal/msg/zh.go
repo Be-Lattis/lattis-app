@@ -1394,6 +1394,9 @@ var zh = map[ID]string{
 	"panic.interrupted": "Lattis 内部错误（{where}）：操作已中断。",
 	"panic.logFile":     "详细信息位于 {path}。",
 
+	// Trousseau du système (internal/keychain)
+	"keychain.unavailable": "没有系统钥匙串：登录和密码仅保留到 Lattis 关闭",
+
 	// Publishing checks
 	"check.columnProblem":  "列“{column}”：{problem}",
 	"check.invalidEntries": "“{table}”：{n} 个无效输入需要更正，或将该列作为文本接受",

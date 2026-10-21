@@ -64,7 +64,7 @@ Implémentations :
 
 **Étiquette `web`** : `go build -tags web ./cmd/lattis-engine` n'importe pas Wails (`go list -deps -tags web ./cmd/lattis-engine | grep wails` est vide). Sans l'étiquette, le moteur compile aussi (l'hôte web remplace l'hôte Wails par `UseHost`).
 
-Reste dans les paquets du moteur : le trousseau (`go-keyring`) qu'utilisent encore `internal/ai` et `internal/query` directement ; à faire passer par `Host.Secrets()` quand la connexion au Serveur Lattis sera en place (chantier parallèle dans `internal/query`).
+Trousseau : `internal/ai` et `internal/query` passent par `internal/keychain` (appels bornés, repli sur la mémoire si le trousseau est absent ou ne répond pas). Le moteur web y branche le coffre de la session (`Options.Secrets`, en mémoire sans lui) : jamais le trousseau du compte système du serveur.
 
 ### 3.2 Transport JSON-RPC (`internal/transport`)
 
@@ -216,7 +216,6 @@ Points d'attention pour `lattisd` :
 
 ## 7. Reste à faire
 
-- Faire passer `internal/ai` et `internal/query` par `Host.Secrets()` (aujourd'hui `go-keyring` directement ; sans effet utile sur un serveur).
 - Fichiers récents du serveur, ouverture d'un classeur du Serveur Lattis, chemins masqués (point 3 ci-dessus).
 - Retirer les états globaux au processus pour héberger plusieurs moteurs par processus.
 - Tests Playwright sur `lattisd` en édition `web` (spécification § 14) ; l'essai de bout en bout est aujourd'hui un script CDP manuel.

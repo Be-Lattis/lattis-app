@@ -85,7 +85,7 @@ Les thèmes de l'organisation s'ajoutent à ceux que l'utilisateur garde dans so
 
 `ai.dataSharing` vaut `schema-only` (structure seulement, par défaut), `sample` (quelques lignes d'exemple par lecture) ou `full` (tout le classeur). Il s'applique à l'assistant intégré comme à Claude Desktop ou Claude Code par le serveur MCP.
 
-**Aucun secret** : `password`, `secret`, `clientSecret`, `token`, `apiKey` sont refusés partout. Les mots de passe et jetons de chaque utilisateur restent dans le trousseau du système. Seule exception : `identity.providers.*.desktopClientSecret`, que Google exige pour une application de bureau sans le tenir pour confidentiel.
+**Aucun secret** : `password`, `secret`, `clientSecret`, `token`, `apiKey` sont refusés partout. Les mots de passe et jetons de chaque utilisateur restent dans le trousseau du système (Gestionnaire d'identification Windows, Trousseau macOS, Secret Service sous Linux : gnome-keyring, KWallet). Sur un poste qui n'en a pas, ou dont le trousseau ne répond pas en quelques secondes (session kiosque, conteneur, invite de déverrouillage impossible à afficher), Lattis les garde en mémoire jusqu'à sa fermeture, jamais dans un fichier, et le dit une fois dans la barre d'état : l'utilisateur se reconnecte à chaque lancement. Seule exception : `identity.providers.*.desktopClientSecret`, que Google exige pour une application de bureau sans le tenir pour confidentiel.
 
 `configUrl` et `remote.*` sont réservés aux couches posées par un administrateur (stratégie, `HKLM`, fichier machine protégé) dès que l'une d'elles les définit. Sur un poste sans configuration d'entreprise, l'environnement peut les poser (tests).
 
