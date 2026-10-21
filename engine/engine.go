@@ -105,7 +105,8 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 	if o.PublicDemo {
 		// Rien ne sort d'une démo publique : ni script, ni connexion.
 		o.Scripting = false
-		guard = &query.Guard{Dir: o.Dir, Offline: true}
+		// Démo publique : aucune connexion sortante, sauf le fond de carte.
+		guard = &query.Guard{Dir: o.Dir, Offline: true, OfflineExcept: []string{"tile.openstreetmap.org"}}
 		bridge.UsePublicDemo(true)
 		e.dispose = o.Dir
 	}

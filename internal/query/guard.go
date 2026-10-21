@@ -30,6 +30,10 @@ type Guard struct {
 	// Offline refuse toute connexion réseau, Hosts compris (démo publique :
 	// pas de connexion sortante) ; les fichiers de Dir restent lisibles.
 	Offline bool
+	// OfflineExcept : hôtes joignables malgré Offline (démo publique : les
+	// tuiles du fond de carte, tile.openstreetmap.org), toujours soumis au
+	// refus des adresses internes.
+	OfflineExcept []string
 	// resolve remplace la résolution DNS (tests).
 	resolve func(ctx context.Context, host string) ([]net.IP, error)
 }
@@ -69,7 +73,7 @@ func (g *Guard) Check(ctx context.Context, a Access) error {
 	if a.Path != "" {
 		return g.CheckPath(a.Path)
 	}
-	if g.Offline {
+	if g.Offline && !g.Excepted(a.Host) {
 		return g.offline(a.Host)
 	}
 	if a.Host == "" {
@@ -87,6 +91,20 @@ func (g *Guard) Check(ctx context.Context, a Access) error {
 		return fmt.Errorf("%s : %w", host, err)
 	}
 	return checkIPs(host, ips)
+}
+
+// Excepted dit si host (« hôte » ou « hôte:port ») est joignable malgré
+// Offline (OfflineExcept).
+func (g *Guard) Excepted(host string) bool {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	for _, e := range g.OfflineExcept {
+		if host != "" && strings.EqualFold(host, e) {
+			return true
+		}
+	}
+	return false
 }
 
 // offline refuse une connexion (Guard.Offline) ; host peut être vide (base
@@ -178,7 +196,7 @@ func (g *Guard) DialContext(ctx context.Context, network, addr string) (net.Conn
 	if err != nil {
 		return nil, err
 	}
-	if g.Offline {
+	if g.Offline && !g.Excepted(host) {
 		return nil, g.offline(addr)
 	}
 	d := &net.Dialer{Timeout: 30 * time.Second}

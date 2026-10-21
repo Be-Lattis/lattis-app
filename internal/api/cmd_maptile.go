@@ -37,10 +37,27 @@ func tileAsk(h string) Dialog {
 	}
 }
 
-// tilesOffline dit si l'hôte de l'application refuse tout réseau.
+// tilesOffline dit si l'hôte de l'application refuse tout réseau, tuiles
+// comprises.
 func (c *Call) tilesOffline() bool {
 	g, ok := c.Host.(query.Guarded)
-	return ok && g.QueryGuard() != nil && g.QueryGuard().Offline
+	return ok && g.QueryGuard() != nil && g.QueryGuard().Offline && !g.QueryGuard().Excepted(tileHost())
+}
+
+// tilesPreallowed : démo publique, les tuiles sont l'exception permise à
+// une application sans réseau ; pas de question à leur sujet.
+func (c *Call) tilesPreallowed() bool {
+	g, ok := c.Host.(query.Guarded)
+	return ok && g.QueryGuard() != nil && g.QueryGuard().Offline && g.QueryGuard().Excepted(tileHost())
+}
+
+// tileHost est l'hôte des tuiles (tileURL).
+func tileHost() string {
+	u, err := url.Parse(fmt.Sprintf(tileURL, 0, 0, 0))
+	if err != nil {
+		return ""
+	}
+	return u.Hostname()
 }
 
 // tileURL est l'adresse des tuiles (OpenStreetMap) ; les tests la changent.
@@ -90,13 +107,15 @@ func (c *Call) mapTile(z, x, y int) (string, error) {
 	if c.tilesOffline() {
 		return "", ErrTileOffline
 	}
-	if err := c.allowHostAsk(u.Host, tileAsk); err != nil {
-		return "", err
+	if !c.tilesPreallowed() {
+		if err := c.allowHostAsk(u.Host, tileAsk); err != nil {
+			return "", err
+		}
 	}
 	if v, ok := tileGet(raw); ok {
 		return v, nil
 	}
-	r, err := c.doHTTP(httpRequest{method: "GET", url: raw, headers: map[string]string{
+	r, err := c.doHTTP(httpRequest{method: "GET", url: raw, preallowed: c.tilesPreallowed(), headers: map[string]string{
 		"User-Agent": "Lattis (tableur ; cartes des graphiques)",
 	}})
 	if err != nil {

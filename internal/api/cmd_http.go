@@ -82,6 +82,9 @@ type httpRequest struct {
 	hasBody bool
 	ctype   string // type par défaut du corps
 	timeout time.Duration
+	// preallowed : hôte permis d'office (tuiles de la démo publique), sans
+	// question ; une redirection ailleurs reste soumise à l'accord.
+	preallowed bool
 }
 
 // askHost sérialise les demandes d'autorisation : deux requêtes simultanées
@@ -170,8 +173,10 @@ func (c *Call) doHTTP(r httpRequest) (HTTPResponse, error) {
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return HTTPResponse{}, msg.New("http.schemeExpected", msg.Args{"url": fmt.Sprintf("%q", r.url)})
 	}
-	if err := c.allowHost(u.Host); err != nil {
-		return HTTPResponse{}, err
+	if !r.preallowed {
+		if err := c.allowHost(u.Host); err != nil {
+			return HTTPResponse{}, err
+		}
 	}
 	timeout := r.timeout
 	if timeout <= 0 {

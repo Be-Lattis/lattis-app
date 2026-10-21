@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Changements
+
+- Démo publique : le fond de carte OpenStreetMap s'affiche (seule connexion sortante permise), sans question.
+
 ## 0.3.4-beta (21/10/2026)
 
 ### Nouveautés
