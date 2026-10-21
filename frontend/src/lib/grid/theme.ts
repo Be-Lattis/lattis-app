@@ -321,6 +321,7 @@ export function gridPalette(t: ResolvedTheme) {
 		linkHead: t.source.head,
 		linkHeadText: t.source.text,
 		linkBorder: t.source.border,
-		linkIcon: t.source.icon
+		linkIcon: t.source.icon,
+		sourceBadge: t.source.badge
 	};
 }

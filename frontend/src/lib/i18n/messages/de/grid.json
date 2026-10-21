@@ -892,7 +892,10 @@
 		"fold.expand": "Erweitern",
 		"fold.collapse": "Reduzieren",
 		"fold.expandAll": "Alle erweitern",
-		"fold.collapseAll": "Alle reduzieren"
+		"fold.collapseAll": "Alle reduzieren",
+		"nameBadge": {
+			"tooltip": "PivotTable „{name}“: Formeln lesen sie wie eine Tabelle ({name}[Spalte]); klicken, um ihren Bereich zu öffnen"
+		}
 	},
 	"readFail": "Die Tabelle „{table}“ konnte nicht erneut gelesen werden; sie wird neu geladen.",
 	"refLink": {

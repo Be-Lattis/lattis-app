@@ -892,7 +892,10 @@
 		"fold.expand": "Développer",
 		"fold.collapse": "Réduire",
 		"fold.expandAll": "Développer tout",
-		"fold.collapseAll": "Réduire tout"
+		"fold.collapseAll": "Réduire tout",
+		"nameBadge": {
+			"tooltip": "Tableau croisé « {name} » : il se lit dans les formules comme un tableau ({name}[Colonne]) ; cliquer pour ouvrir son volet"
+		}
 	},
 	"readFail": "Le tableau « {table} » n'a pas pu être relu ; il sera rechargé.",
 	"refLink": {

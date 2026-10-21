@@ -892,7 +892,10 @@
 		"fold.expand": "展开",
 		"fold.collapse": "折叠",
 		"fold.expandAll": "全部展开",
-		"fold.collapseAll": "全部折叠"
+		"fold.collapseAll": "全部折叠",
+		"nameBadge": {
+			"tooltip": "数据透视表“{name}”：公式像表格一样读取它（{name}[列]）；单击打开其窗格"
+		}
 	},
 	"readFail": "无法重新读取表格“{table}”；将重新加载它。",
 	"refLink": {

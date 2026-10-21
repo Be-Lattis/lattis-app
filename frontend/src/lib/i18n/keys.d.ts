@@ -1351,6 +1351,7 @@ export interface MessageParams {
 	'grid.pivot.move.last': Record<never, never>;
 	'grid.pivot.move.to': { zone: number | string };
 	'grid.pivot.move.up': Record<never, never>;
+	'grid.pivot.nameBadge.tooltip': { name: number | string };
 	'grid.pivot.noValues': Record<never, never>;
 	'grid.pivot.overlap': { name: number | string };
 	'grid.pivot.panel.help': Record<never, never>;

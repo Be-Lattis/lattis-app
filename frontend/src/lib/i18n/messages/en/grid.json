@@ -892,7 +892,10 @@
 		"fold.expand": "Expand",
 		"fold.collapse": "Collapse",
 		"fold.expandAll": "Expand all",
-		"fold.collapseAll": "Collapse all"
+		"fold.collapseAll": "Collapse all",
+		"nameBadge": {
+			"tooltip": "PivotTable “{name}”: formulas read it like a table ({name}[Column]); click to open its pane"
+		}
 	},
 	"readFail": "The table “{table}” couldn't be reread; it will be reloaded.",
 	"refLink": {

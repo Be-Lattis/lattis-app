@@ -85,6 +85,9 @@ type tx struct {
 	// syncingFormulas : recalcul des tableaux liés à une formule en cours
 	// (spilltable.go).
 	syncingFormulas bool
+	// pivotTables : tableaux croisés en cours de calcul comme tableau de
+	// formules (pivotref.go), contre la récursion.
+	pivotTables map[string]bool
 	// typed : écriture de la session d'une saisie tapée (SetCell, collage),
 	// lue par input dans la forme gardée (session.go) ; nil : la saisie est
 	// déjà dans la forme gardée.

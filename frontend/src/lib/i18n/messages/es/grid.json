@@ -892,7 +892,10 @@
 		"fold.expand": "Expandir",
 		"fold.collapse": "Contraer",
 		"fold.expandAll": "Expandir todo",
-		"fold.collapseAll": "Contraer todo"
+		"fold.collapseAll": "Contraer todo",
+		"nameBadge": {
+			"tooltip": "Tabla dinámica «{name}»: las fórmulas la leen como una tabla ({name}[Columna]); haga clic para abrir su panel"
+		}
 	},
 	"readFail": "No se pudo volver a leer la tabla «{table}»; se volverá a cargar.",
 	"refLink": {

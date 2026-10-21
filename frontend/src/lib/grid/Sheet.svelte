@@ -90,6 +90,7 @@
 	import { brokenPivotAt, pivotsCleared } from './pivotzone';
 	import { midEllipsis } from './midellipsis';
 	import { handAlign, handEditText, handKeptNote, handStart, pivotHandAt } from './pivothand';
+	import { pivotRangeRef, pivotRefText } from './pivotref';
 	import { placeAt, placedMessage, placeHint, placeKey, placesOnClick, type Placement } from './pivotplace';
 	import SheetButtons from './SheetButtons.svelte';
 	import { BUTTON_H, BUTTON_W, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
@@ -770,6 +771,8 @@
 		// Pastille du nom d'un tableau : nommé (couleur du thème, plus claire), ou nom par défaut (gris, à renommer).
 		nameBadge: '#2f7d55',
 		unnamedBadge: '#8a9099',
+		// Pastille du nom d'un tableau croisé (TCD1) : couleur des sources externes.
+		sourceBadge: '#3b6fb6',
 		// Pastille « sur ce poste » : tableau d'un classeur collaboratif pas
 		// (encore) dans le classeur partagé (ambre : à remarquer).
 		localBadge: '#a15c07',
@@ -2372,6 +2375,7 @@
 		pinnedFrame = [];
 		keyHintBoxes = [];
 		followBadges = [];
+		pivotBadges = [];
 		hiddenMarks = [];
 		// Texte centré verticalement partout (les volets dessinent entre save et
 		// restore : la ligne de base doit être posée avant, pour la marge et le bandeau).
@@ -2805,6 +2809,34 @@
 			}
 			ctx.stroke();
 			ctx.restore();
+			// Pastille du nom (TCD1), comme celle d'un tableau : un TCD se lit
+			// dans les formules comme un tableau nommé (TCD1[Nombre]). Toujours
+			// montrée : l'onglet « TCD 1 » ne porte pas son nom. Un clic ouvre le volet.
+			if (curPane && p.config.name) {
+				ctx.font = FONT_SMALL;
+				const bh = 13;
+				const bx = Math.round(cx(p.col)) - 0.5;
+				const by = Math.round(ry(p.row)) - 0.5;
+				let aboveFree = true;
+				for (let r = p.row - 1; aboveFree && r >= 0 && ry(r + 1) > by - bh; r--) {
+					if (!rh(r)) continue;
+					for (let c = p.col; c <= pc1; c++) {
+						const v = cells.get(key(r, c));
+						if ((v !== undefined && v !== '') || tableAt(r, c) || (pivotAt(r, c) && pivotAt(r, c) !== p) || mergeOf(r, c)) {
+							aboveFree = false;
+							break;
+						}
+					}
+				}
+				const fw = spanW(p.col, pc1);
+				const label = fitText(p.config.name, fw - 10);
+				const bw = Math.ceil(ctx.measureText(label).width) + 10;
+				const pp = curPane;
+				if (fw >= 30) {
+					const b = placeFollowBadge({ x: bx, y: by, w: fw, bw, bh, paneTop: pp.y0, strip: pp.y0 === TOP_H, aboveFree, left: true });
+					pivotBadges.push({ p, label, radii: b.radii, x0: b.x, x1: b.x + bw, y0: b.y, y1: b.y + bh, clip: { x0: pp.x0, x1: pp.x1, y0: pp.y0 === TOP_H ? 0 : pp.y0, y1: pp.y1 } });
+				}
+			}
 		}
 		// Texte aligné à gauche qui déborde (comme Excel) : seulement sur les
 		// cellules voisines vides ; il est coupé à la première cellule occupée
@@ -3861,6 +3893,8 @@
 	// le même pour toutes les valeurs. Un clic sur la pastille ouvre son menu
 	// (« Suivre l'année », à décocher).
 	let followBadges: { kind: 'follow' | 'name' | 'unnamed' | 'local'; e: Entry; label: string; radii: number[]; x0: number; x1: number; y0: number; y1: number; clip: { x0: number; x1: number; y0: number; y1: number } }[] = [];
+	/** Pastilles du nom des tableaux croisés (TCD1) : un clic ouvre leur volet. */
+	let pivotBadges: { p: SheetPivot; label: string; radii: number[]; x0: number; x1: number; y0: number; y1: number; clip: { x0: number; x1: number; y0: number; y1: number } }[] = [];
 	// Champ du nom du tableau (barre de formule) : la pastille du nom l'ouvre.
 	let tableNameEl = $state<HTMLInputElement>();
 	/** Volet en cours de dessin (découpe des pastilles). */
@@ -3868,12 +3902,12 @@
 
 	/** Pastilles posées pendant le dessin des cadres, par-dessus le bandeau du haut. */
 	function drawFollowBadges() {
-		for (const b of followBadges) {
+		for (const b of [...followBadges, ...pivotBadges.map((x) => ({ ...x, kind: 'pivot' as const }))]) {
 			ctx.save();
 			ctx.beginPath();
 			ctx.rect(Math.max(b.clip.x0, MARGIN), b.clip.y0, b.clip.x1 - Math.max(b.clip.x0, MARGIN), b.clip.y1 - b.clip.y0);
 			ctx.clip();
-			ctx.fillStyle = b.kind === 'follow' ? C.followBadge : b.kind === 'name' ? C.nameBadge : b.kind === 'local' ? C.localBadge : C.unnamedBadge;
+			ctx.fillStyle = b.kind === 'pivot' ? C.sourceBadge : b.kind === 'follow' ? C.followBadge : b.kind === 'name' ? C.nameBadge : b.kind === 'local' ? C.localBadge : C.unnamedBadge;
 			ctx.beginPath();
 			ctx.roundRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, b.radii);
 			ctx.fill();
@@ -3899,6 +3933,11 @@
 	function nameBadgeAt(ev: MouseEvent): Entry | null {
 		const b = badgeAt(ev);
 		return b && (b.kind === 'name' || b.kind === 'unnamed') ? b.e : null;
+	}
+	/** Pastille du nom d'un tableau croisé sous la souris : son TCD. */
+	function pivotBadgeAt(ev: MouseEvent): SheetPivot | null {
+		const { x, y } = toLocal(ev);
+		return pivotBadges.find((b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1)?.p ?? null;
 	}
 	/** Pastille « sur ce poste » sous la souris : son tableau. */
 	function localBadgeAt(ev: MouseEvent): Entry | null {
@@ -7806,6 +7845,17 @@
 			void renameFromBadge(ne);
 			return;
 		}
+		if (e.button === 0 && !formulaMode && pivotBadgeAt(e)) {
+			// Nom d'un TCD : sa cellule d'en-tête et son volet (où se lit son nom).
+			e.preventDefault();
+			if (!commitEditor()) return;
+			const pb = pivotBadgeAt(e)!;
+			closeMenus();
+			moveTo(pb.row, pb.col);
+			ensureVisible(pb.row, pb.col);
+			panel = { kind: 'pivot', id: pb.id };
+			return;
+		}
 		if (e.button === 0 && !formulaMode && localBadgeAt(e)) {
 			// « Sur ce poste » : propose de l'ajouter au classeur partagé
 			// (confirmation, ou pourquoi pas maintenant).
@@ -7964,6 +8014,11 @@
 	 */
 	function refFor(r: number, c: number, kind: '' | 'table' | 'column' = ''): string {
 		const e = tableAt(r, c);
+		// Tableau croisé : lu comme un tableau nommé (TCD1[Col], [Col] dans
+		// ses colonnes saisies), jamais par l'adresse de la cellule (pivotref.ts).
+		const pv = e ? undefined : pivotAt(r, c);
+		const pref = pv ? pivotRefText(pv, r, c, hold ? null : active, kind) : null;
+		if (pref) return pref;
 		if (!e) return cellAddr(r, c);
 		const col = e.t.columns[c - e.t.col].name;
 		// L'argument en cours attend un tableau ou une colonne entière
@@ -8135,10 +8190,13 @@
 		const { from } = refDrag;
 		const { tables, at } = refContext();
 		const hereT = at?.table;
+		const pv = pivotAt(from.row, from.col);
 		const text =
 			from.row === cell.row && from.col === cell.col
 				? refFor(cell.row, cell.col)
-				: rangeRef({ r0: from.row, c0: from.col, r1: cell.row, c1: cell.col }, tables, hereT);
+				: pv && pivotAt(cell.row, cell.col) === pv
+					? pivotRangeRef(pv, from.row, from.col, cell.row, cell.col)
+					: rangeRef({ r0: from.row, c0: from.col, r1: cell.row, c1: cell.col }, tables, hereT);
 		if (text === null) {
 			say(tr('grid.formula.refOneColumn'));
 			return;
@@ -10149,6 +10207,12 @@
 					? tr('grid.nameBadge.default.tooltip', { name: nb.t.name })
 					: tr('grid.nameBadge.tooltip', { name: nb.t.name });
 			tipCell = 'name:' + nb.t.name;
+			return;
+		}
+		const pb = pivotBadgeAt(ev);
+		if (pb) {
+			if (tipCell !== 'pivot:' + pb.id) scroller.title = tr('grid.pivot.nameBadge.tooltip', { name: pb.config.name ?? '' });
+			tipCell = 'pivot:' + pb.id;
 			return;
 		}
 		if (localBadgeAt(ev)) {

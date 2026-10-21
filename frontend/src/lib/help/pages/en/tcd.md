@@ -66,3 +66,5 @@ Typed columns stay at the right edge of the PivotTable when it widens (one more 
 ## Use a PivotTable elsewhere {#utiliser-un-tableau-croise-ailleurs}
 
 A PivotTable has a name (shown at the top of the pane): it can be queried in the [SQL tab](sql) like a table, and serves as a source for [charts](graphiques). The [GROUPBY](fonction:GROUPBY) function gives a simple grouping directly in a formula.
+
+**In a formula**, a PivotTable reads like a named table, by its name (the blue badge at the top left of its frame): `=SUM(TCD1[Count])` reads the whole column (detail rows only, without groups, subtotals or total), `=TCD1[NID][2]` its second detail row, and its typed columns read the same way (`TCD1[test]`). While typing a formula, clicking in the PivotTable writes these references rather than an address: `[Count]` on the row of a formula typed in a typed column of the PivotTable, `TCD1[Count][2]` elsewhere, `TCD1[Count]` on a header or a total row. In a typed column, `[Count]` (or `[@Count]`) is also calculated on group, subtotal and total rows, with their own values; row fields finer than the row are empty there.

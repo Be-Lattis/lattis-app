@@ -283,7 +283,7 @@ func (t *tx) pivotHandEval(sheet int64, cfg PivotConfig, cells [][]string, rows 
 	var lines []string
 	for i := 1; i < len(cells); i++ {
 		d := "0"
-		if keys[i] != "" {
+		if pivotDetail(cfg, keys, i) {
 			d = "1"
 		}
 		parts := []string{strconv.Itoa(i), strconv.Itoa(i), d}

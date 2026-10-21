@@ -82,7 +82,7 @@ func TestSchemaCachedPerGeneration(t *testing.T) {
 		var s *formula.Schema
 		if err := d.read(ctx, func(x *tx) error {
 			var err error
-			s, err = x.schema()
+			s, err = x.schemaBase()
 			return err
 		}); err != nil {
 			t.Fatal(err)

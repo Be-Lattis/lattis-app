@@ -69,6 +69,11 @@ type Schema struct {
 	// lit dans une colonne (« 1,234 » vaut 1,234 en français et 1234 en
 	// anglais, voir TextNumber) ; français par défaut.
 	Numbers Locale
+
+	// Extra rend un tableau qui n'est pas dans Tables, cherché par son nom
+	// (ok faux : inconnu) : les tableaux croisés (TCD1[Nombre]), calculés
+	// seulement quand une formule les cite.
+	Extra func(name string) (*Table, bool)
 }
 
 // rule donne la lecture des textes d'une plage : colonne de tableau, ou
@@ -118,6 +123,9 @@ func (s *Schema) Table(name string) (*Table, bool) {
 		if strings.EqualFold(t.Name, name) {
 			return t, true
 		}
+	}
+	if s.Extra != nil {
+		return s.Extra(name)
 	}
 	return nil, false
 }

@@ -126,7 +126,7 @@ func (t *tx) prepareFormula(sheet int64, src string) (formula.Node, error) {
 	seen := map[string]bool{}
 	for _, need := range needs {
 		low := strings.ToLower(need.Table)
-		if ft, ok := schema.Table(need.Table); ok && ft.Key == "" && !byRow[low] && !seen[low] {
+		if ft, ok := schema.Table(need.Table); ok && ft.Key == "" && !byRow[low] && !seen[low] && !pivotSchemaTable(schema, need.Table) {
 			seen[low] = true
 			pending = append(pending, need)
 		}
@@ -288,7 +288,25 @@ func (t *tx) ensureKey(table, column string) error {
 // dizaine de tableaux, plus avec davantage). Le moteur de formules ne le
 // modifie pas.
 func (t *tx) schema() (*formula.Schema, error) {
+	s, err := t.schemaBase()
+	return t.withPivots(s), err
+}
+
+// schemaBase est le schéma en cache, sans les tableaux croisés.
+func (t *tx) schemaBase() (*formula.Schema, error) {
 	return cached(t, "schema", t.schemaRaw)
+}
+
+// withPivots rend une copie du schéma s qui trouve aussi les tableaux
+// croisés par leur nom (TCD1[Nombre], pivotref.go), calculés à la demande
+// dans cette transaction (le schéma en cache ne garde pas la transaction).
+func (t *tx) withPivots(s *formula.Schema) *formula.Schema {
+	if s == nil {
+		return nil
+	}
+	c := *s
+	c.Extra = t.pivotFormulaTable
+	return &c
 }
 
 func (t *tx) schemaRaw() (*formula.Schema, error) {
@@ -363,8 +381,8 @@ func (t *tx) schemaRaw() (*formula.Schema, error) {
 // de l'année affichée, comme dans l'ancien onglet « 2025 »), et SOUS.TOTAL y
 // suit aussi le filtre de l'utilisateur. Les autres feuilles voient tout.
 func (t *tx) schemaFor(sheet int64) (*formula.Schema, error) {
-	return cached(t, fmt.Sprintf("schema:%d", sheet), func() (*formula.Schema, error) {
-		base, err := t.schema()
+	s, err := cached(t, fmt.Sprintf("schema:%d", sheet), func() (*formula.Schema, error) {
+		base, err := t.schemaBase()
 		if err != nil {
 			return nil, err
 		}
@@ -399,6 +417,7 @@ func (t *tx) schemaFor(sheet int64) (*formula.Schema, error) {
 		}
 		return &s, nil
 	})
+	return t.withPivots(s), err
 }
 
 // evalFree calcule une cellule libre avec formule (moteur SQL : agrégats et

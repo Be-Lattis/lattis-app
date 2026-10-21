@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Tableaux croisés : un TCD se lit dans les formules comme un tableau nommé, par son nom affiché dans une pastille bleue au-dessus de son cadre : `=SOMME(TCD1[Nombre])` (lignes de détail, sans sous-totaux ni total), `=TCD1[NID][2]`, ses colonnes saisies comprises. Pendant la saisie d'une formule, un clic dans le TCD écrit ces références au lieu d'une adresse `Cell[C3]` : `[Nombre]` sur la ligne d'une colonne calculée tapée à côté du TCD, qui suit ses lignes quand il est trié ou actualisé.
+
 ### Changements
 
 - Ruban : l'aide est un onglet « ? » comme les autres, et non plus une bulle.
