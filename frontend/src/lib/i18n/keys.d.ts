@@ -4445,7 +4445,7 @@ export interface MessageParams {
 	'shell.welcome.openHelp': Record<never, never>;
 	'shell.welcome.openSample': Record<never, never>;
 	'shell.welcome.progress': { done: number | string; label: number | string; total: number | string };
-	'shell.welcome.progressCells': { cells: number | string; done: number | string; label: number | string; total: number | string; totalCells: number | string };
+	'shell.welcome.progressCells': { cells: number | string; label: number | string; totalCells: number | string };
 	'shell.welcome.progressStart': { label: number | string };
 	'shell.welcome.recent': Record<never, never>;
 	'shell.welcome.steps.formula.text': Record<never, never>;

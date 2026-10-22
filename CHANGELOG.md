@@ -6,8 +6,17 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.4.2-beta (22/10/2026)
+
+### Nouveautés
+
+- Gros classeurs : la barre d'état dit ce que fait Lattis au lieu de « Traitement… » (« Suppression de la colonne Prix : réécriture du tableau », « Tri par Client : classement des lignes · 12 s »), et propose « Annuler » sur les actions qu'on peut arrêter proprement (suppression et insertion de colonnes ou de lignes, tri, type, collage, mise en forme, requêtes SQL) : le classeur revient tel quel.
+- La colonne, les lignes ou le bloc en cours de traitement ont un reflet animé jusqu'à la fin de l'action.
+
 ### Changements
 
+- Gros classeurs : la grille s'affiche d'abord (1 M de lignes : 0,1 s au lieu de 3,3 s à l'ouverture), la suggestion de clé, la numérotation, les TCD et les graphiques se calculent ensuite ; en attendant, un TCD ou un graphique garde ses anciennes valeurs. Une saisie ne relance plus la vérification de la numérotation sur tout le tableau.
+- Démo : à l'ouverture d'un classeur de démonstration, l'avancement dit les cellules construites sur le total.
 - Graphique de type carte : « Affichage » propose deux cases, « Points » et « Densité », au lieu d'un choix exclusif. Cochées ensemble, la nappe de densité s'affiche sous les points, qui restent colorables, survolables et cliquables. En script, `mapMode = "both"` fait de même.
 
 ## 0.4.1-beta (22/10/2026)
