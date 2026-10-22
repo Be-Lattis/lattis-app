@@ -63,6 +63,59 @@ func (t *tx) pivotCells(cfg PivotConfig) ([][]string, []PivotRowInfo, error) {
 	return v.cells, v.rows, err
 }
 
+// pivotLater dit si le calcul du TCD (pivotCells) parcourrait un grand
+// tableau (plus de quickRows lignes) sans être en cache (LayoutFirst).
+func (t *tx) pivotLater(cfg PivotConfig) bool {
+	cfg.Hand, cfg.Styles = nil, nil
+	tb, err := t.tableByName(cfg.Source)
+	if err != nil || tb.Rows <= quickRows {
+		return false
+	}
+	key := keyOf("pivotview:", cfg)
+	if cfg.byFormula() {
+		_, ok := peek[pivotView](t, key)
+		return !ok
+	}
+	_, ok := peekOn[pivotView](t, key, []string{tb.sql()})
+	return !ok
+}
+
+// chartKey : clé du cache des données d'un graphique (chartData).
+func (t *tx) chartKey(cfg ChartConfig) string {
+	key := keyOf("chart:", ChartConfig{Source: cfg.Source, Kind: cfg.Kind, X: cfg.X, Series: cfg.Series, MapCoords: cfg.MapCoords, MapDraft: cfg.MapDraft, ColorBy: cfg.ColorBy, Bins: cfg.Bins, Hidden: cfg.Hidden})
+	// Le filtre du tableau (rangé hors du tableau) fait partie de la clé.
+	if tb, err := t.tableByName(cfg.Source); err == nil && !cfg.Hidden {
+		key += "|" + tb.where
+	}
+	return key
+}
+
+// chartLater dit, comme pivotLater, si les données du graphique
+// demanderaient de parcourir un grand tableau (sa source, ou celle du TCD
+// qu'il lit).
+func (t *tx) chartLater(cfg ChartConfig) bool {
+	tb, err := t.tableByName(cfg.Source)
+	if err != nil {
+		pc, ok, perr := t.pivotByName(cfg.Source)
+		if perr != nil || !ok {
+			return false
+		}
+		if tb, err = t.tableByName(pc.Source); err != nil {
+			return false
+		}
+	}
+	if tb.Rows <= quickRows {
+		return false
+	}
+	key := t.chartKey(cfg)
+	if deps, ok := t.chartDeps(cfg.Source); ok {
+		_, hit := peekOn[chartResult](t, key, deps)
+		return !hit
+	}
+	_, hit := peek[chartResult](t, key)
+	return !hit
+}
+
 // chartDeps donne les tableaux que lit un graphique, ou faux s'il peut en
 // lire d'autres (colonne calculée de la source : formules, REFERENCE…).
 func (t *tx) chartDeps(source string) ([]string, bool) {
@@ -111,11 +164,7 @@ func (r chartResult) fill(c *ChartInfo) {
 }
 
 func (t *tx) chartData(cfg ChartConfig) (chartResult, error) {
-	key := keyOf("chart:", ChartConfig{Source: cfg.Source, Kind: cfg.Kind, X: cfg.X, Series: cfg.Series, MapCoords: cfg.MapCoords, MapDraft: cfg.MapDraft, ColorBy: cfg.ColorBy, Bins: cfg.Bins, Hidden: cfg.Hidden})
-	// Le filtre du tableau (rangé hors du tableau) fait partie de la clé.
-	if tb, err := t.tableByName(cfg.Source); err == nil && !cfg.Hidden {
-		key += "|" + tb.where
-	}
+	key := t.chartKey(cfg)
 	calc := func() (chartResult, error) {
 		return t.chartDataRaw(cfg)
 	}

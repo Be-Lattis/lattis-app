@@ -306,7 +306,7 @@ func RangeEventData(host Host, sheet int64, r0, c0, r1, c1 int) map[string]any {
 		return out
 	}
 	out["sheet"] = sheetName(contextBG, d, sheet)
-	if l, err := d.Layout(contextBG, sheet); err == nil {
+	if l, err := d.LayoutFirst(contextBG, sheet); err == nil {
 		if t := tableAt(l, r0, c0); t != nil {
 			out["table"], out["column"] = t.Name, t.Columns[c0-t.Col].Name
 		}

@@ -895,7 +895,8 @@
 		"fold.collapseAll": "全部折叠",
 		"nameBadge": {
 			"tooltip": "数据透视表“{name}”：公式像表格一样读取它（{name}[列]）；单击打开其窗格"
-		}
+		},
+		"computing": "数据透视表：正在计算…"
 	},
 	"readFail": "无法重新读取表格“{table}”；将重新加载它。",
 	"refLink": {
@@ -1261,7 +1262,8 @@
 		"copyImage": "复制为图片",
 		"edit": "编辑…",
 		"pasteHere": "在活动单元格处粘贴图表",
-		"delete": "删除图表"
+		"delete": "删除图表",
+		"computing": "正在计算图表…"
 	},
 	"query": {
 		"readOnly": "由查询加载的表格：其单元格不能编辑；请修改查询（数据 › 查询）后刷新 (F5)"

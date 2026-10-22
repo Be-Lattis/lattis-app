@@ -895,7 +895,8 @@
 		"fold.collapseAll": "Contraer todo",
 		"nameBadge": {
 			"tooltip": "Tabla dinámica «{name}»: las fórmulas la leen como una tabla ({name}[Columna]); haga clic para abrir su panel"
-		}
+		},
+		"computing": "Tabla dinámica: calculando…"
 	},
 	"readFail": "No se pudo volver a leer la tabla «{table}»; se volverá a cargar.",
 	"refLink": {
@@ -1261,7 +1262,8 @@
 		"copyImage": "Copiar como imagen",
 		"edit": "Modificar…",
 		"pasteHere": "Pegar un gráfico en la celda activa",
-		"delete": "Eliminar gráfico"
+		"delete": "Eliminar gráfico",
+		"computing": "Calculando el gráfico…"
 	},
 	"query": {
 		"readOnly": "Tabla cargada por una consulta: sus celdas no se pueden modificar; cambie la consulta (Datos › Consultas) y luego actualice (F5)"

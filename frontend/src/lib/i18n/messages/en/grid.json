@@ -895,7 +895,8 @@
 		"fold.collapseAll": "Collapse all",
 		"nameBadge": {
 			"tooltip": "PivotTable “{name}”: formulas read it like a table ({name}[Column]); click to open its pane"
-		}
+		},
+		"computing": "PivotTable: calculating…"
 	},
 	"readFail": "The table “{table}” couldn't be reread; it will be reloaded.",
 	"refLink": {
@@ -1261,7 +1262,8 @@
 		"copyImage": "Copy as image",
 		"edit": "Edit…",
 		"pasteHere": "Paste a chart at the active cell",
-		"delete": "Delete chart"
+		"delete": "Delete chart",
+		"computing": "Calculating chart…"
 	},
 	"query": {
 		"readOnly": "Table loaded by a query: its cells can't be edited; change the query (Data › Queries) then refresh (F5)"

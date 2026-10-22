@@ -332,6 +332,11 @@ export interface ChartInfo {
     "error": string;
 
     /**
+     * Pending : données pas encore calculées (grand tableau, LayoutFirst).
+     */
+    "pending"?: boolean;
+
+    /**
      * Invalid : carte, valeurs de coordonnées illisibles ou hors bornes,
      * ignorées.
      */
@@ -831,6 +836,12 @@ export interface Layout {
      * Mise en page de la feuille (onglet Mise en page).
      */
     "pageSetup": PageSetup;
+
+    /**
+     * Pending : LayoutFirst a laissé de côté un calcul sur un grand tableau
+     * (Pending d'un tableau, d'un TCD ou d'un graphique) ; Layout le donne.
+     */
+    "pending"?: boolean;
 }
 
 /**
@@ -1486,6 +1497,12 @@ export interface PivotInfo {
      */
     "styles"?: string[] | null;
     "headStyles"?: string[] | null;
+
+    /**
+     * Pending : pas encore calculé (grand tableau source, LayoutFirst) ;
+     * Cells est vide.
+     */
+    "pending"?: boolean;
 }
 
 /**
@@ -1907,6 +1924,7 @@ export interface Span {
  * 	colonne d'un tableau    _lattis_styles (tbl, rid = 0, col)
  * 	en-tête d'un tableau    _lattis_styles (tbl, rid = -1, col)
  * 	cellule d'un tableau    _lattis_styles (tbl, rid, col)
+ * 	colonne d'un TCD        configuration du TCD, styles (pivotstyle.go)
  * 	cellule libre ou de TCD _lattis_cell_styles (sheet, row, col)
  * 
  * Une couche plus précise remplace propriété par propriété les couches
@@ -2044,6 +2062,12 @@ export interface TableInfo {
      * catégorie, ChoiceCol sans objet).
      */
     "byFormula"?: boolean;
+
+    /**
+     * Pending : grand tableau dont KeyHint et AutoNumber ne sont pas encore
+     * calculés (ils parcourent tout le tableau) : voir LayoutFirst.
+     */
+    "pending"?: boolean;
 }
 
 /**

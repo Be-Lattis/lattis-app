@@ -605,6 +605,17 @@ func (s *DocumentService) Layout(ctx context.Context, sheet int64) (canvas.Layou
 	return d.Layout(ctx, sheet)
 }
 
+// LayoutFirst donne la mise en page d'une feuille à afficher tout de suite :
+// sans ce qui demande de parcourir un grand tableau et n'est pas en cache
+// (Pending) ; l'interface demande ensuite Layout, qui le calcule.
+func (s *DocumentService) LayoutFirst(ctx context.Context, sheet int64) (canvas.Layout, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.Layout{}, err
+	}
+	return d.LayoutFirst(ctx, sheet)
+}
+
 // gridTable donne le tableau prêt à lire par fenêtres (gardé en cache).
 func (s *DocumentService) gridTable(ctx context.Context, sheet, table int64) (*grid.Table, error) {
 	d, err := s.current()
@@ -645,7 +656,9 @@ func (s *DocumentService) gridTable(ctx context.Context, sheet, table int64) (*g
 // alors cherché sur sa propre feuille.
 func (s *DocumentService) tableInfo(ctx context.Context, d *doc.Document, sheet, table int64) (canvas.TableInfo, bool, error) {
 	find := func(sheet int64) (canvas.TableInfo, bool, error) {
-		l, err := d.Layout(ctx, sheet)
+		// Les tableaux seulement : ni TCD ni graphique à calculer avant le
+		// premier bloc.
+		l, err := d.LayoutFirst(ctx, sheet)
 		if err != nil {
 			return canvas.TableInfo{}, false, err
 		}

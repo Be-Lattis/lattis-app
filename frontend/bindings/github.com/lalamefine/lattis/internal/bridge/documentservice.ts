@@ -1101,6 +1101,15 @@ export function Layout(sheet: number): $CancellablePromise<canvas$0.Layout> {
 }
 
 /**
+ * LayoutFirst donne la mise en page d'une feuille à afficher tout de suite :
+ * sans ce qui demande de parcourir un grand tableau et n'est pas en cache
+ * (Pending) ; l'interface demande ensuite Layout, qui le calcule.
+ */
+export function LayoutFirst(sheet: number): $CancellablePromise<canvas$0.Layout> {
+    return $Call.ByID(3569323510, sheet);
+}
+
+/**
  * LocateRow situe une ligne de tableau sur sa feuille, d'après son
  * identifiant (point de carte cliqué : ChartInfo.Rows).
  */

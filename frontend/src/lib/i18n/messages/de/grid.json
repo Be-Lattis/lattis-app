@@ -895,7 +895,8 @@
 		"fold.collapseAll": "Alle reduzieren",
 		"nameBadge": {
 			"tooltip": "PivotTable „{name}“: Formeln lesen sie wie eine Tabelle ({name}[Spalte]); klicken, um ihren Bereich zu öffnen"
-		}
+		},
+		"computing": "Pivot-Tabelle: wird berechnet…"
 	},
 	"readFail": "Die Tabelle „{table}“ konnte nicht erneut gelesen werden; sie wird neu geladen.",
 	"refLink": {
@@ -1261,7 +1262,8 @@
 		"copyImage": "Als Bild kopieren",
 		"edit": "Bearbeiten…",
 		"pasteHere": "Ein Diagramm in die aktive Zelle einfügen",
-		"delete": "Diagramm löschen"
+		"delete": "Diagramm löschen",
+		"computing": "Diagramm wird berechnet…"
 	},
 	"query": {
 		"readOnly": "Von einer Abfrage geladene Tabelle: Ihre Zellen lassen sich nicht bearbeiten; ändern Sie die Abfrage (Daten › Abfragen) und aktualisieren Sie dann (F5)"

@@ -215,6 +215,8 @@
 		styles?: string[] | null;
 		headStyles?: string[] | null;
 		error: string;
+		/** Pas encore calculé (grand tableau source) : la feuille s'affiche d'abord, le TCD arrive ensuite. */
+		pending?: boolean;
 		/** Colonnes saisies à droite (les dernières de cells, voir pivothand.ts) : nom, formule (« = » compris). */
 		hand?: { name: string; formula?: string }[] | null;
 		/** Lignes dont les valeurs saisies sont mises de côté ; handNote : pourquoi elles le sont toutes. */
@@ -276,6 +278,8 @@
 		labels: string[];
 		series: { name: string; values: (number | null)[] }[];
 		error: string;
+		/** Données pas encore calculées (grand tableau) : elles arrivent après l'affichage de la feuille. */
+		pending?: boolean;
 		/** Carte : coordonnées illisibles ignorées. */
 		invalid?: number;
 		/** Carte : colonnes de coordonnées repérées par le classeur. */
@@ -1124,6 +1128,9 @@
 		if (clipRange && clipRange.sheet === (d.sheet ?? 0) && placedBefore) clipRange = followClip(clipRange, placedBefore, placed());
 		placedSheet = d.sheet ?? 0;
 		pivots = (d.pivots ?? []).map((p) => {
+			// Pas encore calculé (LayoutFirst) : traité comme un TCD en erreur
+			// (une seule cellule, sans contenu), avec son propre message.
+			if (p.pending) p = { ...p, error: p.error || '…', cells: [] };
 			const f = p.error ? 0 : (p.config.filters?.length ?? 0);
 			return { ...p, anchor: p.row, row: p.row + (f ? f + 1 : 0) };
 		});
@@ -2736,6 +2743,11 @@
 		}
 		// Tableaux croisés : en-tête et total en gras, dans un cadre.
 		for (const p of pivots) {
+			if (p.pending) {
+				// Grand tableau source : calculé après l'affichage de la feuille.
+				drawText(tr('grid.pivot.computing'), cx(p.col), ry(p.row), cax().size(p.col), 'left', undefined, C.stripText, w);
+				continue;
+			}
 			if (p.error) {
 				drawText(tr('grid.pivot.error', { error: p.error }), cx(p.col), ry(p.row), cax().size(p.col), 'left', undefined, C.error, w);
 				continue;
@@ -11044,7 +11056,9 @@
 						oncontextmenu={(ev) => onChartMenu(ev, ch)}
 						onwheel={(ev) => onWheel(ev)}
 					>
-						{#if ch.error}
+						{#if ch.pending}
+							<p class="chart-pending" aria-busy="true">{tr('grid.chart.computing')}</p>
+						{:else if ch.error}
 							<p class="chart-error">{tr('grid.chart.error', { error: ch.error })}</p>
 						{:else}
 							<Chart kind={ch.config.kind} labels={ch.labels} series={ch.series} width={box.w} height={box.h} style={ch.config} animate={animate && chartTween} grow={grownCharts.has(ch.id)} interactive={selChart === ch.id} onview={(v) => setMapView(ch.id, v)} map={ch} info={ch} onpoint={onrowlink && ((r) => pointToRow(ch, r))} />
@@ -13010,6 +13024,26 @@
 	.chart-error {
 		margin: 12px;
 		color: #c0392b;
+	}
+	/* Graphique d'un grand tableau, calculé après l'affichage : fond d'attente discret. */
+	.chart-pending {
+		margin: 0;
+		height: 100%;
+		box-sizing: border-box;
+		padding: 12px;
+		color: #5f6368;
+		background: #f5f6f7;
+		animation: chart-wait 1.6s ease-in-out infinite alternate;
+	}
+	@keyframes chart-wait {
+		to {
+			background: #eceef1;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.chart-pending {
+			animation: none;
+		}
 	}
 	.body {
 		flex: 1;

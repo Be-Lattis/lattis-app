@@ -895,7 +895,8 @@
 		"fold.collapseAll": "Réduire tout",
 		"nameBadge": {
 			"tooltip": "Tableau croisé « {name} » : il se lit dans les formules comme un tableau ({name}[Colonne]) ; cliquer pour ouvrir son volet"
-		}
+		},
+		"computing": "Tableau croisé : calcul…"
 	},
 	"readFail": "Le tableau « {table} » n'a pas pu être relu ; il sera rechargé.",
 	"refLink": {
@@ -1261,7 +1262,8 @@
 		"copyImage": "Copier comme image",
 		"edit": "Modifier…",
 		"pasteHere": "Coller un graphique à la cellule active",
-		"delete": "Supprimer le graphique"
+		"delete": "Supprimer le graphique",
+		"computing": "Calcul du graphique…"
 	},
 	"query": {
 		"readOnly": "Tableau chargé par une requête : ses cellules ne se modifient pas ; changez la requête (Données › Requêtes) puis actualisez (F5)"

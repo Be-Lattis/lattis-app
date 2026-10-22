@@ -42,6 +42,9 @@ type PivotInfo struct {
 	// cellule.
 	Styles     []string `json:"styles,omitempty"`
 	HeadStyles []string `json:"headStyles,omitempty"`
+	// Pending : pas encore calculé (grand tableau source, LayoutFirst) ;
+	// Cells est vide.
+	Pending bool `json:"pending,omitempty"`
 }
 
 // ErrPivot signale un tableau croisé impossible.
@@ -200,7 +203,11 @@ func pivotRect(p PivotInfo) Rect {
 }
 
 // pivots donne les tableaux croisés d'une feuille, calculés.
-func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
+func (t *tx) pivots(sheet int64) ([]PivotInfo, error) { return t.pivotsIn(sheet, false) }
+
+// pivotsIn est pivots ; later : un TCD sur un grand tableau qui n'est pas
+// en cache n'est pas calculé (Pending, voir LayoutFirst).
+func (t *tx) pivotsIn(sheet int64, later bool) ([]PivotInfo, error) {
 	rs, err := t.query(`SELECT id, row, col, config FROM _lattis_pivots WHERE sheet = ? ORDER BY id`, sheet)
 	if err != nil {
 		return nil, err
@@ -234,6 +241,10 @@ func (t *tx) pivots(sheet int64) ([]PivotInfo, error) {
 		hand := out[i].Config.Hand
 		out[i].Config.Hand = nil // dans Hand (le volet ne les change pas)
 		if out[i].Error != "" {
+			continue
+		}
+		if later && t.pivotLater(out[i].Config) {
+			out[i].Pending = true
 			continue
 		}
 		cells, rows, err := t.pivotCells(out[i].Config)

@@ -120,7 +120,16 @@ type TableInfo struct {
 	// ByFormula : il suit une catégorie calculée (pas de colonne de
 	// catégorie, ChoiceCol sans objet).
 	ByFormula bool `json:"byFormula,omitempty"`
+	// Pending : grand tableau dont KeyHint et AutoNumber ne sont pas encore
+	// calculés (ils parcourent tout le tableau) : voir LayoutFirst.
+	Pending bool `json:"pending,omitempty"`
 }
+
+// quickRows : au-delà, LayoutFirst ne calcule pas ce qui parcourt tout un
+// tableau et n'est pas en cache (suggestion de clé, numérotation, TCD,
+// graphique) ; la grille s'affiche d'abord
+// (docs/audits/vue-d-abord-gros-classeurs-2026-10-22.md).
+const quickRows = 20_000
 
 // SharingAccess est la partie facultative de Sharing qui donne les droits
 // d'un classeur collaboratif (workbook.Link).
@@ -182,6 +191,9 @@ type Layout struct {
 	WorkbookStructure bool `json:"workbookStructure"`
 	// Mise en page de la feuille (onglet Mise en page).
 	PageSetup PageSetup `json:"pageSetup"`
+	// Pending : LayoutFirst a laissé de côté un calcul sur un grand tableau
+	// (Pending d'un tableau, d'un TCD ou d'un graphique) ; Layout le donne.
+	Pending bool `json:"pending,omitempty"`
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -203,8 +215,22 @@ type ColWidth struct {
 	Width int `json:"width"`
 }
 
-// Layout lit la mise en page d'une feuille.
+// Layout lit la mise en page d'une feuille, tout calculé.
 func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
+	return m.layout(ctx, sheet, false)
+}
+
+// LayoutFirst lit la mise en page d'une feuille pour l'afficher tout de
+// suite : sur un grand tableau (plus de quickRows lignes), ce qui demande
+// de le parcourir en entier et n'est pas déjà en cache est laissé de côté
+// (Pending : suggestion de clé et numérotation d'un tableau, données d'un
+// TCD ou d'un graphique). Layout, appelé ensuite, le calcule et le garde
+// en cache.
+func (m *Model) LayoutFirst(ctx context.Context, sheet int64) (Layout, error) {
+	return m.layout(ctx, sheet, true)
+}
+
+func (m *Model) layout(ctx context.Context, sheet int64, later bool) (Layout, error) {
 	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Heights: []RowHeight{}, Names: []NameInfo{}, Styles: []CellStyle{}}
 	err := m.read(ctx, func(t *tx) error {
 		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0, color, hidden <> 0, freeze_rows, freeze_cols, zoom,
@@ -269,12 +295,17 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 			if tb.choice != nil && tb.choice.formula() {
 				ti.Follows, ti.ByFormula = true, true
 			}
-			if ti.KeyHint, err = t.keyHint(tb); err != nil {
+			// Grand tableau : la suggestion de clé et la numérotation (un
+			// parcours de tout le tableau chacune) viennent après la vue.
+			var later1, later2 bool
+			if ti.KeyHint, later1, err = t.keyHintIn(tb, later); err != nil {
 				return err
 			}
-			if ti.AutoNumber, err = t.autoNumbered(tb); err != nil {
+			if ti.AutoNumber, later2, err = t.autoNumberedIn(tb, later); err != nil {
 				return err
 			}
+			ti.Pending = later1 || later2
+			l.Pending = l.Pending || ti.Pending
 			if len(tb.Filter) > 0 {
 				b, err := json.Marshal(tb.Filter)
 				if err != nil {
@@ -417,11 +448,17 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 		if l.RuleMarks, err = t.ruleMarks(sheet, l.Styles, l.RowRules, l.ColRules, l.Cells, l.Tables); err != nil {
 			return err
 		}
-		if l.Pivots, err = t.pivots(sheet); err != nil {
+		if l.Pivots, err = t.pivotsIn(sheet, later); err != nil {
 			return err
 		}
-		if l.Charts, err = t.charts(sheet); err != nil {
+		if l.Charts, err = t.chartsIn(sheet, later); err != nil {
 			return err
+		}
+		for _, p := range l.Pivots {
+			l.Pending = l.Pending || p.Pending
+		}
+		for _, c := range l.Charts {
+			l.Pending = l.Pending || c.Pending
 		}
 		if l.Buttons, err = t.buttons(sheet); err != nil {
 			return err

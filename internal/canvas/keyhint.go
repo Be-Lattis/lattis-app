@@ -22,10 +22,23 @@ import (
 // métadonnées ne changent pas (cachedOn) : une saisie dans une autre
 // colonne ne relit pas tout le tableau.
 func (t *tx) keyHint(tb Table) (bool, error) {
+	hint, _, err := t.keyHintIn(tb, false)
+	return hint, err
+}
+
+// keyHintIn est keyHint ; later : sur un grand tableau (plus de quickRows
+// lignes), rien n'est calculé s'il n'est pas déjà en cache, pending le dit
+// (la mise en page s'affiche d'abord, LayoutHints complète ensuite).
+func (t *tx) keyHintIn(tb Table, later bool) (hint, pending bool, err error) {
 	if tb.Key != 0 || tb.Rows < 2 || len(tb.Cols) == 0 || tb.Cols[0].Formula != "" {
-		return false, nil
+		return false, false, nil
 	}
-	return cachedOn(t, "keyhint:"+tb.sql(), []string{store.ColumnOf(tb.sql(), colSQL(tb.Cols[0].ID))}, func() (bool, error) {
+	key, deps := "keyhint:"+tb.sql(), []string{store.ColumnOf(tb.sql(), colSQL(tb.Cols[0].ID))}
+	if later && tb.Rows > quickRows {
+		v, ok := peekOn[bool](t, key, deps)
+		return v, !ok, nil
+	}
+	hint, err = cachedOn(t, key, deps, func() (bool, error) {
 		var off bool
 		if err := t.row(`SELECT no_key_hint FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&off); err != nil || off {
 			return false, err
@@ -33,6 +46,7 @@ func (t *tx) keyHint(tb Table) (bool, error) {
 		why, err := t.keyCheck(tb, 0)
 		return why == "", err
 	})
+	return hint, false, err
 }
 
 // DismissKeyHint ne propose plus la première colonne du tableau comme clé

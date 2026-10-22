@@ -768,6 +768,7 @@ export interface MessageParams {
 	'grid.cf.vstyle.scale3': Record<never, never>;
 	'grid.chart.aria': Record<never, never>;
 	'grid.chart.aria.titled': { title: number | string };
+	'grid.chart.computing': Record<never, never>;
 	'grid.chart.copied': Record<never, never>;
 	'grid.chart.copiedImage': Record<never, never>;
 	'grid.chart.copyImage': Record<never, never>;
@@ -1297,6 +1298,7 @@ export interface MessageParams {
 	'grid.pivot.calc.name': Record<never, never>;
 	'grid.pivot.calc.title': Record<never, never>;
 	'grid.pivot.calc.title.edit': { name: number | string };
+	'grid.pivot.computing': Record<never, never>;
 	'grid.pivot.defaultName': Record<never, never>;
 	'grid.pivot.defer': Record<never, never>;
 	'grid.pivot.delete': Record<never, never>;

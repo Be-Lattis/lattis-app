@@ -255,24 +255,8 @@ func (t *Table) Load(ctx context.Context) error {
 	// Versions relevées avant la lecture : une écriture validée pendant
 	// qu'on lit les fait avancer, le tableau sera relu (Fresh).
 	rowsVer, valuesVer, dataVer := t.db.GridVersion(t.deps)
-	rs, err := t.db.Read().QueryContext(ctx, `SELECT _pos FROM `+t.sqlName+` ORDER BY _pos`)
+	anchors, n, err := t.anchorsOf(ctx)
 	if err != nil {
-		return err
-	}
-	defer rs.Close()
-	var anchors []string
-	n := 0
-	for rs.Next() {
-		if n%AnchorEvery == 0 {
-			var p string
-			if err := rs.Scan(&p); err != nil {
-				return err
-			}
-			anchors = append(anchors, p)
-		}
-		n++
-	}
-	if err := rs.Err(); err != nil {
 		return err
 	}
 	t.mu.Lock()
@@ -281,6 +265,49 @@ func (t *Table) Load(ctx context.Context) error {
 	t.stats, t.cf = nil, nil
 	t.mu.Unlock()
 	return nil
+}
+
+// anchorsOf relève les ancres et compte les lignes, dans une même lecture.
+// Chaque ancre se lit depuis la précédente (« _pos >= ancre, 1000 plus
+// loin ») : SQLite avance dans l'index sans rendre une ligne sur deux à Go.
+// Parcourir toutes les lignes depuis Go coûtait 0,3 s par million de lignes
+// avant le premier bloc affiché ; ainsi, 27 ms
+// (docs/audits/vue-d-abord-gros-classeurs-2026-10-22.md).
+func (t *Table) anchorsOf(ctx context.Context) ([]string, int, error) {
+	tx, err := t.db.Read().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, 0, err
+	}
+	defer tx.Rollback()
+	var p string
+	switch err := tx.QueryRowContext(ctx, `SELECT _pos FROM `+t.sqlName+` ORDER BY _pos LIMIT 1`).Scan(&p); {
+	case errors.Is(err, sql.ErrNoRows):
+		return nil, 0, nil
+	case err != nil:
+		return nil, 0, err
+	}
+	next, err := tx.PrepareContext(ctx, `SELECT _pos FROM `+t.sqlName+` WHERE _pos >= ? ORDER BY _pos LIMIT 1 OFFSET ?`)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer next.Close()
+	anchors := []string{p}
+	for {
+		err := next.QueryRowContext(ctx, p, AnchorEvery).Scan(&p)
+		if errors.Is(err, sql.ErrNoRows) {
+			break
+		}
+		if err != nil {
+			return nil, 0, err
+		}
+		anchors = append(anchors, p)
+	}
+	// Lignes après la dernière ancre (elle comprise) : moins de AnchorEvery.
+	var tail int
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM (SELECT 1 FROM `+t.sqlName+` WHERE _pos >= ? ORDER BY _pos LIMIT ?)`, p, AnchorEvery).Scan(&tail); err != nil {
+		return nil, 0, err
+	}
+	return anchors, (len(anchors)-1)*AnchorEvery + tail, nil
 }
 
 // Info décrit le tableau.

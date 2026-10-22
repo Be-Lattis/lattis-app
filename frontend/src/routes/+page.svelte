@@ -38,6 +38,7 @@
 	import type { PageBreaks } from '#bindings/internal/transfer/models.js';
 	import SqlView, { type Favorite } from '#lib/shell/SqlView.svelte';
 	import { keepMounted, keptFor } from '#lib/shell/keep.js';
+	import { keepShown } from '#lib/shell/layoutfirst.js';
 	import AiPanel from '#lib/ai/AiPanel.svelte';
 	import { chat as aiChat, openAssistant } from '#lib/ai/state.svelte.js';
 	import McpConfirm from '#lib/shell/McpConfirm.svelte';
@@ -648,15 +649,22 @@
 			loadSources()
 		]);
 		side.catch(() => {}); // erreur rendue par l'await plus bas
-		const [st, first] = await Promise.all([DocumentService.State(), DocumentService.Layout(sheetId)]);
+		// La vue d'abord (LayoutFirst) : sur un grand tableau, ce qui le
+		// parcourt en entier (suggestion de clé, TCD, graphique…) vient après
+		// (completeLayout).
+		const gen = workbook;
+		const [st, first] = await Promise.all([DocumentService.State(), DocumentService.LayoutFirst(sheetId)]);
 		docState = st;
-		layout = first;
+		// Ce qui reste à calculer garde ce que la feuille montrait (même classeur).
+		layout = keepShown(layoutOf === gen ? layout : null, first);
+		layoutOf = gen;
 		// Feuille affichée masquée ou disparue : la première feuille visible.
 		const shownId = visibleSheet(layout?.sheets ?? [], sheetId);
 		if (layout && shownId !== sheetId) {
 			sheetId = shownId;
-			layout = await DocumentService.Layout(sheetId);
+			layout = await DocumentService.LayoutFirst(sheetId);
 		}
+		if (layout?.pending) completeLayout(layout, sheetId);
 		// Onglet page HTML ou Document affiché : son contenu (la page se recharge s'il change).
 		const shown = layout?.sheets?.find((s) => s.id === sheetId);
 		if (shown?.kind === 'html' || shown?.kind === 'doc') {
@@ -673,6 +681,32 @@
 		if (mergeOffer && !similar.some((g) => g.id === mergeOffer?.id && g.propose)) mergeOffer = null;
 		// Volet Requêtes ouvert : ses listes suivent (Ctrl+Z, assistant, MCP, autre classeur).
 		queryHost?.reloadLists();
+	}
+
+	// Classeur (génération workbook) de la mise en page affichée.
+	let layoutOf = -1;
+	// Mise en page complète demandée (completeLayout), par feuille : une
+	// seule à la fois, le calcul pouvant durer plusieurs secondes.
+	const completing = new Set<number>();
+
+	/**
+	 * La grille est affichée (LayoutFirst) : le reste de la mise en page
+	 * (suggestion de clé, numérotation, TCD et graphiques d'un grand
+	 * tableau) se calcule ensuite, sans bloquer l'écran, et remplace la
+	 * mise en page si rien d'autre ne l'a relue entre-temps.
+	 */
+	function completeLayout(l: Layout, id: number) {
+		if (completing.has(id)) return;
+		completing.add(id);
+		DocumentService.Layout(id)
+			.then((full) => {
+				completing.delete(id);
+				if (layout === l && sheetId === id) layout = full;
+				// Relue pendant le calcul et encore incomplète : une autre fois
+				// (le calcul est maintenant en cache, ou presque).
+				else if (layout?.pending && sheetId === id && layout !== l) completeLayout(layout, id);
+			})
+			.catch(() => completing.delete(id));
 	}
 
 	/** Enregistre la mise en page de la feuille active (une étape d'annulation) ; les sauts de page s'affichent, comme dans Excel. */
@@ -2271,7 +2305,8 @@
 	/** Supprimer une feuille : tout son contenu part avec elle (un Ctrl+Z rend tout) ; demandé d'abord si elle n'est pas vide. */
 	async function askDeleteSheet(id: number) {
 		try {
-			const l = await DocumentService.Layout(id);
+			// Le contenu à nommer seulement : rien à calculer (LayoutFirst).
+			const l = await DocumentService.LayoutFirst(id);
 			const name = l.sheets?.find((x) => x.id === id)?.name ?? '';
 			const items: string[] = [];
 			const add = (n: number, key: 'tables' | 'pivots' | 'charts' | 'buttons' | 'cells', names?: string[]) => {

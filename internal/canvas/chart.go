@@ -102,6 +102,8 @@ type ChartInfo struct {
 	Labels []string      `json:"labels"`
 	Series []ChartSeries `json:"series"`
 	Error  string        `json:"error"`
+	// Pending : données pas encore calculées (grand tableau, LayoutFirst).
+	Pending bool `json:"pending,omitempty"`
 	// Invalid : carte, valeurs de coordonnées illisibles ou hors bornes,
 	// ignorées.
 	Invalid int `json:"invalid,omitempty"`
@@ -597,7 +599,11 @@ func (t *tx) columnFormat(tb Table, c Column) (string, error) {
 }
 
 // charts donne les graphiques d'une feuille, avec leurs données.
-func (t *tx) charts(sheet int64) ([]ChartInfo, error) {
+func (t *tx) charts(sheet int64) ([]ChartInfo, error) { return t.chartsIn(sheet, false) }
+
+// chartsIn est charts ; later : sans les données d'un graphique sur un
+// grand tableau qui ne sont pas en cache (Pending, voir LayoutFirst).
+func (t *tx) chartsIn(sheet int64, later bool) ([]ChartInfo, error) {
 	rs, err := t.query(`SELECT id, row, col, config FROM _lattis_charts WHERE sheet = ? ORDER BY id`, sheet)
 	if err != nil {
 		return nil, err
@@ -618,6 +624,10 @@ func (t *tx) charts(sheet int64) ([]ChartInfo, error) {
 	rs.Close()
 	for i := range out {
 		if out[i].Error != "" {
+			continue
+		}
+		if later && t.chartLater(out[i].Config) {
+			out[i].Pending = true
 			continue
 		}
 		r, err := t.chartData(out[i].Config)

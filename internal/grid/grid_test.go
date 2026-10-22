@@ -56,6 +56,26 @@ func TestWindowAcrossAnchors(t *testing.T) {
 	}
 }
 
+// Ancres relevées de proche en proche (anchorsOf) : nombre de lignes juste,
+// et dernière fenêtre lisible, quand le tableau fait pile un multiple de
+// AnchorEvery, une ligne de plus, ou une seule.
+func TestAnchorsCount(t *testing.T) {
+	ctx := context.Background()
+	for _, rows := range []int{1, AnchorEvery - 1, AnchorEvery, AnchorEvery + 1, 3 * AnchorEvery} {
+		tbl := openDemo(t, rows)
+		if got := tbl.Info().Rows; got != rows {
+			t.Fatalf("%d lignes : Rows = %d", rows, got)
+		}
+		if want := (rows + AnchorEvery - 1) / AnchorEvery; len(tbl.anchors) != want {
+			t.Fatalf("%d lignes : %d ancres, attendu %d", rows, len(tbl.anchors), want)
+		}
+		w, err := tbl.Window(ctx, rows-1, 5)
+		if err != nil || len(w.Cells) != 1 || w.Cells[0][0] != int64(100_000+rows-1) {
+			t.Fatalf("%d lignes : dernière ligne %v, %v", rows, w.Cells, err)
+		}
+	}
+}
+
 func TestSetCell(t *testing.T) {
 	tbl := openDemo(t, 100)
 	ctx := context.Background()

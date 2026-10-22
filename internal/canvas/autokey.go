@@ -7,6 +7,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/store"
 )
 
 // Clé posée d'office et numérotation automatique (demande de Louis,
@@ -148,33 +149,52 @@ func (t *tx) autoNumber(tb Table) (autoNum, bool, error) {
 // autoNumbered dit, pour l'affichage, quelle colonne se numérote d'elle-même
 // (rang, -1 si aucune). Gardé tant que le tableau ne change pas.
 func (t *tx) autoNumbered(tb Table) (int, error) {
+	i, _, err := t.autoNumberedIn(tb, false)
+	return i, err
+}
+
+// autoNumberedIn est autoNumbered ; later : comme keyHintIn (grand tableau
+// pas encore en cache : -1 et pending).
+func (t *tx) autoNumberedIn(tb Table, later bool) (int, bool, error) {
 	if len(tb.Cols) == 0 || tb.Rows == 0 {
-		return -1, nil
+		return -1, false, nil
 	}
 	// La clé et le type des colonnes sont dans la clé du cache (ils
-	// changent dans _lattis_tables et _lattis_columns).
+	// changent dans _lattis_tables et _lattis_columns). Le calcul ne lit
+	// que la première colonne et la clé, dans l'ordre des lignes : une
+	// saisie dans une autre colonne ne le refait pas (il parcourt tout le
+	// tableau : 2 s sur 1 M de lignes).
 	key := fmt.Sprintf("autonum:%s:%d", tb.sql(), tb.Key)
+	var deps []string
 	for i, c := range tb.Cols {
 		if i == 0 || c.ID == tb.Key {
 			key += fmt.Sprintf(":%d:%s:%t", c.ID, c.Type, c.Formula != "")
+			deps = append(deps, store.ColumnOf(tb.sql(), colSQL(c.ID)))
 		}
 	}
-	id, err := cachedOn(t, key, []string{tb.sql()}, func() (int64, error) {
-		a, ok, err := t.autoNumber(tb)
-		if err != nil || !ok {
-			return 0, err
+	id, ok := peekOn[int64](t, key, deps)
+	if !ok && later && tb.Rows > quickRows {
+		return -1, true, nil
+	}
+	if !ok {
+		var err error
+		id, err = cachedOn(t, key, deps, func() (int64, error) {
+			a, ok, err := t.autoNumber(tb)
+			if err != nil || !ok {
+				return 0, err
+			}
+			return a.col.ID, nil
+		})
+		if err != nil {
+			return -1, false, err
 		}
-		return a.col.ID, nil
-	})
-	if err != nil || id == 0 {
-		return -1, err
 	}
 	for i, c := range tb.Cols {
-		if c.ID == id {
-			return i, nil
+		if id != 0 && c.ID == id {
+			return i, false, nil
 		}
 	}
-	return -1, nil
+	return -1, false, nil
 }
 
 // numberRow donne son numéro à la ligne rid qui vient d'être ajoutée en pos

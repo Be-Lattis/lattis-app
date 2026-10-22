@@ -251,6 +251,39 @@ type depEntry struct {
 	v   any
 }
 
+// peekOn rend le résultat gardé par cachedOn pour la clé, s'il vaut encore
+// (ok faux sinon), sans rien calculer.
+func peekOn[T any](t *tx, key string, deps []string) (v T, ok bool) {
+	if t.m == nil {
+		return v, false
+	}
+	m := t.m
+	ver := m.db.Version(deps...)
+	m.cacheMu.Lock()
+	defer m.cacheMu.Unlock()
+	if e, found := m.depCache[key]; found && e.ver == ver {
+		v, ok = e.v.(T)
+	}
+	return v, ok
+}
+
+// peek rend le résultat gardé par cached pour la clé dans la génération de
+// la lecture, sans rien calculer.
+func peek[T any](t *tx, key string) (v T, ok bool) {
+	if !t.ro || t.m == nil {
+		return v, false
+	}
+	m := t.m
+	m.cacheMu.Lock()
+	defer m.cacheMu.Unlock()
+	if m.cache != nil && m.cacheGen == t.gen {
+		if e, found := m.cache[key]; found {
+			v, ok = e.(T)
+		}
+	}
+	return v, ok
+}
+
 // cachedOn est cached pour un calcul qui ne lit que les tableaux deps (noms
 // SQL t_N) et les métadonnées : il reste valable après des écritures
 // ailleurs (un TCD ou un graphique ne se recalcule plus quand on modifie un
