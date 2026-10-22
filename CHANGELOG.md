@@ -6,6 +6,12 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.4.3-beta (22/10/2026)
+
+### Changements
+
+- Gros classeurs : le contrôle de la clé (et le comptage des lignes) n'est refait que si le nombre de lignes change ou si la colonne de la clé est modifiée. Ajouter, supprimer ou changer le type d'une autre colonne, trier, annuler : la feuille se réaffiche en quelques millisecondes au lieu d'environ 1 s sur 1 M de lignes et 9 s sur 10 M.
+
 ## 0.4.2-beta (22/10/2026)
 
 ### Nouveautés
