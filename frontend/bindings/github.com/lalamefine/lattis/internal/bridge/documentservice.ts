@@ -253,6 +253,15 @@ export function Call(name: string, args: { [_ in string]?: any } | null): $Cance
 }
 
 /**
+ * CancelWork interrompt l'opération id (bouton « Annuler » de la barre
+ * d'état) : sa transaction est défaite, le classeur reste tel qu'avant.
+ * Faux si elle est finie ou ne peut pas être interrompue.
+ */
+export function CancelWork(id: number): $CancellablePromise<boolean> {
+    return $Call.ByID(1780982689, id);
+}
+
+/**
  * ChartData calcule les données d'un graphique sans le poser sur une
  * feuille (graphiques insérés dans un onglet Document).
  */

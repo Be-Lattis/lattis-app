@@ -10,6 +10,7 @@ import (
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // MinRows est le nombre de lignes (en-tête compris) à partir duquel une zone
@@ -761,6 +762,7 @@ func (m *Model) InsertRow(ctx context.Context, table string, n int) error {
 		if err != nil {
 			return err
 		}
+		work.Op(ctx, "insertRows", tb.Name)
 		// Sous le choix de l'onglet, les rangs sont ceux des lignes affichées
 		// et la ligne insérée reçoit la valeur choisie.
 		if tb.userFiltered() {
@@ -811,6 +813,7 @@ func (m *Model) DeleteRow(ctx context.Context, table string, n int) error {
 		if err != nil {
 			return err
 		}
+		work.Op(ctx, "deleteRows", tb.Name)
 		rid, _, err := t.rowID(tb, n)
 		if err != nil {
 			return err
@@ -836,6 +839,7 @@ func (m *Model) InsertColumn(ctx context.Context, table string, i int, name stri
 		if err != nil {
 			return err
 		}
+		work.Op(ctx, "insertColumn", tb.Name)
 		if i < 0 || i > len(tb.Cols) {
 			return msg.New("table.columnOutOfRange", nil)
 		}
@@ -857,6 +861,7 @@ func (m *Model) DeleteColumn(ctx context.Context, table string, i int) error {
 		if i < 0 || i >= len(tb.Cols) || len(tb.Cols) == 1 {
 			return msg.New("table.columnNotDeletable", nil)
 		}
+		work.Op(ctx, "deleteColumn", tb.Cols[i].Name)
 		if err := t.dropColumn(tb, tb.Cols[i], i); err != nil {
 			return err
 		}
@@ -899,6 +904,11 @@ func (m *Model) SuppressColumns(ctx context.Context, table string, i, j int) err
 		}
 		if i < 0 || j < i || j >= len(tb.Cols) || j-i+1 >= len(tb.Cols) {
 			return msg.New("table.columnNotDeletable", nil)
+		}
+		if i == j {
+			work.Op(ctx, "deleteColumn", tb.Cols[i].Name)
+		} else {
+			work.Op(ctx, "deleteColumns", tb.Name)
 		}
 		if i > 0 && j < len(tb.Cols)-1 && !tb.Filtered() {
 			empty, err := t.columnsEmpty(tb, i, j)
@@ -964,6 +974,11 @@ func (m *Model) DeleteColumnSpans(ctx context.Context, spans []ColumnSpan) error
 			}
 			if s.From < 0 || s.To < s.From || s.To >= len(tb.Cols) || s.To-s.From+1 >= len(tb.Cols) {
 				return msg.Wrap(ErrTable, "table.keepsOneColumn", msg.Args{"table": tb.Name})
+			}
+			if len(spans) == 1 && s.From == s.To {
+				work.Op(ctx, "deleteColumn", tb.Cols[s.From].Name)
+			} else {
+				work.Op(ctx, "deleteColumns", tb.Name)
 			}
 			if err := t.deleteColumnsAt(tb, s.From, s.To); err != nil {
 				return err

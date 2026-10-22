@@ -15,6 +15,7 @@
 	import { Axis } from './axis';
 	import { allGenerated, defaultNameHint, isDefaultTableName, isGeneratedColumnName } from './defaultname';
 	import { ease, flashAlpha, lerpBar, motionAt, progress, reducedMotion, sameBar, shiftAxis, tableMotions, zeroBar, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
+	import { sweepAt, watchSource, WORK_DELAY, workAlpha, type WorkLookup, type WorkZone } from './working';
 	import { followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
 	import { boxStyle, formatStat, isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
 	import { formatCell } from './numfmt';
@@ -714,7 +715,17 @@
 		onplacing?: (p: { hint: string; create: boolean } | null) => void;
 	}
 
-	let { data, source, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing }: Props = $props();
+	let { data, source: rawSource, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing }: Props = $props();
+
+	// Actions sur des cellules, lignes ou colonnes : leur zone reçoit un
+	// reflet animé jusqu'à leur fin (working.ts, drawWorking).
+	const workLook: WorkLookup = {
+		table(t) {
+			const e = typeof t === 'string' ? entries.find((x) => x.t.name === t) : entries.find((x) => x.t.id === (t as SheetTable | undefined)?.id);
+			return e && { row: e.t.row, col: e.t.col, last: e.last, lastCol: e.lastCol };
+		}
+	};
+	const source = $derived(watchSource(rawSource, workLook, startWork, endWork));
 
 	// Feuille sans fin pratique (choix de Louis) : au-delà des limites d'Excel,
 	// bornée par la nomenclature Cell[ZZZZ999999999] (4 lettres, 9 chiffres).
@@ -2417,6 +2428,7 @@
 		}
 		if (incomplete) missingFrames++;
 		drawJumpFlash(t0);
+		drawWorking(t0);
 		if (motion())
 			viewNow = {
 				r0: rax().indexAt(main.y0 - TOP_H + main.top),
@@ -4862,6 +4874,77 @@
 			schedule();
 		}, JUMP_FLASH_MS);
 		schedule();
+	}
+
+	// Zones en cours de traitement (working.ts) : reflet bleu qui passe, contour en pointillés qui défile.
+	let working: { id: number; zones: WorkZone[]; t0: number }[] = [];
+	let workSeq = 0;
+
+	function startWork(zones: WorkZone[]): number {
+		const id = ++workSeq;
+		working = [...working, { id, zones, t0: performance.now() }];
+		// Le reflet paraît après WORK_DELAY : une image à ce moment-là, même sans animation.
+		setTimeout(schedule, WORK_DELAY + 10);
+		return id;
+	}
+
+	function endWork(id: number) {
+		working = working.filter((w) => w.id !== id);
+		schedule();
+	}
+
+	function drawWorking(now: number) {
+		if (!working.length) return;
+		const anim = motion();
+		const rFirst = rowAtY(TOP_H + rowTop(fRows()));
+		const cFirst = colAtX(MARGIN + cax().offset(fCols()));
+		const rLast = rowAtY(viewH - 1);
+		const cLast = colAtX(viewW - 1);
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(MARGIN, TOP_H, viewW - MARGIN, viewH - TOP_H);
+		ctx.clip();
+		for (const w of working) {
+			const a = anim ? workAlpha(now, w.t0) : workAlpha(now, w.t0) > 0 ? 1 : 0;
+			if (anim && a < 1) animBusy = true;
+			if (a <= 0) continue;
+			for (const z of w.zones) {
+				// Bornée à la vue : une colonne d'un million de lignes, des lignes entières.
+				const r0 = z.r0 >= fRows() ? Math.max(z.r0, rFirst - 1) : z.r0;
+				const c0 = z.c0 >= fCols() ? Math.max(z.c0, cFirst - 1) : z.c0;
+				const r1 = Math.min(z.r1, rLast + 1);
+				const c1 = Math.min(z.c1, cLast + 1);
+				if (r0 > r1 || c0 > c1) continue;
+				const x = screenX(c0);
+				const y = screenY(r0);
+				const zw = cax().offset(c1 + 1) - cax().offset(c0);
+				const zh = rowTop(r1 + 1) - rowTop(r0);
+				if (zw <= 0 || zh <= 0) continue;
+				ctx.fillStyle = `rgba(15, 108, 189, ${(0.08 * a).toFixed(3)})`;
+				ctx.fillRect(x, y, zw, zh);
+				if (anim) {
+					// Bande lumineuse qui parcourt la zone dans sa longueur.
+					const tall = zh > zw * 1.5;
+					const len = tall ? zh : zw;
+					const band = Math.max(24, Math.min(180, len * 0.45));
+					const at = (tall ? y : x) - band + sweepAt(now, w.t0) * (len + 2 * band);
+					const g = tall ? ctx.createLinearGradient(0, at - band, 0, at + band) : ctx.createLinearGradient(at - band, 0, at + band, 0);
+					g.addColorStop(0, 'rgba(15, 108, 189, 0)');
+					g.addColorStop(0.5, `rgba(15, 108, 189, ${(0.2 * a).toFixed(3)})`);
+					g.addColorStop(1, 'rgba(15, 108, 189, 0)');
+					ctx.fillStyle = g;
+					ctx.fillRect(x, y, zw, zh);
+					ctx.setLineDash([6, 4]);
+					ctx.lineDashOffset = -((now - w.t0) / 40) % 10;
+					animBusy = true;
+				}
+				ctx.strokeStyle = `rgba(15, 108, 189, ${(0.7 * a).toFixed(3)})`;
+				ctx.lineWidth = 1.5;
+				ctx.strokeRect(x + 0.75, y + 0.75, zw - 1.5, zh - 1.5);
+				ctx.setLineDash([]);
+			}
+		}
+		ctx.restore();
 	}
 
 	function drawJumpFlash(now: number) {

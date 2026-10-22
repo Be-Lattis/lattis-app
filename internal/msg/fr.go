@@ -1456,4 +1456,5 @@ var fr = map[ID]string{
 	"update.install.locked":     "lattis.exe était encore ouvert et n'a pas pu être remplacé",
 	"update.install.elevation":  "les droits d'administration n'ont pas été accordés",
 	"update.install.failed":     "l'installeur s'est arrêté avant la fin (code {code})",
+	"work.cancelled":            "Opération annulée : le classeur n'a pas été modifié",
 }

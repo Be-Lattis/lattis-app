@@ -10,6 +10,7 @@ import (
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // Insertion et suppression de lignes ou de colonnes entières de la feuille,
@@ -52,6 +53,7 @@ func (a axis) lineStyles() string {
 // InsertSheetRows insère n lignes vides avant la ligne at de la feuille.
 func (m *Model) InsertSheetRows(ctx context.Context, sheet int64, at, n int) error {
 	return m.Do(ctx, plural(n, "Insérer une ligne", "Insérer des lignes"), func(t *tx) error {
+		work.Op(ctx, "insertRows", "")
 		return t.guarded(sheet, func() error { return t.insertLines(sheet, rowsAxis, at, n) })
 	})
 }
@@ -59,6 +61,7 @@ func (m *Model) InsertSheetRows(ctx context.Context, sheet int64, at, n int) err
 // DeleteSheetRows supprime les lignes r0 à r1 de la feuille.
 func (m *Model) DeleteSheetRows(ctx context.Context, sheet int64, r0, r1 int) error {
 	return m.Do(ctx, plural(r1-r0+1, "Supprimer une ligne", "Supprimer des lignes"), func(t *tx) error {
+		work.Op(ctx, "deleteRows", "")
 		return t.guarded(sheet, func() error { return t.deleteLines(sheet, rowsAxis, r0, r1) })
 	})
 }
@@ -66,6 +69,7 @@ func (m *Model) DeleteSheetRows(ctx context.Context, sheet int64, r0, r1 int) er
 // InsertSheetColumns insère n colonnes vides avant la colonne at de la feuille.
 func (m *Model) InsertSheetColumns(ctx context.Context, sheet int64, at, n int) error {
 	return m.Do(ctx, plural(n, "Insérer une colonne", "Insérer des colonnes"), func(t *tx) error {
+		work.Op(ctx, "insertColumn", "")
 		return t.guarded(sheet, func() error { return t.insertLines(sheet, colsAxis, at, n) })
 	})
 }
@@ -73,6 +77,7 @@ func (m *Model) InsertSheetColumns(ctx context.Context, sheet int64, at, n int) 
 // DeleteSheetColumns supprime les colonnes c0 à c1 de la feuille.
 func (m *Model) DeleteSheetColumns(ctx context.Context, sheet int64, c0, c1 int) error {
 	return m.Do(ctx, plural(c1-c0+1, "Supprimer une colonne", "Supprimer des colonnes"), func(t *tx) error {
+		work.Op(ctx, "deleteColumns", "")
 		return t.guarded(sheet, func() error { return t.deleteLines(sheet, colsAxis, c0, c1) })
 	})
 }

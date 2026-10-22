@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // MaxPasteCells borne un collage cellule par cellule (le collage d'un bloc
@@ -70,6 +71,7 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		return ""
 	}
 	err = m.Do(ctx, "Coller", func(t *tx) error {
+		work.Op(ctx, "write", "")
 		if err := t.guardCells(sheet, Rect{row, col, row + h - 1, col + w - 1}, true); err != nil {
 			return err
 		}
@@ -105,12 +107,14 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		}
 		t.pasting = true
 		defer func() { t.pasting = false }()
+		work.Loop(ctx, "cells", int64(h))
 		for r := range h {
 			for c := range w {
 				if err := t.input(sheet, row+r, col+c, cell(r, c), &ev); err != nil {
 					return err
 				}
 			}
+			work.Progress(ctx, int64(r+1), int64(h))
 		}
 		if ev.Created != "" {
 			ev.AutoKey = t.autoKeyed
@@ -164,7 +168,9 @@ func (t *tx) pasteInto(sheet int64, row, col int, block [][]string, w int, ev *E
 		return false, err
 	}
 	cur := *tb
+	work.Loop(t.Ctx, "cells", int64(h))
 	for r, line := range block {
+		work.Progress(t.Ctx, int64(r), int64(h))
 		for c := range w {
 			v := ""
 			if c < len(line) {

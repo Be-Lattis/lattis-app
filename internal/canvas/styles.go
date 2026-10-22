@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // Style est la mise en forme d'une cellule (JSON compact) : b, i, u, x
@@ -229,6 +230,7 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		return err
 	}
 	return m.Do(ctx, "Mise en forme", func(t *tx) error {
+		work.Op(ctx, "format", "")
 		if err := t.guard(sheet); err != nil {
 			return err
 		}

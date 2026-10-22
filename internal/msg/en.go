@@ -1454,4 +1454,5 @@ var en = map[ID]string{
 	"update.install.locked":     "lattis.exe was still open and could not be replaced",
 	"update.install.elevation":  "administrator rights were not granted",
 	"update.install.failed":     "the installer stopped before the end (code {code})",
+	"work.cancelled":            "Operation cancelled: the workbook was not changed",
 }

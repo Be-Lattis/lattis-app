@@ -9,6 +9,7 @@ import (
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // Convertir en valeurs (demande de Louis) : une colonne calculée devient une
@@ -33,6 +34,7 @@ func (m *Model) ColumnsToValues(ctx context.Context, table string, cols []int) e
 		if err != nil {
 			return err
 		}
+		work.Op(ctx, "toValues", tb.Name)
 		for _, i := range cols {
 			if i < 0 || i >= len(tb.Cols) {
 				return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})

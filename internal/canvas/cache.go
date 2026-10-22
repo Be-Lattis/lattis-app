@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/lalamefine/lattis/internal/formula"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // Versions en cache des calculs lourds relus à chaque mise en page : une
@@ -41,7 +42,10 @@ func (t *tx) pivotFlat(cfg PivotConfig) ([][]string, error) {
 	cfg = cfg.flat()
 	// Un TCD ne lit que son tableau source (pas de colonne calculée comme champ).
 	if tb, err := t.tableByName(cfg.Source); err == nil && !cfg.byFormula() {
-		return cachedOn(t, keyOf("pivot:", cfg), []string{tb.sql()}, func() ([][]string, error) { return t.pivotCellsRaw(cfg) })
+		return cachedOn(t, keyOf("pivot:", cfg), []string{tb.sql()}, func() ([][]string, error) {
+			work.Phase(t.Ctx, "pivot")
+			return t.pivotCellsRaw(cfg)
+		})
 	}
 	return cached(t, keyOf("pivot:", cfg), func() ([][]string, error) { return t.pivotCellsRaw(cfg) })
 }
@@ -52,7 +56,10 @@ func (t *tx) pivotFlat(cfg PivotConfig) ([][]string, error) {
 func (t *tx) pivotCells(cfg PivotConfig) ([][]string, []PivotRowInfo, error) {
 	cfg.Hand = nil // colonnes saisies : ajoutées après le calcul (pivothand.go)
 	cfg.Styles = nil
-	calc := func() (pivotView, error) { return t.pivotViewRaw(cfg) }
+	calc := func() (pivotView, error) {
+		work.Phase(t.Ctx, "pivot")
+		return t.pivotViewRaw(cfg)
+	}
 	var v pivotView
 	var err error
 	if tb, terr := t.tableByName(cfg.Source); terr == nil && !cfg.byFormula() {
@@ -166,6 +173,7 @@ func (r chartResult) fill(c *ChartInfo) {
 func (t *tx) chartData(cfg ChartConfig) (chartResult, error) {
 	key := t.chartKey(cfg)
 	calc := func() (chartResult, error) {
+		work.Phase(t.Ctx, "chart")
 		return t.chartDataRaw(cfg)
 	}
 	var r chartResult

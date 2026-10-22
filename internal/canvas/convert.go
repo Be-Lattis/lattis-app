@@ -12,6 +12,7 @@ import (
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/work"
 	"github.com/ncruces/go-sqlite3"
 )
 
@@ -255,6 +256,9 @@ func (m *Model) SetType(ctx context.Context, table string, i int, to grid.Type) 
 		tb, err := t.editTable(table)
 		if err != nil {
 			return err
+		}
+		if i >= 0 && i < len(tb.Cols) {
+			work.Op(ctx, "setType", tb.Cols[i].Name)
 		}
 		return t.setType(tb, i, to)
 	})

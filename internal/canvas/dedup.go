@@ -9,6 +9,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // RemoveDuplicates supprime les lignes dont les colonnes cols (toutes si
@@ -23,6 +24,7 @@ func (m *Model) RemoveDuplicates(ctx context.Context, table string, cols []int) 
 		if err != nil {
 			return err
 		}
+		work.Op(ctx, "dedup", tb.Name)
 		if tb.Filtered() {
 			return tb.errFiltered(false)
 		}

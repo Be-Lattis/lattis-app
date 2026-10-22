@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/store"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // AnchorEvery est l'écart, en lignes, entre deux ancres.
@@ -255,6 +256,8 @@ func (t *Table) Load(ctx context.Context) error {
 	// Versions relevées avant la lecture : une écriture validée pendant
 	// qu'on lit les fait avancer, le tableau sera relu (Fresh).
 	rowsVer, valuesVer, dataVer := t.db.GridVersion(t.deps)
+	// Barre d'état : comptage des lignes (le total n'est pas connu).
+	work.Loop(ctx, "count", 0)
 	anchors, n, err := t.anchorsOf(ctx)
 	if err != nil {
 		return err

@@ -9,6 +9,7 @@ import (
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 func tableSQL(id int64) string { return fmt.Sprintf("t_%d", id) }
@@ -137,6 +138,7 @@ func (t *tx) fill(tb *Table) error {
 	// lignes), relu seulement quand le tableau a changé.
 	n, err := cachedOn(t, "rows:"+tb.sql(), []string{store.RowsOf(tb.sql())}, func() (int, error) {
 		var n int
+		work.Phase(t.Ctx, "count")
 		err := t.row(`SELECT count(*) FROM ` + tb.sql()).Scan(&n)
 		return n, err
 	})

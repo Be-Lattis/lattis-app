@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/work"
 	"slices"
 	"strings"
 )
@@ -354,6 +355,7 @@ func (m *Model) SortTableCustom(ctx context.Context, table string, i int, o Cust
 		if i < 0 || i >= len(tb.Cols) {
 			return msg.New("table.columnIndexOutOfRange", msg.Args{"n": i})
 		}
+		work.Op(ctx, "sort", tb.Cols[i].Name)
 		if o, err = t.resolveOrder(o); err != nil {
 			return err
 		}

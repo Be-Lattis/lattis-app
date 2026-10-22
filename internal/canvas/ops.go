@@ -198,7 +198,9 @@ func (t *tx) dropColumn(tb Table, c Column, pos int) error {
 		// Corbeille indexée sur id : l'annulation relit chaque ligne par sa clé
 		// (sans index, 1 M de lignes demandaient 1 M de parcours complets).
 		st(`CREATE TABLE ` + trash + ` (id INTEGER PRIMARY KEY, v)`),
-		st(`INSERT INTO ` + trash + ` (id, v) SELECT id, ` + col + ` FROM ` + tb.sql()),
+		// Cellules vides laissées de côté : la colonne rétablie est vide
+		// partout ailleurs (une colonne vide ne coûte qu'un parcours).
+		st(`INSERT INTO ` + trash + ` (id, v) SELECT id, ` + col + ` FROM ` + tb.sql() + ` WHERE ` + col + ` IS NOT NULL`),
 		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, raw FROM _lattis_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
 		st(`CREATE TABLE `+trash+`_sty AS SELECT rid, style FROM _lattis_styles WHERE tbl = ? AND col = ?`, tb.ID, c.ID),
@@ -467,6 +469,15 @@ func (t *tx) physical(tb Table) ([]Column, error) {
 	return out, rs.Err()
 }
 
+// notAllNull : condition SQL « au moins une de ces colonnes n'est pas vide ».
+func notAllNull(cols []string) string {
+	parts := make([]string, len(cols))
+	for i, c := range cols {
+		parts[i] = c + ` IS NOT NULL`
+	}
+	return `(` + strings.Join(parts, ` OR `) + `)`
+}
+
 func nullIfEmpty(s string) any {
 	if s == "" {
 		return nil
@@ -547,7 +558,9 @@ func (t *tx) dropColumns(tb Table, idx []int) error {
 
 	do := []stmt{
 		st(`CREATE TABLE ` + trash + ` (` + strings.Join(tdefs, ", ") + `)`),
-		st(`INSERT INTO ` + trash + ` (` + strings.Join(tcols, ", ") + `) SELECT ` + strings.Join(tsel, ", ") + ` FROM ` + name),
+		// Lignes vides dans toutes les colonnes supprimées laissées de côté :
+		// l'annulation les rejoint en LEFT JOIN (NULL).
+		st(`INSERT INTO ` + trash + ` (` + strings.Join(tcols, ", ") + `) SELECT ` + strings.Join(tsel, ", ") + ` FROM ` + name + ` WHERE ` + notAllNull(tsel[1:])),
 		st(`CREATE TABLE `+trash+`_inv AS SELECT rid, col, raw FROM _lattis_invalid WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
 		st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),
 		st(`CREATE TABLE `+trash+`_sty AS SELECT rid, col, style FROM _lattis_styles WHERE tbl = ? AND col IN (`+in+`)`, tb.ID),

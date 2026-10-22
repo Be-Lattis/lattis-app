@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // SheetInfo décrit un onglet.
@@ -427,6 +428,7 @@ func (m *Model) layout(ctx context.Context, sheet int64, later bool) (Layout, er
 		for _, c := range cells {
 			ci := CellInfo{Row: c.Row, Col: c.Col, Raw: c.Raw}
 			if isFormula(c.Raw) {
+				work.Phase(ctx, "formulas")
 				if rows, ok, e := t.spillFree(sheet, c.Raw); ok {
 					switch {
 					case e.IsErr():

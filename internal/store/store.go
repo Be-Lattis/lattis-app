@@ -20,6 +20,8 @@ import (
 	"sync/atomic"
 
 	"github.com/ncruces/go-sqlite3"
+
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // ErrClosed signale une écriture soumise après Close.
@@ -543,6 +545,8 @@ func (s *Store) run(j job) (err error) {
 		tx.Rollback()
 		return err
 	}
+	// Écriture sur le disque : longue après une grosse modification.
+	work.Phase(j.ctx, "commit")
 	return tx.Commit()
 }
 

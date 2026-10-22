@@ -29,6 +29,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/store"
 	"github.com/lalamefine/lattis/internal/trace"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // Schema crée la table du journal.
@@ -168,6 +169,8 @@ func (t *Tx) Row(q string, args ...any) *sql.Row { return t.QueryRowContext(t.Ct
 
 func run(ctx context.Context, tx *sql.Tx, stmts []Stmt, c Capture) error {
 	for _, s := range stmts {
+		// Étape de l'opération pour la barre d'état (réécriture du tableau…).
+		work.Statement(ctx, s.Q)
 		if _, err := tx.ExecContext(ctx, s.Q, s.Args...); err != nil {
 			return fmt.Errorf("%s : %w", s.Q, err)
 		}
@@ -261,6 +264,7 @@ func (b *Bus) do(ctx context.Context, name string, fn func(*Tx) error) (int64, e
 			return t.finish(Commit{Kind: KindDo})
 		}
 		t.keepOps()
+		work.Phase(ctx, "journal")
 		if seq, err = t.insertEntries(ctx, sqlTx, t.entries(name)); err != nil {
 			return err
 		}

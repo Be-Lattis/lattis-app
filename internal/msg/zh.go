@@ -1456,4 +1456,5 @@ var zh = map[ID]string{
 	"update.install.locked":     "lattis.exe 仍处于打开状态，无法替换",
 	"update.install.elevation":  "未获得管理员权限",
 	"update.install.failed":     "安装程序在完成前停止（代码 {code}）",
+	"work.cancelled":            "操作已取消：工作簿未被修改",
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/work"
 	"regexp"
 	"slices"
 	"strconv"
@@ -106,6 +107,7 @@ type partialCell struct {
 // tableau. En copie, une sélection dst multiple du bloc le reçoit répété.
 func (m *Model) Transfer(ctx context.Context, from int64, src Rect, to int64, dst Rect, move bool, values [][]string) (Event, error) {
 	var ev Event
+	work.Op(ctx, "write", "")
 	if src.R0 > src.R1 || src.C0 > src.C1 || dst.R0 < 0 || dst.C0 < 0 {
 		return ev, msg.Wrap(ErrTable, "table.areaOutOfSheet", nil)
 	}
@@ -926,6 +928,7 @@ func (m *Model) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 		label = "Supprimer"
 	}
 	return m.Do(ctx, label, func(t *tx) error {
+		work.Op(ctx, "clear", "")
 		zone := Rect{r0, c0, r1, c1}
 		// Structure protégée : Suppr dans les données d'un tableau seulement.
 		guard := func() error { return t.guardCells(sheet, zone, false) }

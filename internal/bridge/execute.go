@@ -3,9 +3,11 @@ package bridge
 import (
 	"context"
 	"errors"
-	"github.com/lalamefine/lattis/internal/msg"
 	"sync"
 	"time"
+
+	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // ExecResult est l'issue d'une requête d'écriture de l'onglet SQL.
@@ -101,10 +103,13 @@ func (s *DocumentService) Execute(ctx context.Context, q string) (ExecResult, er
 		return ExecResult{}, err
 	}
 	start := time.Now()
-	qctx, done := s.sqlContext(ctx, sqlWriteTimeout())
+	wctx, t := s.track(ctx, true)
+	work.Op(wctx, "query", "")
+	qctx, done := s.sqlContext(wctx, sqlWriteTimeout())
 	n, err := d.ExecSQL(qctx, q)
 	err = sqlErr(qctx, err)
 	done()
+	s.untrack(t, &err)
 	if err != nil {
 		return ExecResult{}, err
 	}

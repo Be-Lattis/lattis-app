@@ -1455,4 +1455,5 @@ var de = map[ID]string{
 	"update.install.locked":     "lattis.exe war noch geöffnet und konnte nicht ersetzt werden",
 	"update.install.elevation":  "Administratorrechte wurden nicht erteilt",
 	"update.install.failed":     "das Installationsprogramm wurde vorzeitig beendet (Code {code})",
+	"work.cancelled":            "Vorgang abgebrochen: Die Arbeitsmappe wurde nicht geändert",
 }

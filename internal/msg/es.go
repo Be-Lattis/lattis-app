@@ -1454,4 +1454,5 @@ var es = map[ID]string{
 	"update.install.locked":     "lattis.exe seguía abierto y no se pudo reemplazar",
 	"update.install.elevation":  "no se concedieron los derechos de administrador",
 	"update.install.failed":     "el instalador se detuvo antes de terminar (código {code})",
+	"work.cancelled":            "Operación cancelada: el libro no se ha modificado",
 }

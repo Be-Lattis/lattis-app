@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/lalamefine/lattis/internal/store"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // Suggestion de clé (choix de Louis du 18/10 : pas de clé primaire
@@ -43,6 +44,7 @@ func (t *tx) keyHintIn(tb Table, later bool) (hint, pending bool, err error) {
 		if err := t.row(`SELECT no_key_hint FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&off); err != nil || off {
 			return false, err
 		}
+		work.Phase(t.Ctx, "keyCheck")
 		why, err := t.keyCheck(tb, 0)
 		return why == "", err
 	})

@@ -22,6 +22,7 @@ import (
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/internal/work"
 	"github.com/lalamefine/lattis/protocol"
 )
 
@@ -122,6 +123,7 @@ type DocumentService struct {
 	lost     string                  // file d'envoi du classeur fermé pas gardée (replace) : message pour State
 	sql      sqlRuns                 // requêtes en cours de l'onglet SQL (execute.go)
 	lang     langState               // langue de la session (lang.go)
+	work     workState               // opérations longues suivies (work.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState
@@ -597,11 +599,14 @@ func (s *DocumentService) changed(ctx context.Context) (DocState, error) {
 }
 
 // Layout donne la mise en page d'une feuille (tableaux et cellules libres).
-func (s *DocumentService) Layout(ctx context.Context, sheet int64) (canvas.Layout, error) {
+func (s *DocumentService) Layout(ctx context.Context, sheet int64) (_ canvas.Layout, err error) {
 	d, err := s.current()
 	if err != nil {
 		return canvas.Layout{}, err
 	}
+	ctx, t := s.track(ctx, false)
+	defer s.untrack(t, &err)
+	work.Op(ctx, "layout", "")
 	return d.Layout(ctx, sheet)
 }
 
@@ -687,11 +692,15 @@ func (s *DocumentService) tableInfo(ctx context.Context, d *doc.Document, sheet,
 }
 
 // Window lit des lignes d'un tableau (lecture par fenêtres).
-func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first, count int) (grid.Window, error) {
+func (s *DocumentService) Window(ctx context.Context, sheet, table int64, first, count int) (_ grid.Window, err error) {
+	ctx, wt := s.track(ctx, false)
+	defer s.untrack(wt, &err)
+	work.Op(ctx, "load", "")
 	t, err := s.gridTable(ctx, sheet, table)
 	if err != nil {
 		return grid.Window{}, err
 	}
+	work.Phase(ctx, "window")
 	w, err := t.Window(ctx, first, count)
 	if errors.Is(err, grid.ErrRange) && first >= 0 && count > 0 {
 		// Lignes au-delà de la fin du tableau chargé : la mise en page de
@@ -774,7 +783,11 @@ func (s *DocumentService) Undo(ctx context.Context) (DocState, error) {
 	if err != nil {
 		return DocState{}, err
 	}
-	if _, err := d.Bus.Undo(ctx); err != nil {
+	wctx, t := s.track(ctx, true)
+	work.Op(wctx, "undo", "")
+	_, err = d.Bus.Undo(wctx)
+	s.untrack(t, &err)
+	if err != nil {
 		return DocState{}, err
 	}
 	// Classeur collaboratif : cellules modifiées par un collègue depuis,
@@ -788,7 +801,11 @@ func (s *DocumentService) Redo(ctx context.Context) (DocState, error) {
 	if err != nil {
 		return DocState{}, err
 	}
-	if _, err := d.Bus.Redo(ctx); err != nil {
+	wctx, t := s.track(ctx, true)
+	work.Op(wctx, "redo", "")
+	_, err = d.Bus.Redo(wctx)
+	s.untrack(t, &err)
+	if err != nil {
 		return DocState{}, err
 	}
 	d.Notify(collab.UndoNoticeIn(s.sessionLang(), d.Oplog, true))
@@ -803,27 +820,27 @@ func (s *DocumentService) MoveCells(ctx context.Context, sheet int64, r0, c0, r1
 
 // InsertSheetRows insère n lignes entières avant la ligne at de la feuille.
 func (s *DocumentService) InsertSheetRows(ctx context.Context, sheet int64, at, n int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.InsertSheetRows(ctx, sheet, at, n) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.InsertSheetRows(ctx, sheet, at, n) })
 }
 
 // DeleteSheetRows supprime les lignes entières r0 à r1 de la feuille.
 func (s *DocumentService) DeleteSheetRows(ctx context.Context, sheet int64, r0, r1 int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.DeleteSheetRows(ctx, sheet, r0, r1) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.DeleteSheetRows(ctx, sheet, r0, r1) })
 }
 
 // InsertSheetColumns insère n colonnes entières avant la colonne at de la feuille.
 func (s *DocumentService) InsertSheetColumns(ctx context.Context, sheet int64, at, n int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.InsertSheetColumns(ctx, sheet, at, n) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.InsertSheetColumns(ctx, sheet, at, n) })
 }
 
 // DeleteSheetColumns supprime les colonnes entières c0 à c1 de la feuille.
 func (s *DocumentService) DeleteSheetColumns(ctx context.Context, sheet int64, c0, c1 int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.DeleteSheetColumns(ctx, sheet, c0, c1) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.DeleteSheetColumns(ctx, sheet, c0, c1) })
 }
 
 func (s *DocumentService) InsertRow(ctx context.Context, table string, n int) (DocState, error) {
 	w := s.watchTableRow("", 0, "insert_row")
-	st, err := s.act(ctx, func(d *doc.Document) error { return d.InsertRow(ctx, table, n) })
+	st, err := s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.InsertRow(ctx, table, n) })
 	if err == nil {
 		s.fireTableRow(w, table, n)
 	}
@@ -832,7 +849,7 @@ func (s *DocumentService) InsertRow(ctx context.Context, table string, n int) (D
 
 func (s *DocumentService) DeleteRow(ctx context.Context, table string, n int) (DocState, error) {
 	w := s.watchTableRow(table, n, "delete_row")
-	st, err := s.act(ctx, func(d *doc.Document) error { return d.DeleteRow(ctx, table, n) })
+	st, err := s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.DeleteRow(ctx, table, n) })
 	if err == nil {
 		s.fireTableRow(w, table, n)
 	}
@@ -840,11 +857,11 @@ func (s *DocumentService) DeleteRow(ctx context.Context, table string, n int) (D
 }
 
 func (s *DocumentService) InsertColumn(ctx context.Context, table string, i int, name string) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.InsertColumn(ctx, table, i, name) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.InsertColumn(ctx, table, i, name) })
 }
 
 func (s *DocumentService) DeleteColumn(ctx context.Context, table string, i int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.DeleteColumn(ctx, table, i) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.DeleteColumn(ctx, table, i) })
 }
 
 func (s *DocumentService) act(ctx context.Context, fn func(*doc.Document) error) (DocState, error) {
@@ -876,11 +893,14 @@ func (s *DocumentService) activeSheet() int64 {
 }
 
 // Query exécute une requête SQL en lecture seule sur le classeur (onglet SQL).
-func (s *DocumentService) Query(ctx context.Context, q string) (grid.QueryResult, error) {
+func (s *DocumentService) Query(ctx context.Context, q string) (_ grid.QueryResult, err error) {
 	d, err := s.current()
 	if err != nil {
 		return grid.QueryResult{}, err
 	}
+	ctx, t := s.track(ctx, true)
+	defer s.untrack(t, &err)
+	work.Op(ctx, "query", "")
 	if q, err = d.CellSQL(ctx, q, s.activeSheet()); err != nil {
 		return grid.QueryResult{}, err
 	}
@@ -945,7 +965,9 @@ func (s *DocumentService) Paste(ctx context.Context, sheet int64, row, col int, 
 		width = max(width, len(r))
 	}
 	w := s.watchChange(sheet, row, col, row+max(len(block), 1)-1, col+width-1, "paste")
-	ev, err := d.Paste(ctx, sheet, row, col, block)
+	wctx, t := s.track(ctx, true)
+	ev, err := d.Paste(wctx, sheet, row, col, block)
+	s.untrack(t, &err)
 	if err != nil {
 		return ev, err
 	}
@@ -1081,7 +1103,7 @@ func (s *DocumentService) TypeMix(ctx context.Context, table string, i int) (can
 
 // SetType fixe le type d'une colonne (valeurs non convertibles marquées en erreur).
 func (s *DocumentService) SetType(ctx context.Context, table string, i int, to grid.Type) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.SetType(ctx, table, i, to) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.SetType(ctx, table, i, to) })
 }
 
 // SetColumnWidth fixe la largeur d'une colonne de la feuille.
@@ -1115,13 +1137,13 @@ func (s *DocumentService) SetName(ctx context.Context, sheet int64, row, col int
 
 // SortTable trie un tableau selon la colonne i (desc : décroissant).
 func (s *DocumentService) SortTable(ctx context.Context, table string, i int, desc bool) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.SortTable(ctx, table, i, desc) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.SortTable(ctx, table, i, desc) })
 }
 
 // SortTableCustom trie un tableau selon la colonne i dans un ordre
 // personnalisé, enregistré pour la colonne.
 func (s *DocumentService) SortTableCustom(ctx context.Context, table string, i int, order canvas.CustomOrder) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.SortTableCustom(ctx, table, i, order) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.SortTableCustom(ctx, table, i, order) })
 }
 
 // ColumnOrderInfo est l'ordre personnalisé enregistré d'une colonne (Order
@@ -1167,13 +1189,17 @@ func (s *DocumentService) SetCustomLists(ctx context.Context, lists []canvas.Cus
 // ApplyStyle met en forme un rectangle de la feuille (patch : propriétés à
 // poser, une valeur vide les retire).
 func (s *DocumentService) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int, patch map[string]any) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.ApplyStyle(ctx, sheet, r0, c0, r1, c1, patch) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error {
+		return d.ApplyStyle(ctx, sheet, r0, c0, r1, c1, patch)
+	})
 }
 
 // ApplyLineStyle met en forme des lignes (rows) ou des colonnes entières
 // [i0, i1] de la feuille, comme Excel.
 func (s *DocumentService) ApplyLineStyle(ctx context.Context, sheet int64, rows bool, i0, i1 int, patch map[string]any) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.ApplyLineStyle(ctx, sheet, rows, i0, i1, patch) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error {
+		return d.ApplyLineStyle(ctx, sheet, rows, i0, i1, patch)
+	})
 }
 
 // SetNote pose la note d'une cellule (texte vide : la retire).
@@ -1340,7 +1366,7 @@ func (s *DocumentService) ConvertToRange(ctx context.Context, name string) (DocS
 
 // ColumnsToValues convertit des colonnes calculées en colonnes de valeurs.
 func (s *DocumentService) ColumnsToValues(ctx context.Context, table string, cols []int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.ColumnsToValues(ctx, table, cols) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.ColumnsToValues(ctx, table, cols) })
 }
 
 // RangeToValues convertit en valeurs les colonnes calculées et les cellules
@@ -1395,7 +1421,9 @@ func (s *DocumentService) RemoveDuplicates(ctx context.Context, table string, co
 	if err != nil {
 		return 0, err
 	}
-	n, err := d.RemoveDuplicates(ctx, table, cols)
+	wctx, t := s.track(ctx, true)
+	n, err := d.RemoveDuplicates(wctx, table, cols)
+	s.untrack(t, &err)
 	if err != nil {
 		return 0, err
 	}
@@ -1729,7 +1757,7 @@ func (s *DocumentService) ClearCells(ctx context.Context, sheet int64, r0, c0, r
 // comprise, comme Supprimer).
 func (s *DocumentService) ClearRange(ctx context.Context, sheet int64, r0, c0, r1, c1 int, all bool) (DocState, error) {
 	w := s.watchChange(sheet, r0, c0, r1, c1, "clear")
-	st, err := s.act(ctx, func(d *doc.Document) error { return d.ClearRange(ctx, sheet, r0, c0, r1, c1, all) })
+	st, err := s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.ClearRange(ctx, sheet, r0, c0, r1, c1, all) })
 	if err == nil {
 		s.fireChange(w)
 	}
@@ -1749,7 +1777,9 @@ func (s *DocumentService) Transfer(ctx context.Context, from int64, src canvas.R
 		source = "move"
 	}
 	w := s.watchChange(to, dst.R0, dst.C0, dst.R1, dst.C1, source)
-	ev, err := d.Transfer(ctx, from, src, to, dst, move, values)
+	wctx, t := s.track(ctx, true)
+	ev, err := d.Transfer(wctx, from, src, to, dst, move, values)
+	s.untrack(t, &err)
 	if err != nil {
 		return ev, err
 	}
@@ -1853,11 +1883,11 @@ func (s *DocumentService) OrderSheets(ctx context.Context, order []int64) (DocSt
 // SuppressColumns : Suppr sur les colonnes entières i à j d'un tableau, en
 // une étape (vides au milieu : le tableau se coupe en deux).
 func (s *DocumentService) SuppressColumns(ctx context.Context, table string, i, j int) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.SuppressColumns(ctx, table, i, j) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.SuppressColumns(ctx, table, i, j) })
 }
 
 // DeleteColumnSpans supprime des colonnes de plusieurs tableaux (colonnes
 // entières de la feuille qui les traversent), en une étape.
 func (s *DocumentService) DeleteColumnSpans(ctx context.Context, spans []canvas.ColumnSpan) (DocState, error) {
-	return s.act(ctx, func(d *doc.Document) error { return d.DeleteColumnSpans(ctx, spans) })
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error { return d.DeleteColumnSpans(ctx, spans) })
 }
