@@ -4,6 +4,9 @@
 	// (spécification de l'application collaborative, §5.3) — types figés,
 	// saisies invalides à corriger ou à accepter comme texte, noms valides en
 	// PostgreSQL. Les tableaux non cochés restent privés (sur ce poste).
+	// Pendant la publication, la boîte dit l'étape et les lignes envoyées
+	// (évènements work:step du moteur, internal/work) ; « Annuler la
+	// publication » la défait tant que le serveur ne l'a pas validée.
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -16,6 +19,7 @@
 	import TableSourcesList from './TableSourcesList.svelte';
 	import { COLLABORATIVE, FROZEN, blocking, defaultSelection, inferredColumns, modeLabel, remoteTypeLabel } from './share';
 	import { errorText, t } from '#lib/i18n/index.js';
+	import { work, workPhaseText, workRatio } from '#lib/shell/work.js';
 
 	interface Props {
 		/** Republier (classeur figé déjà publié) plutôt que publier. */
@@ -43,6 +47,14 @@
 	let mode = $state(untrack(() => (republish && share ? share.mode : FROZEN)));
 	let busy = $state(false);
 	let error = $state('');
+	// Publication annulée (rien n'a changé) : dit sans alarme.
+	let notice = $state('');
+	// Publication en cours, suivie par le moteur : étape, avancement,
+	// annulation possible. stopping : « Annuler » demandé.
+	let publishing = $state(false);
+	let stopping = $state(false);
+	const step = $derived(publishing && $work && ($work.op === 'publish' || $work.op === 'republish') ? $work : null);
+	const ratio = $derived(step ? workRatio(step) : null);
 	const err = errorText;
 	const servers = $derived(connected(lattis.state.servers));
 	const blocked = $derived(check ? blocking(check, selected) : []);
@@ -117,17 +129,26 @@
 	}
 
 	async function publish() {
-		error = '';
-		busy = true;
+		error = notice = '';
+		busy = publishing = true;
+		stopping = false;
 		try {
 			const st = republish ? await DocumentService.ShareRepublish(selected) : await DocumentService.SharePublish({ server, title: name.trim(), mode, tables: selected });
 			const chosen = (check?.tables ?? []).filter((t) => selected.includes(t.id) && t.query && lake.includes(t.name)).map((t) => t.name);
 			ondone(st, mode === COLLABORATIVE ? chosen : []);
 		} catch (e) {
-			error = err(e);
+			if (stopping) notice = t('remote.shareDialog.progress.cancelled');
+			else error = err(e);
 		} finally {
-			busy = false;
+			busy = publishing = stopping = false;
 		}
+	}
+
+	/** Annuler pendant la publication : la transaction du serveur est abandonnée. */
+	function stop() {
+		if (!step?.cancel || stopping) return;
+		stopping = true;
+		DocumentService.CancelWork(step.id).catch(() => undefined);
 	}
 </script>
 
@@ -218,10 +239,33 @@
 			{/if}
 			<TableSourcesList />
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			{#if notice}<p class="notice" role="status">{notice}</p>{/if}
 		</div>
+		{#if publishing}
+			{@const label = step ? workPhaseText(step) : ''}
+			<div
+				class="progress"
+				role="progressbar"
+				aria-label={t('remote.shareDialog.progress.aria')}
+				aria-valuetext={label || t('remote.shareDialog.publishing')}
+				aria-valuemin={ratio === null ? undefined : 0}
+				aria-valuemax={ratio === null ? undefined : 100}
+				aria-valuenow={ratio === null ? undefined : Math.round(ratio * 100)}
+			>
+				<span class="plabel">{label || t('remote.shareDialog.publishing')}</span>
+				<span class="track">{#if ratio === null}<span class="bar"></span>{:else}<span class="fill" style:width="{ratio * 100}%"></span>{/if}</span>
+				{#if step && !step.cancel && !stopping}<span class="muted">{t('remote.shareDialog.progress.noReturn')}</span>{/if}
+			</div>
+		{/if}
 		<footer>
 			<span class="grow why" class:warn={noTables} id="share-why">{why}</span>
-			<button onclick={() => ondone(null)} disabled={busy}>{t('common.cancel')}</button>
+			{#if publishing}
+				<button onclick={stop} disabled={!step?.cancel || stopping} title={t('remote.shareDialog.progress.cancelTooltip')}>
+					{stopping ? t('remote.shareDialog.progress.cancelling') : t('remote.shareDialog.progress.cancel')}
+				</button>
+			{:else}
+				<button onclick={() => ondone(null)} disabled={busy}>{t('common.cancel')}</button>
+			{/if}
 			<button class="primary" onclick={publish} disabled={busy || !!why} title={why || undefined} aria-describedby={why ? 'share-why' : undefined}>
 				{busy ? t('remote.shareDialog.publishing') : republish ? t('remote.shareDialog.republish') : t('remote.shareDialog.publish')}
 			</button>
@@ -429,6 +473,70 @@
 		color: #c0392b;
 		margin-top: 10px;
 		white-space: pre-line;
+	}
+	.progress {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 10px;
+		padding: 8px 16px;
+		border-top: 1px solid #e3e5e8;
+		font-size: 12px;
+	}
+	.plabel {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-variant-numeric: tabular-nums;
+	}
+	.track {
+		position: relative;
+		flex: none;
+		width: 180px;
+		height: 6px;
+		border-radius: 3px;
+		background: #e3e5e8;
+		overflow: hidden;
+	}
+	.bar,
+	.fill {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		border-radius: 3px;
+		background: #217346;
+	}
+	.bar {
+		width: 40%;
+		animation: slide 1.1s ease-in-out infinite;
+	}
+	.fill {
+		left: 0;
+		transition: width 0.2s ease-out;
+	}
+	.progress .muted {
+		flex-basis: 100%;
+	}
+	@keyframes slide {
+		from {
+			left: -40%;
+		}
+		to {
+			left: 100%;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.bar {
+			animation: none;
+			left: 0;
+			width: 100%;
+			opacity: 0.5;
+		}
+		.fill {
+			transition: none;
+		}
 	}
 	footer {
 		display: flex;

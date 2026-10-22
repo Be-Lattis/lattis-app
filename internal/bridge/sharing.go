@@ -22,6 +22,7 @@ import (
 	"github.com/lalamefine/lattis/internal/remote/pgpool"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/internal/trace"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // Classeurs partagés (docs/collaboration/publication.md) : Fichier ›
@@ -698,12 +699,30 @@ func (s *DocumentService) SharePublish(ctx context.Context, req ShareRequest) (w
 		return workbook.State{}, err
 	}
 	server, _ := auth.NormalizeURL(req.Server)
-	if _, err := workbook.Publish(ctx, srv, d.DB(), workbook.Request{
-		Server: server, ServerName: name, User: user.PGRole, Title: req.Title, Mode: req.Mode, Tables: req.Tables,
-	}); err != nil {
+	return s.publishTracked(ctx, d, func(ctx context.Context) error {
+		_, err := workbook.Publish(ctx, srv, d.DB(), workbook.Request{
+			Server: server, ServerName: name, User: user.PGRole, Title: req.Title, Mode: req.Mode, Tables: req.Tables,
+		})
+		return err
+	})
+}
+
+// publishTracked fait une publication (fn) suivie dans la barre d'état et
+// dans la boîte de publication (étapes, lignes envoyées) : « Annuler » la
+// défait tant que le serveur ne l'a pas validée (transaction du serveur
+// abandonnée, rien de noté dans le classeur), comme une erreur. Le
+// classeur publié est ensuite réenregistré, toujours suivi mais sans
+// annulation.
+func (s *DocumentService) publishTracked(ctx context.Context, d *doc.Document, fn func(context.Context) error) (st workbook.State, err error) {
+	wctx, t := s.track(ctx, true)
+	defer s.untrack(t, &err)
+	if err := fn(wctx); err != nil {
 		return workbook.State{}, err
 	}
-	return s.afterShare(ctx, d)
+	if d.Path() != "" {
+		work.Loop(wctx, "save", 0)
+	}
+	return s.afterShare(context.WithoutCancel(wctx), d)
 }
 
 // ShareCanPublish dit si le compte connecté à server peut y créer un
@@ -733,10 +752,10 @@ func (s *DocumentService) ShareRepublish(ctx context.Context, tables []int64) (w
 	if err != nil {
 		return workbook.State{}, err
 	}
-	if _, err := workbook.Republish(ctx, srv, d.DB(), tables); err != nil {
-		return workbook.State{}, err
-	}
-	return s.afterShare(ctx, d)
+	return s.publishTracked(ctx, d, func(ctx context.Context) error {
+		_, err := workbook.Republish(ctx, srv, d.DB(), tables)
+		return err
+	})
 }
 
 // afterShare : le partage du classeur d a changé (publication,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { setLang } from '#lib/i18n/index.js';
-import { WorkList, workRatio, workText } from './work';
+import { WorkList, workPhaseText, workRatio, workText } from './work';
 
 describe('WorkList', () => {
 	it('montre l’action annulable la plus ancienne, sinon la lecture la plus récente', () => {
@@ -32,6 +32,15 @@ describe('workText', () => {
 		await setLang('en');
 		expect(workText({ id: 1, op: 'sort', name: 'Price', phase: 'rank' })).toBe('Sorting by Price: ranking rows');
 		await setLang('fr');
+	});
+
+	it('publication : le classeur publié, l’étape et les lignes envoyées', async () => {
+		await setLang('fr');
+		const s = { id: 1, op: 'publish', name: 'Ventes', phase: 'send', done: 2300000, total: 10000000, cancel: true };
+		expect(workText(s)).toMatch(/^Publication de Ventes : envoi des lignes 2\s300\s000 \/ 10\s000\s000$/);
+		expect(workPhaseText(s)).toMatch(/^Envoi des lignes 2\s300\s000 \/ 10\s000\s000$/);
+		expect(workPhaseText({ id: 1, op: 'publish', phase: 'record' })).toBe('Enregistrement des identifiants');
+		expect(workPhaseText({ id: 1, op: 'publish' })).toBe('');
 	});
 
 	it('part faite seulement quand le total est connu', () => {

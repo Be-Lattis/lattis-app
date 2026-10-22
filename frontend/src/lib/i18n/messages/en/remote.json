@@ -1210,7 +1210,15 @@
 		"uncheckedPrivate": "Unchecked tables stay private: on this computer only.",
 		"publishing": "Publishing…",
 		"republish": "Republish",
-		"publish": "Publish"
+		"publish": "Publish",
+		"progress": {
+			"aria": "Publishing progress",
+			"cancel": "Cancel publishing",
+			"cancelling": "Cancelling…",
+			"cancelTooltip": "Stop publishing: nothing is published, the workbook stays as it was",
+			"noReturn": "Almost done: publishing can no longer be cancelled",
+			"cancelled": "Publishing cancelled: nothing changed on the server or in the workbook."
+		}
 	},
 	"dataShare": {
 		"title": {

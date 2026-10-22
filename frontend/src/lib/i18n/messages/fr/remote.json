@@ -1210,7 +1210,15 @@
 		"uncheckedPrivate": "Les tableaux non cochés restent privés : sur ce poste seulement.",
 		"publishing": "Publication…",
 		"republish": "Republier",
-		"publish": "Publier"
+		"publish": "Publier",
+		"progress": {
+			"aria": "Avancement de la publication",
+			"cancel": "Annuler la publication",
+			"cancelling": "Annulation…",
+			"cancelTooltip": "Interrompre la publication : rien n'est publié, le classeur reste tel qu'avant",
+			"noReturn": "Presque fini : la publication ne peut plus être annulée",
+			"cancelled": "Publication annulée : rien n'a changé sur le serveur ni dans le classeur."
+		}
 	},
 	"dataShare": {
 		"title": {

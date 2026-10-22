@@ -12,6 +12,7 @@
 package order
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math/rand/v2"
@@ -134,6 +135,18 @@ func Spread(n int) []string {
 	if n <= 0 {
 		return nil
 	}
+	key := SpreadKeys(n)
+	keys := make([]string, n)
+	for i := range n {
+		keys[i] = string(key(i))
+	}
+	return keys
+}
+
+// SpreadKeys donne les clés de Spread(n) une à une sans les garder toutes
+// (vérifier qu'un gros tableau est déjà réparti) : key(i), i de 0 à n-1 ;
+// la tranche rendue est réutilisée à l'appel suivant.
+func SpreadKeys(n int) func(i int) []byte {
 	// Largeur w telle que 62^w dépasse largement n : un chiffre de marge
 	// laisse au moins 61 insertions entre deux clés avant d'allonger les clés.
 	width, capacity := 1, uint64(base)
@@ -142,17 +155,15 @@ func Spread(n int) []string {
 		capacity *= uint64(base)
 	}
 	step := capacity / uint64(n+1)
-	keys := make([]string, n)
 	buf := make([]byte, width)
-	for i := range n {
+	return func(i int) []byte {
 		v := step * uint64(i+1)
 		for k := width - 1; k >= 0; k-- {
 			buf[k] = Digits[v%uint64(base)]
 			v /= uint64(base)
 		}
-		keys[i] = strings.TrimRight(string(buf), "0")
+		return bytes.TrimRight(buf, "0")
 	}
-	return keys
 }
 
 func valid(k string) bool {

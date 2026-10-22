@@ -6,6 +6,14 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Publier sur un serveur : la boîte de publication dit l'étape en cours et les lignes envoyées (« Envoi des lignes 2 300 000 / 10 000 000 ») avec une barre de progression, comme la barre d'état, et propose « Annuler la publication » : rien n'est publié et le classeur reste tel qu'avant, jusqu'au dernier instant où le serveur valide la publication.
+
+### Changements
+
+- Publier un gros tableau est bien plus rapide : 1 M de lignes en 23 s au lieu de 60 à 80 s, 10 M en moins de 5 minutes au lieu d'une vingtaine ; la note des lignes publiées dans le classeur, qui ralentissait de plus en plus avec la taille, prend quelques secondes au lieu de plusieurs minutes, et la mémoire utilisée ne croît plus démesurément.
+
 ## 0.4.4-beta (22/10/2026)
 
 ### Nouveautés

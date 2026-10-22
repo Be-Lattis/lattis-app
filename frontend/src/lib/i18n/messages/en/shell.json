@@ -324,7 +324,9 @@
 			"redo": "Redoing",
 			"layout": "Laying out the sheet",
 			"load": "Loading the table",
-			"query": "SQL query"
+			"query": "SQL query",
+			"publish": "Publishing {name}",
+			"republish": "Republishing {name}"
 		},
 		"phase": {
 			"keep": "saving a copy for undo",
@@ -345,7 +347,14 @@
 			"pivot": "computing the pivot table",
 			"chart": "computing the chart",
 			"formulas": "recalculating formulas",
-			"window": "reading visible cells"
+			"window": "reading visible cells",
+			"check": "checking entries",
+			"prepare": "preparing",
+			"send": "sending rows",
+			"layout": "sending the layout",
+			"finish": "going live",
+			"record": "saving row identifiers",
+			"save": "saving the file"
 		}
 	},
 	"sync": {

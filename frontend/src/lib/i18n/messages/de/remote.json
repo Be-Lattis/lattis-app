@@ -1210,7 +1210,15 @@
 		"uncheckedPrivate": "Nicht aktivierte Tabellen bleiben privat: nur auf diesem Computer.",
 		"publishing": "Wird veröffentlicht…",
 		"republish": "Erneut veröffentlichen",
-		"publish": "Veröffentlichen"
+		"publish": "Veröffentlichen",
+		"progress": {
+			"aria": "Fortschritt der Veröffentlichung",
+			"cancel": "Veröffentlichung abbrechen",
+			"cancelling": "Wird abgebrochen…",
+			"cancelTooltip": "Veröffentlichung abbrechen: Nichts wird veröffentlicht, die Arbeitsmappe bleibt unverändert",
+			"noReturn": "Fast fertig: Die Veröffentlichung kann nicht mehr abgebrochen werden",
+			"cancelled": "Veröffentlichung abgebrochen: Weder auf dem Server noch in der Arbeitsmappe hat sich etwas geändert."
+		}
 	},
 	"dataShare": {
 		"title": {

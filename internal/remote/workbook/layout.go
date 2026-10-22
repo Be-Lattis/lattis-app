@@ -72,6 +72,19 @@ func (r *LayoutRows) index(name string) int { return slices.Index(r.Columns, nam
 // ayant d'autres rid.
 type rowIDs map[int64]map[int64]string
 
+// rowLookup donne l'identifiant partagé d'une ligne (rid) d'un tableau.
+// tracked : le tableau a des identifiants partagés (sinon le rid reste tel
+// quel) ; ok : la ligne en a un (sinon elle n'est pas publiée).
+type rowLookup interface {
+	rowID(ctx context.Context, tbl, rid int64) (u string, tracked, ok bool, err error)
+}
+
+func (ids rowIDs) rowID(_ context.Context, tbl, rid int64) (string, bool, bool, error) {
+	m, tracked := ids[tbl]
+	u, ok := m[rid]
+	return u, tracked, ok, nil
+}
+
 type txOrDB interface {
 	QueryContext(ctx context.Context, q string, args ...any) (*sql.Rows, error)
 	QueryRowContext(ctx context.Context, q string, args ...any) *sql.Row
@@ -79,7 +92,7 @@ type txOrDB interface {
 
 // dumpLayout lit la mise en page. published : tableaux publiés (nil : tous
 // les tableaux sont gardés, tableaux privés compris).
-func dumpLayout(ctx context.Context, q txOrDB, format int, published map[int64]bool, ids rowIDs) (*Layout, error) {
+func dumpLayout(ctx context.Context, q txOrDB, format int, published map[int64]bool, ids rowLookup) (*Layout, error) {
 	l := &Layout{Key: layoutKey, Format: format, Tables: map[string]*LayoutRows{}}
 	for _, name := range layoutTables {
 		cols, err := tableColumns(ctx, q, name)
@@ -129,12 +142,18 @@ func dumpLayout(ctx context.Context, q txOrDB, format int, published map[int64]b
 			if ridAt >= 0 && tblAt >= 0 && ids != nil {
 				tbl, _ := asInt(vals[tblAt])
 				rid, _ := asInt(vals[ridAt])
-				if m, ok := ids[tbl]; ok && rid != 0 {
-					u, ok := m[rid]
-					if !ok {
+				if rid != 0 {
+					u, tracked, ok, err := ids.rowID(ctx, tbl, rid)
+					if err != nil {
+						rs.Close()
+						return nil, err
+					}
+					if tracked && !ok {
 						continue // ligne sans identifiant partagé
 					}
-					vals[ridAt] = u
+					if tracked {
+						vals[ridAt] = u
+					}
 				}
 			}
 			lr.Rows = append(lr.Rows, vals)

@@ -324,7 +324,9 @@
 			"redo": "Wiederherstellen",
 			"layout": "Blattlayout",
 			"load": "Tabelle wird geladen",
-			"query": "SQL-Abfrage"
+			"query": "SQL-Abfrage",
+			"publish": "Veröffentlichung von {name}",
+			"republish": "Neuveröffentlichung von {name}"
 		},
 		"phase": {
 			"keep": "Kopie für Rückgängig",
@@ -345,7 +347,14 @@
 			"pivot": "Pivot-Tabelle wird berechnet",
 			"chart": "Diagramm wird berechnet",
 			"formulas": "Formeln werden neu berechnet",
-			"window": "sichtbare Zellen werden gelesen"
+			"window": "sichtbare Zellen werden gelesen",
+			"check": "Prüfung der Eingaben",
+			"prepare": "Vorbereitung",
+			"send": "Senden der Zeilen",
+			"layout": "Senden des Layouts",
+			"finish": "Freigabe",
+			"record": "Speichern der Zeilenkennungen",
+			"save": "Speichern der Datei"
 		}
 	},
 	"sync": {

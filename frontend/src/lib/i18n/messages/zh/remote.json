@@ -1210,7 +1210,15 @@
 		"uncheckedPrivate": "未选中的表格保持私有：仅在本计算机上。",
 		"publishing": "正在发布…",
 		"republish": "重新发布",
-		"publish": "发布"
+		"publish": "发布",
+		"progress": {
+			"aria": "发布进度",
+			"cancel": "取消发布",
+			"cancelling": "正在取消…",
+			"cancelTooltip": "中止发布：不会发布任何内容，工作簿保持原样",
+			"noReturn": "即将完成：发布已无法取消",
+			"cancelled": "发布已取消：服务器和工作簿均未改变。"
+		}
 	},
 	"dataShare": {
 		"title": {

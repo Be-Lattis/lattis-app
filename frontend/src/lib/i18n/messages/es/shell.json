@@ -324,7 +324,9 @@
 			"redo": "Rehaciendo",
 			"layout": "Diseño de la hoja",
 			"load": "Cargando la tabla",
-			"query": "Consulta SQL"
+			"query": "Consulta SQL",
+			"publish": "Publicación de {name}",
+			"republish": "Republicación de {name}"
 		},
 		"phase": {
 			"keep": "copia para deshacer",
@@ -345,7 +347,14 @@
 			"pivot": "cálculo de la tabla dinámica",
 			"chart": "cálculo del gráfico",
 			"formulas": "recálculo de fórmulas",
-			"window": "lectura de las celdas visibles"
+			"window": "lectura de las celdas visibles",
+			"check": "comprobación de las entradas",
+			"prepare": "preparación",
+			"send": "envío de las filas",
+			"layout": "envío del diseño",
+			"finish": "puesta en línea",
+			"record": "registro de los identificadores",
+			"save": "guardado del archivo"
 		}
 	},
 	"sync": {

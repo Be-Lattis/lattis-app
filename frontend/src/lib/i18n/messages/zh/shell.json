@@ -324,7 +324,9 @@
 			"redo": "正在恢复",
 			"layout": "工作表布局",
 			"load": "正在加载表格",
-			"query": "SQL 查询"
+			"query": "SQL 查询",
+			"publish": "正在发布 {name}",
+			"republish": "正在重新发布 {name}"
 		},
 		"phase": {
 			"keep": "保存撤销副本",
@@ -345,7 +347,14 @@
 			"pivot": "计算数据透视表",
 			"chart": "计算图表",
 			"formulas": "重新计算公式",
-			"window": "读取可见单元格"
+			"window": "读取可见单元格",
+			"check": "检查输入",
+			"prepare": "准备",
+			"send": "发送行",
+			"layout": "发送布局",
+			"finish": "上线",
+			"record": "记录行标识",
+			"save": "保存文件"
 		}
 	},
 	"sync": {

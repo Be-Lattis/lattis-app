@@ -126,6 +126,25 @@ func TestCancel(t *testing.T) {
 	none.End()
 }
 
+// Point de non-retour : Annuler n'est plus proposé ni suivi d'effet ; une
+// opération déjà annulée ne le passe pas.
+func TestFinal(t *testing.T) {
+	if !Final(context.Background()) {
+		t.Fatal("sans suivi, rien n'empêche de continuer")
+	}
+	ctx, tr := Start(context.Background(), func(Step) {}, true)
+	if !Final(ctx) || tr.Cancel() || tr.Cancelled() || ctx.Err() != nil || tr.cur.Cancel {
+		t.Fatal("après Final, l'opération ne s'annule plus")
+	}
+	tr.End()
+	ctx, tr = Start(context.Background(), func(Step) {}, true)
+	tr.Cancel()
+	if Final(ctx) {
+		t.Fatal("une opération annulée ne passe pas le point de non-retour")
+	}
+	tr.End()
+}
+
 func TestClassify(t *testing.T) {
 	for q, want := range map[string]string{
 		"CREATE TABLE _lattis_trash_1 (id INTEGER PRIMARY KEY, v)":     "",

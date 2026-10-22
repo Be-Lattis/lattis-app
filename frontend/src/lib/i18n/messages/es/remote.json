@@ -1210,7 +1210,15 @@
 		"uncheckedPrivate": "Las tablas no marcadas siguen siendo privadas: solo en este equipo.",
 		"publishing": "Publicando…",
 		"republish": "Volver a publicar",
-		"publish": "Publicar"
+		"publish": "Publicar",
+		"progress": {
+			"aria": "Progreso de la publicación",
+			"cancel": "Cancelar la publicación",
+			"cancelling": "Cancelando…",
+			"cancelTooltip": "Detener la publicación: no se publica nada, el libro queda como estaba",
+			"noReturn": "Casi listo: la publicación ya no se puede cancelar",
+			"cancelled": "Publicación cancelada: no ha cambiado nada ni en el servidor ni en el libro."
+		}
 	},
 	"dataShare": {
 		"title": {

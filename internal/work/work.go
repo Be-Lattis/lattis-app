@@ -59,6 +59,7 @@ type Tracker struct {
 	last    time.Time // dernière émission
 	timer   *time.Timer
 	hold    bool        // étape de Loop : les instructions ne la changent pas
+	final   bool        // Final passé : Cancel ne peut plus l'interrompre
 	stopped atomic.Bool // annulée par l'utilisateur
 
 	emitMu sync.Mutex // émissions dans l'ordre, la fin en dernier
@@ -108,9 +109,40 @@ func (t *Tracker) Cancel() bool {
 	if t == nil || t.cancel == nil {
 		return false
 	}
+	t.mu.Lock()
+	if t.final {
+		t.mu.Unlock()
+		return false
+	}
 	t.stopped.Store(true)
+	t.mu.Unlock()
 	t.cancel(ErrCancelled)
 	return true
+}
+
+// Final marque le point de non-retour d'une opération qu'on pouvait
+// interrompre (publication : la transaction du serveur va être validée) :
+// Cancel ne l'interrompt plus et « Annuler » disparaît. Faux si elle a déjà
+// été annulée (ce qui suit ne doit pas être fait) ; vrai sans suivi.
+func Final(ctx context.Context) bool {
+	t := From(ctx)
+	if t == nil || t.cancel == nil {
+		return true
+	}
+	ok := true
+	t.change(func(s *Step) bool {
+		if t.stopped.Load() {
+			ok = false
+			return false
+		}
+		t.final = true
+		if !s.Cancel {
+			return false
+		}
+		s.Cancel = false
+		return true
+	})
+	return ok
 }
 
 // Cancelled : l'opération a été interrompue par Cancel.

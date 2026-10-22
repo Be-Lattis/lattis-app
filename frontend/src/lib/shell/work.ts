@@ -18,8 +18,8 @@ export interface WorkStep {
 	end?: boolean;
 }
 
-/** Actions dont le libellé cite ce qu'elles visent ({name} : la colonne). */
-const NAMED = new Set(['deleteColumn', 'sort', 'setType']);
+/** Actions dont le libellé cite ce qu'elles visent ({name} : la colonne, le classeur publié). */
+const NAMED = new Set(['deleteColumn', 'sort', 'setType', 'publish', 'republish']);
 
 /** Opérations en cours, par identifiant (fonctions pures, testées). */
 export class WorkList {
@@ -53,14 +53,35 @@ export class WorkList {
 export function workText(s: WorkStep): string {
 	const opKey = `shell.work.op.${s.op}`;
 	const op = s.op && hasKey(opKey) ? tAny(opKey, NAMED.has(s.op) ? { name: s.name ?? '' } : undefined) : '';
-	const phaseKey = `shell.work.phase.${s.phase}`;
-	const phase = s.phase && hasKey(phaseKey) ? tAny(phaseKey) : '';
+	const phase = phaseText(s);
 	// Étape seule (action sans nom) : avec une majuscule, comme un libellé.
-	const lone = phase && phase[0].toLocaleUpperCase() + phase.slice(1);
-	let text = op && phase ? t('shell.work.both', { op, phase }) : op || lone || t('shell.busy.label');
-	if (s.total && s.total > 0) text += ` ${fmtInteger(Math.min(s.done ?? 0, s.total))} / ${fmtInteger(s.total)}`;
-	else if (s.done && s.done > 0) text += ` ${fmtInteger(s.done)}`;
-	return text;
+	const lone = phase && capital(phase);
+	return (op && phase ? t('shell.work.both', { op, phase }) : op || lone || t('shell.busy.label')) + countText(s);
+}
+
+/**
+ * Étape seule, avec une majuscule, et son avancement (« Envoi des lignes
+ * 2 300 000 / 10 000 000 ») : pour une boîte qui dit déjà l'action
+ * (publication). '' quand l'étape n'a pas de libellé.
+ */
+export function workPhaseText(s: WorkStep): string {
+	const phase = phaseText(s);
+	return phase ? capital(phase) + countText(s) : '';
+}
+
+function phaseText(s: WorkStep): string {
+	const key = `shell.work.phase.${s.phase}`;
+	return s.phase && hasKey(key) ? tAny(key) : '';
+}
+
+function capital(s: string): string {
+	return s[0].toLocaleUpperCase() + s.slice(1);
+}
+
+function countText(s: WorkStep): string {
+	if (s.total && s.total > 0) return ` ${fmtInteger(Math.min(s.done ?? 0, s.total))} / ${fmtInteger(s.total)}`;
+	if (s.done && s.done > 0) return ` ${fmtInteger(s.done)}`;
+	return '';
 }
 
 /** Part faite (0..1), ou null quand le total n'est pas connu. */

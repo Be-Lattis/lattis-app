@@ -196,7 +196,7 @@ func AddTable(ctx context.Context, srv Server, db *store.Store, info *Info, tbl 
 			tbl, t.name, tid, string(cols)); err != nil {
 			return err
 		}
-		if err := insertRowIDs(ctx, tx, tbl, added, info.User); err != nil {
+		if err := insertRowIDMap(ctx, tx, tbl, added, info.User); err != nil {
 			return err
 		}
 		if err := writeBase(ctx, tx, base); err != nil {
