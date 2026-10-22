@@ -542,7 +542,7 @@
 	"welcome": {
 		"progressStart": "{label}…",
 		"progress": "{label} : {done} / {total} lignes",
-		"progressCells": "{label} : {done} / {total} lignes · {cells} / {totalCells} cellules",
+		"progressCells": "{label} : {cells} / {totalCells} cellules",
 		"steps": {
 			"table": {
 				"title": "Tapez un tableau",

@@ -542,7 +542,7 @@
 	"welcome": {
 		"progressStart": "{label}…",
 		"progress": "{label}: {done} / {total} Zeilen",
-		"progressCells": "{label}: {done} / {total} Zeilen · {cells} / {totalCells} Zellen",
+		"progressCells": "{label}: {cells} / {totalCells} Zellen",
 		"steps": {
 			"table": {
 				"title": "Tabelle eingeben",

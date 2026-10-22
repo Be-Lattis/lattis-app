@@ -4,10 +4,10 @@ import { plain, slug } from '#lib/help/markdown.js';
 import { demoProgressText, firstSteps, guidePage, hideSteps, languageChoices, languageValue, stepsShown } from './welcome';
 
 describe('demoProgressText', () => {
-	it('annonce les lignes et les cellules', () => {
+	it('annonce les cellules construites, sinon les lignes', () => {
 		expect(demoProgressText('Classeur d’exemple', null)).toBe('Classeur d’exemple…');
 		expect(demoProgressText('Exemple', { done: 1500, total: 3000, cells: 0, totalCells: 0 })).toBe('Exemple : 1 500 / 3 000 lignes');
-		expect(demoProgressText('Exemple', { done: 1, total: 2, cells: 5, totalCells: 10 })).toBe('Exemple : 1 / 2 lignes · 5 / 10 cellules');
+		expect(demoProgressText('Exemple', { done: 1, total: 2, cells: 25000, totalCells: 100000 })).toBe('Exemple : 25 000 / 100 000 cellules');
 	});
 });
 

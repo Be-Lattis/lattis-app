@@ -35,12 +35,7 @@ type demoRun struct {
 // SetDemo demande, au lancement, un classeur de démonstration (main.go,
 // option --demo) ; seed 0 : graine par défaut.
 func (s *DocumentService) SetDemo(preset string, seed uint64) {
-	s.demo = &demoRun{preset: preset, seed: seed}
-	if p, err := demo.Resolve(preset); err == nil {
-		if plan, err := p.Load(); err == nil {
-			s.demo.cells = plan.Cells()
-		}
-	}
+	s.demo = &demoRun{preset: preset, seed: seed, cells: presetCells(preset)}
 }
 
 // DemoRequested donne le preset demandé au lancement (--demo), ou "".
@@ -86,13 +81,17 @@ const SamplePreset = demo.DefaultPreset
 // démonstration, il n'est jamais enregistré de lui-même et ne laisse rien
 // à récupérer : le fermer sans l'avoir modifié ne demande rien.
 func (s *DocumentService) OpenSample(ctx context.Context) (DemoResult, error) {
-	r := &demoRun{preset: SamplePreset}
-	if p, err := demo.Resolve(SamplePreset); err == nil {
+	return s.openPreset(ctx, &demoRun{preset: SamplePreset, cells: presetCells(SamplePreset)})
+}
+
+// presetCells : cellules de données du preset (0 s'il ne se lit pas).
+func presetCells(preset string) int {
+	if p, err := demo.Resolve(preset); err == nil {
 		if plan, err := p.Load(); err == nil {
-			r.cells = plan.Cells()
+			return plan.Cells()
 		}
 	}
-	return s.openPreset(ctx, r)
+	return 0
 }
 
 // openPreset fabrique le classeur de démonstration r et l'ouvre.

@@ -8,7 +8,9 @@ export type DemoProgress = { done: number; total: number; cells: number; totalCe
 /** Avancement de la fabrication d'une démonstration ou de l'exemple. */
 export function demoProgressText(label: string, p: DemoProgress | null): string {
 	if (!p || p.total <= 0) return t('shell.welcome.progressStart', { label });
-	return p.totalCells ? t('shell.welcome.progressCells', { label, done: p.done, total: p.total, cells: p.cells, totalCells: p.totalCells }) : t('shell.welcome.progress', { label, done: p.done, total: p.total });
+	return p.totalCells
+		? t('shell.welcome.progressCells', { label, cells: p.cells, totalCells: p.totalCells })
+		: t('shell.welcome.progress', { label, done: p.done, total: p.total });
 }
 
 /** Ce qui fait la différence de Lattis, en trois points (cible : page d'aide). */

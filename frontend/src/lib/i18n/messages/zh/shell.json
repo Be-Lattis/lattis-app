@@ -542,7 +542,7 @@
 	"welcome": {
 		"progressStart": "{label}…",
 		"progress": "{label}：{done} / {total} 行",
-		"progressCells": "{label}：{done} / {total} 行 · {cells} / {totalCells} 个单元格",
+		"progressCells": "{label}：{cells} / {totalCells} 个单元格",
 		"steps": {
 			"table": {
 				"title": "键入一个表格",

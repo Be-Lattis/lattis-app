@@ -71,8 +71,7 @@ func (s *DocumentService) OpenPreset(ctx context.Context, preset string) (DemoRe
 	if !publicDemo.Load() || !slices.ContainsFunc(DemoPresets, func(p DemoPreset) bool { return p.Preset == preset }) {
 		return DemoResult{}, errDemo
 	}
-	r := &demoRun{preset: preset}
-	return s.openPreset(ctx, r)
+	return s.openPreset(ctx, &demoRun{preset: preset, cells: presetCells(preset)})
 }
 
 // demoSave : Enregistrer, dans la démo publique, télécharge le classeur
