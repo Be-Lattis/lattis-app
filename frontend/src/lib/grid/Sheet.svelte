@@ -340,6 +340,8 @@
 		key?: number;
 		/** Sans clé : la première colonne semble identifier chaque ligne (proposée comme clé). */
 		keyHint?: boolean;
+		/** Suggestion de clé pas encore calculée (vue d'abord) : sa place est gardée dans l'en-tête. */
+		keyPending?: boolean;
 		/** Rang de la colonne numérotée d'office (une ligne ajoutée reçoit le numéro suivant), absent sinon. */
 		autoNumber?: number;
 		/** En-têtes sur deux lignes : le groupe de chaque nom « Groupe.Sous » dans une bande, ligne row - 1. */
@@ -1243,7 +1245,7 @@
 	 */
 	function headerWidth(e: Entry, i: number): number {
 		const col = e.t.columns[i];
-		const icon = (col.filter ? '⧩ ' : '') + (typeIconName(col.type) ? ' ▾' : typeIcon(col.type) + ' ▾') + (e.t.key === i || (i === 0 && !!e.t.keyHint && e.t.key === undefined && !!source.setKey) ? '🔑 ' : '');
+		const icon = (col.filter ? '⧩ ' : '') + (typeIconName(col.type) ? ' ▾' : typeIcon(col.type) + ' ▾') + (e.t.key === i || (i === 0 && (!!e.t.keyHint || !!e.t.keyPending) && e.t.key === undefined && !!source.setKey) ? '🔑 ' : '');
 		measurer ??= document.createElement('canvas').getContext('2d');
 		if (measurer) measurer.font = FONT_SMALL;
 		const iconW = (measurer?.measureText(icon).width ?? 0) + (typeIconName(col.type) ? 13 : 0);

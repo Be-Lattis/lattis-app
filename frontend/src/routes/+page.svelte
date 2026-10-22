@@ -1919,6 +1919,7 @@
 						hidden: t.total - t.rows,
 						key: t.key >= 0 ? t.key : undefined,
 						keyHint: t.keyHint || undefined,
+						keyPending: (t.pending && !t.keyHint) || undefined,
 						autoNumber: t.autoNumber >= 0 ? t.autoNumber : undefined,
 						twoLevel: t.twoLevel || undefined,
 						query: t.queryId ? { id: t.queryId, name: t.queryName } : undefined,

@@ -29,6 +29,11 @@ describe('la vue d’abord : ce qui reste à calculer garde ce qui était affich
 		expect(l.charts?.[0]).toMatchObject({ labels: ['FR'], pending: false });
 	});
 
+	it('deux relectures avant la fin du calcul : la suggestion de clé reste', () => {
+		const again = keepShown(keepShown(shown, quick), quick);
+		expect(again.tables?.[0]).toMatchObject({ keyHint: true, autoNumber: 0, pending: true });
+	});
+
 	it('rien de gardé pour une autre feuille, une autre configuration, ou sans mise en page avant', () => {
 		expect(keepShown(null, quick)).toBe(quick);
 		expect(keepShown({ ...shown, sheet: 2 }, quick)).toBe(quick);

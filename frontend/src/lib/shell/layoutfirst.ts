@@ -20,7 +20,11 @@ export function keepShown(prev: Layout | null, next: Layout): Layout {
 	if (!prev || !next.pending || prev.sheet !== next.sheet) return next;
 	const tables = (next.tables ?? []).map((t): TableInfo => {
 		if (!t.pending) return t;
-		const o = prev.tables?.find((x) => x.id === t.id && !x.pending);
+		// prev peut être lui-même une mise en page rapide complétée ici (deux
+		// relectures avant la fin du calcul) : ses valeurs gardées comptent
+		// aussi, sinon l'icône de la clé disparaît et la colonne change de
+		// largeur le temps du calcul.
+		const o = prev.tables?.find((x) => x.id === t.id);
 		return o ? { ...t, keyHint: o.keyHint, autoNumber: o.autoNumber } : t;
 	});
 	const pivots = (next.pivots ?? []).map((p): PivotInfo => {
