@@ -134,6 +134,13 @@
 	function setMap(patch: Partial<MapChoice>, validate: boolean) {
 		set(mapPatch({ ...map, ...patch }, validate));
 	}
+	// Couches de la carte : points (défaut), densité, ou les deux.
+	const mapDots = $derived(config.mapMode !== 'heat');
+	const mapHeat = $derived(config.mapMode === 'heat' || config.mapMode === 'both');
+	function setLayers(dots: boolean, heat: boolean) {
+		if (!dots && !heat) return;
+		set({ mapMode: dots && heat ? 'both' : heat ? 'heat' : undefined });
+	}
 	function setMapCol(i: number, c: string) {
 		const cols = [...map.cols];
 		cols[i] = c;
@@ -207,17 +214,15 @@
 		<label class="line">{t('chart.panel.value')}
 			<Select value={map.value} options={[{ value: none, label: t('chart.panel.noneF') }, ...columns.map((c) => ({ value: c, label: c }))]} onchange={(value) => setMap({ value }, false)} />
 		</label>
-		<label class="line">{t('chart.panel.display')}
-			<Select
-				value={config.mapMode || 'points'}
-				options={[
-					{ value: 'points', label: t('chart.panel.points') },
-					{ value: 'heat', label: t('chart.panel.heat') }
-				]}
-				onchange={(v) => set({ mapMode: v === 'points' ? undefined : v })}
-			/>
-		</label>
-		{#if config.mapMode === 'heat'}
+		<!-- Couches cumulables : au moins une reste cochée (sa case se grise). -->
+		<div class="line">
+			<span>{t('chart.panel.display')}</span>
+			<span class="layers">
+				<label class="opt"><input type="checkbox" checked={mapDots} disabled={mapDots && !mapHeat} onchange={(e) => setLayers((e.currentTarget as HTMLInputElement).checked, mapHeat)} /> {t('chart.panel.points')}</label>
+				<label class="opt"><input type="checkbox" checked={mapHeat} disabled={mapHeat && !mapDots} onchange={(e) => setLayers(mapDots, (e.currentTarget as HTMLInputElement).checked)} /> {t('chart.panel.heat')}</label>
+			</span>
+		</div>
+		{#if !mapDots}
 			<label class="line" title={t('chart.panel.colorBy.heatTooltip')}>{t('chart.panel.colorBy.label')}
 				<Select value={none} options={[{ value: none, label: t('chart.panel.colorBy.pointsOnly') }]} disabled onchange={() => {}} />
 			</label>
@@ -506,6 +511,13 @@
 		align-items: center;
 		gap: 6px;
 		margin-top: 4px;
+	}
+	.layers {
+		display: flex;
+		gap: 12px;
+	}
+	.layers .opt {
+		margin-top: 0;
 	}
 	.minmax {
 		display: flex;

@@ -158,7 +158,7 @@ var zh = map[ID]string{
 	"chart.unknownBlanks":          "图表：未知的空单元格设置 {blanks}（gap、zero 或 span）",
 	"chart.unknownKind":            "图表：未知类型 {kind}",
 	"chart.unknownMapCoords":       "图表：未知坐标 {coords}（pair 或 single）",
-	"chart.unknownMapMode":         "图表：未知地图模式 {mode}（points 或 heat）",
+	"chart.unknownMapMode":         "图表：未知地图模式 {mode}（points、heat 或 both）",
 	"chart.unknownSeriesKind":      "图表：未知系列形状 {kind}（bar、line 或 area）",
 
 	// Merging cells

@@ -158,7 +158,7 @@ var fr = map[ID]string{
 	"chart.unknownBlanks":          "graphique : cellules vides {blanks} inconnues (gap, zero ou span)",
 	"chart.unknownKind":            "graphique : type {kind} inconnu",
 	"chart.unknownMapCoords":       "graphique : coordonnées {coords} inconnues (pair ou single)",
-	"chart.unknownMapMode":         "graphique : mode de carte {mode} inconnu (points ou heat)",
+	"chart.unknownMapMode":         "graphique : mode de carte {mode} inconnu (points, heat ou both)",
 	"chart.unknownSeriesKind":      "graphique : forme de série {kind} inconnue (bar, line ou area)",
 
 	// Fusion de cellules

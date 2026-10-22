@@ -156,7 +156,7 @@ var es = map[ID]string{
 	"chart.unknownBlanks":          "gráfico: tratamiento de celdas vacías desconocido {blanks} (gap, zero o span)",
 	"chart.unknownKind":            "gráfico: tipo desconocido {kind}",
 	"chart.unknownMapCoords":       "gráfico: coordenadas desconocidas {coords} (pair o single)",
-	"chart.unknownMapMode":         "gráfico: modo de mapa desconocido {mode} (points o heat)",
+	"chart.unknownMapMode":         "gráfico: modo de mapa desconocido {mode} (points, heat o both)",
 	"chart.unknownSeriesKind":      "gráfico: forma de serie desconocida {kind} (bar, line o area)",
 
 	// Combinar celdas

@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Changements
+
+- Graphique de type carte : « Affichage » propose deux cases, « Points » et « Densité », au lieu d'un choix exclusif. Cochées ensemble, la nappe de densité s'affiche sous les points, qui restent colorables, survolables et cliquables. En script, `mapMode = "both"` fait de même.
+
 ## 0.4.1-beta (22/10/2026)
 
 ### Nouveautés

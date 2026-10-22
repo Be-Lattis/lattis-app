@@ -157,7 +157,7 @@ var de = map[ID]string{
 	"chart.unknownBlanks":          "Diagramm: unbekannte Einstellung für leere Zellen {blanks} (gap, zero oder span)",
 	"chart.unknownKind":            "Diagramm: unbekannter Typ {kind}",
 	"chart.unknownMapCoords":       "Diagramm: unbekannte Koordinaten {coords} (pair oder single)",
-	"chart.unknownMapMode":         "Diagramm: unbekannter Kartenmodus {mode} (points oder heat)",
+	"chart.unknownMapMode":         "Diagramm: unbekannter Kartenmodus {mode} (points, heat oder both)",
 	"chart.unknownSeriesKind":      "Diagramm: unbekannte Form der Datenreihe {kind} (bar, line oder area)",
 
 	// Merging cells

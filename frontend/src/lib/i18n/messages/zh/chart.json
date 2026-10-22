@@ -177,7 +177,7 @@
 		"heat": "密度（热力）",
 		"colorBy": {
 			"label": "颜色依据",
-			"heatTooltip": "密度：切换到“点”以按值着色",
+			"heatTooltip": "仅密度：同时勾选“点”以按值着色",
 			"pointsOnly": "（仅限点）",
 			"tooltip": "该列每个不同值一种颜色",
 			"single": "（单一颜色）"

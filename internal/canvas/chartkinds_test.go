@@ -29,6 +29,12 @@ func TestChartNewKinds(t *testing.T) {
 			t.Fatalf("%s : %v", k, err)
 		}
 	}
+	// Carte : points, densité, ou les deux.
+	for _, m := range []string{"", "points", "heat", "both"} {
+		if err := checkChart(ChartConfig{Kind: "map", Series: []string{"a", "b"}, MapMode: m}); err != nil {
+			t.Fatalf("mapMode %q : %v", m, err)
+		}
+	}
 	// Combiné : regroupé par catégorie comme un histogramme.
 	if _, err := d.CreateChart(ctx, 1, 0, 5, ChartConfig{Source: "Feuille1", Kind: "combo", X: "Pays", Series: []string{"Ventes", "Coût"}, SeriesKinds: []string{"bar", "line"}}); err != nil {
 		t.Fatal(err)

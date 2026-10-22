@@ -44,7 +44,8 @@ type ChartConfig struct {
 	// SeriesKinds : graphique combiné, forme de chaque série (bar, line ou
 	// area ; par défaut la première en barres, les suivantes en courbes).
 	SeriesKinds []string `json:"seriesKinds,omitempty"`
-	// MapMode : carte, « points » (défaut) ou « heat » (densité).
+	// MapMode : carte, « points » (défaut), « heat » (densité) ou « both »
+	// (les deux : la nappe de densité sous les points).
 	MapMode string `json:"mapMode,omitempty"`
 	// MapCoords : carte, coordonnées en deux colonnes (« pair », défaut :
 	// séries latitude, longitude, valeur) ou en une (« single » : séries
@@ -204,7 +205,7 @@ func checkChart(cfg ChartConfig) error {
 	if cfg.Kind == "map" && !draft && cfg.MapCoords != "single" && len(cfg.Series) < 2 {
 		return msg.Wrap(ErrChart, "chart.mapNeedsTwoSeries", nil)
 	}
-	if cfg.MapMode != "" && cfg.MapMode != "points" && cfg.MapMode != "heat" {
+	if cfg.MapMode != "" && cfg.MapMode != "points" && cfg.MapMode != "heat" && cfg.MapMode != "both" {
 		return msg.Wrap(ErrChart, "chart.unknownMapMode", msg.Args{"mode": fmt.Sprintf("%q", cfg.MapMode)})
 	}
 	if cfg.Blanks != "" && cfg.Blanks != "gap" && cfg.Blanks != "zero" && cfg.Blanks != "span" {
