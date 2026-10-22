@@ -177,7 +177,7 @@
 		"heat": "Dichte (Heatmap)",
 		"colorBy": {
 			"label": "Farbe nach",
-			"heatTooltip": "Dichte: Wechseln Sie zu „Punkte“, um nach Wert zu färben",
+			"heatTooltip": "Nur Dichte: Aktivieren Sie auch „Punkte“, um nach Wert zu färben",
 			"pointsOnly": "(nur Punkte)",
 			"tooltip": "Eine Farbe pro eindeutigem Wert der Spalte",
 			"single": "(eine Farbe)"

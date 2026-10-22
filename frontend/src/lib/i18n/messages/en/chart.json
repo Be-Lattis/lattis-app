@@ -177,7 +177,7 @@
 		"heat": "Density (heat)",
 		"colorBy": {
 			"label": "Color by",
-			"heatTooltip": "Density: switch to “Points” to color by value",
+			"heatTooltip": "Density only: also tick “Points” to color by value",
 			"pointsOnly": "(points only)",
 			"tooltip": "One color per distinct value of the column",
 			"single": "(single color)"

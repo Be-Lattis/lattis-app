@@ -156,7 +156,7 @@ var en = map[ID]string{
 	"chart.unknownBlanks":          "chart: unknown empty cells setting {blanks} (gap, zero or span)",
 	"chart.unknownKind":            "chart: unknown type {kind}",
 	"chart.unknownMapCoords":       "chart: unknown coordinates {coords} (pair or single)",
-	"chart.unknownMapMode":         "chart: unknown map mode {mode} (points or heat)",
+	"chart.unknownMapMode":         "chart: unknown map mode {mode} (points, heat or both)",
 	"chart.unknownSeriesKind":      "chart: unknown series shape {kind} (bar, line or area)",
 
 	// Merging cells

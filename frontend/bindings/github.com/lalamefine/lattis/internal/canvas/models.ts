@@ -256,7 +256,8 @@ export interface ChartConfig {
     "seriesKinds"?: string[] | null;
 
     /**
-     * MapMode : carte, « points » (défaut) ou « heat » (densité).
+     * MapMode : carte, « points » (défaut), « heat » (densité) ou « both »
+     * (les deux : la nappe de densité sous les points).
      */
     "mapMode"?: string;
 

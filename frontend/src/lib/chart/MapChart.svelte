@@ -1,5 +1,6 @@
 <script lang="ts">
-	// Carte : points (taille selon une valeur facultative) ou densité, sur un
+	// Carte : points (taille selon une valeur facultative), densité, ou les
+	// deux (mapMode « both » : la nappe sous les points), sur un
 	// fond OpenStreetMap. Séries : latitude, longitude, valeur. La vue
 	// s'ajuste aux points (zoom entier, tuiles de 256 px), ou suit celle que
 	// l'utilisateur a choisie (style.mapView : centre et zoom fractionnaire).
@@ -62,7 +63,9 @@
 	const top = $derived(style.title ? 30 : 0);
 	const w = $derived(Math.max(20, width));
 	const h = $derived(Math.max(20, height - top));
-	const heat = $derived(style.mapMode === 'heat');
+	// Couches affichées : la densité (heat, both) et les points (tout sauf heat).
+	const heat = $derived(style.mapMode === 'heat' || style.mapMode === 'both');
+	const dots = $derived(style.mapMode !== 'heat');
 	const color = $derived(style.colors?.[0] || PALETTE[0]);
 
 	const draft = $derived(!!style.mapDraft);
@@ -120,16 +123,16 @@
 	);
 
 	// Couleur par colonne : points seulement (la densité reste une nappe).
-	const coloring = $derived(!heat && style.colorBy && categories && groups?.length ? colorCategories(categories, groups) : null);
+	const coloring = $derived(dots && style.colorBy && categories && groups?.length ? colorCategories(categories, groups) : null);
 	const fill = (i: number) => (coloring ? groupColor(coloring, groups?.[i]) : color);
 	const showLegend = $derived(!!coloring && style.legend !== 'none' && pts.length > 0);
 
 	// Point survolé (rang dans placed, −1 : aucun) ; cliquable si la carte est
 	// sélectionnée et que ses points viennent d'un tableau.
 	let hot = $state(-1);
-	const canGo = $derived(!!onpoint && !!rows?.length && !heat);
-	const hotPt = $derived(hot >= 0 && hot < placed.length && !heat ? placed[hot] : null);
-	const pick = (x: number, y: number) => (heat ? -1 : hitPoint(placed.map((p) => ({ x: p.x, y: p.y - top, r: p.r })), x, y));
+	const canGo = $derived(!!onpoint && !!rows?.length && dots);
+	const hotPt = $derived(hot >= 0 && hot < placed.length && dots ? placed[hot] : null);
+	const pick = (x: number, y: number) => (!dots ? -1 : hitPoint(placed.map((p) => ({ x: p.x, y: p.y - top, r: p.r })), x, y));
 	const fmtTip = (v: number) => fmtNumber(v, { maximumFractionDigits: 6 });
 
 	// Densité : grille lissée, pondérée par la valeur (positive) s'il y en a
@@ -399,7 +402,8 @@
 			<g filter="url(#blur-{uid})">
 				{#each cells as c, i (i)}<rect x={c.x} y={c.y} width={CELL} height={CELL} fill={heatColor(c.t)} fill-opacity={0.4 + 0.5 * c.t} />{/each}
 			</g>
-		{:else}
+		{/if}
+		{#if dots}
 			{#each placed as p, i (i)}
 				{#if coloring}
 					<!-- Liseré sombre sous le contour blanc : lisible sur les tuiles claires comme foncées. -->
@@ -463,7 +467,8 @@
 	</div>
 {/if}
 {#if showLegend && coloring}
-	<div class="maplegend" style:max-height="{Math.max(48, h * 0.6)}px" aria-label={t('chart.map.legend', { name: style.colorBy ?? '' })}>
+	<!-- Avec la densité, la légende des couleurs passe au-dessus de son dégradé. -->
+	<div class="maplegend" style:bottom={heat && cells.length ? '30px' : null} style:max-height="{Math.max(48, h * 0.6)}px" aria-label={t('chart.map.legend', { name: style.colorBy ?? '' })}>
 		<div class="lt">{style.colorBy}</div>
 		{#each coloring.legend as e, eIndex (eIndex)}
 			<div class="le" title={t('chart.map.legendItem', { label: e.label, n: e.count })}><span class="sw" style:background={e.color}></span><span class="ll">{e.label}</span></div>
