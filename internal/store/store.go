@@ -71,15 +71,15 @@ type Store struct {
 	seen map[rowKey]bool
 	// Écritures par colonne (colver.go) : cgen par colonne (« t_3.c_1 »),
 	// agen par tableau pour celles qui peuvent toucher toutes ses colonnes ;
-	// pendingCols, pendingAll : celles de la tâche en cours. curTable,
-	// curCols : tableau et colonnes qu'écrit la requête en cours ; allSeen :
-	// tableaux déjà comptés dans pendingAll par noteRow (goroutine de
-	// l'écrivain seulement).
+	// pendingCols, pendingAll : celles de la tâche en cours. cur : ce
+	// qu'écrit la requête en cours ; allSeen : tableaux déjà comptés dans
+	// pendingAll par noteRow ; rebuilds : reconstructions de la tâche en
+	// cours (goroutine de l'écrivain seulement).
 	cgen, agen              map[string]int64
 	pendingCols, pendingAll map[string]bool
-	curTable                string
-	curCols                 []string
+	cur                     colWrite
 	allSeen                 map[string]bool
+	rebuilds                map[string]*rebuild
 	busy                    atomic.Bool
 	// writeConn : connexion SQLite de l'écrivain (autorisateur, AsUser).
 	writeConn atomic.Pointer[sqlite3.Conn]
@@ -141,11 +141,12 @@ func (s *Store) watchedWrite(q string) {
 
 // noteWrite relève les tableaux qu'une requête de l'écrivain peut modifier.
 func (s *Store) noteWrite(q string) {
-	defer func() { s.curTable, s.curCols = "", nil }()
+	defer func() { s.cur = colWrite{} }()
 	head := strings.ToUpper(strings.TrimSpace(q))
 	if strings.HasPrefix(head, "SELECT") || strings.HasPrefix(head, "PRAGMA") {
 		return
 	}
+	s.trackRebuild(q)
 	s.watchedWrite(q)
 	names := tableName.FindAllString(q, -1)
 	meta := tableMeta.MatchString(q)
@@ -211,12 +212,17 @@ func (s *Store) TakeTouched() (content, structure map[string]bool, all bool) {
 
 // Version résume les écritures sur les tableaux nommés (t_N) et sur les
 // métadonnées : un calcul qui ne lit qu'eux reste valable tant qu'elle ne
-// change pas, quoi qu'on écrive ailleurs.
+// change pas, quoi qu'on écrive ailleurs. Avec NoMeta en tête, les
+// métadonnées n'y sont pas (voir colver.go).
 func (s *Store) Version(tables ...string) string {
 	s.tmu.Lock()
 	defer s.tmu.Unlock()
 	var b strings.Builder
-	b.WriteString(strconv.FormatInt(s.metaGen, 10))
+	if len(tables) > 0 && tables[0] == NoMeta {
+		tables = tables[1:]
+	} else {
+		b.WriteString(strconv.FormatInt(s.metaGen, 10))
+	}
 	for _, n := range tables {
 		if t, ok := strings.CutSuffix(n, rowsSuffix); ok {
 			b.WriteString("|" + n + ":" + strconv.FormatInt(s.sgen[t], 10))

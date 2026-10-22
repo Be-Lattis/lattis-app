@@ -160,12 +160,14 @@ func (t *tx) autoNumberedIn(tb Table, later bool) (int, bool, error) {
 		return -1, false, nil
 	}
 	// La clé et le type des colonnes sont dans la clé du cache (ils
-	// changent dans _lattis_tables et _lattis_columns). Le calcul ne lit
-	// que la première colonne et la clé, dans l'ordre des lignes : une
-	// saisie dans une autre colonne ne le refait pas (il parcourt tout le
-	// tableau : 2 s sur 1 M de lignes).
+	// changent dans _lattis_tables et _lattis_columns, hors de la version :
+	// store.NoMeta). Le calcul ne lit que la première colonne et la clé,
+	// dans l'ordre des lignes (_pos : un tri le refait) : une saisie dans
+	// une autre colonne, l'ajout, la suppression ou la conversion d'une
+	// autre colonne ne le refont pas (il parcourt tout le tableau : 2 s sur
+	// 1 M de lignes).
 	key := fmt.Sprintf("autonum:%s:%d", tb.sql(), tb.Key)
-	var deps []string
+	deps := []string{store.NoMeta, store.ColumnOf(tb.sql(), "_pos")}
 	for i, c := range tb.Cols {
 		if i == 0 || c.ID == tb.Key {
 			key += fmt.Sprintf(":%d:%s:%t", c.ID, c.Type, c.Formula != "")

@@ -1,6 +1,8 @@
 package store
 
 import (
+	"strings"
+
 	"github.com/ncruces/go-sqlite3"
 )
 
@@ -60,6 +62,9 @@ func (s *Store) noteRow(op sqlite3.AuthorizerActionCode, schema, table string) {
 	if w := s.watched.Load(); w != nil && (*w)[table] {
 		s.watchGen.Add(1)
 	}
+	if s.rebuilds != nil && strings.HasSuffix(table, "_rebuild") {
+		s.rowRebuild(op, table)
+	}
 	data, meta, cells := isDataTable(table), gridMetaTables[table], cellTables[table]
 	sheets := table == "_lattis_sheets" && op != sqlite3.AUTH_UPDATE
 	if !data && !meta && !cells && !sheets {
@@ -68,7 +73,7 @@ func (s *Store) noteRow(op sqlite3.AuthorizerActionCode, schema, table string) {
 	// seen n'est lu et écrit que par la goroutine de l'écrivain (ici et
 	// dans settle) : pas de verrou pour les lignes suivantes.
 	if data {
-		s.rowAllColumns(table)
+		s.rowAllColumns(op, table)
 	}
 	k := rowKey{op, table}
 	if s.seen[k] {

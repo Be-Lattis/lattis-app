@@ -135,8 +135,10 @@ func (t *tx) fill(tb *Table) error {
 		return err
 	}
 	// Nombre de lignes : un parcours de tout le tableau (0,2 s sur 10 M de
-	// lignes), relu seulement quand le tableau a changé.
-	n, err := cachedOn(t, "rows:"+tb.sql(), []string{store.RowsOf(tb.sql())}, func() (int, error) {
+	// lignes), relu seulement quand des lignes ont pu être ajoutées ou
+	// supprimées (ni après une saisie, ni après un tri, ni après un
+	// changement de colonne).
+	n, err := cachedOn(t, "rows:"+tb.sql(), []string{store.NoMeta, store.CountOf(tb.sql())}, func() (int, error) {
 		var n int
 		work.Phase(t.Ctx, "count")
 		err := t.row(`SELECT count(*) FROM ` + tb.sql()).Scan(&n)

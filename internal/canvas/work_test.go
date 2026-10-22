@@ -277,17 +277,33 @@ func TestMesureRetourVisuel(t *testing.T) {
 		t.Logf("%-34s %7d ms  [%s %s]%s", nom, total.Milliseconds(), op, name, p.summary(total))
 	}
 	mesure("mise en page", func(ctx context.Context) error { _, err := d.Layout(ctx, sheet); return err })
+	// Mise en page après chaque opération de structure : le contrôle de la
+	// clé et le comptage des lignes ne sont refaits que si les lignes ou la
+	// première colonne changent.
+	layout := func(nom string) {
+		t.Helper()
+		mesure("  mise en page après "+nom, func(ctx context.Context) error { _, err := d.Layout(ctx, sheet); return err })
+	}
 	mesure("insérer une colonne", func(ctx context.Context) error { return d.InsertColumn(ctx, "Commandes", 3, "Nouvelle") })
+	layout("l'insertion")
 	mesure("supprimer une colonne vide", func(ctx context.Context) error { return d.DeleteColumn(ctx, "Commandes", 3) })
+	layout("la suppression")
 	mesure("supprimer la colonne Prix", func(ctx context.Context) error { return d.DeleteColumn(ctx, "Commandes", 3) })
 	mesure("mise en page après", func(ctx context.Context) error { _, err := d.Layout(ctx, sheet); return err })
 	mesure("annuler la suppression", func(ctx context.Context) error { _, err := d.bus.Undo(ctx); return err })
+	layout("l'annulation")
 	mesure("supprimer 2 colonnes (Prix, Qté)", func(ctx context.Context) error { return d.SuppressColumns(ctx, "Commandes", 3, 4) })
+	layout("la suppression de 2 colonnes")
 	mesure("annuler", func(ctx context.Context) error { _, err := d.bus.Undo(ctx); return err })
+	layout("l'annulation")
 	mesure("trier par Prix", func(ctx context.Context) error { return d.SortTable(ctx, "Commandes", 3, true) })
+	layout("le tri")
 	mesure("annuler le tri", func(ctx context.Context) error { _, err := d.bus.Undo(ctx); return err })
+	layout("l'annulation du tri")
 	mesure("type de Qté : texte", func(ctx context.Context) error { return d.SetType(ctx, "Commandes", 4, grid.Text) })
+	layout("le type")
 	mesure("annuler le type", func(ctx context.Context) error { _, err := d.bus.Undo(ctx); return err })
+	layout("l'annulation du type")
 	mesure("insérer une ligne au milieu", func(ctx context.Context) error { return d.InsertRow(ctx, "Commandes", n/2) })
 	mesure("supprimer des lignes (10 lignes)", func(ctx context.Context) error { return d.DeleteSheetRows(ctx, sheet, 1000, 1009) })
 	mesure("coller 1 000 × 2 dans le tableau", func(ctx context.Context) error {

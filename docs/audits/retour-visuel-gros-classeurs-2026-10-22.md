@@ -38,6 +38,34 @@
 6. **L'écriture sur le disque prend 5 à 10 s à 10 M lignes.** C'est la validation en `synchronous=FULL` d'une transaction de plusieurs centaines de Mo dans le WAL. Elle est incompressible tant que l'annulation garde une copie complète des données.
 7. **Le comptage des lignes (`count(*)`) prend 0,2 à 0,7 s à 10 M lignes au début de presque chaque action.** Il est relu après chaque écriture qui change les lignes. Il est en cache entre deux actions et fait partie du chantier « vue d'abord » (nombre de lignes gardé).
 
+## Suite du constat 2 : contrôle de la clé gardé (22/10)
+
+**Demande de Louis.** « Le contrôle de la clé, c'est à refaire que si le nombre de lignes change ou si on modifie les colonnes de la clé. Sinon, non. »
+
+**Ce qui a été fait.**
+
+- **Versions par colonne sans les métadonnées** (`internal/store/colver.go`). Un calcul peut demander sa version sans les métadonnées (`store.NoMeta`) et met dans la clé de son cache ce qu'il en lit (identifiant et type de la colonne, clé, « ne plus proposer » lu hors du cache). La version d'une colonne n'avance plus que si des lignes sont ajoutées ou supprimées, si une écriture peut toucher toutes les colonnes, ou si cette colonne est écrite.
+- **Le Store reconnaît les changements de structure** : `ALTER TABLE … ADD|DROP COLUMN c_K` ne touche que c_K ; une reconstruction (`t_N_rebuild` remplie depuis `t_N`, puis renommée, dans la même tâche) garde la version des colonnes recopiées telles quelles ; une écriture dans une corbeille ou une table de rangs ne fait que lire `t_N` ; un index créé ou supprimé ne change rien. Toute autre écriture qui nomme `t_N`, ou qui écrit des lignes sans les nommer (déclencheur, vue), compte toujours pour toutes les colonnes.
+- **L'ordre des lignes est une colonne à part** (`_pos`) : un tri ne refait pas le contrôle de la clé, il refait seulement la numérotation automatique, qui dépend de l'ordre.
+- **Même règle pour la numérotation automatique** (première colonne et clé, plus l'ordre) et pour le **comptage des lignes** (`store.CountOf` : ni une saisie, ni un tri, ni un changement de colonne ne le refont).
+- Le contrôle est refait après : ajout ou suppression de lignes (saisie, collage, onglet SQL, scripts), modification de la colonne contrôlée (saisie, collage, recherche et remplacement, effacement, onglet SQL, annulation), suppression ou conversion de cette colonne, ou une autre colonne devenue la première. Essais : `TestColumnVersionStructure` (Store) et `TestKeyHintCacheKept`, `TestKeyHintCacheDropped` (modèle).
+- **Limite connue** : une requête de l'onglet SQL passe par des vues et des déclencheurs. Le Store ne sait pas quelles colonnes elle écrit, et elle compte encore pour tout le tableau, même si elle ne modifie qu'une autre colonne.
+
+**Mesures** (`TestMesureRetourVisuel`, mise en page après chaque opération, 1 M lignes × 10, même poste) :
+
+| Mise en page après… | Avant | Après |
+|---|---:|---:|
+| insérer une colonne | 882 ms (contrôle de la clé 858) | 2 ms |
+| supprimer une colonne (vide ou pleine) | 884 à 922 ms | 1 ms |
+| annuler la suppression | 882 ms | 1 ms |
+| supprimer 2 colonnes, puis annuler | 868 et 882 ms | 1 ms |
+| type d'une autre colonne (Qté → texte), puis annuler | 907 et 890 ms | 1 à 2 ms |
+| trier, puis annuler le tri | 910 et 902 ms | 1 ms |
+
+L'insertion de colonne et la suppression d'une colonne ne recomptent plus les lignes non plus (environ 22 ms de moins à 1 M lignes).
+
+À 10 M lignes, la mise en page après chacune de ces opérations (insertion, suppressions, annulations, tri, type d'une autre colonne) prend désormais 1 à 2 ms, contre 9,2 s avant (contrôle de la clé 8,9 s, ligne « Mise en page après une opération de structure » du tableau plus haut). La première mise en page (8,8 s) et celle qui suit un ajout ou une suppression de lignes (8,7 s) refont le contrôle, comme il se doit.
+
 ## Captures (version web, 1 M lignes × 10)
 
 - Suppression de la colonne Ville : reflet sur la colonne, « Suppression de la colonne Ville : réécriture du tableau », bouton Annuler.

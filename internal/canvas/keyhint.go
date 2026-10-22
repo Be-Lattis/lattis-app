@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/lalamefine/lattis/internal/store"
 	"github.com/lalamefine/lattis/internal/work"
@@ -18,10 +19,14 @@ import (
 
 // keyHint dit si la première colonne du tableau peut identifier chaque
 // ligne (la même règle que SetKey : keyCheck), avec au moins 2 lignes, et
-// si le tableau n'a ni clé ni refus (« Ne plus proposer »). Le résultat est
-// gardé tant que les lignes du tableau, sa première colonne et les
-// métadonnées ne changent pas (cachedOn) : une saisie dans une autre
-// colonne ne relit pas tout le tableau.
+// si le tableau n'a ni clé ni refus (« Ne plus proposer »). Le contrôle
+// (keyCheck, un parcours de toute la colonne : 0,9 s sur 1 M de lignes)
+// n'est refait que si le nombre de lignes ou les valeurs de la première
+// colonne changent, ou si une autre colonne devient la première ou que son
+// type change (demande de Louis du 22/10) : pas après une saisie, un tri,
+// ni l'ajout, la suppression ou la conversion d'une autre colonne. La clé,
+// le refus et la formule se lisent hors du cache ; l'identifiant et le type
+// de la colonne sont dans sa clé (store.NoMeta).
 func (t *tx) keyHint(tb Table) (bool, error) {
 	hint, _, err := t.keyHintIn(tb, false)
 	return hint, err
@@ -34,16 +39,18 @@ func (t *tx) keyHintIn(tb Table, later bool) (hint, pending bool, err error) {
 	if tb.Key != 0 || tb.Rows < 2 || len(tb.Cols) == 0 || tb.Cols[0].Formula != "" {
 		return false, false, nil
 	}
-	key, deps := "keyhint:"+tb.sql(), []string{store.ColumnOf(tb.sql(), colSQL(tb.Cols[0].ID))}
+	var off bool
+	if err := t.row(`SELECT no_key_hint FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&off); err != nil || off {
+		return false, false, err
+	}
+	c := tb.Cols[0]
+	key := fmt.Sprintf("keyhint:%s:%d:%s", tb.sql(), c.ID, c.Type)
+	deps := []string{store.NoMeta, store.ColumnOf(tb.sql(), colSQL(c.ID))}
 	if later && tb.Rows > quickRows {
 		v, ok := peekOn[bool](t, key, deps)
 		return v, !ok, nil
 	}
 	hint, err = cachedOn(t, key, deps, func() (bool, error) {
-		var off bool
-		if err := t.row(`SELECT no_key_hint FROM _lattis_tables WHERE id = ?`, tb.ID).Scan(&off); err != nil || off {
-			return false, err
-		}
 		work.Phase(t.Ctx, "keyCheck")
 		why, err := t.keyCheck(tb, 0)
 		return why == "", err
