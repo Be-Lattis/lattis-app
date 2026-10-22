@@ -42,6 +42,8 @@ Dans un classeur collaboratif (partagé en direct sur un Serveur Lattis), un tab
 - **Voir en tant que…** : depuis la ligne d'un membre ou d'un rôle, ou dans son onglet, montre ce que ce membre peut faire sur un tableau et les lignes qu'il voit, lues sur le serveur sous son identité (règles comprises).
 - **Écarts** : règles changées hors de Lattis, directement dans PostgreSQL ; **Recompiler les droits** remet celles de Lattis.
 
+**Retirer du serveur…** (propriétaire ; en bas de cette boîte, ou dans Fichier) supprime le classeur du serveur pour tous : données et droits, pipelines et formulaires ; ses partages au Data Lake sont coupés. Les copies déjà sur les postes restent : les autres membres voient « Ce classeur a été supprimé » et peuvent garder la leur (**Enregistrer une copie locale…**). La vôtre reste ouverte en classeur local. Une confirmation le demande ; cela ne s'annule pas.
+
 ## Serveur injoignable : travailler hors ligne, ou se détacher
 
 Quand le serveur d'un classeur partagé ne répond plus (serveur arrêté, réseau coupé), un bandeau orange s'affiche sous le ruban, par exemple « Le serveur localhost:8080 ne répond pas ». **Détails** montre l'erreur technique (aussi en infobulle et dans le journal).

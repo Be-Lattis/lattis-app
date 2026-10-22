@@ -859,3 +859,24 @@ func (s *session) Recompile(ctx context.Context, workbookID string) error {
 	a.drift = nil
 	return nil
 }
+
+// RemoveWorkbook : lattis.drop_workbook (propriétaires du classeur ou du
+// serveur), comme Fake.DropWorkbook ; ses formulaires partent avec lui.
+func (s *session) RemoveWorkbook(ctx context.Context, workbookID string) error {
+	s.f.mu.Lock()
+	defer s.f.mu.Unlock()
+	if err := s.begin("drop_workbook"); err != nil {
+		return err
+	}
+	b := s.f.books[workbookID]
+	if b == nil {
+		return ErrServer{"P0002", "classeur inconnu"}
+	}
+	if !s.has(b, "owner") && !s.f.serverOwners[s.user] {
+		return ErrPrivilege{"réservé aux propriétaires du classeur"}
+	}
+	delete(s.f.books, workbookID)
+	delete(s.f.acls, workbookID)
+	s.f.forms = slices.DeleteFunc(s.f.forms, func(x *fform) bool { return x.workbook == workbookID })
+	return nil
+}

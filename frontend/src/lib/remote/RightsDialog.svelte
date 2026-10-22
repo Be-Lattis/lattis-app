@@ -34,8 +34,10 @@
 		onclose: () => void;
 		/** Classeur partagé en direct : ajouter un tableau qui n'est que sur ce poste (confirmation et envoi par la page). */
 		onaddshared?: (table: string) => Promise<void>;
+		/** « Retirer du serveur… » (propriétaire) : la page ferme la boîte, confirme et retire. */
+		onremove?: () => void;
 	}
-	let { title, server, link = '', onclose, onaddshared }: Props = $props();
+	let { title, server, link = '', onclose, onaddshared, onremove }: Props = $props();
 
 	/** Page d'aide des droits. */
 	const HELP = 'fichiers#gerer-l-acces-a-un-classeur-partage';
@@ -266,6 +268,9 @@
 			{/if}
 		</div>
 		<footer class="sf-foot">
+			{#if manage && onremove}
+				<button type="button" class="ac-link danger" disabled={busy} onclick={onremove}>{t('remote.rightsDialog.remove')}</button>
+			{/if}
 			{#if error}
 				<p class="sf-error" role="alert">{error}</p>
 			{:else if notice}

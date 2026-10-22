@@ -917,6 +917,10 @@
 			"question": "Détacher ce classeur du serveur ?",
 			"ok": "Détacher"
 		},
+		"remove": {
+			"title": "Retirer du serveur",
+			"ok": "Retirer du serveur"
+		},
 		"link": {
 			"title": "Ouvrir un lien Lattis",
 			"question": "Ouvrir un classeur de « {name} » ?",

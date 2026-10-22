@@ -94,6 +94,13 @@ type Rights interface {
 	// (lattis.workbook_invitations, migration 0046 : propriétaires) ;
 	// ErrUnsupported sans la migration (celles de ACL restent).
 	WorkbookInvitations(ctx context.Context, workbookID string) ([]Invitation, error)
+	// RemoveWorkbook retire le classeur du serveur (lattis.drop_workbook,
+	// contrat client §5 « Supprimer » : propriétaires du classeur et du
+	// serveur) : données et rôles supprimés pour tous les membres, pipelines
+	// et formulaires aussi, partages au Data Lake coupés (la donnée reste,
+	// sans source). Les copies des postes restent ; leur synchronisation
+	// répond « classeur inconnu » (P0002, GoneDeleted).
+	RemoveWorkbook(ctx context.Context, workbookID string) error
 }
 
 // Person est un utilisateur du serveur trouvé par SearchPeople.

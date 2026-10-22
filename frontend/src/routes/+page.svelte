@@ -82,7 +82,7 @@
 	import { refusedNotice } from '#lib/remote/share.js';
 	import { pushSummary, type SourceLink } from '#lib/remote/source.js';
 	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
-	import { canRepublish, detachQuestion, goneError, retryNotice, roleChip, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
+	import { canRepublish, detachQuestion, goneError, removeQuestion, retryNotice, roleChip, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, requestLoginOrLocal, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
@@ -515,6 +515,9 @@
 	// Serveur injoignable : « Réessayer » en cours ; question avant « Détacher du serveur ».
 	let shareRetrying = $state(false);
 	let detachAsk = $state<string[] | null>(null);
+	/** « Retirer du serveur… » : question en attente de confirmation ; removing : retrait en cours. */
+	let removeAsk = $state<{ question: string; lines: string[] } | null>(null);
+	let removing = $state(false);
 	// Données › Obtenir des données : requêtes d'import (lib/query).
 	let queryHost = $state<ReturnType<typeof QueryHost>>();
 	// Révision › Protéger : boîte du mot de passe (protéger, ou ôter une
@@ -802,6 +805,25 @@
 			await opened(await DocumentService.ShareDetach());
 		} catch (e) {
 			notice = err(e);
+		}
+	}
+
+	/** « Retirer du serveur… » (propriétaire) : supprime le classeur du serveur pour tous, après confirmation ; le sien reste ouvert en classeur local. */
+	function askRemove() {
+		if (share?.shared && share.canManage && !share.gone) removeAsk = removeQuestion(share, !!docState.remote, isWeb);
+	}
+
+	async function shareRemove() {
+		removing = true;
+		try {
+			const r = await DocumentService.ShareRemove();
+			removeAsk = null;
+			await opened(r);
+		} catch (e) {
+			removeAsk = null;
+			notice = err(e);
+		} finally {
+			removing = false;
 		}
 	}
 
@@ -1544,6 +1566,9 @@
 					break;
 				case 'detach':
 					if (mode === 'doc') askDetach();
+					break;
+				case 'remove':
+					if (mode === 'doc') askRemove();
 					break;
 				case 'close':
 					await closeDoc();
@@ -2446,6 +2471,7 @@
 		republish={mode === 'doc' && canRepublish(share)}
 		reconnect={mode === 'doc' && !!share?.shared && !share.online && !share.gone}
 		detach={mode === 'doc' && !!share?.shared && !!share.canManage}
+		remove={mode === 'doc' && !!share?.shared && !!share.canManage && !share.gone}
 		rights={canRights}
 		pageSetup={layout?.pageSetup}
 		onpage={mode === 'doc' ? pageCmd : undefined}
@@ -2942,7 +2968,7 @@
 		/>
 	{/if}
 	{#if rightsOpen && canRights && share}
-		<RightsDialog title={share.title} server={share.server} link={share.link} onclose={() => (rightsOpen = false)} onaddshared={share.mode === 'collaborative' ? async (t) => void (await addToShared(t)) : undefined} />
+		<RightsDialog title={share.title} server={share.server} link={share.link} onclose={() => (rightsOpen = false)} onremove={() => { rightsOpen = false; askRemove(); }} onaddshared={share.mode === 'collaborative' ? async (t) => void (await addToShared(t)) : undefined} />
 	{/if}
 	{#if shareDlg && mode === 'doc'}
 		<ShareDialog
@@ -3035,6 +3061,21 @@
 				<div class="actions">
 					<button class="primary" onclick={shareDetach}>{t('shell.share.detach.ok')}</button>
 					<button onclick={() => (detachAsk = null)}>Annuler</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+	{#if removeAsk}
+		{@const q = removeAsk}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.share.remove.title')} use:modal={() => !removing && (removeAsk = null)}>
+				<p>{q.question}</p>
+				{#each q.lines as line, i (i)}
+					<p class="muted">{line}</p>
+				{/each}
+				<div class="actions">
+					<button class="primary danger" disabled={removing} onclick={shareRemove}>{t('shell.share.remove.ok')}</button>
+					<button data-autofocus disabled={removing} onclick={() => (removeAsk = null)}>{t('common.cancel')}</button>
 				</div>
 			</div>
 		</div>

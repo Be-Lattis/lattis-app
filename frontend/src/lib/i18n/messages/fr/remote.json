@@ -76,6 +76,14 @@
 			"cached": "Vous allez choisir où enregistrer le classeur local.",
 			"final": "Ce détachement ne s’annule pas."
 		},
+		"remove": {
+			"question": "Retirer « {title} » de {server} ?",
+			"everyone": "Pour tous : données et droits supprimés du serveur, pipelines et formulaires aussi ; partages au Data Lake coupés.",
+			"copies": "Les copies déjà sur les postes restent. La vôtre reste ouverte en classeur local.",
+			"cached": "Vous allez choisir où l’enregistrer.",
+			"download": "Une copie sera téléchargée.",
+			"final": "Cette action ne s’annule pas."
+		},
 		"retryNotice": "Nouvel essai de connexion…",
 		"when": {
 			"today": "à {time}",
@@ -1157,7 +1165,8 @@
 			"recompile": "Recompiler les droits"
 		},
 		"sending": "Envoi au serveur…",
-		"designerOnly": "Concepteur : consultation et vérification seulement"
+		"designerOnly": "Concepteur : consultation et vérification seulement",
+		"remove": "Retirer du serveur…"
 	},
 	"shareDialog": {
 		"checking": "Vérification du classeur…",

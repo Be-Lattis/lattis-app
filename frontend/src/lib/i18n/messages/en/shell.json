@@ -917,6 +917,10 @@
 			"question": "Detach this workbook from the server?",
 			"ok": "Detach"
 		},
+		"remove": {
+			"title": "Remove from the server",
+			"ok": "Remove from the server"
+		},
 		"link": {
 			"title": "Open a Lattis link",
 			"question": "Open a workbook from “{name}”?",

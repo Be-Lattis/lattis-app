@@ -2406,6 +2406,22 @@ export function ShareReload(): $CancellablePromise<$models.DocState> {
 }
 
 /**
+ * ShareRemove retire du serveur le classeur partagé ouvert
+ * (lattis.drop_workbook, propriétaires ; l'interface a demandé
+ * confirmation) : données, rôles, pipelines et formulaires disparaissent
+ * du serveur pour tous ; les partages au Data Lake sont coupés. Les copies
+ * des postes restent : les membres voient « supprimé du serveur » et
+ * peuvent garder la leur (shareGone). Celle du propriétaire devient un
+ * classeur local ordinaire, comme après « Détacher du serveur » ; un
+ * classeur ouvert depuis le serveur est d'abord enregistré ailleurs
+ * (boîte Enregistrer sous ; édition web : fichier de la session,
+ * téléchargé). Annuler la boîte ne retire rien.
+ */
+export function ShareRemove(): $CancellablePromise<$models.OpenResult> {
+    return $Call.ByID(871781949);
+}
+
+/**
  * ShareRepublish publie une nouvelle version du classeur figé ouvert
  * (Fichier › Republier) ; tables nil : les tableaux déjà publiés.
  */

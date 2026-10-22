@@ -76,6 +76,14 @@
 			"cached": "Elegirá dónde guardar el libro local.",
 			"final": "La desvinculación no se puede deshacer."
 		},
+		"remove": {
+			"question": "¿Retirar «{title}» de {server}?",
+			"everyone": "Para todos: datos y permisos eliminados del servidor, también pipelines y formularios; compartidos del Data Lake cortados.",
+			"copies": "Las copias ya presentes en los equipos se quedan. La suya sigue abierta como libro local.",
+			"cached": "Elegirá dónde guardarlo.",
+			"download": "Se descargará una copia.",
+			"final": "Esta acción no se puede deshacer."
+		},
 		"retryNotice": "Intentando conectar de nuevo…",
 		"when": {
 			"today": "a las {time}",
@@ -1157,7 +1165,8 @@
 			"recompile": "Recompilar los derechos"
 		},
 		"sending": "Enviando al servidor…",
-		"designerOnly": "Diseñador: solo ver y comprobar"
+		"designerOnly": "Diseñador: solo ver y comprobar",
+		"remove": "Retirar del servidor…"
 	},
 	"shareDialog": {
 		"checking": "Comprobando el libro…",

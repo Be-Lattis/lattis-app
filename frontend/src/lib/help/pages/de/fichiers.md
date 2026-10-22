@@ -42,6 +42,8 @@ In einer kollaborativen Arbeitsmappe (live auf einem Lattis-Server geteilt) wird
 - **Anzeigen als…**: In der Zeile eines Mitglieds oder einer Rolle oder in ihrem Register zeigt, was dieses Mitglied mit einer Tabelle tun kann und welche Zeilen es sieht, auf dem Server unter seiner Identität gelesen (Regeln inbegriffen).
 - **Abweichungen**: außerhalb von Lattis, direkt in PostgreSQL geänderte Regeln; **Rechte neu kompilieren** stellt die von Lattis wieder her.
 
+**Vom Server entfernen…** (Besitzer; unten in diesem Dialog oder unter Datei) löscht die Arbeitsmappe für alle vom Server: Daten und Berechtigungen, Pipelines und Formulare; ihre Freigaben im Data Lake werden getrennt. Kopien auf den Rechnern bleiben: Die anderen Mitglieder sehen, dass die Arbeitsmappe gelöscht wurde, und können ihre behalten (**Lokale Kopie speichern…**). Ihre bleibt als lokale Arbeitsmappe geöffnet. Eine Bestätigung fragt vorher; das lässt sich nicht rückgängig machen.
+
 ## Server nicht erreichbar: offline arbeiten oder trennen {#serveur-injoignable-travailler-hors-ligne-ou-se-detacher}
 
 Antwortet der Server einer geteilten Arbeitsmappe nicht mehr (Server gestoppt, Netzwerk ausgefallen), erscheint unter dem Menüband ein orangefarbenes Banner, zum Beispiel „Der Server localhost:8080 antwortet nicht“. **Details** zeigt den technischen Fehler (auch als QuickInfo und im Protokoll).

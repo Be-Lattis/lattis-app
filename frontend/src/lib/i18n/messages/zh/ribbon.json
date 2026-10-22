@@ -62,6 +62,7 @@
 		"republish": "重新发布…",
 		"reconnect": "重试连接",
 		"detach": "与服务器分离…",
+		"remove": "从服务器移除…",
 		"import": "导入（CSV、Excel）…",
 		"export": "导出",
 		"exportTable": "表格导出为 CSV…",

@@ -108,7 +108,7 @@
 	const NF_NAMES: Record<string, string> = { '0': 'number', '0,00': 'number', '%': 'percent', '€': 'currency', date: 'date', time: 'time', text: 'text' };
 	const nfName = (nf: string) => tAny(`ribbon.numberFormat.${NF_NAMES[nf] ?? 'general'}`);
 
-	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'reconnect' | 'detach' | 'save' | 'saveAs' | 'download' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
+	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'reconnect' | 'detach' | 'remove' | 'save' | 'saveAs' | 'download' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
 	/** Accueil › Édition (Remplissage, Effacer, Trier et filtrer), Mettre sous forme de tableau. */
 	export type EditAction = 'fillDown' | 'fillRight' | 'clearContents' | 'clearFilters' | 'formatAsTable';
 
@@ -226,6 +226,8 @@
 		/** Fichier › Réessayer la connexion (classeur partagé hors ligne) et Détacher du serveur… (propriétaire). */
 		reconnect?: boolean;
 		detach?: boolean;
+		/** « Retirer du serveur… » : propriétaire du classeur partagé ouvert (action dangereuse, en rouge). */
+		remove?: boolean;
 		/** Fichier › Gérer l’accès… (droits du classeur publié : propriétaire ou concepteur). */
 		rights?: boolean;
 		/** Mise en page de la feuille active, et les commandes de l'onglet Mise en page. */
@@ -239,7 +241,7 @@
 		ontheme?: (id: string) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -1459,8 +1461,8 @@
 						<button role="menuitem" disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
-					{#each [['save', t('ribbon.file.save'), 'Ctrl+S'], ['saveAs', t('ribbon.file.saveAs'), 'F12'], ...(platform.web && !platform.demo && !shared ? [['download', t('ribbon.file.download'), '']] : []), ...(sharedWorkbooksEnabled() && !shared ? [['share', t('ribbon.file.share'), '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', t('ribbon.file.rights'), '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', t('ribbon.file.republish'), '']] : []), ...(sharedWorkbooksEnabled() && reconnect ? [['reconnect', t('ribbon.file.reconnect'), '']] : []), ...(sharedWorkbooksEnabled() && detach ? [['detach', t('ribbon.file.detach'), '']] : []), ['import', t('ribbon.file.import'), '']] as [a, label, keys] (a)}
-						<button role="menuitem" disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
+					{#each [['save', t('ribbon.file.save'), 'Ctrl+S'], ['saveAs', t('ribbon.file.saveAs'), 'F12'], ...(platform.web && !platform.demo && !shared ? [['download', t('ribbon.file.download'), '']] : []), ...(sharedWorkbooksEnabled() && !shared ? [['share', t('ribbon.file.share'), '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', t('ribbon.file.rights'), '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', t('ribbon.file.republish'), '']] : []), ...(sharedWorkbooksEnabled() && reconnect ? [['reconnect', t('ribbon.file.reconnect'), '']] : []), ...(sharedWorkbooksEnabled() && detach ? [['detach', t('ribbon.file.detach'), '']] : []), ...(sharedWorkbooksEnabled() && remove ? [['remove', t('ribbon.file.remove'), '']] : []), ['import', t('ribbon.file.import'), '']] as [a, label, keys] (a)}
+						<button role="menuitem" class:danger={a === 'remove'} disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
 					<!-- Exporter : CSV du tableau ou de la feuille, classeur .xlsx ou .ods ; l'impression reste à part. -->
@@ -1845,6 +1847,10 @@
 	.file-menu button:disabled {
 		color: #9aa0a6;
 		cursor: default;
+	}
+	/* Action qui supprime pour tous (Retirer du serveur…). */
+	.file-menu button.danger:not(:disabled) {
+		color: #b91c1c;
 	}
 	.file-menu hr {
 		border: none;

@@ -42,6 +42,8 @@ In a collaborative workbook (shared live on a Lattis Server), a table created af
 - **View as…**: from the line of a member or a role, or in its tab, shows what that member can do on a table and the rows they see, read on the server under their identity (rules included).
 - **Discrepancies**: rules changed outside Lattis, directly in PostgreSQL; **Recompile rights** restores those from Lattis.
 
+**Remove from the server…** (owner; at the bottom of this box, or in File) deletes the workbook from the server for everyone: data and permissions, pipelines and forms; its Data Lake shares are cut. Copies already on computers stay: the other members see “This workbook was deleted” and can keep theirs (**Save a local copy…**). Yours stays open as a local workbook. A confirmation asks first; it can't be undone.
+
 ## Server unreachable: work offline, or detach {#serveur-injoignable-travailler-hors-ligne-ou-se-detacher}
 
 When the server of a shared workbook no longer responds (server stopped, network down), an orange banner shows under the ribbon, for example “The server localhost:8080 is not responding”. **Details** shows the technical error (also as a tooltip and in the log).

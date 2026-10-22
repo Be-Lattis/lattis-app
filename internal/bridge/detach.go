@@ -3,12 +3,15 @@ package bridge
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/internal/trace"
 )
 
 // Sortir d'un classeur partagé (bandeau « Hors ligne », Fichier) :
@@ -43,13 +46,13 @@ func (s *DocumentService) ShareLocalCopy(ctx context.Context) (OpenResult, error
 		// Supprimé du serveur (bandeau « Enregistrer une copie locale… ») :
 		// le cache n'a plus de raison d'être, ni l'entrée des récents ; les
 		// modifications jamais envoyées restent dans la copie.
-		r, err := s.detachAs(ctx, d, "Enregistrer une copie locale", docBaseName(d)+".lattis", true)
+		r, err := s.detachAs(ctx, d, "Enregistrer une copie locale", docBaseName(d)+".lattis", true, nil)
 		if err == nil && !r.Cancelled {
 			dropRecent(RecentFile{Server: st.Server, WorkbookID: st.WorkbookID})
 		}
 		return r, err
 	}
-	return s.detachAs(ctx, d, "Travailler sur une copie locale", docBaseName(d)+" (copie locale).lattis", false)
+	return s.detachAs(ctx, d, "Travailler sur une copie locale", docBaseName(d)+" (copie locale).lattis", false, nil)
 }
 
 // ShareDetach fait du classeur partagé ouvert un classeur local ordinaire
@@ -72,19 +75,94 @@ func (s *DocumentService) ShareDetach(ctx context.Context) (OpenResult, error) {
 		return OpenResult{}, msg.New("share.detachReadOnly", nil)
 	}
 	if inShareCache(d.Path()) || d.Path() == "" {
-		return s.detachAs(ctx, d, "Détacher du serveur : enregistrer le classeur", docBaseName(d)+".lattis", true)
+		return s.detachAs(ctx, d, "Détacher du serveur : enregistrer le classeur", docBaseName(d)+".lattis", true, nil)
 	}
-	unsent, err := s.detachTo(ctx, d, "", false)
+	unsent, err := s.detachTo(ctx, d, "", false, nil)
 	if err != nil {
 		return OpenResult{}, err
 	}
 	return s.reopenDetached(ctx, d, detachedNotice(s.sessionLang(), false, unsent, filepath.Base(d.Path())))
 }
 
+// ShareRemove retire du serveur le classeur partagé ouvert
+// (lattis.drop_workbook, propriétaires ; l'interface a demandé
+// confirmation) : données, rôles, pipelines et formulaires disparaissent
+// du serveur pour tous ; les partages au Data Lake sont coupés. Les copies
+// des postes restent : les membres voient « supprimé du serveur » et
+// peuvent garder la leur (shareGone). Celle du propriétaire devient un
+// classeur local ordinaire, comme après « Détacher du serveur » ; un
+// classeur ouvert depuis le serveur est d'abord enregistré ailleurs
+// (boîte Enregistrer sous ; édition web : fichier de la session,
+// téléchargé). Annuler la boîte ne retire rien.
+func (s *DocumentService) ShareRemove(ctx context.Context) (OpenResult, error) {
+	d, err := s.current()
+	if err != nil {
+		return OpenResult{}, err
+	}
+	info := d.Share.Info()
+	if info == nil {
+		return OpenResult{}, errNotShared
+	}
+	if !info.CanManage() {
+		return OpenResult{}, msg.New("share.removeOwnerOnly", nil)
+	}
+	if d.ReadOnly() {
+		return OpenResult{}, msg.New("share.removeReadOnly", nil)
+	}
+	srv, _, _, err := remoteServer(ctx, info.Server)
+	if err != nil {
+		return OpenResult{}, err
+	}
+	// Retiré du serveur une fois le suivi arrêté, juste avant le
+	// détachement local : un refus ne change rien au classeur ouvert.
+	drop := func() error {
+		if err := srv.RemoveWorkbook(ctx, info.WorkbookID); err != nil {
+			if workbook.Privilege(err) {
+				return msg.New("share.removeOwnerOnly", nil)
+			}
+			return errors.New(rightsError(err))
+		}
+		trace.Logf(1, trace.Doc, "classeur partagé « %s » retiré de %s", info.Title, info.Server)
+		return nil
+	}
+	var r OpenResult
+	if inShareCache(d.Path()) || d.Path() == "" {
+		r, err = s.detachAs(ctx, d, "Retirer du serveur : enregistrer le classeur", docBaseName(d)+".lattis", true, drop)
+		if err != nil || r.Cancelled {
+			return r, err
+		}
+	} else {
+		unsent, err := s.detachTo(ctx, d, "", false, drop)
+		if err != nil {
+			return OpenResult{}, err
+		}
+		if r, err = s.reopenDetached(ctx, d, ""); err != nil {
+			return OpenResult{}, err
+		}
+		r.State.Notice = removedNotice(s.sessionLang(), unsent, filepath.Base(d.Path()), r.State.Notice)
+	}
+	dropRecent(RecentFile{Server: info.Server, WorkbookID: info.WorkbookID})
+	return r, nil
+}
+
+// removedNotice : message de la barre d'état après « Retirer du serveur »
+// (rest : ce que la réouverture avait à dire).
+func removedNotice(l msg.Lang, unsent int, name, rest string) string {
+	text := msg.Format(l, "share.removed", msg.Args{"name": name})
+	if unsent > 0 {
+		text += msg.Format(l, "share.unsentKept", msg.Args{"n": unsent})
+	}
+	if rest = strings.TrimSpace(rest); rest != "" {
+		text += " " + rest
+	}
+	return text
+}
+
 // detachAs demande où enregistrer le classeur détaché (name : nom proposé),
 // l'y enregistre puis l'ouvre ; dropCache retire ensuite le cache du
-// classeur du serveur (Détacher).
-func (s *DocumentService) detachAs(ctx context.Context, d *doc.Document, title, name string, dropCache bool) (OpenResult, error) {
+// classeur du serveur (Détacher) ; drop (non nil) le retire d'abord du
+// serveur (Retirer du serveur, voir detachTo).
+func (s *DocumentService) detachAs(ctx context.Context, d *doc.Document, title, name string, dropCache bool, drop func() error) (OpenResult, error) {
 	var unsent int
 	var werr error
 	p, err := s.sys().SaveFile(FileDialog{
@@ -98,7 +176,7 @@ func (s *DocumentService) detachAs(ctx context.Context, d *doc.Document, title, 
 			werr = msg.New("share.detachChooseFolder", nil)
 			return werr
 		}
-		unsent, werr = s.detachTo(ctx, d, p, dropCache)
+		unsent, werr = s.detachTo(ctx, d, p, dropCache, drop)
 		return werr
 	})
 	if werr != nil {
@@ -110,6 +188,13 @@ func (s *DocumentService) detachAs(ctx context.Context, d *doc.Document, title, 
 	if p == "" {
 		return OpenResult{Cancelled: true}, nil
 	}
+	if drop != nil {
+		r, err := s.reopenDetached(ctx, d, "")
+		if err == nil {
+			r.State.Notice = removedNotice(s.sessionLang(), unsent, filepath.Base(p), r.State.Notice)
+		}
+		return r, err
+	}
 	return s.reopenDetached(ctx, d, detachedNotice(s.sessionLang(), !dropCache, unsent, filepath.Base(p)))
 }
 
@@ -117,8 +202,10 @@ func (s *DocumentService) detachAs(ctx context.Context, d *doc.Document, title, 
 // fichier). Rend le nombre d'étapes jamais envoyées au serveur, gardées
 // dans le classeur détaché. Le cache d'un classeur du serveur est d'abord
 // enregistré (sa file d'envoi comprise, qui partira à sa prochaine
-// ouverture), sauf dropCache : il est alors retiré.
-func (s *DocumentService) detachTo(ctx context.Context, d *doc.Document, path string, dropCache bool) (int, error) {
+// ouverture), sauf dropCache : il est alors retiré. drop (non nil) est
+// appelé une fois le suivi arrêté, avant tout changement local (Retirer
+// du serveur) : en cas d'échec, le suivi reprend et rien ne change.
+func (s *DocumentService) detachTo(ctx context.Context, d *doc.Document, path string, dropCache bool, drop func() error) (int, error) {
 	unsent, _, err := workbook.Unsent(ctx, d.DB().Read())
 	if err != nil {
 		return 0, err
@@ -136,6 +223,12 @@ func (s *DocumentService) detachTo(ctx context.Context, d *doc.Document, path st
 	}
 	// Plus de suivi du serveur : rien ne part pendant le détachement.
 	s.stopShare()
+	if drop != nil {
+		if err := drop(); err != nil {
+			s.watchShare(d)
+			return 0, err
+		}
+	}
 	if path != "" && !samePath(path, d.Path()) {
 		// Enregistré sous le nouveau nom d'abord : un échec ne change rien.
 		if err := saveDoc(ctx, d, path); err != nil {

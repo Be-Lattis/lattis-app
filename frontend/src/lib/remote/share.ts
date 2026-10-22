@@ -223,6 +223,18 @@ export function detachQuestion(s: State, cached: boolean): string[] {
 	return out;
 }
 
+/**
+ * Boîte « Retirer du serveur » (propriétaire) : la question, puis ce qui
+ * se passe, en peu de mots. cached : classeur ouvert depuis le serveur, à
+ * enregistrer (où, sur le poste ; téléchargé, en édition web).
+ */
+export function removeQuestion(s: State, cached: boolean, web: boolean): { question: string; lines: string[] } {
+	const lines = [t('remote.share.remove.everyone'), t('remote.share.remove.copies')];
+	if (cached) lines.push(t(web ? 'remote.share.remove.download' : 'remote.share.remove.cached'));
+	lines.push(t('remote.share.remove.final'));
+	return { question: t('remote.share.remove.question', { title: s.title, server: serverLabel(s) }), lines };
+}
+
 /** Message de la barre d'état après « Réessayer ». */
 export function retryNotice(): string {
 	return t('remote.share.retryNotice');

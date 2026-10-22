@@ -76,6 +76,14 @@
 			"cached": "Sie wählen gleich, wo die lokale Arbeitsmappe gespeichert wird.",
 			"final": "Das Trennen lässt sich nicht rückgängig machen."
 		},
+		"remove": {
+			"question": "„{title}“ von {server} entfernen?",
+			"everyone": "Für alle: Daten und Berechtigungen werden vom Server gelöscht, Pipelines und Formulare ebenfalls; Freigaben im Data Lake werden getrennt.",
+			"copies": "Kopien auf den Rechnern bleiben. Ihre bleibt als lokale Arbeitsmappe geöffnet.",
+			"cached": "Sie wählen, wo sie gespeichert wird.",
+			"download": "Eine Kopie wird heruntergeladen.",
+			"final": "Das lässt sich nicht rückgängig machen."
+		},
 		"retryNotice": "Neuer Verbindungsversuch…",
 		"when": {
 			"today": "um {time}",
@@ -1157,7 +1165,8 @@
 			"recompile": "Rechte neu kompilieren"
 		},
 		"sending": "Wird an den Server gesendet…",
-		"designerOnly": "Designer: nur anzeigen und prüfen"
+		"designerOnly": "Designer: nur anzeigen und prüfen",
+		"remove": "Vom Server entfernen…"
 	},
 	"shareDialog": {
 		"checking": "Arbeitsmappe wird geprüft…",

@@ -154,6 +154,10 @@ func (s pgServer) Recompile(ctx context.Context, workbookID string) error {
 	return s.exec(ctx, `SELECT lattis.compile_acl($1::uuid)`, workbookID)
 }
 
+func (s pgServer) RemoveWorkbook(ctx context.Context, workbookID string) error {
+	return s.exec(ctx, `SELECT lattis.drop_workbook($1::uuid)`, workbookID)
+}
+
 // SearchPeople : lattis.search_people (migration 0046) ; fonction absente
 // (42883) : ErrUnsupported.
 func (s pgServer) SearchPeople(ctx context.Context, query string, limit int) ([]Person, error) {

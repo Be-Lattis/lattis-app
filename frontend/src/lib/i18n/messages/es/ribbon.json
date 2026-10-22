@@ -62,6 +62,7 @@
 		"republish": "Volver a publicar…",
 		"reconnect": "Reintentar la conexión",
 		"detach": "Desvincular del servidor…",
+		"remove": "Retirar del servidor…",
 		"import": "Importar (CSV, Excel)…",
 		"export": "Exportar",
 		"exportTable": "La tabla en CSV…",

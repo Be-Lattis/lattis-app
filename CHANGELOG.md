@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Classeur partagé : son propriétaire peut le retirer du serveur (Fichier › Retirer du serveur…, ou en bas de « Gérer l’accès »). Après confirmation, données, droits, pipelines et formulaires sont supprimés du serveur pour tous ; chacun garde la copie de son poste, et celle du propriétaire reste ouverte en classeur local.
+
 ## 0.4.3-beta (22/10/2026)
 
 ### Changements

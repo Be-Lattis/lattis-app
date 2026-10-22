@@ -917,6 +917,10 @@
 			"question": "¿Desvincular este libro del servidor?",
 			"ok": "Desvincular"
 		},
+		"remove": {
+			"title": "Retirar del servidor",
+			"ok": "Retirar del servidor"
+		},
 		"link": {
 			"title": "Abrir un enlace de Lattis",
 			"question": "¿Abrir un libro de «{name}»?",

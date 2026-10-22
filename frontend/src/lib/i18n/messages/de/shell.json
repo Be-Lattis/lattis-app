@@ -917,6 +917,10 @@
 			"question": "Diese Arbeitsmappe vom Server trennen?",
 			"ok": "Trennen"
 		},
+		"remove": {
+			"title": "Vom Server entfernen",
+			"ok": "Vom Server entfernen"
+		},
 		"link": {
 			"title": "Lattis-Link öffnen",
 			"question": "Eine Arbeitsmappe von „{name}“ öffnen?",

@@ -76,6 +76,14 @@
 			"cached": "接下来请选择本地工作簿的保存位置。",
 			"final": "分离操作无法撤消。"
 		},
+		"remove": {
+			"question": "要从 {server} 移除“{title}”吗？",
+			"everyone": "对所有人：服务器上的数据和权限将被删除，管道和表单也一样；Data Lake 共享将被切断。",
+			"copies": "各电脑上已有的副本会保留。您的副本将作为本地工作簿保持打开。",
+			"cached": "您将选择保存位置。",
+			"download": "将下载一份副本。",
+			"final": "此操作无法撤销。"
+		},
 		"retryNotice": "正在尝试重新连接…",
 		"when": {
 			"today": "于 {time}",
@@ -1157,7 +1165,8 @@
 			"recompile": "重新编译权限"
 		},
 		"sending": "正在发送到服务器…",
-		"designerOnly": "设计者：仅可查看和检查"
+		"designerOnly": "设计者：仅可查看和检查",
+		"remove": "从服务器移除…"
 	},
 	"shareDialog": {
 		"checking": "正在检查工作簿…",

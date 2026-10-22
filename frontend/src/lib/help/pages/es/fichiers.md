@@ -42,6 +42,8 @@ En un libro colaborativo (compartido en directo en un Servidor Lattis), una tabl
 - **Ver como…**: desde la línea de un miembro o de un rol, o en su pestaña, muestra lo que ese miembro puede hacer en una tabla y las filas que ve, leídas en el servidor con su identidad (reglas incluidas).
 - **Diferencias**: reglas cambiadas fuera de Lattis, directamente en PostgreSQL; **Recompilar los derechos** restablece las de Lattis.
 
+**Retirar del servidor…** (propietario; al pie de este cuadro, o en Archivo) elimina el libro del servidor para todos: datos y permisos, pipelines y formularios; sus compartidos del Data Lake se cortan. Las copias ya presentes en los equipos se quedan: los demás miembros ven que el libro se ha eliminado y pueden conservar la suya (**Guardar una copia local…**). La suya sigue abierta como libro local. Una confirmación lo pregunta antes; no se puede deshacer.
+
 ## Servidor inaccesible: trabajar sin conexión o desvincularse {#serveur-injoignable-travailler-hors-ligne-ou-se-detacher}
 
 Cuando el servidor de un libro compartido deja de responder (servidor detenido, red caída), aparece una franja naranja bajo la cinta, por ejemplo «El servidor localhost:8080 no responde». **Detalles** muestra el error técnico (también como información sobre herramientas y en el registro).

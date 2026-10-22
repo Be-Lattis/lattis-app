@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Check, State } from '#bindings/internal/remote/workbook/models.js';
 import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 import { syncAt } from '#lib/grid/cache.js';
-import { banner, blocking, detachQuestion, goneError, goneText, offlineText, serverDown, serverLabel, canRepublish, conflictText, defaultSelection, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, roleChip, rolesLabel, whenLabel } from './share';
+import { banner, blocking, detachQuestion, removeQuestion, goneError, goneText, offlineText, serverDown, serverLabel, canRepublish, conflictText, defaultSelection, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, roleChip, rolesLabel, whenLabel } from './share';
 
 const check: Check = {
 	tables: [
@@ -122,6 +122,20 @@ describe('partage', () => {
 		expect(q.join(' ')).toContain('choisir où enregistrer');
 		expect(q[q.length - 1]).toBe('Ce détachement ne s’annule pas.');
 		expect(detachQuestion({ ...s, pending: 0 }, false).join(' ')).not.toMatch(/en attente|non envoyée|choisir/);
+	});
+
+	it('explique le retrait du serveur', () => {
+		const s = state({ server: 'http://localhost:8080', serverName: '', title: 'Nids', mode: 'collaborative', canManage: true });
+		const q = removeQuestion(s, true, false);
+		expect(q.question).toBe('Retirer « Nids » de localhost:8080 ?');
+		expect(q.lines.join(' ')).toContain('données et droits supprimés du serveur');
+		expect(q.lines.join(' ')).toContain('Data Lake');
+		expect(q.lines.join(' ')).toContain('La vôtre reste ouverte en classeur local');
+		expect(q.lines.join(' ')).toContain('choisir où');
+		expect(q.lines[q.lines.length - 1]).toBe('Cette action ne s’annule pas.');
+		// Édition web : la copie se télécharge ; fichier à soi : rien à choisir.
+		expect(removeQuestion(s, true, true).lines.join(' ')).toContain('téléchargée');
+		expect(removeQuestion(s, false, false).lines.join(' ')).not.toMatch(/choisir|téléchargée/);
 	});
 
 	it('décrit un conflit', () => {

@@ -2644,6 +2644,7 @@ export interface MessageParams {
 	'remote.rightsDialog.reading': Record<never, never>;
 	'remote.rightsDialog.reload.aria': Record<never, never>;
 	'remote.rightsDialog.reload.tooltip': Record<never, never>;
+	'remote.rightsDialog.remove': Record<never, never>;
 	'remote.rightsDialog.sending': Record<never, never>;
 	'remote.rightsDialog.tab.drift': Record<never, never>;
 	'remote.rightsDialog.tab.members': Record<never, never>;
@@ -2808,6 +2809,12 @@ export interface MessageParams {
 	'remote.share.offline.pending': { n: number | string };
 	'remote.share.offline.readOnly': { why: number | string };
 	'remote.share.refused': { list: number | string; more: number | string; n: number | string };
+	'remote.share.remove.cached': Record<never, never>;
+	'remote.share.remove.copies': Record<never, never>;
+	'remote.share.remove.download': Record<never, never>;
+	'remote.share.remove.everyone': Record<never, never>;
+	'remote.share.remove.final': Record<never, never>;
+	'remote.share.remove.question': { server: number | string; title: number | string };
 	'remote.share.retryNotice': Record<never, never>;
 	'remote.share.role.designer': Record<never, never>;
 	'remote.share.role.editor': Record<never, never>;
@@ -3281,6 +3288,7 @@ export interface MessageParams {
 	'ribbon.file.recent': Record<never, never>;
 	'ribbon.file.recentNone': Record<never, never>;
 	'ribbon.file.reconnect': Record<never, never>;
+	'ribbon.file.remove': Record<never, never>;
 	'ribbon.file.report': Record<never, never>;
 	'ribbon.file.republish': Record<never, never>;
 	'ribbon.file.rights': Record<never, never>;
@@ -4096,6 +4104,8 @@ export interface MessageParams {
 	'shell.share.publishedFrozen': { server: number | string };
 	'shell.share.publishedLive': { server: number | string };
 	'shell.share.readOnlyRole': { reason: number | string; roles: number | string };
+	'shell.share.remove.ok': Record<never, never>;
+	'shell.share.remove.title': Record<never, never>;
 	'shell.share.removeRecent': { error: number | string };
 	'shell.share.scriptsLocked': Record<never, never>;
 	'shell.share.sourceFailed': { error: number | string; table: number | string };

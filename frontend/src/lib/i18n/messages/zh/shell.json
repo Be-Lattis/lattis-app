@@ -917,6 +917,10 @@
 			"question": "要将此工作簿与服务器分离吗？",
 			"ok": "分离"
 		},
+		"remove": {
+			"title": "从服务器移除",
+			"ok": "从服务器移除"
+		},
 		"link": {
 			"title": "打开 Lattis 链接",
 			"question": "要打开来自“{name}”的工作簿吗？",

@@ -578,4 +578,34 @@ func rights0009(t *testing.T, env *pgEnv, as workbook.Server, wb, rt, carol, car
 	must(t, as.DropRole(ctx, sud))
 }
 
+// Retirer un classeur du serveur (lattis.drop_workbook) contre
+// PostgreSQL 18 : refusé à un membre éditeur (42501) ; fait par la
+// propriétaire, le classeur n'est plus listé et les capacités du membre
+// répondent « classeur inconnu » (P0002 : GoneDeleted).
+func TestPostgresRemoveWorkbook(t *testing.T) {
+	env := pgSetup(t)
+	useRoot(t)
+	ctx := context.Background()
+	alice, _ := env.user(t, "alice")
+	carol, carolID := env.user(t, "carol")
+	a := author(t)
+	as := env.as(alice)
+	info, err := workbook.Publish(ctx, as, a.DB(), workbook.Request{Server: server, User: alice, Title: "À retirer", Mode: workbook.Collaborative, Tables: []int64{tableID(t, a, "Ventes")}})
+	must(t, err)
+	env.addMember(t, info.WorkbookID, "editor", carolID)
+	if err := env.as(carol).RemoveWorkbook(ctx, info.WorkbookID); !workbook.Privilege(err) {
+		t.Fatalf("retiré par Carol : %v", err)
+	}
+	must(t, as.RemoveWorkbook(ctx, info.WorkbookID))
+	list, err := as.Workbooks(ctx)
+	must(t, err)
+	if len(list) != 0 {
+		t.Fatalf("toujours listé : %+v", list)
+	}
+	_, err = env.as(carol).Capabilities(ctx, info.WorkbookID)
+	if g := workbook.GoneReason(err); g != workbook.GoneDeleted {
+		t.Fatalf("capacités de Carol : %q, %v", g, err)
+	}
+}
+
 func quoteIdent(s string) string { return `"` + strings.ReplaceAll(s, `"`, `""`) + `"` }

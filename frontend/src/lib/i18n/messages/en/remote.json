@@ -76,6 +76,14 @@
 			"cached": "You will choose where to save the local workbook.",
 			"final": "Detaching cannot be undone."
 		},
+		"remove": {
+			"question": "Remove “{title}” from {server}?",
+			"everyone": "For everyone: data and permissions deleted from the server, pipelines and forms too; Data Lake shares cut.",
+			"copies": "Copies already on computers stay. Yours stays open as a local workbook.",
+			"cached": "You will choose where to save it.",
+			"download": "A copy will be downloaded.",
+			"final": "This can’t be undone."
+		},
 		"retryNotice": "Trying to connect again…",
 		"when": {
 			"today": "at {time}",
@@ -1157,7 +1165,8 @@
 			"recompile": "Recompile rights"
 		},
 		"sending": "Sending to the server…",
-		"designerOnly": "Designer: view and check only"
+		"designerOnly": "Designer: view and check only",
+		"remove": "Remove from the server…"
 	},
 	"shareDialog": {
 		"checking": "Checking the workbook…",
