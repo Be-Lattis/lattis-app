@@ -1111,6 +1111,12 @@ func (s *DocumentService) SetColumnWidth(ctx context.Context, sheet int64, col, 
 	return s.act(ctx, func(d *doc.Document) error { return d.SetColumnWidth(ctx, sheet, col, width) })
 }
 
+// SetColumnWidths fixe la largeur de plusieurs colonnes en une seule étape
+// d'annulation (ajustement automatique des colonnes sélectionnées).
+func (s *DocumentService) SetColumnWidths(ctx context.Context, sheet int64, widths []canvas.ColWidth) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetColumnWidths(ctx, sheet, widths) })
+}
+
 // FormulaHelp sert l'aide à la saisie des formules : fonctions (dans la
 // langue de la session) et tableaux du classeur avec leurs colonnes.
 type FormulaHelp struct {
@@ -1673,6 +1679,12 @@ func (s *DocumentService) SetPageSetup(ctx context.Context, sheet int64, p canva
 // SetRowHeight fixe la hauteur d'une ligne (0 : hauteur par défaut).
 func (s *DocumentService) SetRowHeight(ctx context.Context, sheet int64, row, height int) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetRowHeight(ctx, sheet, row, height) })
+}
+
+// SetRowHeights fixe la hauteur de plusieurs lignes en une seule étape
+// d'annulation (0 : hauteur par défaut).
+func (s *DocumentService) SetRowHeights(ctx context.Context, sheet int64, heights []canvas.RowHeight) (DocState, error) {
+	return s.act(ctx, func(d *doc.Document) error { return d.SetRowHeights(ctx, sheet, heights) })
 }
 
 // Favorites liste les requêtes SQL favorites du classeur.

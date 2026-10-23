@@ -90,6 +90,7 @@
 	import { panelAtCell, changeSource, startValues } from './pivotfields';
 	import { brokenPivotAt, pivotsCleared } from './pivotzone';
 	import { midEllipsis } from './midellipsis';
+	import { fitColumns, fitRows } from './autofit';
 	import { handAlign, handEditText, handKeptNote, handStart, pivotHandAt } from './pivothand';
 	import { pivotRangeRef, pivotRefText } from './pivotref';
 	import { placeAt, placedMessage, placeHint, placeKey, placesOnClick, type Placement } from './pivotplace';
@@ -483,8 +484,12 @@
 		/** Type majoritaire d'une colonne en texte au type inféré. */
 		typeMix?(table: SheetTable, i: number): Promise<TypeMix>;
 		setColumnWidth?(col: number, width: number): Promise<unknown>;
+		/** Largeurs de plusieurs colonnes, en une seule étape d'annulation (ajustement de la sélection). */
+		setColumnWidths?(widths: { col: number; width: number }[]): Promise<unknown>;
 		/** Hauteur d'une ligne de la feuille (0 : par défaut). */
 		setRowHeight?(row: number, height: number): Promise<unknown>;
+		/** Hauteurs de plusieurs lignes, en une seule étape d'annulation (0 : par défaut). */
+		setRowHeights?(heights: { row: number; height: number }[]): Promise<unknown>;
 		/** Nomme une cellule libre (vide : retire le nom). */
 		setName?(row: number, col: number, name: string): Promise<unknown>;
 		sortTable?(table: SheetTable, i: number, desc: boolean): Promise<unknown>;
@@ -4600,26 +4605,39 @@
 	 */
 	function autoFitRows() {
 		closeMenus();
-		const set = source.setRowHeight;
-		if (!set) return;
 		const { r0, r1 } = selection();
-		const rows: number[] = [];
-		for (const r of userHeights.keys()) if (r >= r0 && r <= r1) rows.push(r);
-		if (!rows.length) return;
+		// Seules les lignes à hauteur choisie changent (la feuille entière peut
+		// compter des millions de lignes).
+		const write = resetRowHeights([...userHeights.keys()].filter((r) => r >= r0 && r <= r1));
+		if (write) menuAction(write);
+	}
+
+	/**
+	 * Remet les lignes rows en hauteur automatique, à l'écran tout de suite ;
+	 * rend l'écriture (une seule étape d'annulation), ou undefined s'il n'y a
+	 * rien à faire.
+	 */
+	function resetRowHeights(rows: number[]): (() => Promise<unknown>) | undefined {
+		const one = source.setRowHeight;
+		const many = source.setRowHeights;
+		if (!rows.length || (!one && !many)) return undefined;
 		for (const r of rows) userHeights.delete(r);
 		rebuildRows();
 		updateExtent();
 		schedule();
-		menuAction(async () => {
-			for (const r of rows) await set(r, 0);
-		});
+		if (many && (rows.length > 1 || !one)) return () => many(rows.map((row) => ({ row, height: 0 })));
+		return async () => {
+			for (const r of rows) await one!(r, 0);
+		};
 	}
 
 	/** Ajuster la largeur de colonne (colonnes sélectionnées), d'après le contenu affiché. */
 	function autoFitCols() {
 		closeMenus();
 		const { c0, c1 } = selection();
-		for (let c = c0; c <= c1 && c - c0 < 500; c++) if (!hiddenCols.has(c)) autoFitColumn(c);
+		const cols: number[] = [];
+		for (let c = c0; c <= c1; c++) if (!hiddenCols.has(c)) cols.push(c);
+		autoFitColumns(cols);
 	}
 
 	// Volets figés.
@@ -7545,41 +7563,65 @@
 		return null;
 	}
 
-	/** Largeur ajustée au contenu affiché de la colonne c (double-clic sur le
-	 * trait de droite de son en-tête, comme Excel) : en-têtes des tableaux,
-	 * lignes visibles, cellules libres et tableaux croisés. */
-	function fitWidth(c: number): number {
-		let w = 0;
+	/** Largeurs ajustées au contenu affiché des colonnes cols (double-clic sur
+	 * le trait de droite d'un en-tête, comme Excel) : en-têtes des tableaux,
+	 * lignes visibles seulement (rien de plus n'est lu, même sur un tableau
+	 * d'un million de lignes), cellules libres et tableaux croisés. Un seul
+	 * passage pour toutes les colonnes (toute la feuille sélectionnée). */
+	function fitWidths(cols: number[]): Map<number, number> {
+		const want = new Set(cols);
+		const w = new Map<number, number>();
+		const up = (c: number, v: number) => v > (w.get(c) ?? 0) && w.set(c, v);
+		if (!cols.length) return w;
+		let lo = cols[0];
+		let hi = cols[0];
+		for (const c of cols) (lo = Math.min(lo, c)), (hi = Math.max(hi, c));
 		const { first, last } = visibleRows();
 		for (const e of entries) {
-			if (c < e.t.col || c > e.lastCol) continue;
-			const i = c - e.t.col;
-			w = Math.max(w, headerWidth(e, i));
+			if (e.lastCol < lo || e.t.col > hi) continue;
 			const d = visibleData(e, first, last);
-			if (d) for (let k = d.first; k <= d.last; k++) w = Math.max(w, textWidth(e.cache.row(k)?.text[i] ?? ''));
+			for (let c = Math.max(lo, e.t.col); c <= Math.min(hi, e.lastCol); c++) {
+				if (!want.has(c)) continue;
+				const i = c - e.t.col;
+				let m = headerWidth(e, i);
+				if (d) for (let k = d.first; k <= d.last; k++) m = Math.max(m, textWidth(e.cache.row(k)?.text[i] ?? ''));
+				up(c, m);
+			}
 		}
 		for (const [k, raw] of cells) {
 			const [r, cc] = k.split(',').map(Number);
-			if (cc === c) w = Math.max(w, textWidth(shown.get(k)?.text ?? raw, !!styleAt(r, cc, undefined)?.b));
+			if (want.has(cc)) up(cc, textWidth(shown.get(k)?.text ?? raw, !!styleAt(r, cc, undefined)?.b));
 		}
 		for (const p of pivots) {
-			const j = c - p.col;
-			if (p.error || j < 0 || j >= (p.cells[0]?.length ?? 0)) continue;
-			p.cells.forEach((r, i) => (w = Math.max(w, textWidth(r[j] ?? '', pivotBold(p, p.row + i)) + (j === 0 ? pivotLabelOffset(pivotRowOf(p, p.row + i)) : 0))));
+			const n = p.cells[0]?.length ?? 0;
+			if (p.error || p.col > hi || p.col + n - 1 < lo) continue;
+			for (let j = 0; j < n; j++) {
+				if (!want.has(p.col + j)) continue;
+				p.cells.forEach((r, i) => up(p.col + j, textWidth(r[j] ?? '', pivotBold(p, p.row + i)) + (j === 0 ? pivotLabelOffset(pivotRowOf(p, p.row + i)) : 0)));
+			}
 		}
-		return w ? clamp(Math.ceil(w) + 14, 24, MAX_FIT) : DEF_W;
+		const out = new Map<number, number>();
+		for (const c of cols) {
+			const v = w.get(c) ?? 0;
+			out.set(c, v ? clamp(Math.ceil(v) + 14, 24, MAX_FIT) : DEF_W);
+		}
+		return out;
 	}
 
-	function autoFitColumn(c: number) {
-		const setWidth = source.setColumnWidth;
-		if (!setWidth) return;
-		const width = fitWidth(c);
-		if (width === cax().size(c)) return;
-		userWidths.set(c, width);
+	/** Ajuste les colonnes cols à leur contenu, en une seule étape d'annulation. */
+	function autoFitColumns(cols: number[]) {
+		const one = source.setColumnWidth;
+		const many = source.setColumnWidths;
+		if (!one && !many) return;
+		const widths: { col: number; width: number }[] = [];
+		for (const [col, width] of fitWidths(cols)) if (width !== cax().size(col)) widths.push({ col, width });
+		if (!widths.length) return;
+		for (const { col, width } of widths) userWidths.set(col, width);
 		rebuildAxis();
 		updateExtent();
 		schedule();
-		writing = writing.catch(() => undefined).then(() => setWidth(c, width).then(() => undefined, (err) => say(errorText(err))));
+		const write = many && (widths.length > 1 || !one) ? () => many(widths) : () => one!(widths[0].col, widths[0].width);
+		writing = writing.catch(() => undefined).then(() => write().then(() => undefined, (err) => say(errorText(err))));
 	}
 
 	/** La souris est-elle sur la bordure de la sélection (poignée de déplacement) ? */
@@ -8037,13 +8079,11 @@
 		if (rb !== null && source.setRowHeight) {
 			e.preventDefault();
 			if (e.detail === 2) {
-				// Double-clic : hauteur par défaut.
-				userHeights.delete(rb);
-				rebuildRows();
-				updateExtent();
-				schedule();
-				const set = source.setRowHeight;
-				writing = writing.catch(() => undefined).then(() => set(rb, 0).then(() => undefined, (err) => say(errorText(err))));
+				// Double-clic : hauteur automatique ; sur une ligne de la
+				// sélection, toutes les lignes sélectionnées (comme Excel).
+				const { r0, r1 } = selection();
+				const write = resetRowHeights(fitRows(rb, r0, r1, userHeights.keys()));
+				if (write) writing = writing.catch(() => undefined).then(() => write().then(() => undefined, (err) => say(errorText(err))));
 				return;
 			}
 			rowResizing = { row: rb, startY: e.clientY, startH: rh(rb), height: rh(rb) };
@@ -8510,8 +8550,11 @@
 		if (hold) return; // pointage d'une formule d'une autre feuille
 		if (locked) return; // feuille protégée : pas de saisie, sans message
 		const b = boundaryAt(e);
-		if (b !== null && source.setColumnWidth) {
-			autoFitColumn(b);
+		if (b !== null && (source.setColumnWidth || source.setColumnWidths)) {
+			// Poignée d'une colonne de la sélection : toutes les colonnes
+			// sélectionnées (toute la feuille comprise), comme Excel.
+			const { c0, c1 } = selection();
+			autoFitColumns(fitColumns(b, c0, c1, hiddenCols));
 			return;
 		}
 		const cell = cellAt(e);

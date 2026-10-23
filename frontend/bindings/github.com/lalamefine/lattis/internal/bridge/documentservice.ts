@@ -1919,6 +1919,14 @@ export function SetColumnWidth(sheet: number, col: number, width: number): $Canc
 }
 
 /**
+ * SetColumnWidths fixe la largeur de plusieurs colonnes en une seule étape
+ * d'annulation (ajustement automatique des colonnes sélectionnées).
+ */
+export function SetColumnWidths(sheet: number, widths: canvas$0.ColWidth[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3201603553, sheet, widths);
+}
+
+/**
  * SetConnectionPassword essaie le mot de passe d'une connexion du classeur
  * et le garde s'il est accepté (pour la session, et dans le trousseau si
  * remember). Renvoie "" s'il est accepté, sinon le message d'erreur.
@@ -2066,6 +2074,14 @@ export function SetPivotCalcField(id: number, old: string, name: string, formula
  */
 export function SetRowHeight(sheet: number, row: number, height: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(234932537, sheet, row, height);
+}
+
+/**
+ * SetRowHeights fixe la hauteur de plusieurs lignes en une seule étape
+ * d'annulation (0 : hauteur par défaut).
+ */
+export function SetRowHeights(sheet: number, heights: canvas$0.RowHeight[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1430052734, sheet, heights);
 }
 
 /**

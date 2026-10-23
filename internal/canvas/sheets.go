@@ -363,53 +363,80 @@ func (m *Model) SetHeadings(ctx context.Context, sheet int64, show bool) error {
 // SetColumnWidth fixe la largeur (en pixels) d'une colonne de la feuille ;
 // 0 revient à la largeur par défaut.
 func (m *Model) SetColumnWidth(ctx context.Context, sheet int64, col, width int) error {
-	return m.Do(ctx, "Largeur de colonne", func(t *tx) error {
+	return m.SetColumnWidths(ctx, sheet, []ColWidth{{Col: col, Width: width}})
+}
+
+// SetColumnWidths fixe la largeur de plusieurs colonnes en une seule étape
+// d'annulation (ajustement automatique de toutes les colonnes sélectionnées,
+// comme Excel) ; une largeur 0 revient à la largeur par défaut.
+func (m *Model) SetColumnWidths(ctx context.Context, sheet int64, widths []ColWidth) error {
+	name := "Largeur de colonne"
+	if len(widths) > 1 {
+		name = "Largeur des colonnes"
+	}
+	return m.Do(ctx, name, func(t *tx) error {
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
-		var old int
-		err := t.row(`SELECT width FROM _lattis_col_widths WHERE sheet = ? AND col = ?`, sheet, col).Scan(&old)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return err
-		}
-		if old == width {
-			return nil
-		}
-		set := func(w int) []stmt {
-			s := []stmt{st(`DELETE FROM _lattis_col_widths WHERE sheet = ? AND col = ?`, sheet, col)}
-			if w > 0 {
-				s = append(s, st(`INSERT INTO _lattis_col_widths (sheet, col, width) VALUES (?, ?, ?)`, sheet, col, w))
+		for _, w := range widths {
+			if err := t.setLineSize(`_lattis_col_widths`, `col`, `width`, sheet, w.Col, w.Width); err != nil {
+				return err
 			}
-			return s
 		}
-		return t.apply(set(width), set(old))
+		return nil
 	})
 }
 
 // SetRowHeight fixe la hauteur (en pixels) d'une ligne de la feuille ; 0
 // revient à la hauteur par défaut.
 func (m *Model) SetRowHeight(ctx context.Context, sheet int64, row, height int) error {
-	return m.Do(ctx, "Hauteur de ligne", func(t *tx) error {
+	return m.SetRowHeights(ctx, sheet, []RowHeight{{Row: row, Height: height}})
+}
+
+// SetRowHeights fixe la hauteur de plusieurs lignes en une seule étape
+// d'annulation (hauteur automatique des lignes sélectionnées) ; 0 revient à
+// la hauteur par défaut.
+func (m *Model) SetRowHeights(ctx context.Context, sheet int64, heights []RowHeight) error {
+	name := "Hauteur de ligne"
+	if len(heights) > 1 {
+		name = "Hauteur des lignes"
+	}
+	return m.Do(ctx, name, func(t *tx) error {
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
-		var old int
-		err := t.row(`SELECT height FROM _lattis_row_heights WHERE sheet = ? AND row = ?`, sheet, row).Scan(&old)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return err
-		}
-		if old == height {
-			return nil
-		}
-		set := func(h int) []stmt {
-			s := []stmt{st(`DELETE FROM _lattis_row_heights WHERE sheet = ? AND row = ?`, sheet, row)}
-			if h > 0 {
-				s = append(s, st(`INSERT INTO _lattis_row_heights (sheet, row, height) VALUES (?, ?, ?)`, sheet, row, h))
+		for _, h := range heights {
+			if err := t.setLineSize(`_lattis_row_heights`, `row`, `height`, sheet, h.Row, h.Height); err != nil {
+				return err
 			}
-			return s
 		}
-		return t.apply(set(height), set(old))
+		return nil
 	})
+}
+
+// setLineSize fixe la taille d'une ligne ou d'une colonne (table des
+// largeurs ou des hauteurs) ; 0 la retire (taille par défaut). Rien n'est
+// écrit si elle ne change pas.
+func (t *tx) setLineSize(table, at, size string, sheet int64, i, px int) error {
+	var old int
+	err := t.row(`SELECT `+size+` FROM `+table+` WHERE sheet = ? AND `+at+` = ?`, sheet, i).Scan(&old)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if px < 0 {
+		px = 0
+	}
+	if old == px {
+		return nil
+	}
+	set := func(v int) []stmt {
+		s := []stmt{st(`DELETE FROM `+table+` WHERE sheet = ? AND `+at+` = ?`, sheet, i)}
+		if v > 0 {
+			s = append(s, st(`INSERT INTO `+table+` (sheet, `+at+`, `+size+`) VALUES (?, ?, ?)`, sheet, i, v))
+		}
+		return s
+	}
+	return t.apply(set(px), set(old))
 }
 
 // sheetPositioned sont les tables de métadonnées repérées par feuille et

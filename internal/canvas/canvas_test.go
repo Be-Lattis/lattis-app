@@ -1625,6 +1625,51 @@ func TestRowHeight(t *testing.T) {
 	}
 }
 
+// Ajustement automatique de plusieurs colonnes (ou lignes) sélectionnées :
+// une seule étape d'annulation, qui rend toutes les tailles d'avant.
+func TestLineSizesOneStep(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if err := d.SetColumnWidth(ctx, 1, 2, 90); err != nil {
+		t.Fatal(err)
+	}
+	before := dump(t, d)
+	if err := d.SetColumnWidths(ctx, 1, []ColWidth{{Col: 0, Width: 140}, {Col: 1, Width: 60}, {Col: 2, Width: 0}, {Col: 3, Width: 75}}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := d.Layout(ctx, 1)
+	got := map[int]int{}
+	for _, w := range l.Widths {
+		got[w.Col] = w.Width
+	}
+	if len(got) != 3 || got[0] != 140 || got[1] != 60 || got[3] != 75 {
+		t.Fatalf("largeurs : %+v", l.Widths)
+	}
+	if st, _ := d.bus.State(ctx); st.Undo != "Largeur des colonnes" {
+		t.Fatalf("étape : %q", st.Undo)
+	}
+	d.bus.Undo(ctx)
+	if got := dump(t, d); got != before {
+		t.Fatalf("annulation en une étape :\n%s", diff(before, got))
+	}
+	if err := d.SetRowHeights(ctx, 1, []RowHeight{{Row: 1, Height: 40}, {Row: 5, Height: 30}}); err != nil {
+		t.Fatal(err)
+	}
+	if l, _ = d.Layout(ctx, 1); len(l.Heights) != 2 {
+		t.Fatalf("hauteurs : %+v", l.Heights)
+	}
+	if err := d.SetRowHeights(ctx, 1, []RowHeight{{Row: 1}, {Row: 5}}); err != nil {
+		t.Fatal(err)
+	}
+	if l, _ = d.Layout(ctx, 1); len(l.Heights) != 0 {
+		t.Fatalf("hauteurs automatiques : %+v", l.Heights)
+	}
+	d.bus.Undo(ctx)
+	if l, _ = d.Layout(ctx, 1); len(l.Heights) != 2 {
+		t.Fatalf("annulation des hauteurs : %+v", l.Heights)
+	}
+}
+
 func TestGridlines(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
