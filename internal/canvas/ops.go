@@ -378,12 +378,16 @@ func (t *tx) createTable(sheet int64, name string, row, col int, headers []strin
 		args := []any{int64(r + 1), keys[r]}
 		for i, raw := range raws {
 			// Apostrophe de tête ('001) : elle a fait choisir le texte, elle n'est pas gardée.
-			if tb.Cols[i].Type == grid.Text && len(raw) > 1 && raw[0] == '\'' {
+			forced := tb.Cols[i].Type == grid.Text && len(raw) > 1 && raw[0] == '\''
+			if forced {
 				raw = raw[1:]
 			}
 			v, err := grid.Parse(tb.Cols[i].Type, raw)
 			if err != nil {
 				return Table{}, err
+			}
+			if forced {
+				v = raw // « 'null » : le texte null
 			}
 			args = append(args, v)
 		}

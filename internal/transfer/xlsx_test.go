@@ -141,7 +141,7 @@ func TestXLSXImport(t *testing.T) {
 	// RECHERCHEV importée : Produits n'a pas de clé et l'import n'en pose pas,
 	// la recherche passe par le numéro de ligne (INDEX/EQUIV).
 	want := `Code:integer Produit:text Qté:integer Prix:decimal=INDEX(Produits[Prix unitaire]; EQUIV([Produit]; Produits[Produit]; 0)) ` +
-		`Total:decimal=[Qté]*[Prix] Date:text Payé:boolean Note:text`
+		`Total:decimal=[Qté]*[Prix] Date:date Payé:boolean Note:text`
 	if got := strings.Join(cols, " "); got != want {
 		t.Errorf("colonnes :\n%s\nattendu :\n%s", got, want)
 	}
@@ -152,7 +152,7 @@ func TestXLSXImport(t *testing.T) {
 	wantCSV := "\ufeffCode;Produit;Qté;Prix;Total;Date;Payé;Note\r\n" +
 		"1;Pomme;3;1,5;4,5;15/01/2024;VRAI;1-Pomme\r\n" +
 		"2;Poire;2;2;4;16/01/2024;FAUX;1x\r\n" +
-		"3;Pomme;10;1,5;15;17/01/2024 12:00:00;;libre\r\n"
+		"3;Pomme;10;1,5;15;17/01/2024 12:00;;libre\r\n"
 	if out != wantCSV {
 		t.Errorf("export :\n%q\nattendu :\n%q", out, wantCSV)
 	}

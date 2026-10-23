@@ -41,11 +41,13 @@ Chaque colonne a un type, deviné d'après ce que vous tapez :
 | Texte | Paris, Réf-001 |
 | Entier | 12, -3 |
 | Décimal | 12,5 ; 1 234,50 € |
-| Date | 15/01/2026 |
+| Date | 15/01/2026 ; avec l'heure : 15/01/2026 14:30 ou 14:30 15/01/2026 |
 | Booléen | VRAI, FAUX |
 | Calculée | une formule appliquée à toute la colonne |
 
 Une valeur qui ne correspond plus au type élargit la colonne quand c'est possible (un décimal dans une colonne d'entiers la passe en décimal, et la barre d'état le signale) ; sinon la cellule est marquée en erreur. Le type se change dans le menu de l'en-tête de colonne.
+
+Le texte « null » tapé, collé ou importé (CSV, Excel) laisse la case vide ; tapez 'null pour garder le mot. Dans un tableau, une case vide montre un tiret gris « – » (rien n'est copié ni exporté) ; une cellule libre vide reste blanche.
 
 ## Trier et filtrer
 

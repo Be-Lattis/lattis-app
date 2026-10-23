@@ -410,7 +410,8 @@ func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table
 		}
 		return tb, ErrComputed{c.Name}
 	}
-	if strings.TrimSpace(raw) == "" {
+	// Case vide, ou texte « null » (demande de Louis) : NULL.
+	if strings.TrimSpace(raw) == "" || grid.IsNull(raw) {
 		return tb, t.setValue(tb, rid, c, nil, "")
 	}
 	// Apostrophe de tête ('123, '007) : du texte, comme dans Excel ; elle force
@@ -429,6 +430,13 @@ func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table
 	v, perr := grid.Parse(c.Type, raw)
 	if forced && c.Type != grid.Text {
 		v, perr = nil, errForcedText
+	} else if forced {
+		v = raw // « 'null » : le texte null, pas une case vide
+	}
+	// Une heure dans une colonne Date publiée : le serveur garde des dates
+	// sans heure (type date), elle n'y passerait pas.
+	if d, ok := v.(string); ok && perr == nil && c.Type == grid.Date && grid.StoredHasTime(d) && t.frozenTypes(tb.ID) {
+		perr = errTimeInDate
 	}
 	if perr != nil && t.frozenTypes(tb.ID) {
 		// Tableau publié d'un classeur partagé : type figé, la valeur hors
@@ -464,8 +472,14 @@ func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table
 	if v, err = grid.Parse(to, raw); err != nil {
 		return tb, err
 	}
+	if forced && to == grid.Text {
+		v = raw
+	}
 	return tb, t.setValue(tb, rid, tb.Cols[i], v, "")
 }
+
+// errTimeInDate : date avec heure dans une colonne Date d'un tableau publié.
+var errTimeInDate = fmt.Errorf("date avec heure dans une colonne Date publiée")
 
 // errForcedText : saisie forcée en texte par une apostrophe, dans une colonne
 // d'un autre type.

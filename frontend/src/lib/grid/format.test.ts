@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editValue, formatColumnValue, formatValue, isErrorValue, sortLabels } from './format';
+import { NULL_MARK, editValue, formatColumnValue, formatValue, isErrorValue, showsNull, sortLabels } from './format';
 
 describe('formatColumnValue', () => {
 	it('colonne calculée décimale : mêmes décimales sur toutes les lignes', () => {
@@ -49,5 +49,27 @@ describe('libellés du tri', () => {
 		expect(sortLabels('date')[1]).toBe('Trier du plus récent au plus ancien');
 		expect(sortLabels('text')[0]).toBe('Trier de A à Z');
 		expect(sortLabels('formula', 'decimal')[1]).toBe('Trier par ordre décroissant');
+	});
+});
+
+describe('showsNull', () => {
+	it('tiret gris pour une case NULL de colonne saisie, texte vide', () => {
+		expect(NULL_MARK).toBe('–');
+		expect(showsNull('text', null)).toBe(true);
+		expect(showsNull('date', null)).toBe(true);
+		expect(showsNull('integer', null)).toBe(true);
+		// Colonne calculée, saisie invalide, case pas encore chargée, texte vide : pas de tiret.
+		expect(showsNull('formula', null)).toBe(false);
+		expect(showsNull('text', null, true)).toBe(false);
+		expect(showsNull('text', undefined)).toBe(false);
+		expect(showsNull('text', '')).toBe(false);
+		expect(showsNull(undefined, null)).toBe(false);
+		// Le texte de la case (copie, édition) reste vide.
+		expect(formatValue('text', null)).toBe('');
+		expect(editValue('date', null)).toBe('');
+	});
+	it('date avec heure : affichée et proposée à l\'édition avec l\'heure', () => {
+		expect(formatValue('date', '2026-10-23 14:30')).toBe('23/10/2026 14:30');
+		expect(editValue('date', '2026-10-23 14:30:15')).toBe('23/10/2026 14:30:15');
 	});
 });

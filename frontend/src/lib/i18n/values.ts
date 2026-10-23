@@ -34,10 +34,14 @@ export function shortDate(y: number, m: number, d: number, l: Lang = lang()): st
 	return order === 'mdy' ? [mm, dd, yy].join(sep) : order === 'ymd' ? [yy, mm, dd].join(sep) : [dd, mm, yy].join(sep);
 }
 
-/** Date ISO (aaaa-mm-jj) d'une colonne Date écrite dans la langue ; un autre texte tel quel. */
+/**
+ * Date ISO d'une colonne Date (aaaa-mm-jj, suivie de l'heure éventuelle :
+ * « 2026-10-23 14:30 ») écrite dans la langue (« 10/23/2026 14:30 ») ; un
+ * autre texte tel quel.
+ */
 export function isoToShort(iso: string, l: Lang = lang()): string {
-	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-	return m ? shortDate(+m[1], +m[2], +m[3], l) : iso;
+	const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}:\d{2}(?::\d{2})?))?$/.exec(iso);
+	return m ? shortDate(+m[1], +m[2], +m[3], l) + (m[4] ? ' ' + m[4] : '') : iso;
 }
 
 /** Motif d'une date courte pour les indications (« jj/mm/aaaa », « mm/dd/yyyy »…). */

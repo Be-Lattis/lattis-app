@@ -484,6 +484,29 @@ func TestChecksBeforePublishing(t *testing.T) {
 	}
 }
 
+// Une colonne Date avec des heures : le serveur garde des dates sans heure,
+// la publication est bloquée avec un message clair (pas d'heure perdue).
+func TestCheckDateWithTime(t *testing.T) {
+	useRoot(t)
+	ctx := context.Background()
+	d := newDoc(t)
+	paste(t, d, 1, 0, 0, [][]string{{"Quand", "Qui"}, {"23/10/2026 14:30", "a"}, {"24/10/2026", "b"}})
+	tbl := tableID(t, d, tableAt(t, d, 0, 0))
+	check, err := workbook.Inspect(ctx, d.DB())
+	must(t, err)
+	b := check.Blocking([]int64{tbl})
+	if len(b) != 1 || !strings.Contains(b[0], "1 date(s) avec heure") {
+		t.Fatalf("blocages : %q", b)
+	}
+	_, err = d.SetCell(ctx, 1, 1, 0, "23/10/2026")
+	must(t, err)
+	check, err = workbook.Inspect(ctx, d.DB())
+	must(t, err)
+	if b := check.Blocking([]int64{tbl}); len(b) != 0 {
+		t.Fatalf("blocages : %q", b)
+	}
+}
+
 func TestPublishFailureLeavesNothing(t *testing.T) {
 	useRoot(t)
 	ctx := context.Background()

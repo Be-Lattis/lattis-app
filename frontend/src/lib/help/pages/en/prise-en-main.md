@@ -41,11 +41,13 @@ Each column has a type, guessed from what you type:
 | Text | Paris, Ref-001 |
 | Whole number | 12, -3 |
 | Decimal | 12.5; $1,234.50 |
-| Date | 01/15/2026 |
+| Date | 01/15/2026; with a time: 01/15/2026 2:30 PM or 14:30 01/15/2026 |
 | True/False | TRUE, FALSE |
 | Calculated | a formula applied to the whole column |
 
 A value that no longer matches the type widens the column when possible (a decimal in a column of whole numbers turns it into decimals, and the status bar says so); otherwise the cell is marked as an error. The type is changed in the column header menu.
+
+The text “null” typed, pasted or imported (CSV, Excel) leaves the cell empty; type 'null to keep the word. In a table, an empty cell shows a grey dash “–” (nothing is copied or exported); an empty free cell stays blank.
 
 ## Sort and filter {#trier-et-filtrer}
 

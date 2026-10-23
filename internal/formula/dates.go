@@ -65,8 +65,13 @@ func FormatDate(f float64) string {
 	return s
 }
 
-// ISODate écrit une date comme elle est stockée dans une colonne de type date.
-func ISODate(f float64) string { return SerialTime(f).Format("2006-01-02") }
+// ISODate écrit une date comme elle est stockée dans une colonne de type
+// date (grid.StoreDate) : aaaa-mm-jj, suivie de l'heure si elle n'est pas
+// minuit.
+func ISODate(f float64) string {
+	t := SerialTime(f)
+	return grid.StoreDate(t, t.Hour() != 0 || t.Minute() != 0 || t.Second() != 0)
+}
 
 var dateLayouts = []string{
 	"2006-01-02", "2006-01-02 15:04:05", "2006-01-02T15:04:05", "2006-01-02 15:04",

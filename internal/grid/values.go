@@ -35,13 +35,13 @@ func (t Type) sqlType() string {
 var ErrValue = errors.New("valeur incompatible avec le type de la colonne")
 
 // Parse convertit une saisie de l'utilisateur (locale française) en valeur
-// stockable. Une saisie vide donne NULL.
+// stockable. Une saisie vide, ou le texte « null » (IsNull), donne NULL.
 //
 // Prototype : l'inférence et l'élargissement de type (phase 3) remplaceront
 // le refus par un élargissement ou un marquage en erreur.
 func Parse(t Type, raw string) (any, error) {
 	s := strings.TrimSpace(raw)
-	if s == "" {
+	if s == "" || IsNull(s) {
 		return nil, nil
 	}
 	switch t {
@@ -70,8 +70,8 @@ func Parse(t Type, raw string) (any, error) {
 		}
 		return nil, fmt.Errorf("%w : %q n'est pas un booléen", ErrValue, raw)
 	case Date:
-		if d, ok := ParseDate(s); ok {
-			return d.Format("2006-01-02"), nil
+		if d, withTime, ok := ParseDateTime(s); ok {
+			return StoreDate(d, withTime), nil
 		}
 		return nil, fmt.Errorf("%w : %q n'est pas une date (jj/mm/aaaa)", ErrValue, raw)
 	default:

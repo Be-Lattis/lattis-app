@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
@@ -546,9 +545,7 @@ func typeName(t grid.Type) string {
 func dateLabel(v any, t grid.Type, raw string) string {
 	if t == grid.Date {
 		if s, ok := v.(string); ok {
-			if d, err := time.Parse("2006-01-02", s); err == nil {
-				return d.Format("02/01/2006")
-			}
+			return grid.ShowStored(s)
 		}
 	}
 	if t == grid.Integer {

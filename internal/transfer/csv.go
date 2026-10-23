@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -526,9 +525,7 @@ func exportText(v any, t grid.Type, style CSVStyle) string {
 		return num(v)
 	case string:
 		if t == grid.Date && style == ExcelFR {
-			if d, err := time.Parse("2006-01-02", v); err == nil {
-				return d.Format("02/01/2006")
-			}
+			return grid.ShowStored(v)
 		}
 		return v
 	}

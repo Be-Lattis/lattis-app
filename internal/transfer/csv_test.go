@@ -219,3 +219,51 @@ func TestParseText(t *testing.T) {
 		}
 	}
 }
+
+// Dates avec heure et texte « null » dans un CSV (demande de Louis,
+// 23/10/2026) : une colonne de dates avec heure est une colonne Date, null
+// une case vide (NULL), réécrite vide à l'export.
+func TestCSVDateTimeAndNull(t *testing.T) {
+	for raw, want := range map[string]string{
+		"23/10/2026 14:30":    "2026-10-23 14:30",
+		"14:30 23/10/2026":    "2026-10-23 14:30",
+		"23/10/2026 14:30:15": "2026-10-23 14:30:15",
+		"23.10.2026 14:30":    "2026-10-23 14:30",
+		"2026-10-23 14:30":    "2026-10-23 14:30",
+		"2026/10/23 14:30":    "2026-10-23 14:30",
+		"2026-10-23T14:30:00": "2026-10-23 14:30",
+		"23/10/2026 2:30 PM":  "2026-10-23 14:30",
+	} {
+		if v := parseText(raw); v.t != grid.Date || v.s != want {
+			t.Errorf("%q : %q %q, attendu %q", raw, v.t, v.s, want)
+		}
+	}
+	for _, raw := range []string{"1.2.3", "14:30", "v1.2 14:30", "23/10/2026 25:00"} {
+		if v := parseText(raw); v.t != grid.Text {
+			t.Errorf("%q : %q", raw, v.t)
+		}
+	}
+	for _, raw := range []string{"null", "NULL", " Null "} {
+		if v := parseText(raw); v.t != "" {
+			t.Errorf("%q : %q", raw, v.t)
+		}
+	}
+	ctx := context.Background()
+	path := write(t, "rdv.csv", []byte("Quand;Qui;N\r\n23/10/2026 14:30;Léa;1\r\n14:30:15 24/10/2026;null;NULL\r\nnull;Paul;3\r\n"))
+	d := open(t)
+	if _, err := ImportCSV(ctx, d.Model, path, CSVOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	check(t, d, "après import")
+	var types []string
+	for _, c := range layoutOf(t, d).Tables[0].Columns {
+		types = append(types, c.Name+":"+string(c.Type))
+	}
+	if got := strings.Join(types, " "); got != "Quand:date Qui:text N:integer" {
+		t.Errorf("colonnes : %s", got)
+	}
+	want := "\ufeffQuand;Qui;N\r\n23/10/2026 14:30;Léa;1\r\n24/10/2026 14:30:15;;\r\n;Paul;3\r\n"
+	if out := exportCSV(t, d, "rdv", ExcelFR); out != want {
+		t.Errorf("export :\n%q\nattendu :\n%q", out, want)
+	}
+}

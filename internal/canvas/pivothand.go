@@ -174,8 +174,8 @@ func handSQL(raw string) string {
 		return "0"
 	case formula.StrLit:
 		return sqlLiteral(n.V)
-	case formula.Call:
-		if d, ok := grid.ParseDate(strings.TrimSpace(raw)); ok {
+	case formula.Call, formula.Binary:
+		if d, _, ok := grid.ParseDateTime(strings.TrimSpace(raw)); ok {
 			return strconv.FormatFloat(formula.TimeSerial(d), 'g', -1, 64)
 		}
 	}

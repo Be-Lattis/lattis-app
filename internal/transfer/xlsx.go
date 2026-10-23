@@ -508,17 +508,17 @@ func (x *xlsxFile) value(c *rawCell) (v value, isErr bool) {
 		if err != nil || i < 0 || i >= len(x.sst) || x.sst[i] == "" {
 			return value{}, false
 		}
-		return textValue(x.sst[i]), false
+		return xlsxText(x.sst[i]), false
 	case "inlineStr":
 		if c.is == "" {
 			return value{}, false
 		}
-		return textValue(c.is), false
+		return xlsxText(c.is), false
 	case "str":
 		if c.v == "" {
 			return value{}, false
 		}
-		return textValue(c.v), false
+		return xlsxText(c.v), false
 	case "b":
 		if !c.hasV {
 			return value{}, false
@@ -554,6 +554,15 @@ func (x *xlsxFile) value(c *rawCell) (v value, isErr bool) {
 	return value{t: grid.Decimal, f: f}, false
 }
 
+// xlsxText : un texte d'une cellule Excel ; « null » est une case vide
+// (grid.IsNull).
+func xlsxText(s string) value {
+	if grid.IsNull(s) {
+		return value{}
+	}
+	return textValue(s)
+}
+
 // serial convertit un numéro de série Excel en date et heure.
 func (x *xlsxFile) serial(f float64) time.Time {
 	days := math.Floor(f)
@@ -571,8 +580,9 @@ func (x *xlsxFile) serial(f float64) time.Time {
 	return base.AddDate(0, 0, int(days)).Add(time.Duration(secs) * time.Second)
 }
 
-// dateValue : une date sans heure devient une date ; une heure, ou une date
-// avec heure, reste du texte (Lattis n'a pas encore de type heure).
+// dateValue : une date, avec ou sans heure, devient une date (colonne Date,
+// grid.StoreDate) ; une heure seule reste du texte (Lattis n'a pas encore
+// de type heure).
 func (x *xlsxFile) dateValue(d time.Time, k dateKind) value {
 	midnight := d.Hour() == 0 && d.Minute() == 0 && d.Second() == 0
 	switch {
@@ -581,5 +591,5 @@ func (x *xlsxFile) dateValue(d time.Time, k dateKind) value {
 	case midnight:
 		return value{t: grid.Date, s: d.Format("2006-01-02")}
 	}
-	return textValue(d.Format("02/01/2006 15:04:05"))
+	return value{t: grid.Date, s: grid.StoreDate(d, true)}
 }

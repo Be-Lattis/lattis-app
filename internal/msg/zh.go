@@ -1414,6 +1414,7 @@ var zh = map[ID]string{
 
 	// Publishing checks
 	"check.columnProblem":  "列“{column}”：{problem}",
+	"check.dateWithTime":   "{n} 个带时间的日期：服务器只保存日期，请将该列改为文本后再发布",
 	"check.invalidEntries": "“{table}”：{n} 个无效输入需要更正，或将该列作为文本接受",
 	"check.nameEmpty":      "名称为空",
 	"check.nameNul":        "名称中有空字符",

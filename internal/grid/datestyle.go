@@ -48,20 +48,32 @@ func DateStyleFor(lang string) DateStyle {
 func (s DateStyle) monthFirst() bool { return s.Order != DMY }
 
 var (
-	// Date tapée sans l'année en tête : 10/19, 10/19/26, 10/19/2026 9:30.
-	typedDateRe = regexp.MustCompile(`^(\d{1,2})([/.\-])(\d{1,2})(?:([/.\-])(\d{2}|\d{4}))?((?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)$`)
+	// Date tapée sans l'année en tête : 10/19, 10/19/26, 10/19/2026 (l'heure
+	// éventuelle, avant ou après, est séparée par splitClock).
+	typedDateRe = regexp.MustCompile(`^(\d{1,2})([/.\-])(\d{1,2})(?:([/.\-])(\d{2}|\d{4}))?$`)
 	// Date gardée à la française : 19/10/2026, 19/10/2026 09:30.
 	frenchDateRe = regexp.MustCompile(`^(\d{1,2})/(\d{1,2})/(\d{4})((?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)$`)
 )
 
 // Input réécrit une date tapée dans l'écriture s en date lue par ParseDate
 // (jour puis mois, mêmes séparateurs) ; un autre texte ne change pas, comme
-// une date dont le « mois » dépasse 12 (lue alors jour puis mois).
+// une date dont le « mois » dépasse 12 (lue alors jour puis mois). Une
+// heure écrite avant ou après la date reste à sa place (« 10/23/2026 2:30
+// PM » donne « 23/10/2026 2:30 PM », lu par ParseDateTime).
 func (s DateStyle) Input(text string) string {
 	if !s.monthFirst() {
 		return text
 	}
-	m := typedDateRe.FindStringSubmatch(strings.TrimSpace(text))
+	date, pre, post := strings.TrimSpace(text), "", ""
+	if d, clk, ok := splitClock(date); ok && !isoClockRe.MatchString(date) {
+		if strings.HasPrefix(date, d) {
+			post = " " + clk
+		} else {
+			pre = clk + " "
+		}
+		date = d
+	}
+	m := typedDateRe.FindStringSubmatch(date)
 	if m == nil {
 		return text
 	}
@@ -74,7 +86,7 @@ func (s DateStyle) Input(text string) string {
 	if m[5] != "" {
 		out += m[4] + m[5]
 	}
-	return out + m[6]
+	return pre + out + post
 }
 
 // Show réécrit une date gardée à la française (jj/mm/aaaa, heure

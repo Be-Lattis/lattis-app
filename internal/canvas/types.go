@@ -8,10 +8,11 @@ import (
 
 // Infer donne le type le plus étroit qui accepte la saisie, dans le treillis
 // booléen → entier → décimal → texte et date → texte. Une saisie vide n'a pas
-// de type (""), elle ne contraint pas la colonne.
+// de type (""), elle ne contraint pas la colonne, pas plus que le texte
+// « null » (une case vide, grid.IsNull). Une date avec heure est une date.
 func Infer(raw string) grid.Type {
 	s := strings.TrimSpace(raw)
-	if s == "" {
+	if s == "" || grid.IsNull(s) {
 		return ""
 	}
 	switch strings.ToLower(s) {

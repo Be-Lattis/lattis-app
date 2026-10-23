@@ -154,7 +154,7 @@ func (m *Model) FindIn(ctx context.Context, sheet int64, text string, in *Rect) 
 
 // canHold : le texte affiché d'une valeur de ce type peut-il contenir s ?
 // Un entier ne s'écrit qu'avec des chiffres et « - », un décimal aussi
-// avec « , », une date avec « / », un booléen VRAI ou FAUX : chercher des
+// avec « , », une date avec « / » (« : » pour l'heure), un booléen VRAI ou FAUX : chercher des
 // lettres n'y lit pas une seule valeur.
 func canHold(t grid.Type, s string) bool {
 	only := func(set string) bool {
@@ -171,7 +171,7 @@ func canHold(t grid.Type, s string) bool {
 	case grid.Decimal:
 		return only("-0123456789,")
 	case grid.Date:
-		return only("0123456789/")
+		return only("0123456789/: ") // heure éventuelle (23/10/2026 14:30)
 	case grid.Boolean:
 		u := strings.ToUpper(s)
 		return strings.Contains("VRAI", u) || strings.Contains("FAUX", u)

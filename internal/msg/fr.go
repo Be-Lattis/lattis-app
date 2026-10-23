@@ -1414,6 +1414,7 @@ var fr = map[ID]string{
 
 	// check
 	"check.columnProblem":  "colonne « {column} » : {problem}",
+	"check.dateWithTime":   "{n} date(s) avec heure : le serveur ne garde que des dates, passez la colonne en texte pour publier",
 	"check.invalidEntries": "« {table} » : {n} saisie(s) invalide(s) à corriger, ou colonne à accepter comme texte",
 	"check.nameEmpty":      "nom vide",
 	"check.nameNul":        "caractère nul dans le nom",

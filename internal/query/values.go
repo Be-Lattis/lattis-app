@@ -166,9 +166,7 @@ func display(v any, t grid.Type) string {
 		return formula.FormatNumber(x)
 	case string:
 		if t == grid.Date {
-			if d, err := time.Parse("2006-01-02", x); err == nil {
-				return d.Format("02/01/2006")
-			}
+			return grid.ShowStored(x)
 		}
 		return x
 	}

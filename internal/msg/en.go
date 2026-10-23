@@ -1412,6 +1412,7 @@ var en = map[ID]string{
 
 	// Publishing checks
 	"check.columnProblem":  "column “{column}”: {problem}",
+	"check.dateWithTime":   "{n} date(s) with a time: the server only keeps dates, change the column to text to publish",
 	"check.invalidEntries": "“{table}”: {n} invalid entry(ies) to correct, or column to accept as text",
 	"check.nameEmpty":      "empty name",
 	"check.nameNul":        "null character in the name",

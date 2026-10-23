@@ -312,8 +312,8 @@ func convertPart(p string, f TextColumnFormat, o TextColumnsOptions) textPart {
 	case grid.Boolean:
 		return textPart{typ: grid.Boolean, raw: strings.ToUpper(s), orig: p}
 	case grid.Date:
-		if d, ok := grid.ParseDate(s); ok {
-			return textPart{typ: grid.Date, raw: d.Format("02/01/2006"), orig: p}
+		if d, withTime, ok := grid.ParseDateTime(s); ok {
+			return textPart{typ: grid.Date, raw: grid.FreeDate(d, withTime), orig: p}
 		}
 	}
 	// Un nombre écrit avec d'autres séparateurs que ceux choisis reste du texte.

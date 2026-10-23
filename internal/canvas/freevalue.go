@@ -27,8 +27,8 @@ func freeRaw(raw string) string {
 	case grid.Boolean:
 		return strings.ToUpper(s)
 	case grid.Date:
-		if d, ok := grid.ParseDate(s); ok {
-			return d.Format("02/01/2006")
+		if d, withTime, ok := grid.ParseDateTime(s); ok {
+			return grid.FreeDate(d, withTime)
 		}
 	case grid.Integer, grid.Decimal:
 		if strings.ContainsAny(s, "()eE") && !strings.Contains(s, "€") {
@@ -94,10 +94,15 @@ func valueLiteral(raw string) formula.Node {
 		v, _ := grid.Parse(grid.Boolean, raw)
 		return formula.BoolLit{V: v == int64(1)}
 	case grid.Date:
-		if d, ok := grid.ParseDate(s); ok {
-			return formula.Call{Fn: "DATE", Args: []formula.Node{
+		if d, withTime, ok := grid.ParseDateTime(s); ok {
+			day := formula.Call{Fn: "DATE", Args: []formula.Node{
 				formula.NumLit{V: float64(d.Year())}, formula.NumLit{V: float64(d.Month())}, formula.NumLit{V: float64(d.Day())},
 			}}
+			if !withTime {
+				return day
+			}
+			// Date et heure : DATE(a; m; j) + la fraction de jour.
+			return formula.Binary{Op: "+", L: day, R: formula.NumLit{V: float64(d.Hour()*3600+d.Minute()*60+d.Second()) / 86400}}
 		}
 	}
 	if f, ok := freeTime(s); ok {

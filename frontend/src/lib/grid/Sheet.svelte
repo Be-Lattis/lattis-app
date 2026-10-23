@@ -118,6 +118,8 @@
 		defaultWidth,
 		editValue,
 		formatColumnValue,
+		NULL_MARK,
+		showsNull,
 		typeIcon,
 		typeIconName,
 		typeLabel,
@@ -817,6 +819,8 @@
 		findCross: 'rgba(250, 204, 21, 0.16)',
 		findGutter: 'rgba(250, 204, 21, 0.55)',
 		frozen: '#9aa0a6',
+		// Tiret d'une case NULL de tableau (format.ts, NULL_MARK) : discret.
+		nullMark: '#b4b9bf',
 		note: '#c0392b',
 		// Classeur collaboratif : modification en attente du serveur, conflit.
 		pending: '#7f93b2',
@@ -2677,6 +2681,11 @@
 						const fk = `t${e.t.id}:${row.id}:${col.name}`;
 						if (motion()) columnFlashes(e.t.id, col.name, fk);
 						paintFlash(flashOf(fk, s ?? '', r, c), x, y, cw, rh(r));
+					}
+					// Case NULL d'une colonne saisie : tiret gris centré (dessiné seulement).
+					if (showsNull(col.type, v, row.bad?.has(i))) {
+						drawText(NULL_MARK, x, y, cw, 'center', undefined, C.nullMark);
+						continue;
 					}
 					if (!s) continue;
 					// Jeu d'icônes : à gauche de la cellule ; barre ou icône seule : valeur masquée.

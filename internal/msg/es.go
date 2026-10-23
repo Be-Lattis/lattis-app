@@ -1412,6 +1412,7 @@ var es = map[ID]string{
 
 	// Comprobaciones antes de publicar
 	"check.columnProblem":  "columna «{column}»: {problem}",
+	"check.dateWithTime":   "{n} fecha(s) con hora: el servidor solo guarda fechas, cambie la columna a texto para publicar",
 	"check.invalidEntries": "«{table}»: {n} entrada(s) no válida(s) que corregir, o columna que aceptar como texto",
 	"check.nameEmpty":      "nombre vacío",
 	"check.nameNul":        "carácter nulo en el nombre",

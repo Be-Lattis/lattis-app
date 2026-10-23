@@ -41,11 +41,13 @@ Cada columna tiene un tipo, deducido de lo que escribe:
 | Texto | Madrid, Ref-001 |
 | Número entero | 12, -3 |
 | Decimal | 12,5; 1.234,50 € |
-| Fecha | 15/01/2026 |
+| Fecha | 15/01/2026; con hora: 15/01/2026 14:30 o 14:30 15/01/2026 |
 | Verdadero/Falso | VERDADERO, FALSO |
 | Calculada | una fórmula aplicada a toda la columna |
 
 Un valor que ya no corresponde al tipo amplía la columna cuando es posible (un decimal en una columna de números enteros la convierte en decimales, y la barra de estado lo indica); si no, la celda se marca como error. El tipo se cambia en el menú del encabezado de la columna.
+
+El texto «null» escrito, pegado o importado (CSV, Excel) deja la celda vacía; escriba 'null para conservar la palabra. En una tabla, una celda vacía muestra un guion gris «–» (no se copia ni se exporta nada); una celda libre vacía queda en blanco.
 
 ## Ordenar y filtrar {#trier-et-filtrer}
 

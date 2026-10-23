@@ -6,7 +6,6 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
@@ -100,9 +99,7 @@ func text(v any, t grid.Type) string {
 		return strings.Replace(strconv.FormatFloat(v, 'f', -1, 64), ".", ",", 1)
 	case string:
 		if t == grid.Date {
-			if d, err := time.Parse("2006-01-02", v); err == nil {
-				return d.Format("02/01/2006")
-			}
+			return grid.ShowStored(v)
 		}
 		return v
 	}

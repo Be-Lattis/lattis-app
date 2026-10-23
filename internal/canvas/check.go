@@ -256,7 +256,8 @@ func (m *Model) Check(ctx context.Context) ([]string, error) {
 				case grid.Boolean:
 					q = col + " NOT IN (0, 1)"
 				case grid.Date:
-					q = col + " NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'"
+					// aaaa-mm-jj, avec l'heure éventuelle (grid.StoreDate).
+					q = col + " NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND " + col + " NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]' AND " + col + " NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]'"
 				default:
 					continue
 				}

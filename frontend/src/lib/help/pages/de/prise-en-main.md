@@ -41,11 +41,13 @@ Jede Spalte hat einen Typ, der aus Ihrer Eingabe abgeleitet wird:
 | Text | Paris, Ref-001 |
 | Ganzzahl | 12, -3 |
 | Dezimalzahl | 12,5; 1.234,50 € |
-| Datum | 15.01.2026 |
+| Datum | 15.01.2026; mit Uhrzeit: 15.01.2026 14:30 oder 14:30 15.01.2026 |
 | Wahr/Falsch | WAHR, FALSCH |
 | Berechnet | eine auf die ganze Spalte angewendete Formel |
 
 Ein Wert, der nicht mehr zum Typ passt, erweitert die Spalte, wenn möglich (eine Dezimalzahl in einer Spalte mit Ganzzahlen macht daraus Dezimalzahlen, und die Statusleiste meldet es); andernfalls wird die Zelle als Fehler markiert. Der Typ wird im Menü der Spaltenüberschrift geändert.
+
+Der Text „null“, eingegeben, eingefügt oder importiert (CSV, Excel), lässt die Zelle leer; geben Sie 'null ein, um das Wort zu behalten. In einer Tabelle zeigt eine leere Zelle einen grauen Strich „–“ (nichts wird kopiert oder exportiert); eine leere freie Zelle bleibt weiß.
 
 ## Sortieren und filtern {#trier-et-filtrer}
 

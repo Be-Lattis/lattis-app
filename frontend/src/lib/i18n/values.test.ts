@@ -15,6 +15,13 @@ describe('valeurs dans la langue de la session', () => {
 		expect(shortDate(2026, 1, 5, 'zh')).toBe('2026/01/05');
 		expect(isoToShort('2026-10-19', 'en')).toBe('10/19/2026');
 		expect(isoToShort('texte', 'en')).toBe('texte');
+		// Date avec heure (colonne Date) : l'heure suit la date, dans chaque langue.
+		expect(isoToShort('2026-10-23 14:30', 'fr')).toBe('23/10/2026 14:30');
+		expect(isoToShort('2026-10-23 14:30', 'en')).toBe('10/23/2026 14:30');
+		expect(isoToShort('2026-10-23 14:30:15', 'de')).toBe('23.10.2026 14:30:15');
+		expect(isoToShort('2026-10-23 14:30', 'es')).toBe('23/10/2026 14:30');
+		expect(isoToShort('2026-10-23 14:30', 'zh')).toBe('2026/10/23 14:30');
+		expect(isoToShort('2026-10-23 14h30', 'fr')).toBe('2026-10-23 14h30');
 		expect(dateStyle('de')).toEqual({ order: 'dmy', sep: '.' });
 	});
 

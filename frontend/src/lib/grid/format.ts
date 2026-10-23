@@ -64,6 +64,19 @@ export function formatColumnValue(col: { type: ColumnType; result?: string } | u
 	return formatValue(col?.type ?? 'text', v);
 }
 
+/**
+ * Marque d'une case NULL d'une colonne saisie (demande de Louis, 23/10/2026) :
+ * un tiret gris, dessiné seulement (le texte de la case reste vide : copie,
+ * édition, export). Une colonne calculée n'en a pas, ni une saisie invalide
+ * (sa valeur brute est affichée).
+ */
+export const NULL_MARK = '–';
+
+/** La case montre-t-elle la marque NULL ? */
+export function showsNull(type: ColumnType | undefined, v: unknown, invalid = false): boolean {
+	return v === null && type !== undefined && type !== 'formula' && !invalid;
+}
+
 /** Texte proposé à l'édition (sans séparateur de milliers). */
 export function editValue(type: ColumnType, v: unknown): string {
 	if (type === 'decimal' && typeof v === 'number') return String(v).replace('.', decimalSep());

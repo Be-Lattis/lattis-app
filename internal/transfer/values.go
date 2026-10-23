@@ -31,14 +31,16 @@ func textValue(s string) value { return value{t: grid.Text, s: s} }
 
 // parseText lit une valeur de CSV : nombres (virgule ou point décimal,
 // espaces de milliers), booléens, dates jj/mm/aaaa ou aaaa-mm-jj ; le reste
-// est du texte, gardé tel quel.
+// est du texte, gardé tel quel. Une date suivie ou précédée d'une heure
+// (« 23/10/2026 14:30 », « 14:30 23/10/2026 », ISO avec T) est une date
+// avec heure ; le texte « null » est une case vide (grid.IsNull).
 //
 // Des chiffres avec un zéro en tête (« 01234 ») ou plus de 15 chiffres
 // restent du texte : codes postaux, références, numéros de compte, que la
 // conversion en nombre abîmerait.
 func parseText(raw string) value {
 	s := strings.TrimSpace(raw)
-	if s == "" {
+	if s == "" || grid.IsNull(s) {
 		return value{}
 	}
 	switch strings.ToLower(s) {
@@ -68,6 +70,13 @@ func parseText(raw string) value {
 			if d, err := time.Parse(layout, s); err == nil {
 				return value{t: grid.Date, s: d.Format("2006-01-02")}
 			}
+		}
+	}
+	// Date et heure : seulement ce qui a deux points et un séparateur de
+	// date (les essais coûtent, un import passe des millions de valeurs).
+	if len(s) <= 32 && strings.Contains(s, ":") && strings.ContainsAny(s, "/-.") {
+		if d, withTime, ok := grid.ParseDateTime(s); ok && withTime {
+			return value{t: grid.Date, s: grid.StoreDate(d, true)}
 		}
 	}
 	return textValue(raw)
@@ -158,9 +167,7 @@ func display(v value) string {
 		}
 		return "FAUX"
 	case grid.Date:
-		if d, err := time.Parse("2006-01-02", v.s); err == nil {
-			return d.Format("02/01/2006")
-		}
+		return grid.ShowStored(v.s)
 	}
 	return v.s
 }

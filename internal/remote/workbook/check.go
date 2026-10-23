@@ -205,6 +205,17 @@ func inspectTable(ctx context.Context, r *sql.DB, l msg.Lang, t *TableCheck) err
 		if c.Computed {
 			continue
 		}
+		// Dates avec heure (« 2026-10-23 14:30 ») : le serveur garde la
+		// colonne en type date, l'heure n'y passerait pas.
+		if c.Type == string(grid.Date) {
+			var n int
+			if err := r.QueryRowContext(ctx, fmt.Sprintf(`SELECT count(*) FROM t_%d WHERE length(c_%d) > 10`, t.ID, id)).Scan(&n); err != nil {
+				return err
+			}
+			if n > 0 {
+				t.Problems = append(t.Problems, msg.Format(l, "check.columnProblem", msg.Args{"column": c.Name, "problem": msg.Format(l, "check.dateWithTime", msg.Args{"n": n})}))
+			}
+		}
 		if err := r.QueryRowContext(ctx, `SELECT count(*) FROM _lattis_invalid WHERE tbl = ? AND col = ?`, t.ID, id).Scan(&c.Invalid); err != nil {
 			return err
 		}
