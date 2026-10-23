@@ -208,6 +208,9 @@ func (e *Engine) sendStructure(ctx context.Context, srv workbook.Server, info *w
 				return err
 			}
 		}
+		if err := recastOld(ctx, tx, en.id, changes, tables, work); err != nil {
+			return err
+		}
 		_, err := tx.ExecContext(ctx, `UPDATE _lattis_outbox SET state = 'sent' WHERE id = ?`, en.id)
 		return err
 	})
@@ -221,6 +224,89 @@ func (e *Engine) sendStructure(ctx context.Context, srv workbook.Server, info *w
 		rep.notice(e.say("collab.restoredLocally", msg.Args{"table": name}))
 	}
 	rep.Sent++
+	return nil
+}
+
+// recastOld : une case modifiée dans l'étape qui a changé le type de sa
+// colonne (valeur tapée ou collée dans une colonne vide, qui en prend le
+// type ; annulation ou rétablissement d'une telle étape) garde dans la file
+// sa valeur d'avant à l'ancien type. Le serveur la tient désormais
+// convertie (lattis.convert_expr, workbook.ConvertRemote) : la condition de
+// l'écriture (« la case vaut toujours … ») est réécrite au nouveau type,
+// dans la transaction qui note la structure faite (id : son entrée ;
+// before, after : correspondance d'avant et d'après).
+func recastOld(ctx context.Context, tx *sql.Tx, id int64, changes []oplog.Change, before, after map[int64]*rtable) error {
+	type key struct{ tbl, col int64 }
+	conv := map[key][2]string{}
+	for _, ch := range changes {
+		b, a := before[ch.Table], after[ch.Table]
+		if ch.Action != oplog.RetypeColumn || b == nil || a == nil {
+			continue
+		}
+		i, ok := b.column(ch.Column)
+		j, ok2 := a.column(ch.Column)
+		if ok && ok2 && b.remote.Columns[i].Type != a.remote.Columns[j].Type {
+			conv[key{ch.Table, ch.Column}] = [2]string{b.remote.Columns[i].Type, a.remote.Columns[j].Type}
+		}
+	}
+	if len(conv) == 0 {
+		return nil
+	}
+	rs, err := tx.QueryContext(ctx, `SELECT id, ops FROM _lattis_outbox WHERE state = 'pending' AND id <> ? AND batch = (SELECT batch FROM _lattis_outbox WHERE id = ?) ORDER BY id`, id, id)
+	if err != nil {
+		return err
+	}
+	type rewrite struct {
+		id   int64
+		data string
+	}
+	var out []rewrite
+	for rs.Next() {
+		var eid int64
+		var data string
+		if err := rs.Scan(&eid, &data); err != nil {
+			rs.Close()
+			return err
+		}
+		ops, err := command.DecodeOps(data)
+		if err != nil {
+			rs.Close()
+			return err
+		}
+		changed := false
+		for i, op := range ops {
+			k, ok := conv[key{op.Table, op.Col}]
+			if op.Kind != command.OpSet || op.Old == nil || !ok {
+				continue
+			}
+			r, err := workbook.ToRemote(k[0], op.Old)
+			if err != nil {
+				continue
+			}
+			c, err := workbook.ConvertRemote(r, k[0], k[1])
+			if err != nil {
+				continue
+			}
+			ops[i].Old, changed = workbook.FromRemote(k[1], c), true
+		}
+		if changed {
+			enc, err := command.EncodeOps(ops)
+			if err != nil {
+				rs.Close()
+				return err
+			}
+			out = append(out, rewrite{eid, enc})
+		}
+	}
+	rs.Close()
+	if err := rs.Err(); err != nil {
+		return err
+	}
+	for _, r := range out {
+		if _, err := tx.ExecContext(ctx, `UPDATE _lattis_outbox SET ops = ? WHERE id = ?`, r.data, r.id); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

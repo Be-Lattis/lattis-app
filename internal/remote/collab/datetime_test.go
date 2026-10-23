@@ -175,20 +175,18 @@ func dateTimeScenario(t *testing.T, publisher workbook.Server, aliceUser string,
 	if localType(t, bob.d, "Fin") != "date" || remoteTypes(t, bob)["Fin"] != "datetime" {
 		t.Fatal("type de Fin chez Bob")
 	}
-	// (Les valeurs du collage qui a typé la colonne vide ne partent pas :
-	// limite connue, indépendante des heures.) Saisies ensuite : oui.
+	// Les valeurs du collage qui a typé la colonne vide partent avec lui.
+	bob.receive()
+	eq(t, "Bob Fin collée", bob.col("Fin"), []string{"2026-10-23 17:00", "2026-10-24", ""})
 	alice.mustSet(2, 3, "25/10/2026 06:00")
 	bob.mustSet(0, 3, "01/11/2026 09:00")
 	alice.send()
 	bob.send()
 	alice.receive()
 	bob.receive()
-	if got := bob.col("Fin"); got[0] != "2026-11-01 09:00" || got[2] != "2026-10-25 06:00" {
-		t.Fatalf("Bob Fin : %q", got)
-	}
-	if got := alice.col("Fin"); got[0] != "2026-11-01 09:00" || got[2] != "2026-10-25 06:00" {
-		t.Fatalf("Alice Fin : %q", got)
-	}
+	fin := []string{"2026-11-01 09:00", "2026-10-24", "2026-10-25 06:00"}
+	eq(t, "Bob Fin", bob.col("Fin"), fin)
+	eq(t, "Alice Fin", alice.col("Fin"), fin)
 
 	// La conceptrice tape une heure dans la colonne de dates seules : la
 	// colonne passe en date et heure sur le serveur, l'éditeur peut alors en

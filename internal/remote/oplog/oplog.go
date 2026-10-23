@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/store"
 )
 
@@ -48,6 +49,13 @@ type Recorder struct {
 	// l'étape (err : tableau publié en lecture seule). Classeur partagé :
 	// voir internal/remote/workbook.
 	Gate func(op command.Op) (send bool, err error)
+	// Convert convertit une valeur stockée d'un type de colonne à un autre,
+	// comme un changement de type (canvas.ConvertStored ; faux : NULL). Une
+	// colonne convertie dans une étape y est comparée valeur à valeur : ce
+	// qui diffère de la conversion a été saisi dans l'étape (colonne vide
+	// typée par sa première valeur) et part après le changement de type.
+	// nil : seules les cases devenues vides ou remplies sont relevées.
+	Convert func(v any, from, to grid.Type) (any, bool)
 	// skipped : cellules laissées à la valeur d'un collègue par une
 	// annulation (TakeSkipped).
 	skipped atomic.Int64
@@ -450,15 +458,21 @@ func (s *session) diffTable(w *writer, before *sql.Tx, id int64, rids []int64) e
 		}
 		full = true
 	}
-	// Colonnes comparées : celles d'après, saisies (pas calculées), au même
-	// type qu'avant. Un changement de structure est une opération « meta » ;
-	// une colonne apparue vaut NULL avant (rétablissement de ses valeurs),
-	// comme une colonne calculée devenue saisie (Convertir en valeurs) qui
-	// n'est pas sur le serveur : ses valeurs y partent toutes.
+	// Colonnes comparées : celles d'après, saisies (pas calculées). Un
+	// changement de structure est une opération « meta » ; une colonne
+	// apparue vaut NULL avant (rétablissement de ses valeurs), comme une
+	// colonne calculée devenue saisie (Convertir en valeurs) qui n'est pas
+	// sur le serveur : ses valeurs y partent toutes. Une colonne qui a changé
+	// de type (retyped) est comparée à sa valeur d'avant convertie : la
+	// conversion est faite par le changement de type (ici et sur le
+	// serveur), le reste a été saisi dans l'étape (valeur tapée ou collée
+	// dans une colonne vide, qui en prend le type, et son annulation) et part
+	// après le changement de type.
 	fresh, err := s.converted(id, bcols, acols)
 	if err != nil {
 		return err
 	}
+	retyped := map[int64][2]grid.Type{}
 	var cols []int64
 	for cid, c := range acols {
 		b, had := bcols[cid]
@@ -477,8 +491,11 @@ func (s *session) diffTable(w *writer, before *sql.Tx, id int64, rids []int64) e
 				}
 			}
 		}
-		if c.formula || had && b.typ != c.typ {
+		if c.formula {
 			continue
+		}
+		if had && b.typ != c.typ {
+			retyped[cid] = [2]grid.Type{grid.Type(b.typ), grid.Type(c.typ)}
 		}
 		cols = append(cols, cid)
 	}
@@ -590,7 +607,7 @@ func (s *session) diffTable(w *writer, before *sql.Tx, id int64, rids []int64) e
 				}
 			case inA && inB:
 				for i, cid := range cols {
-					if !same(b.vals[i], a.vals[i]) {
+					if !s.unchanged(retyped, cid, b.vals[i], a.vals[i]) {
 						if err := w.add(command.Op{Kind: command.OpSet, Table: id, Row: uid, Col: cid, Old: b.vals[i], New: a.vals[i]}); err != nil {
 							return err
 						}
@@ -783,6 +800,27 @@ func values(cols []int64, vals []any) command.Values {
 }
 
 func same(a, b any) bool { return a == b }
+
+// unchanged dit si la valeur d'une case est restée la même pendant l'étape :
+// dans une colonne qui a changé de type (retyped), la valeur d'après est
+// celle d'avant convertie. L'opération qui part sinon garde l'ancienne
+// valeur telle quelle, à l'ancien type (condition des annulations, comme
+// les autres) ; la synchronisation la convertit comme le serveur une fois
+// le type changé chez lui (collab.recastOld).
+func (s *session) unchanged(retyped map[int64][2]grid.Type, cid int64, before, after any) bool {
+	k, ok := retyped[cid]
+	if !ok {
+		return same(before, after)
+	}
+	if s.r.Convert == nil {
+		return (before == nil) == (after == nil)
+	}
+	v, ok := s.r.Convert(before, k[0], k[1])
+	if !ok {
+		v = nil
+	}
+	return SameValue(v, after)
+}
 
 // --- File d'envoi ------------------------------------------------------------
 

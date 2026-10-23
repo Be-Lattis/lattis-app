@@ -116,6 +116,7 @@ func wrap(ctx context.Context, a *archive.Doc, keep bool) (*Document, error) {
 	}
 	rec := oplog.New(a.DB)
 	rec.Gate = share.Gate
+	rec.Convert = canvas.ConvertStored
 	bus.Recorder = rec
 	a.Remote = func(ctx context.Context) (*archive.Remote, error) { return workbook.Manifest(ctx, a.DB.Read()) }
 	var id string

@@ -5,12 +5,10 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"math"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -377,65 +375,7 @@ func (w *writer) DropColumn(ctx context.Context, workbookID, tableID, columnID s
 
 // convert imite lattis.convert_expr : une valeur du serveur d'un type à
 // un autre.
-func convert(v any, from, to string) (any, error) {
-	if v == nil {
-		return nil, nil
-	}
-	if to == "text" {
-		switch x := v.(type) {
-		case bool:
-			return strconv.FormatBool(x), nil
-		case time.Time:
-			if from == "date" {
-				return x.Format("2006-01-02"), nil
-			}
-			return x.UTC().Format("2006-01-02 15:04:05+00"), nil
-		}
-		return workbook.ToRemote("text", workbook.FromRemote(from, v))
-	}
-	if from == "text" {
-		s := strings.TrimSpace(fmt.Sprint(v))
-		if s == "" {
-			return nil, nil
-		}
-		switch to {
-		case "decimal", "integer":
-			f, err := strconv.ParseFloat(strings.ReplaceAll(s, ",", "."), 64)
-			if err != nil {
-				return nil, fmt.Errorf("syntaxe en entrée invalide pour le type numeric : « %s »", s)
-			}
-			if to == "integer" {
-				return int64(math.Round(f)), nil
-			}
-			return f, nil
-		case "boolean":
-			switch strings.ToLower(s) {
-			case "t", "true", "y", "yes", "on", "1":
-				return true, nil
-			case "f", "false", "n", "no", "off", "0":
-				return false, nil
-			}
-			return nil, fmt.Errorf("syntaxe en entrée invalide pour le type boolean : « %s »", s)
-		}
-		return workbook.ToRemote(to, s)
-	}
-	switch {
-	case from == "decimal" && to == "integer":
-		f, _ := v.(float64)
-		return int64(math.Round(f)), nil
-	case from == "boolean" && (to == "integer" || to == "decimal"):
-		n := int64(0)
-		if x, _ := v.(bool); x {
-			n = 1
-		}
-		return workbook.ToRemote(to, n)
-	case (from == "integer" || from == "decimal") && to == "boolean":
-		f, _ := workbook.ToRemote("decimal", workbook.FromRemote(from, v))
-		x, _ := f.(float64)
-		return x != 0, nil
-	}
-	return workbook.ToRemote(to, workbook.FromRemote(from, v))
-}
+func convert(v any, from, to string) (any, error) { return workbook.ConvertRemote(v, from, to) }
 
 func (w *writer) AlterColumnType(ctx context.Context, workbookID, tableID, columnID, typ string) error {
 	b, _, t, err := w.structure(workbookID, tableID)

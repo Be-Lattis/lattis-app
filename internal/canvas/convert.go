@@ -106,6 +106,11 @@ func text(v any, t grid.Type) string {
 	return fmt.Sprint(v)
 }
 
+// ConvertStored convertit une valeur stockée du type from au type to, comme
+// un changement de type de colonne (slt_convert) ; faux : elle ne se
+// convertit pas (NULL). Journal d'un classeur partagé (oplog.Recorder.Convert).
+func ConvertStored(v any, from, to grid.Type) (any, bool) { return convert(v, from, to) }
+
 // convert convertit une valeur stockée du type from au type to.
 func convert(v any, from, to grid.Type) (any, bool) {
 	if v == nil {
