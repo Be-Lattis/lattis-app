@@ -125,6 +125,18 @@ func (c PivotConfig) normalized() PivotConfig {
 	return c
 }
 
+// created : la configuration d'un tableau croisé qu'on crée (CreatePivot,
+// CreatePivotAt : ruban, scripts, assistant). Sans valeur, il compte les
+// lignes (« Nombre de lignes »), pour montrer un résultat tout de suite ;
+// des valeurs choisies sont gardées telles quelles.
+func (c PivotConfig) created() PivotConfig {
+	c = c.normalized()
+	if len(c.Values) == 0 {
+		c.Values = []PivotValue{{Agg: "count"}}
+	}
+	return c
+}
+
 var pivotAggs = map[string]struct{ label string }{
 	"sum":           {"Somme"},
 	"count":         {"Nombre"},

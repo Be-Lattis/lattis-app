@@ -87,7 +87,7 @@
 	import type { RowFormulaPreview } from '#lib/ui/rowformula.js';
 	import { svgToPng } from '#lib/chart/image.js';
 	import PivotPanel from './PivotPanel.svelte';
-	import { panelAtCell, changeSource } from './pivotfields';
+	import { panelAtCell, changeSource, startValues } from './pivotfields';
 	import { brokenPivotAt, pivotsCleared } from './pivotzone';
 	import { midEllipsis } from './midellipsis';
 	import { handAlign, handEditText, handKeptNote, handStart, pivotHandAt } from './pivothand';
@@ -6381,10 +6381,11 @@
 		}
 		const k = e.t.columns[targetCol(e)];
 		// Comme Excel : la colonne active en lignes, la dernière colonne de
-		// nombres en valeurs ; le volet s'ouvre pour la suite.
+		// nombres en valeurs, puis le nombre de lignes (startValues) ; le volet
+		// s'ouvre pour la suite.
 		const num = e.t.columns.findLast((c) => !c.formula && (c.type === 'integer' || c.type === 'decimal') && c !== k);
 		const first = k && !k.formula ? k.name : (e.t.columns.find((c) => !c.formula)?.name ?? '');
-		const cfg: PivotConfig = { source: e.t.name, rowFields: [first], values: [num ? { field: num.name, agg: 'sum' } : { agg: 'count' }] };
+		const cfg: PivotConfig = { source: e.t.name, rowFields: [first], values: startValues(num?.name) };
 		// Le premier clic sur une cellule (de n'importe quelle feuille) le
 		// pose ; « Nouvelle feuille » dans la barre d'état garde l'ancienne
 		// façon (pivotplace.ts).

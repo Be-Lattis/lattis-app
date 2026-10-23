@@ -59,7 +59,7 @@ const (
 // CreatePivot crée un tableau croisé sur une nouvelle feuille, comme Excel,
 // et renvoie l'identifiant de la feuille.
 func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error) {
-	cfg = cfg.normalized().stored()
+	cfg = cfg.created().stored()
 	var sheet int64
 	err := m.Do(ctx, "Tableau croisé dynamique", func(t *tx) error {
 		if err := t.guardWorkbook(); err != nil {
@@ -426,6 +426,7 @@ func (m *Model) CreatePivotAt(ctx context.Context, sheet int64, row, col int, cf
 	if row < 0 || col < 0 {
 		return 0, msg.Wrap(ErrPivot, "pivot.outOfSheet", nil)
 	}
+	cfg = cfg.created()
 	var nid int64
 	err := m.Do(ctx, "Tableau croisé dynamique", func(t *tx) error {
 		if err := t.guard(sheet); err != nil {

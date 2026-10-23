@@ -15,6 +15,7 @@
 	import { MORE_KINDS, chartFields, defaultChartTitle } from '#lib/chart/kinds.js';
 	import { encodeObj, objFromText, type ObjClip } from '#lib/clip/objects.js';
 	import PivotPanel from '#lib/grid/PivotPanel.svelte';
+	import { startValues } from '#lib/grid/pivotfields.js';
 	import { dismiss } from '#lib/grid/dismiss.js';
 	import Submenu from '#lib/ui/Submenu.svelte';
 	import { resizePanel } from '#lib/ui/resize.js';
@@ -462,7 +463,7 @@
 
 	// Champs de départ : en lignes, la première colonne de texte qui regroupe
 	// (2 à 50 valeurs distinctes) ; en valeurs, la somme du premier nombre qui
-	// n'est pas un identifiant (sinon le nombre de lignes).
+	// n'est pas un identifiant, puis toujours le nombre de lignes (startValues).
 	async function defaultPivot(tb: DocTable): Promise<PivotConfig> {
 		const num = (i: number) => /^(int|integer|decimal|real|number)/i.test(tb.types[i] ?? '');
 		const idLike = (c: string) => /^(n°|no\b|num|id\b|code|matricule|réf)/i.test(c);
@@ -481,7 +482,7 @@
 		return {
 			source: tb.name,
 			rowFields: row ? [row] : [],
-			values: val ? [{ field: val, agg: 'sum' }] : [{ field: row ?? tb.columns[0], agg: 'count' }]
+			values: startValues(val)
 		} as PivotConfig;
 	}
 

@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"context"
+	"fmt"
 	"testing"
 )
 
@@ -165,5 +166,42 @@ func TestCreatePivotAt(t *testing.T) {
 	}
 	if got := dump(t, d); got != before {
 		t.Fatalf("refus incomplet :\n%s", diff(before, got))
+	}
+}
+
+// Un tableau croisé créé sans valeur compte les lignes (« Nombre de
+// lignes ») : sur une nouvelle feuille (CreatePivot, scripts, assistant)
+// comme à une cellule (CreatePivotAt) ; des valeurs choisies restent seules.
+func TestCreatePivotRowCount(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	_, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Pays", "Ventes"}, {"FR", "10"}, {"IT", "5"}, {"FR", "7"}})
+	must(t, err)
+	sheet, err := d.CreatePivot(ctx, PivotConfig{Source: "Feuille1", RowFields: []string{"Pays"}})
+	must(t, err)
+	l, err := d.Layout(ctx, sheet)
+	must(t, err)
+	if v := l.Pivots[0].Config.Values; len(v) != 1 || v[0] != (PivotValue{Agg: "count"}) {
+		t.Fatalf("valeurs : %+v", v)
+	}
+	if got := fmt.Sprint(l.Pivots[0].Cells); got != "[[Pays Nombre] [FR 2] [IT 1] [Total 3]]" {
+		t.Fatalf("nouvelle feuille : %s", got)
+	}
+	id, err := d.CreatePivotAt(ctx, 1, 0, 4, PivotConfig{Source: "Feuille1", RowFields: []string{"Pays"}})
+	must(t, err)
+	l, err = d.Layout(ctx, 1)
+	must(t, err)
+	for _, p := range l.Pivots {
+		if p.ID == id && fmt.Sprint(p.Cells) != "[[Pays Nombre] [FR 2] [IT 1] [Total 3]]" {
+			t.Fatalf("à une cellule : %v", p.Cells)
+		}
+	}
+	// Valeurs choisies : gardées telles quelles.
+	sheet, err = d.CreatePivot(ctx, PivotConfig{Source: "Feuille1", RowFields: []string{"Pays"}, Values: []PivotValue{{Field: "Ventes", Agg: "sum"}}})
+	must(t, err)
+	l, err = d.Layout(ctx, sheet)
+	must(t, err)
+	if n := len(l.Pivots[0].Config.Values); n != 1 {
+		t.Fatalf("valeurs choisies : %+v", l.Pivots[0].Config.Values)
 	}
 }
