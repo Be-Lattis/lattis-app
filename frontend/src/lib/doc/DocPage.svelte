@@ -462,11 +462,9 @@
 	}
 
 	// Champs de départ : en lignes, la première colonne de texte qui regroupe
-	// (2 à 50 valeurs distinctes) ; en valeurs, la somme du premier nombre qui
-	// n'est pas un identifiant, puis toujours le nombre de lignes (startValues).
+	// (2 à 50 valeurs distinctes) ; en valeur, le nombre de lignes (startValues).
 	async function defaultPivot(tb: DocTable): Promise<PivotConfig> {
 		const num = (i: number) => /^(int|integer|decimal|real|number)/i.test(tb.types[i] ?? '');
-		const idLike = (c: string) => /^(n°|no\b|num|id\b|code|matricule|réf)/i.test(c);
 		const texts = tb.columns.filter((_, i) => !num(i));
 		let row = texts[0];
 		if (fieldValues) {
@@ -478,11 +476,10 @@
 				}
 			}
 		}
-		const val = tb.columns.find((c, i) => num(i) && !idLike(c));
 		return {
 			source: tb.name,
 			rowFields: row ? [row] : [],
-			values: startValues(val)
+			values: startValues()
 		} as PivotConfig;
 	}
 

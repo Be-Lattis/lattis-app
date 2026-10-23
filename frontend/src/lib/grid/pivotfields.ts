@@ -85,11 +85,12 @@ export function defaultValue(field: string, fields: PivotField[]): PivotValue {
 
 /**
  * Valeurs d'un tableau croisé qu'on crée (Insertion › Tableau croisé,
- * document) : toujours le nombre de lignes, pour un résultat tout de suite ;
- * la somme d'une colonne de nombres choisie d'office passe devant.
+ * document) : le nombre de lignes, et lui seul (choix de Louis du 23/10 :
+ * pas de somme d'une colonne choisie d'office), pour un résultat tout de
+ * suite ; les autres valeurs s'ajoutent dans le volet.
  */
-export function startValues(num?: string): PivotValue[] {
-	return num ? [{ field: num, agg: 'sum' }, { agg: 'count' }] : [{ agg: 'count' }];
+export function startValues(): PivotValue[] {
+	return [{ agg: 'count' }];
 }
 
 /** Nom affiché d'une valeur (comme pivotLabel côté Go, sans le pourcentage). */

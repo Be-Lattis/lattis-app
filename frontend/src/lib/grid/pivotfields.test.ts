@@ -55,9 +55,8 @@ describe('champs par défaut', () => {
 		expect(insertAt(base, 'rows', ROW_COUNT, fields)).toBe(base);
 	});
 	it('un TCD créé compte toujours les lignes, après la somme choisie d\'office', () => {
-		expect(startValues('Ventes')).toEqual([{ field: 'Ventes', agg: 'sum' }, { agg: 'count' }]);
 		expect(startValues()).toEqual([{ agg: 'count' }]);
-		expect(startValues('Ventes').map(valueLabel)).toEqual(['Somme de Ventes', 'Nombre de lignes']);
+		expect(startValues().map(valueLabel)).toEqual(['Nombre de lignes']);
 	});
 	it('icône du type de champ', () => {
 		expect(fields.map((f) => fieldIcon(f.type))).toEqual(['type-text', 'type-text', 'type-date', 'type-number', 'type-number', 'function']);

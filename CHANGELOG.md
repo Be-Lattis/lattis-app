@@ -13,7 +13,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Changements
 
 - Publier un gros tableau est bien plus rapide : 1 M de lignes en 23 s au lieu de 60 à 80 s, 10 M en moins de 5 minutes au lieu d'une vingtaine ; la note des lignes publiées dans le classeur, qui ralentissait de plus en plus avec la taille, prend quelques secondes au lieu de plusieurs minutes, et la mémoire utilisée ne croît plus démesurément.
-- Tableaux croisés : un tableau croisé qu'on crée montre toujours le **Nombre de lignes** en valeurs, après la somme de la colonne de nombres choisie d'office s'il y en a une (Insertion › Tableau croisé, sur une feuille comme dans un document) ; créé par un script ou l'assistant sans valeurs, il compte les lignes. Les tableaux croisés existants ne changent pas.
+- Tableaux croisés : un tableau croisé qu'on crée prend le **Nombre de lignes** comme valeur, au lieu de la somme d'une colonne de nombres choisie d'office (Insertion › Tableau croisé, sur une feuille comme dans un document) ; créé par un script ou l'assistant sans valeurs, il compte les lignes. Les tableaux croisés existants ne changent pas.
 
 ## 0.4.4-beta (22/10/2026)
 

@@ -6380,12 +6380,10 @@
 			return;
 		}
 		const k = e.t.columns[targetCol(e)];
-		// Comme Excel : la colonne active en lignes, la dernière colonne de
-		// nombres en valeurs, puis le nombre de lignes (startValues) ; le volet
-		// s'ouvre pour la suite.
-		const num = e.t.columns.findLast((c) => !c.formula && (c.type === 'integer' || c.type === 'decimal') && c !== k);
+		// La colonne active en lignes, le nombre de lignes en valeur
+		// (startValues) ; le volet s'ouvre pour la suite.
 		const first = k && !k.formula ? k.name : (e.t.columns.find((c) => !c.formula)?.name ?? '');
-		const cfg: PivotConfig = { source: e.t.name, rowFields: [first], values: startValues(num?.name) };
+		const cfg: PivotConfig = { source: e.t.name, rowFields: [first], values: startValues() };
 		// Le premier clic sur une cellule (de n'importe quelle feuille) le
 		// pose ; « Nouvelle feuille » dans la barre d'état garde l'ancienne
 		// façon (pivotplace.ts).
