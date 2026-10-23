@@ -93,6 +93,12 @@ func Start(ctx context.Context, emit func(Step), cancellable bool) (context.Cont
 		t.cur.Cancel = true
 	}
 	t.timer = time.AfterFunc(Delay, t.flush)
+	if Delay <= 0 {
+		// Sans délai (essais) : montrée tout de suite, sinon une étape dite
+		// avant que la minuterie ne tourne serait remplacée sans être émise.
+		t.timer.Stop()
+		t.flush()
+	}
 	return context.WithValue(ctx, key{}, t), t
 }
 
