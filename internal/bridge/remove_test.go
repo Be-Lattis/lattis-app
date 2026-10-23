@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -89,7 +90,10 @@ func TestShareRemoveMember(t *testing.T) {
 	UseHost(sh2, nil, s2)
 	_, err := s2.ShareOpen(ctx, "https://lattis.example.test", id, "")
 	mustShare(t, err)
-	waitShare(t, h2, "en ligne", func(s workbook.State) bool { return s.Online })
+	// Le cache du poste est celui d'Alice (même poste, même classeur) : ses
+	// rôles restent affichés jusqu'à la relecture des droits de Bob, qui peut
+	// suivre la mise en ligne sur une machine lente (CI).
+	waitShare(t, h2, "en ligne, droits de Bob relus", func(s workbook.State) bool { return s.Online && !slices.Contains(s.Roles, "owner") })
 	if st := s2.ShareState(); st.CanManage {
 		t.Fatalf("Bob propriétaire ? %+v", st)
 	}
