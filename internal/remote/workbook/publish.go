@@ -374,6 +374,16 @@ func readTables(ctx context.Context, q txOrDB, ids []int64) ([]localTable, error
 		if err := rs.Err(); err != nil {
 			return nil, err
 		}
+		// Colonne Date avec des heures : datetime (values.go).
+		for i, c := range t.cols {
+			if c.typ == grid.Date {
+				r, err := DateRemote(ctx, q, id, c.id)
+				if err != nil {
+					return nil, err
+				}
+				t.cols[i].remote = r
+			}
+		}
 		out = append(out, t)
 	}
 	return out, nil

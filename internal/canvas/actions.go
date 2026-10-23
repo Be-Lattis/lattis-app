@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
@@ -433,15 +434,24 @@ func (t *tx) setCellAt(tb Table, rid int64, i int, raw string, ev *Event) (Table
 	} else if forced {
 		v = raw // « 'null » : le texte null, pas une case vide
 	}
-	// Une heure dans une colonne Date publiée : le serveur garde des dates
-	// sans heure (type date), elle n'y passerait pas.
+	// Une heure dans une colonne Date publiée en dates sans heure (type
+	// date du serveur) : gardée dans un classeur figé (republié avec les
+	// heures) ; dans un classeur collaboratif, la colonne passe en date et
+	// heure pour qui en conçoit la structure (WidenTime), sinon l'heure est
+	// refusée. Publiée en date et heure (datetime) : gardée.
+	noTime := false
 	if d, ok := v.(string); ok && perr == nil && c.Type == grid.Date && grid.StoredHasTime(d) && t.frozenTypes(tb.ID) {
-		perr = errTimeInDate
+		switch keep, widen := t.timesIn(tb.ID, c.ID); {
+		case !keep:
+			perr, noTime = errTimeInDate, true
+		case widen:
+			t.Record(command.Op{Kind: command.OpMeta, Table: tb.ID, Meta: &command.MetaChange{Object: "column", Action: WidenTime, ID: c.ID}})
+		}
 	}
 	if perr != nil && t.frozenTypes(tb.ID) {
 		// Tableau publié d'un classeur partagé : type figé, la valeur hors
 		// type n'est pas gardée en erreur (rien ne partirait au serveur).
-		return tb, t.refuse(tb, c, raw, ev)
+		return tb, t.refuseValue(tb, c, raw, ev, noTime)
 	}
 	if c.Fixed {
 		if perr != nil {

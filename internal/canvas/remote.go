@@ -362,13 +362,53 @@ type ErrOutOfType struct {
 	Table, Column string
 	Type          grid.Type
 	Raw           string
+	// NoTime : date avec heure dans une colonne publiée en dates sans heure.
+	NoTime bool
 }
 
 func (e ErrOutOfType) Error() string { return e.Msg().String() }
 
 // Msg : le message de l'erreur (msg.Messager).
 func (e ErrOutOfType) Msg() msg.Message {
-	return msg.M("workbook.outOfType", msg.Args{"value": e.Raw, "type": typeArticle(e.Type), "column": e.Column, "table": e.Table})
+	args := msg.Args{"value": e.Raw, "type": typeArticle(e.Type), "column": e.Column, "table": e.Table}
+	if e.NoTime {
+		return msg.M("workbook.timeInDate", args)
+	}
+	return msg.M("workbook.outOfType", args)
+}
+
+// TimeKeeper est implémenté par le partage (Sharing) : une date avec heure
+// peut-elle aller dans une colonne Date d'un tableau publié en dates sans
+// heure (type date du serveur) ? ok : oui ; widen : la colonne passe alors
+// en date et heure sur le serveur (WidenTime). Classeur figé : oui, la
+// republication publie en date et heure une colonne qui en a ; classeur
+// collaboratif : pour qui en conçoit la structure, en élargissant.
+type TimeKeeper interface {
+	TimesIn(tbl int64) (ok, widen bool)
+}
+
+// WidenTime : action de l'opération de structure (command.OpMeta, objet
+// « column », ID : la colonne) enregistrée quand une date avec heure entre
+// dans une colonne publiée en dates sans heure (TimeKeeper) : la
+// synchronisation passe la colonne en date et heure sur le serveur
+// (oplog).
+const WidenTime = "widen_time"
+
+// timesIn : une date avec heure peut aller dans la colonne Date col du
+// tableau publié tbl : colonne publiée en datetime
+// (_lattis_remote_tables.columns), ou partage qui le permet (TimeKeeper ;
+// widen : la colonne est à élargir).
+func (t *tx) timesIn(tbl, col int64) (ok, widen bool) {
+	var yes bool
+	err := t.row(`SELECT EXISTS (SELECT 1 FROM _lattis_remote_tables r, json_each(coalesce(r.columns, '[]')) j
+		WHERE r.tbl = ? AND json_extract(j.value, '$.local') = ? AND json_extract(j.value, '$.type') = 'datetime')`, tbl, col).Scan(&yes)
+	if err == nil && yes {
+		return true, false
+	}
+	if k, is := t.m.sharing.(TimeKeeper); is {
+		return k.TimesIn(tbl)
+	}
+	return false, false
 }
 
 // typeArticle : « un nombre entier », « une date »… (message).
@@ -408,7 +448,13 @@ func (t *tx) frozenTypes(tbl int64) bool {
 // refuse traite une saisie hors du type figé d'un tableau publié : un
 // collage la note (Event.Refused) et continue, une saisie est refusée.
 func (t *tx) refuse(tb Table, c Column, raw string, ev *Event) error {
-	e := ErrOutOfType{Table: tb.Name, Column: c.Name, Type: c.Type, Raw: raw}
+	return t.refuseValue(tb, c, raw, ev, false)
+}
+
+// refuseValue est refuse ; noTime : date avec heure dans une colonne
+// publiée en dates sans heure.
+func (t *tx) refuseValue(tb Table, c Column, raw string, ev *Event, noTime bool) error {
+	e := ErrOutOfType{Table: tb.Name, Column: c.Name, Type: c.Type, Raw: raw, NoTime: noTime}
 	if t.collect && ev != nil {
 		if len(ev.Refused) < maxRefused {
 			ev.Refused = append(ev.Refused, t.say("workbook.refusedValue", msg.Args{"column": c.Name, "value": raw}))

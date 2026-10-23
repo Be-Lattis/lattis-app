@@ -1193,6 +1193,7 @@ var de = map[ID]string{
 	"workbook.offline":               "Offline, schreibgeschützt",
 	"workbook.onlyComputedColumns":   "Die Tabelle „{table}“ hat nur berechnete Spalten: Sie braucht mindestens eine Eingabespalte, um geteilt zu werden",
 	"workbook.outOfType":             "„{value}“ ist nicht {type}: Die Spalte „{column}“ der geteilten Tabelle „{table}“ hat einen festen Typ",
+	"workbook.timeInDate":            "„{value}“ enthält eine Uhrzeit: Die Spalte „{column}“ der geteilten Tabelle „{table}“ ist nur mit Datumswerten ohne Uhrzeit veröffentlicht",
 	"workbook.readOnly":              "Arbeitsmappe schreibgeschützt veröffentlicht",
 	"workbook.reader":                "Schreibgeschützte Tabelle: Ihre Berechtigungen erlauben keine Änderung",
 	"workbook.receivedTableError":    "Vom Server empfangene Tabelle „{table}“: {err}",
@@ -1413,7 +1414,6 @@ var de = map[ID]string{
 
 	// Publishing checks
 	"check.columnProblem":  "Spalte „{column}“: {problem}",
-	"check.dateWithTime":   "{n} Datum/Daten mit Uhrzeit: Der Server speichert nur Datumswerte, stellen Sie die Spalte zum Veröffentlichen auf Text um",
 	"check.invalidEntries": "„{table}“: {n} ungültige Eingabe(n) zu korrigieren oder Spalte als Text zu akzeptieren",
 	"check.nameEmpty":      "leerer Name",
 	"check.nameNul":        "Nullzeichen im Namen",

@@ -222,7 +222,23 @@ func localColumns(ctx context.Context, d *doc.Document, tbl int64) ([]localColum
 		c.Type = workbook.RemoteType(grid.Type(typ))
 		out = append(out, c)
 	}
-	return out, rs.Err()
+	if err := rs.Err(); err != nil {
+		return nil, err
+	}
+	rs.Close()
+	// Colonne Date avec des heures : date et heure (workbook.DateRemote).
+	for i, c := range out {
+		if c.Type == "date" {
+			var yes bool
+			if err := d.DB().Read().QueryRowContext(ctx, workbook.HasTimeSQL(tbl, c.ID)).Scan(&yes); err != nil {
+				return nil, err
+			}
+			if yes {
+				out[i].Type = "datetime"
+			}
+		}
+	}
+	return out, nil
 }
 
 // errPushUnsupported : serveur sans les sources poussées (migration 0027).
@@ -899,6 +915,11 @@ func sourceCSV(ctx context.Context, m *canvas.Model, table string, cols []Source
 				blanked++
 			}
 			rec[k] = csvText(v)
+			if t, isTime := v.(time.Time); isTime && cols[k].Type == "datetime" {
+				// Heure au mur, en UTC (workbook/values.go) : avec son
+				// décalage, que le serveur ne la lise pas dans son fuseau.
+				rec[k] = t.UTC().Format("2006-01-02 15:04:05-07")
+			}
 		}
 		rows++
 		return w.Write(rec)
@@ -958,9 +979,13 @@ func sourceValue(typ string, v any) (any, bool) {
 				v = x.Bool
 			}
 		case formula.Date:
-			if typ == "date" || typ == "text" {
+			switch typ {
+			case "date", "text":
 				v = excelEpoch.AddDate(0, 0, int(x.Num)).Format("2006-01-02")
-			} else {
+			case "datetime":
+				// Date avec heure d'une formule : jours et fraction de jour.
+				v = excelEpoch.Add(time.Duration(x.Num * float64(24*time.Hour))).Round(time.Second)
+			default:
 				v = x.Num
 			}
 		}

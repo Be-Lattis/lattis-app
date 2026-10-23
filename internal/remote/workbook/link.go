@@ -272,6 +272,26 @@ func (l *Link) TableShare(tbl int64) string {
 	return "private"
 }
 
+// TimesIn dit si une date avec heure peut aller dans une colonne Date d'un
+// tableau publié en dates sans heure (canvas.TimeKeeper) : classeur figé,
+// dont la republication publie la colonne en date et heure (DateRemote) ;
+// classeur collaboratif, pour un propriétaire ou un concepteur, en passant
+// la colonne en date et heure sur le serveur (widen ; un éditeur voit
+// l'heure refusée).
+func (l *Link) TimesIn(tbl int64) (ok, widen bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	switch {
+	case l.info == nil:
+		return false, false
+	case l.info.Mode == Frozen:
+		return true, false
+	case l.info.CanDesign() && l.gone == "":
+		return true, true
+	}
+	return false, false
+}
+
 // LayoutLock refuse de changer les cellules libres et la mise en page d'un
 // classeur collaboratif à qui n'en est ni propriétaire ni concepteur
 // (canvas.LayoutLocker ; décision 0018) : seuls ceux-là la partagent

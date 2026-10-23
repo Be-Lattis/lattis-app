@@ -83,7 +83,16 @@ remote:
     "3": "1234"
 ```
 
-Types : texte → `text`, entier → `integer` (`bigint`), décimal → `decimal` (`numeric`, envoyé depuis le réel local), booléen → `boolean`, date → `date` ; `datetime` du serveur se lit en texte ISO 8601.
+Types : texte → `text`, entier → `integer` (`bigint`), décimal → `decimal` (`numeric`, envoyé depuis le réel local), booléen → `boolean`, date → `date`, ou `datetime` (`timestamptz`) quand la colonne Date a au moins une valeur avec heure (`workbook.DateRemote` ; décision de Louis, 23/10/2026).
+
+**Dates avec heure.** Une colonne Date locale garde `2026-10-23` et `2026-10-23 14:30[:ss]` (`grid.StoreDate`). Règles :
+
+- Publication (et republication d'un classeur figé) : une colonne Date qui a une valeur avec heure part en `datetime` ; une colonne de dates seules reste en `date`. Une colonne publiée en `datetime` le reste, même quand elle n'a plus que des dates (la correspondance `_lattis_remote_tables.columns` le dit à la republication). La vérification avant publication montre le type (« Date et heure ») et ne bloque plus.
+- Fuseau : l'heure saisie est une heure « au mur », sans fuseau. Elle part en UTC (`2026-10-23 14:30:00+00`, `ToRemote` rend un `time.Time` UTC, encodé en instant par pgx) et se relit en UTC (`selectExpr` : `AT TIME ZONE 'UTC'` ; `to_jsonb` de `changes_since` avec son décalage, ramené en UTC par `FromJSON`) : chaque poste, quel que soit son fuseau ou celui de la session PostgreSQL, montre ce qui a été tapé. `lattis.alter_column_type` (conversion `date` ou `text` → `timestamptz`) suit le fuseau de la session : `AlterColumnType` pose `SET LOCAL TIME ZONE 'UTC'` avant.
+- Lecture : `datetime` du serveur → colonne Date locale (`LocalType`), valeur `StoredDateTime` : minuit s'écrit comme une date seule (« 2026-10-23 »), une autre heure « 2026-10-23 14:30 » (secondes si non nulles). Une date seule saisie dans une colonne `datetime` vaut minuit : pas de faux conflit (comparaison en instants, `SameRemote`).
+- Collaboratif : les types se comparent avec `workbook.SameType` (Date va avec `date` et `datetime`). Une colonne Date ajoutée ou convertie (`oplog.Change.Time`) qui a des heures est créée ou convertie en `datetime`. Une heure tapée dans une colonne publiée en `date` : refusée pour un éditeur (« … est publiée en dates sans heure », `workbook.timeInDate`) ; pour un propriétaire ou un concepteur, gardée, et la colonne passe en `datetime` sur le serveur (`canvas.WidenTime` → `retype_column` avec `Time`, envoyé avant les données de l'étape ; refusé, il est défait comme tout changement de structure). Classeur figé : l'heure est gardée en local, la republication publie la colonne en `datetime`.
+- Sources poussées (Data Lake) : une colonne Date avec des heures part en `datetime`, valeurs écrites avec leur décalage (`2026-10-23 14:30:00+00`).
+- Formulaires : `datetime` se lit comme une colonne Date. Le serveur lit aujourd'hui les heures tapées dans un formulaire et `received_at`/`now` dans son fuseau (`time.Local`) : sur un serveur hors UTC, elles apparaissent décalées dans Lattis (voir le journal du serveur).
 
 ## 4. Hypothèses sur l'API SQL du serveur
 
@@ -94,7 +103,7 @@ Toutes vérifiées contre PostgreSQL 18 avec les migrations de la branche serveu
 | `lattis.my_workbooks() → jsonb` | Liste « Ouvrir depuis un serveur » : `id`, `title`, `mode`, `state`, `version`, `schema`, `roles`, `published_at`. Brouillons (`state = 'draft'`) écartés côté client. |
 | `lattis.my_capabilities(id) → jsonb` | Schéma de la version courante (brouillon compris, pour la publication), `channel`, `roles`, `version`, `tables` (`table_id` → `level`). Appelée dans la transaction de publication, après `create_workbook` et après `finish_publish`. |
 | `lattis.create_workbook(title, mode) → uuid` | Dans la même transaction que la suite : le rôle de propriétaire accordé par la fonction vaut pour le `COPY` qui suit (vérifié). |
-| `lattis.create_table(id, name, columns jsonb) → uuid` | `columns = [{"name", "type", "local_id", "table_local_id"}]` ; types `text`, `integer`, `decimal`, `date`, `boolean`. Colonnes relues dans `"<schéma>".lattis_meta_columns` (`column_id`, `local_id`, `position`), lisibles par l'auteur dans le brouillon et la version de travail. |
+| `lattis.create_table(id, name, columns jsonb) → uuid` | `columns = [{"name", "type", "local_id", "table_local_id"}]` ; types `text`, `integer`, `decimal`, `date`, `datetime`, `boolean`. Colonnes relues dans `"<schéma>".lattis_meta_columns` (`column_id`, `local_id`, `position`), lisibles par l'auteur dans le brouillon et la version de travail. |
 | `COPY "<schéma>"."<tableau>" (lattis_id, lattis_pos, <colonnes>)` | Colonnes par leur nom ; `lattis_author` et les autres colonnes système posées par les déclencheurs. |
 | `lattis.save_meta(id, 'layout', payload)` | Objet unique, clé `payload->>'key' = 'workbook'` ; relu dans `"<schéma>".lattis_meta_objects`. |
 | `lattis.publish_script(id, name, source)` | Une fois par script ; la dernière version de chacun est relue dans `lattis_meta_script_versions`. |

@@ -1194,6 +1194,7 @@ var zh = map[ID]string{
 	"workbook.offline":               "离线，只读",
 	"workbook.onlyComputedColumns":   "表格“{table}”只有计算列：至少需要一个输入列才能共享",
 	"workbook.outOfType":             "“{value}”不是{type}：共享表格“{table}”的列“{column}”类型固定",
+	"workbook.timeInDate":            "“{value}”带有时间：共享表格“{table}”的列“{column}”发布时只包含日期，不含时间",
 	"workbook.readOnly":              "工作簿以只读方式发布",
 	"workbook.reader":                "只读表格：您的权限不允许修改它",
 	"workbook.receivedTableError":    "从服务器收到的表格“{table}”：{err}",
@@ -1414,7 +1415,6 @@ var zh = map[ID]string{
 
 	// Publishing checks
 	"check.columnProblem":  "列“{column}”：{problem}",
-	"check.dateWithTime":   "{n} 个带时间的日期：服务器只保存日期，请将该列改为文本后再发布",
 	"check.invalidEntries": "“{table}”：{n} 个无效输入需要更正，或将该列作为文本接受",
 	"check.nameEmpty":      "名称为空",
 	"check.nameNul":        "名称中有空字符",

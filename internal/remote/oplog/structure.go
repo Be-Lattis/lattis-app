@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/command"
+	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
 )
 
@@ -57,6 +59,9 @@ type Change struct {
 	// redevenue calculée par une annulation (drop_column) : sa formule
 	// (anglais). Un refus du serveur la lui rend, ou la lui retire.
 	Formula string `json:"f,omitempty"`
+	// Time : colonne Date ajoutée ou convertie qui a des dates avec heure :
+	// datetime sur le serveur (workbook.DateRemote).
+	Time bool `json:"h,omitempty"`
 }
 
 // OpStructure : opération de la file d'envoi qui porte un changement de
@@ -323,6 +328,27 @@ func (s *session) structure(fn StructureFunc, w *writer, kind string, ops []comm
 		return err
 	}
 	ch := changes(ids, b, a, kind)
+	// Colonne Date ajoutée ou convertie : avec des heures, elle va au
+	// serveur en date et heure (une lecture, pour ces colonnes seulement).
+	for i, c := range ch {
+		if (c.Action == AddColumn || c.Action == RetypeColumn) && c.Type == string(grid.Date) {
+			if err := s.tx.QueryRowContext(s.ctx, fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM t_%d WHERE length(c_%d) > 10)`, c.Table, c.Column)).Scan(&ch[i].Time); err != nil {
+				return err
+			}
+		}
+	}
+	// Date avec heure saisie dans une colonne publiée en dates sans heure
+	// (canvas.WidenTime, « widen_time ») : la colonne passe en date et heure.
+	for _, op := range ops {
+		if op.Kind != command.OpMeta || op.Meta == nil || op.Meta.Object != "column" || op.Meta.Action != "widen_time" || !s.pub[op.Table] {
+			continue
+		}
+		if !slices.ContainsFunc(ch, func(c Change) bool {
+			return c.Table == op.Table && c.Column == op.Meta.ID && (c.Action == RetypeColumn || c.Action == AddColumn || c.Action == DropColumn)
+		}) {
+			ch = append(ch, Change{Table: op.Table, Action: RetypeColumn, Column: op.Meta.ID, Type: string(grid.Date), Time: true})
+		}
+	}
 	if len(ch) == 0 {
 		return nil
 	}

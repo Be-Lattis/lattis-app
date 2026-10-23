@@ -1192,6 +1192,7 @@ var es = map[ID]string{
 	"workbook.offline":               "Sin conexión, solo lectura",
 	"workbook.onlyComputedColumns":   "La tabla «{table}» solo tiene columnas calculadas: necesita al menos una columna introducida para compartirse",
 	"workbook.outOfType":             "«{value}» no es {type}: la columna «{column}» de la tabla compartida «{table}» tiene un tipo fijo",
+	"workbook.timeInDate":            "«{value}» tiene hora: la columna «{column}» de la tabla compartida «{table}» está publicada solo con fechas, sin hora",
 	"workbook.readOnly":              "Libro publicado en solo lectura",
 	"workbook.reader":                "Tabla de solo lectura: sus permisos no le permiten modificarla",
 	"workbook.receivedTableError":    "tabla «{table}» recibida del servidor: {err}",
@@ -1412,7 +1413,6 @@ var es = map[ID]string{
 
 	// Comprobaciones antes de publicar
 	"check.columnProblem":  "columna «{column}»: {problem}",
-	"check.dateWithTime":   "{n} fecha(s) con hora: el servidor solo guarda fechas, cambie la columna a texto para publicar",
 	"check.invalidEntries": "«{table}»: {n} entrada(s) no válida(s) que corregir, o columna que aceptar como texto",
 	"check.nameEmpty":      "nombre vacío",
 	"check.nameNul":        "carácter nulo en el nombre",

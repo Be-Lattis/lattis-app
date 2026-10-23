@@ -1192,6 +1192,7 @@ var en = map[ID]string{
 	"workbook.offline":               "Offline, read-only",
 	"workbook.onlyComputedColumns":   "Table “{table}” only has calculated columns: it needs at least one entered column to be shared",
 	"workbook.outOfType":             "“{value}” is not {type}: column “{column}” of shared table “{table}” has a fixed type",
+	"workbook.timeInDate":            "“{value}” has a time: column “{column}” of shared table “{table}” is published with dates only, without times",
 	"workbook.readOnly":              "Workbook published read-only",
 	"workbook.reader":                "Read-only table: your permissions do not allow you to modify it",
 	"workbook.receivedTableError":    "table “{table}” received from the server: {err}",
@@ -1412,7 +1413,6 @@ var en = map[ID]string{
 
 	// Publishing checks
 	"check.columnProblem":  "column “{column}”: {problem}",
-	"check.dateWithTime":   "{n} date(s) with a time: the server only keeps dates, change the column to text to publish",
 	"check.invalidEntries": "“{table}”: {n} invalid entry(ies) to correct, or column to accept as text",
 	"check.nameEmpty":      "empty name",
 	"check.nameNul":        "null character in the name",

@@ -1,6 +1,7 @@
 package workbook
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -28,8 +29,20 @@ func RemoteType(t grid.Type) string {
 	return "text"
 }
 
-// LocalType est l'inverse de RemoteType (datetime, inconnu localement,
-// devient du texte ISO 8601).
+// Dates avec heure (décision de Louis, 23/10/2026) : une colonne Date
+// locale garde des dates (« 2026-10-23 ») et des dates avec heure
+// (« 2026-10-23 14:30 », grid.StoreDate). Publiée, elle va au serveur en
+// date tant qu'elle n'a que des dates, en datetime (timestamptz) dès
+// qu'une valeur porte une heure (DateRemoteSQL) ; une colonne publiée en
+// datetime le reste, même si elle n'a plus que des dates. L'heure saisie
+// est une heure « au mur », sans fuseau : elle part en UTC
+// (« 2026-10-23 14:30:00+00 ») et se relit en UTC, si bien que chaque
+// poste, quel que soit son fuseau, montre ce qui a été tapé. Une date sans
+// heure dans une colonne datetime vaut minuit (UTC) et se relit sans
+// heure : minuit s'écrit comme une date seule.
+
+// LocalType est l'inverse de RemoteType : date et datetime donnent une
+// colonne Date.
 func LocalType(t string) grid.Type {
 	switch t {
 	case "integer":
@@ -38,10 +51,72 @@ func LocalType(t string) grid.Type {
 		return grid.Decimal
 	case "boolean":
 		return grid.Boolean
-	case "date":
+	case "date", "datetime":
 		return grid.Date
 	}
 	return grid.Text
+}
+
+// SameType dit si une colonne locale de type local va avec une colonne du
+// serveur de type remote : RemoteType, ou une colonne Date publiée en
+// datetime.
+func SameType(local grid.Type, remote string) bool {
+	return RemoteType(local) == remote || local == grid.Date && remote == "datetime"
+}
+
+// HasTimeSQL : requête qui dit si la colonne col du tableau local tbl (de
+// type Date) a une valeur avec heure (« 2026-10-23 14:30 », plus longue
+// qu'une date seule).
+func HasTimeSQL(tbl, col int64) string {
+	return fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM t_%d WHERE length(c_%d) > 10)`, tbl, col)
+}
+
+// PublishedDateTimeSQL : requête qui dit si la colonne locale (tbl, col)
+// est publiée en datetime (correspondance _lattis_remote_tables), avec
+// les paramètres tbl et col.
+const PublishedDateTimeSQL = `SELECT EXISTS (SELECT 1 FROM _lattis_remote_tables r, json_each(coalesce(r.columns, '[]')) j
+	WHERE r.tbl = ? AND json_extract(j.value, '$.local') = ? AND json_extract(j.value, '$.type') = 'datetime')`
+
+// DateRemote donne le type du serveur d'une colonne Date locale à publier :
+// datetime si elle a une valeur avec heure ou si elle est déjà publiée en
+// datetime (republication d'un classeur figé), date sinon.
+func DateRemote(ctx context.Context, q txOrDB, tbl, col int64) (string, error) {
+	for _, s := range []struct {
+		q    string
+		args []any
+	}{{PublishedDateTimeSQL, []any{tbl, col}}, {HasTimeSQL(tbl, col), nil}} {
+		var yes bool
+		if err := q.QueryRowContext(ctx, s.q, s.args...).Scan(&yes); err != nil {
+			return "", err
+		}
+		if yes {
+			return "datetime", nil
+		}
+	}
+	return "date", nil
+}
+
+// StoredDateTime écrit un instant du serveur (timestamptz) comme le garde
+// une colonne Date locale : lu en UTC, sans heure à minuit.
+func StoredDateTime(t time.Time) string {
+	t = t.UTC()
+	return grid.StoreDate(t, t.Hour() != 0 || t.Minute() != 0 || t.Second() != 0)
+}
+
+// dateTimeLayouts : formes lues d'une date avec heure (valeur d'une
+// colonne Date, texte ISO 8601 d'un ancien classeur ou du serveur). Sans
+// fuseau, l'heure est en UTC.
+var dateTimeLayouts = []string{"2006-01-02 15:04:05", "2006-01-02 15:04", "2006-01-02", time.RFC3339Nano,
+	"2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02 15:04:05Z07", "2006-01-02 15:04:05Z07:00", "2006-01-02 15:04:05.999999999Z07"}
+
+// ParseDateTime lit une date avec ou sans heure (dateTimeLayouts), en UTC.
+func ParseDateTime(s string) (time.Time, bool) {
+	for _, l := range dateTimeLayouts {
+		if t, err := time.ParseInLocation(l, s, time.UTC); err == nil {
+			return t.UTC(), true
+		}
+	}
+	return time.Time{}, false
 }
 
 // ToRemote convertit une valeur stockée localement (table STRICT : INTEGER,
@@ -107,6 +182,17 @@ func ToRemote(typ string, v any) (any, error) {
 				return d, nil
 			}
 		}
+	case "datetime":
+		// Heure au mur, posée en UTC (voir plus haut) : un instant, encodé
+		// tel quel quel que soit le fuseau de la session du serveur.
+		switch x := v.(type) {
+		case string:
+			if d, ok := ParseDateTime(x); ok {
+				return d, nil
+			}
+		case time.Time:
+			return x.UTC(), nil
+		}
 	default:
 		switch x := v.(type) {
 		case string:
@@ -146,11 +232,19 @@ func FromRemote(typ string, v any) any {
 		}
 		return x
 	case time.Time:
-		if typ == "date" {
+		switch typ {
+		case "date":
 			return x.Format("2006-01-02")
+		case "datetime":
+			return StoredDateTime(x)
 		}
 		return x.UTC().Format(time.RFC3339)
 	case string:
+		if typ == "datetime" {
+			if t, ok := ParseDateTime(x); ok {
+				return StoredDateTime(t)
+			}
+		}
 		return x
 	}
 	return fmt.Sprint(v)
@@ -190,8 +284,10 @@ func FromJSON(typ string, v any) any {
 				return x[:10]
 			}
 		case "datetime":
-			if t, err := time.Parse(time.RFC3339Nano, x); err == nil {
-				return t.UTC().Format(time.RFC3339)
+			// to_jsonb écrit l'instant avec le décalage de la session :
+			// relu en UTC.
+			if t, ok := ParseDateTime(x); ok {
+				return StoredDateTime(t)
 			}
 		case "integer":
 			if n, err := strconv.ParseInt(x, 10, 64); err == nil {

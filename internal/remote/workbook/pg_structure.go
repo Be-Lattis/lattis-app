@@ -72,6 +72,13 @@ func (w pgWriter) DropColumn(ctx context.Context, workbookID, tableID, columnID 
 }
 
 func (w pgWriter) AlterColumnType(ctx context.Context, workbookID, tableID, columnID, typ string) error {
+	// La conversion du serveur (lattis.convert_expr : date ou texte vers
+	// timestamptz, et retour) suit le fuseau de la session : en UTC, comme
+	// les heures « au mur » de Lattis (values.go), le temps de la
+	// transaction.
+	if _, err := w.tx.Exec(ctx, `SET LOCAL TIME ZONE 'UTC'`); err != nil {
+		return err
+	}
 	_, err := w.tx.Exec(ctx, `SELECT lattis.alter_column_type($1::uuid, $2::uuid, $3::uuid, $4)`, workbookID, tableID, columnID, typ)
 	return err
 }

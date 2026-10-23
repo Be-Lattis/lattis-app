@@ -395,7 +395,7 @@ func (e *Engine) revertStructure(ctx context.Context, srv workbook.Server, info 
 				lt, here := types[o.LocalID]
 				if known && o.LocalID != 0 && here {
 					sc.ID = o.LocalID
-					if workbook.RemoteType(lt) != c.Type {
+					if !workbook.SameType(lt, c.Type) {
 						sc.Type = workbook.LocalType(c.Type)
 					}
 				} else {
@@ -553,6 +553,15 @@ func pendingStructure(ctx context.Context, q interface {
 	return out, rs.Err()
 }
 
+// changeType : type du serveur d'une colonne ajoutée ou convertie ; une
+// colonne Date avec des heures est en date et heure (oplog.Change.Time).
+func changeType(ch oplog.Change) string {
+	if ch.Time && grid.Type(ch.Type) == grid.Date {
+		return "datetime"
+	}
+	return workbook.RemoteType(grid.Type(ch.Type))
+}
+
 // structureOne fait un changement sur le serveur et le reporte dans la
 // correspondance t.
 func (e *Engine) structureOne(ctx context.Context, w workbook.Writer, wb string, t *rtable, ch oplog.Change) error {
@@ -586,8 +595,11 @@ func (e *Engine) structureOne(ctx context.Context, w workbook.Writer, wb string,
 		(*cols)[i].Name = ch.Name
 	case oplog.RetypeColumn:
 		i, ok := t.column(ch.Column)
-		typ := workbook.RemoteType(grid.Type(ch.Type))
-		if !ok || (*cols)[i].Type == typ {
+		typ := changeType(ch)
+		// Une colonne publiée en datetime reste datetime pour une colonne
+		// Date sans heure (values.go) ; date passe en datetime quand des
+		// heures arrivent avec la conversion.
+		if !ok || (*cols)[i].Type == typ || typ == "date" && workbook.SameType(grid.Date, (*cols)[i].Type) {
 			return nil
 		}
 		if err := w.AlterColumnType(ctx, wb, tid, (*cols)[i].ID, typ); err != nil {
@@ -607,7 +619,7 @@ func (e *Engine) structureOne(ctx context.Context, w workbook.Writer, wb string,
 				break
 			}
 		}
-		typ := workbook.RemoteType(grid.Type(ch.Type))
+		typ := changeType(ch)
 		id, err := w.InsertColumn(ctx, wb, tid, ch.Name, typ, at+1, ch.Column)
 		if errors.Is(err, workbook.ErrUnsupported) {
 			// Serveur sans insert_column (migration 0026) : add_column ne

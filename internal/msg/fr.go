@@ -1194,6 +1194,7 @@ var fr = map[ID]string{
 	"workbook.offline":               "Hors ligne, lecture seule",
 	"workbook.onlyComputedColumns":   "Le tableau « {table} » n'a que des colonnes calculées : il lui faut au moins une colonne saisie pour être partagé",
 	"workbook.outOfType":             "« {value} » n'est pas {type} : la colonne « {column} » du tableau partagé « {table} » a un type figé",
+	"workbook.timeInDate":            "« {value} » porte une heure : la colonne « {column} » du tableau partagé « {table} » est publiée en dates sans heure",
 	"workbook.readOnly":              "Classeur publié en lecture seule",
 	"workbook.reader":                "Tableau en lecture seule : vos droits ne permettent pas de le modifier",
 	"workbook.receivedTableError":    "tableau « {table} » reçu du serveur : {err}",
@@ -1414,7 +1415,6 @@ var fr = map[ID]string{
 
 	// check
 	"check.columnProblem":  "colonne « {column} » : {problem}",
-	"check.dateWithTime":   "{n} date(s) avec heure : le serveur ne garde que des dates, passez la colonne en texte pour publier",
 	"check.invalidEntries": "« {table} » : {n} saisie(s) invalide(s) à corriger, ou colonne à accepter comme texte",
 	"check.nameEmpty":      "nom vide",
 	"check.nameNul":        "caractère nul dans le nom",

@@ -484,8 +484,8 @@ func TestChecksBeforePublishing(t *testing.T) {
 	}
 }
 
-// Une colonne Date avec des heures : le serveur garde des dates sans heure,
-// la publication est bloquée avec un message clair (pas d'heure perdue).
+// Une colonne Date avec des heures : publiée en date et heure (datetime),
+// sans blocage ; une colonne de dates seules reste en date.
 func TestCheckDateWithTime(t *testing.T) {
 	useRoot(t)
 	ctx := context.Background()
@@ -494,16 +494,47 @@ func TestCheckDateWithTime(t *testing.T) {
 	tbl := tableID(t, d, tableAt(t, d, 0, 0))
 	check, err := workbook.Inspect(ctx, d.DB())
 	must(t, err)
-	b := check.Blocking([]int64{tbl})
-	if len(b) != 1 || !strings.Contains(b[0], "1 date(s) avec heure") {
-		t.Fatalf("blocages : %q", b)
+	if b := check.Blocking([]int64{tbl}); len(b) != 0 || check.Tables[0].Columns[0].Remote != "datetime" {
+		t.Fatalf("blocages : %q, colonnes %+v", b, check.Tables[0].Columns)
 	}
 	_, err = d.SetCell(ctx, 1, 1, 0, "23/10/2026")
 	must(t, err)
 	check, err = workbook.Inspect(ctx, d.DB())
 	must(t, err)
-	if b := check.Blocking([]int64{tbl}); len(b) != 0 {
-		t.Fatalf("blocages : %q", b)
+	if b := check.Blocking([]int64{tbl}); len(b) != 0 || check.Tables[0].Columns[0].Remote != "date" {
+		t.Fatalf("blocages : %q, colonnes %+v", b, check.Tables[0].Columns)
+	}
+}
+
+// Valeurs d'une colonne datetime : heure au mur en UTC, minuit relu sans
+// heure, décalage d'une lecture JSON ramené en UTC.
+func TestDateTimeValues(t *testing.T) {
+	v, err := workbook.ToRemote("datetime", "2026-10-23 14:30")
+	must(t, err)
+	if d, ok := v.(time.Time); !ok || !d.Equal(time.Date(2026, 10, 23, 14, 30, 0, 0, time.UTC)) {
+		t.Fatalf("ToRemote : %v", v)
+	}
+	for in, want := range map[any]string{
+		time.Date(2026, 10, 23, 14, 30, 0, 0, time.UTC):                        "2026-10-23 14:30",
+		time.Date(2026, 10, 23, 16, 30, 5, 0, time.FixedZone("Paris", 2*3600)): "2026-10-23 14:30:05",
+		time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC):                          "2026-10-23",
+		"2026-10-23T14:30:00Z":                                                 "2026-10-23 14:30",
+		"2026-10-23 14:30:00+00":                                               "2026-10-23 14:30",
+	} {
+		if got := workbook.FromRemote("datetime", in); got != want {
+			t.Errorf("FromRemote(%v) : %v, attendu %s", in, got, want)
+		}
+	}
+	if got := workbook.FromJSON("datetime", "2026-10-23T10:30:00-04:00"); got != "2026-10-23 14:30" {
+		t.Errorf("FromJSON : %v", got)
+	}
+	a, _ := workbook.ToRemote("datetime", "2026-10-23")
+	b, _ := workbook.ToRemote("datetime", "2026-10-23 00:00")
+	if !workbook.SameRemote(a, b) {
+		t.Error("minuit et date seule")
+	}
+	if workbook.LocalType("datetime") != grid.Date || !workbook.SameType(grid.Date, "datetime") || workbook.SameType(grid.Text, "datetime") {
+		t.Error("types")
 	}
 }
 
