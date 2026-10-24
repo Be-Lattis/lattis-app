@@ -86,7 +86,7 @@ Le détail est dans [docs/mesures/performances-1M.md](docs/mesures/performances-
 
 ## Essayer
 
-Téléchargez l'installeur de votre système (Windows, macOS, Linux) dans les [versions publiées](https://github.com/Be-Lattis/lattis-app/releases). Depuis les sources :
+Téléchargez l'installeur de votre système (Windows, macOS, Linux) dans les [versions publiées](https://github.com/Be-Lattis/lattis-app/releases), ou essayez-le sans rien installer dans la [démo en ligne](https://main.lattis.be/demo/). Depuis les sources :
 
 ```bash
 go run . --demo med      # vitrine : document, carte, jauge, TCD en arborescence, requête SQL, scripts
