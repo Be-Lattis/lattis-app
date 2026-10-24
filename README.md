@@ -2,9 +2,9 @@
 
 **Le tableur que vous connaissez, avec une vraie base de données dessous.**
 
-Lattis a la souplesse d'Excel : une grille infinie, des formules en français, un ruban familier, Ctrl+C / Ctrl+V. Chaque tableau que vous tapez est en réalité une table **SQLite** typée, indexée et interrogeable en SQL. Résultat : un million de lignes ne fait plus peur, les données restent propres, et vous pouvez passer à tout moment de la souris au SQL, ou au script.
+Lattis a la souplesse d'un tableur : une grille infinie, des formules en français, un ruban familier, Ctrl+C / Ctrl+V. Chaque tableau que vous tapez est en réalité une table **SQLite** typée, indexée et interrogeable en SQL. Résultat : un million de lignes ne fait plus peur, les données restent propres, et vous pouvez passer à tout moment de la souris au SQL, ou au script.
 
-Application de bureau native (Go + Wails), **local-first** : vos classeurs sont de simples fichiers `.lattis`, sans compte ni cloud ni abonnement.
+Application de bureau native (Go + Wails), **local-first** : vos classeurs sont de simples fichiers `.lattis`, utilisables sans compte ni abonnement. Pour travailler à plusieurs, un Serveur Lattis de votre organisation les partage.
 
 ![Une feuille Lattis : deux tableaux reliés par une formule NB.SI](docs/captures/grille-formule.png)
 
@@ -18,15 +18,15 @@ Application de bureau native (Go + Wails), **local-first** : vos classeurs sont 
 | `RECHERCHEV` fragile, décalée dès qu'on insère une colonne | `REFERENCE(Produits[Prix]; [Code])` : une jointure par **nom de colonne**, qui ne casse pas |
 | Le fichier rame au-delà de 100 000 lignes | Défilement instantané sur **1 million de lignes** et plus : seules les lignes visibles sont lues |
 | Les données sont prisonnières de la feuille | **Onglet SQL** intégré : interrogez vos tableaux, croisés dynamiques compris, comme des tables |
-| Macros VBA risquées | **Scripts Lua** en bac à sable, impossibles à bloquer : une boucle infinie est interrompue |
+| Macros risquées | **Scripts Lua** en bac à sable, impossibles à bloquer : une boucle infinie est interrompue |
 
 ## Ce que vous pouvez faire
 
-### Saisir comme dans Excel, sans rien déclarer
+### Saisir comme dans un tableur, sans rien déclarer
 
-Tapez quelques lignes n'importe où : Lattis reconnaît l'îlot de données, met l'en-tête en valeur, devine le type de chaque colonne et crée la table correspondante. Collez depuis Excel, glissez un tableau à côté d'un autre pour les fusionner, annulez tout avec Ctrl+Z.
+Tapez quelques lignes n'importe où : Lattis reconnaît l'îlot de données, met l'en-tête en valeur, devine le type de chaque colonne et crée la table correspondante. Collez depuis un autre tableur, glissez un tableau à côté d'un autre pour les fusionner, annulez tout avec Ctrl+Z.
 
-Les formules parlent français (`SOMME.SI`, `NB.SI`, `SI`, `ARRONDI`…) et désignent les colonnes par leur nom : `=[Quantité]*[Prix unitaire]` s'applique à toute la colonne, comme un tableau structuré d'Excel. Les références sont colorées pendant la saisie et se placent d'un clic, et la colonne calculée concernée est mise en évidence.
+Les formules parlent français (`SOMME.SI`, `NB.SI`, `SI`, `ARRONDI`…) et désignent les colonnes par leur nom : `=[Quantité]*[Prix unitaire]` s'applique à toute la colonne. Les références sont colorées pendant la saisie et se placent d'un clic, et la colonne calculée concernée est mise en évidence.
 
 ### Analyser : tableaux croisés et graphiques
 
@@ -34,7 +34,7 @@ Les formules parlent français (`SOMME.SI`, `NB.SI`, `SI`, `ARRONDI`…) et dés
 
 - **Tableaux croisés dynamiques** calculés par SQLite (`GROUP BY`) : lignes, colonnes, plusieurs valeurs, pourcentages, filtres de rapport et tri directement dans la grille.
 - **Graphiques** (barres, colonnes, courbes, aires, secteurs, anneaux, nuages de points) branchés sur un tableau ou un TCD, et mis à jour avec lui.
-- Mise en forme conditionnelle, filtres et tris comme dans Excel, suppression des doublons, validation des données.
+- Mise en forme conditionnelle, filtres et tris, suppression des doublons, validation des données.
 
 ### Interroger en SQL
 
@@ -53,7 +53,7 @@ L'onglet **Script** offre un vrai éditeur : coloration syntaxique, linter en di
 ![L'éditeur de requêtes : étapes appliquées, aperçu, menus de colonnes](docs/captures/power-query.png)
 
 L'éditeur de requêtes importe des données depuis :
-- des fichiers CSV, Excel, JSON ou Parquet ;
+- des fichiers CSV, XLSX, JSON ou Parquet ;
 - une base SQLite, PostgreSQL, MySQL ou SQL Server ;
 - le web ;
 - un autre tableau du classeur.
@@ -64,7 +64,7 @@ Chaque transformation devient une étape rejouable : filtrer, trier, choisir des
 
 - **Import / export** `.xlsx` et `.csv`, export `.ods` (formules traduites, mise en forme, tableaux), impression.
 - **Serveur MCP** intégré : laissez un assistant comme Claude lire et modifier le classeur ouvert, en local et avec un jeton. → [docs/mcp.md](docs/mcp.md)
-- **Fichier `.lattis`** : une seule archive (base SQLite + manifeste), facile à envoyer par e-mail ou à archiver, avec enregistrement atomique et récupération après incident. L'historique d'annulation et les données supprimées n'y sont jamais enregistrés. Ouvert depuis un dossier partagé, il est signalé aux autres postes (`~$nom.lattis`, comme Excel), et un fichier modifié ailleurs n'est pas écrasé sans question. Le format est décrit dans [docs/format-lattis.md](docs/format-lattis.md) : ce qu'un autre outil peut y lire ou y écrire.
+- **Fichier `.lattis`** : une seule archive (base SQLite + manifeste), facile à envoyer par e-mail ou à archiver, avec enregistrement atomique et récupération après incident. L'historique d'annulation et les données supprimées n'y sont jamais enregistrés. Ouvert depuis un dossier partagé, il est signalé aux autres postes (`~$nom.lattis`), et un fichier modifié ailleurs n'est pas écrasé sans question. Le format est décrit dans [docs/format-lattis.md](docs/format-lattis.md) : ce qu'un autre outil peut y lire ou y écrire.
 - **Commune d'un point GPS**, hors ligne : `=COMMUNE([Latitude]; [Longitude])` donne la commune française (ou son code INSEE, son code postal, son département, sa région) à partir des contours officiels embarqués, même sur 100 000 lignes. Contient des données IGN et INSEE, Licence Ouverte / Etalab 2.0. → [docs/fonctions.md](docs/fonctions.md#géographie)
 - Protection de feuilles et de classeur, notes façon post-it, cellules fusionnées, volets figés, zoom, animations de sélection.
 
@@ -86,8 +86,10 @@ Le détail est dans [docs/mesures/performances-1M.md](docs/mesures/performances-
 
 ## Essayer
 
+Téléchargez l'installeur de votre système (Windows, macOS, Linux) dans les [versions publiées](https://github.com/Be-Lattis/lattis-app/releases). Depuis les sources :
+
 ```bash
-go run . --demo med      # vitrine : document, carte, jauge, TCD en arborescence, requête SQL, scripts, page HTML
+go run . --demo med      # vitrine : document, carte, jauge, TCD en arborescence, requête SQL, scripts
 go run . --demo refs     # 5 tableaux reliés par des REFERENCE, SOMME.SI, NB.SI
 go run . --demo 1Mx10    # un million de lignes
 go run . --demo docs/demo/exemple.yaml   # classeur décrit par un fichier YAML (docs/demo.md)
