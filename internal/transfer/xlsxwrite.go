@@ -112,6 +112,17 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 			fmt.Fprintf(&types, `<Override PartName="/xl/tables/table%d.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/>`, t.id)
 		}
 	}
+	// Graphiques : numérotés dans tout le classeur (xlsxchartwrite.go).
+	var charts []string
+	for i := range sheets {
+		if e := sheets[i].extra; e != nil {
+			for k := range e.charts {
+				charts = append(charts, e.charts[k].xml)
+				e.charts[k].id = len(charts)
+				fmt.Fprintf(&types, `<Override PartName="/xl/charts/chart%d.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>`, len(charts))
+			}
+		}
+	}
 	// Dessins (images, formes) : une partie par feuille qui en a.
 	md := &xlsxMedia{names: map[string]string{}, exts: map[string]string{}}
 	drawings := make([][2]string, len(sheets))
@@ -205,7 +216,13 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 			return err
 		}
 	}
+	for k, c := range charts {
+		if err := file(fmt.Sprintf("xl/charts/chart%d.xml", k+1), c); err != nil {
+			return err
+		}
+	}
 	for _, mf := range md.files {
+
 		w, err := zw.CreateHeader(&zip.FileHeader{Name: "xl/media/" + mf.name, Method: zip.Store})
 		if err != nil {
 			return err

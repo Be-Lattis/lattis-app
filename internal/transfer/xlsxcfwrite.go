@@ -21,9 +21,10 @@ import (
 
 // sheetExtras : ce qu'une feuille exporte en plus de ses cellules.
 type sheetExtras struct {
-	cf    []*cfOut
-	dv    []dvOut
-	notes []noteOut
+	cf     []*cfOut
+	dv     []dvOut
+	notes  []noteOut
+	charts []chartOut // xlsxchartwrite.go
 }
 
 type cfOut struct {
@@ -155,7 +156,9 @@ func collectExtras(sh *xsheet, l canvas.Layout, b *book, fm *fmts) *sheetExtras 
 		e.dv = append(e.dv, *o)
 	}
 	sh.rep.Rules, sh.rep.Lists, sh.rep.Notes = failed, failedDV, 0
+	e.collectCharts(sh, l, b)
 	return e
+
 }
 
 // mergeRects réunit les cellules voisines d'une même ligne, puis les

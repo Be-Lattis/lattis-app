@@ -65,6 +65,10 @@ type xlsxFile struct {
 	// imp : ce qui a été repris (graphiques, TCD, notes) et ce qui ne l'a
 	// pas été, par feuille (xlsxdecorate.go).
 	imp importCounts
+	// rv : îlots du classeur (sources des graphiques et des TCD).
+	rv *resolver
+	// pivotDefs : tableaux croisés du classeur (xlsxpivot.go).
+	pivotDefs []*xPivot
 }
 
 type dateKind uint8

@@ -465,7 +465,7 @@ var de = map[ID]string{
 	"import.cellFormulaDropped":  "{sheet}, Zeile {row}, Spalte {column}: {err}; Wert ohne die Formel {formula} importiert",
 	"import.formulaDropped":      "{table}[{column}]: {err}; Werte ohne die Formel {formula} importiert",
 	"import.rulesDropped": "Tabellenblatt „{sheet}“: {n, plural, one {1 unlesbare Regel der bedingten Formatierung nicht importiert} other {# unlesbare Regeln der bedingten Formatierung nicht importiert}}",
-	"import.pivotDropped": "Tabellenblatt „{sheet}“: PivotTable als Werte importiert ({err})",
+	"import.pivotDropped": "Tabellenblatt „{sheet}“: PivotTable nicht importiert ({err})",
 	"import.chartDropped": "Tabellenblatt „{sheet}“: Diagramm nicht importiert ({err})",
 	"import.inconsistentColumns": "Import der Tabelle {table}: inkonsistente Spalten",
 	"import.invalidTableName":    "Import: {table} ist kein gültiger Tabellenname",

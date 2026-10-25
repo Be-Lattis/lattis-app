@@ -466,7 +466,7 @@ var zh = map[ID]string{
 	"import.cellFormulaDropped":  "{sheet}，第 {row} 行，列 {column}：{err}；已导入值，但未导入公式 {formula}",
 	"import.formulaDropped":      "{table}[{column}]：{err}；已导入值，但未导入公式 {formula}",
 	"import.rulesDropped": "工作表“{sheet}”：{n, plural, other {# 条无法读取的条件格式规则未导入}}",
-	"import.pivotDropped": "工作表“{sheet}”：数据透视表已作为值导入（{err}）",
+	"import.pivotDropped": "工作表“{sheet}”：数据透视表未导入（{err}）",
 	"import.chartDropped": "工作表“{sheet}”：图表未导入（{err}）",
 	"import.inconsistentColumns": "导入表格 {table}：列不一致",
 	"import.invalidTableName":    "导入：{table} 不是有效的表格名称",

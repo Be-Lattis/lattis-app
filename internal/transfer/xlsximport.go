@@ -41,6 +41,7 @@ func ImportXLSX(ctx context.Context, m *canvas.Model, path string) (canvas.Impor
 		return canvas.ImportResult{}, err
 	}
 	x.pics = x.readDrawings(sheets)
+	x.readCharts(sheets)
 	visibleSheet(sheets)
 	res, err := m.Import(ctx, "Importer "+filepath.Base(path), sheets)
 	res.Warnings = slices.Concat(x.lost(), warnings, res.Warnings)
@@ -151,9 +152,13 @@ type islandState struct {
 // relues au moment de l'import.
 func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.ImportSheet, []string, error) {
 	rv := &resolver{bySheet: map[string][]*island{}}
+	x.rv = rv
 	states := make([][]*islandState, len(x.sheets))
 	builds := make([]*sheetBuild, len(x.sheets))
-	for si, sh := range x.sheets {
+	pass1 := func(si int) error {
+		sh := x.sheets[si]
+		states[si] = nil
+		delete(rv.bySheet, strings.ToLower(sh.name))
 		b := newIslands()
 		err := x.scan(ctx, sh, func(c *rawCell) error {
 			if !c.empty(x.sst) && !sh.skipped(c.row, c.col) {
@@ -162,7 +167,7 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 			return nil
 		})
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
 		rects := b.rects()
 		maxCol := 0
@@ -190,7 +195,22 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 			states[si] = append(states[si], st)
 			rv.bySheet[strings.ToLower(sh.name)] = append(rv.bySheet[strings.ToLower(sh.name)], is)
 		}
+		return nil
 	}
+	for si := range x.sheets {
+		if err := pass1(si); err != nil {
+			return nil, nil, err
+		}
+	}
+	// Tableaux croisés dont la source est un tableau du classeur : leur zone
+	// n'est pas lue comme des cellules (xlsxpivot.go) ; leurs feuilles sont
+	// relues.
+	for _, si := range x.placePivots() {
+		if err := pass1(si); err != nil {
+			return nil, nil, err
+		}
+	}
+
 
 	for si, sh := range x.sheets {
 		shared := map[string]struct {
@@ -304,6 +324,7 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 		out[si].Links = x.sheetLinks(sh)
 		warnings = append(warnings, x.decorate(sh, builds[si], rv)...)
 		out[si].Format = builds[si].f
+		out[si].Pivots = x.sheetPivots(si)
 		for _, st := range states[si] {
 			is := st.is
 			if !is.table() {

@@ -79,7 +79,7 @@ func (md *xlsxMedia) add(hash string, p xpic) string {
 // drawingXML écrit la partie de dessin d'une feuille et ses relations ;
 // "" si la feuille n'a pas d'objet exportable.
 func drawingXML(s *xsheet, md *xlsxMedia) (string, string) {
-	if len(s.objects) == 0 {
+	if len(s.objects) == 0 && (s.extra == nil || len(s.extra.charts) == 0) {
 		return "", ""
 	}
 	var b, rels strings.Builder
@@ -122,10 +122,12 @@ func drawingXML(s *xsheet, md *xlsxMedia) (string, string) {
 		}
 		b.WriteString(`<xdr:clientData/></xdr:oneCellAnchor>`)
 	}
+	n, _ = chartFrames(&b, &rels, s, n, rid) // graphiques (xlsxchartwrite.go)
 	if n == 0 {
 		return "", ""
 	}
 	b.WriteString(`</xdr:wsDr>`)
+
 	rels.WriteString(`</Relationships>`)
 	return b.String(), rels.String()
 }

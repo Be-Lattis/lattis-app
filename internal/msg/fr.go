@@ -466,7 +466,7 @@ var fr = map[ID]string{
 	"import.cellFormulaDropped":  "{sheet}, ligne {row}, colonne {column} : {err} ; valeur importée sans la formule {formula}",
 	"import.formulaDropped":      "{table}[{column}] : {err} ; valeurs importées sans la formule {formula}",
 	"import.rulesDropped": "Feuille « {sheet} » : {n, plural, one {1 règle de mise en forme conditionnelle illisible non importée} other {# règles de mise en forme conditionnelle illisibles non importées}}",
-	"import.pivotDropped": "Feuille « {sheet} » : tableau croisé importé en valeurs ({err})",
+	"import.pivotDropped": "Feuille « {sheet} » : tableau croisé non importé ({err})",
 	"import.chartDropped": "Feuille « {sheet} » : graphique non importé ({err})",
 	"import.inconsistentColumns": "import du tableau {table} : colonnes incohérentes",
 	"import.invalidTableName":    "import : {table} n'est pas un nom de tableau valable",
