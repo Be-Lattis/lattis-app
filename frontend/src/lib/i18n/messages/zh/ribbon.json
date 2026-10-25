@@ -63,7 +63,7 @@
 		"reconnect": "重试连接",
 		"detach": "与服务器分离…",
 		"remove": "从服务器移除…",
-		"import": "导入（CSV、Excel）…",
+		"import": "导入（CSV、.xlsx、.ods）…",
 		"export": "导出",
 		"exportTable": "表格导出为 CSV…",
 		"exportSheet": "整个工作表导出为 CSV…",

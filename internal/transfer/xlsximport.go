@@ -145,8 +145,8 @@ type freeCell struct {
 }
 
 type islandState struct {
-	tb    *tableBuild // mise en forme (tableau)
-	is    *island
+	tb *tableBuild // mise en forme (tableau)
+	is *island
 
 	cols  []colState
 	cells []freeCell
@@ -215,7 +215,6 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 			return nil, nil, err
 		}
 	}
-
 
 	for si, sh := range x.sheets {
 		shared := map[string]struct {

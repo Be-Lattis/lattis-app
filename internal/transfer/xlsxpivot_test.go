@@ -26,7 +26,7 @@ func TestXLSXImportPivot(t *testing.T) {
 		row(6, is("A6", "Total général"), cn("B6", "15"), cn("C6", "30")) +
 		`</sheetData>`
 	parts := map[string]string{
-		"xl/worksheets/_rels/sheet2.xml.rels": `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="p1" Type="` + relNS + `pivotTable" Target="../pivotTables/pivotTable1.xml"/></Relationships>`,
+		"xl/worksheets/_rels/sheet2.xml.rels":       `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="p1" Type="` + relNS + `pivotTable" Target="../pivotTables/pivotTable1.xml"/></Relationships>`,
 		"xl/pivotTables/_rels/pivotTable1.xml.rels": `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="c1" Type="` + relNS + `pivotCacheDefinition" Target="../pivotCache/pivotCacheDefinition1.xml"/></Relationships>`,
 		"xl/pivotTables/pivotTable1.xml": `<pivotTableDefinition ` + xmlNS + ` name="TCD1" cacheId="1"><location ref="A3:C6" firstHeaderRow="0" firstDataRow="1" firstDataCol="1" rowPageCount="1" colPageCount="1"/>` +
 			`<pivotFields count="4"><pivotField axis="axisRow"><items count="3"><item x="0"/><item x="1"/><item t="default"/></items></pivotField><pivotField/><pivotField dataField="1"/>` +

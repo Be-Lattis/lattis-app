@@ -58,8 +58,8 @@ type xlsxFile struct {
 	sst      []string
 	dates    []dateKind // par style de cellule (attribut s)
 	date1904 bool
-	mu    sync.Mutex
-	links map[string][]xlsxLink // par feuille lue jusqu'au bout (xlsxlinks.go)
+	mu       sync.Mutex
+	links    map[string][]xlsxLink // par feuille lue jusqu'au bout (xlsxlinks.go)
 
 	// pics : images lues dans les parties de dessin (xlsxdrawing.go).
 	pics int

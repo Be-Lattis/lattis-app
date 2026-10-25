@@ -63,7 +63,7 @@
 		"reconnect": "Reintentar la conexión",
 		"detach": "Desvincular del servidor…",
 		"remove": "Retirar del servidor…",
-		"import": "Importar (CSV, Excel)…",
+		"import": "Importar (CSV, .xlsx, .ods)…",
 		"export": "Exportar",
 		"exportTable": "La tabla en CSV…",
 		"exportSheet": "Toda la hoja en CSV…",
