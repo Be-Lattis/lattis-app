@@ -106,7 +106,7 @@ func TestParseErrors(t *testing.T) {
 		}
 	}
 	// Un nom de fonction inconnu reste dans l'AST (affiché #NOM? à l'évaluation).
-	if _, err := Parse(`=DECALER(1;2)`, FR); err != nil {
+	if _, err := Parse(`=INCONNUE(1;2)`, FR); err != nil {
 		t.Errorf("fonction inconnue refusée à l'analyse : %v", err)
 	}
 }
@@ -199,7 +199,7 @@ func TestKeyTargetsAndSuggestion(t *testing.T) {
 	if got := KeyTargets(n); !slices.Equal(got, []string{"Clients", "Baremes", "Produits"}) {
 		t.Fatalf("KeyTargets = %v", got)
 	}
-	if Suggestion("decaler") == "" || Suggestion("SOMME") != "" {
+	if Suggestion("lambda") == "" || Suggestion("SOMME") != "" || Suggestion("DECALER") != "" {
 		t.Fatal("suggestions")
 	}
 }
@@ -218,7 +218,11 @@ func TestCatalogueNames(t *testing.T) {
 		if (f.kind == scalar) != (f.impl != nil) && f.EN != "RANDBETWEEN" {
 			t.Errorf("%s : implémentation incohérente avec son genre", f.EN)
 		}
-		if _, ok := scans[f.EN]; ok != (f.kind == scan) && f.EN != "REFERENCE.APPROX" {
+		// REFERENCE.APPROCHEE, DROITEREG et les fonctions de base de données
+		// passent par un scanner sans être des parcours ordinaires.
+		_, internal := dbFns[f.EN]
+		internal = internal || f.EN == "REFERENCE.APPROX" || f.EN == "LINEST" || f.EN == "LOGEST"
+		if _, ok := scans[f.EN]; ok != (f.kind == scan) && !internal {
 			t.Errorf("%s : déclaré en parcours sans scanner, ou l'inverse", f.EN)
 		}
 	}

@@ -266,6 +266,106 @@ var funcs = []funcDef{
 	{"PPMT", "PRINCPER", 4, 6, scalar, fnIpmtPpmt(true)},
 	{"NPV", "VAN", 2, -1, aggregate, nil},
 	{"IRR", "TRI", 1, 2, scan, nil},
+	{"XNPV", "VAN.PAIEMENTS", 3, 3, scan, nil},
+	{"XIRR", "TRI.PAIEMENTS", 2, 3, scan, nil},
+	{"EFFECT", "TAUX.EFFECTIF", 2, 2, scalar, fnEffect},
+	{"NOMINAL", "TAUX.NOMINAL", 2, 2, scalar, fnNominal},
+	// Amortissements et titres (funcs_bonds.go)
+	{"SLN", "AMORLIN", 3, 3, scalar, fnSln},
+	{"SYD", "SYD", 4, 4, scalar, fnSyd},
+	{"DB", "DB", 4, 5, scalar, fnDb},
+	{"DDB", "DDB", 4, 5, scalar, fnDdb},
+	{"VDB", "VDB", 5, 7, scalar, fnVdb},
+	{"AMORLINC", "AMORLINC", 6, 7, scalar, fnAmorlinc},
+	{"AMORDEGRC", "AMORDEGRC", 6, 7, scalar, fnAmordegrc},
+	{"PRICE", "PRIX.TITRE", 6, 7, scalar, fnPrice},
+	{"YIELD", "RENDEMENT.TITRE", 6, 7, scalar, fnYield},
+	{"ACCRINT", "INTERET.ACC", 6, 8, scalar, fnAccrint},
+	{"COUPNUM", "NB.COUPONS", 3, 4, scalar, fnCoupon("NUM")},
+	{"COUPPCD", "DATE.COUPON.PREC", 3, 4, scalar, fnCoupon("PCD")},
+	{"COUPNCD", "DATE.COUPON.SUIV", 3, 4, scalar, fnCoupon("NCD")},
+	{"COUPDAYS", "NB.JOURS.COUPONS", 3, 4, scalar, fnCoupon("DAYS")},
+	{"COUPDAYBS", "NB.JOURS.COUPON.PREC", 3, 4, scalar, fnCoupon("DAYBS")},
+	{"COUPDAYSNC", "NB.JOURS.COUPON.SUIV", 3, 4, scalar, fnCoupon("DAYSNC")},
+
+	// Statistiques : lois (funcs_distrib.go), puis parcours de colonnes
+	// (funcs_stats2.go)
+	{"NORM.DIST", "LOI.NORMALE.N", 4, 4, scalar, fnNormDist},
+	{"NORM.INV", "LOI.NORMALE.INVERSE.N", 3, 3, scalar, fnNormInv},
+	{"NORM.S.DIST", "LOI.NORMALE.STANDARD.N", 2, 2, scalar, fnNormSDist},
+	{"NORM.S.INV", "LOI.NORMALE.STANDARD.INVERSE.N", 1, 1, scalar, fnNormSInv},
+	{"NORMSDIST", "LOI.NORMALE.STANDARD", 1, 1, scalar, fnNormSDistLegacy},
+	{"LOGNORM.DIST", "LOI.LOGNORMALE.N", 4, 4, scalar, fnLogNormDist},
+	{"LOGNORM.INV", "LOI.LOGNORMALE.INVERSE.N", 3, 3, scalar, fnLogNormInv},
+	{"T.DIST", "LOI.STUDENT.N", 3, 3, scalar, fnTDist},
+	{"T.DIST.2T", "LOI.STUDENT.BILATERALE", 2, 2, scalar, fnTDistTail(true)},
+	{"T.DIST.RT", "LOI.STUDENT.DROITE", 2, 2, scalar, fnTDistTail(false)},
+	{"T.INV", "LOI.STUDENT.INVERSE.N", 2, 2, scalar, fnTInv(false)},
+	{"T.INV.2T", "LOI.STUDENT.INVERSE.BILATERALE", 2, 2, scalar, fnTInv(true)},
+	{"CHISQ.DIST", "LOI.KHIDEUX.N", 3, 3, scalar, fnChiDist},
+	{"CHISQ.DIST.RT", "LOI.KHIDEUX.DROITE", 2, 2, scalar, fnChiDistRT},
+	{"CHISQ.INV", "LOI.KHIDEUX.INVERSE", 2, 2, scalar, fnChiInv(false)},
+	{"CHISQ.INV.RT", "LOI.KHIDEUX.INVERSE.DROITE", 2, 2, scalar, fnChiInv(true)},
+	{"F.DIST", "LOI.F.N", 4, 4, scalar, fnFDist},
+	{"F.DIST.RT", "LOI.F.DROITE", 3, 3, scalar, fnFDistRT},
+	{"F.INV", "INVERSE.LOI.F.N", 3, 3, scalar, fnFInv(false)},
+	{"F.INV.RT", "INVERSE.LOI.F.DROITE", 3, 3, scalar, fnFInv(true)},
+	{"BINOM.DIST", "LOI.BINOMIALE.N", 4, 4, scalar, fnBinomDist},
+	{"BINOM.INV", "LOI.BINOMIALE.INVERSE", 3, 3, scalar, fnBinomInv},
+	{"NEGBINOM.DIST", "LOI.BINOMIALE.NEG.N", 4, 4, scalar, fnNegBinomDist},
+	{"HYPGEOM.DIST", "LOI.HYPERGEOMETRIQUE.N", 5, 5, scalar, fnHypGeomDist},
+	{"POISSON.DIST", "LOI.POISSON.N", 3, 3, scalar, fnPoissonDist},
+	{"EXPON.DIST", "LOI.EXPONENTIELLE.N", 3, 3, scalar, fnExponDist},
+	{"GAMMA.DIST", "LOI.GAMMA.N", 4, 4, scalar, fnGammaDist},
+	{"GAMMA.INV", "LOI.GAMMA.INVERSE.N", 3, 3, scalar, fnGammaInv},
+	{"GAMMALN", "LNGAMMA", 1, 1, scalar, fnGammaLn},
+	{"GAMMA", "GAMMA", 1, 1, scalar, fnGamma},
+	{"BETA.DIST", "LOI.BETA.N", 4, 6, scalar, fnBetaDist},
+	{"BETA.INV", "BETA.INVERSE.N", 3, 5, scalar, fnBetaInv},
+	{"WEIBULL.DIST", "LOI.WEIBULL.N", 4, 4, scalar, fnWeibullDist},
+	{"CONFIDENCE.NORM", "INTERVALLE.CONFIANCE.NORMAL", 3, 3, scalar, fnConfidence(false)},
+	{"CONFIDENCE.T", "INTERVALLE.CONFIANCE.STUDENT", 3, 3, scalar, fnConfidence(true)},
+	{"STANDARDIZE", "CENTREE.REDUITE", 3, 3, scalar, fnStandardize},
+	{"PHI", "PHI", 1, 1, scalar, fnPhi},
+	{"GAUSS", "GAUSS", 1, 1, scalar, fnGauss},
+	{"FISHER", "FISHER", 1, 1, scalar, fnFisher},
+	{"FISHERINV", "FISHER.INVERSE", 1, 1, scalar, fnFisherInv},
+	{"KURT", "KURTOSIS", 1, -1, aggregate, nil},
+	{"SKEW", "COEFFICIENT.ASYMETRIE", 1, -1, aggregate, nil},
+	{"SKEW.P", "COEFFICIENT.ASYMETRIE.P", 1, -1, aggregate, nil},
+	{"AVEDEV", "ECART.MOYEN", 1, -1, aggregate, nil},
+	{"DEVSQ", "SOMME.CARRES.ECARTS", 1, -1, aggregate, nil},
+	{"GEOMEAN", "MOYENNE.GEOMETRIQUE", 1, -1, aggregate, nil},
+	{"HARMEAN", "MOYENNE.HARMONIQUE", 1, -1, aggregate, nil},
+	{"COVARIANCE.S", "COVARIANCE.STANDARD", 2, 2, scan, nil},
+	{"COVARIANCE.P", "COVARIANCE.PEARSON", 2, 2, scan, nil},
+	{"RSQ", "COEFFICIENT.DETERMINATION", 2, 2, scan, nil},
+	{"STEYX", "ERREUR.TYPE.XY", 2, 2, scan, nil},
+	{"FORECAST.LINEAR", "PREVISION.LINEAIRE", 3, 3, scan, nil},
+	{"TREND", "TENDANCE", 3, 4, scan, nil},
+	{"GROWTH", "CROISSANCE", 3, 4, scan, nil},
+	{"LINEST", "DROITEREG", 2, 4, spill, nil},
+	{"LOGEST", "LOGREG", 2, 4, spill, nil},
+	{"T.TEST", "T.TEST", 4, 4, scan, nil},
+	{"F.TEST", "F.TEST", 2, 2, scan, nil},
+	{"Z.TEST", "Z.TEST", 2, 3, scan, nil},
+	{"CHISQ.TEST", "CHISQ.TEST", 2, 2, scan, nil},
+	{"RANK.AVG", "MOYENNE.RANG", 2, 3, scan, nil},
+	{"AGGREGATE", "AGREGAT", 3, -1, special, nil},
+
+	// Base de données : BDSOMME(base; champ; critères), voir funcs_refs.go
+	{"DSUM", "BDSOMME", 3, 3, special, nil},
+	{"DAVERAGE", "BDMOYENNE", 3, 3, special, nil},
+	{"DCOUNT", "BDNB", 3, 3, special, nil},
+	{"DCOUNTA", "BDNBVAL", 3, 3, special, nil},
+	{"DMAX", "BDMAX", 3, 3, special, nil},
+	{"DMIN", "BDMIN", 3, 3, special, nil},
+	{"DPRODUCT", "BDPRODUIT", 3, 3, special, nil},
+	{"DSTDEV", "BDECARTYPE", 3, 3, special, nil},
+	{"DSTDEVP", "BDECARTYPEP", 3, 3, special, nil},
+	{"DVAR", "BDVAR", 3, 3, special, nil},
+	{"DVARP", "BDVARP", 3, 3, special, nil},
+	{"DGET", "BDLIRE", 3, 3, special, nil},
 
 	// Calculs entre lignes, dans l'ordre du tableau
 	{"PREVIOUS", "PRECEDENT", 1, 2, special, nil},
@@ -286,6 +386,10 @@ var funcs = []funcDef{
 	{"COLUMN", "COLONNE", 0, 1, special, nil},
 	{"ROWS", "LIGNES", 1, 1, special, nil},
 	{"COLUMNS", "COLONNES", 1, 1, special, nil},
+	// Références calculées et informations (funcs_refs.go)
+	{"OFFSET", "DECALER", 3, 5, special, nil},
+	{"INDIRECT", "INDIRECT", 1, 2, special, nil},
+	{"CELL", "CELLULE", 2, 2, special, nil},
 
 	// Géographie (contours des communes embarqués, voir funcs_geo.go)
 	{"MUNICIPALITY", "COMMUNE", 2, 3, scalar, fnMunicipality},
@@ -301,6 +405,7 @@ var funcs = []funcDef{
 	{"QUERY", "REQUETE", 1, 1, spill, nil},
 	{"SEQUENCE", "SEQUENCE", 1, 4, spill, nil},
 	{"TEXTSPLIT", "FRACTIONNER.TEXTE", 2, 6, spill, nil},
+	{"TRANSPOSE", "TRANSPOSE", 1, 1, spill, nil},
 }
 
 // refused : fonctions d'Excel reconnues pour être refusées à la saisie avec
@@ -320,8 +425,27 @@ var funcIndex = func() map[string]funcDef {
 			}
 		}
 	}
+	for n, en := range aliases {
+		m[n] = m[en]
+	}
 	return m
 }()
+
+// aliases : anciens noms et synonymes du tableur, acceptés à la saisie dans
+// toutes les langues et lus comme la fonction qu'ils désignent, qui
+// s'affiche ensuite sous son nom (comme VAR.P mène à VAR.P.N) : EQUATION.RANG
+// est RANG, LOI.NORMALE est LOI.NORMALE.N, PEARSON est
+// COEFFICIENT.CORRELATION.
+var aliases = map[string]string{
+	"RANK.EQ": "RANK", "EQUATION.RANG": "RANK", "RANG.GLEICH": "RANK", "JERARQUIA.EQV": "RANK",
+	"PEARSON": "CORREL",
+	"COVAR":   "COVARIANCE.P", "COVARIANCE": "COVARIANCE.P", "KOVAR": "COVARIANCE.P",
+	"FORECAST": "FORECAST.LINEAR", "PREVISION": "FORECAST.LINEAR", "SCHÄTZER": "FORECAST.LINEAR", "PRONOSTICO": "FORECAST.LINEAR",
+	"NORMDIST": "NORM.DIST", "LOI.NORMALE": "NORM.DIST", "NORMVERT": "NORM.DIST", "DISTR.NORM": "NORM.DIST",
+	"NORMINV": "NORM.INV", "LOI.NORMALE.INVERSE": "NORM.INV", "DISTR.NORM.INV": "NORM.INV",
+	"NORMSINV": "NORM.S.INV", "LOI.NORMALE.STANDARD.INVERSE": "NORM.S.INV", "STANDNORMINV": "NORM.S.INV", "DISTR.NORM.ESTAND.INV": "NORM.S.INV",
+	"GAMMALN.PRECISE": "GAMMALN", "LNGAMMA.PRECIS": "GAMMALN", "GAMMALN.GENAU": "GAMMALN", "GAMMA.LN.EXACTO": "GAMMALN",
+}
 
 // LocalName donne le nom d'une fonction (dans n'importe quelle langue) dans
 // une langue ; le nom tel quel pour une fonction inconnue.

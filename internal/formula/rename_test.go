@@ -44,6 +44,8 @@ func TestRenameRefs(t *testing.T) {
 		{rename, FR, "", `=FRACTIONNER.TEXTE(Taux; {",";";"})`, `=FRACTIONNER.TEXTE(Coef; {",";";"})`},
 		{rename, FR, "", `=FILTRE(Ventes; Ventes[Qté]>2)`, `=FILTRE(Achats; Achats[Quantité]>2)`},
 		{rename, FR, "", `=LIGNES(Ventes)+COLONNES(Ventes[Qté])`, `=LIGNES(Achats)+COLONNES(Achats[Quantité])`},
+		// Base d'une fonction de base de données ; le champ écrit en texte reste tel quel.
+		{rename, FR, "", `=BDSOMME(Ventes; "Qté"; Cell[E1:F3])`, `=BDSOMME(Achats; "Qté"; Cell[E1:F3])`},
 		// Rien à changer : le texte reste tel quel.
 		{rename, FR, "", "=  Autre[Qté] + $B$2", "=  Autre[Qté] + $B$2"},
 		{rename, FR, "", `="Ventes[Qté]"`, `="Ventes[Qté]"`},

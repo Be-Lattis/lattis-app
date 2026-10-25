@@ -46,7 +46,8 @@ func aggOf(key string) Agg {
 
 func (a *Agg) keepsVals() bool {
 	switch a.Fn {
-	case "MEDIAN", "STDEV", "STDEVP", "STDEV.S", "STDEV.P", "VAR", "VARP", "VAR.S", "VAR.P", "MODE", "MODE.SNGL", "NPV":
+	case "MEDIAN", "STDEV", "STDEVP", "STDEV.S", "STDEV.P", "VAR", "VARP", "VAR.S", "VAR.P", "MODE", "MODE.SNGL", "NPV",
+		"KURT", "SKEW", "SKEW.P", "AVEDEV", "DEVSQ", "GEOMEAN", "HARMEAN":
 		return true
 	}
 	return false
@@ -308,6 +309,8 @@ func (a *Agg) Result() Value {
 			v = math.Sqrt(v)
 		}
 		return number(v)
+	case "KURT", "SKEW", "SKEW.P", "AVEDEV", "DEVSQ", "GEOMEAN", "HARMEAN":
+		return shapeStats(a.Fn, a.Vals)
 	}
 	return Err(ErrName)
 }

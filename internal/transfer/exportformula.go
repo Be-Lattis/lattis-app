@@ -197,6 +197,25 @@ func init() {
 		PERCENTILE.INC PERCENTILE.EXC QUARTILE.INC QUARTILE.EXC NETWORKDAYS.INTL WORKDAY.INTL`) {
 		exportFuncs[f] = [2]string{"_xlfn." + f, "COM.MICROSOFT." + f}
 	}
+	// Audit 16 : lois, statistiques, amortissements et titres. Les fonctions
+	// de base de données, INDIRECT et CELLULE ne sont pas traduites (base
+	// sans en-têtes, texte de référence et types d'information propres à
+	// Lattis) : leur valeur est gardée.
+	for _, f := range strings.Fields(`NORMSDIST GAMMALN FISHER FISHERINV STANDARDIZE KURT SKEW AVEDEV DEVSQ GEOMEAN HARMEAN
+		RSQ STEYX TREND GROWTH LINEST LOGEST SLN SYD DB DDB VDB AMORLINC AMORDEGRC EFFECT NOMINAL PRICE YIELD ACCRINT
+		COUPNUM COUPPCD COUPNCD COUPDAYS COUPDAYBS COUPDAYSNC XNPV XIRR OFFSET TRANSPOSE`) {
+		exportFuncs[f] = [2]string{f, f}
+	}
+	for _, f := range strings.Fields(`NORM.DIST NORM.INV NORM.S.DIST NORM.S.INV LOGNORM.DIST LOGNORM.INV T.DIST T.DIST.2T T.DIST.RT
+		T.INV T.INV.2T CHISQ.DIST CHISQ.DIST.RT CHISQ.INV CHISQ.INV.RT F.DIST F.DIST.RT F.INV F.INV.RT BINOM.DIST BINOM.INV
+		NEGBINOM.DIST HYPGEOM.DIST POISSON.DIST EXPON.DIST GAMMA.DIST GAMMA.INV BETA.DIST BETA.INV WEIBULL.DIST
+		CONFIDENCE.NORM CONFIDENCE.T COVARIANCE.S COVARIANCE.P SKEW.P T.TEST F.TEST Z.TEST CHISQ.TEST RANK.AVG AGGREGATE
+		FORECAST.LINEAR`) {
+		exportFuncs[f] = [2]string{"_xlfn." + f, "COM.MICROSOFT." + f}
+	}
+	for _, f := range strings.Fields(`GAMMA PHI GAUSS`) {
+		exportFuncs[f] = [2]string{"_xlfn." + f, f}
+	}
 }
 
 func (tr *translator) walk(n formula.Node) formula.Node {

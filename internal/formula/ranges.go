@@ -59,8 +59,11 @@ func walkCols(n Node, f func(Node)) {
 				args = args[min(2, len(args)):]
 			case "EXISTS":
 				args = args[min(1, len(args)):]
-			case "SUBTOTAL", "VLOOKUP", "XLOOKUP", "HLOOKUP", "ROW", "COLUMN", "ROWS", "COLUMNS":
+			case "SUBTOTAL", "VLOOKUP", "XLOOKUP", "HLOOKUP", "ROW", "COLUMN", "ROWS", "COLUMNS", "AGGREGATE", "CELL":
 				return // ROW… ne lisent que la forme de leur référence
+			}
+			if _, ok := dbFns[fn.EN]; ok {
+				return // BDSOMME… lisent leur propre tableau
 			}
 		}
 		for _, a := range args {

@@ -115,6 +115,41 @@ var scans = map[string]scanDef{
 	"IRR": {roles: func(n int) ([]role, bool) { return roles(column, param)[:n], true },
 		make: func(p []Value) scanner { return &irr{guess: optParam(p, 0)} }, ordered: true},
 
+	"COVARIANCE.S":    {roles: twoCols, make: pairStatOf("COVARIANCE.S")},
+	"COVARIANCE.P":    {roles: twoCols, make: pairStatOf("COVARIANCE.P")},
+	"RSQ":             {roles: twoCols, make: pairStatOf("RSQ")},
+	"STEYX":           {roles: twoCols, make: pairStatOf("STEYX")},
+	"FORECAST.LINEAR": {roles: func(n int) ([]role, bool) { return roles(param, column, column), n == 3 }, make: newRegression("FORECAST")},
+	"TREND":           {roles: func(n int) ([]role, bool) { return roles(column, column, param, param)[:n], n >= 3 }, make: newRegression("TREND")},
+	"GROWTH":          {roles: func(n int) ([]role, bool) { return roles(column, column, param, param)[:n], n >= 3 }, make: newRegression("GROWTH")},
+	"LINEST":          {roles: linestRoles, make: newLinest(false)},
+	"LOGEST":          {roles: linestRoles, make: newLinest(true)},
+	"T.TEST": {roles: func(n int) ([]role, bool) { return roles(column, column, param, param), n == 4 },
+		make: func(p []Value) scanner { return &twoSamples{fn: "T.TEST", tails: p[0], typ: p[1]} }},
+	"F.TEST": {roles: twoCols, make: func([]Value) scanner { return &twoSamples{fn: "F.TEST"} }},
+	"Z.TEST": {roles: func(n int) ([]role, bool) { return roles(column, param, param)[:n], n >= 2 },
+		make: func(p []Value) scanner { return &zTest{x: p[0], sigma: optParam(p, 1)} }},
+	// CHISQ.TEST reçoit en plus la forme d'une plage de cellules (voir scanOf).
+	"CHISQ.TEST": {roles: func(n int) ([]role, bool) { return roles(column, column, param, param)[:n], n == 2 || n == 4 },
+		make: func(p []Value) scanner {
+			c := &chiTest{}
+			if len(p) == 2 {
+				c.rows, c.cols = int(p[0].Num), int(p[1].Num)
+			}
+			return c
+		}},
+	"RANK.AVG": {roles: func(n int) ([]role, bool) { return roles(param, column, param)[:n], n >= 2 },
+		make: func(p []Value) scanner { return &rankAvg{rank: *newRank(p).(*rank)} }},
+	"XNPV": {roles: func(n int) ([]role, bool) { return roles(param, column, column), n == 3 },
+		make: func(p []Value) scanner { return &datedFlows{param: p[0]} }},
+	"XIRR": {roles: func(n int) ([]role, bool) { return roles(column, column, param)[:n], n >= 2 },
+		make: func(p []Value) scanner { return &datedFlows{irr: true, param: optParam(p, 0)} }},
+
+	// Base de données (funcs_refs.go) : colonnes et paramètres posés par dbScan.
+	"DSUM": dbDef("DSUM"), "DAVERAGE": dbDef("DAVERAGE"), "DCOUNT": dbDef("DCOUNT"), "DCOUNTA": dbDef("DCOUNTA"),
+	"DMAX": dbDef("DMAX"), "DMIN": dbDef("DMIN"), "DPRODUCT": dbDef("DPRODUCT"), "DSTDEV": dbDef("DSTDEV"),
+	"DSTDEVP": dbDef("DSTDEVP"), "DVAR": dbDef("DVAR"), "DVARP": dbDef("DVARP"), "DGET": dbDef("DGET"),
+
 	"NETWORKDAYS": {roles: func(n int) ([]role, bool) { return roles(param, param, column)[:n], true },
 		make: func(p []Value) scanner { return newWorkdays(p, false, false) }},
 	"WORKDAY": {roles: func(n int) ([]role, bool) { return roles(param, param, column)[:n], true },

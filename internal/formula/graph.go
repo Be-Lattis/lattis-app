@@ -42,6 +42,13 @@ func Deps(n Node) (names, tables []string) {
 			walk(n.R)
 		case Call:
 			args := n.Args
+			if dynFn(n.Fn) {
+				// DECALER(Cell[A1]; 1; 0), INDIRECT("Feuille2!B3") : la cible,
+				// quand des littéraux la donnent (sinon : IsVolatile).
+				if r, ok := dynDeps(n); ok {
+					walk(r)
+				}
+			}
 			switch {
 			case (n.Fn == "REFERENCE" || n.Fn == "REFERENCE.APPROX") && len(args) == 3:
 				if t, ok := nameOf(args[0]); ok {
@@ -136,7 +143,42 @@ func (ns *Names) order() (order, cyclic []string) {
 	for _, k := range keys {
 		visit(k)
 	}
-	return order, cyclic
+	return ns.volatileLast(order), cyclic
+}
+
+// volatileLast place à la fin de l'ordre de calcul les formules volatiles
+// (IsVolatile : leur cible n'est connue qu'au calcul) et celles qui en
+// dépendent : elles lisent ainsi des cellules déjà calculées.
+func (ns *Names) volatileLast(order []string) []string {
+	tainted := map[string]bool{}
+	for _, n := range order {
+		if IsVolatile(ns.Formulas[n]) {
+			tainted[n] = true
+		}
+	}
+	if len(tainted) == 0 {
+		return order
+	}
+	for _, n := range order {
+		deps, _ := Deps(ns.Formulas[n])
+		for _, d := range append(deps, ns.Extra[n]...) {
+			if tainted[d] {
+				tainted[n] = true
+			}
+		}
+	}
+	out := make([]string, 0, len(order))
+	for _, n := range order {
+		if !tainted[n] {
+			out = append(out, n)
+		}
+	}
+	for _, n := range order {
+		if tainted[n] {
+			out = append(out, n)
+		}
+	}
+	return out
 }
 
 // Recalc recalcule les noms dans l'ordre des dépendances. Une référence
@@ -167,7 +209,7 @@ func (ns *Names) Affected(tables, names []string) []string {
 	var out []string
 	for _, n := range order {
 		deps, tbls := Deps(ns.Formulas[n])
-		hit := dirty[n]
+		hit := dirty[n] || IsVolatile(ns.Formulas[n])
 		for _, d := range deps {
 			hit = hit || dirty[d]
 		}

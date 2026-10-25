@@ -263,9 +263,6 @@ func indexMatch(c Call, s *Schema, r Resolver, original string) (Node, KeyNeed, 
 
 // suggestions : fonctions d'Excel absentes de Lattis, et ce qu'on propose.
 var suggestions = map[string]string{
-	"OFFSET":     "DECALER n'existe pas dans Lattis : essayez FILTRE ou PRENDRE",
-	"DECALER":    "DECALER n'existe pas dans Lattis : essayez FILTRE ou PRENDRE",
-	"INDIRECT":   "INDIRECT n'existe pas dans Lattis : essayez REFERENCE ou FILTRE",
 	"LOOKUP":     "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
 	"RECHERCHE":  "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
 	"LAMBDA":     "LAMBDA n'existe pas dans Lattis : utilisez un script Lua",

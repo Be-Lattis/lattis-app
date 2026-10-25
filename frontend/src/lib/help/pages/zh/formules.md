@@ -78,6 +78,8 @@ Excel 的情况不同，它会忽略这些文本。自由单元格区域（`Cell
 
 财务函数遵循 Excel 的约定：支出的金额为负数，利率为每期利率。一笔 200,000 元、期限 20 年、年利率 4% 的贷款，其月还款额写作 `=PMT(4%/12, 20*12, 200000)`（−1,211.96）。另请参阅 [PV](fonction:PV)、[FV](fonction:FV)、[NPER](fonction:NPER)、[RATE](fonction:RATE)、[IPMT](fonction:IPMT) 和 [PPMT](fonction:PPMT)，用于制作分期还款表。[NPV](fonction:NPV) 和 [IRR](fonction:IRR) **按表格的显示顺序**读取某列中的现金流：`=IRR(CashFlows[Amount])`。
 
+还提供概率分布（[NORM.DIST](fonction:NORM.DIST)、[T.DIST](fonction:T.DIST)…）、检验（[T.TEST](fonction:T.TEST)）、回归（[FORECAST.LINEAR](fonction:FORECAST.LINEAR)、[LINEST](fonction:LINEST)）、折旧（[SLN](fonction:SLN)、[AMORDEGRC](fonction:AMORDEGRC)）和证券（[PRICE](fonction:PRICE)）函数。[DSUM](fonction:DSUM) 等数据库函数从单元格区域读取条件：`=DSUM(销售, "金额", Cell[E1:F3])`。[OFFSET](fonction:OFFSET) 和 [INDIRECT](fonction:INDIRECT) 计算引用：`=SUM(OFFSET(Cell[B2], 0, 0, Cell[A1]))`。
+
 ## GPS 点所在的市镇 {#commune-d-un-point-gps}
 
 [MUNICIPALITY](fonction:MUNICIPALITY) 返回包含某个点的法国市镇（commune）：`=MUNICIPALITY([Latitude], [Longitude])`，或其 INSEE 代码（`"code"`）、邮政编码（`"cp"`）、省（`"departement"`）或大区（`"region"`）。计算无需联网，基于 Lattis 内置的市镇边界（法国本土和海外领地），即使对 100,000 行的列也很快。位于海上或法国境外的点返回 `#N/A`。由于边界经过简化，距离边界几十米以内的点可能会落入相邻的市镇。

@@ -184,6 +184,9 @@ func QualifyCells(n Node, sheet int64) Node {
 			args[i] = QualifyCells(a, sheet)
 		}
 		v.Args = args
+		if dynFn(v.Fn) {
+			v.home = sheet
+		}
 		return v
 	}
 	return n
@@ -213,7 +216,7 @@ func External(src, own string) bool {
 			return walk(v.L) || walk(v.R)
 		case Call:
 			switch v.Fn {
-			case "RAND", "RANDBETWEEN", "RANDARRAY", "NOW", "TODAY", "SHEETCHOICE":
+			case "RAND", "RANDBETWEEN", "RANDARRAY", "NOW", "TODAY", "SHEETCHOICE", "OFFSET", "INDIRECT":
 				return true
 			}
 			for _, a := range v.Args {

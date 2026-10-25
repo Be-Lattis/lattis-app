@@ -303,6 +303,9 @@ func (c *compiler) newAlias() string {
 }
 
 func (c *compiler) call(n Call, sc scope) string {
+	if hasDyn(n) {
+		n = c.dyn(n, sc).substDyn(n)
+	}
 	if k, ok := relativeOffset(n); ok {
 		return c.relative(n, k, sc)
 	}
@@ -354,7 +357,10 @@ func hoistable(fn funcDef) bool {
 	case aggregate, scan:
 		return true
 	}
-	return fn.EN == "SUBTOTAL" || fn.EN == "EXISTS" || fn.EN == "REFERENCE.APPROX"
+	if _, ok := dbFns[fn.EN]; ok {
+		return true
+	}
+	return fn.EN == "SUBTOTAL" || fn.EN == "EXISTS" || fn.EN == "REFERENCE.APPROX" || fn.EN == "AGGREGATE"
 }
 
 // aggregate compile un agrégat : chaque colonne ou expression sur colonnes
@@ -525,6 +531,30 @@ func (c *compiler) special(fn string, n Call, sc scope) string {
 			return errSQL(e.Err)
 		}
 		return c.aggregate(agg, n.Args[1:], sc, true)
+	case "OFFSET", "INDIRECT":
+		r, e := c.dyn(n, sc).dynRef(n)
+		if e != 0 {
+			return errSQL(e)
+		}
+		return c.expr(r, sc)
+	case "CELL":
+		r, e := cellInfo(n, c.dyn(n, sc).static)
+		if e != 0 {
+			return errSQL(e)
+		}
+		return c.expr(r, sc)
+	case "AGGREGATE":
+		agg, args, hidden, e := aggregateOf(n, c.dyn(n, sc).static)
+		if e != 0 {
+			return errSQL(e)
+		}
+		if f, _ := lookupFunc(agg); f.kind == scan {
+			return c.scan(scanOf(Call{Fn: agg, Args: args}, c.schema, sc.table), sc)
+		}
+		return c.aggregate(agg, args, sc, hidden)
+	case "DSUM", "DAVERAGE", "DCOUNT", "DCOUNTA", "DMAX", "DMIN", "DPRODUCT", "DSTDEV", "DSTDEVP", "DVAR", "DVARP", "DGET":
+		x := c.dyn(n, sc)
+		return c.scan(dbScan(n, c.schema, c.names, x.home, x.static), sc)
 	case "PREVIOUS", "NEXT":
 		if sc.table == nil || sc.alias == "" {
 			return errSQL(ErrRef)

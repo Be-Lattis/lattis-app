@@ -1,6 +1,7 @@
 package formula
 
 import (
+	"slices"
 	"strings"
 	"time"
 )
@@ -44,6 +45,11 @@ func scanOf(n Call, s *Schema, current *Table) scanCall {
 		if r, ok := args[0].(Ref); ok && r.Row && (len(args) == 1 || len(args) == 2 && !hasColumnRef(args[1])) {
 			col := Ref{Table: r.Table, Col: r.Col}
 			args = append([]Node{args[0], col}, args[1:]...)
+		}
+	case "CHISQ.TEST":
+		if r, ok := args[0].(CellRange); ok && len(args) == 2 {
+			rows, cols := r.Size()
+			args = append(slices.Clone(args), NumLit{V: float64(rows)}, NumLit{V: float64(cols)})
 		}
 	case "REFERENCE.APPROX":
 		t, col, err := refTarget(s, n)

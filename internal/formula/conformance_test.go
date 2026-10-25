@@ -80,8 +80,21 @@ func fixture(t testing.TB) *fixtureDoc {
 		{Name: "Val", SQL: "c_1", Type: grid.Text},
 		{Name: "N", SQL: "c_2", Type: grid.Integer},
 	}}
+	// Mesures et Flux : exemples chiffrés des définitions du tableur
+	// (T.TEST, Z.TEST, PREVISION, DROITEREG, VAN.PAIEMENTS…).
+	mesures := &Table{Name: "Mesures", SQL: "t_m", Cols: []Column{
+		{Name: "A", SQL: "c_1", Type: grid.Integer},
+		{Name: "B", SQL: "c_2", Type: grid.Integer},
+		{Name: "Z", SQL: "c_3", Type: grid.Integer},
+		{Name: "X", SQL: "c_4", Type: grid.Integer},
+		{Name: "Y", SQL: "c_5", Type: grid.Integer},
+	}}
+	flux := &Table{Name: "Flux", SQL: "t_l", Cols: []Column{
+		{Name: "Montant", SQL: "c_1", Type: grid.Decimal},
+		{Name: "Jour", SQL: "c_2", Type: grid.Date},
+	}}
 	schema := &Schema{
-		Tables: []*Table{ventes, clients, baremes, feries, etapes, textes, formats},
+		Tables: []*Table{ventes, clients, baremes, feries, etapes, textes, formats, mesures, flux},
 		Now:    time.Date(2026, 10, 15, 14, 30, 0, 0, time.Local),
 		Seed:   42,
 	}
@@ -105,6 +118,13 @@ func fixture(t testing.TB) *fixtureDoc {
 			`INSERT INTO t_y VALUES (1, 'a', '1,234.56', 1), (2, 'b', '1.234,56', 2), (3, 'c', '1''234.5', 3), (4, 'd', '1,234,567', 4),
 				(5, 'e', '3.5', 5), (6, 'f', '1.234', 6), (7, 'g', '1,234', 7), (8, 'h', '(12)', 8), (9, 'i', '$12', 9), (10, 'j', '1,5e3', 10),
 				(11, 'k', '-1 234,5 EUR', 11), (12, 'l', '0.250', 12)`,
+			`CREATE TABLE t_m (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 INTEGER, c_2 INTEGER, c_3 INTEGER, c_4 INTEGER, c_5 INTEGER) STRICT`,
+			`INSERT INTO t_m VALUES (1, 'a', 3, 6, 3, 20, 6), (2, 'b', 4, 19, 6, 28, 7), (3, 'c', 5, 3, 7, 31, 9), (4, 'd', 8, 2, 8, 38, 15),
+				(5, 'e', 9, 14, 6, 40, 21), (6, 'f', 1, 4, 5, NULL, NULL), (7, 'g', 2, 5, 4, NULL, NULL), (8, 'h', 4, 17, 2, NULL, NULL),
+				(9, 'i', 5, 1, 1, NULL, NULL), (10, 'j', NULL, NULL, 9, NULL, NULL)`,
+			`CREATE TABLE t_l (id INTEGER PRIMARY KEY, _pos TEXT NOT NULL, c_1 REAL, c_2 TEXT) STRICT`,
+			`INSERT INTO t_l VALUES (1, 'a', -10000, '2008-01-01'), (2, 'b', 2750, '2008-03-01'), (3, 'c', 4250, '2008-10-30'),
+				(4, 'd', 3250, '2009-02-15'), (5, 'e', 2750, '2009-04-01')`,
 		} {
 			if _, err := tx.Exec(q); err != nil {
 				return err
@@ -136,6 +156,13 @@ func fixture(t testing.TB) *fixtureDoc {
 		"cell_b1": "=10",
 		"cell_b2": "=20",
 		"cell_b3": "=30",
+		// Critères des fonctions de base de données (Cell[E1:F3], Cell[G1:G2]).
+		"cell_e1": `="Qté"`,
+		"cell_e2": `=">2"`,
+		"cell_f1": `="Produit"`,
+		"cell_f3": `="Cla"`,
+		"cell_g1": `="Produit"`,
+		"cell_g2": `="Souris"`,
 	} {
 		names.Formulas[name] = mustParse(t, f, FR)
 	}

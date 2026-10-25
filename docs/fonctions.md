@@ -1,8 +1,8 @@
 # Fonctions des formules
 
-*Bibliothèque livrée le 16/10/2026 (phase 4), d'après un catalogue du 15/10/2026 tenu hors du dépôt, que ce document remplace, complétée le 19/10/2026 (audit 6, I7 : statistiques, finances, mathématiques, texte, dates, position). Code : `internal/formula`.*
+*Bibliothèque livrée le 16/10/2026 (phase 4), d'après un catalogue du 15/10/2026 tenu hors du dépôt, que ce document remplace, complétée le 19/10/2026 (audit 6, I7 : statistiques, finances, mathématiques, texte, dates, position) et le 26/10/2026 (audit 16 : lois de probabilité et tests, régression, amortissements et titres, base de données, DECALER, INDIRECT, CELLULE, AGREGAT, TRANSPOSE). Code : `internal/formula`.*
 
-175 fonctions (dont RECHERCHEH, reconnue pour être refusée à la saisie), chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées par `testdata/conformite.txt` sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
+274 fonctions (dont RECHERCHEH, reconnue pour être refusée à la saisie), chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement) : par `testdata/conformite.txt`, et pour les ajouts de l'audit 16 par `funcs_stats_test.go` et `funcs_refs_test.go` (valeurs des exemples des définitions du tableur, à la tolérance de leurs chiffres affichés). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
 
 L'aide détaillée de chaque fonction (description, arguments nommés et décrits, exemple) est dans `internal/formula/docs.go` : elle alimente l'infobulle de saisie (argument en cours en gras, comme Excel), l'autocomplétion et le dialogue « Insérer une fonction ». `TestFunctionDocs` vérifie que chaque fonction y figure, que ses arguments correspondent à son nombre d'arguments et que son exemple s'analyse.
 
@@ -67,6 +67,13 @@ Conventions d'Excel : une somme versée est négative, une somme reçue positive
 | INTPER, PRINCPER | IPMT, PPMT | ✅ période hors de 1 à npm : #NOMBRE! ; INTPER + PRINCPER = VPM |
 | VAN | NPV | ✅ `VAN(8%; Flux[Montant])` : flux actualisés dès la fin de la première période, **dans l'ordre d'affichage** du tableau ; valeurs directes converties comme dans SOMME (`"abc"` : #VALEUR!) |
 | TRI | IRR | ⚠️ `TRI(Flux[Montant]; [estimation])` sur une colonne, une plage ou une expression sur colonnes, dans l'ordre d'affichage ; il faut un flux positif et un négatif (sinon #NOMBRE!) ; Newton, 100 itérations au plus |
+| VAN.PAIEMENTS, TRI.PAIEMENTS | XNPV, XIRR | ⚠️ `VAN.PAIEMENTS(9%; Flux[Montant]; Flux[Date])` : valeurs et dates, deux colonnes du même tableau ; la première date sert d'origine (une date antérieure, ou une valeur sans date : #NOMBRE!) ; une ligne vide est sautée |
+| TAUX.EFFECTIF, TAUX.NOMINAL | EFFECT, NOMINAL | ✅ nombre de périodes tronqué ; taux ≤ 0 ou moins d'une période : #NOMBRE! |
+| AMORLIN, SYD, DB, DDB, VDB | SLN, SYD, DB, DDB, VDB | ✅ DB : taux arrondi à trois décimales, première année au prorata des mois ; VDB : périodes fractionnaires, bascule vers le linéaire sauf `pas_de_bascule` |
+| AMORLINC, AMORDEGRC | AMORLINC, AMORDEGRC | ✅ plan comptable français : première période au prorata (FRACTION.ANNEE), AMORDEGRC à coefficient 1,5, 2 ou 2,5 selon la durée, montants arrondis à l'unité ; base 2 ou durée de 0 à 3 ans (hors 1 et 2) ou de 4 à 5 ans : #NOMBRE! |
+| PRIX.TITRE, RENDEMENT.TITRE | PRICE, YIELD | ✅ formules du tableur (RENDEMENT.TITRE : Newton sur PRIX.TITRE quand il reste plusieurs coupons) ; fréquence 1, 2 ou 4, base 0 à 4 ; règlement ≥ échéance : #NOMBRE! |
+| INTERET.ACC | ACCRINT | ⚠️ valeur nominale × taux × FRACTION.ANNEE(émission ou premier coupon ; règlement ; base) : identique au tableur en base 0, 2, 3 et 4, peut s'en écarter de quelques centièmes en base 1 sur plusieurs périodes de coupon |
+| NB.COUPONS, DATE.COUPON.PREC, DATE.COUPON.SUIV, NB.JOURS.COUPONS, NB.JOURS.COUPON.PREC, NB.JOURS.COUPON.SUIV | COUPNUM, COUPPCD, COUPNCD, COUPDAYS, COUPDAYBS, COUPDAYSNC | ✅ coupons comptés à rebours depuis l'échéance (fin de mois si l'échéance en est une) |
 
 ## Agrégats
 
@@ -85,6 +92,7 @@ Conventions d'Excel : une somme versée est négative, une somme reçue positive
 | SOMME.SI.ENS, NB.SI.ENS, MOYENNE.SI.ENS, MAX.SI.ENS, MIN.SI.ENS | SUMIFS, COUNTIFS, AVERAGEIFS, MAXIFS, MINIFS | ✅ |
 | SOMMEPROD | SUMPRODUCT | ⚠️ colonnes d'un même tableau ; accepte des expressions : `SOMMEPROD((Ventes[Qté]>1)*Ventes[Prix])` |
 | SOUS.TOTAL | SUBTOTAL | ⚠️ codes 1 à 11 et 101 à 111, écrits en toutes lettres ; ne tient pas encore compte du filtre de la grille |
+| AGREGAT | AGGREGATE | ⚠️ `AGREGAT(9; 6; Ventes[Montant])` : fonctions 1 à 19 et options 0 à 7, écrites en littéraux ; ignorer les erreurs revient à lire chaque valeur à travers SIERREUR ; les lignes masquées (options 1, 3, 5, 7) suivent SOUS.TOTAL pour les fonctions 1 à 13, et ne sont pas exclues pour 14 à 19 (GRANDE.VALEUR…) |
 
 Un agrégat accepte une **expression sur les colonnes** d'un tableau, calculée ligne à ligne : `SOMME(Ventes[Prix]*Ventes[Qté])`. Des colonnes de deux tableaux dans la même expression donnent #VALEUR!.
 
@@ -144,8 +152,15 @@ Une date est un **numéro de série** comme dans Excel (le 1er janvier 2026 vaut
 | LIGNE, COLONNE | ROW, COLUMN | ⚠️ avec une référence seulement : `LIGNE(Cell[B3])` vaut 3, `COLONNE(Cell[C1])` 3 ; pour un tableau, positions **dans le tableau** (`COLONNE(Ventes[Prix])` : rang de la colonne, `LIGNE(Ventes[Prix][2:5])` : 2) ; sans argument, #VALEUR! (le moteur ne connaît pas la position de la formule : pour numéroter les lignes d'un tableau, `CUMUL(1)`) |
 | ONGLET.CHOIX | SHEETCHOICE | 🆕 valeur choisie sur l'onglet à choix de la feuille de la formule (« Ventes · 2025 ▾ », pour une colonne calculée : la feuille de son tableau), avec le type de sa colonne (2025 est un nombre) ; vide pour « (Toutes) », #N/A sur une feuille sans choix. `SOMME.SI.ENS(Ventes[Montant]; Ventes[Année]; ONGLET.CHOIX())` suit l'onglet. Les formules libres de la feuille voient déjà ses tableaux filtrés par le choix (`SOMME(Ventes[Montant])` y donne le total de l'année affichée) ; celles des autres feuilles voient tout. Voir `canvas/choice.go` |
 | RECHERCHEH | HLOOKUP | ❌ refusée à la saisie avec un message (transposer les données, puis REFERENCE) ; absente de l'autocomplétion et d'« Insérer une fonction » |
+| DECALER | OFFSET | ⚠️ voir « Références calculées » ci-dessous |
+| INDIRECT | INDIRECT | ⚠️ voir « Références calculées » ; style L1C1 (2e argument FAUX) : #REF! |
+| CELLULE | CELL | ⚠️ `CELLULE("adresse"; Cell[B3])` donne `$B$3` ; types `adresse`, `ligne`, `col`, `contenu`, `type` (`b` vide, `l` texte, `v` valeur), noms anglais acceptés ; la référence est obligatoire (la « dernière cellule modifiée » n'a pas de sens ici) ; pour un tableau, l'adresse est la référence dans la nomenclature (`Ventes[Prix][2]`) et la ligne celle de LIGNE ; autres types : #VALEUR! |
 
-`Suggestion(nom)` donne l'infobulle d'une fonction absente (DECALER, INDIRECT, LAMBDA…). `KeyTargets` liste les tableaux où une formule cherche une ligne (REFERENCE, REFERENCE.APPROCHEE, EXISTE). Une recherche **tapée** dans un tableau sans clé ne pose jamais de clé d'elle-même (choix de Louis, 19/10/2026) : la saisie demande si le tableau désigne ses lignes par leur numéro (retenu pour le tableau : la question ne revient plus, et la clé n'est plus proposée) ou si la colonne cherchée devient la clé ; la réponse et la formule forment une seule étape d'annulation. Les formules collées, importées ou reposées par Lattis gardent les numéros de ligne, sans question. Le numéro de ligne est le rang dans l'ordre du tableau (lignes masquées par un filtre comprises) : il change quand on trie, insère ou supprime des lignes.
+**Références calculées.** DECALER et INDIRECT rendent une référence de la nomenclature, lue ensuite comme si elle était écrite dans la formule : `INDIRECT("B3")`, `INDIRECT("Feuille2!B3")`, `INDIRECT("Cell[A1:A9]")`, `INDIRECT("Ventes[Prix]")` ; `DECALER(Cell[A1]; 2; 1)` (Cell[B3]), `SOMME(DECALER(Cell[B2]; 0; 0; Cell[A1]; 1))` (plage de hauteur variable), `DECALER(Ventes[Prix][1]; 2; 0)` (Ventes[Prix][3]), `DECALER(Ventes[Prix]; 0; 1)` (la colonne suivante du tableau), `DECALER([Prix]; -1; 0)` dans une colonne calculée (comme `[Prix][-1]`). Une adresse A1 dans le texte d'INDIRECT désigne toujours une cellule libre ; un tableau entier n'est pas une référence (#REF!). La référence est calculée par le même code pour les deux backends, avant la formule : ses arguments ne doivent dépendre que de littéraux et de cellules (pas d'une colonne de la ligne, d'une colonne entière ni d'un agrégat), sinon #REF!. Hors des bornes (ligne ou colonne négative, colonne hors du tableau, hauteur nulle) : #REF!. Sur un tableau, une seule colonne à la fois (largeur 1) ; une colonne entière ne se décale que vers une autre colonne.
+
+Recalcul : quand la cible est écrite en littéraux (`INDIRECT("B3")`, `DECALER(Cell[A1]; 1; 0)`), elle compte comme une dépendance ordinaire (`Deps`). Sinon la formule est **volatile** (`IsVolatile`) : elle est calculée après toutes les autres, avec celles qui en dépendent (`Names.order`), et recalculée à chaque changement (`Names.Affected`). Une référence calculée vers une autre formule volatile peut lire sa valeur précédente jusqu'au recalcul suivant (F9).
+
+`Suggestion(nom)` donne l'infobulle d'une fonction absente (LAMBDA, RECHERCHE…). `KeyTargets` liste les tableaux où une formule cherche une ligne (REFERENCE, REFERENCE.APPROCHEE, EXISTE). Une recherche **tapée** dans un tableau sans clé ne pose jamais de clé d'elle-même (choix de Louis, 19/10/2026) : la saisie demande si le tableau désigne ses lignes par leur numéro (retenu pour le tableau : la question ne revient plus, et la clé n'est plus proposée) ou si la colonne cherchée devient la clé ; la réponse et la formule forment une seule étape d'annulation. Les formules collées, importées ou reposées par Lattis gardent les numéros de ligne, sans question. Le numéro de ligne est le rang dans l'ordre du tableau (lignes masquées par un filtre comprises) : il change quand on trie, insère ou supprime des lignes.
 
 ## Géographie
 
@@ -170,7 +185,7 @@ Données : `internal/geo/communes.bin.gz` (4,3 Mo, embarqué), chargé au premie
 |---|---|---|
 | PRECEDENT, SUIVANT | PREVIOUS, NEXT | 🆕 `PRECEDENT([Solde]; 0)`, valeur par défaut au bord du tableau |
 | CUMUL | RUNNINGSUM | 🆕 somme cumulée dans l'ordre du tableau |
-| RANG | RANK | ✅ forme Excel `RANG(valeur; T[Col]; [ordre])`, et 🆕 `RANG([Score])` |
+| RANG | RANK | ✅ forme Excel `RANG(valeur; T[Col]; [ordre])`, et 🆕 `RANG([Score])` ; EQUATION.RANG (RANK.EQ) est accepté et devient RANG |
 
 Une colonne peut lire ses propres lignes voisines : `[Mvt]+PRECEDENT([Solde]; 0)` ou `[Mvt]+[Solde][-1]` donnent un solde cumulé, calculé ligne après ligne dans l'ordre du tableau (`[Reste][+1]` remonte depuis la dernière ligne). Lire sa propre ligne, toute sa colonne (`SOMME(T[Solde])` dans Solde), ou ses voisines dans les deux sens, est une référence circulaire : la cellule affiche `#CIRC!`, avec une explication dans la barre d'état (exportée en `#REF!` vers Excel).
 
@@ -185,6 +200,8 @@ Une colonne peut lire ses propres lignes voisines : `[Mvt]+PRECEDENT([Solde]; 0)
 | GROUPER.PAR | GROUPBY | ⚠️ `GROUPER.PAR(Ventes[Client]; Ventes[Montant]; SOMME)`, trié par clé, sans ligne de total |
 | REQUETE | QUERY | 🆕 `REQUETE("SELECT …")`, moteur SQL seulement |
 | SEQUENCE | SEQUENCE | ⚠️ le nombre de colonnes doit être écrit dans la formule (il fixe la forme du résultat) ; 1 000 000 valeurs au plus |
+| TRANSPOSE | TRANSPOSE | ⚠️ `TRANSPOSE(Cell[A1:C2])` se déverse ; source : une plage de cellules libres ou une constante matricielle, dont la forme est connue à la compilation (une colonne de tableau : #VALEUR!) |
+| DROITEREG, LOGREG | LINEST, LOGEST | ⚠️ une seule variable explicative (x_connus obligatoire) ; 1 ligne (pente, ordonnée) ou 5 avec les statistiques (erreurs types, R² et erreur type de y, F et degrés de liberté, sommes des carrés) ; `statistiques` doit être écrit dans la formule (VRAI, FAUX ou un nombre : il fixe la forme) |
 
 Leur résultat se déverse sur la feuille : `EvalSpill` (Go) et `CompileSpill` (requête SQL ordonnée et en-têtes) le fournissent. Dans une cellule, un tableau dynamique vaut #VALEUR! ; dans un agrégat (`SOMME`, `NBVAL`, `JOINDRE.TEXTE`, `SOUS.TOTAL`…), il fournit ses valeurs : `SOMME(FILTRE(Ventes[Montant]; Ventes[Qté]>1))`. Les fonctions qui parcourent des colonnes (`NB.SI`, `SOMME.SI.ENS`, `GRANDE.VALEUR`, `CENTILE`, `EQUIV`, `INDEX`, `RANG`, `TRI`…) ne le lisent pas : #VALEUR! (`NB.SI(UNIQUE(Ventes[Qté]); ">1")`), comme `LIGNES(UNIQUE(…))`.
 
@@ -192,21 +209,57 @@ Leur résultat se déverse sur la feuille : `EvalSpill` (Go) et `CompileSpill` (
 
 **Constantes matricielles.** `{1;2;3}` (une colonne), `{"a"."b"}` (une ligne ; `\` est aussi accepté entre colonnes), `{1.2;3.4}` ; en anglais `{1;2;3}` et `{"a","b"}`. Elles ne contiennent que des littéraux (nombres, textes, VRAI, FAUX, erreurs) et se lisent comme un tableau dynamique : `={1;2;3}` se déverse, `SOMME({1;2;3})` vaut 6, `FRACTIONNER.TEXTE(Cell[A1]; {",";";"})` découpe à chaque délimiteur. Ailleurs (dans un calcul sur une valeur), une constante vaut #VALEUR!.
 
+## Statistiques
+
+Lois de probabilité : fonctions scalaires communes aux deux backends (`funcs_distrib.go`), avec les erreurs du tableur (paramètre hors domaine : #NOMBRE! ; degrés de liberté et nombres de succès tronqués). Les fonctions de répartition reposent sur les fonctions gamma et bêta incomplètes régularisées (précision ≈ 1e-14), les inverses sur une dichotomie jusqu'à la précision de la machine.
+
+| Français | Anglais | |
+|---|---|---|
+| LOI.NORMALE.N, LOI.NORMALE.INVERSE.N, LOI.NORMALE.STANDARD.N, LOI.NORMALE.STANDARD.INVERSE.N | NORM.DIST, NORM.INV, NORM.S.DIST, NORM.S.INV | ✅ les anciens noms LOI.NORMALE, LOI.NORMALE.INVERSE et LOI.NORMALE.STANDARD.INVERSE (NORMDIST, NORMINV, NORMSINV) sont acceptés et deviennent les nouveaux |
+| LOI.NORMALE.STANDARD | NORMSDIST | ✅ forme ancienne, toujours cumulée |
+| LOI.LOGNORMALE.N, LOI.LOGNORMALE.INVERSE.N | LOGNORM.DIST, LOGNORM.INV | ✅ |
+| LOI.STUDENT.N, LOI.STUDENT.BILATERALE, LOI.STUDENT.DROITE, LOI.STUDENT.INVERSE.N, LOI.STUDENT.INVERSE.BILATERALE | T.DIST, T.DIST.2T, T.DIST.RT, T.INV, T.INV.2T | ✅ |
+| LOI.KHIDEUX.N, LOI.KHIDEUX.DROITE, LOI.KHIDEUX.INVERSE, LOI.KHIDEUX.INVERSE.DROITE | CHISQ.DIST, CHISQ.DIST.RT, CHISQ.INV, CHISQ.INV.RT | ✅ |
+| LOI.F.N, LOI.F.DROITE, INVERSE.LOI.F.N, INVERSE.LOI.F.DROITE | F.DIST, F.DIST.RT, F.INV, F.INV.RT | ✅ |
+| LOI.BINOMIALE.N, LOI.BINOMIALE.INVERSE, LOI.BINOMIALE.NEG.N, LOI.HYPERGEOMETRIQUE.N, LOI.POISSON.N, LOI.EXPONENTIELLE.N | BINOM.DIST, BINOM.INV, NEGBINOM.DIST, HYPGEOM.DIST, POISSON.DIST, EXPON.DIST | ✅ |
+| LOI.GAMMA.N, LOI.GAMMA.INVERSE.N, LNGAMMA, GAMMA, LOI.BETA.N, BETA.INVERSE.N, LOI.WEIBULL.N | GAMMA.DIST, GAMMA.INV, GAMMALN, GAMMA, BETA.DIST, BETA.INV, WEIBULL.DIST | ✅ LNGAMMA.PRECIS (GAMMALN.PRECISE) est accepté et devient LNGAMMA |
+| INTERVALLE.CONFIANCE.NORMAL, INTERVALLE.CONFIANCE.STUDENT | CONFIDENCE.NORM, CONFIDENCE.T | ✅ taille tronquée ; .STUDENT avec une taille de 1 : #DIV/0! |
+| CENTREE.REDUITE, PHI, GAUSS, FISHER, FISHER.INVERSE | STANDARDIZE, PHI, GAUSS, FISHER, FISHERINV | ✅ |
+
+Statistiques sur colonnes (comme PENTE : colonnes d'un même tableau, ou plages de même forme ; seuls les nombres comptent, textes lus selon la décision 0013) :
+
+| Français | Anglais | |
+|---|---|---|
+| KURTOSIS, COEFFICIENT.ASYMETRIE, COEFFICIENT.ASYMETRIE.P, ECART.MOYEN, SOMME.CARRES.ECARTS, MOYENNE.GEOMETRIQUE, MOYENNE.HARMONIQUE | KURT, SKEW, SKEW.P, AVEDEV, DEVSQ, GEOMEAN, HARMEAN | ✅ agrégats (mêmes arguments que MOYENNE) ; KURTOSIS : 4 valeurs au moins, asymétrie : 3 (sinon #DIV/0!) ; moyennes géométrique et harmonique : nombres positifs (sinon #NOMBRE!) |
+| COVARIANCE.STANDARD, COVARIANCE.PEARSON, COEFFICIENT.DETERMINATION, ERREUR.TYPE.XY | COVARIANCE.S, COVARIANCE.P, RSQ, STEYX | ✅ lignes où les deux valeurs sont des nombres ; COVARIANCE (COVAR) devient COVARIANCE.PEARSON, PEARSON devient COEFFICIENT.CORRELATION |
+| PREVISION.LINEAIRE | FORECAST.LINEAR | ✅ PREVISION (FORECAST) est accepté et devient PREVISION.LINEAIRE ; PREVISION.ETS (lissage exponentiel saisonnier) n'est pas pris en charge |
+| TENDANCE, CROISSANCE | TREND, GROWTH | ⚠️ `TENDANCE(Ventes[Montant]; Ventes[Qté]; [Qté])` : une valeur par appel, `x_nouveau` obligatoire (dans une colonne calculée, une valeur par ligne) ; une seule variable explicative |
+| T.TEST, F.TEST, Z.TEST, CHISQ.TEST | T.TEST, F.TEST, Z.TEST, CHISQ.TEST | ⚠️ deux colonnes d'un même tableau ou plages de même forme ; T.TEST de type 1 (apparié) sur les lignes où les deux valeurs sont des nombres, types 2 et 3 sur les nombres de chaque colonne (type 3 : degrés de liberté de Welch, non entiers) ; CHISQ.TEST : degrés de liberté (lignes − 1) × (colonnes − 1) pour une plage, lignes − 1 pour une colonne |
+| MOYENNE.RANG | RANK.AVG | ✅ forme `MOYENNE.RANG(valeur; T[Col]; [ordre])` : les ex æquo reçoivent leur rang moyen |
+
+## Base de données
+
+| Français | Anglais | |
+|---|---|---|
+| BDSOMME, BDMOYENNE, BDNB, BDNBVAL, BDMAX, BDMIN, BDPRODUIT, BDECARTYPE, BDECARTYPEP, BDVAR, BDVARP, BDLIRE | DSUM, DAVERAGE, DCOUNT, DCOUNTA, DMAX, DMIN, DPRODUCT, DSTDEV, DSTDEVP, DVAR, DVARP, DGET | ⚠️ `BDSOMME(Ventes; "Montant"; Cell[E1:F3])` : la base est un tableau, nommé ; le champ, un nom de colonne en texte ou son numéro ; les critères, une plage de cellules libres dont la première ligne nomme des colonnes du tableau (en-tête inconnu : #VALEUR!), puis une condition par ligne (ET dans une ligne, OU entre les lignes, cellule vide : sans condition). Un texte sans opérateur trouve les valeurs qui commencent par lui (`Dur` trouve « Durand »), `=Dur` l'égalité ; opérateurs et jokers comme NB.SI. Les critères calculés (formule dans la plage de critères, en-tête vide) ne sont pas pris en charge. BDLIRE : aucune ligne #VALEUR!, plusieurs #NOMBRE! |
+
+Elles s'exécutent comme les fonctions de parcours (`dbScan`, slt_scan en SQL) : la plage de critères est lue à la compilation, ses valeurs passent en paramètres.
+
 ## Fonctions d'Excel absentes
 
 Une fonction inconnue donne #NOM? (l'import d'un classeur Excel garde alors la valeur). Les manques connus, et ce qui les remplace :
 
 | Excel (français / anglais) | Dans Lattis |
 |---|---|
-| DECALER / OFFSET, INDIRECT | FILTRE, PRENDRE, REFERENCE |
 | RECHERCHE / LOOKUP | REFERENCE ou REFERENCE.APPROCHEE |
 | RECHERCHEH / HLOOKUP | refusée à la saisie : transposer les données, puis REFERENCE |
 | RECHERCHEV / VLOOKUP approchée, INDEX à 3 arguments | REFERENCE.APPROCHEE ; INDEX(colonne; ligne) |
 | LAMBDA, MAP, BYROW… | un script Lua |
 | VARP (VAR.P en français) | VAR.P.N, que `VAR.P` désigne aussi |
 | LIGNE(), COLONNE() sans argument | CUMUL(1) pour numéroter les lignes d'un tableau |
-| TRANSPOSE, AGREGAT / AGGREGATE, fonctions de base de données (BDSOMME…), CELLULE / CELL, INFO, LIEN_HYPERTEXTE / HYPERLINK | pas d'équivalent |
-| Fonctions financières des obligations et amortissements (PRIX, RENDEMENT, AMORLIN…), statistiques avancées (LOI.NORMALE…, PREVISION…) | pas encore |
+| INFO / INFO | pas d'équivalent |
+| PREVISION.ETS et ses variantes (FORECAST.ETS…), DROITEREG à plusieurs variables explicatives | pas encore |
+| Autres fonctions financières des titres (VALEUR.ENCAISSEMENT, DUREE, TAUX.ESCOMPTE…) | pas encore |
 
 ## Performances
 

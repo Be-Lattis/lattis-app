@@ -357,6 +357,9 @@ func (env *Env) cell(t *Table, row, i int) Value {
 }
 
 func (env *Env) call(n Call) Value {
+	if hasDyn(n) {
+		n = env.dyn(n).substDyn(n)
+	}
 	if _, ok := relativeOffset(n); ok {
 		// [Col][-1] ne se calcule qu'en SQL, dans une colonne calculée.
 		return Err(ErrRef)
@@ -546,6 +549,30 @@ func (env *Env) special(fn string, n Call) Value {
 			return err
 		}
 		return env.aggregate(agg, n.Args[1:])
+	case "OFFSET", "INDIRECT":
+		r, e := env.dyn(n).dynRef(n)
+		if e != 0 {
+			return Err(e)
+		}
+		return Eval(r, env)
+	case "CELL":
+		r, e := cellInfo(n, env.dyn(n).static)
+		if e != 0 {
+			return Err(e)
+		}
+		return Eval(r, env)
+	case "AGGREGATE":
+		agg, args, _, e := aggregateOf(n, env.dyn(n).static)
+		if e != 0 {
+			return Err(e)
+		}
+		if f, _ := lookupFunc(agg); f.kind == scan {
+			return env.scan(scanOf(Call{Fn: agg, Args: args}, env.Schema, env.Table))
+		}
+		return env.aggregate(agg, args)
+	case "DSUM", "DAVERAGE", "DCOUNT", "DCOUNTA", "DMAX", "DMIN", "DPRODUCT", "DSTDEV", "DSTDEVP", "DVAR", "DVARP", "DGET":
+		x := env.dyn(n)
+		return env.scan(dbScan(n, env.Schema, env.Names, x.home, x.static))
 	case "PREVIOUS", "NEXT":
 		if env.Table == nil {
 			return Err(ErrRef)

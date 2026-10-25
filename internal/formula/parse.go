@@ -126,6 +126,10 @@ type (
 		// la formule). Posé par LET sur les valeurs de ses noms, pour qu'un
 		// nom utilisé deux fois donne le même tirage (voir expandLet).
 		rank int
+
+		// home : feuille de la formule, posée par QualifyCells sur DECALER
+		// et INDIRECT (la référence qu'ils calculent y est rattachée).
+		home int64
 	}
 	// ArrayLit est une constante matricielle : {1;2;3} ou {"a"."b"} en
 	// français, {1;2;3} ou {"a","b"} en anglais (« ; » sépare les lignes).

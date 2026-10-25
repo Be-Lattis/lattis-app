@@ -57,10 +57,16 @@ func IsFreeSpill(n Node, s *Schema) bool {
 // source, un tableau nommé (FILTRE(Ventes; …)) : pas pour SEQUENCE et
 // FRACTIONNER.TEXTE, dont le premier argument est une valeur, ni pour LET,
 // dont il est un nom local.
+//
+// Les fonctions de base de données (BDSOMME(Ventes; …)) nomment aussi leur
+// tableau en premier argument : renommages et dépendances le suivent de même.
 func NamesSource(c Call) bool {
 	switch c.Fn {
-	case "SEQUENCE", "TEXTSPLIT", "LET":
+	case "SEQUENCE", "TEXTSPLIT", "LET", "TRANSPOSE", "LINEST", "LOGEST":
 		return false
+	}
+	if _, ok := dbFns[c.Fn]; ok {
+		return true
 	}
 	return IsSpill(c)
 }
@@ -293,6 +299,15 @@ func (env *Env) spill(n Node) (rel, Value) {
 	case "LET":
 		body, _ := expandLet(c, env.nextRand)
 		return env.spill(body)
+	case "TRANSPOSE":
+		vals, e := env.constGrid(c.Args[0])
+		if e.IsErr() {
+			return rel{}, e
+		}
+		vals = transpose(vals)
+		return rel{cols: seqHeaders(len(vals[0])), values: vals}, Value{}
+	case "LINEST", "LOGEST":
+		return env.linest(c)
 	}
 	if c.Fn == "QUERY" {
 		return rel{}, Err(ErrValue) // SQL libre : seulement dans le moteur SQL
@@ -623,6 +638,14 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 	case "LET":
 		body, _ := expandLet(call, c.nextRand)
 		return c.spill(body, sc)
+	case "TRANSPOSE":
+		vals, e := c.constGrid(call.Args[0], sc)
+		if e != 0 {
+			return sqlRel{}, e
+		}
+		return c.constRel(transpose(vals))
+	case "LINEST", "LOGEST":
+		return c.linest(call, sc)
 	case "QUERY":
 		q, ok := call.Args[0].(StrLit)
 		if !ok {
