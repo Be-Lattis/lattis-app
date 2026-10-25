@@ -22,7 +22,6 @@ import (
 // sheetExtras : ce qu'une feuille exporte en plus de ses cellules.
 type sheetExtras struct {
 	cf     []*cfOut
-	dv     []dvOut
 	notes  []noteOut
 	charts []chartOut // xlsxchartwrite.go
 }
@@ -33,11 +32,6 @@ type cfOut struct {
 	table *tablePlace // règle d'une colonne de tableau ([@Colonne])
 	lines bool        // lignes ou colonnes entières
 	xml   string
-}
-
-type dvOut struct {
-	refs    []rect
-	formula string
 }
 
 type noteOut struct {
@@ -71,23 +65,6 @@ func collectExtras(sh *xsheet, l canvas.Layout, b *book, fm *fmts) *sheetExtras 
 			o.refs = append(o.refs, ref)
 		}
 	}
-	dvs := map[string]*dvOut{}
-	var dvOrder []string
-	failedDV := 0
-	addDV := func(v any, ref rect) {
-		f, ok := dvFormula(v, sh.name, b)
-		if !ok {
-			failedDV++
-			return
-		}
-		o := dvs[f]
-		if o == nil {
-			o = &dvOut{formula: f}
-			dvs[f] = o
-			dvOrder = append(dvOrder, f)
-		}
-		o.refs = append(o.refs, ref)
-	}
 	note := func(st canvas.Style, r, c int) {
 		if t, _ := st["nt"].(string); t != "" && r < ExcelRows && c < ExcelCols {
 			e.notes = append(e.notes, noteOut{r: r, c: c, text: t, pinned: st["np"] == true})
@@ -102,18 +79,11 @@ func collectExtras(sh *xsheet, l canvas.Layout, b *book, fm *fmts) *sheetExtras 
 			if c.Rules != "" {
 				addRules(c.Rules, ref, xt.place, false)
 			}
-			st := parseStyle(c.Style)
-			if st["dv"] != nil {
-				addDV(st["dv"], ref)
-			}
 			note(parseStyle(c.HeaderStyle), tb.Row, col)
 		}
 		for k, row := range xt.own {
 			for j, st := range row {
 				note(st, tb.Row+1+k, tb.Col+j)
-				if st["dv"] != nil {
-					addDV(st["dv"], rect{tb.Row + 1 + k, tb.Col + j, tb.Row + 1 + k, tb.Col + j})
-				}
 			}
 		}
 	}
@@ -132,9 +102,6 @@ func collectExtras(sh *xsheet, l canvas.Layout, b *book, fm *fmts) *sheetExtras 
 			raw, _ := json.Marshal(cf)
 			addRules(string(raw), rect{s.Row, s.Col, s.Row, s.Col}, nil, false)
 		}
-		if st["dv"] != nil {
-			addDV(st["dv"], rect{s.Row, s.Col, s.Row, s.Col})
-		}
 		note(st, s.Row, s.Col)
 	}
 	failed := 0
@@ -150,12 +117,7 @@ func collectExtras(sh *xsheet, l canvas.Layout, b *book, fm *fmts) *sheetExtras 
 		kept = append(kept, o)
 	}
 	e.cf = kept
-	for _, f := range dvOrder {
-		o := dvs[f]
-		o.refs = mergeRects(o.refs)
-		e.dv = append(e.dv, *o)
-	}
-	sh.rep.Rules, sh.rep.Lists, sh.rep.Notes = failed, failedDV, 0
+	sh.rep.Rules, sh.rep.Notes = failed, 0
 	e.collectCharts(sh, l, b)
 	return e
 
@@ -449,68 +411,40 @@ func cfRuleXML(o *cfOut, prio int, fm *fmts) string {
 	return ""
 }
 
-// dvFormula écrit la source d'une liste de validation : la liste entre
-// guillemets, ou la plage (colonne de tableau, cellules) en A1.
-func dvFormula(v any, sheet string, b *book) (string, bool) {
-	switch x := v.(type) {
-	case []any:
-		var parts []string
-		for _, p := range x {
-			s := fmt.Sprint(p)
-			if strings.ContainsAny(s, `,"`) {
-				return "", false
-			}
-			parts = append(parts, s)
-		}
-		f := `"` + strings.Join(parts, ",") + `"`
-		return f, len(parts) > 0 && len(f) <= 257
-	case map[string]any:
-		src, ok := canvas.DVSource(x)
-		if !ok || b == nil {
-			return "", false
-		}
-		n, err := formula.Parse(src, formula.FR)
-		if err != nil {
-			return "", false
-		}
-		cells := func(sh string, r0, c0, r1, c1 int) string {
-			s := ""
-			if sh != "" && !strings.EqualFold(sh, sheet) {
-				s = quoteSheet(sh) + "!"
-			}
-			s += "$" + colName(c0) + "$" + strconv.Itoa(r0+1)
-			if r1 != r0 || c1 != c0 {
-				s += ":$" + colName(c1) + "$" + strconv.Itoa(r1+1)
-			}
-			return s
-		}
-		switch r := n.(type) {
-		case formula.Ref:
-			tp := b.tables[strings.ToLower(r.Table)]
-			if tp == nil {
-				return "", false
-			}
-			j := tp.colIndex(r.Col)
-			if j < 0 {
-				return "", false
-			}
-			return cells(tp.sheet, tp.row+1, tp.col+j, tp.lastRow(), tp.col+j), true
-		case formula.CellRange:
-			sh := r.Sheet
-			if sh != "" {
-				sh = b.sheets[strings.ToLower(sh)]
-			}
-			return cells(sh, r.R1, r.C1, r.R2, r.C2), true
-		case formula.Name:
-			if p, ok := b.names[strings.ToLower(r.Name)]; ok {
-				return cells(p.sheet, p.row, p.col, p.row, p.col), true
-			}
-		}
+// tableDVSource récrit la source d'une liste tirée d'une colonne de
+// tableau (Tableau[Colonne]) en plage de cellules du fichier exporté, que
+// l'écriture des validations (xlsxvalidation.go) sait citer.
+func tableDVSource(dv any, b *book) any {
+	m, ok := dv.(map[string]any)
+	if !ok || b == nil {
+		return dv
 	}
-	return "", false
+	src, ok := m["src"].(string)
+	if !ok {
+		return dv
+	}
+	n, err := formula.Parse(src, formula.FR)
+	if err != nil {
+		return dv
+	}
+	r, ok := n.(formula.Ref)
+	if !ok || r.Table == "" {
+		return dv
+	}
+	tp := b.tables[strings.ToLower(r.Table)]
+	if tp == nil || tp.colIndex(r.Col) < 0 {
+		return dv
+	}
+	c := tp.col + tp.colIndex(r.Col)
+	out := map[string]any{}
+	for k, v := range m {
+		out[k] = v
+	}
+	out["src"] = formula.CellRange{Sheet: tp.sheet, R1: tp.row + 1, C1: c, R2: tp.lastRow(), C2: c}.String()
+	return out
 }
 
-// extrasXML écrit les règles et les validations (après les fusions).
+// extrasXML écrit les règles conditionnelles (après les fusions).
 func extrasXML(e *sheetExtras) string {
 	if e == nil {
 		return ""
@@ -518,13 +452,6 @@ func extrasXML(e *sheetExtras) string {
 	var b strings.Builder
 	for _, o := range e.cf {
 		fmt.Fprintf(&b, `<conditionalFormatting sqref="%s">%s</conditionalFormatting>`, sqref(o.refs), o.xml)
-	}
-	if len(e.dv) > 0 {
-		fmt.Fprintf(&b, `<dataValidations count="%d">`, len(e.dv))
-		for _, d := range e.dv {
-			fmt.Fprintf(&b, `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="%s"><formula1>%s</formula1></dataValidation>`, sqref(d.refs), xmlEscape(d.formula))
-		}
-		b.WriteString(`</dataValidations>`)
 	}
 	return b.String()
 }

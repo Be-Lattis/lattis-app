@@ -17,10 +17,33 @@ import (
 // dvValue donne la propriété dv d'une validation ; faux si elle n'a pas
 // d'équivalent.
 func (x *xlsxFile) dvValue(dv *xDV, sheet string, rv *resolver) (any, bool) {
-	if dv.attrs["type"] == "list" {
-		return x.listValidation(dv.f1, sheet, rv)
+	a := dv.attrs
+	on := func(k string) bool { return a[k] == "1" || a[k] == "true" }
+	top, _, _ := strings.Cut(strings.Fields(dv.sqref + " ")[0], ":")
+	v, ok := validationFromXlsx(XlsxValidation{Type: a["type"], Operator: a["operator"], AllowBlank: on("allowBlank"),
+		ShowInput: on("showInputMessage"), ShowError: on("showErrorMessage"), ErrorStyle: a["errorStyle"], ErrorTitle: a["errorTitle"],
+		Error: a["error"], PromptTitle: a["promptTitle"], Prompt: a["prompt"], Formula1: dv.f1, Formula2: dv.f2, TopLeft: top})
+	if a["type"] != "list" {
+		return v, ok // xlsxvalidation.go
 	}
-	return nil, false
+	// Liste : la source est retrouvée dans les tableaux importés (colonne de
+	// tableau, nom défini) ; messages et alerte gardés.
+	l, lok := x.listValidation(dv.f1, sheet, rv)
+	if !lok {
+		return v, ok && (v["list"] != nil || v["src"] != nil)
+	}
+	if !ok || v["type"] != "list" {
+		return l, true // sans alerte : la liste déroulante seule
+	}
+	delete(v, "list")
+	delete(v, "src")
+	switch l := l.(type) {
+	case []any:
+		v["list"] = l
+	case map[string]any:
+		v["src"] = l["src"]
+	}
+	return v, true
 }
 
 // listValidation lit la source d'une liste.

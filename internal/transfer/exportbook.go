@@ -420,7 +420,7 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 	sh.rep.Rules = len(rules)
 	if b != nil && b.target == toXLSX {
 		// Validations des données écrites dans le fichier (xlsxvalidation.go).
-		sh.validations, sh.rep.Lists = sheetValidationsXML(l)
+		sh.validations, sh.rep.Lists = sheetValidationsXML(l, b)
 	}
 	return sh, nil
 }

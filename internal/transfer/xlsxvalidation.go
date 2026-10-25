@@ -300,7 +300,7 @@ func xlsxRange(src string) (string, bool) {
 // lignes et colonnes entières, colonnes de tableau) : une entrée par
 // validation, ses plages dans sqref ; skipped compte celles qui ne
 // s'écrivent pas.
-func sheetValidationsXML(l canvas.Layout) (xml string, skipped int) {
+func sheetValidationsXML(l canvas.Layout, b *book) (xml string, skipped int) {
 	type group struct {
 		dv     any
 		ranges []string
@@ -316,6 +316,7 @@ func sheetValidationsXML(l canvas.Layout) (xml string, skipped int) {
 		if json.Unmarshal([]byte(style), &st) != nil || st["dv"] == nil {
 			return
 		}
+		st["dv"] = tableDVSource(st["dv"], b) // liste tirée d'une colonne de tableau (xlsxcfwrite.go)
 		k, _ := json.Marshal(st["dv"])
 		g := groups[string(k)]
 		if g == nil {

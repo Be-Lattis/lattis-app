@@ -218,7 +218,7 @@ func TestXLSXRulesRoundTrip(t *testing.T) {
 	if g := got(string(cf)); g != "bar: top:2 date:today formula:=A$21>MOYENNE($A$21:$C$21)" {
 		t.Errorf("A22 : %s", g)
 	}
-	if dv := styleOf(t, cols[3].Style)["dv"]; fmtAny(dv) != "[VRAI,FAUX]" {
+	if dv, _ := styleOf(t, cols[3].Style)["dv"].(map[string]any); fmtAny(dv["list"]) != "[VRAI,FAUX]" {
 		t.Errorf("liste de Payé : %v", dv)
 	}
 	if dv, _ := free[[2]int{20, 2}]["dv"].(map[string]any); dv["src"] != "Ventes[Produit]" {
