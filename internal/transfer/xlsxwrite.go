@@ -124,6 +124,18 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 	for _, ext := range slices.Sorted(maps.Keys(md.exts)) {
 		fmt.Fprintf(&types, `<Default Extension="%s" ContentType="%s"/>`, ext, md.exts[ext])
 	}
+	// Notes : commentaires et leur dessin VML (xlsxcfwrite.go).
+	comments := make([][2]string, len(sheets))
+	vml := false
+	for i := range sheets {
+		if c, v := commentsXML(sheets[i].extra, i+1); c != "" {
+			comments[i], vml = [2]string{c, v}, true
+			fmt.Fprintf(&types, `<Override PartName="/xl/comments%d.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"/>`, i+1)
+		}
+	}
+	if vml {
+		types.WriteString(`<Default Extension="vml" ContentType="application/vnd.openxmlformats-officedocument.vmlDrawing"/>`)
+	}
 	types.WriteString(`</Types>`)
 	// Excel recalcule à l'ouverture : les valeurs écrites ne servent qu'en
 	// attendant (et aux lecteurs qui ne calculent pas).
@@ -153,7 +165,7 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 		if err != nil {
 			return err
 		}
-		if len(tables[i]) == 0 && len(urls) == 0 && drawing == "" {
+		if len(tables[i]) == 0 && len(urls) == 0 && drawing == "" && comments[i][0] == "" {
 			continue
 		}
 		var r strings.Builder
@@ -178,6 +190,16 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 				return err
 			}
 		}
+		if comments[i][0] != "" {
+			fmt.Fprintf(&r, `<Relationship Id="rComments1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="../comments%d.xml"/>`, i+1)
+			fmt.Fprintf(&r, `<Relationship Id="rVml1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing" Target="../drawings/vmlDrawing%d.vml"/>`, i+1)
+			if err := file(fmt.Sprintf("xl/comments%d.xml", i+1), comments[i][0]); err != nil {
+				return err
+			}
+			if err := file(fmt.Sprintf("xl/drawings/vmlDrawing%d.vml", i+1), comments[i][1]); err != nil {
+				return err
+			}
+		}
 		r.WriteString(`</Relationships>`)
 		if err := file(fmt.Sprintf("xl/worksheets/_rels/sheet%d.xml.rels", i+1), r.String()); err != nil {
 			return err
@@ -193,7 +215,7 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 		}
 	}
 	// Les styles en dernier : toutes les mises en forme sont alors connues.
-	if err := file("xl/styles.xml", xlsxStyles(fm.all())); err != nil {
+	if err := file("xl/styles.xml", strings.Replace(xlsxStyles(fm.all()), "</styleSheet>", dxfsXML(fm.dxfs)+"</styleSheet>", 1)); err != nil {
 		return err
 	}
 	return zw.Close()
@@ -326,12 +348,17 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 	if len(merges) > 0 {
 		fmt.Fprintf(bw, `<mergeCells count="%d">%s</mergeCells>`, len(merges), strings.Join(merges, ""))
 	}
+	bw.WriteString(extrasXML(s.extra)) // règles conditionnelles (xlsxcfwrite.go)
 	bw.WriteString(s.validations)
 	urls := writeHyperlinks(bw, links, len(tables)+1)
 	bw.WriteString(xlsxPageXML(s.page))
 	if drawing != "" {
 		fmt.Fprintf(bw, `<drawing r:id="%s"/>`, drawing)
 	}
+	if s.extra != nil && len(s.extra.notes) > 0 {
+		bw.WriteString(`<legacyDrawing r:id="rVml1"/>`)
+	}
+
 	if len(tables) > 0 {
 		fmt.Fprintf(bw, `<tableParts count="%d">`, len(tables))
 		for k := range tables {

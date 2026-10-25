@@ -41,6 +41,7 @@ func ImportXLSX(ctx context.Context, m *canvas.Model, path string) (canvas.Impor
 		return canvas.ImportResult{}, err
 	}
 	x.pics = x.readDrawings(sheets)
+	visibleSheet(sheets)
 	res, err := m.Import(ctx, "Importer "+filepath.Base(path), sheets)
 	res.Warnings = slices.Concat(x.lost(), warnings, res.Warnings)
 	return res, err
@@ -67,6 +68,10 @@ func (x *xlsxFile) lost() []string {
 			notes += countTags(f, "comment")
 		}
 	}
+	// Repris : seuls les autres sont perdus.
+	charts -= x.imp.charts
+	pivots -= x.imp.pivots
+	notes -= x.imp.notes
 	var out []string
 	say := func(id msg.ID, args msg.Args) { out = append(out, msg.Format(x.lang, id, args)) }
 	if charts > 0 {
@@ -86,14 +91,14 @@ func (x *xlsxFile) lost() []string {
 		say("import.xlsx.images", msg.Args{"n": images})
 	}
 	for _, sh := range x.sheets {
-		e := x.extras[sh.name]
-		if e[0] > 0 {
-			say("import.xlsx.rules", msg.Args{"sheet": sh.name, "n": e[0]})
+		if n := x.imp.rules[sh.name]; n > 0 {
+			say("import.xlsx.rules", msg.Args{"sheet": sh.name, "n": n})
 		}
-		if e[1] > 0 {
-			say("import.xlsx.validations", msg.Args{"sheet": sh.name, "n": e[1]})
+		if n := x.imp.lists[sh.name]; n > 0 {
+			say("import.xlsx.validations", msg.Args{"sheet": sh.name, "n": n})
 		}
 	}
+
 	return out
 }
 
@@ -134,7 +139,9 @@ type freeCell struct {
 }
 
 type islandState struct {
+	tb    *tableBuild // mise en forme (tableau)
 	is    *island
+
 	cols  []colState
 	cells []freeCell
 }
@@ -145,10 +152,11 @@ type islandState struct {
 func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.ImportSheet, []string, error) {
 	rv := &resolver{bySheet: map[string][]*island{}}
 	states := make([][]*islandState, len(x.sheets))
+	builds := make([]*sheetBuild, len(x.sheets))
 	for si, sh := range x.sheets {
 		b := newIslands()
 		err := x.scan(ctx, sh, func(c *rawCell) error {
-			if !c.empty(x.sst) {
+			if !c.empty(x.sst) && !sh.skipped(c.row, c.col) {
 				b.add(c.row, c.col)
 			}
 			return nil
@@ -156,13 +164,28 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 		if err != nil {
 			return nil, nil, err
 		}
-		for _, r := range b.rects() {
+		rects := b.rects()
+		maxCol := 0
+		for _, r := range rects {
+			maxCol = max(maxCol, r.c1)
+		}
+		sb := newSheetBuild(x, x.sheetFormat(sh, maxCol+10))
+		builds[si] = sb
+		xnames := x.excelTables(sh)
+		for _, r := range rects {
 			is := &island{rect: r, sheet: sh.name}
 			st := &islandState{is: is}
 			if is.table() {
-				is.name = tableName(sh.name, r.r0, r.c0, taken)
+				// Un tableau d'Excel à la même place garde son nom.
+				if n := identifier(xnames[r]); n != "" && !taken[n] && !canvas.A1Like(n) {
+					taken[n] = true
+					is.name = n
+				} else {
+					is.name = tableName(sh.name, r.r0, r.c0, taken)
+				}
 				is.headers = make([]string, r.c1-r.c0+1)
 				st.cols = make([]colState, len(is.headers))
+				st.tb = sb.addTable(is)
 			}
 			states[si] = append(states[si], st)
 			rv.bySheet[strings.ToLower(sh.name)] = append(rv.bySheet[strings.ToLower(sh.name)], is)
@@ -175,8 +198,9 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 			err error
 		}{}
 		active := states[si]
+		sb := builds[si]
 		err := x.scan(ctx, sh, func(c *rawCell) error {
-			if c.empty(x.sst) {
+			if sh.skipped(c.row, c.col) {
 				return nil
 			}
 			var st *islandState
@@ -192,9 +216,17 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 					break
 				}
 			}
-			if st == nil {
+			if x.st != nil {
+				var tb *tableBuild
+				if st != nil {
+					tb = st.tb
+				}
+				sb.cell(tb, c.row, c.col, c.s)
+			}
+			if st == nil || c.empty(x.sst) {
 				return nil
 			}
+
 			var ps []piece
 			var perr error
 			if c.hasF {
@@ -270,6 +302,8 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 			out[si].Page = sh.page
 		}
 		out[si].Links = x.sheetLinks(sh)
+		warnings = append(warnings, x.decorate(sh, builds[si], rv)...)
+		out[si].Format = builds[si].f
 		for _, st := range states[si] {
 			is := st.is
 			if !is.table() {
@@ -302,6 +336,7 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 				Types:    make([]grid.Type, len(is.headers)),
 				Formulas: make([]string, len(is.headers)),
 				Count:    rows,
+				Format:   st.tb.tf,
 			}
 			errs := 0
 			for i, cs := range st.cols {

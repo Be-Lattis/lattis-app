@@ -28,6 +28,21 @@ type xlsxSheet struct {
 	// page : mise en page lue (balises après les cellules, noms
 	// d'impression du classeur).
 	page *canvas.PageSetup
+	// hidden : feuille masquée ; ext : mise en forme, règles, validations
+	// (lues au premier passage, xlsxsheetfmt.go).
+	hidden bool
+	ext    *sheetExt
+	// skip : zones lues autrement (tableaux croisés repris comme tels).
+	skip []rect
+}
+
+func (sh *xlsxSheet) skipped(r, c int) bool {
+	for _, z := range sh.skip {
+		if z.contains(r, c) {
+			return true
+		}
+	}
+	return false
 }
 
 type xlsxFile struct {
@@ -38,13 +53,18 @@ type xlsxFile struct {
 	sst      []string
 	dates    []dateKind // par style de cellule (attribut s)
 	date1904 bool
-	// extras : par feuille lue jusqu'au bout, règles de mise en forme
-	// conditionnelle et validations (non importées).
-	mu     sync.Mutex
-	extras map[string][2]int
-	links  map[string][]xlsxLink // par feuille lue jusqu'au bout (xlsxlinks.go)
+	mu    sync.Mutex
+	links map[string][]xlsxLink // par feuille lue jusqu'au bout (xlsxlinks.go)
+
 	// pics : images lues dans les parties de dessin (xlsxdrawing.go).
 	pics int
+	// st : mise en forme du classeur (xlsxstyle.go) ; names : noms définis
+	// du classeur (minuscules), pour les sources des listes et des TCD.
+	st    *bookStyles
+	names map[string]string
+	// imp : ce qui a été repris (graphiques, TCD, notes) et ce qui ne l'a
+	// pas été, par feuille (xlsxdecorate.go).
+	imp importCounts
 }
 
 type dateKind uint8
@@ -145,8 +165,9 @@ func (x *xlsxFile) load() error {
 			Date1904 string `xml:"date1904,attr"`
 		} `xml:"workbookPr"`
 		Sheets []struct {
-			Name string `xml:"name,attr"`
-			ID   string `xml:"id,attr"` // r:id
+			Name  string `xml:"name,attr"`
+			ID    string `xml:"id,attr"` // r:id
+			State string `xml:"state,attr"`
 		} `xml:"sheets>sheet"`
 		Names []struct {
 			Name  string `xml:"name,attr"`
@@ -166,12 +187,17 @@ func (x *xlsxFile) load() error {
 	for i, s := range wb.Sheets {
 		pages[i] = &canvas.PageSetup{}
 		if f := x.find(byID[s.ID]); f != nil {
-			x.sheets = append(x.sheets, xlsxSheet{name: s.Name, file: f, page: pages[i]})
+			x.sheets = append(x.sheets, xlsxSheet{name: s.Name, file: f, page: pages[i], hidden: s.State == "hidden" || s.State == "veryHidden", ext: &sheetExt{}})
 		}
 	}
 	for _, n := range wb.Names {
 		if n.Local != nil && *n.Local >= 0 && *n.Local < len(pages) {
 			parsePrintNames(pages[*n.Local], n.Name, n.Value)
+		} else if n.Local == nil {
+			if x.names == nil {
+				x.names = map[string]string{}
+			}
+			x.names[strings.ToLower(n.Name)] = n.Value
 		}
 	}
 	if p := byType["sharedStrings"]; p != "" {
@@ -186,6 +212,11 @@ func (x *xlsxFile) load() error {
 			if x.dates, err = x.readStyles(f); err != nil {
 				return err
 			}
+			var theme *zip.File
+			if p := byType["theme"]; p != "" {
+				theme = x.find(p)
+			}
+			x.st = x.readFormats(f, theme)
 		}
 	}
 	return nil
@@ -372,8 +403,13 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 	row, col := -1, -1
 	var buf strings.Builder
 	capture, inIS, skip := false, false, 0
-	n, rules, lists := 0, 0, 0
+	n := 0
 	var links []xlsxLink // liens hypertexte (après les cellules)
+	// Mise en forme de la feuille : lue au premier passage seulement.
+	var fx *fmtReader
+	if sh.ext != nil && !sh.ext.done {
+		fx = &fmtReader{e: sh.ext}
+	}
 	// Mise en page (après les cellules) ; relue à l'identique au second passage.
 	page := sh.page
 	var hf *canvas.HeaderFooter
@@ -382,10 +418,9 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 		if err := d.next(); err != nil {
 			if err == io.EOF {
 				x.mu.Lock()
-				if x.extras == nil {
-					x.extras = map[string][2]int{}
+				if fx != nil {
+					sh.ext.done = true
 				}
-				x.extras[sh.name] = [2]int{rules, lists}
 				if x.links == nil {
 					x.links = map[string][]xlsxLink{}
 				}
@@ -397,12 +432,18 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 		}
 		switch d.kind {
 		case xmlStart:
+			if fx != nil && string(d.name) != "row" && fx.start(d, row) {
+				continue
+			}
 			switch string(d.name) {
 			case "row":
 				row++
 				col = -1
 				if v, err := strconv.Atoi(string(d.attr("r"))); err == nil {
 					row = v - 1
+				}
+				if fx != nil {
+					fx.start(d, row)
 				}
 			case "c":
 				col++
@@ -429,10 +470,6 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 				skip++
 			case "t":
 				capture = inIS && skip == 0
-			case "cfRule":
-				rules++
-			case "dataValidation":
-				lists++
 			case "hyperlink":
 				links = append(links, xlsxLink{ref: string(d.attr("ref")), id: string(d.attr("id")), loc: string(d.attr("location"))})
 			default:
@@ -449,6 +486,9 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 				}
 			}
 		case xmlEnd:
+			if fx != nil && fx.end(string(d.name)) {
+				continue
+			}
 			switch string(d.name) {
 			case "v":
 				c.v, c.hasV, capture = buf.String(), true, false
@@ -477,6 +517,9 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 				}
 			}
 		case xmlText:
+			if fx != nil && fx.text(d.text) {
+				continue
+			}
 			if capture {
 				buf.Write(d.text)
 			}

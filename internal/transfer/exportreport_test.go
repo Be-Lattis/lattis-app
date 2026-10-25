@@ -47,7 +47,11 @@ func TestExportReport(t *testing.T) {
 			t.Fatalf("%s : %d feuilles", ext, len(rep.Sheets))
 		}
 		s := rep.Sheets[0]
-		if s.Name != "Données" || s.Charts != 1 || s.Rules != 1 || s.Notes != 1 || s.Tables != 1 {
+		lost := 1 // règle et note : exportées en .xlsx
+		if ext == ".xlsx" {
+			lost = 0
+		}
+		if s.Name != "Données" || s.Charts != 1 || s.Rules != lost || s.Notes != lost || s.Tables != 1 {
 			t.Errorf("%s : feuille Données : %+v", ext, s)
 		}
 		// TEXTE et FILTRE (cellules), CUMUL (colonne calculée).

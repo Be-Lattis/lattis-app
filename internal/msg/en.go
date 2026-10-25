@@ -463,6 +463,9 @@ var en = map[ID]string{
 	// Importing tables
 	"import.cellFormulaDropped":  "{sheet}, row {row}, column {column}: {err}; value imported without the formula {formula}",
 	"import.formulaDropped":      "{table}[{column}]: {err}; values imported without the formula {formula}",
+	"import.rulesDropped": "Sheet “{sheet}”: {n, plural, one {1 unreadable conditional formatting rule not imported} other {# unreadable conditional formatting rules not imported}}",
+	"import.pivotDropped": "Sheet “{sheet}”: PivotTable imported as values ({err})",
+	"import.chartDropped": "Sheet “{sheet}”: chart not imported ({err})",
 	"import.inconsistentColumns": "import of table {table}: inconsistent columns",
 	"import.invalidTableName":    "import: {table} is not a valid table name",
 	"import.rowCount":            "import of table {table}: {n} rows instead of {expected}",

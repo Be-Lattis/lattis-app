@@ -463,6 +463,9 @@ var es = map[ID]string{
 	// Importación de tablas
 	"import.cellFormulaDropped":  "{sheet}, fila {row}, columna {column}: {err}; valor importado sin la fórmula {formula}",
 	"import.formulaDropped":      "{table}[{column}]: {err}; valores importados sin la fórmula {formula}",
+	"import.rulesDropped": "Hoja «{sheet}»: {n, plural, one {1 regla de formato condicional ilegible no importada} other {# reglas de formato condicional ilegibles no importadas}}",
+	"import.pivotDropped": "Hoja «{sheet}»: tabla dinámica importada como valores ({err})",
+	"import.chartDropped": "Hoja «{sheet}»: gráfico no importado ({err})",
 	"import.inconsistentColumns": "importación de la tabla {table}: columnas incoherentes",
 	"import.invalidTableName":    "importación: {table} no es un nombre de tabla válido",
 	"import.rowCount":            "importación de la tabla {table}: {n} filas en lugar de {expected}",

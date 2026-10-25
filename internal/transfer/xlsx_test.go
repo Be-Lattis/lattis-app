@@ -268,8 +268,8 @@ func TestFormatKind(t *testing.T) {
 func TestXLSXImportLost(t *testing.T) {
 	ctx := context.Background()
 	sheet := `<sheetData>` + row(1, cs("A1", 0), cs("B1", 1)) + row(2, cn("A2", "1"), cn("B2", "2")) + row(3, cn("A3", "3"), cn("B3", "4")) + `</sheetData>` +
-		`<conditionalFormatting sqref="A2:A3"><cfRule type="cellIs" priority="1" operator="greaterThan"><formula>1</formula></cfRule></conditionalFormatting>` +
-		`<dataValidations count="1"><dataValidation type="list" sqref="B2:B3"><formula1>"1,2"</formula1></dataValidation></dataValidations>`
+		`<conditionalFormatting sqref="A2:A3"><cfRule type="cellIs" priority="1" operator="greaterThan"><formula>$C$1</formula></cfRule></conditionalFormatting>` +
+		`<dataValidations count="1"><dataValidation type="whole" operator="between" sqref="B2:B3"><formula1>1</formula1><formula2>9</formula2></dataValidation></dataValidations>`
 	path := xlsxFixtureParts(t, []string{"A", "B"}, [][2]string{{"Données", sheet}}, map[string]string{
 		"xl/charts/chart1.xml":           `<chartSpace/>`,
 		"xl/charts/chart2.xml":           `<chartSpace/>`,

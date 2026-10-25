@@ -81,6 +81,9 @@ type xsheet struct {
 	pics    map[string]xpic
 	// validations : <dataValidations> de la feuille (.xlsx).
 	validations string
+	// extra : règles conditionnelles, notes et graphiques (export .xlsx :
+	// xlsxcfwrite.go, xlsxchartwrite.go).
+	extra *sheetExtras
 }
 
 // Limites d'une feuille Excel : la feuille de Lattis va au-delà, l'export coupe.
@@ -136,6 +139,7 @@ func exportBook(ctx context.Context, m *canvas.Model, tg target) ([]xsheet, *fmt
 			sh.objects = layouts[i].Objects
 			sh.pics = sheetObjects(ctx, m, sh.objects)
 			sh.sparks = layouts[i].Sparklines
+			sh.extra = collectExtras(&sh, layouts[i], b, fm)
 		}
 		sh.rows = func(ctx context.Context, xt *xtable, send func(int, []xcell) error) error {
 			return tableRows(ctx, m, xt, fm, tg, send)

@@ -49,6 +49,8 @@ type ImportTable struct {
 	// Key : colonne clé (1 = la première ; 0 : sans clé), posée avant les
 	// formules (REFERENCE cherche par la clé ; sans clé, par le rang).
 	Key int
+	// Format : mise en forme et règles conditionnelles (importformat.go).
+	Format *TableFormat
 }
 
 // ImportCell est une cellule libre importée.
@@ -67,6 +69,11 @@ type ImportSheet struct {
 	Links  []ImportLink
 	// Objects : images et formes posées sur la feuille (fichier .xlsx).
 	Objects []ImportObject
+	// Format : mise en forme de la feuille (importformat.go) ; Charts et
+	// Pivots : graphiques et tableaux croisés (importobjects.go).
+	Format *ImportFormat
+	Charts []ImportChart
+	Pivots []ImportPivot
 }
 
 // ImportLink est le lien hypertexte d'une cellule importée (adresse sous
@@ -145,6 +152,7 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 			it *ImportTable
 		}
 		var tables []made
+		var cfDropped []int
 		for si := range sheets {
 			s := &sheets[si]
 			id, err := t.newSheet(s.Name)
@@ -162,8 +170,15 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 				if err != nil {
 					return err
 				}
+				if err := t.importTableFormat(tb, s.Tables[i].Format); err != nil {
+					return err
+				}
 				tables = append(tables, made{tb.ID, &s.Tables[i]})
 				res.Tables = append(res.Tables, tb.Name)
+			}
+			cfDropped = append(cfDropped, validCF(s.Format))
+			if err := t.importFormat(id, s.Format); err != nil {
+				return err
 			}
 		}
 		for _, mk := range tables {
@@ -195,6 +210,28 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 					res.Warnings = append(res.Warnings, m.say("import.formulaDropped", msg.Args{"table": tb.Name, "column": tb.Cols[i].Name, "err": err, "formula": f}))
 				}
 			}
+		}
+		// Règles conditionnelles : leurs formules peuvent citer les tableaux.
+		for si := range sheets {
+			s := &sheets[si]
+			var tbs []Table
+			var tfs []*TableFormat
+			for _, mk := range tables {
+				for i := range s.Tables {
+					if mk.it == &s.Tables[i] {
+						tb, err := t.table(mk.id)
+						if err != nil {
+							return err
+						}
+						tbs, tfs = append(tbs, tb), append(tfs, s.Tables[i].Format)
+					}
+				}
+			}
+			w, err := m.importRules(t, res.Sheets[si], s.Name, tbs, tfs, s.Format, cfDropped[si])
+			if err != nil {
+				return err
+			}
+			res.Warnings = append(res.Warnings, w...)
 		}
 		for si, s := range sheets {
 			for _, c := range s.Cells {
@@ -248,6 +285,11 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 				}
 			}
 		}
+		w, err := m.importObjects(t, sheets, res.Sheets)
+		if err != nil {
+			return err
+		}
+		res.Warnings = append(res.Warnings, w...)
 		if len(res.Sheets) > 0 {
 			for _, id := range blank {
 				if err := t.dropBlankSheet(id); err != nil {

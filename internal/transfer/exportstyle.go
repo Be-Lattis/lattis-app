@@ -53,6 +53,8 @@ type fmts struct {
 	// résolvent les couleurs prises dans le thème (« theme:accent1:+40 ») ;
 	// nil : celles du thème par défaut.
 	colors map[string]string
+	// dxfs : formats différentiels (mise en forme conditionnelle, .xlsx).
+	dxfs []xfmt
 }
 
 func newFmts() *fmts {
