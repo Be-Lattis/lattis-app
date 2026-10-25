@@ -84,14 +84,14 @@ At the bottom, checks show in orange (empty list, default value not in the list,
 
 ## Import {#importer}
 
-File › Import reads a CSV file (or delimited text) and Excel workbooks `.xlsx` and `.xlsm`: each sheet becomes a tab, each block of data a table. Whatever isn't carried over as is (macros, charts, PivotTables, conditional formatting, comments, validations) is reported at the end of the import.
+File › Import reads a CSV file (or delimited text), `.xlsx`, `.xlsm` and OpenDocument `.ods` workbooks: each sheet becomes a tab, each block of data a table, with its formatting, notes, validation lists and conditional formatting. Charts and PivotTables are carried over when their data is a table of the workbook. Whatever isn't carried over (macros, other objects) is reported at the end of the import.
 
 For data to refresh (JSON or Parquet file, SQLite database, PostgreSQL, MySQL, SQL Server, web page), use a query instead: see [Import data and connections](connexions).
 
 ## Export {#exporter}
 
 - **CSV**: the active table or the whole sheet. In a CSV for Excel, a text that starts with `=`, `+`, `-` or `@` is preceded by an apostrophe, so that Excel doesn't run it as a formula.
-- **Excel (`.xlsx`) and OpenDocument (`.ods`)**: the whole workbook. Tables become Excel tables, formulas are translated when the format has an equivalent, otherwise exported as their value. PivotTables go out as values; charts, conditional formatting, notes and scripts are not exported. A report says what didn't go out as is.
+- **Excel (`.xlsx`) and OpenDocument (`.ods`)**: the whole workbook. Tables become Excel tables, formulas are translated when the format has an equivalent, otherwise exported as their value. PivotTables go out as values; charts, conditional formatting, validation lists and notes go out in `.xlsx`; scripts are not exported. A report says what didn't go out as is.
 - **PDF**: File › Print, with the “Microsoft Print to PDF” printer (see [Page layout and printing](impression)).
 
 ## Sample workbook {#classeur-d-exemple}

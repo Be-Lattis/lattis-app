@@ -31,9 +31,10 @@ func (s *DocumentService) Import(ctx context.Context, path string) (ImportResult
 		p, err := s.sys().OpenFile(FileDialog{
 			Title: "Importer des données",
 			Filters: []FileFilter{
-				{"CSV ou classeur Excel", "*.csv;*.tsv;*.txt;*.xlsx;*.xlsm"},
+				{"CSV ou classeur", "*.csv;*.tsv;*.txt;*.xlsx;*.xlsm;*.ods"},
 				{"CSV", "*.csv;*.tsv;*.txt"},
 				{"Classeur Excel", "*.xlsx;*.xlsm"},
+				{"Classeur OpenDocument", "*.ods"},
 			},
 		})
 		if err != nil {

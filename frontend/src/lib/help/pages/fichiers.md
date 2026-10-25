@@ -84,14 +84,14 @@ En bas, les vérifications s'affichent en orange (liste vide, valeur par défaut
 
 ## Importer
 
-Fichier › Importer lit un fichier CSV (ou texte délimité) et les classeurs Excel `.xlsx` et `.xlsm` : chaque feuille devient un onglet, chaque bloc de données un tableau. Ce qui n'est pas repris tel quel (macros, graphiques, tableaux croisés, mise en forme conditionnelle, commentaires, validations) est signalé à la fin de l'import.
+Fichier › Importer lit un fichier CSV (ou texte délimité), les classeurs `.xlsx`, `.xlsm` et OpenDocument `.ods` : chaque feuille devient un onglet, chaque bloc de données un tableau, avec sa mise en forme, ses notes, ses listes de validation et sa mise en forme conditionnelle. Graphiques et tableaux croisés sont repris quand leurs données sont un tableau du classeur. Ce qui n'est pas repris (macros, autres objets) est signalé à la fin de l'import.
 
 Pour des données à actualiser (fichier JSON ou Parquet, base SQLite, PostgreSQL, MySQL, SQL Server, page web), passez plutôt par une requête : voir [Importer des données et connexions](connexions).
 
 ## Exporter
 
 - **CSV** : le tableau actif ou toute la feuille. Dans un CSV pour Excel, un texte qui commence par `=`, `+`, `-` ou `@` est précédé d'une apostrophe, pour qu'Excel ne l'exécute pas comme une formule.
-- **Excel (`.xlsx`) et OpenDocument (`.ods`)** : tout le classeur. Les tableaux deviennent des tableaux Excel, les formules sont traduites quand le format a un équivalent, sinon exportées par leur valeur. Les tableaux croisés partent en valeurs ; les graphiques, la mise en forme conditionnelle, les notes et les scripts ne sont pas exportés. Un compte rendu dit ce qui n'est pas parti tel quel.
+- **Excel (`.xlsx`) et OpenDocument (`.ods`)** : tout le classeur. Les tableaux deviennent des tableaux Excel, les formules sont traduites quand le format a un équivalent, sinon exportées par leur valeur. Les tableaux croisés partent en valeurs ; graphiques, mise en forme conditionnelle, listes de validation et notes partent en `.xlsx` ; les scripts ne sont pas exportés. Un compte rendu dit ce qui n'est pas parti tel quel.
 - **PDF** : Fichier › Imprimer, avec l'imprimante « Microsoft Print to PDF » (voir [Mise en page et impression](impression)).
 
 ## Classeur d'exemple

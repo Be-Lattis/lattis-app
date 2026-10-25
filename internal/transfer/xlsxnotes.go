@@ -108,6 +108,11 @@ func (x *xlsxFile) threadedComments(p string) map[string]string {
 
 // placeNotes pose les notes de la feuille.
 func (x *xlsxFile) placeNotes(sh xlsxSheet, sb *sheetBuild) {
+	for ref, t := range sh.notes { // fichier .ods
+		if r, c, ok := parseCellRef(ref); ok {
+			sb.patch(r, c, canvas.Style{"nt": t})
+		}
+	}
 	if sh.file == nil {
 		return
 	}

@@ -2,6 +2,7 @@ package transfer
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/xml"
 	"fmt"
@@ -34,6 +35,10 @@ type xlsxSheet struct {
 	ext    *sheetExt
 	// skip : zones lues autrement (tableaux croisés repris comme tels).
 	skip []rect
+	// data : feuille déjà écrite en SpreadsheetML (fichier .ods, odsread.go),
+	// à la place de file ; notes : ses notes par cellule (« B3 »).
+	data  []byte
+	notes map[string]string
 }
 
 func (sh *xlsxSheet) skipped(r, c int) bool {
@@ -397,9 +402,12 @@ func (c *rawCell) empty(sst []string) bool {
 // scan parcourt les cellules d'une feuille dans l'ordre du fichier (lignes
 // croissantes, colonnes croissantes).
 func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) error) error {
-	r, err := sh.file.Open()
-	if err != nil {
-		return err
+	var r io.ReadCloser = io.NopCloser(bytes.NewReader(sh.data))
+	if sh.data == nil {
+		var err error
+		if r, err = sh.file.Open(); err != nil {
+			return err
+		}
 	}
 	defer r.Close()
 	d := newXMLScanner(r)

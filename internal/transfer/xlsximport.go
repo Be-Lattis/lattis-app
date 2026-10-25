@@ -31,6 +31,11 @@ func ImportXLSX(ctx context.Context, m *canvas.Model, path string) (canvas.Impor
 		return canvas.ImportResult{}, err
 	}
 	defer x.Close()
+	return x.importBook(ctx, m, path)
+}
+
+// importBook importe un classeur lu (.xlsx, ou .ods ramené au même modèle).
+func (x *xlsxFile) importBook(ctx context.Context, m *canvas.Model, path string) (canvas.ImportResult, error) {
 	x.lang = m.Language()
 	taken, err := m.TableNames(ctx)
 	if err != nil {

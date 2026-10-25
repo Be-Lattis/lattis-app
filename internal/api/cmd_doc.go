@@ -180,9 +180,9 @@ func init() {
 			},
 		},
 		&Command{
-			Name: "doc.import", Label: "Importer", Summary: "Importe un fichier CSV ou un classeur Excel (.xlsx) dans de nouvelles feuilles.", NoLua: true, Write: true,
+			Name: "doc.import", Label: "Importer", Summary: "Importe un fichier CSV ou un classeur (.xlsx, .ods) dans de nouvelles feuilles.", NoLua: true, Write: true,
 			Returns: "{sheets, tables, warnings}",
-			Params:  []Param{{Name: "path", Type: String, Desc: "chemin du fichier .csv, .tsv, .txt ou .xlsx"}},
+			Params:  []Param{{Name: "path", Type: String, Desc: "chemin du fichier .csv, .tsv, .txt, .xlsx ou .ods"}},
 			Run: func(c *Call) (any, error) {
 				d, err := c.Doc()
 				if err != nil {

@@ -84,14 +84,14 @@ Abajo, las comprobaciones aparecen en naranja (lista vacía, valor predeterminad
 
 ## Importar {#importer}
 
-Archivo › Importar lee un archivo CSV (o texto delimitado) y los libros de Excel `.xlsx` y `.xlsm`: cada hoja se convierte en una pestaña, cada bloque de datos en una tabla. Lo que no se traslada tal cual (macros, gráficos, tablas dinámicas, formato condicional, comentarios, validaciones) se indica al final de la importación.
+Archivo › Importar lee un archivo CSV (o texto delimitado), los libros `.xlsx`, `.xlsm` y OpenDocument `.ods`: cada hoja se convierte en una pestaña, cada bloque de datos en una tabla, con su formato, notas, listas de validación y formato condicional. Los gráficos y las tablas dinámicas se trasladan cuando sus datos son una tabla del libro. Lo que no se traslada (macros, otros objetos) se indica al final de la importación.
 
 Para datos que actualizar (archivo JSON o Parquet, base de datos SQLite, PostgreSQL, MySQL, SQL Server, página web), use mejor una consulta: consulte [Importar datos y conexiones](connexions).
 
 ## Exportar {#exporter}
 
 - **CSV**: la tabla activa o toda la hoja. En un CSV para Excel, un texto que empieza por `=`, `+`, `-` o `@` va precedido de un apóstrofo, para que Excel no lo ejecute como una fórmula.
-- **Excel (`.xlsx`) y OpenDocument (`.ods`)**: todo el libro. Las tablas se convierten en tablas de Excel, las fórmulas se traducen cuando el formato tiene un equivalente; si no, se exportan como su valor. Las tablas dinámicas salen como valores; los gráficos, el formato condicional, las notas y los scripts no se exportan. Un informe indica lo que no salió tal cual.
+- **Excel (`.xlsx`) y OpenDocument (`.ods`)**: todo el libro. Las tablas se convierten en tablas de Excel, las fórmulas se traducen cuando el formato tiene un equivalente; si no, se exportan como su valor. Las tablas dinámicas salen como valores; los gráficos, el formato condicional, las listas de validación y las notas salen en `.xlsx`; los scripts no se exportan. Un informe indica lo que no salió tal cual.
 - **PDF**: Archivo › Imprimir, con la impresora «Microsoft Print to PDF» (consulte [Diseño de página e impresión](impression)).
 
 ## Libro de ejemplo {#classeur-d-exemple}

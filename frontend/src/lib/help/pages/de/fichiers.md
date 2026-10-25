@@ -84,14 +84,14 @@ Unten erscheinen Prüfungen in Orange (leere Liste, Standardwert nicht in der Li
 
 ## Importieren {#importer}
 
-Datei › Importieren liest eine CSV-Datei (oder Text mit Trennzeichen) und Excel-Arbeitsmappen `.xlsx` und `.xlsm`: Jedes Tabellenblatt wird zu einem Register, jeder Datenblock zu einer Tabelle. Was nicht unverändert übernommen wird (Makros, Diagramme, PivotTables, bedingte Formatierung, Kommentare, Überprüfungen), wird am Ende des Imports gemeldet.
+Datei › Importieren liest eine CSV-Datei (oder Text mit Trennzeichen), Arbeitsmappen `.xlsx`, `.xlsm` und OpenDocument `.ods`: Jedes Tabellenblatt wird zu einem Register, jeder Datenblock zu einer Tabelle, mit Formatierung, Notizen, Auswahllisten und bedingter Formatierung. Diagramme und PivotTables werden übernommen, wenn ihre Daten eine Tabelle der Arbeitsmappe sind. Was nicht übernommen wird (Makros, andere Objekte), wird am Ende des Imports gemeldet.
 
 Für Daten, die aktualisiert werden sollen (JSON- oder Parquet-Datei, SQLite-Datenbank, PostgreSQL, MySQL, SQL Server, Webseite), verwenden Sie stattdessen eine Abfrage: siehe [Daten importieren und Verbindungen](connexions).
 
 ## Exportieren {#exporter}
 
 - **CSV**: die aktive Tabelle oder das ganze Blatt. In einer CSV für Excel wird einem Text, der mit `=`, `+`, `-` oder `@` beginnt, ein Apostroph vorangestellt, damit Excel ihn nicht als Formel ausführt.
-- **Excel (`.xlsx`) und OpenDocument (`.ods`)**: die ganze Arbeitsmappe. Tabellen werden zu Excel-Tabellen, Formeln werden übersetzt, wenn das Format eine Entsprechung hat, sonst als ihr Wert exportiert. PivotTables gehen als Werte hinaus; Diagramme, bedingte Formatierung, Notizen und Skripte werden nicht exportiert. Ein Bericht nennt, was nicht unverändert hinausging.
+- **Excel (`.xlsx`) und OpenDocument (`.ods`)**: die ganze Arbeitsmappe. Tabellen werden zu Excel-Tabellen, Formeln werden übersetzt, wenn das Format eine Entsprechung hat, sonst als ihr Wert exportiert. PivotTables gehen als Werte hinaus; Diagramme, bedingte Formatierung, Auswahllisten und Notizen gehen in `.xlsx` hinaus; Skripte werden nicht exportiert. Ein Bericht nennt, was nicht unverändert hinausging.
 - **PDF**: Datei › Drucken, mit dem Drucker „Microsoft Print to PDF“ (siehe [Seitenlayout und Drucken](impression)).
 
 ## Beispielarbeitsmappe {#classeur-d-exemple}
