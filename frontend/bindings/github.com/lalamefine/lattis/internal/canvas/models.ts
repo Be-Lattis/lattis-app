@@ -588,6 +588,9 @@ export interface DVRule {
     "at"?: string;
     "input"?: DVMessage | null;
     "error"?: DVMessage | null;
+}
+
+/**
  * DataTableDef : une table de données posée. Row : cellule d'entrée en ligne
  * (valeurs de la première ligne), Col : en colonne (valeurs de la première
  * colonne) ; les deux : table à deux variables.
@@ -782,6 +785,9 @@ export interface Found {
      * Text : ce qui a été trouvé (valeur, formule ou note), coupé.
      */
     "text": string;
+}
+
+/**
  * GoalSeekResult : issue d'une recherche de valeur cible. Raw (forme
  * gardée) est la valeur à poser par SetWhatIfValues (« Conserver »).
  */
