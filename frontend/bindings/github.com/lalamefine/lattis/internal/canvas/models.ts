@@ -1267,6 +1267,32 @@ export interface PageSetup {
 }
 
 /**
+ * PasteOptions sont les choix du collage spécial.
+ */
+export interface PasteOptions {
+    /**
+     * What : "all" (ou ""), "values", "formulas", "formats", "valuesNumbers"
+     * (valeurs et formats de nombre), "widths" (largeurs de colonnes).
+     */
+    "what": string;
+
+    /**
+     * Op : "" (aucune), "add", "sub", "mul", "div".
+     */
+    "op": string;
+
+    /**
+     * SkipBlanks : les cellules vides de la source ne remplacent rien.
+     */
+    "skipBlanks": boolean;
+
+    /**
+     * Transpose : lignes et colonnes échangées.
+     */
+    "transpose": boolean;
+}
+
+/**
  * PendingRef est ce qui citait un ancien tableau (formule, colonne
  * calculée, règle de mise en forme, TCD, graphique, Document, contrôle,
  * requête) : repris (After, la formule ou l'objet d'après) ou à reprendre à

@@ -19,6 +19,8 @@ Die QuickInfo jedes Farbfelds nennt seinen Namen („Grün, Akzent 1, heller 40 
 
 Start › Bearbeiten › Löschen entfernt die Formate, den Inhalt (`Entf`) oder die Notiz der Auswahl. Füllbereich kopiert die erste Zeile nach unten (`Strg+D`) oder die erste Spalte nach rechts (`Strg+R`).
 
+**Inhalte einfügen** (`Strg+Alt+V`, Start › Einfügen ▾ oder Rechtsklick) fügt nur die Werte, Formeln, Formate, Werte und Zahlenformate oder Spaltenbreiten ein; es kann zum Ziel addieren, davon subtrahieren, es multiplizieren oder dividieren, leere Zellen überspringen und transponieren. Eine Kopie aus einer Tabellenkalkulation wird mit Farben, Schriften, Rahmen, Zahlenformaten und verbundenen Zellen eingefügt; eine Kopie aus Lattis behält ihre Formatierung auch in einer Tabellenkalkulation.
+
 Start › Als Tabelle formatieren (`Strg+L`) macht aus dem Block freier Zellen um die aktive Zelle eine Tabelle, deren erste Zeile die Überschriften liefert. Auf einer leeren Zelle legt Einfügen › Tabelle (oder `Strg+L`) eine leere Tabelle mit einer Spalte „Spalte 1“ an, die Überschrift auf der Zelle: Geben Sie darunter ein, um sie zu füllen, in der Überschrift, um die Spalte umzubenennen.
 
 ## Bedingte Formatierung {#mise-en-forme-conditionnelle}

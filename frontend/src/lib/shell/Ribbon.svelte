@@ -15,6 +15,7 @@
 	import { colorName, resolveColor } from '#lib/grid/colors.js';
 	import { tableTheme } from '#lib/grid/theme.svelte.js';
 	import { clearPatch, type CellStyle } from '#lib/grid/style.js';
+	import type { PasteKind } from '#lib/grid/pastespecial.js';
 	import { DEFAULT_PT, FONTS, SIZES } from '#lib/grid/textwrap.js';
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
@@ -67,6 +68,8 @@
 		items?: { label: string; icon?: IconName; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean; data?: boolean; swatch?: [string, string]; sep?: boolean }[];
 		/** Commande qui ouvre son propre menu (▾ affiché, voir anchor). */
 		menu?: boolean;
+		/** Bouton partagé (Coller) : le bouton fait la commande, son ▾ ouvre les choix (items). */
+		split?: boolean;
 		/** Forme dans un groupe compact (par défaut petite icône seule) : 'small' petite icône à libellé, 'big' grand bouton (Coller, Fusionner et centrer). */
 		size?: Size;
 		/** Liste en tête d'un groupe en lignes (Format de nombre) : le choix en cours, affiché dans la liste ; items donne les choix. */
@@ -161,7 +164,8 @@
 		/** Insertion › Formulaire : partager le tableau actif comme formulaire. */
 		onform?: () => void;
 		onformula?: (what: 'insert' | 'sum' | 'reference') => void;
-		onclip?: (what: 'cut' | 'copy' | 'paste') => void;
+		/** Presse-papiers ; PasteKind : collage spécial (boîte, ou Valeurs, Formules, Formats, Transposer). */
+		onclip?: (what: 'cut' | 'copy' | 'paste' | PasteKind) => void;
 		onpainter?: () => void;
 		onaudit?: (kind: 'show' | 'clear') => void;
 		onchart?: (kind: ChartKind) => void;
@@ -357,7 +361,24 @@
 				// Comme Excel : Coller en grand, les autres en petit avec leur libellé.
 				compact: true,
 				commands: [
-					{ label: t('ribbon.cmd.paste.label'), icon: 'paste', size: 'big', data: true, run: onclip ? () => onclip('paste') : undefined, hint: t('ribbon.cmd.paste.tooltip') },
+					{
+						label: t('ribbon.cmd.paste.label'),
+						icon: 'paste',
+						size: 'big',
+						data: true,
+						split: true,
+						run: onclip ? () => onclip('paste') : undefined,
+						hint: t('ribbon.cmd.paste.tooltip'),
+						// Comme un tableur : Coller ▾ propose les collages courants et la boîte.
+						items: [
+							{ label: t('grid.pasteSpecial.paste'), keys: 'Ctrl+V', run: onclip ? () => onclip('paste') : undefined },
+							{ label: t('grid.pasteSpecial.values'), run: onclip ? () => onclip('values') : undefined },
+							{ label: t('grid.pasteSpecial.formulas'), run: onclip ? () => onclip('formulas') : undefined },
+							{ label: t('grid.pasteSpecial.formats'), run: onclip ? () => onclip('formats') : undefined },
+							{ label: t('grid.pasteSpecial.transpose'), run: onclip ? () => onclip('transpose') : undefined },
+							{ label: t('grid.pasteSpecial.menu'), keys: 'Ctrl+Alt+V', sep: true, run: onclip ? () => onclip('dialog') : undefined }
+						]
+					},
 					{ label: t('ribbon.cmd.cut.label'), icon: 'cut', size: 'small', run: onclip ? () => onclip('cut') : undefined, hint: t('ribbon.cmd.cut.tooltip') },
 					{ label: t('ribbon.cmd.copy.label'), icon: 'copy', size: 'small', ro: true, run: onclip ? () => onclip('copy') : undefined, hint: t('ribbon.cmd.copy.tooltip') },
 					{ label: t('ribbon.cmd.painter.label'), icon: 'format-painter', size: 'small', local: true, run: onpainter, hint: t('ribbon.cmd.painter.tooltip') }
@@ -1593,6 +1614,34 @@
 										onclick={(ev) => toggleDrop(c, ev)}
 										title={tipOf(c, disabled)}><span class="label">{c.combo}</span><span class="chev" aria-hidden="true">▾</span></button
 									>
+								{:else if c.split && c.items}
+									<!-- Bouton partagé (Coller) : la commande, et son ▾ dessous (ou à côté). -->
+									<span class="split" class:big={size === 'big'} class:big-cmd={size === 'big' && !!g.compact}>
+										<button
+											class="cmd"
+											class:row-cmd={size !== 'big'}
+											aria-label={size === 'icon' ? c.label : undefined}
+											data-kt={c.label}
+											disabled={!c.run}
+											onclick={(ev) => {
+												anchorAt(ev);
+												c.run?.();
+											}}
+											title={tipOf(c, disabled)}
+										>
+											<Icon name={c.icon} size={size === 'big' ? 24 : 16} />
+											{#if size !== 'icon'}<span class="label">{c.label}</span>{/if}
+										</button>
+										<button
+											class="cmd chev"
+											aria-haspopup="menu"
+											aria-expanded={dropMenu?.label === c.label}
+											aria-label={t('grid.pasteSpecial.title')}
+											title={t('grid.pasteSpecial.title')}
+											disabled={!c.run}
+											onclick={(ev) => toggleDrop(c, ev)}>▾</button
+										>
+									</span>
 								{:else}
 									<button
 										class="cmd"
@@ -1993,6 +2042,29 @@
 	}
 	.commands.stack .big-cmd {
 		grid-row: span 3;
+	}
+	/* Bouton partagé (Coller) : grand, la commande au-dessus de son ▾ ; petit, côte à côte. */
+	.split {
+		display: flex;
+	}
+	.split.big {
+		flex-direction: column;
+	}
+	.split.big > .cmd:first-child {
+		flex: 1;
+		border-bottom-left-radius: 0;
+		border-bottom-right-radius: 0;
+	}
+	.cmd.chev {
+		min-width: 0;
+		padding: 0 4px;
+		font-size: 10px;
+		line-height: 1;
+	}
+	.split.big > .cmd.chev {
+		padding: 1px 0 2px;
+		border-top-left-radius: 0;
+		border-top-right-radius: 0;
 	}
 	/* Groupe en lignes (Nombre, Paragraphe) : petites icônes rangées ligne par
 	   ligne, sous la liste du format qui prend toute la première. */

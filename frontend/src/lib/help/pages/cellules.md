@@ -19,6 +19,8 @@ L'infobulle de chaque pastille donne son nom (« Vert, Accent 1, plus clair 40 %
 
 Accueil › Édition › Effacer retire les formats, le contenu (`Suppr`) ou la note de la sélection. Remplissage recopie la première ligne vers le bas (`Ctrl+D`) ou la première colonne vers la droite (`Ctrl+R`).
 
+**Collage spécial** (`Ctrl+Alt+V`, Accueil › Coller ▾ ou clic droit) colle seulement les valeurs, les formules, les formats, les valeurs et formats de nombre ou les largeurs de colonnes ; il peut additionner, soustraire, multiplier ou diviser la destination, ignorer les cellules vides (Blancs non compris) et transposer. Une copie faite dans un tableur se colle avec ses couleurs, polices, bordures, formats de nombre et fusions ; une copie de Lattis collée dans un tableur garde aussi sa mise en forme.
+
 Accueil › Mettre sous forme de tableau (`Ctrl+L`) fait un tableau du bloc de cellules libres de la cellule active, sa première ligne donnant les en-têtes. Sur une cellule vide, Insertion › Tableau (ou `Ctrl+L`) pose un tableau vide d'une colonne « Colonne 1 », l'en-tête sur la cellule : tapez dessous pour le remplir, dans l'en-tête pour renommer la colonne.
 
 ## Mise en forme conditionnelle

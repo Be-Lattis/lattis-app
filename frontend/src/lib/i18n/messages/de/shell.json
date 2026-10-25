@@ -151,6 +151,7 @@
 			"copy": "Kopieren",
 			"cut": "Ausschneiden",
 			"paste": "Einfügen",
+			"pasteSpecial": "Inhalte einfügen",
 			"find": "Suchen",
 			"replace": "Ersetzen",
 			"bold": "Fett, kursiv, unterstrichen",

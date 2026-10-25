@@ -11,22 +11,22 @@ describe('cellule de tableau', () => {
 	const all = { format: true, rules: true, note: true, sort: true, row: true, column: true, table: true };
 
 	it('suit l’ordre demandé : presse-papiers, mise en forme, note, sous-menus', () => {
-		expect(flat(tableCellMenu(all))).toBe('cut copy paste | clear format rules | note | sort row column table');
+		expect(flat(tableCellMenu(all))).toBe('cut copy paste pasteSpecial | clear format rules | note | sort row column table');
 	});
 
 	it('met la situation en tête, suivie d’un séparateur', () => {
-		expect(flat(tableCellMenu({ ...all, ref: true, toNote: true }))).toBe('ref toNote | cut copy paste | clear format rules | note | sort row column table');
+		expect(flat(tableCellMenu({ ...all, ref: true, toNote: true }))).toBe('ref toNote | cut copy paste pasteSpecial | clear format rules | note | sort row column table');
 		expect(flat(tableCellMenu({ ...all, promote: true }))).toMatch(/^promote \| cut/);
 	});
 
 	it('en-tête : du texte ou des groupes au-dessus, pas de sous-menu Ligne', () => {
 		const head = { ...all, row: false };
-		expect(flat(tableCellMenu({ ...head, toHeader: true, groupsOn: true }))).toBe('toHeader groupsOn | cut copy paste | clear format rules | note | sort column table');
+		expect(flat(tableCellMenu({ ...head, toHeader: true, groupsOn: true }))).toBe('toHeader groupsOn | cut copy paste pasteSpecial | clear format rules | note | sort column table');
 		expect(flat(tableCellMenu({ ...head, groupsOff: true }))).toMatch(/^groupsOff \| cut copy paste/);
 	});
 
 	it('sans mise en forme ni note (droits) : l’effacement reste, sans séparateur vide', () => {
-		expect(flat(tableCellMenu({ column: true }))).toBe('cut copy paste | clear | column');
+		expect(flat(tableCellMenu({ column: true }))).toBe('cut copy paste pasteSpecial | clear | column');
 	});
 
 	it('n’a plus d’entrée de l’assistant', () => {
@@ -44,21 +44,21 @@ describe('cellule de tableau', () => {
 
 describe('cellule libre', () => {
 	it('situation, presse-papiers, mise en forme, note, insertion, tableau croisé', () => {
-		expect(flat(freeCellMenu({ format: true, rules: true, note: true, lines: true, pivot: true }))).toBe('cut copy paste | clear format rules | note | insertDialog clearAll | pivot');
+		expect(flat(freeCellMenu({ format: true, rules: true, note: true, lines: true, pivot: true }))).toBe('cut copy paste pasteSpecial | clear format rules | note | insertDialog clearAll | pivot');
 		expect(flat(freeCellMenu({ ref: true, asHeader: true, join: true, asTable: true, spill: true, toValues: true, asGroups: true }))).toBe(
-			'ref asHeader join asTable spillLinked spillValues toValues asGroups | cut copy paste | clear'
+			'ref asHeader join asTable spillLinked spillValues toValues asGroups | cut copy paste pasteSpecial | clear'
 		);
 	});
 
 	it('colle un graphique ou un bouton copié avec le presse-papiers', () => {
-		expect(flat(freeCellMenu({ pasteChart: true, pasteButton: true }))).toBe('cut copy paste pasteChart pasteButton | clear');
+		expect(flat(freeCellMenu({ pasteChart: true, pasteButton: true }))).toBe('cut copy paste pasteSpecial pasteChart pasteButton | clear');
 	});
 });
 
 describe('numéro de ligne, lettre de colonne', () => {
 	it('la ligne ou la colonne en tête (sans sous-menu), puis presse-papiers, mise en forme, tableau', () => {
-		expect(flat(headerMenu({ format: true, rules: true, lines: true, table: true }))).toBe('linesTop | cut copy paste | clear format rules | table');
-		expect(flat(headerMenu({ toNote: true, asGroups: true, lines: true }))).toBe('toNote asGroups | linesTop | cut copy paste | clear');
+		expect(flat(headerMenu({ format: true, rules: true, lines: true, table: true }))).toBe('linesTop | cut copy paste pasteSpecial | clear format rules | table');
+		expect(flat(headerMenu({ toNote: true, asGroups: true, lines: true }))).toBe('toNote asGroups | linesTop | cut copy paste pasteSpecial | clear');
 	});
 
 	it('sous-menu des lignes ou colonnes : insertion, taille, affichage', () => {

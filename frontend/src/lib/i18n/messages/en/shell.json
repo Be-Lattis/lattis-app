@@ -151,6 +151,7 @@
 			"copy": "Copy",
 			"cut": "Cut",
 			"paste": "Paste",
+			"pasteSpecial": "Paste Special",
 			"find": "Find",
 			"replace": "Replace",
 			"bold": "Bold, italic, underline",

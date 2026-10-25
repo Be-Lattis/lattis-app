@@ -17,6 +17,9 @@
 	import { ease, flashAlpha, lerpBar, motionAt, progress, reducedMotion, sameBar, shiftAxis, tableMotions, zeroBar, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
 	import { sweepAt, watchSource, WORK_DELAY, workAlpha, type WorkLookup, type WorkZone } from './working';
 	import { followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
+	import { clipValues, hasClipStyles, parseClipHtml, toClipHtml, type ClipStyle } from './clipboardHtml';
+	import { pasteOptions, plainPaste, type PasteKind, type PasteOptions } from './pastespecial';
+	import PasteSpecial from './PasteSpecial.svelte';
 	import { boxStyle, formatStat, isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
 	import { formatCell } from './numfmt';
 	import { autoHeight, BASE_PX, cellFont, fontPx, headerHeight, headerTextWidth, lineHeight, wrapLines } from './textwrap';
@@ -463,6 +466,10 @@
 		 * tableau en valeur. values : le bloc affiché de la source.
 		 */
 		transfer?(from: number, src: ClipRect, dst: ClipRect, move: boolean, values: string[][]): Promise<string | void>;
+		/** Collage spécial d'une zone copiée dans Lattis (valeurs, formules, formats, opération, transposé…). */
+		pasteSpecial?(from: number, src: ClipRect, dst: ClipRect, opt: PasteOptions, values: string[][]): Promise<string | void>;
+		/** Bloc venu d'ailleurs, avec la mise en forme d'un tableur (JSON par cellule) et les choix du collage spécial. */
+		pasteBlock?(dst: ClipRect, block: string[][], styles: string[][] | null, opt: PasteOptions): Promise<string | void>;
 		/**
 		 * Classeur collaboratif : saisie commencée (on) ou terminée dans la
 		 * cellule (row, col) ; une modification reçue d'un collègue pour elle
@@ -8650,6 +8657,9 @@
 			case 'chart':
 				chartActive('bar');
 				return true;
+			case 'pasteSpecial':
+				void pasteSpecial();
+				return true;
 			case 'repeat':
 				if (lastRepeat) lastRepeat();
 				else say(tr('grid.repeat.nothing'));
@@ -10087,7 +10097,7 @@
 		const text = takeClip(cut);
 		if (text === null) return;
 		try {
-			await navigator.clipboard.writeText(text);
+			await writeClip(text);
 		} catch {
 			clipRange = null;
 			say(tr('grid.clipboard.unavailable'));
@@ -10139,7 +10149,7 @@
 		const text = takeClip(cut);
 		if (text === null) return;
 		try {
-			await navigator.clipboard.writeText(text);
+			await writeClip(text);
 		} catch {
 			clipRange = null;
 			say(tr('grid.clipboard.unavailable.copy'));
@@ -10148,17 +10158,142 @@
 		clipMessage(cut);
 	}
 
+	/** Version HTML de la dernière copie (valeurs et mise en forme), pour un collage dans un tableur. */
+	function clipHtml(): string {
+		const c = clipRange;
+		if (!c) return '';
+		return toClipHtml(c.values, (i, j) => (styleAt(c.r0 + i, c.c0 + j) ?? null) as ClipStyle | null);
+	}
+
+	/** Écrit la copie dans le presse-papiers : texte tabulé et, s'il le permet, HTML avec la mise en forme. */
+	async function writeClip(text: string) {
+		const html = clipHtml();
+		if (html && typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
+			try {
+				await navigator.clipboard.write([new ClipboardItem({ 'text/plain': new Blob([text], { type: 'text/plain' }), 'text/html': new Blob([html], { type: 'text/html' }) })]);
+				return;
+			} catch {
+				// HTML refusé : le texte seul.
+			}
+		}
+		await navigator.clipboard.writeText(text);
+	}
+
+	/** Lit le presse-papiers : texte et, s'il y en a, sa version HTML (copie d'un tableur) ; null s'il est inaccessible. */
+	async function readClip(): Promise<{ text: string; html: string } | null> {
+		try {
+			let text = '';
+			let html = '';
+			for (const it of await navigator.clipboard.read()) {
+				if (!text && it.types.includes('text/plain')) text = await (await it.getType('text/plain')).text();
+				if (!html && it.types.includes('text/html')) html = await (await it.getType('text/html')).text();
+			}
+			return { text, html };
+		} catch {
+			try {
+				return { text: await navigator.clipboard.readText(), html: '' };
+			} catch {
+				return null;
+			}
+		}
+	}
+
 	/** Coller à la cellule active (ruban, clic droit). */
 	export async function pasteClipboard() {
 		wrap.focus();
-		let text = '';
-		try {
-			text = await navigator.clipboard.readText();
-		} catch {
+		const clip = await readClip();
+		if (!clip) {
 			say(tr('grid.clipboard.unavailable.paste'));
 			return;
 		}
-		pasteText(text);
+		pasteText(clip.text, clip.html);
+	}
+
+	// --- Collage spécial (Ctrl+Alt+V) ---------------------------------------------
+
+	let pasteDlg = $state<{ text: string; html: string; internal: boolean; formats: boolean } | null>(null);
+
+	/** Collage spécial : la boîte, ou une entrée directe (Valeurs, Formules, Formats, Transposer). */
+	export async function pasteSpecial(kind: PasteKind = 'dialog') {
+		wrap.focus();
+		if (editing || !source.paste) return;
+		const clip = await readClip();
+		if (!clip) {
+			say(tr('grid.clipboard.unavailable.paste'));
+			return;
+		}
+		if (kind === 'dialog') {
+			const internal = !!source.pasteSpecial && !!richClip(clipRange, clip.text);
+			pasteDlg = { ...clip, internal, formats: internal || hasClipStyles(parseClipHtml(clip.html)) };
+			return;
+		}
+		if (!pasteWith(pasteOptions(kind), clip.text, clip.html)) say(tr('grid.pasteSpecial.empty'));
+	}
+
+	/**
+	 * Colle le presse-papiers (text, html) selon les choix du collage spécial ;
+	 * faux si rien à coller. styled : collage ordinaire d'un bloc copié dans
+	 * un tableur, avec sa mise en forme (depuis pasteText).
+	 */
+	function pasteWith(opt: PasteOptions, text: string, html: string, styled = false): boolean {
+		if (!source.paste) return false;
+		if (plainPaste(opt) && !styled) return pasteText(text, html);
+		const sel = selection();
+		const finish = (area: ClipRect) => (m: string | void) => {
+			message = m || tr('grid.clipboard.pasted');
+			active = { row: area.r0, col: area.c0 };
+			anchor = { row: area.r1, col: area.c1 };
+			refreshFx();
+			refreshStatus();
+			schedule();
+		};
+		const fail = (err: unknown) => {
+			message = errorText(err);
+			refreshStatus();
+			schedule();
+		};
+		const blocked = (area: ClipRect) => {
+			if (pivotIn(area.r0, area.c0, area.r1, area.c1)) say(PIVOT_READONLY);
+			else if (queryIn(area.r0, area.c0, area.r1, area.c1)) say(QUERY_READONLY);
+			else return false;
+			return true;
+		};
+		// Copie faite dans Lattis : la zone source, lue par le modèle.
+		const rich = source.pasteSpecial ? richClip(clipRange, text) : null;
+		if (rich && source.pasteSpecial) {
+			const run = source.pasteSpecial;
+			const [h, w] = opt.transpose ? [rich.c1 - rich.c0 + 1, rich.r1 - rich.r0 + 1] : [rich.r1 - rich.r0 + 1, rich.c1 - rich.c0 + 1];
+			const area = opt.what === 'widths' ? sel : pasteArea(h, w, sel);
+			if (opt.what !== 'widths' && blocked(area)) return true;
+			const src = { r0: rich.r0, c0: rich.c0, r1: rich.r1, c1: rich.c1 };
+			writing = writing.catch(() => undefined).then(() => run(rich.sheet, src, sel, opt, rich.values).then(finish(area), fail));
+			return true;
+		}
+		// Venue d'ailleurs : le texte, et la mise en forme de sa version HTML.
+		const parsed = html ? parseClipHtml(html) : null;
+		const tsv = parseTSV(text);
+		const block = parsed ? clipValues(parsed, tsv) : tsv;
+		if (!block.length || !source.pasteBlock) return false;
+		if (opt.what === 'widths') {
+			say(tr('grid.pasteSpecial.noWidths'));
+			return true;
+		}
+		const withStyles = hasClipStyles(parsed);
+		if ((opt.what === 'formats' || opt.what === 'valuesNumbers') && !withStyles) {
+			if (opt.what === 'formats') {
+				say(tr('grid.pasteSpecial.noFormats'));
+				return true;
+			}
+			opt = { ...opt, what: 'values' };
+		}
+		const h0 = block.length;
+		const w0 = Math.max(...block.map((r) => r.length));
+		const area = opt.transpose ? pasteArea(w0, h0, sel) : pasteArea(h0, w0, sel);
+		if (blocked(area)) return true;
+		const run = source.pasteBlock;
+		const styles = withStyles && parsed ? parsed.styles.map((r) => r.map((s) => (s ? JSON.stringify(s) : ''))) : null;
+		writing = writing.catch(() => undefined).then(() => run(sel, block, styles, opt).then(finish(area), fail));
+		return true;
 	}
 
 	function onCut(e: ClipboardEvent) {
@@ -10180,6 +10315,7 @@
 		const text = takeClip(true);
 		if (text === null) return;
 		e.clipboardData?.setData('text/plain', text);
+		e.clipboardData?.setData('text/html', clipHtml());
 		e.preventDefault();
 		clipMessage(true);
 	}
@@ -10202,6 +10338,7 @@
 		const text = takeClip(false);
 		if (text === null) return;
 		e.clipboardData?.setData('text/plain', text);
+		e.clipboardData?.setData('text/html', clipHtml());
 		e.preventDefault();
 		clipMessage(false);
 	}
@@ -10209,7 +10346,7 @@
 	function onPaste(e: ClipboardEvent) {
 		if (document.activeElement !== wrap || editing || !source.paste) return;
 		const text = e.clipboardData?.getData('text/plain') ?? '';
-		if (pasteText(text)) e.preventDefault();
+		if (pasteText(text, e.clipboardData?.getData('text/html') ?? '')) e.preventDefault();
 	}
 
 	/**
@@ -10217,9 +10354,10 @@
 	 * coller. Le texte de la dernière copie de Lattis se colle « riche »
 	 * (transfer : formules, mise en forme, tableaux ; une zone coupée se
 	 * déplace). Comme Excel, une sélection multiple du bloc copié le reçoit
-	 * répété (une cellule copiée remplit toute la sélection).
+	 * répété (une cellule copiée remplit toute la sélection). Copié d'un
+	 * tableur (html), le bloc garde sa mise en forme (pasteBlock).
 	 */
-	function pasteText(text: string): boolean {
+	function pasteText(text: string, html = ''): boolean {
 		if (!source.paste) return false;
 		const sel = selection();
 		// Graphique (d'une feuille ou d'un document) ; tableau croisé
@@ -10301,6 +10439,10 @@
 				)
 			);
 			return true;
+		}
+		// Copié d'un tableur : valeurs et mise en forme (collage ordinaire).
+		if (!rich && html && source.pasteBlock && hasClipStyles(parseClipHtml(html))) {
+			return pasteWith({ what: 'all', op: '', skipBlanks: false, transpose: false }, text, html, true);
 		}
 		// Texte venu d'ailleurs (ou d'un tableau croisé) : des valeurs.
 		const tiled = tileBlock(block, sel);
@@ -11081,6 +11223,13 @@
 				menu = freeMenu = null;
 				pasteClipboard();
 			}}>{tr('common.paste')} <span class="keys">Ctrl+V</span></button
+		>
+	{:else if id === 'pasteSpecial'}
+		<button data-shed="3"
+			onclick={() => {
+				menu = freeMenu = null;
+				void pasteSpecial();
+			}}>{tr('grid.pasteSpecial.menu')} <span class="keys">Ctrl+Alt+V</span></button
 		>
 	{:else if id === 'pasteChart'}
 		<button
@@ -12099,6 +12248,24 @@
 				}}
 				onclose={() => {
 					customDlg = null;
+					wrap.focus();
+				}}
+			/>
+		{/if}
+		{#if pasteDlg}
+			{@const d = pasteDlg}
+			<PasteSpecial
+				internal={d.internal}
+				formats={d.formats}
+				onok={(o) => {
+					// Lu avant de fermer la boîte (d suit pasteDlg).
+					const { text, html } = d;
+					pasteDlg = null;
+					wrap.focus();
+					if (!pasteWith(o, text, html)) say(tr('grid.pasteSpecial.empty'));
+				}}
+				onclose={() => {
+					pasteDlg = null;
 					wrap.focus();
 				}}
 			/>

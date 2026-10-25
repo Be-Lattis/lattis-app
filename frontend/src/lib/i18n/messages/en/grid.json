@@ -1525,5 +1525,27 @@
 	"local": {
 		"badge": "on this computer",
 		"tooltip": "This table is only on this computer: the other members don't see it. A table created by the owner or a designer is added to the shared workbook automatically (offline: on reconnection). Click to add it to the shared workbook"
+	},
+	"pasteSpecial": {
+		"title": "Paste Special",
+		"menu": "Paste Special…",
+		"paste": "Paste",
+		"all": "All",
+		"values": "Values",
+		"formulas": "Formulas",
+		"formats": "Formats",
+		"valuesNumbers": "Values and number formats",
+		"widths": "Column widths",
+		"operation": "Operation",
+		"none": "None",
+		"add": "Add",
+		"sub": "Subtract",
+		"mul": "Multiply",
+		"div": "Divide",
+		"skipBlanks": "Skip blanks",
+		"transpose": "Transpose",
+		"noFormats": "Nothing to paste: the clipboard has no formatting",
+		"noWidths": "Column widths: only for a copy made in Lattis",
+		"empty": "The clipboard is empty"
 	}
 }

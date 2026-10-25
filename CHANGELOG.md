@@ -9,6 +9,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Nouveautés
 
 - Imprimer / Exporter en PDF reprend la feuille telle qu'à l'écran : couleurs, polices, bordures, alignements, formats de nombre, mise en forme conditionnelle (couleurs, barres, icônes), tableaux croisés et graphiques ; toute la feuille s'imprime, même au-delà de 100 000 lignes (avant : arrêt à 5 000), avec l'avancement dans la barre d'état.
+- Collage spécial (`Ctrl+Alt+V`, Accueil › Coller ▾, clic droit) : coller seulement les valeurs, les formules, les formats, les valeurs et formats de nombre ou les largeurs de colonnes, additionner, soustraire, multiplier ou diviser la destination, ignorer les cellules vides et transposer, en une seule annulation ; Coller ▾ propose aussi directement Valeurs, Formules, Formats et Transposer.
+- Une copie faite dans un tableur se colle avec sa mise en forme (couleurs, gras, italique, police, taille, alignement, bordures, formats de nombre, cellules fusionnées), et une copie de Lattis collée dans un tableur garde la sienne.
 - Publier sur un serveur : la boîte de publication dit l'étape en cours et les lignes envoyées (« Envoi des lignes 2 300 000 / 10 000 000 ») avec une barre de progression, comme la barre d'état, et propose « Annuler la publication » : rien n'est publié et le classeur reste tel qu'avant, jusqu'au dernier instant où le serveur valide la publication.
 
 ### Changements

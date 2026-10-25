@@ -1525,5 +1525,27 @@
 	"local": {
 		"badge": "仅本机",
 		"tooltip": "此表格仅在本机：其他成员看不到它。所有者或设计者创建的表格会自动添加到共享工作簿（离线时：重新连接后）。点击将其添加到共享工作簿"
+	},
+	"pasteSpecial": {
+		"title": "选择性粘贴",
+		"menu": "选择性粘贴…",
+		"paste": "粘贴",
+		"all": "全部",
+		"values": "数值",
+		"formulas": "公式",
+		"formats": "格式",
+		"valuesNumbers": "值和数字格式",
+		"widths": "列宽",
+		"operation": "运算",
+		"none": "无",
+		"add": "加",
+		"sub": "减",
+		"mul": "乘",
+		"div": "除",
+		"skipBlanks": "跳过空单元",
+		"transpose": "转置",
+		"noFormats": "无可粘贴：剪贴板中没有格式",
+		"noWidths": "列宽：仅适用于在 Lattis 中复制的内容",
+		"empty": "剪贴板为空"
 	}
 }

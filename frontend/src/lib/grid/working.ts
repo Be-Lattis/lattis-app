@@ -112,8 +112,10 @@ export function workZones(method: string, args: unknown[], look: WorkLookup): Wo
 		case 'mergeCells':
 		case 'unmergeCells':
 			return rect(a[0], a[1], a[2], a[3]);
-		case 'transfer': {
-			const d = a[2] as { r0?: number; c0?: number; r1?: number; c1?: number } | undefined;
+		case 'pasteBlock':
+		case 'transfer':
+		case 'pasteSpecial': {
+			const d = a[method === 'pasteBlock' ? 0 : 2] as { r0?: number; c0?: number; r1?: number; c1?: number } | undefined;
 			return d ? rect(d.r0, d.c0, d.r1, d.c1) : null;
 		}
 		case 'textToColumns':
@@ -163,6 +165,8 @@ const ZONED = new Set([
 	'mergeCells',
 	'unmergeCells',
 	'transfer',
+	'pasteSpecial',
+	'pasteBlock',
 	'textToColumns',
 	'sheetLines',
 	'applyLineStyle',

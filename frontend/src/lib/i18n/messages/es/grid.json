@@ -1525,5 +1525,27 @@
 	"local": {
 		"badge": "en este equipo",
 		"tooltip": "Esta tabla solo está en este equipo: los demás miembros no la ven. Una tabla creada por el propietario o un diseñador se agrega sola al libro compartido (sin conexión: al reconectarse). Haga clic para agregarla al libro compartido"
+	},
+	"pasteSpecial": {
+		"title": "Pegado especial",
+		"menu": "Pegado especial…",
+		"paste": "Pegar",
+		"all": "Todo",
+		"values": "Valores",
+		"formulas": "Fórmulas",
+		"formats": "Formatos",
+		"valuesNumbers": "Valores y formatos de número",
+		"widths": "Ancho de columnas",
+		"operation": "Operación",
+		"none": "Ninguna",
+		"add": "Sumar",
+		"sub": "Restar",
+		"mul": "Multiplicar",
+		"div": "Dividir",
+		"skipBlanks": "Saltar blancos",
+		"transpose": "Transponer",
+		"noFormats": "Nada que pegar: el portapapeles no tiene formato",
+		"noWidths": "Ancho de columnas: solo para una copia hecha en Lattis",
+		"empty": "El portapapeles está vacío"
 	}
 }

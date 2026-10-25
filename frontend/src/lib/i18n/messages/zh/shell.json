@@ -151,6 +151,7 @@
 			"copy": "复制",
 			"cut": "剪切",
 			"paste": "粘贴",
+			"pasteSpecial": "选择性粘贴",
 			"find": "查找",
 			"replace": "替换",
 			"bold": "加粗、倾斜、下划线",

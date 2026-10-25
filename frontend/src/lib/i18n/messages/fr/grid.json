@@ -1525,5 +1525,27 @@
 	"local": {
 		"badge": "sur ce poste",
 		"tooltip": "Ce tableau n'est que sur ce poste : les autres membres ne le voient pas. Un tableau créé par le propriétaire ou un concepteur s'ajoute de lui-même au classeur partagé (hors ligne : à la reconnexion). Cliquer pour l'ajouter au classeur partagé"
+	},
+	"pasteSpecial": {
+		"title": "Collage spécial",
+		"menu": "Collage spécial…",
+		"paste": "Coller",
+		"all": "Tout",
+		"values": "Valeurs",
+		"formulas": "Formules",
+		"formats": "Formats",
+		"valuesNumbers": "Valeurs et formats de nombre",
+		"widths": "Largeurs de colonnes",
+		"operation": "Opération",
+		"none": "Aucune",
+		"add": "Addition",
+		"sub": "Soustraction",
+		"mul": "Multiplication",
+		"div": "Division",
+		"skipBlanks": "Blancs non compris",
+		"transpose": "Transposer",
+		"noFormats": "Rien à coller : le presse-papiers n'a pas de mise en forme",
+		"noWidths": "Largeurs de colonnes : seulement pour une copie faite dans Lattis",
+		"empty": "Le presse-papiers est vide"
 	}
 }

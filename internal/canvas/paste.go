@@ -49,6 +49,12 @@ func itoa(n int) string {
 // chaque cellule est saisie comme au clavier (extension des tableaux,
 // élargissement des types, cellules libres).
 func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]string) (Event, error) {
+	return m.paste(ctx, sheet, row, col, block, nil)
+}
+
+// paste est Paste, suivi de after dans la même étape d'annulation (mise en
+// forme d'un bloc copié dans un tableur, PasteBlock).
+func (m *Model) paste(ctx context.Context, sheet int64, row, col int, block [][]string, after func(*tx) error) (Event, error) {
 	var ev Event
 	h := len(block)
 	w := 0
@@ -70,7 +76,7 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 		}
 		return ""
 	}
-	err = m.Do(ctx, "Coller", func(t *tx) error {
+	body := func(t *tx) error {
 		work.Op(ctx, "write", "")
 		if err := t.guardCells(sheet, Rect{row, col, row + h - 1, col + w - 1}, true); err != nil {
 			return err
@@ -120,6 +126,12 @@ func (m *Model) Paste(ctx context.Context, sheet int64, row, col int, block [][]
 			ev.AutoKey = t.autoKeyed
 		}
 		return nil
+	}
+	err = m.Do(ctx, "Coller", func(t *tx) error {
+		if err := body(t); err != nil || after == nil {
+			return err
+		}
+		return after(t)
 	})
 	ev.Split = m.splitBirth(ctx, ev, err)
 	return ev, err

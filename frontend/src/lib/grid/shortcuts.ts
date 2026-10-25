@@ -28,6 +28,7 @@ export type Shortcut =
 	| 'hideCols' // Ctrl+0 : masquer les colonnes
 	| 'note' // Maj+F2 : nouvelle note (ou la modifier)
 	| 'insertFunction' // Maj+F3 : insérer une fonction
+	| 'pasteSpecial' // Ctrl+Alt+V : collage spécial
 	| 'chart'; // Alt+F1 ou F11 : graphique du tableau actif
 
 type Keys = Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey'>;
@@ -66,6 +67,8 @@ export function shortcutOf(e: Keys): Shortcut | null {
 	// changement d'onglet).
 	if (e.altKey && ctrl && !e.shiftKey && k === 'PageDown') return 'nextChoice';
 	if (e.altKey && ctrl && !e.shiftKey && k === 'PageUp') return 'prevChoice';
+	// Collage spécial (touche V, quel que soit le clavier).
+	if (e.altKey && ctrl && !e.shiftKey && (e.code === 'KeyV' || lower === 'v')) return 'pasteSpecial';
 	if (ctrl || e.altKey) return null;
 	if (e.shiftKey && (k === ' ' || e.code === 'Space')) return 'selectRow';
 	if (e.shiftKey && k === 'F11') return 'insertSheet';

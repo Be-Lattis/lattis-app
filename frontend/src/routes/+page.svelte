@@ -1761,6 +1761,18 @@
 			if (ev.created) return t('shell.notice.created', { table: ev.created, more: '' });
 			if (ev.widened) return t('shell.notice.widened', { column: ev.widened, from: typeLabel(ev.from as ColumnType), to: typeLabel(ev.to as ColumnType) });
 		},
+		async pasteSpecial(from, src, dst, opt, values) {
+			const ev = await DocumentService.PasteSpecial(from, src, sheetId, dst, opt, values);
+			await reload();
+			if (ev.refusedCount) return refusedNotice(ev);
+			if (ev.created) return t('shell.notice.created', { table: ev.created, more: '' });
+		},
+		async pasteBlock(dst, block, styles, opt) {
+			const ev = await DocumentService.PasteBlock(sheetId, dst, block, styles, opt);
+			await reload();
+			if (ev.refusedCount) return refusedNotice(ev);
+			if (ev.created) return t('shell.notice.created', { table: ev.created, more: autoKeyNote(ev) });
+		},
 		sheetLines: (op, a, b) =>
 			(op === 'insertRows'
 				? DocumentService.InsertSheetRows(sheetId, a, b)
@@ -2421,7 +2433,7 @@
 		tableReadOnly={sheetStatus?.readOnly ? (share?.shared && !share.canDesign && share.roles?.length ? t('shell.share.readOnlyRole', { reason: sheetStatus.readOnly, roles: rolesLabel(share.roles) }) : sheetStatus.readOnly) : undefined}
 		onaudit={mode === 'doc' ? (k) => sheet?.auditActive(k) : undefined}
 		onpainter={mode === 'doc' ? () => sheet?.formatPainter() : undefined}
-		onclip={mode === 'doc' ? (what) => (what === 'paste' ? sheet?.pasteClipboard() : sheet?.copySelection(what === 'cut')) : undefined}
+		onclip={mode === 'doc' ? (what) => (what === 'paste' ? sheet?.pasteClipboard() : what === 'cut' || what === 'copy' ? sheet?.copySelection(what === 'cut') : sheet?.pasteSpecial(what)) : undefined}
 		onchart={mode === 'doc' ? (kind) => sheet?.chartActive(kind) : undefined}
 		onformula={mode === 'doc' ? (what) => (what === 'insert' ? sheet?.openFunctions() : what === 'sum' ? sheet?.autoSum() : sheet?.startFormula('=REFERENCE(')) : undefined}
 		onpivot={mode === 'doc' ? () => sheet?.pivotActive() : undefined}

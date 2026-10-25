@@ -27,7 +27,7 @@ export function groups(...gs: Entry[][]): MenuGroups {
 export const flat = (gs: MenuGroups) => gs.map((g) => g.join(' ')).join(' | ');
 
 /** Le presse-papiers, commun à tous les menus de cellules. */
-const CLIPBOARD = ['cut', 'copy', 'paste'];
+const CLIPBOARD = ['cut', 'copy', 'paste', 'pasteSpecial'];
 
 /** Cellule d'un tableau (données, en-tête ou bande des groupes). */
 export interface TableCellMenu {

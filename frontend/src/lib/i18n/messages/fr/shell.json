@@ -151,6 +151,7 @@
 			"copy": "Copier",
 			"cut": "Couper",
 			"paste": "Coller",
+			"pasteSpecial": "Collage spécial",
 			"find": "Rechercher",
 			"replace": "Remplacer",
 			"bold": "Gras, italique, souligné",

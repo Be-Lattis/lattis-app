@@ -111,6 +111,7 @@ const groups: ShortcutGroup[] = [
 		['Ctrl+C', 'copy'],
 		['Ctrl+X', 'cut'],
 		['Ctrl+V', 'paste'],
+		['Ctrl+Alt+V', 'pasteSpecial'],
 		['Ctrl+F', 'find'],
 		['Ctrl+H', 'replace'],
 		['Ctrl+B / Ctrl+I / Ctrl+U', 'bold'],

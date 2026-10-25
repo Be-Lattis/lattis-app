@@ -151,6 +151,7 @@
 			"copy": "Copiar",
 			"cut": "Cortar",
 			"paste": "Pegar",
+			"pasteSpecial": "Pegado especial",
 			"find": "Buscar",
 			"replace": "Reemplazar",
 			"bold": "Negrita, cursiva, subrayado",

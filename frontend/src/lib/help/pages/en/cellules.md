@@ -19,6 +19,8 @@ Each swatch's tooltip gives its name (“Green, Accent 1, Lighter 40%”). With 
 
 Home › Editing › Clear removes the formats, the contents (`Del`) or the note of the selection. Fill copies the first row down (`Ctrl+D`) or the first column to the right (`Ctrl+R`).
 
+**Paste Special** (`Ctrl+Alt+V`, Home › Paste ▾ or right-click) pastes only the values, formulas, formats, values and number formats, or column widths; it can add to, subtract from, multiply or divide the destination, skip empty cells (Skip blanks) and transpose. A copy made in a spreadsheet pastes with its colors, fonts, borders, number formats and merges; a copy from Lattis pasted into a spreadsheet keeps its formatting too.
+
 Home › Format as Table (`Ctrl+L`) makes a table from the block of free cells around the active cell, its first row giving the headers. On an empty cell, Insert › Table (or `Ctrl+L`) places an empty table with one column, “Column 1”, its header on the cell: type below it to fill it, in the header to rename the column.
 
 ## Conditional formatting {#mise-en-forme-conditionnelle}

@@ -1525,5 +1525,27 @@
 	"local": {
 		"badge": "auf diesem Rechner",
 		"tooltip": "Diese Tabelle ist nur auf diesem Rechner: Die anderen Mitglieder sehen sie nicht. Eine vom Besitzer oder einem Designer erstellte Tabelle wird der geteilten Arbeitsmappe automatisch hinzugefügt (offline: bei der Wiederverbindung). Klicken, um sie der geteilten Arbeitsmappe hinzuzufügen"
+	},
+	"pasteSpecial": {
+		"title": "Inhalte einfügen",
+		"menu": "Inhalte einfügen…",
+		"paste": "Einfügen",
+		"all": "Alles",
+		"values": "Werte",
+		"formulas": "Formeln",
+		"formats": "Formate",
+		"valuesNumbers": "Werte und Zahlenformate",
+		"widths": "Spaltenbreiten",
+		"operation": "Vorgang",
+		"none": "Keine",
+		"add": "Addieren",
+		"sub": "Subtrahieren",
+		"mul": "Multiplizieren",
+		"div": "Dividieren",
+		"skipBlanks": "Leerzellen überspringen",
+		"transpose": "Transponieren",
+		"noFormats": "Nichts einzufügen: Die Zwischenablage hat keine Formatierung",
+		"noWidths": "Spaltenbreiten: nur für eine Kopie aus Lattis",
+		"empty": "Die Zwischenablage ist leer"
 	}
 }

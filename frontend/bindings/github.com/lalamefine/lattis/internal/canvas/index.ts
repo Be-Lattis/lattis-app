@@ -49,6 +49,7 @@ export type {
     Mix,
     NameInfo,
     PageSetup,
+    PasteOptions,
     PendingRef,
     PivotCalcField,
     PivotColStyle,

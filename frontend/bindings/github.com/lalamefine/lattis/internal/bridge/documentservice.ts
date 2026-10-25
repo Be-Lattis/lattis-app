@@ -1405,6 +1405,25 @@ export function Paste(sheet: number, row: number, col: number, block: (string[] 
 }
 
 /**
+ * PasteBlock colle un bloc venu d'ailleurs, avec la mise en forme lue dans la
+ * version HTML du presse-papiers (copie faite dans un tableur ; styles : JSON
+ * de chaque cellule) et les choix du collage spécial (voir
+ * canvas.Model.PasteBlock).
+ */
+export function PasteBlock(sheet: number, dst: canvas$0.Rect, block: (string[] | null)[] | null, styles: (string[] | null)[] | null, opt: canvas$0.PasteOptions): $CancellablePromise<canvas$0.Event> {
+    return $Call.ByID(891995102, sheet, dst, block, styles, opt);
+}
+
+/**
+ * PasteSpecial colle une zone copiée dans Lattis selon les choix du collage
+ * spécial (valeurs, formules, formats, opération, transposé… : voir
+ * canvas.Model.PasteSpecial).
+ */
+export function PasteSpecial($from: number, src: canvas$0.Rect, to: number, dst: canvas$0.Rect, opt: canvas$0.PasteOptions, values: (string[] | null)[] | null): $CancellablePromise<canvas$0.Event> {
+    return $Call.ByID(1322688876, $from, src, to, dst, opt, values);
+}
+
+/**
  * PickControlFile demande un fichier pour un sélecteur de fichier de la
  * feuille ; "" si l'utilisateur annule.
  */
