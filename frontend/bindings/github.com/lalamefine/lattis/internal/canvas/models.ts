@@ -330,6 +330,13 @@ export interface ChartConfig {
      * Excel), à zéro ("zero") ou reliée aux points voisins ("span").
      */
     "blanks"?: string;
+
+    /**
+     * Trendlines, ErrorBars : courbe de tendance et barres d'erreur de
+     * chaque série, par rang (nil : aucune ; voir chartfit.go).
+     */
+    "trendlines"?: (Trendline | null)[] | null;
+    "errorBars"?: (ErrorBars | null)[] | null;
 }
 
 /**
@@ -410,6 +417,13 @@ export interface ChartInfo {
      */
     "formats"?: string[] | null;
     "xFormat"?: string;
+
+    /**
+     * Trends, Errors : courbes de tendance et barres d'erreur calculées, par
+     * rang de série (nil : aucune).
+     */
+    "trends"?: (TrendFit | null)[] | null;
+    "errors"?: (ErrorValues | null)[] | null;
 }
 
 /**
@@ -647,6 +661,39 @@ export interface Dependencies {
     "subject": string;
     "precedents": DepTarget[] | null;
     "dependents": DepTarget[] | null;
+}
+
+/**
+ * ErrorBars : barres d'erreur d'une série.
+ */
+export interface ErrorBars {
+    /**
+     * Type : fixed (valeur fixe Value), percent (Value % de chaque valeur),
+     * stddev (Value écarts types, 1 par défaut, autour de la moyenne de la
+     * série), stderr (erreur type) ou custom (montants lus dans les colonnes
+     * Plus et Minus ; Minus vide : ceux de Plus).
+     */
+    "type": string;
+    "value"?: number;
+    "plus"?: string;
+    "minus"?: string;
+
+    /**
+     * Dir : both (défaut), plus ou minus ; NoCap : sans embouts.
+     */
+    "dir"?: string;
+    "noCap"?: boolean;
+}
+
+/**
+ * ErrorValues : barres d'erreur calculées, montant au-dessus (Plus) et
+ * au-dessous (Minus) de chaque point (nil : pas de barre) ; Center :
+ * barres centrées sur cette valeur (écart type : la moyenne de la série).
+ */
+export interface ErrorValues {
+    "plus": (number | null)[] | null;
+    "minus": (number | null)[] | null;
+    "center"?: number | null;
 }
 
 /**
@@ -894,6 +941,11 @@ export interface Layout {
      * Images, formes et zones de texte, du fond vers le premier plan.
      */
     "objects": ObjectInfo[] | null;
+
+    /**
+     * Graphiques sparkline (sparkline.go).
+     */
+    "sparklines": SparklineInfo[] | null;
 
     /**
      * Ranges : zones « plage » (tableaux convertis), en rectangles.
@@ -2247,6 +2299,104 @@ export interface Span {
 }
 
 /**
+ * SparkCell : un graphique d'un groupe de cellules libres, sa cellule et
+ * ses valeurs (nil : vide ou pas un nombre).
+ */
+export interface SparkCell {
+    "row": number;
+    "col": number;
+    "values": (number | null)[] | null;
+}
+
+/**
+ * SparklineConfig décrit un groupe de graphiques sparkline.
+ */
+export interface SparklineConfig {
+    /**
+     * Kind : line (courbe), column (histogramme) ou winloss (positif/négatif).
+     */
+    "kind": string;
+
+    /**
+     * Tableau : Table, colonnes sources Cols (dans l'ordre), colonne de
+     * dessin At (vide : la colonne juste à droite du tableau).
+     */
+    "table"?: string;
+    "cols"?: string[] | null;
+    "at"?: string;
+
+    /**
+     * Cellules libres : plage source et emplacement (A1:L4, M1:M4).
+     */
+    "source"?: string;
+    "location"?: string;
+
+    /**
+     * Points mis en valeur : haut, bas, premier, dernier, négatifs ;
+     * Markers : tous les points d'une courbe.
+     */
+    "high"?: boolean;
+    "low"?: boolean;
+    "first"?: boolean;
+    "last"?: boolean;
+    "negative"?: boolean;
+    "markers"?: boolean;
+
+    /**
+     * Couleurs « #rrggbb » (vides : celles par défaut) : série, points
+     * négatifs, marqueurs, points haut, bas, premier et dernier.
+     */
+    "color"?: string;
+    "negColor"?: string;
+    "markerColor"?: string;
+    "highColor"?: string;
+    "lowColor"?: string;
+    "firstColor"?: string;
+    "lastColor"?: string;
+
+    /**
+     * Axis : axe horizontal à zéro (quand zéro est dans l'échelle) ; Same :
+     * même échelle pour tout le groupe ; Min, Max : bornes fixes.
+     */
+    "axis"?: boolean;
+    "same"?: boolean;
+    "min"?: number | null;
+    "max"?: number | null;
+
+    /**
+     * Weight : épaisseur de la courbe (px ; 0 : 1,5).
+     */
+    "weight"?: number;
+}
+
+/**
+ * SparklineInfo : un groupe posé sur la feuille.
+ */
+export interface SparklineInfo {
+    "id": number;
+    "config": SparklineConfig;
+
+    /**
+     * Cellules libres : chaque graphique.
+     */
+    "cells"?: SparkCell[] | null;
+
+    /**
+     * Tableau : rang des colonnes sources dans le tableau, colonne de la
+     * feuille où se dessinent les graphiques.
+     */
+    "src"?: number[] | null;
+    "atCol": number;
+
+    /**
+     * Lo, Hi : échelle commune (Same) sur tout le groupe.
+     */
+    "lo"?: number | null;
+    "hi"?: number | null;
+    "error"?: string;
+}
+
+/**
  * Style est la mise en forme d'une cellule (JSON compact) : b, i, u, x
  * (gras, italique, souligné, barré), ff et fs (police et taille en points),
  * fg et bg (couleurs #rrggbb), al (left, center, right), va (top, middle,
@@ -2575,6 +2725,49 @@ export interface Theme {
     "accents"?: string[] | null;
     "dark"?: string;
     "light"?: string;
+}
+
+/**
+ * TrendFit : courbe de tendance calculée. Coef : linear et poly, c0 + c1·x
+ * + c2·x² … ; exp, y = c0·e^(c1·x) ; log, y = c0·ln(x) + c1 ; power,
+ * y = c0·x^c1 ; movavg, aucun. R2 : coefficient de détermination (sur
+ * ln y pour exp et power, comme un tableur). Points : la courbe à tracer
+ * (x, y), prévision comprise ; Index : x est le rang de la catégorie (1,
+ * 2…), pas une valeur de X.
+ */
+export interface TrendFit {
+    "type": string;
+    "coef": number[] | null;
+    "r2": number;
+    "points": number[][] | null;
+    "index"?: boolean;
+}
+
+/**
+ * Trendline : courbe de tendance d'une série.
+ */
+export interface Trendline {
+    /**
+     * Type : linear, exp (exponentielle), log (logarithmique), poly
+     * (polynomiale, Order de 2 à 6), power (puissance) ou movavg (moyenne
+     * mobile sur Period points).
+     */
+    "type": string;
+    "order"?: number;
+    "period"?: number;
+
+    /**
+     * Forward, Backward : prévision après et avant les points, en unités de
+     * X (catégories pour un axe de catégories).
+     */
+    "forward"?: number;
+    "backward"?: number;
+
+    /**
+     * Equation, R2 : affichés sur le graphique.
+     */
+    "equation"?: boolean;
+    "r2"?: boolean;
 }
 
 /**

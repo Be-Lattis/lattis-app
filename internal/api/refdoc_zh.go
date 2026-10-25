@@ -4,9 +4,10 @@ package api
 // reference_i18n.go).
 var apiDocZH = func() apiDoc {
 	style := `bold、italic、underline、strike（布尔值），font（字体）和 size（字号，单位为磅），color 和 fill（颜色 "#rrggbb"，或工作簿主题中的颜色："theme:accent1" 到 "theme:accent6"、"theme:dk1"、"theme:lt1"、"theme:dk2"、"theme:lt2"，必要时后接 ":+40" 表示调亮 40%，或 ":-25" 表示调暗 25%；它们随主题变化），align（"left"、"center" 或 "right"），valign（"top"、"middle" 或 "bottom"），wrap（自动换行），format（"0"、"0,00"、"%"、"€"、"date"、"time" 或 "text"），decimals（小数位数），no_grouping（不用千位分隔符），date_format（日期或时间的格式："jj/mm/aaaa"、"jj mmm aaaa"、"aaaa-mm-jj"、"hh:mm"…），format_code（自定义数字格式代码：'# ##0.00 "kg"'、"0.00E+00"、"# ?/?"、"0;[Red]-0"；优先于 format），borders（四条边框）或 border_top、border_bottom、border_left、border_right、border_color（默认颜色；边框为 true 表示细线，或 "样式 颜色"："thin"、"medium"、"thick"、"double"、"dotted" 或 "dashed"，可再跟一个颜色："double #c00000"），以及 validation（下拉列表：允许值的列表 {"是", "否"}，或源区域 "=客户[城市]"、"=Cell[A1:A10]"、"=Sheet2!Cell[A1:A10]" 或 "=单元格名称"，每次打开列表和每次输入时都会重新读取其中不同的非空值；或规则 {type = "whole", op = "between", min = 1, max = 10}：type 为 "whole"、"decimal"、"date"、"time"、"length"、"list"（带 list 或 src）、"custom"（formula = "=ISNUMBER(B2)"，按单元格 at = "B2" 编写）或 "any"，op 为 "between"、"notbetween"、"="、"<>"、">"、"<"、">=" 或 "<="，min 和 max（值或公式 "=B1"），blank = false（拒绝空值），input = {title, msg}（输入信息），error = {style = "stop"、"warning" 或 "info", title, msg}（警告）；在网格中输入时检查，脚本不检查）。false 或 "" 会移除该属性。`
-	chart := `config：{source, kind, x, series, title, …}。source 是表格或数据透视表，x 是分类（x 轴）所在的列，series 是要绘制的列的列表。kind："bar"（柱形图：竖直的柱子）、"column"（水平条形）、"line"、"area"、"pie"、"doughnut"、"scatter"、"combo"（柱形和折线：seriesKinds 给出每个系列的形状，"bar"、"line" 或 "area"）、"bar3d" 和 "pie3d"（立体）、"map"（OpenStreetMap 地图）、"waterfall"（瀑布图）、"treemap"（树状图）、"radar"、"funnel"（漏斗图）、"boxplot"（箱形图）、"histogram"（频率，bins 为分组数）或 "gauge"（仪表：第一个系列的最后一个值，介于 yMin 和 yMax 之间）。
+	chart := `config：{source, kind, x, series, title, …}。source 是表格或数据透视表，x 是分类（x 轴）所在的列，series 是要绘制的列的列表。kind："bar"（柱形图：竖直的柱子）、"column"（水平条形）、"line"、"area"、"pie"、"doughnut"、"scatter"、"combo"（柱形和折线：seriesKinds 给出每个系列的形状，"bar"、"line" 或 "area"）、"bar3d" 和 "pie3d"（立体）、"map"（OpenStreetMap 地图）、"waterfall"（瀑布图）、"treemap"（树状图）、"radar"、"funnel"（漏斗图）、"boxplot"（箱形图）、"histogram"（频率，bins 为分组数）、"gauge"（仪表：第一个系列的最后一个值，介于 yMin 和 yMax 之间）、"bubble"（气泡图：x 为数值，series 成对 {Y, 大小}）或 "stock"（股价图：series = {最高, 最低, 收盘} 或 {开盘, 最高, 最低, 收盘, 可选的成交量}，每行一根 K 线）。
 外观：title；legend（"bottom"、"top"、"right" 或 "none"）；xTitle、yTitle、y2Title（坐标轴标题）；labels（数据标签）；noGrid（无网格线）；stacked（堆积：柱形、面积）；yMin、yMax（数值轴的范围）；colors（每个系列的颜色，"#rrggbb"；饼图、圆环图、漏斗图和树状图按分类；瀑布图为增加、减少和总计）；secondary（布尔值列表：位于右侧坐标轴的系列）；blanks（折线和面积：空单元格 "gap" 显示为空距，默认，"zero" 或 "span" 连接各点）；hidden（同时读取被表格筛选隐藏的行）；filters（基于表格的图表：{{field, values}, ...}，只读取 field 列显示其中某个值的行，类似数据透视表的报表筛选；作用于选择标签的列时，优先于该选择）；width、height（像素）以及 offX、offY（在锚定单元格内的偏移，像素）。
-地图：series = {纬度, 经度, 可选的值}（mapCoords "pair"，默认）或 {坐标, 可选的值}（mapCoords "single"：一个单元格“48.85, 2.35”）；x 为各点的名称；mapMode "points"、"heat"（密度）或 "both"（两者叠加）；colorBy，其每个值各取一种颜色的列；mapScale，点的大小系数（默认 1，范围 0.25 到 4）；mapView {lat, lon, zoom} 固定视图。`
+地图：series = {纬度, 经度, 可选的值}（mapCoords "pair"，默认）或 {坐标, 可选的值}（mapCoords "single"：一个单元格“48.85, 2.35”）；x 为各点的名称；mapMode "points"、"heat"（密度）或 "both"（两者叠加）；colorBy，其每个值各取一种颜色的列；mapScale，点的大小系数（默认 1，范围 0.25 到 4）；mapView {lat, lon, zoom} 固定视图。
+分析（柱形、折线、面积、散点、组合、气泡；不可堆积）：trendlines，按序号为每个系列设置趋势线（{ {type = "linear"}, nil, … }）：type 为 "linear"、"exp"、"log"、"poly"（order 为 2 到 6）、"power" 或 "movavg"（移动平均，period 为 2 到 255）；forward、backward：向前和向后预测（X 的单位，分类轴上为分类数）；equation、r2：显示在图表上。errorBars，按序号为每个系列设置误差线：type 为 "fixed"（value）、"percent"（value %）、"stddev"（value 个标准偏差，默认 1，以平均值为中心）、"stderr"（标准误差）或 "custom"（取 plus 和 minus 列的值；无 minus：用 plus 的值）；dir 为 "both"（默认）、"plus" 或 "minus"；noCap：无线端。`
 	controls := `控件在工作簿中有唯一的名称（“按钮1”、“列表1”…），自动选择，可以修改。kind："button"（单击执行其操作）、"checkbox"（复选框，TRUE / FALSE）、"select"（下拉列表，options）、"input"（单行文本）、"textarea"（多行文本）或 "file"（文件选择器：单元格接收所选文件的路径）。除按钮外，控件都链接到一个单元格（link，“B3”）：它的值（value）就是该单元格的值——复选框为布尔值，其他为文本。`
 	props := `属性：name、label（按钮或复选框的文字，输入框的提示文字）、link、value（写入链接的单元格；值改变时触发 change 事件）、options（下拉列表）、script 和 function（控件的操作）、color、hoverColor、activeColor、textColor（“#rrggbb”）、hidden 或 visible、row、col、width、height（像素）。`
 	ctlEvents := `事件："click"（按钮）和 "change"（其他控件的新值，来自工作表中的输入或 controls.set）。侦听器是库中已保存脚本的全局函数，调用时传入表 {control, event, value, old}（也在全局变量 event 中）；它保存在工作簿中，脚本结束后依然有效。控件的操作（script 和 function）先执行，然后依次执行各侦听器。由脚本引发的事件在脚本结束时执行，属于同一个撤消步骤。`
@@ -15,6 +16,7 @@ var apiDocZH = func() apiDoc {
 	http := `响应：status（200、404…）、ok（状态为 2xx 时为 true）、url（重定向后的最终地址）、headers（名称为小写）、body（文本）和 json（响应为 JSON 时解码后的正文）。错误状态（404、500…）不是 Lua 错误：请检查 ok；网络故障或超时才是错误（用 pcall 捕获）。首次向某个主机发送请求前，Lattis 会征求用户许可（可为该工作簿记住；在“脚本”标签 › 网络访问中查看）；MCP 服务器只能访问已获许可的主机。超时：默认 15 秒（timeout，最多 120 秒），不计入脚本的最长运行时间；响应最大 10 MB；最多 10 次重定向；“停止”按钮会中断请求。`
 	pivot := `config：{source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}。source 是表格，rowFields 是行字段列表，cols 是列字段，values 是 {field, agg, show} 的列表（agg："sum"、"count"、"countDistinct"、"avg"、"min" 或 "max"；show：""、"pctTotal"、"pctRow" 或 "pctCol"），filters 是 {field, values} 的列表。有多个行字段时，数据透视表以树形显示：subtotals 指定各组小计的位置（"" 在组所在行，"bottom" 在下方，"none" 不显示）；collapsed 列出已折叠的组，每组以其标签表示（{"人事"}、{"人事", "巴黎"}）；collapseAll 折叠全部，expanded 中的组除外。calc 添加计算字段，是 {name, text} 的列表：text 是基于源表格每一行各列的公式（"=ANNEE([Date])"、"=GAUCHE([Code];2)"，公式用法语书写），name 是字段名，之后可像列一样放入 rowFields、cols、values 或 filters（各行按其结果分组）。`
 	split := `options：{delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}。delims：分隔字符（";"、","、" "、"	"…）；merge = true：连续的分隔符视为一个；quote：文本识别符（向导中默认为 "\""，"'" 或 "" 表示无）。fixed = true：固定宽度，breaks 给出分割位置（以字符计）。columns：生成的每一列的格式，{format = ""（常规）、"text"、"date" 或 "skip"（不导入），order = "DMY"、"MDY"、"YMD"… 用于日期}。decimal 和 thousands：数字的分隔符（默认为 "," 和 " "）。dest：在自由单元格中的目标单元格（“E2”）。`
+	sparkline := "config：{kind, table, cols, at, source, location, high, low, first, last, negative, markers, color, negColor, markerColor, highColor, lowColor, firstColor, lastColor, axis, same, min, max, weight}。kind：\"line\"（折线）、\"column\"（柱形）或 \"winloss\"（盈亏）。来自表格：table、cols（同一行的列，按顺序：{\"一月\", \"二月\", …}）和 at（在表格中绘制的列；省略时为表格右侧紧邻的列）；表格每行一个迷你图，新增的行也包括在内。来自自由单元格：source（\"B2:M5\"）和 location（\"N2:N5\"），源区域每行（或每列）一个迷你图。high、low、first、last、negative：突出显示的点；markers：折线的所有点；颜色为 \"#rrggbb\"；axis：零位坐标轴；same：整组使用相同刻度；min、max：固定边界；weight：线条粗细（像素，默认 1.5）。放在另一组单元格上的组会替换该组。"
 	object := "config：{kind, width, height, offX, offY, name, fill, line, lineWidth, transparency, text, bold, italic, size, color, align, valign, flipH, flipV, data, image}。kind：\"rect\"、\"roundRect\"（圆角矩形）、\"ellipse\"、\"triangle\"、\"line\"、\"arrow\"（箭头）、\"text\"（文本框）或 \"image\"。width、height：以像素计的大小（默认取决于类型；图像保持比例，宽度最多 480 像素）；offX、offY：在锚定单元格内的偏移。fill 和 line：填充和轮廓的颜色（\"#rrggbb\"，\"\" 表示无）；lineWidth：轮廓粗细（像素）；transparency：填充的透明度（0 到 100）。text：形状或文本框中的文字，格式由 bold、italic、size（磅）、color、align（\"left\"、\"center\"、\"right\"）和 valign（\"top\"、\"middle\"、\"bottom\"）设定。flipH、flipV：线条或箭头的方向（默认从左上角到右下角，箭头在末端）。图像由 data（base64 编码的 PNG、JPEG、GIF 或 WebP 内容，最多 10 MB）或 image（工作簿中已有图像的哈希值，见 objects.list）给出。"
 	return apiDoc{
 		phrases: refPhrases{
@@ -125,15 +127,19 @@ var apiDocZH = func() apiDoc {
 			"pages.add": {S: "添加一个网页（在隔离框架中显示的 HTML、CSS 和 JavaScript）或一个文档（kind = \"doc\"：富文本），并返回 {id, name, kind}。",
 				D: "页面通过 lattis.call(\"命令\", {参数}) 与工作簿通信，它返回一个 Promise（允许的脚本命令列表：读取类如 sheets.list 或 db.query，写值类如 cells.set 或 db.execute，ui.*、http.*、buttons.run；不能访问文件、脚本、结构或保护），并通过 lattis.on(\"change\", 函数) 在工作簿变化时得到调用。页面还可以通过 lattis.sql(\"SELECT …\", {参数}) 和 lattis.query(\"收藏查询的名称\") 读取工作簿，它们返回对象数组。网页默认关闭（配置项 features.htmlPages，浏览器版中始终关闭）；文档（kind = \"doc\"）仍然允许。没有 source 时，页面使用示例模板。没有 before 时，标签添加在末尾。",
 				R: "{id, name, kind}"},
-			"pages.get":      {S: "返回网页的 HTML 内容。", R: "HTML 文本"},
-			"pages.set":      {S: "替换网页的 HTML 内容。", D: "网页默认关闭（配置项 features.htmlPages）。"},
-			"pivots.create":  {S: "在新工作表上创建数据透视表并返回该工作表。", D: pivot, R: "{id, name}（工作表）"},
-			"pivots.delete":  {S: "删除数据透视表（其工作表保留）。"},
-			"pivots.set":     {S: "替换数据透视表的配置。", D: pivot},
-			"objects.create": {S: "在工作表上放置形状、文本框或图像，左上角位于 row, col，返回其标识符。", D: object},
-			"objects.delete": {S: "删除图像、形状或文本框。"},
-			"objects.list":   {S: "列出工作表中的图像、形状和文本框，从底层到顶层。", R: "{ {id, kind, name, row, col, offX, offY, width, height, text, image}, ... }"},
-			"queries.delete": {S: "删除导入查询；其表格保留在工作表上。"},
+			"pages.get":         {S: "返回网页的 HTML 内容。", R: "HTML 文本"},
+			"pages.set":         {S: "替换网页的 HTML 内容。", D: "网页默认关闭（配置项 features.htmlPages）。"},
+			"pivots.create":     {S: "在新工作表上创建数据透视表并返回该工作表。", D: pivot, R: "{id, name}（工作表）"},
+			"pivots.delete":     {S: "删除数据透视表（其工作表保留）。"},
+			"pivots.set":        {S: "替换数据透视表的配置。", D: pivot},
+			"objects.create":    {S: "在工作表上放置形状、文本框或图像，左上角位于 row, col，返回其标识符。", D: object},
+			"objects.delete":    {S: "删除图像、形状或文本框。"},
+			"objects.list":      {S: "列出工作表中的图像、形状和文本框，从底层到顶层。", R: "{ {id, kind, name, row, col, offX, offY, width, height, text, image}, ... }"},
+			"sparklines.create": {S: "插入一组迷你图（单元格中的小图表），并返回其标识符。", D: sparkline},
+			"sparklines.delete": {S: "删除一组迷你图。"},
+			"sparklines.list":   {S: "列出工作表中的迷你图组及其配置。", R: "{ {id, config, error}, ... }"},
+			"sparklines.set":    {S: "修改一组迷你图：只更改给定的字段。", D: sparkline},
+			"queries.delete":    {S: "删除导入查询；其表格保留在工作表上。"},
 			"queries.list": {S: "列出工作簿中的导入查询，以及它们的来源、步骤和加载的表格。",
 				R: "{ {id, name, source, steps, table, sheet, refreshed}, ... }"},
 			"queries.preview": {S: "计算查询在前 n 个步骤之后的预览（默认全部步骤；基于每个来源的前 1,000 行）。",
@@ -264,6 +270,8 @@ var apiDocZH = func() apiDoc {
 		},
 		params: map[string]string{
 			"objet (identifiant ou nom)":                                               "对象（标识符或名称）",
+			"groupe de sparklines (identifiant ou emplacement)":                        "迷你图组（标识符或位置）",
+			"type, source et emplacement des graphiques":                               "迷你图的类型、来源和位置",
 			"genre et présentation de l'objet":                                         "对象的类型和格式",
 			"cellule à définir, avec une formule (\"B5\")":                             "目标单元格，含公式（\"B5\"）",
 			"valeur à atteindre":                                                       "目标值",

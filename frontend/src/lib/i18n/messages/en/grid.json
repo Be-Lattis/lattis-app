@@ -1740,5 +1740,33 @@
 			"tooLarge": "Picture too large: 10 MB at most",
 			"unreadable": "Unreadable picture"
 		}
+	},
+	"sparkline": {
+		"title": "Sparklines",
+		"type": "Type",
+		"kind": {
+			"line": "Line",
+			"column": "Column",
+			"winloss": "Win/Loss"
+		},
+		"from": "From column",
+		"to": "To column",
+		"where": "Draw in",
+		"right": "Right of {table}",
+		"tableHint": "One sparkline per row, new rows included.",
+		"data": "Data",
+		"location": "Location",
+		"show": "Show",
+		"high": "High point",
+		"low": "Low point",
+		"first": "First point",
+		"last": "Last point",
+		"negative": "Negative points",
+		"markers": "Markers",
+		"color": "Color",
+		"axis": "Axis",
+		"same": "Same scale",
+		"sameHint": "Same minimum and maximum for the whole group",
+		"remove": "Delete"
 	}
 }

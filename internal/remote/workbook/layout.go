@@ -29,7 +29,7 @@ var layoutTables = []string{
 	"_lattis_styles", "_lattis_cell_styles", "_lattis_row_styles", "_lattis_col_styles",
 	"_lattis_row_rules", "_lattis_col_rules", "_lattis_pivots", "_lattis_charts",
 	"_lattis_buttons", "_lattis_pages", "_lattis_range_cells", "_lattis_page_setup",
-	"_lattis_images", "_lattis_objects",
+	"_lattis_images", "_lattis_objects", "_lattis_sparklines",
 }
 
 // Images d'un classeur partagé : la mise en page est un seul objet du

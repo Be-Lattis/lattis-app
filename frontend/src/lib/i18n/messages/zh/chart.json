@@ -72,6 +72,14 @@
 		"gauge": {
 			"label": "仪表图",
 			"hint": "在表盘上显示一个介于最小值和最大值之间的数值"
+		},
+		"bubble": {
+			"label": "气泡图",
+			"hint": "X、Y 和大小"
+		},
+		"stock": {
+			"label": "股价图",
+			"hint": "开盘、最高、最低、收盘"
 		}
 	},
 	"note": {
@@ -252,11 +260,61 @@
 		"dataLabels": "数据标签",
 		"grid": "网格线",
 		"moveHelp": "拖动可移动，拖动控点可调整大小；右键单击：剪切、复制、删除。",
-		"keyboardHelp": "使用键盘：方向键移动，Shift+方向键调整大小，Tab 转到下一个图表，Del 删除。"
+		"keyboardHelp": "使用键盘：方向键移动，Shift+方向键调整大小，Tab 转到下一个图表，Del 删除。",
+		"size": "大小"
 	},
 	"image": {
 		"unreadable": "无法读取的图像",
 		"noCanvas": "无法绘制",
 		"empty": "空图像"
+	},
+	"stock": {
+		"open": "开盘",
+		"high": "最高",
+		"low": "最低",
+		"close": "收盘",
+		"volume": "成交量",
+		"up": "上涨",
+		"down": "下跌"
+	},
+	"trend": {
+		"type": {
+			"linear": "线性",
+			"exp": "指数",
+			"log": "对数",
+			"poly": "多项式",
+			"power": "幂",
+			"movavg": "移动平均"
+		},
+		"legend": "{type}（{name}）",
+		"legendAvg": "{n} 周期移动平均（{name}）"
+	},
+	"analysis": {
+		"title": "分析",
+		"series": "系列",
+		"none": "无",
+		"trend": "趋势线",
+		"order": "阶数",
+		"period": "周期",
+		"forecast": "预测",
+		"backward": "向后",
+		"forward": "向前",
+		"equation": "公式",
+		"errors": "误差线",
+		"error": {
+			"fixed": "固定值",
+			"percent": "百分比",
+			"stddev": "标准偏差",
+			"stderr": "标准误差",
+			"custom": "自定义"
+		},
+		"value": "值",
+		"times": "倍数",
+		"plus": "正",
+		"minus": "负",
+		"samePlus": "同正",
+		"direction": "方向",
+		"both": "双向",
+		"caps": "线端"
 	}
 }

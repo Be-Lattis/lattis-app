@@ -26,7 +26,9 @@ export type ChartKind =
 	| 'funnel'
 	| 'boxplot'
 	| 'histogram'
-	| 'gauge';
+	| 'gauge'
+	| 'bubble'
+	| 'stock';
 
 export interface KindInfo {
 	kind: ChartKind;
@@ -66,7 +68,9 @@ export const KINDS: KindInfo[] = [
 	kind('funnel', 'chart-funnel'),
 	kind('boxplot', 'chart-boxplot'),
 	kind('histogram', 'chart-histogram'),
-	kind('gauge', 'chart-gauge')
+	kind('gauge', 'chart-gauge'),
+	kind('bubble', 'chart-bubble'),
+	kind('stock', 'chart-stock')
 ];
 
 /** Types proposés par « Autres graphiques » (ruban) : au-delà des classiques. */
@@ -75,7 +79,7 @@ export const MORE_KINDS = KINDS.filter((k) => !['bar', 'line', 'pie', 'scatter']
 export const kindInfo = (k: string) => KINDS.find((i) => i.kind === k);
 
 /** Graphique à axes (catégories et valeurs). */
-export const CARTESIAN = new Set<string>(['bar', 'column', 'line', 'area', 'scatter', 'combo', 'bar3d', 'waterfall', 'boxplot', 'histogram']);
+export const CARTESIAN = new Set<string>(['bar', 'column', 'line', 'area', 'scatter', 'combo', 'bar3d', 'waterfall', 'boxplot', 'histogram', 'bubble', 'stock']);
 /** Graphique dont la légende nomme les catégories (une couleur par catégorie). */
 export const BY_CATEGORY = new Set<string>(['pie', 'doughnut', 'pie3d', 'treemap', 'funnel']);
 /** Une seule série dessinée (la première). */
@@ -96,6 +100,19 @@ export const RAW_ROWS = new Set<string>(['map', 'histogram', 'boxplot']);
  */
 export function chartFields(kind: string, cols: { name: string; numeric: boolean }[], cur = -1): { x: string; series: string[] } {
 	const c = cols[cur];
+	// Bulles : X, Y et taille, trois colonnes de nombres ; boursier : ouverture,
+	// haut, bas, clôture (et volume), les colonnes de nombres dans l'ordre.
+	if (kind === 'bubble') {
+		const nums = cols.filter((k) => k.numeric);
+		const x = c?.numeric ? c : nums[0];
+		const rest = nums.filter((k) => k !== x).map((k) => k.name);
+		return { x: x?.name ?? cols[0]?.name ?? '', series: rest.length >= 2 ? rest.slice(0, 2) : [] };
+	}
+	if (kind === 'stock') {
+		const x = c && !c.numeric ? c : (cols.find((k) => !k.numeric) ?? cols[0]);
+		const nums = cols.filter((k) => k !== x && k.numeric).map((k) => k.name);
+		return { x: x?.name ?? '', series: nums.length >= 3 ? nums.slice(0, nums.length >= 4 ? Math.min(5, nums.length) : 3) : [] };
+	}
 	const x =
 		kind === 'scatter'
 			? c?.numeric ? c : (cols.find((k) => k.numeric) ?? cols[0])
@@ -116,7 +133,7 @@ export function chartFields(kind: string, cols: { name: string; numeric: boolean
 export function chartFieldsFrom(kind: string, cols: { name: string; numeric: boolean }[], selected: number[], cur = -1): { x: string; series: string[] } {
 	const base = chartFields(kind, cols, cur);
 	const sel = selected.map((i) => cols[i]).filter(Boolean);
-	if (sel.length < 2) return base;
+	if (sel.length < 2 || kind === 'bubble' || kind === 'stock') return base;
 	const x = (kind === 'scatter' ? sel.find((c) => c.numeric) : sel.find((c) => !c.numeric))?.name ?? base.x;
 	let series = sel.filter((c) => c.numeric && c.name !== x).map((c) => c.name);
 	if (!series.length) return base;
@@ -133,12 +150,20 @@ export const defaultChartTitle = (series: string[]): string | undefined => (seri
  * de rester à leur rang. Les couleurs des secteurs (par catégorie) et de la
  * cascade (hausse, baisse, total) ne sont pas celles des séries : gardées.
  */
-export function reorderSeries(
-	cfg: { kind: string; series: string[]; colors?: string[]; secondary?: boolean[]; seriesKinds?: string[] },
+export function reorderSeries<T, E>(
+	cfg: { kind: string; series: string[]; colors?: string[]; secondary?: boolean[]; seriesKinds?: string[]; trendlines?: (T | null)[] | null; errorBars?: (E | null)[] | null },
 	next: string[]
-): { series: string[]; colors?: string[]; secondary?: boolean[]; seriesKinds?: string[] } {
+): { series: string[]; colors?: string[]; secondary?: boolean[]; seriesKinds?: string[]; trendlines?: (T | null)[]; errorBars?: (E | null)[] } {
 	const old = (n: string) => cfg.series.indexOf(n);
-	const out: { series: string[]; colors?: string[]; secondary?: boolean[]; seriesKinds?: string[] } = { series: next };
+	const out: { series: string[]; colors?: string[]; secondary?: boolean[]; seriesKinds?: string[]; trendlines?: (T | null)[]; errorBars?: (E | null)[] } = { series: next };
+	// Courbes de tendance et barres d'erreur suivent leur série.
+	const follow = <X,>(list?: (X | null)[] | null) => {
+		if (!list?.some(Boolean)) return undefined;
+		const l = next.map((n) => (old(n) >= 0 ? (list[old(n)] ?? null) : null));
+		return l.some(Boolean) ? l : undefined;
+	};
+	out.trendlines = follow(cfg.trendlines);
+	out.errorBars = follow(cfg.errorBars);
 	if (!BY_CATEGORY.has(cfg.kind) && cfg.kind !== 'waterfall') {
 		out.colors = cfg.colors?.length ? next.map((n) => (old(n) >= 0 ? (cfg.colors![old(n)] ?? '') : '')) : undefined;
 		if (out.colors && !out.colors.some(Boolean)) out.colors = undefined;

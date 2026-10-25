@@ -1740,5 +1740,33 @@
 			"tooLarge": "图片过大：最大 10 MB",
 			"unreadable": "图片无法读取"
 		}
+	},
+	"sparkline": {
+		"title": "迷你图",
+		"type": "类型",
+		"kind": {
+			"line": "折线",
+			"column": "柱形",
+			"winloss": "盈亏"
+		},
+		"from": "起始列",
+		"to": "结束列",
+		"where": "绘制位置",
+		"right": "{table} 右侧",
+		"tableHint": "每行一个迷你图，新增行也包括在内。",
+		"data": "数据",
+		"location": "位置",
+		"show": "显示",
+		"high": "高点",
+		"low": "低点",
+		"first": "首点",
+		"last": "尾点",
+		"negative": "负点",
+		"markers": "标记",
+		"color": "颜色",
+		"axis": "坐标轴",
+		"same": "相同刻度",
+		"sameHint": "整组使用相同的最小值和最大值",
+		"remove": "删除"
 	}
 }

@@ -49,3 +49,11 @@ Ein kopiertes Diagramm kann auf einem anderen Blatt oder in einem [Dokument](ong
 ## Bilder, Formen und Textfelder {#images-formes-et-zones-de-texte}
 
 Einfügen › **Bild** (oder Strg+V eines kopierten Bildes), **Formen** oder **Textfeld**: Das Objekt wird an der aktiven Zelle platziert und folgt ihren Zeilen und Spalten. Ziehen Sie es, um es zu verschieben, ziehen Sie an seinen Ziehpunkten, um die Größe zu ändern (ein Bild behält seine Proportionen; Umschalt hebt das auf), doppelklicken Sie auf eine Form, um Text einzugeben. Die Leiste über dem Objekt stellt Farben, Linie, Transparenz und Text ein; Entf löscht, Strg+D dupliziert. Ein sehr großes Bild wird beim Einfügen verkleinert; höchstens 10 MB (1 MB in einer freigegebenen Arbeitsmappe).
+
+## Trendlinien und Fehlerindikatoren {#tendance-et-erreurs}
+
+Diagrammbereich › **Analyse** (Säulen, Linien, Flächen, Punkte, Blasen): Reihe wählen, dann eine **Trendlinie** (linear, exponentiell, logarithmisch, polynomisch, Potenz, gleitender Durchschnitt), mit Prognose vor oder nach den Daten, Formel und R². **Fehlerindikatoren**: fester Wert, Prozentsatz, Standardabweichung, Standardfehler oder Beträge aus einer Spalte. Die Typen **Blasen** (X, Y, Größe) und **Kurs** (Eröffnung, Hoch, Tief, Schluss, Volumen) stehen unter Weitere Diagramme.
+
+## Sparklines {#sparklines}
+
+Einfügen › **Sparklines**: ein kleines Diagramm in einer Zelle (Linie, Säule, Gewinn/Verlust). Die Spalten einer Tabellenzeile wählen (Jan bis Dez): jede Tabellenzeile erhält ihre eigene, neue Zeilen eingeschlossen. Außerhalb einer Tabelle Datenbereich und Position angeben. Dasselbe Menü auf einer Zelle mit Sparkline stellt hervorgehobene Punkte, Farben und Achse ein oder löscht sie.

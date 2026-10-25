@@ -66,6 +66,7 @@ var layoutKeys = map[string][]string{
 	"_lattis_page_setup":   {"sheet"},
 	"_lattis_images":       {"hash"},
 	"_lattis_objects":      {"id"},
+	"_lattis_sparklines":   {"id"},
 }
 
 // layoutOwn : colonnes que la mise en page en direct ne compare ni
@@ -86,7 +87,7 @@ var dataColumnOwn = map[string]bool{"name": true, "type": true, "fixed": true}
 // surrogates : tables dont l'identifiant est donné par le poste (le plus
 // grand + 1) : deux concepteurs peuvent ajouter au même moment deux
 // feuilles, graphiques… différents sous le même identifiant (separate).
-var surrogates = map[string]string{"_lattis_sheets": "sheet", "_lattis_pivots": "pivot", "_lattis_charts": "chart", "_lattis_buttons": "button", "_lattis_objects": "object"}
+var surrogates = map[string]string{"_lattis_sheets": "sheet", "_lattis_pivots": "pivot", "_lattis_charts": "chart", "_lattis_buttons": "button", "_lattis_objects": "object", "_lattis_sparklines": "sparkline"}
 
 // --- Vue d'une mise en page : lignes par clé ------------------------------------
 

@@ -72,6 +72,14 @@
 		"gauge": {
 			"label": "Tachometer",
 			"hint": "Ein Wert auf einer Skala zwischen einem Minimum und einem Maximum"
+		},
+		"bubble": {
+			"label": "Blasen",
+			"hint": "X, Y und Größe"
+		},
+		"stock": {
+			"label": "Kurs",
+			"hint": "Eröffnung, Hoch, Tief, Schluss"
 		}
 	},
 	"note": {
@@ -252,11 +260,61 @@
 		"dataLabels": "Datenbeschriftungen",
 		"grid": "Gitternetzlinien",
 		"moveHelp": "Ziehen zum Verschieben, an den Ziehpunkten für die Größe; Rechtsklick: ausschneiden, kopieren, löschen.",
-		"keyboardHelp": "Mit der Tastatur: Pfeiltasten zum Verschieben, Umschalt+Pfeiltasten zum Ändern der Größe, Tab zum nächsten Diagramm, Entf zum Löschen."
+		"keyboardHelp": "Mit der Tastatur: Pfeiltasten zum Verschieben, Umschalt+Pfeiltasten zum Ändern der Größe, Tab zum nächsten Diagramm, Entf zum Löschen.",
+		"size": "Größe"
 	},
 	"image": {
 		"unreadable": "Bild nicht lesbar",
 		"noCanvas": "Zeichnen nicht möglich",
 		"empty": "leeres Bild"
+	},
+	"stock": {
+		"open": "Eröffnung",
+		"high": "Hoch",
+		"low": "Tief",
+		"close": "Schluss",
+		"volume": "Volumen",
+		"up": "Anstieg",
+		"down": "Rückgang"
+	},
+	"trend": {
+		"type": {
+			"linear": "Linear",
+			"exp": "Exponentiell",
+			"log": "Logarithmisch",
+			"poly": "Polynomisch",
+			"power": "Potenz",
+			"movavg": "Gleitender Durchschnitt"
+		},
+		"legend": "{type} ({name})",
+		"legendAvg": "Gleit. Durchschn. {n} Per. ({name})"
+	},
+	"analysis": {
+		"title": "Analyse",
+		"series": "Reihe",
+		"none": "Keine",
+		"trend": "Trendlinie",
+		"order": "Grad",
+		"period": "Periode",
+		"forecast": "Prognose",
+		"backward": "Rückwärts",
+		"forward": "Vorwärts",
+		"equation": "Formel",
+		"errors": "Fehlerindikator",
+		"error": {
+			"fixed": "Fester Wert",
+			"percent": "Prozentsatz",
+			"stddev": "Standardabweichung",
+			"stderr": "Standardfehler",
+			"custom": "Benutzerdefiniert"
+		},
+		"value": "Wert",
+		"times": "Vielfaches",
+		"plus": "Plus",
+		"minus": "Minus",
+		"samePlus": "Wie Plus",
+		"direction": "Richtung",
+		"both": "Beide",
+		"caps": "Abschluss"
 	}
 }

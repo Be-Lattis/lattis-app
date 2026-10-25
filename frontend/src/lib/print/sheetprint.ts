@@ -41,6 +41,8 @@ export interface PrintCell {
 	overflow?: boolean;
 	/** Cellule d'un tableau ou d'un tableau croisé : encadrée sans quadrillage. */
 	framed?: boolean;
+	/** Graphique sparkline de la cellule (SVG à sa taille). */
+	spark?: string;
 }
 
 /** Un graphique posé sur la feuille. */
@@ -112,6 +114,7 @@ export function pageCss(plan: PrintPlan): string {
 		`#lattis-print .lp-axis { position: absolute; top: 1px; bottom: 1px; border-left: 1px dashed #000; }` +
 		`#lattis-print .lp-ic { float: left; width: 16px; height: 16px; margin: 0 4px 0 -3px; vertical-align: middle; }` +
 		`#lattis-print .lp-txt { position: relative; }` +
+		`#lattis-print .lp-spark { position: absolute; inset: 0; } #lattis-print .lp-spark svg { display: block; }` +
 		`#lattis-print .lp-objs { position: absolute; overflow: hidden; }` +
 		`#lattis-print .lp-chart { position: absolute; overflow: hidden; background: #fff; }` +
 		`#lattis-print .lp-chart svg { display: block; }` +
@@ -276,6 +279,7 @@ export async function* printChunks(plan: PrintPlan, src: PrintSource, opts: Prin
 				}
 				if (cls.length) attr += ` class="${cls.join(' ')}"`;
 				let inner = '';
+				if (x.spark) inner += `<div class="lp-spark">${x.spark}</div>`;
 				if (x.bar) {
 					const bar = x.bar;
 					const a = Math.max(0, Math.min(1, bar.a));

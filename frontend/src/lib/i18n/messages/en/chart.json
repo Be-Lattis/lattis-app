@@ -72,6 +72,14 @@
 		"gauge": {
 			"label": "Gauge",
 			"hint": "One value on a dial, between a minimum and a maximum"
+		},
+		"bubble": {
+			"label": "Bubble",
+			"hint": "X, Y and size"
+		},
+		"stock": {
+			"label": "Stock",
+			"hint": "Open, high, low, close"
 		}
 	},
 	"note": {
@@ -252,11 +260,61 @@
 		"dataLabels": "Data labels",
 		"grid": "Gridlines",
 		"moveHelp": "Drag to move, pull the handles to resize; right-click: cut, copy, delete.",
-		"keyboardHelp": "With the keyboard: arrows to move it, Shift+arrows to resize it, Tab to go to the next chart, Del to delete it."
+		"keyboardHelp": "With the keyboard: arrows to move it, Shift+arrows to resize it, Tab to go to the next chart, Del to delete it.",
+		"size": "Size"
 	},
 	"image": {
 		"unreadable": "unreadable image",
 		"noCanvas": "can't draw",
 		"empty": "empty image"
+	},
+	"stock": {
+		"open": "Open",
+		"high": "High",
+		"low": "Low",
+		"close": "Close",
+		"volume": "Volume",
+		"up": "Up",
+		"down": "Down"
+	},
+	"trend": {
+		"type": {
+			"linear": "Linear",
+			"exp": "Exponential",
+			"log": "Logarithmic",
+			"poly": "Polynomial",
+			"power": "Power",
+			"movavg": "Moving average"
+		},
+		"legend": "{type} ({name})",
+		"legendAvg": "{n} per. mov. avg. ({name})"
+	},
+	"analysis": {
+		"title": "Analysis",
+		"series": "Series",
+		"none": "None",
+		"trend": "Trendline",
+		"order": "Order",
+		"period": "Period",
+		"forecast": "Forecast",
+		"backward": "Backward",
+		"forward": "Forward",
+		"equation": "Equation",
+		"errors": "Error bars",
+		"error": {
+			"fixed": "Fixed value",
+			"percent": "Percentage",
+			"stddev": "Standard deviation",
+			"stderr": "Standard error",
+			"custom": "Custom"
+		},
+		"value": "Value",
+		"times": "Multiple",
+		"plus": "Plus",
+		"minus": "Minus",
+		"samePlus": "Same as Plus",
+		"direction": "Direction",
+		"both": "Both",
+		"caps": "End caps"
 	}
 }

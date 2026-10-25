@@ -339,6 +339,7 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 		}
 		bw.WriteString(`</tableParts>`)
 	}
+	bw.WriteString(sparklinesXML(s))
 	bw.WriteString(`</worksheet>`)
 	return urls, bw.Flush()
 }

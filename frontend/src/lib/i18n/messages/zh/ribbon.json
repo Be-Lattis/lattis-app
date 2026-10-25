@@ -688,6 +688,10 @@
 		"textBox": {
 			"label": "文本框",
 			"tooltip": "放在工作表上的自由文本"
+		},
+		"sparklines": {
+			"label": "迷你图",
+			"tooltip": "单元格中的小图表，或表格每行一个"
 		}
 	},
 	"protect": {

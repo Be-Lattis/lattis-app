@@ -49,3 +49,11 @@ A copied chart can be pasted on another sheet or in a [document](onglets), where
 ## Pictures, shapes and text boxes {#images-formes-et-zones-de-texte}
 
 Insert › **Picture** (or Ctrl+V of a copied image), **Shapes** or **Text Box**: the object is placed at the active cell and moves with its rows and columns. Drag it to move it, pull its handles to resize it (a picture keeps its proportions; Shift frees them), double-click a shape to type text in it. The bar above the object sets the colors, the line, the transparency and the text; Delete removes it, Ctrl+D duplicates it. A very large picture is reduced when inserted; 10 MB at most (1 MB in a shared workbook).
+
+## Trendlines and error bars {#tendance-et-erreurs}
+
+Chart pane › **Analysis** (bars, lines, areas, scatter, bubbles): pick a series, then a **trendline** (linear, exponential, logarithmic, polynomial, power, moving average), with its forecast before or after the data, its equation and its R². **Error bars**: fixed value, percentage, standard deviation, standard error, or amounts from a column. The **Bubble** (X, Y, size) and **Stock** (open, high, low, close, volume) types are in More charts.
+
+## Sparklines {#sparklines}
+
+Insert › **Sparklines**: a small chart in a cell (line, column, win/loss). Select the columns of a table row (Jan to Dec): every row of the table gets its own, new rows included. Outside a table, give the data range and the location. The same menu, on a cell that has one, sets the highlighted points, the colors and the axis, or deletes it.

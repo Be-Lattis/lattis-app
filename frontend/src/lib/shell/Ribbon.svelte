@@ -200,6 +200,8 @@
 		onbutton?: (kind?: '' | 'checkbox' | 'select' | 'input' | 'textarea' | 'file') => void;
 		/** Insertion › Image, Formes, Zone de texte (objets posés sur la feuille). */
 		onobject?: (kind: ObjectKind) => void;
+		/** Insertion › Sparklines : courbe, histogramme ou positif/négatif. */
+		onsparkline?: (kind: 'line' | 'column' | 'winloss') => void;
 		/** Feuille active protégée : les commandes qui la modifient sont grisées. */
 		sheetProtected?: boolean;
 		/** La feuille active elle-même est protégée (sheetProtected : verrouillée, par elle ou par le classeur). */
@@ -265,7 +267,7 @@
 		ontheme?: (id: string) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, onsparkline, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -654,7 +656,14 @@
 						run: onchart ? () => onchart(k) : undefined,
 						hint: k === 'bar' ? t('ribbon.cmd.chart.tooltipBar', { chart: kindInfo(k)!.label }) : t('ribbon.cmd.chart.tooltip', { chart: kindInfo(k)!.label })
 					})),
-					{ label: t('ribbon.cmd.moreCharts.label'), icon: 'chart-more', run: onchart ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, icon: k.icon, run: onchart ? () => onchart(k.kind) : undefined })) }
+					{ label: t('ribbon.cmd.moreCharts.label'), icon: 'chart-more', run: onchart ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, icon: k.icon, run: onchart ? () => onchart(k.kind) : undefined })) },
+					{
+						label: t('ribbon.cmd.sparklines.label'),
+						icon: 'sparkline',
+						run: onsparkline ? openItems : undefined,
+						hint: t('ribbon.cmd.sparklines.tooltip'),
+						items: (['line', 'column', 'winloss'] as const).map((k) => ({ label: tAny(`grid.sparkline.kind.${k}`), run: onsparkline ? () => onsparkline(k) : undefined }))
+					}
 				])
 			},
 			{

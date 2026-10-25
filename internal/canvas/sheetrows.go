@@ -551,6 +551,10 @@ func (t *tx) rewriteCellRefs(sheet int64, move func(r, c int) (int, int, bool)) 
 			return err
 		}
 	}
+	// Graphiques sparkline des cellules libres : source et emplacement.
+	if err := t.rewriteSparklines(sheet, move); err != nil {
+		return err
+	}
 	// Sources des validations tirées d'une plage (feuille de leur couche de style).
 	return t.rewriteDVSources(func(src string, home int64) (string, bool) {
 		neu := rewrite(src, home)

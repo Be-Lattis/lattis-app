@@ -10,11 +10,12 @@
 	import { BY_CATEGORY, SECONDARY, SINGLE_SERIES, STACKABLE, chartSummary, chartNote, seriesShape } from './kinds';
 	import { binLabels, boxGroups, histogramBins, lerpBoxes, shade, waterfallSteps, type BoxStats, type BoxStatsIn } from './shapes';
 	import { axisValueFormat, dateTickFormat, valueFormat } from './format';
+	import { FITTABLE, bubbleRadii, candles, errorSpan, r2Text, trendEquation, type ErrorBars, type ErrorValues, type TrendFit, type Trendline } from './fits';
 	import ChartFree from './ChartFree.svelte';
 	import MapChart from './MapChart.svelte';
 	import type { MapCam } from './mapview';
 	import { ease, lerpSeries, progress, reducedMotion, sameSeries } from '../grid/anim';
-	import { fmtNumber, numberFormat, t } from '#lib/i18n/index.js';
+	import { fmtNumber, numberFormat, t, tAny } from '#lib/i18n/index.js';
 
 	export interface Series {
 		name: string;
@@ -37,6 +38,9 @@
 		/** Format de nombre de chaque série et de X (style JSON). */
 		formats?: string[] | null;
 		xFormat?: string;
+		/** Courbes de tendance et barres d'erreur calculées, par rang de série. */
+		trends?: (TrendFit | null)[] | null;
+		errors?: (ErrorValues | null)[] | null;
 	}
 
 	export interface ChartStyle {
@@ -69,6 +73,9 @@
 		bins?: number;
 		/** Courbes : cellule vide en intervalle (gap, défaut), à zéro (zero) ou reliée (span). */
 		blanks?: string;
+		/** Courbe de tendance et barres d'erreur de chaque série (par rang). */
+		trendlines?: (Trendline | null)[] | null;
+		errorBars?: (ErrorBars | null)[] | null;
 	}
 
 	interface Props {
@@ -175,8 +182,26 @@
 		}
 		const labels = xText ? f.labels.map((l, i) => xText!(i, l)) : f.labels;
 		if (kind === 'waterfall') return { labels: [...labels, t('chart.waterfall.total')], series: ss.slice(0, 1), boxes: null };
+		// Prévision d'une courbe de tendance sur un axe de catégories : des
+		// catégories vides au bout, comme un tableur.
+		if (extraCats) {
+			const pad = Array.from({ length: extraCats }, () => '');
+			return { labels: [...labels, ...pad], series: ss.map((s) => ({ name: s.name, values: [...s.values, ...pad.map(() => null)] })), boxes: null };
+		}
 		return { labels, series: SINGLE_SERIES.has(kind) ? ss.slice(0, 1) : ss, boxes: null };
 	}
+	// Courbes de tendance et barres d'erreur : types à axes, non empilés.
+	const fits = $derived(FITTABLE.has(kind) && !(style.stacked && STACKABLE.has(kind)));
+	const trends = $derived(fits ? (info?.trends ?? []) : []);
+	const errs = $derived(fits ? (info?.errors ?? []) : []);
+	const extraCats = $derived.by(() => {
+		let n = 0;
+		trends.forEach((f, k) => {
+			if (f?.index) n = Math.max(n, Math.ceil(style.trendlines?.[k]?.forward ?? 0));
+		});
+		return Math.min(n, 100);
+	});
+	const xy = $derived(kind === 'scatter' || kind === 'bubble');
 	const view = $derived(prepare(shown));
 	const goal = $derived(prepare(targetFrame));
 	const labels = $derived(view.labels);
@@ -199,8 +224,16 @@
 	const isLine = (k: number) => kind === 'line' || kind === 'area' || (kind === 'combo' && shape(k) !== 'bar');
 	const isArea = (k: number) => shape(k) === 'area';
 
-	const legendItems = $derived.by(() => {
+	const legendItems = $derived.by((): { name: string; color: string; dash?: boolean }[] => {
 		if (kind === 'gauge') return [];
+		if (kind === 'stock') {
+			const out = [
+				{ name: t('chart.stock.up'), color: upColor },
+				{ name: t('chart.stock.down'), color: downColor }
+			];
+			if (series.length > 4) out.push({ name: series[4].name, color: VOLUME });
+			return out;
+		}
 		if (kind === 'waterfall')
 			return [
 				{ name: t('chart.waterfall.up'), color: color(0) },
@@ -208,8 +241,21 @@
 				{ name: t('chart.waterfall.total'), color: color(2) }
 			];
 		if (BY_CATEGORY.has(kind)) return labels.map((l, i) => ({ name: l, color: color(i) }));
-		return series.map((s, k) => ({ name: s.name, color: color(k) }));
+		const out: { name: string; color: string; dash?: boolean }[] = kind === 'bubble' ? series.flatMap((s, k) => (k % 2 ? [] : [{ name: s.name, color: color(k / 2) }])) : series.map((s, k) => ({ name: s.name, color: color(k) }));
+		// Courbes de tendance : une entrée chacune, en pointillé.
+		trends.forEach((f, k) => {
+			if (!f || !series[k]) return;
+			const name = f.type === 'movavg' ? t('chart.trend.legendAvg', { n: style.trendlines?.[k]?.period ?? 2, name: series[k].name }) : t('chart.trend.legend', { type: tAny(`chart.trend.type.${f.type}`), name: series[k].name });
+			out.push({ name, color: seriesColor(k), dash: true });
+		});
+		return out;
 	});
+	// Graphique boursier : hausse, baisse, volume.
+	const upColor = $derived(style.colors?.[0] || '#1e8e3e');
+	const downColor = $derived(style.colors?.[1] || '#d93025');
+	const VOLUME = '#c4c9cf';
+	/** Couleur d'une série (bulles : celle de sa paire). */
+	const seriesColor = (k: number) => (kind === 'bubble' ? color(Math.floor(k / 2)) : color(k));
 
 	// Perspective de l'histogramme 3D : profondeur des barres (vers la droite et le haut).
 	const d3 = $derived(kind === 'bar3d' ? Math.min(16, Math.max(6, ((width - 90) / Math.max(1, labels.length)) * 0.22)) : 0);
@@ -234,7 +280,7 @@
 	const padLeft = $derived((noAxes ? 12 : horizontal ? Math.max(40, Math.ceil(hChars * 6.2) + 12) : 48) + (style.yTitle && !noAxes ? 18 : 0));
 	const padRight = $derived(16 + d3 + (legend === 'right' && legendItems.length ? 130 : 0) + (hasSec ? 44 + (style.y2Title ? 18 : 0) : 0));
 	const catLayout = $derived(
-		noAxes || horizontal || kind === 'scatter' || timeAxis
+		noAxes || horizontal || xy || timeAxis
 			? { every: 1, angle: 0, depth: 14, chars: 12 }
 			: categoryLayout(labels, Math.max(20, width - padLeft - padRight) / Math.max(1, labels.length))
 	);
@@ -278,8 +324,13 @@
 			}
 		} else {
 			goal.series.forEach((s, k) => {
-				if (isSec(k)) return;
+				if (isSec(k) || notValue(k)) return;
 				for (const v of s.values) if (v !== null) see(v);
+				for (const p of trends[k]?.points ?? []) see(p[1]);
+				s.values.forEach((v, i) => {
+					const e = errorSpan(errs[k], i, v);
+					if (e) see(e.lo), see(e.hi);
+				});
 			});
 		}
 		if (lo > hi) lo = hi = 0;
@@ -288,7 +339,9 @@
 	// Origine de l'axe des valeurs : 0 pour les barres et les aires (leur
 	// longueur compte) ; pour des courbes et un nuage, la règle d'Excel
 	// (autoZero) ; jamais imposée pour les boîtes à moustaches.
-	const pointsOnly = (ks: number[]) => ks.length > 0 && ks.every((k) => kind === 'scatter' || (isLine(k) && !isArea(k)));
+	const pointsOnly = (ks: number[]) => ks.length > 0 && ks.every((k) => xy || kind === 'stock' || (isLine(k) && !isArea(k)));
+	/** Série qui n'est pas une valeur de l'axe : taille des bulles, volume du boursier. */
+	const notValue = (k: number) => (kind === 'bubble' && k % 2 === 1) || (kind === 'stock' && k === 4);
 	const zeroOf = (lo: number, hi: number, ks: number[]) => (kind === 'boxplot' ? false : pointsOnly(ks) ? autoZero(lo, hi) : true);
 	// Axe secondaire : sa propre échelle, sur ses séries seulement.
 	const ticks2 = $derived.by(() => {
@@ -452,8 +505,10 @@
 	const xOrder = $derived(xs.map((_, i) => i).sort((a, b) => xs[a] - xs[b]));
 	const xTicks = $derived.by(() => {
 		if (!xs.length) return [0, 1];
-		const lo = Math.min(...xs);
-		const hi = Math.max(...xs);
+		// Prévision d'une courbe de tendance : l'axe s'étend jusqu'à elle.
+		const tx = trends.flatMap((f) => (f && !f.index ? (f.points ?? []).map((p) => p[0]) : []));
+		const lo = Math.min(...xs, ...tx);
+		const hi = Math.max(...xs, ...tx);
 		return xDate ? dateTicks(lo, hi) : ticks(lo, hi, 5, autoZero(lo, hi));
 	});
 	const xFmt = $derived(xDate ? dateTickFormat(xTicks) : axisValueFormat(xTicks, [info?.xFormat]));
@@ -485,6 +540,73 @@
 		return `M ${p(R, from)} A ${R} ${R} 0 ${large} 1 ${p(R, to)} L ${p(r, to)} A ${r} ${r} 0 ${large} 0 ${p(r, from)} Z`;
 	}
 	const pct = $derived(numberFormat({ style: 'percent', maximumFractionDigits: 1 }));
+
+	// Position verticale sans butée (courbe de tendance, coupée au cadre).
+	const vyFree = (k: number) => (v: number) => (isSec(k) ? pad.top + plotH - ((v - w0) / (w1 - w0 || 1)) * plotH : pad.top + plotH - ((v - v0) / span) * plotH);
+	// Courbes de tendance : X en rang de catégorie (centre de sa bande) ou en valeur.
+	const trendPaths = $derived(
+		trends.flatMap((f, k) => {
+			if (!f?.points?.length || !series[k]) return [];
+			const x = (v: number) => (f.index ? pad.left + band * (v - 0.5) : sx(v));
+			const y = vyFree(k);
+			const d = f.points.map((p, i) => `${i ? 'L' : 'M'} ${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join(' ');
+			return [{ k, d, c: seriesColor(k) }];
+		})
+	);
+	// Équation et R² en haut à droite du tracé, une ligne chacun.
+	const eqNum = (v: number) => fmtNumber(v, { maximumSignificantDigits: 5 });
+	const eqLines = $derived(
+		trends.flatMap((f, k) => {
+			const o = style.trendlines?.[k];
+			if (!f || !o || f.type === 'movavg' || !series[k]) return [];
+			const out: { parts: { t: string; sup?: boolean }[]; c: string }[] = [];
+			if (o.equation) out.push({ parts: trendEquation(f, eqNum), c: seriesColor(k) });
+			if (o.r2) out.push({ parts: [{ t: r2Text(f.r2, (v, d) => fmtNumber(v, { minimumFractionDigits: d, maximumFractionDigits: d })) }], c: seriesColor(k) });
+			return out;
+		})
+	);
+	// Barres d'erreur : X du point (centre de sa barre, de sa catégorie ou sa valeur).
+	const errorBars = $derived.by(() => {
+		const out: { x: number; y0: number; y1: number; cap: number; plus: boolean; minus: boolean; c: string; tip: string }[] = [];
+		if (horizontal) return out;
+		const barX = new Map(bars.map((b) => [`${b.k}:${b.i}`, b.x + b.w / 2]));
+		errs.forEach((e, k) => {
+			if (!e || !series[k] || notValue(k)) return;
+			const y = vyOf(k);
+			series[k].values.forEach((v, i) => {
+				const sp = errorSpan(e, i, v);
+				if (!sp) return;
+				const x = xy ? sx(xs[i]) : isBar(k) ? barX.get(`${k}:${i}`) : cat(i);
+				if (x === undefined) return;
+				const cap = style.errorBars?.[k]?.noCap ? 0 : Math.max(2, Math.min(5, band * 0.12));
+				out.push({ x, y0: y(sp.hi), y1: y(sp.lo), cap, plus: sp.plus, minus: sp.minus, c: shade(seriesColor(k), -0.45), tip: `${labels[i]} : ${fmt(sp.lo, k)} – ${fmt(sp.hi, k)}` });
+			});
+		});
+		return out;
+	});
+	// Bulles : une paire de séries (Y, taille) chacune ; les grandes dessous.
+	const bubbles = $derived.by(() => {
+		if (kind !== 'bubble') return [];
+		const maxR = Math.max(4, Math.min(plotW, plotH) * 0.125);
+		const out: { x: number; y: number; r: number; c: string; tip: string }[] = [];
+		for (let k = 0; k + 1 < series.length; k += 2) {
+			const radii = bubbleRadii(series[k + 1].values, maxR);
+			series[k].values.forEach((v, i) => {
+				if (v === null || !radii[i]) return;
+				out.push({ x: sx(xs[i]), y: vy(v), r: radii[i], c: color(k / 2), tip: `${labels[i]} · ${series[k].name} : ${fmt(v, k)} ; ${series[k + 1].name} : ${fmt(series[k + 1].values[i]!, k + 1)}` });
+			});
+		}
+		return out.sort((a, b) => b.r - a.r);
+	});
+	// Graphique boursier : bougies (ou haut-bas-clôture), volume en bas.
+	const sticks = $derived(kind === 'stock' ? candles(series.slice(0, 4)) : []);
+	const volume = $derived.by(() => {
+		if (kind !== 'stock' || series.length < 5) return [];
+		const vs = series[4].values;
+		const top = Math.max(0, ...vs.map((v) => v ?? 0));
+		return vs.map((v, i) => (v && v > 0 && top ? { x: cat(i) - band * 0.3, w: Math.max(1, band * 0.6), h: (v / top) * plotH * 0.25, v, i } : null)).filter((b) => !!b);
+	});
+	const clipId = `chart-clip-${uid}`;
 </script>
 
 {#if kind === 'map'}
@@ -528,7 +650,7 @@
 				{/if}
 			{/each}
 			<!-- Axe des catégories. -->
-			{#if kind === 'scatter' || timeAxis}
+			{#if xy || timeAxis}
 				{#each xTicks as t (t)}
 					<text x={sx(t)} y={pad.top + plotH + 14} text-anchor="middle" class="small">{xFmt(t)}</text>
 				{/each}
@@ -547,7 +669,29 @@
 				{/each}
 			{/if}
 
-			{#if kind === 'scatter'}
+			{#if kind === 'bubble'}
+				{#each bubbles as b, i (i)}
+					<circle cx={b.x} cy={b.y} r={b.r} fill={b.c} fill-opacity="0.65" stroke={shade(b.c, -0.25)}><title>{b.tip}</title></circle>
+				{/each}
+			{:else if kind === 'stock'}
+				{#each volume as b (b.i)}
+					<rect x={b.x} y={pad.top + plotH - b.h} width={b.w} height={b.h} fill={VOLUME}><title>{labels[b.i]} · {series[4]?.name} : {fmt(b.v, 4)}</title></rect>
+				{/each}
+				{#each sticks as c, i (i)}
+					{#if c}
+						{@const x = cat(i)}
+						{@const w = Math.max(3, band * 0.55)}
+						{@const col = c.up ? upColor : downColor}
+						{@const tip = `${labels[i]} — ${c.open !== null ? `${series[0]?.name} ${fmt(c.open)} · ` : ''}${t('chart.stock.high')} ${fmt(c.high)} · ${t('chart.stock.low')} ${fmt(c.low)} · ${t('chart.stock.close')} ${fmt(c.close)}`}
+						<line x1={x} x2={x} y1={vy(c.high)} y2={vy(c.low)} stroke={c.open === null ? shade(color(0), -0.3) : col} stroke-width="1.2" />
+						{#if c.open !== null}
+							<rect x={x - w / 2} y={vy(Math.max(c.open, c.close))} width={w} height={Math.max(1, vy(Math.min(c.open, c.close)) - vy(Math.max(c.open, c.close)))} fill={c.up ? '#fff' : col} stroke={col}><title>{tip}</title></rect>
+						{:else}
+							<path d="M {x} {vy(c.close)} h {w / 2}" stroke={shade(color(0), -0.3)} stroke-width="1.5"><title>{tip}</title></path>
+						{/if}
+					{/if}
+				{/each}
+			{:else if kind === 'scatter'}
 				{#each series as s, k (k)}
 					{#each s.values as v, i (i)}
 						{#if v !== null}<circle cx={sx(xs[i])} cy={vyOf(k)(v)} r={s.values.length > 500 ? 2 : 3.5} fill={color(k)}><title>{labels[i]} : {fmt(v, k)}</title></circle>{/if}
@@ -611,6 +755,24 @@
 				{/each}
 			{/if}
 
+			{#if trendPaths.length}
+				<clipPath id={clipId}><rect x={pad.left} y={pad.top} width={plotW} height={plotH} /></clipPath>
+				<g clip-path="url(#{clipId})">
+					{#each trendPaths as p (p.k)}<path d={p.d} fill="none" stroke={p.c} stroke-width="1.6" stroke-dasharray="5 3" />{/each}
+				</g>
+			{/if}
+			{#each errorBars as e, i (i)}
+				<g stroke={e.c} stroke-width="1.2">
+					<title>{e.tip}</title>
+					<line x1={e.x} x2={e.x} y1={e.y0} y2={e.y1} />
+					{#if e.cap && e.plus}<line x1={e.x - e.cap} x2={e.x + e.cap} y1={e.y0} y2={e.y0} />{/if}
+					{#if e.cap && e.minus}<line x1={e.x - e.cap} x2={e.x + e.cap} y1={e.y1} y2={e.y1} />{/if}
+				</g>
+			{/each}
+			{#each eqLines as l, i (i)}
+				<text x={pad.left + plotW - 6} y={pad.top + 14 + i * 15} text-anchor="end" class="eq" style:fill={shade(l.c, -0.35)}>{#each l.parts as part, j (j)}{#if part.sup}<tspan dy="-5" font-size="9">{part.t}</tspan><tspan dy="5"> </tspan>{:else}{part.t}{/if}{/each}</text>
+			{/each}
+
 			{#if style.xTitle}<text x={pad.left + plotW / 2} y={pad.top + plotH + (horizontal ? 14 : catLayout.depth) + 18} text-anchor="middle" class="axis-title">{style.xTitle}</text>{/if}
 			{#if style.yTitle}
 				<text x="14" y={pad.top + plotH / 2} text-anchor="middle" class="axis-title" transform="rotate(-90 14 {pad.top + plotH / 2})">{style.yTitle}</text>
@@ -635,7 +797,7 @@
 				{@const room = Math.max(1, Math.floor((height - pad.top - 8) / 18))}
 				{@const fit = legendItems.length > room ? room - 1 : room}
 				{#each legendItems.slice(0, fit) as it, i (i)}
-					<rect x={width - 136} y={pad.top + i * 18} width="10" height="10" fill={it.color} />
+					{#if it.dash}<line x1={width - 137} x2={width - 125} y1={pad.top + i * 18 + 5} y2={pad.top + i * 18 + 5} stroke={it.color} stroke-width="1.6" stroke-dasharray="3 2" />{:else}<rect x={width - 136} y={pad.top + i * 18} width="10" height="10" fill={it.color} />{/if}
 					<text x={width - 122} y={pad.top + i * 18 + 9} class="small"><title>{it.name}</title>{short(it.name, 18)}{radial && slices[i] ? ` (${pct.format(slices[i].part)})` : ''}</text>
 				{/each}
 				{#if legendItems.length > fit}
@@ -645,7 +807,7 @@
 				{@const y0 = legend === 'top' ? (style.title ? 34 : 12) : height - legendH + 10 - noteH}
 				{#each flow.items as f, i (i)}
 					{@const y = y0 + f.row * 16}
-					<rect x={f.x} y={y - 8} width="10" height="10" fill={legendItems[i].color} />
+					{#if legendItems[i].dash}<line x1={f.x - 1} x2={f.x + 11} y1={y - 3} y2={y - 3} stroke={legendItems[i].color} stroke-width="1.6" stroke-dasharray="3 2" />{:else}<rect x={f.x} y={y - 8} width="10" height="10" fill={legendItems[i].color} />{/if}
 					<text x={f.x + 14} y={y + 1} class="small"><title>{legendItems[i].name}</title>{f.text}</text>
 				{/each}
 			{/if}
@@ -684,6 +846,13 @@
 	.small {
 		font-size: 11px;
 		fill: #4b5563;
+	}
+	.eq {
+		font-size: 11px;
+		paint-order: stroke;
+		stroke: #fff;
+		stroke-width: 3px;
+		stroke-linejoin: round;
 	}
 	.on-color {
 		font-size: 11px;

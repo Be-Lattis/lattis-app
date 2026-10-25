@@ -229,7 +229,8 @@ describe('carte', () => {
 
 describe('types', () => {
 	it('tous proposés, les nouveaux dans « Autres graphiques »', () => {
-		expect(KINDS).toHaveLength(18);
+		expect(KINDS).toHaveLength(20);
+		expect(MORE_KINDS.map((k) => k.kind)).toEqual(expect.arrayContaining(['bubble', 'stock']));
 		expect(MORE_KINDS.map((k) => k.kind)).not.toContain('bar');
 		expect(MORE_KINDS.map((k) => k.kind)).toContain('map');
 		expect(new Set(KINDS.map((k) => k.label)).size).toBe(KINDS.length);

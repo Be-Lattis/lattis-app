@@ -72,6 +72,14 @@
 		"gauge": {
 			"label": "Jauge",
 			"hint": "Une valeur sur un cadran, entre un minimum et un maximum"
+		},
+		"bubble": {
+			"label": "Bulles",
+			"hint": "X, Y et taille"
+		},
+		"stock": {
+			"label": "Boursier",
+			"hint": "Ouverture, haut, bas, clôture"
 		}
 	},
 	"note": {
@@ -252,11 +260,61 @@
 		"dataLabels": "Étiquettes de données",
 		"grid": "Quadrillage",
 		"moveHelp": "Glissez pour déplacer, tirez les poignées pour redimensionner ; clic droit : couper, copier, supprimer.",
-		"keyboardHelp": "Au clavier : flèches pour le déplacer, Maj+flèches pour le redimensionner, Tab pour passer au graphique suivant, Suppr pour le supprimer."
+		"keyboardHelp": "Au clavier : flèches pour le déplacer, Maj+flèches pour le redimensionner, Tab pour passer au graphique suivant, Suppr pour le supprimer.",
+		"size": "Taille"
 	},
 	"image": {
 		"unreadable": "image illisible",
 		"noCanvas": "dessin impossible",
 		"empty": "image vide"
+	},
+	"stock": {
+		"open": "Ouverture",
+		"high": "Haut",
+		"low": "Bas",
+		"close": "Clôture",
+		"volume": "Volume",
+		"up": "Hausse",
+		"down": "Baisse"
+	},
+	"trend": {
+		"type": {
+			"linear": "Linéaire",
+			"exp": "Exponentielle",
+			"log": "Logarithmique",
+			"poly": "Polynomiale",
+			"power": "Puissance",
+			"movavg": "Moyenne mobile"
+		},
+		"legend": "{type} ({name})",
+		"legendAvg": "Moy. mobile sur {n} pér. ({name})"
+	},
+	"analysis": {
+		"title": "Analyse",
+		"series": "Série",
+		"none": "Aucune",
+		"trend": "Tendance",
+		"order": "Ordre",
+		"period": "Période",
+		"forecast": "Prévision",
+		"backward": "Avant les données",
+		"forward": "Après les données",
+		"equation": "Équation",
+		"errors": "Barres d’erreur",
+		"error": {
+			"fixed": "Valeur fixe",
+			"percent": "Pourcentage",
+			"stddev": "Écart type",
+			"stderr": "Erreur type",
+			"custom": "Personnalisée"
+		},
+		"value": "Valeur",
+		"times": "Multiple",
+		"plus": "Plus",
+		"minus": "Moins",
+		"samePlus": "Comme Plus",
+		"direction": "Sens",
+		"both": "Les deux",
+		"caps": "Embouts"
 	}
 }

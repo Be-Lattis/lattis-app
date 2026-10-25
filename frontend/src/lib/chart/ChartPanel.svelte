@@ -8,6 +8,8 @@
 	import { PALETTE } from './scale';
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
+	import ChartAnalysis from './ChartAnalysis.svelte';
+	import { FITTABLE } from './fits';
 	import { BY_CATEGORY, CARTESIAN, KINDS, SECONDARY, SINGLE_SERIES, STACKABLE, chartFields, chartNotes, mapChoice, mapComplete, mapPatch, reorderSeries, seriesShape, type MapChoice, type MapGuess } from './kinds';
 	import { fmtNumber, t } from '#lib/i18n/index.js';
 
@@ -120,6 +122,13 @@
 			set({ kind, series: [], mapDraft: true, mapCoords: undefined, colors: undefined, secondary: undefined, seriesKinds: undefined });
 			return;
 		}
+		// Bulles et boursier : colonnes choisies comme à l'insertion.
+		if (kind === 'bubble' || kind === 'stock') {
+			const cols = sources.find((s) => s.name === config.source)?.columns ?? columns.map((name) => ({ name, numeric: true }));
+			const f = chartFields(kind, cols);
+			set({ kind, x: f.x || config.x, series: f.series.length ? f.series : config.series, colors: undefined, secondary: undefined, seriesKinds: undefined, mapDraft: undefined });
+			return;
+		}
 		if (config.kind === 'map') {
 			const m = mapChoice(config, guess);
 			const first = m.value || m.cols.find(Boolean) || columns.find((c) => c !== config.x) || '';
@@ -153,6 +162,18 @@
 	}
 	const colOptions = $derived([{ value: none, label: t('chart.panel.choose') }, ...columns.map((c) => ({ value: c, label: c }))]);
 	const hasSecondary = $derived(canSecondary && config.series.some((_, k) => config.secondary?.[k]));
+	// Bulles : Y et taille ; boursier : ouverture (facultative), haut, bas,
+	// clôture, volume (facultatif, avec l'ouverture).
+	const stock = $derived.by(() => {
+		const s = config.series;
+		return s.length >= 4 ? { open: s[0], high: s[1], low: s[2], close: s[3], volume: s[4] ?? '' } : { open: '', high: s[0] ?? '', low: s[1] ?? '', close: s[2] ?? '', volume: '' };
+	});
+	function setStock(patch: Partial<typeof stock>) {
+		const v = { ...stock, ...patch };
+		const prices = [v.high, v.low, v.close];
+		set({ series: v.open ? [v.open, ...prices, ...(v.volume ? [v.volume] : [])] : prices });
+	}
+	const optOptions = $derived([{ value: none, label: t('chart.panel.noneF') }, ...columns.map((c) => ({ value: c, label: c }))]);
 	function toggleSecondary(k: number) {
 		const secondary = config.series.map((_, j) => !!config.secondary?.[j]);
 		secondary[k] = !secondary[k];
@@ -267,6 +288,16 @@
 		<label class="line">{t('chart.panel.axisX')}
 			<Select value={config.x} options={columns.map((c) => ({ value: c, label: c }))} onchange={(x) => set({ x, ...reorderSeries(config, config.series.filter((s) => s !== x)) })} />
 		</label>
+		{#if config.kind === 'bubble'}
+			<label class="line">{t('chart.panel.axisY')}<Select value={config.series[0] ?? none} options={colOptions} onchange={(c) => set({ series: [c, config.series[1] ?? c] })} /></label>
+			<label class="line">{t('chart.panel.size')}<Select value={config.series[1] ?? none} options={colOptions} onchange={(c) => set({ series: [config.series[0] ?? c, c] })} /></label>
+		{:else if config.kind === 'stock'}
+			<label class="line">{t('chart.stock.open')}<Select value={stock.open} options={optOptions} onchange={(c) => setStock({ open: c, volume: c ? stock.volume : '' })} /></label>
+			<label class="line">{t('chart.stock.high')}<Select value={stock.high} options={colOptions} onchange={(c) => setStock({ high: c })} /></label>
+			<label class="line">{t('chart.stock.low')}<Select value={stock.low} options={colOptions} onchange={(c) => setStock({ low: c })} /></label>
+			<label class="line">{t('chart.stock.close')}<Select value={stock.close} options={colOptions} onchange={(c) => setStock({ close: c })} /></label>
+			<label class="line">{t('chart.stock.volume')}<Select value={stock.volume} options={optOptions} disabled={!stock.open} onchange={(c) => setStock({ volume: c })} /></label>
+		{:else}
 		<div class="series">
 			{#each listed as c (c)}
 				{@const k = config.series.indexOf(c)}
@@ -313,6 +344,7 @@
 				</label>
 			{/each}
 		</div>
+		{/if}
 		<label class="opt"><input type="checkbox" checked={!!config.hidden} onchange={(e) => set({ hidden: (e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('chart.panel.hidden.label')}</label>
 		{#if config.kind === 'histogram'}
 			<label class="line">{t('chart.panel.bins')}<input value={config.bins ?? ''} onchange={(e) => set({ bins: num((e.currentTarget as HTMLInputElement).value) })} placeholder="auto" /></label>
@@ -334,6 +366,10 @@
 		{/if}
 	</section>
 
+	{#if FITTABLE.has(config.kind) && !(config.stacked && stackable)}
+		<ChartAnalysis kind={config.kind} series={config.series} {columns} trendlines={config.trendlines} errorBars={config.errorBars} onchange={(patch) => set(patch)} />
+	{/if}
+
 	{#if byCategory && catLabels.length}
 		<section>
 			<h3>{t('chart.panel.colors')}</h3>
@@ -343,6 +379,15 @@
 				{/each}
 			</div>
 			{#if (info?.labels?.length ?? 0) > catLabels.length}<p class="hint">{t('chart.panel.paletteRepeat')}</p>{/if}
+		</section>
+	{:else if config.kind === 'stock'}
+		<section>
+			<h3>{t('chart.panel.colors')}</h3>
+			<div class="colors">
+				{#each [[t('chart.stock.up'), '#1e8e3e'], [t('chart.stock.down'), '#d93025']] as [l, d], i (i)}
+					<label><input type="color" value={config.colors?.[i] || d} onchange={(e) => { const colors = [config.colors?.[0] || '#1e8e3e', config.colors?.[1] || '#d93025']; colors[i] = (e.currentTarget as HTMLInputElement).value; set({ colors }); }} /><span>{l}</span></label>
+				{/each}
+			</div>
 		</section>
 	{:else if config.kind === 'waterfall'}
 		<section>

@@ -72,6 +72,14 @@
 		"gauge": {
 			"label": "Medidor",
 			"hint": "Un valor en un cuadrante, entre un mínimo y un máximo"
+		},
+		"bubble": {
+			"label": "Burbujas",
+			"hint": "X, Y y tamaño"
+		},
+		"stock": {
+			"label": "Cotizaciones",
+			"hint": "Apertura, máximo, mínimo, cierre"
 		}
 	},
 	"note": {
@@ -252,11 +260,61 @@
 		"dataLabels": "Etiquetas de datos",
 		"grid": "Líneas de cuadrícula",
 		"moveHelp": "Arrastre para mover y use los controladores para cambiar el tamaño; clic derecho: cortar, copiar, eliminar.",
-		"keyboardHelp": "Con el teclado: flechas para moverlo, Mayús+flechas para cambiar su tamaño, Tab para pasar al gráfico siguiente, Supr para eliminarlo."
+		"keyboardHelp": "Con el teclado: flechas para moverlo, Mayús+flechas para cambiar su tamaño, Tab para pasar al gráfico siguiente, Supr para eliminarlo.",
+		"size": "Tamaño"
 	},
 	"image": {
 		"unreadable": "imagen ilegible",
 		"noCanvas": "no se puede dibujar",
 		"empty": "imagen vacía"
+	},
+	"stock": {
+		"open": "Apertura",
+		"high": "Máximo",
+		"low": "Mínimo",
+		"close": "Cierre",
+		"volume": "Volumen",
+		"up": "Subida",
+		"down": "Bajada"
+	},
+	"trend": {
+		"type": {
+			"linear": "Lineal",
+			"exp": "Exponencial",
+			"log": "Logarítmica",
+			"poly": "Polinómica",
+			"power": "Potencial",
+			"movavg": "Media móvil"
+		},
+		"legend": "{type} ({name})",
+		"legendAvg": "Media móvil {n} per. ({name})"
+	},
+	"analysis": {
+		"title": "Análisis",
+		"series": "Serie",
+		"none": "Ninguna",
+		"trend": "Tendencia",
+		"order": "Orden",
+		"period": "Período",
+		"forecast": "Previsión",
+		"backward": "Hacia atrás",
+		"forward": "Hacia delante",
+		"equation": "Ecuación",
+		"errors": "Barras de error",
+		"error": {
+			"fixed": "Valor fijo",
+			"percent": "Porcentaje",
+			"stddev": "Desviación estándar",
+			"stderr": "Error estándar",
+			"custom": "Personalizada"
+		},
+		"value": "Valor",
+		"times": "Múltiplo",
+		"plus": "Más",
+		"minus": "Menos",
+		"samePlus": "Igual que Más",
+		"direction": "Dirección",
+		"both": "Ambas",
+		"caps": "Remates"
 	}
 }

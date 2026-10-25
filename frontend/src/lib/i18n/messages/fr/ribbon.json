@@ -688,6 +688,10 @@
 		"textBox": {
 			"label": "Zone de texte",
 			"tooltip": "Texte libre posé sur la feuille"
+		},
+		"sparklines": {
+			"label": "Sparklines",
+			"tooltip": "Petit graphique dans une cellule, ou dans chaque ligne d’un tableau"
 		}
 	},
 	"protect": {

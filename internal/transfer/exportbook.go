@@ -77,6 +77,7 @@ type xsheet struct {
 	book *book
 	// Images, formes et zones de texte (export .xlsx : xlsxdrawing.go).
 	objects []canvas.ObjectInfo
+	sparks  []canvas.SparklineInfo // graphiques sparkline (xlsxsparklines.go)
 	pics    map[string]xpic
 	// validations : <dataValidations> de la feuille (.xlsx).
 	validations string
@@ -134,6 +135,7 @@ func exportBook(ctx context.Context, m *canvas.Model, tg target) ([]xsheet, *fmt
 		if tg == toXLSX {
 			sh.objects = layouts[i].Objects
 			sh.pics = sheetObjects(ctx, m, sh.objects)
+			sh.sparks = layouts[i].Sparklines
 		}
 		sh.rows = func(ctx context.Context, xt *xtable, send func(int, []xcell) error) error {
 			return tableRows(ctx, m, xt, fm, tg, send)

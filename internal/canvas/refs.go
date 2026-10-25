@@ -67,7 +67,7 @@ func (t *tx) rewriteRefs(rc refChange) error {
 		return nil
 	}
 	steps := []func(refChange) error{t.rewriteCellFormulas, t.rewriteColumnFormulas, t.rewriteLineRules,
-		t.rewriteCellRules, t.rewritePivots, t.rewriteCharts, t.rewriteButtons, t.rewriteQueries, t.rewriteDocObjects, t.rewriteSortOrders, t.rewriteValidations, t.rewriteChoiceFormulas, t.rewriteLinks}
+		t.rewriteCellRules, t.rewritePivots, t.rewriteCharts, t.rewriteSparkRefs, t.rewriteButtons, t.rewriteQueries, t.rewriteDocObjects, t.rewriteSortOrders, t.rewriteValidations, t.rewriteChoiceFormulas, t.rewriteLinks}
 	for _, f := range steps {
 		if err := f(rc); err != nil {
 			return err
@@ -472,6 +472,14 @@ func renameChartConfig(m map[string]any, rc refChange, headers map[string]map[st
 	for _, v := range filters {
 		if f, ok := v.(map[string]any); ok {
 			changed = renameField(f, "field", cols, src) || changed
+		}
+	}
+	// Barres d'erreur personnalisées : colonnes des montants.
+	bars, _ := m["errorBars"].([]any)
+	for _, v := range bars {
+		if f, ok := v.(map[string]any); ok {
+			changed = renameField(f, "plus", cols, src) || changed
+			changed = renameField(f, "minus", cols, src) || changed
 		}
 	}
 	if n := rc.Table(src); n != src {

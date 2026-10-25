@@ -492,6 +492,13 @@ export function CreatePivotAt(sheet: number, row: number, col: number, cfg: canv
 }
 
 /**
+ * CreateSparkline pose un groupe de graphiques sparkline.
+ */
+export function CreateSparkline(sheet: number, cfg: canvas$0.SparklineConfig): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2835841493, sheet, cfg);
+}
+
+/**
  * CreateTableSource publie le tableau seul comme source poussée : classeur
  * technique, pipeline et donnée créés sur le serveur, lien gardé dans le
  * classeur, puis premier envoi. Le classeur n'est pas publié. Un premier
@@ -640,6 +647,13 @@ export function DeleteSheetRows(sheet: number, r0: number, r1: number): $Cancell
  */
 export function DeleteSheets(sheets: number[] | null): $CancellablePromise<$models.DocState> {
     return $Call.ByID(118903757, sheets);
+}
+
+/**
+ * DeleteSparkline supprime un groupe de graphiques sparkline.
+ */
+export function DeleteSparkline(id: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(4220218540, id);
 }
 
 /**
@@ -2332,6 +2346,13 @@ export function SetSheetsColor(sheets: number[] | null, color: string): $Cancell
  */
 export function SetSheetsHidden(sheets: number[] | null, hidden: boolean): $CancellablePromise<$models.DocState> {
     return $Call.ByID(496599342, sheets, hidden);
+}
+
+/**
+ * SetSparkline change un groupe de graphiques sparkline.
+ */
+export function SetSparkline(id: number, cfg: canvas$0.SparklineConfig): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3161674017, id, cfg);
 }
 
 /**

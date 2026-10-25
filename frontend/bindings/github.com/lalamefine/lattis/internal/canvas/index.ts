@@ -27,6 +27,8 @@ export type {
     DataTableDef,
     DepTarget,
     Dependencies,
+    ErrorBars,
+    ErrorValues,
     Event,
     FamilyOutcome,
     Favorite,
@@ -92,6 +94,9 @@ export type {
     SolverParams,
     SolverResult,
     Span,
+    SparkCell,
+    SparklineConfig,
+    SparklineInfo,
     Style,
     TableFamily,
     TableInfo,
@@ -100,6 +105,8 @@ export type {
     TextColumnsOptions,
     TextColumnsPreview,
     Theme,
+    TrendFit,
+    Trendline,
     ValidationList,
     WhatIfCell
 } from "./models.js";

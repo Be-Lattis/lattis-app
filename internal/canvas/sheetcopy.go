@@ -104,6 +104,17 @@ func (t *tx) copySheet(sheet int64, to int) (int64, error) {
 	if err := t.copyObjects(`_lattis_objects`, sheet, id, nil); err != nil {
 		return 0, err
 	}
+	// Graphiques sparkline : ceux d'un tableau copié lisent sa copie.
+	if err := t.copyObjects(`_lattis_sparklines`, sheet, id, func(cfg map[string]any) error {
+		if src, ok := cfg["table"].(string); ok {
+			if n, ok := renamed[strings.ToLower(src)]; ok {
+				cfg["table"] = n
+			}
+		}
+		return nil
+	}); err != nil {
+		return 0, err
+	}
 	return id, t.moveSheet(id, to)
 }
 

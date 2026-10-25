@@ -518,6 +518,16 @@ CREATE TABLE _lattis_images (
 	data   BLOB NOT NULL
 ) STRICT;
 `,
+	// 36 → 37 : graphiques sparkline (canvas/sparkline.go), par groupe :
+	// tirés d'un tableau (une ligne, un graphique) ou de cellules libres
+	// (plage source et emplacement en A1) ; configuration JSON.
+	`
+CREATE TABLE _lattis_sparklines (
+	id     INTEGER PRIMARY KEY,
+	sheet  INTEGER NOT NULL REFERENCES _lattis_sheets(id),
+	config TEXT NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

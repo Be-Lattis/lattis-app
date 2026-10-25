@@ -1740,5 +1740,33 @@
 			"tooLarge": "Image trop lourde : 10 Mo au plus",
 			"unreadable": "Image illisible"
 		}
+	},
+	"sparkline": {
+		"title": "Sparklines",
+		"type": "Type",
+		"kind": {
+			"line": "Courbe",
+			"column": "Histogramme",
+			"winloss": "Positif/Négatif"
+		},
+		"from": "De la colonne",
+		"to": "À la colonne",
+		"where": "Dessiner dans",
+		"right": "À droite de {table}",
+		"tableHint": "Un graphique par ligne, lignes ajoutées comprises.",
+		"data": "Données",
+		"location": "Emplacement",
+		"show": "Afficher",
+		"high": "Point haut",
+		"low": "Point bas",
+		"first": "Premier point",
+		"last": "Dernier point",
+		"negative": "Négatifs",
+		"markers": "Marqueurs",
+		"color": "Couleur",
+		"axis": "Axe",
+		"same": "Même échelle",
+		"sameHint": "Mêmes minimum et maximum pour tout le groupe",
+		"remove": "Supprimer"
 	}
 }

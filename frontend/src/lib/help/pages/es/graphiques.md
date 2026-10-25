@@ -49,3 +49,11 @@ Un gráfico copiado puede pegarse en otra hoja o en un [documento](onglets), don
 ## Imágenes, formas y cuadros de texto {#images-formes-et-zones-de-texte}
 
 Insertar › **Imagen** (o Ctrl+V de una imagen copiada), **Formas** o **Cuadro de texto**: el objeto se coloca en la celda activa y sigue sus filas y columnas. Arrástrelo para moverlo, tire de sus controladores para cambiar su tamaño (una imagen conserva sus proporciones; Mayús las libera), haga doble clic en una forma para escribir texto. La barra sobre el objeto ajusta los colores, la línea, la transparencia y el texto; Supr lo elimina, Ctrl+D lo duplica. Una imagen muy grande se reduce al insertarla; 10 MB como máximo (1 MB en un libro compartido).
+
+## Tendencia y barras de error {#tendance-et-erreurs}
+
+Panel del gráfico › **Análisis** (barras, líneas, áreas, dispersión, burbujas): elija una serie y luego una **línea de tendencia** (lineal, exponencial, logarítmica, polinómica, potencial, media móvil), con su previsión antes o después de los datos, su ecuación y su R². **Barras de error**: valor fijo, porcentaje, desviación estándar, error estándar o importes de una columna. Los tipos **Burbujas** (X, Y, tamaño) y **Cotizaciones** (apertura, máximo, mínimo, cierre, volumen) están en Otros gráficos.
+
+## Minigráficos {#sparklines}
+
+Insertar › **Minigráficos**: un gráfico pequeño en una celda (línea, columna, ganancia/pérdida). Seleccione las columnas de una fila de una tabla (Ene a Dic): cada fila de la tabla recibe el suyo, filas nuevas incluidas. Fuera de una tabla, indique el rango de datos y la ubicación. El mismo menú, en una celda que tiene uno, ajusta los puntos resaltados, los colores y el eje, o lo elimina.

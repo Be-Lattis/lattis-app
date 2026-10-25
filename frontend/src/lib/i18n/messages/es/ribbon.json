@@ -688,6 +688,10 @@
 		"textBox": {
 			"label": "Cuadro de texto",
 			"tooltip": "Texto libre sobre la hoja"
+		},
+		"sparklines": {
+			"label": "Minigráficos",
+			"tooltip": "Gráfico pequeño en una celda, o en cada fila de una tabla"
 		}
 	},
 	"protect": {

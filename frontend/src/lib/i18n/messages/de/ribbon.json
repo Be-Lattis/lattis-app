@@ -688,6 +688,10 @@
 		"textBox": {
 			"label": "Textfeld",
 			"tooltip": "Freier Text auf dem Blatt"
+		},
+		"sparklines": {
+			"label": "Sparklines",
+			"tooltip": "Kleines Diagramm in einer Zelle oder in jeder Tabellenzeile"
 		}
 	},
 	"protect": {

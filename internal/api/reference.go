@@ -12,7 +12,7 @@ import (
 // Catégories de la référence de l'onglet Script, par espace de noms.
 var luaCategory = map[string]string{
 	"sheets": "sheets", "cells": "cells", "tables": "tables", "columns": "columns",
-	"ui": "ui", "charts": "objects", "pivots": "objects", "buttons": "objects", "objects": "objects", "controls": "controls",
+	"ui": "ui", "charts": "objects", "pivots": "objects", "buttons": "objects", "objects": "objects", "sparklines": "objects", "controls": "controls",
 	"doc": "workbook", "scripts": "workbook", "formulas": "workbook", "help": "workbook",
 	"queries": "workbook", "connections": "workbook",
 	"http": "http", "pages": "sheets", "events": "events",

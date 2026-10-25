@@ -77,6 +77,10 @@ type ChartConfig struct {
 	// Blanks : courbes et aires, cellule vide en intervalle ("", comme
 	// Excel), à zéro ("zero") ou reliée aux points voisins ("span").
 	Blanks string `json:"blanks,omitempty"`
+	// Trendlines, ErrorBars : courbe de tendance et barres d'erreur de
+	// chaque série, par rang (nil : aucune ; voir chartfit.go).
+	Trendlines []*Trendline `json:"trendlines,omitempty"`
+	ErrorBars  []*ErrorBars `json:"errorBars,omitempty"`
 }
 
 // MapView : vue d'une carte, centre (degrés) et niveau de zoom (fractionnaire,
@@ -139,6 +143,10 @@ type ChartInfo struct {
 	// ng, celui de la colonne source) ; XFormat : celui de X.
 	Formats []string `json:"formats,omitempty"`
 	XFormat string   `json:"xFormat,omitempty"`
+	// Trends, Errors : courbes de tendance et barres d'erreur calculées, par
+	// rang de série (nil : aucune).
+	Trends []*TrendFit    `json:"trends,omitempty"`
+	Errors []*ErrorValues `json:"errors,omitempty"`
 }
 
 // BoxStats : statistiques d'une boîte à moustaches (quartiles interpolés
@@ -173,11 +181,14 @@ const (
 // courbes, SeriesKinds) ; bar3d, pie3d (perspective) ; map (carte
 // OpenStreetMap : séries latitude, longitude et valeur facultative) ;
 // waterfall (cascade), treemap (compartimentage), radar, funnel (entonnoir),
-// boxplot (boîte à moustaches), histogram (fréquences), gauge (jauge).
+// boxplot (boîte à moustaches), histogram (fréquences), gauge (jauge) ;
+// bubble (bulles : séries par paires Y, taille) ; stock (boursier : séries
+// haut, bas, clôture, ou ouverture, haut, bas, clôture et volume facultatif).
 var chartKinds = map[string]bool{
 	"bar": true, "column": true, "line": true, "area": true, "pie": true, "doughnut": true, "scatter": true,
 	"combo": true, "bar3d": true, "pie3d": true, "map": true,
 	"waterfall": true, "treemap": true, "radar": true, "funnel": true, "boxplot": true, "histogram": true, "gauge": true,
+	"bubble": true, "stock": true,
 }
 
 // chartRawRows : types qui lisent les lignes du tableau une à une, sans
@@ -216,7 +227,13 @@ func checkChart(cfg ChartConfig) error {
 	if cfg.Bins < 0 || cfg.Bins > 200 {
 		return msg.Wrap(ErrChart, "chart.binsRange", nil)
 	}
-	return nil
+	if cfg.Kind == "bubble" && len(cfg.Series)%2 != 0 {
+		return msg.Wrap(ErrChart, "chart.bubbleSeries", nil)
+	}
+	if cfg.Kind == "stock" && (len(cfg.Series) < 3 || len(cfg.Series) > 5) {
+		return msg.Wrap(ErrChart, "chart.stockSeries", nil)
+	}
+	return checkFits(cfg)
 }
 
 // CreateChart pose un graphique sur une feuille, coin haut gauche en (row, col).
@@ -444,8 +461,10 @@ func (t *tx) chartTable(cfg ChartConfig, tb Table) (chartResult, error) {
 	for k, v := range vals {
 		cols[k] = fmt.Sprintf("%s AS v%d", v, k)
 	}
-	// Un nuage de points prend les lignes une à une, même avec un X de texte (comme Excel).
-	grouped := (xType == grid.Text || xType == grid.Boolean) && !chartRawRows[cfg.Kind] && cfg.Kind != "scatter"
+	// Un nuage de points (ou de bulles) prend les lignes une à une, même avec
+	// un X de texte (comme un tableur) ; un graphique boursier aussi (un jour
+	// par ligne).
+	grouped := (xType == grid.Text || xType == grid.Boolean) && !chartRawRows[cfg.Kind] && cfg.Kind != "scatter" && cfg.Kind != "bubble" && cfg.Kind != "stock"
 	var q string
 	if grouped {
 		// Une catégorie par valeur de X, séries additionnées.

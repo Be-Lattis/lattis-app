@@ -25,7 +25,11 @@ func TestChartNewKinds(t *testing.T) {
 		}
 	}
 	for k := range chartKinds {
-		if err := checkChart(ChartConfig{Kind: k, Series: []string{"a", "b"}}); err != nil {
+		series := []string{"a", "b"}
+		if k == "stock" {
+			series = append(series, "c")
+		}
+		if err := checkChart(ChartConfig{Kind: k, Series: series}); err != nil {
 			t.Fatalf("%s : %v", k, err)
 		}
 	}

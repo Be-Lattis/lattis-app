@@ -91,6 +91,7 @@
 	import type { State as ShareState } from '#bindings/internal/remote/workbook/models.js';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
 	import type { ObjectConfig } from '#lib/grid/objects.js';
+	import type { SparklineGroup } from '#lib/grid/sparkline.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
@@ -1889,6 +1890,9 @@
 		placeLine: (id, row, col, offX, offY, w, h, flipH, flipV) => DocumentService.PlaceLine(id, row, col, offX, offY, w, h, flipH, flipV).then(reload),
 		orderObject: (id, front) => DocumentService.OrderObject(id, front).then(reload),
 		deleteObject: (id) => DocumentService.DeleteObject(id).then(reload),
+		createSparkline: (cfg) => DocumentService.CreateSparkline(sheetId, cfg as never).then(reload),
+		setSparkline: (id, cfg) => DocumentService.SetSparkline(id, cfg as never).then(reload),
+		deleteSparkline: (id) => DocumentService.DeleteSparkline(id).then(reload),
 		imageData: (hash) => DocumentService.ImageData(hash),
 		deletePivot: (id) => DocumentService.DeletePivot(id).then(reload),
 		movePivot: (id, row, col) => DocumentService.MovePivot(id, sheetId, row, col).then(reload),
@@ -2032,6 +2036,7 @@
 					pivots: (layout.pivots ?? []).map((p) => ({ ...p, config: p.config as PivotConfig, cells: (p.cells ?? []).map((r) => r ?? []) })),
 					buttons: (layout.buttons ?? []).map((b) => ({ ...b, config: b.config as ButtonConfig })),
 					objects: (layout.objects ?? []).map((o) => ({ id: o.id, row: o.row, col: o.col, config: o.config as unknown as ObjectConfig })),
+					sparklines: (layout.sparklines ?? []) as SparklineGroup[],
 					ranges: layout.ranges ?? []
 				}
 			: null
@@ -2480,6 +2485,7 @@
 		ontextcols={mode === 'doc' ? () => sheet?.textToColumnsActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
 		onobject={mode === 'doc' ? (kind) => sheet?.insertObject(kind) : undefined}
+		onsparkline={mode === 'doc' ? (kind) => sheet?.insertSparkline(kind) : undefined}
 		context={activePage && view === 'grid' ? (activeDoc ? 'doc' : 'html') : 'sheet'}
 		ondoc={docCommand}
 		docState={activeDoc && docFmt ? docFmt : undefined}

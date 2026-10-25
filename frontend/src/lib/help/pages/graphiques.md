@@ -49,3 +49,11 @@ Un graphique copié se colle sur une autre feuille ou dans un [document](onglets
 ## Images, formes et zones de texte
 
 Insertion › **Image** (ou Ctrl+V d'une image copiée), **Formes** ou **Zone de texte** : l'objet se pose à la cellule active et suit ses lignes et colonnes. Glissez-le pour le déplacer, tirez ses poignées pour le redimensionner (une image garde ses proportions ; Maj pour les libérer), double-cliquez une forme pour y taper du texte. La barre au-dessus de l'objet règle les couleurs, le trait, la transparence et le texte ; Suppr supprime, Ctrl+D duplique. Une image très grande est réduite à l'insertion ; 10 Mo au plus (1 Mo dans un classeur partagé).
+
+## Tendance et erreurs
+
+Volet du graphique › **Analyse** (barres, courbes, aires, nuages, bulles) : choisissez une série, puis une **tendance** (linéaire, exponentielle, logarithmique, polynomiale, puissance, moyenne mobile), avec sa prévision avant ou après les données, son équation et son R². **Barres d'erreur** : valeur fixe, pourcentage, écart type, erreur type, ou montants d'une colonne. Les types **Bulles** (X, Y, taille) et **Boursier** (ouverture, haut, bas, clôture, volume) sont dans Autres graphiques.
+
+## Sparklines
+
+Insertion › **Sparklines** : un petit graphique dans une cellule (courbe, histogramme, positif/négatif). Sélectionnez les colonnes d'une ligne d'un tableau (Jan à Déc) : chaque ligne du tableau reçoit le sien, lignes ajoutées comprises. Hors tableau, donnez la plage des données et l'emplacement. Le même menu, sur une cellule qui en a un, règle les points mis en valeur, les couleurs et l'axe, ou le supprime.

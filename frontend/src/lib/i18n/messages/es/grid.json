@@ -1740,5 +1740,33 @@
 			"tooLarge": "Imagen demasiado pesada: 10 MB como máximo",
 			"unreadable": "Imagen ilegible"
 		}
+	},
+	"sparkline": {
+		"title": "Minigráficos",
+		"type": "Tipo",
+		"kind": {
+			"line": "Línea",
+			"column": "Columna",
+			"winloss": "Ganancia/Pérdida"
+		},
+		"from": "De la columna",
+		"to": "A la columna",
+		"where": "Dibujar en",
+		"right": "A la derecha de {table}",
+		"tableHint": "Un minigráfico por fila, filas nuevas incluidas.",
+		"data": "Datos",
+		"location": "Ubicación",
+		"show": "Mostrar",
+		"high": "Punto alto",
+		"low": "Punto bajo",
+		"first": "Primer punto",
+		"last": "Último punto",
+		"negative": "Puntos negativos",
+		"markers": "Marcadores",
+		"color": "Color",
+		"axis": "Eje",
+		"same": "Misma escala",
+		"sameHint": "Mismo mínimo y máximo para todo el grupo",
+		"remove": "Eliminar"
 	}
 }

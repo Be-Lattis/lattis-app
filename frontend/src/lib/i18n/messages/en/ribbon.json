@@ -688,6 +688,10 @@
 		"textBox": {
 			"label": "Text Box",
 			"tooltip": "Free text placed on the sheet"
+		},
+		"sparklines": {
+			"label": "Sparklines",
+			"tooltip": "Small chart in a cell, or in each row of a table"
 		}
 	},
 	"protect": {

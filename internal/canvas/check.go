@@ -73,6 +73,7 @@ func (m *Model) Dump(ctx context.Context) (string, error) {
 		{"graphiques", `SELECT * FROM _lattis_charts ORDER BY id`},
 		{"boutons", `SELECT * FROM _lattis_buttons ORDER BY id`},
 		{"objets", `SELECT * FROM _lattis_objects ORDER BY id`},
+		{"sparklines", `SELECT * FROM _lattis_sparklines ORDER BY id`},
 		{"favoris", `SELECT * FROM _lattis_favorites ORDER BY id`},
 		{"connexions", `SELECT * FROM _lattis_connections ORDER BY id`},
 		{"requêtes", `SELECT id, name, source, steps, target FROM _lattis_queries ORDER BY id`},

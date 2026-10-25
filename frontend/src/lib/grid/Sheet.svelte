@@ -44,6 +44,9 @@
 	import TextToColumns from './TextToColumns.svelte';
 	import CustomSort from './CustomSort.svelte';
 	import LinkDialog from './LinkDialog.svelte';
+	import SparklineDialog from './SparklineDialog.svelte';
+	import { a1 as sparkA1, defaultLocation, drawSparkline, freeSparkAt, sparkGeometry, sparkSvg, sparkValue, type SparkKind, type SparklineConfig, type SparklineGroup } from './sparkline';
+	import type { ErrorBars, ErrorValues, TrendFit, Trendline } from '#lib/chart/fits.js';
 	import { autoLink, isLinkClick, linkKind, onLinkText, openLink } from './hyperlink';
 	import { withoutField, type CustomList, type CustomOrder } from './customsort';
 	import { handQuestion, keyQuestion, type KeyChoice, type KeyQuestion } from './keychoice';
@@ -283,6 +286,9 @@
 		filters?: { field: string; values: string[] | null }[] | null;
 		/** Courbes : cellule vide en intervalle (défaut), à zéro (zero) ou reliée (span). */
 		blanks?: string;
+		/** Courbe de tendance et barres d'erreur de chaque série (par rang). */
+		trendlines?: (Trendline | null)[] | null;
+		errorBars?: (ErrorBars | null)[] | null;
 		offX?: number;
 		offY?: number;
 	}
@@ -316,6 +322,8 @@
 		boxes?: ((BoxStatsIn | null)[] | null)[] | null;
 		formats?: string[] | null;
 		xFormat?: string;
+		trends?: (TrendFit | null)[] | null;
+		errors?: (ErrorValues | null)[] | null;
 	}
 
 	export interface DepTarget {
@@ -423,6 +431,8 @@
 		buttons?: SheetButton[] | null;
 		/** Images, formes et zones de texte de la feuille, du fond vers le premier plan. */
 		objects?: SheetObject[] | null;
+		/** Graphiques sparkline (sparkline.ts). */
+		sparklines?: SparklineGroup[] | null;
 		/** Zones « plage » (tableaux convertis) : y écrire ne refait pas de tableau. */
 		ranges?: { r0: number; c0: number; r1: number; c1: number }[];
 	}
@@ -630,6 +640,10 @@
 		placeLine?(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number, flipH: boolean, flipV: boolean): Promise<unknown>;
 		orderObject?(id: number, front: boolean): Promise<unknown>;
 		deleteObject?(id: number): Promise<unknown>;
+		/** Graphiques sparkline : groupe posé, modifié, supprimé. */
+		createSparkline?(cfg: SparklineConfig): Promise<unknown>;
+		setSparkline?(id: number, cfg: SparklineConfig): Promise<unknown>;
+		deleteSparkline?(id: number): Promise<unknown>;
 		/** Image du classeur en adresse data:. */
 		imageData?(hash: string): Promise<string>;
 		setPivot?(id: number, cfg: PivotConfig): Promise<unknown>;
@@ -1099,6 +1113,7 @@
 	let buttons = $state.raw<SheetButton[]>([]);
 	let buttonsLayer = $state<ReturnType<typeof SheetButtons>>();
 	let sheetObjects = $state.raw<SheetObject[]>([]);
+	let sparkGroups: SparklineGroup[] = [];
 	let objectsLayer = $state<ReturnType<typeof SheetObjects>>();
 	// Décalage de la vue, pour placer les graphiques au-dessus de la grille.
 	let viewPos = $state({ x: 0, y: 0 });
@@ -1224,6 +1239,7 @@
 		charts = d.charts ?? [];
 		buttons = d.buttons ?? [];
 		sheetObjects = d.objects ?? [];
+		sparkGroups = d.sparklines ?? [];
 		controlsTick++;
 		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
@@ -2605,6 +2621,105 @@
 	}
 	type Layer = ReturnType<typeof layer>;
 
+	/**
+	 * Graphiques sparkline des cellules visibles du volet : ceux d'un tableau
+	 * lisent les lignes déjà chargées (rien n'est demandé de plus), ceux des
+	 * cellules libres leurs valeurs données avec la mise en page.
+	 */
+	function drawSparklines(L: Layer) {
+		if (!sparkGroups.length) return;
+		const { r0, r1, c0, c1, cx, ry } = L;
+		const one = (g: SparklineGroup, values: (number | null)[], r: number, c: number) => {
+			const w = cax().size(c);
+			const h = rh(r);
+			if (!w || !h) return;
+			const x = cx(c);
+			const y = ry(r);
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(x, y, w, h);
+			ctx.clip();
+			drawSparkline(ctx, sparkGeometry(values, g.config, w, h, g.config.same ? { lo: g.lo, hi: g.hi } : undefined), x, y, w);
+			ctx.restore();
+		};
+		for (const g of sparkGroups) {
+			if (g.error) continue;
+			if (g.config.table) {
+				const e = entries.find((x) => x.t.name === g.config.table);
+				if (!e || !g.src || g.atCol < c0 || g.atCol > c1) continue;
+				for (let r = Math.max(r0, e.t.row + 1); r <= Math.min(r1, e.last); r++) {
+					const row = e.cache.row(r - e.t.row - 1);
+					if (row) one(g, g.src.map((i) => sparkValue(row.cells[i])), r, g.atCol);
+				}
+				continue;
+			}
+			for (const s of g.cells ?? []) if (s.row >= r0 && s.row <= r1 && s.col >= c0 && s.col <= c1) one(g, s.values ?? [], s.row, s.col);
+		}
+	}
+
+	/** Groupe sparkline dessiné en (r, c), et ses valeurs (lignes de tableau chargées). */
+	function sparkAt(r: number, c: number): { g: SparklineGroup; values: (number | null)[] } | null {
+		const f = freeSparkAt(sparkGroups, r, c);
+		if (f) return f;
+		for (const g of sparkGroups) {
+			if (!g.config.table || g.atCol !== c || !g.src) continue;
+			const e = entries.find((x) => x.t.name === g.config.table);
+			if (!e || r <= e.t.row || r > e.last) continue;
+			const row = e.cache.row(r - e.t.row - 1);
+			return { g, values: row ? g.src.map((i) => sparkValue(row.cells[i])) : [] };
+		}
+		return null;
+	}
+
+	/** Cellule imprimée avec son graphique sparkline (SVG). */
+	function printSpark(cell: PrintCell | undefined, r: number, c: number): PrintCell | undefined {
+		if (!sparkGroups.length) return cell;
+		const s = sparkAt(r, c);
+		if (!s || s.g.error) return cell;
+		const w = cax().size(c);
+		const h = rh(r);
+		const svg = sparkSvg(sparkGeometry(s.values, s.g.config, w, h, s.g.config.same ? { lo: s.g.lo, hi: s.g.hi } : undefined), w, h);
+		return { ...(cell ?? { text: '' }), spark: svg };
+	}
+
+	// Insertion › Sparklines : dialogue (groupe neuf ou celui de la cellule active).
+	let sparkDlg = $state<{ config: SparklineConfig; columns: string[]; id?: number } | null>(null);
+	export function insertSparkline(kind: SparkKind) {
+		if (!source.createSparkline) return;
+		const here = sparkAt(active.row, active.col);
+		if (here) {
+			const e = here.g.config.table ? entries.find((x) => x.t.name === here.g.config.table) : undefined;
+			sparkDlg = { config: { ...here.g.config }, columns: e?.t.columns.map((k) => k.name) ?? [], id: here.g.id };
+			return;
+		}
+		const { r0, r1, c0, c1 } = selection();
+		const e = tableAt(r0, c0);
+		if (e && r0 > e.t.row && c1 <= e.lastCol) {
+			// Dans un tableau : une colonne de graphiques, les colonnes choisies de chaque ligne.
+			const cols = e.t.columns.slice(c0 - e.t.col, c1 - e.t.col + 1).map((k) => k.name);
+			const all = e.t.columns.map((k) => k.name);
+			const numeric = e.t.columns.filter((k) => k.type === 'integer' || k.type === 'decimal').map((k) => k.name);
+			const nums = cols.length > 1 ? cols : numeric.length ? numeric : all.slice(1);
+			sparkDlg = { config: { kind, table: e.t.name, cols: nums }, columns: all };
+			return;
+		}
+		sparkDlg = { config: { kind, source: sparkA1(r0, c0, r1, c1), location: defaultLocation(r0, c0, r1, c1) }, columns: [] };
+	}
+	async function saveSparkline(cfg: SparklineConfig) {
+		const d = sparkDlg;
+		if (!d) return;
+		if (d.id !== undefined) await source.setSparkline?.(d.id, cfg);
+		else await source.createSparkline?.(cfg);
+		sparkDlg = null;
+		wrap.focus();
+	}
+	async function removeSparkline() {
+		const d = sparkDlg;
+		if (d?.id !== undefined) await source.deleteSparkline?.(d.id);
+		sparkDlg = null;
+		wrap.focus();
+	}
+
 	/** Cellules d'un volet (dans sa découpe) ; vrai s'il manque des lignes pas encore chargées. */
 	function drawCells(L: Layer): boolean {
 		const { w, h, r0, r1, c0, c1, cx, ry, xEnd, spanW, visible, s0, s1, k0, k1 } = L;
@@ -2831,6 +2946,7 @@
 				const [r, c] = k.split(',').map(Number);
 				if (r >= r0 && r <= r1 && c >= c0 && c <= c1) paint(r, c);
 			}
+		drawSparklines(L);
 		// Valeurs déversées : comme des cellules, dans un cadre bleu.
 		for (const sp of spills) {
 			const sr1 = sp.row + sp.rows.length - 1;
@@ -11663,7 +11779,7 @@
 					cfWaits = null;
 				}
 			},
-			cell: printCell
+			cell: (r, c) => printSpark(printCell(r, c), r, c)
 		};
 	}
 
@@ -13311,6 +13427,20 @@
 				onremove={removeLink}
 				oncancel={() => {
 					linkDlg = null;
+					wrap.focus();
+				}}
+			/>
+		{/if}
+		{#if sparkDlg}
+			{@const d = sparkDlg}
+			<SparklineDialog
+				config={d.config}
+				columns={d.columns}
+				editing={d.id !== undefined}
+				onok={saveSparkline}
+				onremove={removeSparkline}
+				oncancel={() => {
+					sparkDlg = null;
 					wrap.focus();
 				}}
 			/>

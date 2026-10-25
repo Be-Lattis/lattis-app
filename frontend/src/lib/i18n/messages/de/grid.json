@@ -1740,5 +1740,33 @@
 			"tooLarge": "Bild zu groß: höchstens 10 MB",
 			"unreadable": "Unlesbares Bild"
 		}
+	},
+	"sparkline": {
+		"title": "Sparklines",
+		"type": "Typ",
+		"kind": {
+			"line": "Linie",
+			"column": "Säule",
+			"winloss": "Gewinn/Verlust"
+		},
+		"from": "Von Spalte",
+		"to": "Bis Spalte",
+		"where": "Zeichnen in",
+		"right": "Rechts von {table}",
+		"tableHint": "Eine Sparkline pro Zeile, neue Zeilen eingeschlossen.",
+		"data": "Daten",
+		"location": "Position",
+		"show": "Anzeigen",
+		"high": "Höchstpunkt",
+		"low": "Tiefpunkt",
+		"first": "Erster Punkt",
+		"last": "Letzter Punkt",
+		"negative": "Negativpunkte",
+		"markers": "Markierungen",
+		"color": "Farbe",
+		"axis": "Achse",
+		"same": "Gleiche Skala",
+		"sameHint": "Gleiches Minimum und Maximum für die ganze Gruppe",
+		"remove": "Löschen"
 	}
 }

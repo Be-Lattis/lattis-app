@@ -159,6 +159,8 @@ type chartResult struct {
 	boxes              [][]*BoxStats
 	formats            []string
 	xFormat            string
+	trends             []*TrendFit
+	errors             []*ErrorValues
 }
 
 // fill reporte les données dans un graphique.
@@ -168,6 +170,7 @@ func (r chartResult) fill(c *ChartInfo) {
 	c.Total, c.Truncated, c.Sampled = r.total, r.truncated, r.sampled
 	c.XValues, c.XDate, c.Edges, c.Boxes = r.xValues, r.xDate, r.edges, r.boxes
 	c.Formats, c.XFormat = r.formats, r.xFormat
+	c.Trends, c.Errors = r.trends, r.errors
 }
 
 func (t *tx) chartData(cfg ChartConfig) (chartResult, error) {
@@ -185,6 +188,9 @@ func (t *tx) chartData(cfg ChartConfig) (chartResult, error) {
 	}
 	if err == nil {
 		err = t.chartFormats(cfg, &r)
+	}
+	if err == nil {
+		err = t.chartFits(cfg, &r)
 	}
 	return r, err
 }

@@ -137,6 +137,9 @@ export const icons = {
 	'chart-boxplot': '<path d="M3.5 20.5h17M7.5 4v4M7.5 15v3M5.5 4h4M5.5 18h4M16.5 7v3M16.5 16v3M14.5 7h4M14.5 19h4"/><rect class="af" x="5" y="8" width="5" height="7" rx=".5"/><rect class="af" x="14" y="10" width="5" height="6" rx=".5"/><path d="M5 11.5h5M14 13h5"/>',
 	'chart-histogram': '<path d="M3.5 20.5h17"/><path class="af" d="M4.5 15h3v5.5h-3zM7.5 9h3v11.5h-3zM10.5 5h3v15.5h-3zM13.5 10h3v10.5h-3zM16.5 15.5h3v5h-3z"/>',
 	'chart-gauge': '<path d="M3.5 17a8.5 8.5 0 0 1 17 0"/><path class="a" d="M3.5 17a8.5 8.5 0 0 1 12.5-7.5"/><path d="M12 17l4.5-6"/><circle cx="12" cy="17" r="1.5"/>',
+	'chart-bubble': '<path d="M4 4v16h16"/><circle class="af" cx="9" cy="14" r="2.5"/><circle class="af" cx="15.5" cy="8.5" r="3.5"/><circle cx="17" cy="16" r="1.5"/>',
+	'chart-stock': '<path d="M4 4v16h16M8 6v11M13 9v9M17.5 5v8"/><rect class="af" x="6.5" y="9" width="3" height="5"/><rect x="11.5" y="11" width="3" height="4"/><rect class="af" x="16" y="7" width="3" height="4"/>',
+	sparkline: '<rect x="3" y="5" width="18" height="14" rx="1"/><path class="a" d="M5.5 15l3-4 3 2.5 3.5-5 3.5 3"/>',
 
 	// Formules
 	function: '<path d="M12.5 4.5H11a2.5 2.5 0 0 0-2.5 2.2L7 18.3a2.5 2.5 0 0 1-2.5 2.2H4M5.5 10h6"/><path class="a" d="m14 11 6 8m0-8-6 8"/>',
