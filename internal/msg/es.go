@@ -166,6 +166,10 @@ var es = map[ID]string{
 	"merge.selectTwoCells": "combinar: seleccione al menos dos celdas para combinar",
 	"merge.severalTables":  "combinar: la selección abarca varias tablas; combine los grupos de encabezados de una tabla cada vez",
 	"merge.tooLarge":       "combinar: la combinación está limitada a {max} celdas",
+	"link.notFound":        "vínculo: «{link}» no se encuentra en el libro",
+	"link.scheme":          "vínculo rechazado: las direcciones «{scheme}:» no están permitidas (solo web, correo o celda del libro)",
+	"link.tooLong":         "vínculo: dirección demasiado larga ({max} caracteres como máximo)",
+	"link.unknown":         "vínculo: dirección no reconocida «{link}»",
 	"merge.twoLevelOnly":   "combinar: en la tabla «{table}», solo se pueden combinar la banda de grupos y el encabezado: la banda y el encabezado de una columna (columna de un solo nivel), o celdas contiguas de la banda (un grupo sobre varias columnas); no con datos ni con celdas fuera de la tabla",
 
 	// Combinar pestañas

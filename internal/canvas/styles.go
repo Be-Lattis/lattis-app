@@ -229,6 +229,9 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 	if err := normalizeDV(patch); err != nil {
 		return err
 	}
+	if err := normalizeLink(patch); err != nil {
+		return err
+	}
 	return m.Do(ctx, "Mise en forme", func(t *tx) error {
 		work.Op(ctx, "format", "")
 		if err := t.guard(sheet); err != nil {
@@ -361,6 +364,9 @@ func (m *Model) ApplyLineStyle(ctx context.Context, sheet int64, rows bool, i0, 
 		return msg.New("style.tooManyLines", msg.Args{"max": MaxStyleLines})
 	}
 	if err := normalizeDV(patch); err != nil {
+		return err
+	}
+	if err := normalizeLink(patch); err != nil {
 		return err
 	}
 	label := "Mise en forme des colonnes"

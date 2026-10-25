@@ -1547,5 +1547,32 @@
 		"noFormats": "无可粘贴：剪贴板中没有格式",
 		"noWidths": "列宽：仅适用于在 Lattis 中复制的内容",
 		"empty": "剪贴板为空"
+	},
+	"link": {
+		"title": "链接",
+		"titleEdit": "编辑链接",
+		"kind": "链接类型",
+		"web": "网页",
+		"mail": "电子邮件",
+		"place": "本工作簿中",
+		"address": "地址",
+		"email": "电子邮件地址",
+		"emailPlaceholder": "name@example.com",
+		"where": "工作表或名称",
+		"sheets": "工作表",
+		"names": "表格和名称",
+		"cell": "单元格",
+		"text": "显示的文本",
+		"textLocked": "由单元格公式计算",
+		"remove": "删除链接",
+		"badAddress": "无法识别的地址（网页或电子邮件）",
+		"badCell": "无法识别的单元格（例如 B3 或 A1:C4）",
+		"menu": "链接…",
+		"menuEdit": "编辑链接…",
+		"open": "打开链接",
+		"tooltip": "{address} — 单击：打开，按住：选择",
+		"auto": "已创建链接 — 按 Ctrl+Z 删除",
+		"refused": "链接被拒绝：不允许的地址",
+		"removed": "已删除链接"
 	}
 }

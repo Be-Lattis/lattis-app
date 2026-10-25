@@ -47,7 +47,7 @@ var apiDocZH = func() apiDoc {
 			"cells.set": {S: "在工作表的单元格中输入一个值，与在网格中键入完全相同。",
 				D: "以 = 开头的文本是公式。在表格旁边输入会扩展表格，在相邻两行输入会创建表格，\"\" 清除单元格。返回这次输入引起的结果（创建了表格、扩展了列…）。",
 				R: "{created, widened, from, to, invalid, keyed}"},
-			"cells.style": {S: "设置单元格区域的格式。", D: "style：" + style},
+			"cells.style": {S: "设置单元格区域的格式。", D: "style：" + style + ` link（超链接："https://…"、"mailto:…" 或 "#Sheet2!B3"、"#B3"、"#表格"；其他协议会被拒绝；单元格的值仍是显示的文本）。`},
 			"cells.style_lines": {S: "设置工作表中整行或整列的格式（其中所有现有和将来的单元格，包括表格和数据透视表）。单元格格式优先于行，行格式优先于列。",
 				D: "style：" + style},
 			"cells.text_to_columns": {S: "将 col 列中第 row 到 row2 行单元格的文本拆分为多列（Excel 的分列向导）：在自由单元格中，各部分向右写入（或从 options.dest 开始）；在表格中则插入新列。返回导入的列数。",

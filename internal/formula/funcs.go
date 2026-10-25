@@ -179,6 +179,9 @@ var funcs = []funcDef{
 	{"CLEAN", "EPURAGE", 1, 1, scalar, fnClean},
 	{"TEXTBEFORE", "TEXTE.AVANT", 2, 6, scalar, textAround(false)},
 	{"TEXTAFTER", "TEXTE.APRES", 2, 6, scalar, textAround(true)},
+	// Lien : rend le nom affiché (l'adresse sans nom) ; la grille fait de la
+	// cellule un lien (HyperlinkTarget, links.go).
+	{"HYPERLINK", "LIEN_HYPERTEXTE", 1, 2, scalar, fnHyperlink},
 	{"NA", "NA", 0, 0, scalar, func([]Value) Value { return Err(ErrNA) }},
 
 	// Dates

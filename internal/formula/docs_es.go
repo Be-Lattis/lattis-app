@@ -156,6 +156,8 @@ var docsES = func() docSet {
 				text, ta("delimitador", "Texto que marca el final del resultado."), instance, matchMode, matchEnd, notFound),
 			"TEXTAFTER": tdx("Devuelve el texto situado después de un delimitador.", `=TEXTAFTER([Correo], "@")`,
 				text, ta("delimitador", "Texto que marca el principio del resultado."), instance, matchMode, matchEnd, notFound),
+			"HYPERLINK": tdx("Muestra un vínculo: un clic abre la dirección (página web, correo o celda del libro).", `=HYPERLINK("https://lattis.be", "Sitio")`,
+				ta("ubicación_del_vínculo", "Dirección: \"https://…\", \"mailto:…\" o # seguido de una celda del libro."), ta("nombre_descriptivo", "Texto mostrado (la dirección si se omite).")),
 			"NA": tdx("Devuelve el valor de error {=#N/A} (valor no disponible).", `=IF([Cant]=0, NA(), [Importe]/[Cant])`),
 
 			// Dates

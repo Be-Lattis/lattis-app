@@ -17,6 +17,8 @@ export interface Fetched {
 	styles?: { row: number; col: number; raw: string }[] | null;
 	/** Règles « formule » de mise en forme conditionnelle vérifiées (rule : rang dans la colonne). */
 	marks?: { row: number; col: number; rule: number }[] | null;
+	/** Adresses des colonnes =LIEN_HYPERTEXTE(…) (raw : l'adresse). */
+	links?: { row: number; col: number; raw: string }[] | null;
 	/**
 	 * Classeur collaboratif : cellules dont la modification attend le
 	 * serveur (pending) ou en conflit (conflict) ; col -1 : toute la ligne.
@@ -45,6 +47,8 @@ export interface Block {
 	sty: (Map<number, string> | undefined)[];
 	/** Règles « formule » vraies : colonne × 1000 + rang de la règle. */
 	marks: (Set<number> | undefined)[];
+	/** Liens calculés (LIEN_HYPERTEXTE) : colonne → adresse. */
+	links?: (Map<number, string> | undefined)[];
 	/** Marques de synchronisation (classeur collaboratif) : colonne → marque. */
 	sync?: (Map<number, SyncKind> | undefined)[];
 	/** Lignes en lecture seule pour un participant (lignes d’autres membres). */
@@ -94,6 +98,7 @@ export class RowCache {
 				bad?: Map<number, string>;
 				sty?: Map<number, string>;
 				marks?: Set<number>;
+				links?: Map<number, string>;
 				sync?: Map<number, SyncKind>;
 				locked?: boolean;
 		  }
@@ -111,6 +116,7 @@ export class RowCache {
 			bad: b.bad[i],
 			sty: b.sty[i],
 			marks: b.marks?.[i],
+			links: b.links?.[i],
 			sync: b.sync?.[i],
 			locked: b.locked?.has(i)
 		};
@@ -170,10 +176,12 @@ export class RowCache {
 			for (const x of w.styles ?? []) (sty[x.row] ??= new Map()).set(x.col, x.raw);
 			const marks: (Set<number> | undefined)[] = [];
 			for (const x of w.marks ?? []) (marks[x.row] ??= new Set()).add(x.col * 1000 + x.rule);
+			const links: (Map<number, string> | undefined)[] = [];
+			for (const x of w.links ?? []) (links[x.row] ??= new Map()).set(x.col, x.raw);
 			const sync: (Map<number, SyncKind> | undefined)[] = [];
 			for (const x of w.sync ?? []) (sync[x.row] ??= new Map()).set(x.col, x.kind === 'conflict' ? 'conflict' : 'pending');
 			this.stale.delete(b);
-			this.blocks.set(b, { ids: w.ids ?? [], cells, text, bad, sty, marks, sync, locked: w.locked?.length ? new Set(w.locked) : undefined });
+			this.blocks.set(b, { ids: w.ids ?? [], cells, text, bad, sty, marks, links, sync, locked: w.locked?.length ? new Set(w.locked) : undefined });
 			this.evict(b);
 			this.error = null;
 		} catch (e) {

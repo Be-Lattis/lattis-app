@@ -168,6 +168,10 @@ var fr = map[ID]string{
 	"merge.selectTwoCells": "fusion : sélectionnez au moins deux cellules à fusionner",
 	"merge.severalTables":  "fusion : la sélection mêle plusieurs tableaux ; fusionnez les groupes d'en-têtes d'un seul tableau à la fois",
 	"merge.tooLarge":       "fusion : fusion limitée à {max} cellules",
+	"link.notFound":        "lien : « {link} » introuvable dans le classeur",
+	"link.scheme":          "lien refusé : adresse « {scheme}: » non permise (web, e-mail ou cellule du classeur seulement)",
+	"link.tooLong":         "lien : adresse trop longue ({max} caractères au plus)",
+	"link.unknown":         "lien : adresse non reconnue « {link} »",
 	"merge.twoLevelOnly":   "fusion : dans le tableau « {table} », seules la bande des groupes et l'en-tête se fusionnent : la bande et l'en-tête d'une colonne (colonne sur un niveau), ou des cellules voisines de la bande (un groupe sur plusieurs colonnes) ; pas avec les données ni avec des cellules hors du tableau",
 
 	// Regrouper des onglets

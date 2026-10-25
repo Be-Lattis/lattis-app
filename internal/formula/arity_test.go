@@ -85,6 +85,7 @@ var fullCalls = map[string]string{
 	"TEXTBEFORE":  `=TEXTE.AVANT("a-b-c";"-";2;0;0;"x")`,
 	"TEXTAFTER":   `=TEXTE.APRES("a-b-c";"-";2;0;0;"x")`,
 	"NA":          `=NA()`,
+	"HYPERLINK":   `=LIEN_HYPERTEXTE("https://a.b";"a")`,
 
 	"TODAY":            `=AUJOURDHUI()`,
 	"NOW":              `=MAINTENANT()`,

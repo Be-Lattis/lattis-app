@@ -29,10 +29,11 @@ type xcell struct {
 	bold bool   // en-tête (impression)
 	f    string // formule traduite (sans =), "" : valeur seule
 	fm   int32  // mise en forme (registre fmts), 0 : aucune
+	link string // lien hypertexte (adresse de Lattis, xlsxlinks.go)
 }
 
-// blank : rien à écrire (ni valeur, ni formule, ni mise en forme).
-func (x xcell) blank() bool { return x.kind == 0 && x.f == "" && x.fm == 0 }
+// blank : rien à écrire (ni valeur, ni formule, ni mise en forme, ni lien).
+func (x xcell) blank() bool { return x.kind == 0 && x.f == "" && x.fm == 0 && x.link == "" }
 
 // xtable est un tableau à écrire : ses lignes sont lues pendant l'écriture.
 type xtable struct {
@@ -72,6 +73,8 @@ type xsheet struct {
 	page       canvas.PageSetup
 	tableRects []canvas.Rect
 	charts     []chartBox // place des graphiques (impression)
+	// book : noms exportés, pour les liens dans le classeur (nil à l'impression).
+	book *book
 }
 
 // Limites d'une feuille Excel : la feuille de Lattis va au-delà, l'export coupe.
@@ -165,6 +168,9 @@ func tableRows(ctx context.Context, m *canvas.Model, xt *xtable, fm *fmts, tg ta
 				x.fm = xt.base[j]
 				if own, rs := xt.own[k][j], xt.rowStyle(r); own != nil || rs != nil {
 					x.fm = fm.of(xt.layers[j][0], rs, xt.layers[j][1], own)
+				}
+				if x.link = tableLink(xt.own[k][j], xt.layers[j][1]); x.link != "" {
+					x.fm = fm.of(xt.layers[j][0], xt.rowStyle(r), linkLook, xt.layers[j][1], xt.own[k][j])
 				}
 			}
 			cells[j] = x
@@ -335,6 +341,16 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 		}
 		x.fm = fmtAt(c.Row, c.Col, nil)
 		put(c.Row, c.Col, x)
+	}
+	// Liens des cellules libres, avec ou sans contenu.
+	sh.book = b
+	for k, st := range own {
+		if ln, _ := st["ln"].(string); ln != "" {
+			x := sh.cells[k]
+			x.link = ln
+			x.fm = fm.of(sh.colStyle[k[1]], sh.rowStyle[k[0]], linkLook, st)
+			put(k[0], k[1], x)
+		}
 	}
 	for _, tb := range l.Tables {
 		xt := &xtable{info: tb, rows: sh.rowStyle}

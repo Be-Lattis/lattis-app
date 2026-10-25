@@ -1547,5 +1547,32 @@
 		"noFormats": "Nothing to paste: the clipboard has no formatting",
 		"noWidths": "Column widths: only for a copy made in Lattis",
 		"empty": "The clipboard is empty"
+	},
+	"link": {
+		"title": "Link",
+		"titleEdit": "Edit link",
+		"kind": "Kind of link",
+		"web": "Web page",
+		"mail": "E-mail",
+		"place": "In this workbook",
+		"address": "Address",
+		"email": "E-mail address",
+		"emailPlaceholder": "name@example.com",
+		"where": "Sheet or name",
+		"sheets": "Sheets",
+		"names": "Tables and names",
+		"cell": "Cell",
+		"text": "Text to display",
+		"textLocked": "Calculated by the cell formula",
+		"remove": "Remove link",
+		"badAddress": "Address not recognized (web page or e-mail)",
+		"badCell": "Cell not recognized (for example B3 or A1:C4)",
+		"menu": "Link…",
+		"menuEdit": "Edit link…",
+		"open": "Open link",
+		"tooltip": "{address} — click: open, click and hold: select",
+		"auto": "Link created — Ctrl+Z to remove it",
+		"refused": "Link refused: address not allowed",
+		"removed": "Link removed"
 	}
 }

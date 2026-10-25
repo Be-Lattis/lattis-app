@@ -178,6 +178,11 @@ export interface CellInfo {
      * cellule, vers le bas et la droite (la première est Value).
      */
     "spill"?: (string[] | null)[] | null;
+
+    /**
+     * Link : adresse d'une formule =LIEN_HYPERTEXTE(…) (links.go).
+     */
+    "link"?: string;
 }
 
 /**
@@ -890,6 +895,18 @@ export interface LineRules {
 export interface LineStyle {
     "index": number;
     "style": string;
+}
+
+/**
+ * LinkPlace est la destination d'un lien dans le classeur : la feuille et
+ * la plage à sélectionner (une cellule : R0 = R1, C0 = C1).
+ */
+export interface LinkPlace {
+    "sheet": number;
+    "r0": number;
+    "c0": number;
+    "r1": number;
+    "c1": number;
 }
 
 /**

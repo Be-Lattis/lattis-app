@@ -19,6 +19,7 @@ import (
 //
 //	nt      note de la cellule (texte)                   cellule
 //	np      note épinglée (toujours affichée)            cellule
+//	ln      lien hypertexte (adresse, voir links.go)     cellule
 //	mr, mc  fusion : lignes et colonnes couvertes        cellule libre en haut à gauche
 //	hd      ligne ou colonne masquée                     ligne ou colonne de la feuille
 //	dv      validation : liste des valeurs permises      cellule, colonne de tableau
@@ -60,7 +61,13 @@ func (m *Model) PinNote(ctx context.Context, sheet int64, row, col int, pinned b
 
 // notePatch pose une propriété de note : dans un tableau elle suit sa ligne.
 func (m *Model) notePatch(ctx context.Context, label string, sheet int64, row, col int, patch Style) error {
-	return m.Do(ctx, label, func(t *tx) error {
+	return m.Do(ctx, label, func(t *tx) error { return t.cellPatch(sheet, row, col, patch) })
+}
+
+// cellPatch pose des propriétés de cellule (note, lien) : dans un tableau
+// elles suivent sa ligne.
+func (t *tx) cellPatch(sheet int64, row, col int, patch Style) error {
+	{
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
@@ -87,7 +94,7 @@ func (m *Model) notePatch(ctx context.Context, label string, sheet int64, row, c
 			return t.styleTable(tb.ID, ids[0], colID, patch, nil)
 		}
 		return t.styleFree(sheet, row, col, patch, nil)
-	})
+	}
 }
 
 // Merge est une plage de cellules fusionnées (cellule en haut à gauche et

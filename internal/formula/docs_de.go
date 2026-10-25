@@ -156,6 +156,8 @@ var docsDE = func() docSet {
 				text, ta("Trennzeichen", "Text, der das Ende des Ergebnisses markiert."), instance, matchMode, matchEnd, notFound),
 			"TEXTAFTER": tdx("Gibt den Text nach einem Trennzeichen zurück.", `=TEXTAFTER([E-Mail], "@")`,
 				text, ta("Trennzeichen", "Text, der den Anfang des Ergebnisses markiert."), instance, matchMode, matchEnd, notFound),
+			"HYPERLINK": tdx("Zeigt einen Link: Ein Klick öffnet die Adresse (Webseite, E-Mail oder Zelle der Mappe).", `=HYPERLINK("https://lattis.be", "Website")`,
+				ta("Hyperlink_Adresse", "Adresse: \"https://…\", \"mailto:…\" oder # gefolgt von einer Zelle der Mappe."), ta("Freundlicher_Name", "Angezeigter Text (die Adresse, falls nicht angegeben).")),
 			"NA": tdx("Gibt den Fehlerwert {=#N/A} zurück (Wert nicht verfügbar).", `=IF([Menge]=0, NA(), [Betrag]/[Menge])`),
 
 			// Dates

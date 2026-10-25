@@ -167,6 +167,10 @@ var de = map[ID]string{
 	"merge.selectTwoCells": "Verbinden: Markieren Sie mindestens zwei zu verbindende Zellen",
 	"merge.severalTables":  "Verbinden: Die Auswahl erstreckt sich über mehrere Tabellen; verbinden Sie die Überschriftengruppen jeweils einer Tabelle",
 	"merge.tooLarge":       "Verbinden: Das Verbinden ist auf {max} Zellen begrenzt",
+	"link.notFound":        "Link: „{link}“ in der Mappe nicht gefunden",
+	"link.scheme":          "Link abgelehnt: Adressen „{scheme}:“ sind nicht erlaubt (nur Web, E-Mail oder Zelle der Mappe)",
+	"link.tooLong":         "Link: Adresse zu lang (höchstens {max} Zeichen)",
+	"link.unknown":         "Link: Adresse nicht erkannt „{link}“",
 	"merge.twoLevelOnly":   "Verbinden: In der Tabelle „{table}“ können nur das Gruppenband und die Überschrift verbunden werden: Band und Überschrift einer Spalte (Spalte mit einer Ebene) oder benachbarte Zellen des Bands (eine Gruppe über mehrere Spalten); nicht mit Daten oder mit Zellen außerhalb der Tabelle",
 
 	// Combining tabs

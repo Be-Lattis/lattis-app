@@ -162,6 +162,7 @@
 			"table": "Dar formato como tabla",
 			"filter": "Filtro de columna (borra los filtros si los hay)",
 			"note": "Nueva nota (o modificar la nota)",
+			"link": "Vínculo (página web, correo, celda)",
 			"chart": "Gráfico (columnas) de la tabla activa"
 		},
 		"calcul": {

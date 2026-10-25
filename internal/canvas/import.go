@@ -64,6 +64,14 @@ type ImportSheet struct {
 	Tables []ImportTable
 	Cells  []ImportCell
 	Page   *PageSetup // mise en page (nil : par défaut)
+	Links  []ImportLink
+}
+
+// ImportLink est le lien hypertexte d'une cellule importée (adresse sous
+// la forme de NormalizeLink).
+type ImportLink struct {
+	Row, Col int
+	Target   string
 }
 
 // ImportResult décrit ce qu'Import a créé.
@@ -195,6 +203,11 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 					}
 				}
 				if err := t.setFreeCell(res.Sheets[si], c.Row, c.Col, raw); err != nil {
+					return err
+				}
+			}
+			for _, l := range s.Links {
+				if err := t.cellPatch(res.Sheets[si], l.Row, l.Col, Style{"ln": l.Target}); err != nil && !userError(err) {
 					return err
 				}
 			}

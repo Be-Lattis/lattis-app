@@ -645,7 +645,8 @@
 		},
 		"link": {
 			"label": "链接",
-			"tooltip": "指向网页的链接（按住 Ctrl 单击可打开）"
+			"tooltip": "指向网页的链接（按住 Ctrl 单击可打开）",
+			"sheetTooltip": "链接到网页、电子邮件或单元格（Ctrl+K）"
 		},
 		"image": {
 			"label": "图片",

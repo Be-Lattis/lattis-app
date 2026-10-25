@@ -156,6 +156,8 @@ var docsEN = func() docSet {
 				text, ta("delimiter", "Text that marks the end of the result."), instance, matchMode, matchEnd, notFound),
 			"TEXTAFTER": tdx("Returns the text after a delimiter.", `=TEXTAFTER([Email], "@")`,
 				text, ta("delimiter", "Text that marks the start of the result."), instance, matchMode, matchEnd, notFound),
+			"HYPERLINK": tdx("Shows a link: a click opens the address (web page, e-mail or cell of the workbook).", `=HYPERLINK("https://lattis.be", "Website")`,
+				ta("link_location", "Address: \"https://…\", \"mailto:…\", or # followed by a cell of the workbook."), ta("friendly_name", "Text shown (the address if omitted).")),
 			"NA": tdx("Returns the error value {=#N/A} (value not available).", `=IF([Qty]=0, NA(), [Amount]/[Qty])`),
 
 			// Dates

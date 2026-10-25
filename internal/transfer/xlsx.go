@@ -42,6 +42,7 @@ type xlsxFile struct {
 	// conditionnelle et validations (non importées).
 	mu     sync.Mutex
 	extras map[string][2]int
+	links  map[string][]xlsxLink // par feuille lue jusqu'au bout (xlsxlinks.go)
 }
 
 type dateKind uint8
@@ -370,6 +371,7 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 	var buf strings.Builder
 	capture, inIS, skip := false, false, 0
 	n, rules, lists := 0, 0, 0
+	var links []xlsxLink // liens hypertexte (après les cellules)
 	// Mise en page (après les cellules) ; relue à l'identique au second passage.
 	page := sh.page
 	var hf *canvas.HeaderFooter
@@ -382,6 +384,10 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 					x.extras = map[string][2]int{}
 				}
 				x.extras[sh.name] = [2]int{rules, lists}
+				if x.links == nil {
+					x.links = map[string][]xlsxLink{}
+				}
+				x.links[sh.name] = links
 				x.mu.Unlock()
 				return nil
 			}
@@ -425,6 +431,8 @@ func (x *xlsxFile) scan(ctx context.Context, sh xlsxSheet, fn func(*rawCell) err
 				rules++
 			case "dataValidation":
 				lists++
+			case "hyperlink":
+				links = append(links, xlsxLink{ref: string(d.attr("ref")), id: string(d.attr("id")), loc: string(d.attr("location"))})
 			default:
 				if page != nil {
 					pr.tag(page, d)

@@ -131,10 +131,11 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 		if err != nil {
 			return err
 		}
-		if err := writeSheet(ctx, f, &sheets[i], i == active, tables[i], fm); err != nil {
+		urls, err := writeSheet(ctx, f, &sheets[i], i == active, tables[i], fm)
+		if err != nil {
 			return err
 		}
-		if len(tables[i]) == 0 {
+		if len(tables[i]) == 0 && len(urls) == 0 {
 			continue
 		}
 		var r strings.Builder
@@ -145,6 +146,10 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 			if err := file(fmt.Sprintf("xl/tables/table%d.xml", t.id), tablePart(t)); err != nil {
 				return err
 			}
+		}
+		// Liens hypertexte vers l'extérieur : à la suite des tableaux.
+		for k, u := range urls {
+			fmt.Fprintf(&r, `<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="%s" TargetMode="External"/>`, len(tables[i])+k+1, xmlEscape(u))
 		}
 		r.WriteString(`</Relationships>`)
 		if err := file(fmt.Sprintf("xl/worksheets/_rels/sheet%d.xml.rels", i+1), r.String()); err != nil {
@@ -186,7 +191,10 @@ func pxWidth(px int) string {
 // defaultColPx : largeur d'une colonne sans largeur choisie.
 const defaultColPx = 100
 
-func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables []xlsxTable, fm *fmts) error {
+// writeSheet écrit une feuille ; rend les adresses de ses liens vers
+// l'extérieur (relations après celles des tableaux).
+func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables []xlsxTable, fm *fmts) ([]string, error) {
+	var links []xlsxHyperlink
 	bw := bufio.NewWriterSize(w, 64<<10)
 	keys := s.sortedKeys()
 	bw.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -259,11 +267,16 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 		bw.WriteString(`>`)
 		for i, c := range cells {
 			writeCell(bw, r, cols[i], c, fm)
+			if c.link != "" {
+				if url, loc := excelLink(c.link, s.name, s.book); url != "" || loc != "" {
+					links = append(links, xlsxHyperlink{ref: colName(cols[i]) + strconv.Itoa(r+1), url: url, loc: loc})
+				}
+			}
 		}
 		bw.WriteString(`</row>`)
 		return nil
 	}); err != nil {
-		return err
+		return nil, err
 	}
 	bw.WriteString(`</sheetData>`)
 	var merges []string
@@ -276,6 +289,7 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 	if len(merges) > 0 {
 		fmt.Fprintf(bw, `<mergeCells count="%d">%s</mergeCells>`, len(merges), strings.Join(merges, ""))
 	}
+	urls := writeHyperlinks(bw, links, len(tables)+1)
 	bw.WriteString(xlsxPageXML(s.page))
 	if len(tables) > 0 {
 		fmt.Fprintf(bw, `<tableParts count="%d">`, len(tables))
@@ -285,7 +299,7 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 		bw.WriteString(`</tableParts>`)
 	}
 	bw.WriteString(`</worksheet>`)
-	return bw.Flush()
+	return urls, bw.Flush()
 }
 
 // writeCols écrit les largeurs, styles et masquage des colonnes.

@@ -1547,5 +1547,32 @@
 		"noFormats": "Nichts einzufügen: Die Zwischenablage hat keine Formatierung",
 		"noWidths": "Spaltenbreiten: nur für eine Kopie aus Lattis",
 		"empty": "Die Zwischenablage ist leer"
+	},
+	"link": {
+		"title": "Link",
+		"titleEdit": "Link bearbeiten",
+		"kind": "Art des Links",
+		"web": "Webseite",
+		"mail": "E-Mail",
+		"place": "In dieser Mappe",
+		"address": "Adresse",
+		"email": "E-Mail-Adresse",
+		"emailPlaceholder": "name@beispiel.de",
+		"where": "Blatt oder Name",
+		"sheets": "Blätter",
+		"names": "Tabellen und Namen",
+		"cell": "Zelle",
+		"text": "Anzuzeigender Text",
+		"textLocked": "Von der Formel der Zelle berechnet",
+		"remove": "Link entfernen",
+		"badAddress": "Adresse nicht erkannt (Webseite oder E-Mail)",
+		"badCell": "Zelle nicht erkannt (zum Beispiel B3 oder A1:C4)",
+		"menu": "Link…",
+		"menuEdit": "Link bearbeiten…",
+		"open": "Link öffnen",
+		"tooltip": "{address} — Klicken: öffnen, gedrückt halten: auswählen",
+		"auto": "Link erstellt — Strg+Z entfernt ihn",
+		"refused": "Link abgelehnt: Adresse nicht erlaubt",
+		"removed": "Link entfernt"
 	}
 }

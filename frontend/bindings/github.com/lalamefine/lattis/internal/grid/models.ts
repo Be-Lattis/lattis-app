@@ -192,6 +192,11 @@ export interface Window {
     "marks": Mark[] | null;
 
     /**
+     * Links : adresses des colonnes =LIEN_HYPERTEXTE(…) (Raw : l'adresse).
+     */
+    "links"?: InvalidCell[] | null;
+
+    /**
      * Sync : cellules d'un tableau partagé dont la modification attend le
      * serveur, ou en conflit (classeur collaboratif ; rempli par le pont).
      */

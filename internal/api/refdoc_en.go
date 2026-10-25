@@ -46,7 +46,7 @@ Map: series = {latitude, longitude, optional value} (mapCoords "pair", the defau
 			"cells.set": {S: "Enters a value in a cell of the sheet, exactly like typing in the grid.",
 				D: "A text that starts with = is a formula. Typing next to a table extends it, typing two adjacent rows creates a table, \"\" clears the cell. Returns what the entry caused (table created, column widened…).",
 				R: "{created, widened, from, to, invalid, keyed}"},
-			"cells.style": {S: "Formats a range of cells.", D: "style: " + style},
+			"cells.style": {S: "Formats a range of cells.", D: "style: " + style + ` link (hyperlink: "https://…", "mailto:…", or "#Sheet2!B3", "#B3", "#Table"; other schemes are refused; the cell value stays the text shown).`},
 			"cells.style_lines": {S: "Formats whole rows or columns of the sheet (all their cells, present and future, tables and PivotTables included). A cell takes precedence over its row, a row over its column.",
 				D: "style: " + style},
 			"cells.text_to_columns": {S: "Splits the text of the cells of column col, rows row to row2, into columns (Excel's Text to Columns wizard): in free cells, the parts are written to the right (or from options.dest); in a table, new columns are inserted. Returns the number of columns imported.",

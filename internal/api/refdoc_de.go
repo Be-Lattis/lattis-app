@@ -46,7 +46,7 @@ Karte: series = {Breite, Länge, optionaler Wert} (mapCoords "pair", Standard) o
 			"cells.set": {S: "Gibt einen Wert in eine Zelle des Blatts ein, genau wie eine Eingabe im Raster.",
 				D: "Ein Text, der mit = beginnt, ist eine Formel. Eine Eingabe neben einer Tabelle vergrößert sie, eine Eingabe in zwei aufeinanderfolgende Zeilen erzeugt eine Tabelle, \"\" löscht die Zelle. Gibt zurück, was die Eingabe bewirkt hat (Tabelle erstellt, Spalte erweitert…).",
 				R: "{created, widened, from, to, invalid, keyed}"},
-			"cells.style": {S: "Formatiert einen Zellbereich.", D: "style: " + style},
+			"cells.style": {S: "Formatiert einen Zellbereich.", D: "style: " + style + ` link (Hyperlink: "https://…", "mailto:…" oder "#Tabelle2!B3", "#B3", "#Tabelle"; andere Schemata werden abgelehnt; der Zellwert bleibt der angezeigte Text).`},
 			"cells.style_lines": {S: "Formatiert ganze Zeilen oder Spalten des Blatts (alle ihre Zellen, vorhandene und künftige, Tabellen und PivotTables eingeschlossen). Eine Zelle hat Vorrang vor ihrer Zeile, eine Zeile vor ihrer Spalte.",
 				D: "style: " + style},
 			"cells.text_to_columns": {S: "Teilt den Text der Zellen der Spalte col, Zeilen row bis row2, in Spalten auf (Excel-Assistent Text in Spalten): In freien Zellen werden die Teile nach rechts geschrieben (oder ab options.dest); in einer Tabelle werden neue Spalten eingefügt. Gibt die Anzahl der importierten Spalten zurück.",

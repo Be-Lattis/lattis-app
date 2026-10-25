@@ -38,6 +38,8 @@
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import TextToColumns from './TextToColumns.svelte';
 	import CustomSort from './CustomSort.svelte';
+	import LinkDialog from './LinkDialog.svelte';
+	import { autoLink, isLinkClick, linkKind, onLinkText, openLink } from './hyperlink';
 	import { withoutField, type CustomList, type CustomOrder } from './customsort';
 	import { handQuestion, keyQuestion, type KeyChoice, type KeyQuestion } from './keychoice';
 	import type { TextColumnsOptions, TextColumnsPreview } from './textcols';
@@ -387,7 +389,9 @@
 		choice?: TabChoice | null;
 		tables: SheetTable[];
 		/** value : résultat d'une formule (sinon raw est affiché). */
-		cells: { row: number; col: number; raw: string; value?: string; error?: boolean; spill?: string[][] }[];
+		cells: { row: number; col: number; raw: string; value?: string; error?: boolean; spill?: string[][]; link?: string }[];
+		/** Noms des feuilles du classeur (dialogue Lien). */
+		sheets?: string[];
 		/** Largeurs choisies par l'utilisateur (sinon : selon le type). */
 		widths?: { col: number; width: number }[];
 		/** Hauteurs choisies par l'utilisateur (sinon ROW_H). */
@@ -517,6 +521,10 @@
 		applyLineStyle?(rows: boolean, i0: number, i1: number, patch: Record<string, unknown>): Promise<unknown>;
 		/** Note d'une cellule (texte vide : la retire). */
 		setNote?(row: number, col: number, text: string): Promise<unknown>;
+		/** Lien hypertexte d'une cellule (adresse vide : le retire) ; text non vide : nouveau texte affiché. Une étape. */
+		setLink?(row: number, col: number, target: string, text: string): Promise<unknown>;
+		/** Destination d'un lien dans le classeur (« #Feuille2!B3 », « #Ventes »). */
+		linkPlace?(target: string): Promise<{ sheet: number; r0: number; c0: number; r1: number; c1: number }>;
 		/** Épingle la note (toujours affichée) ou la remet en infobulle. */
 		pinNote?(row: number, col: number, pinned: boolean): Promise<unknown>;
 		/** Fusionne et centre des cellules libres ; renvoie le nombre de valeurs effacées. */
@@ -821,6 +829,8 @@
 		active: '#217346',
 		activeStrip: '#d3e7dc',
 		error: '#c0392b',
+		// Liens hypertexte (hyperlink.ts) : le bleu des liens d'un tableur.
+		link: '#0563c1',
 		spill: '#5b9bd5',
 		found: 'rgba(250, 204, 21, 0.30)',
 		// Cellule trouvée (Ctrl+F) : sa ligne et sa colonne entières, teintées ; plus marqué dans les gouttières.
@@ -850,6 +860,10 @@
 	// Mise en forme, en couches (voir style.ts) : colonnes et lignes entières
 	// de la feuille, colonnes et en-têtes des tableaux, cellules.
 	let freeStyles = new Map<string, StyleLayer>(); // position → style (hors tableaux : cellules libres, TCD)
+	// Cellules libres =LIEN_HYPERTEXTE(…) : position → adresse calculée.
+	let freeLinks = new Map<string, string>();
+	/** Couche de style d'un lien calculé (il passe devant le lien posé). */
+	const lnLayer = (url: string | undefined): StyleLayer | undefined => (url ? { ln: url } : undefined);
 	let sheetRowStyles = new Map<number, StyleLayer>();
 	let sheetColStyles = new Map<number, StyleLayer>();
 	// Mise en forme conditionnelle (voir rules.ts, cfmodel.ts) : règles des
@@ -1179,6 +1193,7 @@
 		controlsTick++;
 		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
+		freeLinks = new Map(d.cells.filter((c) => c.link).map((c) => [key(c.row, c.col), c.link!]));
 		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
 		userHeights = new Map((d.heights ?? []).map((h) => [h.row, h.height]));
 		names = new Map((d.names ?? []).map((n) => [key(n.row, n.col), n.name]));
@@ -1233,6 +1248,12 @@
 			scroller.scrollLeft = back.left;
 			updateExtent();
 			syncNative();
+		}
+		// Lien suivi vers une autre feuille : arrivé, sa destination se sélectionne.
+		const go = linkGo;
+		if (go && (d.sheet ?? 0) === go.sheet) {
+			linkGo = null;
+			selectPlace(go);
 		}
 		startAnims(nav, new Set(old.keys()), oldCharts, performance.now());
 		refreshFx();
@@ -2341,10 +2362,11 @@
 	function styleAt(r: number, c: number, e = tableAt(r, c)): CellStyle | undefined {
 		const col = sheetColStyles.get(c);
 		const row = sheetRowStyles.get(r);
-		if (!e) return resolveStyle(pivotLayer(pivots, r, c), col, row, pivotColLayer(pivots, r, c), freeStyles.get(key(r, c)));
+		if (!e) return resolveStyle(pivotLayer(pivots, r, c), col, row, pivotColLayer(pivots, r, c), freeStyles.get(key(r, c)), lnLayer(freeLinks.get(key(r, c))));
 		const i = c - e.t.col;
 		if (r === e.t.row) return resolveStyle(col, row, headStyles.get(e.t.id)?.[i]);
-		return resolveStyle(col, row, colStyles.get(e.t.id)?.[i], parseStyle(e.cache.row(r - e.t.row - 1)?.sty?.get(i)));
+		const line = e.cache.row(r - e.t.row - 1);
+		return resolveStyle(col, row, colStyles.get(e.t.id)?.[i], parseStyle(line?.sty?.get(i)), lnLayer(line?.links?.get(i)));
 	}
 
 	// --- Volets figés (voir panes.ts) ---------------------------------------
@@ -4261,7 +4283,9 @@
 		ctx.font = fancy ? cellFont(st) : (st?.i ? 'italic ' : '') + (st?.b ? FONT_BOLD : FONT);
 		ctx.textAlign = align;
 		ctx.textBaseline = 'middle';
-		ctx.fillStyle = themed(st?.fg) ?? color;
+		// Lien hypertexte : bleu (sauf couleur choisie) et souligné.
+		const link = !!st?.ln && !!linkKind(st.ln);
+		ctx.fillStyle = themed(st?.fg) ?? (link ? C.link : color);
 		const tx = align === 'left' ? x + 6 : align === 'right' ? x + cw - 6 : x + cw / 2;
 		const px = fontPx(st?.fs);
 		const lh = lineHeight(px);
@@ -4278,11 +4302,11 @@
 		lines.forEach((line, k) => {
 			const cy = top + lh * k + lh / 2;
 			ctx.fillText(line, tx, cy);
-			if (st?.u || st?.x) {
+			if (st?.u || st?.x || link) {
 				const w = ctx.measureText(line).width;
 				const lx = align === 'left' ? tx : align === 'right' ? tx - w : tx - w / 2;
-				if (st.u) ctx.fillRect(lx, cy + Math.round(px * 0.55), w, 1);
-				if (st.x) ctx.fillRect(lx, cy, w, 1);
+				if (st?.u || link) ctx.fillRect(lx, cy + Math.round(px * 0.55), w, 1);
+				if (st?.x) ctx.fillRect(lx, cy, w, 1);
 			}
 		});
 		ctx.restore();
@@ -5290,6 +5314,143 @@
 		}
 		const { row, col } = active;
 		menuAction(() => set(row, col, ''));
+	}
+
+	// --- Liens hypertexte (hyperlink.ts) --------------------------------------------
+
+	let linkDlg = $state<{ row: number; col: number; text: string; locked: boolean; target: string; names: string[] } | null>(null);
+	// Clic sur le texte d'un lien : suivi au relâcher s'il est court (maintenu : sélection seule).
+	let linkPress: { row: number; col: number; t: number; x: number; y: number; url: string } | null = null;
+	// Lien suivi vers une autre feuille : sa destination, sélectionnée à l'arrivée (applyData).
+	let linkGo: { sheet: number; r0: number; c0: number; r1: number; c1: number } | null = null;
+
+	/** Lien de la cellule (fusion : celui de la cellule en haut à gauche), s'il est permis. */
+	function linkOf(r: number, c: number): string | undefined {
+		const g = mergeOf(r, c);
+		const ln = (g ? styleAt(g.row, g.col, undefined) : styleAt(r, c))?.ln;
+		return ln && linkKind(ln) ? ln : undefined;
+	}
+
+	/** Le lien sous la souris, quand elle est sur le texte de sa cellule (à côté : la cellule se sélectionne). */
+	function linkUnder(e: MouseEvent): { row: number; col: number; url: string } | null {
+		const cell = cellAt(e);
+		if (!cell || editing) return null;
+		const g = mergeOf(cell.row, cell.col);
+		const r = g?.row ?? cell.row;
+		const c = g?.col ?? cell.col;
+		const url = linkOf(r, c);
+		const text = url ? shownValue(r, c) : '';
+		if (!url || !text) return null;
+		const st = styleAt(r, c);
+		ctx.save();
+		ctx.font = st && (st.ff || st.fs) ? cellFont(st) : (st?.i ? 'italic ' : '') + (st?.b ? FONT_BOLD : FONT);
+		const tw = Math.max(...text.split('\n').map((l) => ctx.measureText(l).width));
+		ctx.restore();
+		const cw = cax().offset(c + (g?.cols ?? 1)) - cax().offset(c);
+		const align = st?.al ?? (isNumeric(text) ? 'right' : 'left');
+		return onLinkText(toLocal(e).x, screenX(c), cw, tw, align) ? { row: r, col: c, url } : null;
+	}
+
+	/** Suit un lien : page web ou e-mail hors de l'application, endroit du classeur sélectionné. */
+	async function followLink(url: string) {
+		if (linkKind(url) !== 'place') {
+			if (!openLink(url)) say(tr('grid.link.refused'));
+			return;
+		}
+		if (!source.linkPlace) return;
+		try {
+			const p = await source.linkPlace(url);
+			if (p.sheet !== sheetId() && onsheet) {
+				linkGo = p;
+				onsheet(p.sheet);
+				return;
+			}
+			selectPlace(p);
+		} catch (err) {
+			say(errorText(err));
+		}
+	}
+
+	function selectPlace(p: { r0: number; c0: number; r1: number; c1: number }) {
+		wrap.focus();
+		if (p.r0 === p.r1 && p.c0 === p.c1) {
+			moveTo(p.r0, p.c0);
+			ensureVisible(p.r0, p.c0);
+		} else selectRange(p.r0, p.c0, p.r1, p.c1);
+	}
+
+	/** Bouton enfoncé sur le texte d'un lien : retenu pour le relâcher (Ctrl+clic : suivi tout de suite). */
+	function pressLink(e: MouseEvent): boolean {
+		linkPress = null;
+		if (e.button !== 0 || e.shiftKey || formulaMode || hold) return false;
+		const l = linkUnder(e);
+		if (!l) return false;
+		if (e.ctrlKey || e.metaKey) {
+			void followLink(l.url);
+			return true;
+		}
+		linkPress = { row: l.row, col: l.col, t: performance.now(), x: e.clientX, y: e.clientY, url: l.url };
+		return false;
+	}
+
+	/** Bouton relâché : un clic court sur le même lien le suit. */
+	function releaseLink(e?: MouseEvent) {
+		const p = linkPress;
+		linkPress = null;
+		if (!p || !e) return;
+		const at = cellAt(e);
+		const g = at ? mergeOf(at.row, at.col) : undefined;
+		if (isLinkClick(p, performance.now(), g ? { row: g.row, col: g.col } : at, e.clientX, e.clientY)) void followLink(p.url);
+	}
+
+	/** Insertion › Lien (Ctrl+K) : le dialogue sur la cellule active. */
+	export function editLink() {
+		if (!source.setLink) return;
+		if (locked) {
+			say(locked);
+			return;
+		}
+		closeMenus();
+		const g = mergeOf(active.row, active.col);
+		const row = g?.row ?? active.row;
+		const col = g?.col ?? active.col;
+		const raw = editText(row, col);
+		const info = cellInfo(row, col);
+		const formula = raw.startsWith('=') || (info.kind === 'data' && info.e.t.columns[info.i].formula !== undefined);
+		const own = (g ? styleAt(row, col, undefined) : styleAt(row, col))?.ln ?? '';
+		// Destinations nommées : tableaux du classeur et cellules nommées de la feuille.
+		const named = [...new Set([...sources.filter((s) => s.kind !== 'pivot').map((s) => s.name), ...names.values()])].sort((a, b) => a.localeCompare(b));
+		linkDlg = { row, col, text: formula ? shownValue(row, col) : raw, locked: formula, target: linkKind(own) ? own : '', names: named };
+	}
+
+	function saveLink(target: string, text: string) {
+		const d = linkDlg;
+		const set = source.setLink;
+		linkDlg = null;
+		if (!d || !set) return;
+		menuAction(() => set(d.row, d.col, target, text));
+	}
+
+	/** Supprimer le lien : sur la sélection (le texte reste). */
+	export function removeLink() {
+		linkDlg = null;
+		const apply = source.applyStyle;
+		if (!apply) return;
+		const sel = selection();
+		menuAction(() => apply(sel.r0, sel.c0, sel.r1, sel.c1, { ln: null })).then((ok) => ok && say(tr('grid.link.removed')));
+	}
+
+	/** Adresse web ou e-mail tapée seule dans une cellule sans lien : elle devient un lien, une étape à part (Ctrl+Z la retire). */
+	function autoLinkAfter(row: number, col: number, raw: string) {
+		const url = autoLink(raw);
+		const set = source.setLink;
+		if (!url || !set || linkOf(row, col)) return;
+		writing = writing.catch(() => undefined).then(() =>
+			set(row, col, url, '').then(
+				() => say(tr('grid.link.auto')),
+				() => undefined
+			)
+		);
 	}
 
 	function pushStat(a: number[], v: number) {
@@ -8139,6 +8300,8 @@
 			wrap.focus();
 			return;
 		}
+		// Texte d'un lien : un clic court le suit au relâcher, Ctrl+clic tout de suite.
+		if (pressLink(e)) return;
 		wrap.focus();
 		moveTo(cell.row, cell.col, e.shiftKey);
 		dragging = true;
@@ -8454,6 +8617,8 @@
 						: headerAt(e)
 							? 'pointer'
 							: '';
+		// Texte d'un lien : la main, comme sur une page web.
+		if (!dragging && !scroller.style.cursor && linkUnder(e)) scroller.style.cursor = 'pointer';
 		if (!dragging) updateHeaderTip(e);
 		updateNoteTip(dragging ? null : cellAt(e));
 		if (!dragging) return;
@@ -8834,6 +8999,12 @@
 			applyStyle({ [e.key.toLowerCase()]: 'toggle' });
 			return;
 		}
+		// Ctrl+K : lien hypertexte de la cellule active.
+		if (ctrl && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k' && source.setLink) {
+			e.preventDefault();
+			editLink();
+			return;
+		}
 		// Ctrl + et Ctrl - : insérer ou supprimer des lignes ou colonnes (comme Excel).
 		if (ctrl && (e.key === '+' || (e.key === '=' && e.shiftKey) || e.key === '-') && source.sheetLines) {
 			e.preventDefault();
@@ -9153,6 +9324,8 @@
 				if (info.kind === 'data' && info.n !== undefined) info.e!.cache.set(info.n, info.i!, m.value);
 				message = '';
 			} else message = m ?? '';
+			// Adresse web ou e-mail tapée : un lien, à part (Ctrl+Z le retire, le texte reste).
+			if (keep && info.kind !== 'header') autoLinkAfter(row, col, raw);
 		} catch (e) {
 			if (optimistic) info.e!.cache.set(info.n!, info.i!, before); // saisie refusée : valeur d'avant
 			message = errorText(e);
@@ -10529,6 +10702,14 @@
 			tipCell = 'keyhint';
 			return;
 		}
+		// Lien : son adresse, et le clic.
+		const lk = linkUnder(ev);
+		if (lk) {
+			const id = `link:${lk.row},${lk.col}`;
+			if (tipCell !== id) scroller.title = tr('grid.link.tooltip', { address: lk.url.replace(/^mailto:/i, '') });
+			tipCell = id;
+			return;
+		}
 		const cell = cellAt(ev);
 		const e = cell && tableAt(cell.row, cell.col);
 		// Zone déversée d'une formule : d'où elle vient, et le clic droit.
@@ -10910,6 +11091,7 @@
 		resize();
 		scroller.addEventListener('wheel', onWheel, { passive: false });
 		const up = (ev?: MouseEvent) => {
+			releaseLink(ev);
 			stopAutoScroll();
 			if (refDrag) nextArg();
 			refDrag = null;
@@ -11252,7 +11434,27 @@
 	{:else if id === 'rules'}
 		<button data-shed="1" onclick={rules}>{tr('grid.menu.conditionalFormat')}</button>
 	{:else if id === 'note'}
+		{@render linkItems()}
 		{@render noteItems()}
+	{/if}
+{/snippet}
+
+{#snippet linkItems()}
+	{#if source.setLink}
+		{@const url = linkOf(active.row, active.col)}
+		{#if url}
+			<button
+				data-shed="1"
+				onclick={() => {
+					menu = freeMenu = null;
+					void followLink(url);
+				}}>{tr('grid.link.open')}</button
+			>
+			<button data-shed="1" onclick={editLink}>{tr('grid.link.menuEdit')} <span class="keys">Ctrl+K</span></button>
+			<button data-shed="1" onclick={removeLink}>{tr('grid.link.remove')}</button>
+		{:else}
+			<button data-shed="1" onclick={editLink}>{tr('grid.link.menu')} <span class="keys">Ctrl+K</span></button>
+		{/if}
 	{/if}
 {/snippet}
 
@@ -12711,6 +12913,23 @@
 			{#key cfView}
 				<CondFormat host={cfHost} view={cfView} onclose={closeRules} />
 			{/key}
+		{/if}
+		{#if linkDlg}
+			{@const d = linkDlg}
+			<LinkDialog
+				text={d.text}
+				textLocked={d.locked}
+				target={d.target}
+				sheets={data.sheets?.length ? data.sheets : [sheetName]}
+				current={sheetName}
+				names={d.names}
+				onok={saveLink}
+				onremove={removeLink}
+				oncancel={() => {
+					linkDlg = null;
+					wrap.focus();
+				}}
+			/>
 		{/if}
 		{#if formatDlg}
 			{@const d = formatDlg}

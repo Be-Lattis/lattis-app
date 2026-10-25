@@ -280,8 +280,19 @@ func LoadGrid(ctx context.Context, d *doc.Document, ti canvas.TableInfo) (*grid.
 		return nil, err
 	}
 	truthy := func(v any) bool { return canvas.Truthy(formula.FromResult(v)) }
+	// Colonnes =LIEN_HYPERTEXTE(…) : l'adresse de chaque ligne, avec les fenêtres.
+	links, linkArgs, linkCols, err := d.LinkExprs(ctx, ti.ID, len(args)+len(markArgs))
+	if err != nil {
+		return nil, err
+	}
+	linkOf := func(v any) string {
+		if a := formula.FromResult(v); !a.IsErr() {
+			return canvas.SafeLink(a.String())
+		}
+		return ""
+	}
 	t := grid.NewTable(d.DB(), ti.Source, ti.Name, cols, sqlCols).WithInvalid(ti.ID, ids).WithExprs(exprs, args, decode).
-		WithMarks(marks, markArgs, markCols, markRules, truthy).WithComputed(anyComputed || len(marks) > 0)
+		WithMarks(marks, markArgs, markCols, markRules, truthy).WithLinks(links, linkArgs, linkCols, linkOf).WithComputed(anyComputed || len(marks) > 0)
 	if err := t.Load(ctx); err != nil {
 		return nil, err
 	}

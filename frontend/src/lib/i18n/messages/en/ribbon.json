@@ -645,7 +645,8 @@
 		},
 		"link": {
 			"label": "Link",
-			"tooltip": "Link to a web page (Ctrl+click to open it)"
+			"tooltip": "Link to a web page (Ctrl+click to open it)",
+			"sheetTooltip": "Link to a web page, an e-mail or a cell (Ctrl+K)"
 		},
 		"image": {
 			"label": "Image",

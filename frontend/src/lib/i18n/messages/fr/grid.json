@@ -1547,5 +1547,32 @@
 		"noFormats": "Rien à coller : le presse-papiers n'a pas de mise en forme",
 		"noWidths": "Largeurs de colonnes : seulement pour une copie faite dans Lattis",
 		"empty": "Le presse-papiers est vide"
+	},
+	"link": {
+		"title": "Lien",
+		"titleEdit": "Modifier le lien",
+		"kind": "Sorte de lien",
+		"web": "Page web",
+		"mail": "E-mail",
+		"place": "Dans le classeur",
+		"address": "Adresse",
+		"email": "Adresse e-mail",
+		"emailPlaceholder": "nom@exemple.fr",
+		"where": "Feuille ou nom",
+		"sheets": "Feuilles",
+		"names": "Tableaux et noms",
+		"cell": "Cellule",
+		"text": "Texte affiché",
+		"textLocked": "Calculé par la formule de la cellule",
+		"remove": "Supprimer le lien",
+		"badAddress": "Adresse non reconnue (page web ou e-mail)",
+		"badCell": "Cellule non reconnue (par exemple B3 ou A1:C4)",
+		"menu": "Lien…",
+		"menuEdit": "Modifier le lien…",
+		"open": "Ouvrir le lien",
+		"tooltip": "{address} — clic : ouvrir, clic maintenu : sélectionner",
+		"auto": "Lien créé — Ctrl+Z pour le retirer",
+		"refused": "Lien refusé : adresse non permise",
+		"removed": "Lien supprimé"
 	}
 }

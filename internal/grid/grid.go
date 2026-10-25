@@ -58,6 +58,8 @@ type Window struct {
 	// Règles « formule » de mise en forme conditionnelle vérifiées par les
 	// cellules de la fenêtre.
 	Marks []Mark `json:"marks"`
+	// Links : adresses des colonnes =LIEN_HYPERTEXTE(…) (Raw : l'adresse).
+	Links []InvalidCell `json:"links,omitempty"`
 	// Sync : cellules d'un tableau partagé dont la modification attend le
 	// serveur, ou en conflit (classeur collaboratif ; rempli par le pont).
 	Sync []SyncMark `json:"sync,omitempty"`
@@ -132,6 +134,27 @@ type Table struct {
 	markRules []int
 	truthy    func(v any) bool
 	cf        map[string]RuleStats // statistiques des règles déjà calculées
+
+	// Liens calculés (LIEN_HYPERTEXTE) : expression SQL de l'adresse, après
+	// les règles, sa colonne affichée, et la vérification de l'adresse.
+	links    []string
+	linkCols []int
+	linkOf   func(v any) string
+}
+
+// WithLinks ajoute à la lecture des fenêtres les adresses des colonnes
+// =LIEN_HYPERTEXTE(…) (paramètres numérotés à la suite des autres) ; safe
+// rend l'adresse affichable ("" : refusée). Après WithMarks.
+func (t *Table) WithLinks(exprs []string, args []any, cols []int, safe func(v any) string) *Table {
+	if len(exprs) == 0 {
+		return t
+	}
+	t.links, t.linkCols, t.linkOf = exprs, cols, safe
+	t.args = append(t.args, args...)
+	all := slices.Concat(t.exprs, t.marks, exprs)
+	t.selectWindow = fmt.Sprintf(`SELECT id, %s FROM %s WHERE _pos >= ? ORDER BY _pos LIMIT ? OFFSET ?`,
+		strings.Join(all, ", "), t.sqlName)
+	return t
 }
 
 // WithMarks ajoute à la lecture des fenêtres les règles « formule » de mise
@@ -343,7 +366,7 @@ func (t *Table) Window(ctx context.Context, first, count int) (Window, error) {
 	defer rs.Close()
 
 	w := Window{First: first, IDs: make([]int64, 0, count), Cells: make([][]any, 0, count)}
-	dest := make([]any, len(t.cols)+1+len(t.marks))
+	dest := make([]any, len(t.cols)+1+len(t.marks)+len(t.links))
 	ptrs := make([]any, len(dest))
 	for i := range dest {
 		ptrs[i] = &dest[i]
@@ -356,6 +379,11 @@ func (t *Table) Window(ctx context.Context, first, count int) (Window, error) {
 		for k := range t.marks {
 			if t.truthy(dest[len(t.cols)+1+k]) {
 				w.Marks = append(w.Marks, Mark{Row: len(w.IDs), Col: t.markCols[k], Rule: t.markRules[k]})
+			}
+		}
+		for k := range t.links {
+			if u := t.linkOf(dest[len(t.cols)+1+len(t.marks)+k]); u != "" {
+				w.Links = append(w.Links, InvalidCell{Row: len(w.IDs), Col: t.linkCols[k], Raw: u})
 			}
 		}
 		row := make([]any, len(t.cols))

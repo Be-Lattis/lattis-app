@@ -166,6 +166,10 @@ var en = map[ID]string{
 	"merge.selectTwoCells": "merge: select at least two cells to merge",
 	"merge.severalTables":  "merge: the selection spans several tables; merge the header groups of one table at a time",
 	"merge.tooLarge":       "merge: merging is limited to {max} cells",
+	"link.notFound":        "link: “{link}” not found in the workbook",
+	"link.scheme":          "link refused: “{scheme}:” addresses are not allowed (web, e-mail or workbook cell only)",
+	"link.tooLong":         "link: address too long ({max} characters at most)",
+	"link.unknown":         "link: address not recognized “{link}”",
 	"merge.twoLevelOnly":   "merge: in table “{table}”, only the group band and the header can be merged: the band and header of a column (single-level column), or adjacent cells of the band (a group over several columns); not with data or with cells outside the table",
 
 	// Combining tabs

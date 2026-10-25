@@ -329,7 +329,7 @@ end`,
 			Name:    "cells.style",
 			Label:   "Mise en forme",
 			Summary: "Met en forme une plage de cellules.",
-			Details: styleHelp,
+			Details: styleHelp + " " + linkHelp,
 			Params:  []Param{pRow, pCol, pRow2, pCol2, {Name: "style", Type: Object, Desc: "propriétés à poser : {bold = true, fill = \"#fff2cc\"}"}, pSheet},
 			Write:   true,
 			Example: `cells.style{row = 1, col = 1, col2 = 4, style = {bold = true, fill = "#fff2cc"}}`,
@@ -513,6 +513,9 @@ end`,
 
 const styleHelp = `style : bold, italic, underline, strike (booléens), font (police) et size (taille en points), color et fill (couleurs "#rrggbb", ou du thème du classeur : "theme:accent1" à "theme:accent6", "theme:dk1", "theme:lt1", "theme:dk2", "theme:lt2", suivies au besoin de ":+40" pour 40 % plus clair ou ":-25" pour 25 % plus foncé ; elles changent avec le thème), align ("left", "center" ou "right"), valign ("top", "middle" ou "bottom"), wrap (renvoyer à la ligne), format ("0", "0,00", "%", "€", "date", "time" ou "text"), decimals (nombre de décimales), no_grouping (sans séparateur de milliers), date_format (motif d'une date ou d'une heure : "jj/mm/aaaa", "jj mmm aaaa", "aaaa-mm-jj", "hh:mm"…), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right, border_color, et validation (liste déroulante : liste des valeurs permises {"Oui", "Non"}, ou plage source "=Clients[Ville]", "=Cell[A1:A10]", "=Feuille2!Cell[A1:A10]" ou "=NomDeCellule", dont les valeurs distinctes non vides sont relues à chaque ouverture de la liste et à chaque saisie). false ou "" retire la propriété.`
 
+// linkHelp : la propriété link (lien hypertexte, internal/canvas/links.go).
+const linkHelp = `link (lien hypertexte : "https://…", "mailto:…" ou "#Feuille2!B3", "#B3", "#Tableau" ; les autres schémas sont refusés ; la valeur de la cellule reste le texte affiché).`
+
 // styleKeys traduit les noms lisibles des propriétés de mise en forme vers
 // les clés du classeur (internal/canvas/styles.go).
 var styleKeys = map[string]string{
@@ -521,10 +524,12 @@ var styleKeys = map[string]string{
 	"border_top": "bt", "border_bottom": "bb", "border_left": "bl", "border_right": "br",
 	"strike": "x", "font": "ff", "size": "fs", "valign": "va", "wrap": "wr", "no_grouping": "ng",
 	"date_format": "df", "border_color": "bc", "validation": "dv",
+	"link": "ln",
 }
 
 var styleRaw = map[string]bool{"b": true, "i": true, "u": true, "x": true, "ff": true, "fs": true, "fg": true, "bg": true, "al": true, "va": true, "wr": true,
-	"nf": true, "dp": true, "ng": true, "df": true, "bt": true, "bb": true, "bl": true, "br": true, "bc": true, "dv": true}
+	"nf": true, "dp": true, "ng": true, "df": true, "bt": true, "bb": true, "bl": true, "br": true, "bc": true, "dv": true,
+	"ln": true}
 
 func toStyle(m map[string]any) (canvas.Style, error) {
 	st := canvas.Style{}

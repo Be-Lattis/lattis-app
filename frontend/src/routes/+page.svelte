@@ -1919,6 +1919,8 @@
 		applyLineStyle: (rows, i0, i1, patch) => DocumentService.ApplyLineStyle(sheetId, rows, i0, i1, patch).then(reload),
 		setNote: (row, col, text) => DocumentService.SetNote(sheetId, row, col, text).then(reload),
 		pinNote: (row, col, pinned) => DocumentService.PinNote(sheetId, row, col, pinned).then(reload),
+		setLink: (row, col, target, text) => DocumentService.SetLink(sheetId, row, col, target, text).then(reload),
+		linkPlace: (target) => DocumentService.LinkPlace(sheetId, target),
 		mergeCells: async (r0, c0, r1, c1) => {
 			const n = await DocumentService.MergeCells(sheetId, r0, c0, r1, c1);
 			await reload();
@@ -1986,6 +1988,7 @@
 					};
 					}),
 					sheet: sheetId,
+					sheets: (layout.sheets ?? []).map((s) => s.name),
 					choice: layout.sheets?.find((s) => s.id === sheetId)?.choice ?? null,
 					cells: (layout.cells ?? []).map((c) => ({ ...c, spill: c.spill?.map((r) => r ?? []) })),
 					widths: layout.widths ?? [],
@@ -2473,6 +2476,7 @@
 		onvalidation={mode === 'doc' ? () => sheet?.openValidation() : undefined}
 		onmergesheets={mode === 'doc' ? openMergeMenu : undefined}
 		onnote={mode === 'doc' ? (what) => (what === 'edit' ? sheet?.editNote() : sheet?.deleteNote()) : undefined}
+		onlink={mode === 'doc' ? () => sheet?.editLink() : undefined}
 		freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
 		onfreeze={mode === 'doc' ? (what) => sheet?.freezeActive(what) : undefined}
 		{zoom}

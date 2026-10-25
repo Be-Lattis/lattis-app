@@ -157,6 +157,8 @@ var docsZH = func() docSet {
 				text, ta("分隔符", "标记结果结尾的文本。"), instance, matchMode, matchEnd, notFound),
 			"TEXTAFTER": tdx("返回分隔符之后的文本。", `=TEXTAFTER([邮箱], "@")`,
 				text, ta("分隔符", "标记结果开头的文本。"), instance, matchMode, matchEnd, notFound),
+			"HYPERLINK": tdx("显示链接：单击打开地址（网页、电子邮件或工作簿中的单元格）。", `=HYPERLINK("https://lattis.be", "网站")`,
+				ta("链接位置", "地址：\"https://…\"、\"mailto:…\"，或 # 加工作簿中的单元格。"), ta("友好名称", "显示的文本（省略时为地址）。")),
 			"NA": tdx("返回错误值 {=#N/A}（值不可用）。", `=IF([数量]=0, NA(), [金额]/[数量])`),
 
 			// Dates

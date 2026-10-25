@@ -162,6 +162,7 @@
 			"table": "Als Tabelle formatieren",
 			"filter": "Spaltenfilter (löscht die Filter, falls vorhanden)",
 			"note": "Neue Notiz (oder Notiz bearbeiten)",
+			"link": "Link (Webseite, E-Mail, Zelle)",
 			"chart": "Diagramm (Säulendiagramm) der aktiven Tabelle"
 		},
 		"calcul": {

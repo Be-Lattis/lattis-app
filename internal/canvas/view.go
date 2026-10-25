@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/work"
 )
@@ -149,6 +150,8 @@ type CellInfo struct {
 	// Tableau dynamique (FILTRE, TRIER…) : valeurs déversées depuis la
 	// cellule, vers le bas et la droite (la première est Value).
 	Spill [][]string `json:"spill,omitempty"`
+	// Link : adresse d'une formule =LIEN_HYPERTEXTE(…) (links.go).
+	Link string `json:"link,omitempty"`
 }
 
 // NameInfo est une cellule nommée de la feuille.
@@ -443,6 +446,11 @@ func (m *Model) layout(ctx context.Context, sheet int64, later bool) (Layout, er
 				} else {
 					v := t.evalFree(sheet, c.Raw)
 					ci.Value, ci.Error = v.String(), v.IsErr()
+					if f := formula.HyperlinkTarget(c.Raw); f != "" && !v.IsErr() {
+						if a := t.evalFree(sheet, f); !a.IsErr() {
+							ci.Link = SafeLink(a.String())
+						}
+					}
 				}
 			}
 			l.Cells = append(l.Cells, ci)

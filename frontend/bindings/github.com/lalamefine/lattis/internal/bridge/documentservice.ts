@@ -1119,6 +1119,14 @@ export function LayoutFirst(sheet: number): $CancellablePromise<canvas$0.Layout>
 }
 
 /**
+ * LinkPlace donne la destination d'un lien dans le classeur (« #Feuille2!B3 »,
+ * « #Ventes »), suivi depuis la feuille sheet.
+ */
+export function LinkPlace(sheet: number, target: string): $CancellablePromise<canvas$0.LinkPlace> {
+    return $Call.ByID(2082476249, sheet, target);
+}
+
+/**
  * LocateRow situe une ligne de tableau sur sa feuille, d'après son
  * identifiant (point de carte cliqué : ChartInfo.Rows).
  */
@@ -2043,6 +2051,16 @@ export function SetLineRules(sheet: number, rows: boolean, i0: number, i1: numbe
  */
 export function SetLinesHidden(sheet: number, rows: boolean, i0: number, i1: number, hide: boolean): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3410588049, sheet, rows, i0, i1, hide);
+}
+
+/**
+ * SetLink pose le lien hypertexte d'une cellule (adresse vide : le retire) ;
+ * text, s'il n'est pas vide, remplace aussi le texte affiché. Une seule
+ * étape d'annulation (dialogue Lien, Ctrl+K ; lien automatique d'une
+ * adresse tapée).
+ */
+export function SetLink(sheet: number, row: number, col: number, target: string, text: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(349679134, sheet, row, col, target, text);
 }
 
 /**

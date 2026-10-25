@@ -168,6 +168,10 @@ var zh = map[ID]string{
 	"merge.selectTwoCells": "合并：请至少选择两个要合并的单元格",
 	"merge.severalTables":  "合并：所选内容跨越多个表格；请一次只合并一个表格的标题组",
 	"merge.tooLarge":       "合并：最多只能合并 {max} 个单元格",
+	"link.notFound":        "链接：在工作簿中找不到“{link}”",
+	"link.scheme":          "链接被拒绝：不允许“{scheme}:”地址（仅限网页、电子邮件或工作簿单元格）",
+	"link.tooLong":         "链接：地址过长（最多 {max} 个字符）",
+	"link.unknown":         "链接：无法识别的地址“{link}”",
 	"merge.twoLevelOnly":   "合并：在表格“{table}”中，只能合并组标题带和标题：某一列的标题带与标题（单级列），或标题带中相邻的单元格（跨多列的组）；不能与数据或表格外的单元格合并",
 
 	// Combining tabs

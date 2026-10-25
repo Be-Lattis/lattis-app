@@ -274,6 +274,9 @@ var docs = map[string]funcDoc{
 	"TEXTAFTER": {catText, "Renvoie le texte situé après un délimiteur.",
 		docArgs(argText, docArg("délimiteur", "Texte qui marque le début du résultat."), argInstance, argMatchMode, argMatchEnd, argNotFound),
 		0, `=TEXTE.APRES([Email]; "@")`},
+	"HYPERLINK": {catText, "Affiche un lien : un clic ouvre l'adresse (page web, e-mail ou cellule du classeur).",
+		docArgs(docArg("adresse", "Adresse : \"https://…\", \"mailto:…\" ou \"#Feuille2!A1\"."), docOpt("nom", "Texte affiché (l'adresse s'il manque).")),
+		0, `=LIEN_HYPERTEXTE("https://lattis.be"; "Site")`},
 	"NA": {catLogic, "Renvoie la valeur d'erreur #N/A (valeur non disponible).",
 		nil, 0, `=SI([Qté]=0; NA(); [Montant]/[Qté])`},
 

@@ -57,6 +57,10 @@ Las validaciones no se exportan a Excel (.xlsx), ni se leen al importar.
 
 Revisar › Nueva nota (`Mayús+F2`) asocia una nota a la celda activa: una esquina roja la señala, y se muestra al pasar el puntero. En una celda que ya tiene una, el comando se convierte en **Editar nota**. La chincheta de la nota la mantiene visible. Revisar › Eliminar nota la quita.
 
+## Vínculos {#liens}
+
+Insertar › Vínculo (`Ctrl+K`) convierte la celda en un vínculo a una página web, una dirección de correo o un lugar del libro (hoja y celda, tabla, celda con nombre). Una dirección web o de correo escrita se convierte sola en vínculo (`Ctrl+Z` lo quita). Un clic en el texto sigue el vínculo; mantener pulsado selecciona la celda. La función `HIPERVINCULO` hace lo mismo en una fórmula.
+
 ## Inmovilizar paneles {#figer-les-volets}
 
 Vista › Inmovilizar paneles mantiene filas y columnas en pantalla al desplazarse:

@@ -1547,5 +1547,32 @@
 		"noFormats": "Nada que pegar: el portapapeles no tiene formato",
 		"noWidths": "Ancho de columnas: solo para una copia hecha en Lattis",
 		"empty": "El portapapeles está vacío"
+	},
+	"link": {
+		"title": "Vínculo",
+		"titleEdit": "Modificar vínculo",
+		"kind": "Tipo de vínculo",
+		"web": "Página web",
+		"mail": "Correo",
+		"place": "En este libro",
+		"address": "Dirección",
+		"email": "Dirección de correo",
+		"emailPlaceholder": "nombre@ejemplo.es",
+		"where": "Hoja o nombre",
+		"sheets": "Hojas",
+		"names": "Tablas y nombres",
+		"cell": "Celda",
+		"text": "Texto mostrado",
+		"textLocked": "Calculado por la fórmula de la celda",
+		"remove": "Quitar vínculo",
+		"badAddress": "Dirección no reconocida (página web o correo)",
+		"badCell": "Celda no reconocida (por ejemplo B3 o A1:C4)",
+		"menu": "Vínculo…",
+		"menuEdit": "Modificar vínculo…",
+		"open": "Abrir vínculo",
+		"tooltip": "{address} — clic: abrir, mantener pulsado: seleccionar",
+		"auto": "Vínculo creado — Ctrl+Z para quitarlo",
+		"refused": "Vínculo rechazado: dirección no permitida",
+		"removed": "Vínculo quitado"
 	}
 }

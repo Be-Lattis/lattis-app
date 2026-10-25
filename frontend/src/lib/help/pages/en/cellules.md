@@ -57,6 +57,10 @@ Validations are not exported to Excel (.xlsx), nor read on import.
 
 Review › New Note (`Shift+F2`) attaches a note to the active cell: a red corner marks it, and it shows on hover. On a cell that has one, the command becomes **Edit Note**. The note's pin keeps it displayed. Review › Delete Note removes it.
 
+## Links {#liens}
+
+Insert › Link (`Ctrl+K`) turns the cell into a link to a web page, an e-mail address or a place in the workbook (sheet and cell, table, named cell). A web or e-mail address you type becomes a link by itself (`Ctrl+Z` removes it). A click on the text follows the link; click and hold selects the cell. The `HYPERLINK` function does the same in a formula.
+
 ## Freeze panes {#figer-les-volets}
 
 View › Freeze Panes keeps rows and columns on screen while scrolling:

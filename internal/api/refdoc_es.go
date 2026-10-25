@@ -46,7 +46,7 @@ Mapa: series = {latitud, longitud, valor opcional} (mapCoords "pair", por defect
 			"cells.set": {S: "Introduce un valor en una celda de la hoja, exactamente como al escribir en la cuadrícula.",
 				D: "Un texto que empieza por = es una fórmula. Escribir junto a una tabla la amplía, escribir dos filas contiguas crea una tabla, \"\" borra la celda. Devuelve lo que ha provocado la entrada (tabla creada, columna ampliada…).",
 				R: "{created, widened, from, to, invalid, keyed}"},
-			"cells.style": {S: "Da formato a un rango de celdas.", D: "style: " + style},
+			"cells.style": {S: "Da formato a un rango de celdas.", D: "style: " + style + ` link (hipervínculo: "https://…", "mailto:…" o "#Hoja2!B3", "#B3", "#Tabla"; los demás esquemas se rechazan; el valor de la celda sigue siendo el texto mostrado).`},
 			"cells.style_lines": {S: "Da formato a filas o columnas enteras de la hoja (todas sus celdas, presentes y futuras, tablas y tablas dinámicas incluidas). Una celda prevalece sobre su fila, una fila sobre su columna.",
 				D: "style: " + style},
 			"cells.text_to_columns": {S: "Convierte el texto de las celdas de la columna col, filas row a row2, en columnas (asistente Texto en columnas de Excel): en celdas libres, las partes se escriben hacia la derecha (o a partir de options.dest); en una tabla, se insertan columnas nuevas. Devuelve el número de columnas importadas.",
