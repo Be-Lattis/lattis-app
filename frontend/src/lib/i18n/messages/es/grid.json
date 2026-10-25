@@ -636,11 +636,13 @@
 		"count": "{k} de {total}",
 		"replaced": {
 			"all": "{n, plural, one {# celda reemplazada} other {# celdas reemplazadas}} (Ctrl+Z para deshacer)",
-			"selection": "{n, plural, one {# celda reemplazada} other {# celdas reemplazadas}} en la selección (Ctrl+Z para deshacer)"
+			"selection": "{n, plural, one {# celda reemplazada} other {# celdas reemplazadas}} en la selección (Ctrl+Z para deshacer)",
+			"book": "{n, plural, one {# celda reemplazada} other {# celdas reemplazadas}} en el libro (Ctrl+Z para deshacer)"
 		},
 		"notFound": {
 			"all": "No se encontró ninguna celda",
-			"selection": "No se encontró ninguna celda en la selección"
+			"selection": "No se encontró ninguna celda en la selección",
+			"book": "No se encontró ninguna celda en el libro"
 		},
 		"none": "Sin resultados",
 		"aria": "Buscar y reemplazar",
@@ -666,7 +668,34 @@
 		"replaceOne": "Reemplazar",
 		"replaceOne.tooltip": "Reemplaza la celda encontrada y pasa a la siguiente",
 		"replaceAll": "Reemplazar todos",
-		"replaceAll.tooltip": "Reemplaza todas las apariciones (Ctrl+Z para deshacer)"
+		"replaceAll.tooltip": "Reemplaza todas las apariciones (Ctrl+Z para deshacer)",
+		"options": "Opciones",
+		"options.tooltip": "Opciones de búsqueda",
+		"in": "Dentro de",
+		"in.sheet": "Hoja",
+		"in.book": "Libro",
+		"order": "Buscar",
+		"order.rows": "Por filas",
+		"order.cols": "Por columnas",
+		"look": "Buscar en",
+		"look.formulas": "Fórmulas",
+		"look.values": "Valores",
+		"look.notes": "Notas",
+		"look.values.replace": "Reemplazar actúa sobre las fórmulas",
+		"case": "Coincidir mayúsculas",
+		"whole": "Celda completa",
+		"findAll": "Buscar todo",
+		"findAll.tooltip": "Lista todas las celdas encontradas",
+		"list.aria": "Celdas encontradas",
+		"list.sheet": "Hoja",
+		"list.table": "Tabla",
+		"list.cell": "Celda",
+		"list.value": "Valor",
+		"list.count": "{n, plural, one {# celda encontrada} other {# celdas encontradas}}",
+		"list.capped": "{shown, plural, one {# mostrada} other {# mostradas}}",
+		"skipped": "{n, plural, one {# celda omitida} other {# celdas omitidas}}",
+		"zone.book": "libro",
+		"placeholder.tooltip": "?: un carácter, *: varios (~? y ~* para buscarlos)"
 	},
 	"sort": {
 		"number": {

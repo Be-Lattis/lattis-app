@@ -35,7 +35,9 @@
 	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvAlertOf, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm, type DvRuleData } from './dvrule';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
-	import { findKey, finderAction, findZone, foundCell, hitCount, inZone, nextHit, replacedLabel, zoneLabel, type Zone } from './findzone';
+	import { findKey, finderAction, findZone, foundCell, hitCount, inZone, replacedLabel, zoneLabel, type Zone } from './findzone';
+	import { defaultFindOpts, nextFound, optsKey, replaceLook, replaceSummary, searchAll, searchQuery, type FindOpts, type FoundCell, type ReplaceResult, type SearchQuery, type SearchResult } from './findopts';
+	import FindMore from './FindMore.svelte';
 	import { edgeScroll, frameStep } from './autoscroll';
 	import { blocksReach, boxesReach } from './objextent';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
@@ -547,6 +549,10 @@
 		find?(text: string, zone: Zone | null): Promise<{ row: number; col: number }[]>;
 		/** Remplace dans la zone (null : partout) ; renvoie le nombre de cellules modifiées. */
 		replace?(text: string, by: string, zone: Zone | null): Promise<number>;
+		/** Recherche avec options (findopts.ts) : une feuille par appel, la suivante dans le classeur. */
+		search?(q: SearchQuery): Promise<SearchResult>;
+		/** Remplacer tout avec options, en une étape d'annulation ; le bilan. */
+		replaceAll?(q: SearchQuery, by: string): Promise<ReplaceResult>;
 		/** Remplace les règles de mise en forme conditionnelle d'une colonne. */
 		/** Actualise la requête d'import qui charge le tableau. */
 		refreshTable?(table: SheetTable): Promise<unknown>;
@@ -1173,8 +1179,9 @@
 		// Navigation (ouverture, autre feuille) : rien ne s'anime.
 		const nav = placedSheet !== (d.sheet ?? 0);
 		if (nav) recovery.reset();
-		// Recherche : occurrences relues après une saisie, un Ctrl+Z, une actualisation ou sur une autre feuille.
-		matchKey = '';
+		// Recherche : occurrences relues après une saisie, un Ctrl+Z, une actualisation ou sur une autre feuille
+		// (sauf dans tout le classeur : passer d'une feuille à l'autre ne les change pas).
+		if (!nav || !finder?.opts.book) matchKey = '';
 		if (nav && finder) {
 			finder.at = null;
 			finder.count = '';
@@ -1276,6 +1283,8 @@
 			updateExtent();
 			syncNative();
 		}
+		// Occurrence trouvée sur une autre feuille : arrivé, elle se sélectionne.
+		findArrived(d.sheet ?? 0);
 		// Lien suivi vers une autre feuille : arrivé, sa destination se sélectionne.
 		const go = linkGo;
 		if (go && (d.sheet ?? 0) === go.sheet) {
@@ -2640,10 +2649,11 @@
 		}
 
 		// Recherche : toutes les occurrences visibles, en léger (l'active reste encadrée).
-		if (finder && matches.length && matchKey === findKey(finder.text, finder.zone)) {
+		if (finder && matches.length && matchKey === matchesKey(finder.text, finder.zone, finder.opts)) {
 			ctx.fillStyle = C.found;
+			const here = data.sheet ?? 0;
 			for (const m of matches)
-				if (m.row >= r0 && m.row <= r1 && m.col >= c0 && m.col <= c1) ctx.fillRect(cx(m.col), ry(m.row), cax().size(m.col), rh(m.row));
+				if (m.sheet === here && m.row >= r0 && m.row <= r1 && m.col >= c0 && m.col <= c1) ctx.fillRect(cx(m.col), ry(m.row), cax().size(m.col), rh(m.row));
 		}
 		// Cellule trouvée : sa ligne et sa colonne entières (toute la fusion), en
 		// croix sous le contenu ; les deux bandes se superposent sur la cellule.
@@ -9147,7 +9157,7 @@
 				return;
 			}
 		}
-		if (ctrl && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'h') && source.find) {
+		if (ctrl && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'h') && (source.find || source.search)) {
 			e.preventDefault();
 			openFinder(e.key.toLowerCase() === 'h');
 			return;
@@ -10173,6 +10183,9 @@
 	// sur chaque occurrence.
 	// count : compteur du champ (« 3 sur 12 », « Aucun résultat ») ; info :
 	// bilan de Remplacer tout ou erreur, sous les champs.
+	// opts : options (« Options », findopts.ts), gardées d'une ouverture à
+	// l'autre ; more : options dépliées ; list : Rechercher tout (null : pas
+	// demandé), total : toutes les cellules trouvées, busy : en cours.
 	let finder = $state<{
 		replace: boolean;
 		text: string;
@@ -10181,12 +10194,27 @@
 		info: string;
 		zone: Zone | null;
 		at: { row: number; col: number } | null;
+		opts: FindOpts;
+		more: boolean;
+		list: FoundCell[] | null;
+		total: number;
+		busy: boolean;
+		current: number;
 	} | null>(null);
+	let findOpts = defaultFindOpts();
+	let findMore = false;
 	let findInput = $state<HTMLInputElement>();
 	let replaceInput = $state<HTMLInputElement>();
-	let matches: { row: number; col: number }[] = [];
-	// Recherche des occurrences en mémoire (texte et zone, findKey).
+	// Occurrences (toutes feuilles), ordre des feuilles parcourues (rang k), total.
+	let matches: FoundCell[] = [];
+	let matchOrder: number[] = [];
+	let matchTotal = 0;
+	// Recherche des occurrences en mémoire (texte, zone, feuille et options).
 	let matchKey = '';
+	// Recherche la plus récente (une plus ancienne qui finit après est ignorée).
+	let findGen = 0;
+	// Occurrence sur une autre feuille : on y va, puis elle se sélectionne (applyData).
+	let findGo: (FoundCell & { count: string }) | null = null;
 	// Barre ouverte ou fermée : redessiner le surlignage des occurrences.
 	$effect(() => {
 		void finder;
@@ -10207,6 +10235,11 @@
 	/** Zone de recherche : la sélection si elle compte plusieurs cellules, sinon null (toute la feuille). */
 	const searchZone = () => findZone(selection(), singleSelection());
 
+	/** Clé des occurrences cherchées : texte, zone (feuille) ou classeur, options. */
+	function matchesKey(text: string, zone: Zone | null, o: FindOpts): string {
+		return findKey(text, o.book ? null : zone, o.book ? -1 : (data.sheet ?? 0)) + optsKey(o);
+	}
+
 	/** Suit la sélection : zone affichée dans la barre, cellule trouvée oubliée hors zone. */
 	function syncFinderZone() {
 		if (!finder) return;
@@ -10221,10 +10254,24 @@
 
 	/** Ouvre la barre de recherche (replace : avec le champ Remplacer par). */
 	export function openFinder(replace: boolean) {
-		if (!source.find) return;
+		if (!source.find && !source.search) return;
 		// Rendue tout de suite : le focus y est avant la frappe suivante.
 		flushSync(() => {
-			finder = { replace, text: finder?.text ?? '', by: finder?.by ?? '', count: '', info: '', zone: searchZone(), at: null };
+			finder = {
+				replace,
+				text: finder?.text ?? '',
+				by: finder?.by ?? '',
+				count: '',
+				info: '',
+				zone: searchZone(),
+				at: null,
+				opts: finder?.opts ?? findOpts,
+				more: finder?.more ?? findMore,
+				list: finder?.list ?? null,
+				total: finder?.total ?? 0,
+				busy: false,
+				current: -1
+			};
 		});
 		findInput?.select();
 		// Ouverte depuis un menu qui reprend le focus en se fermant : y revenir.
@@ -10235,48 +10282,75 @@
 
 	/** Ferme la barre et rend la main à la grille. */
 	function closeFinder() {
+		if (finder) {
+			findOpts = finder.opts;
+			findMore = finder.more;
+		}
 		finder = null;
+		findGen++;
 		wrap.focus();
 	}
 
 	/** Affiche ou masque la ligne Remplacer par (le focus y va à l'ouverture). */
 	function toggleReplace(open = !finder?.replace) {
-		if (!finder || !source.replace) return;
+		if (!finder || (!source.replace && !source.replaceAll)) return;
 		const f = finder;
 		flushSync(() => (f.replace = open));
 		if (open) replaceInput?.select();
 		else findInput?.focus();
 	}
 
-	/** Occurrences du texte cherché dans la zone (relues si le texte ou la zone a changé). */
-	async function findAll(zone: Zone | null) {
-		if (!finder || !source.find) return;
-		const k = findKey(finder.text, zone, data.sheet ?? 0);
-		if (k !== matchKey) {
-			matches = await source.find(finder.text, zone);
-			matchKey = k;
-		}
+	/** Texte ou options changés : compteur, bilan et liste oubliés. */
+	function findChanged() {
+		if (!finder) return;
+		finder.count = '';
+		finder.info = '';
+		finder.list = null;
+		finder.current = -1;
 	}
 
-	async function findNext(back = false) {
-		if (!finder || !source.find || !finder.text) return;
-		const zone = searchZone();
-		finder.zone = zone;
-		await findAll(zone);
+	/**
+	 * Occurrences du texte cherché (relues si le texte, la zone, la feuille
+	 * ou les options ont changé) ; faux si une recherche plus récente l'a
+	 * remplacée. onPart : la liste au fur et à mesure (classeur).
+	 */
+	async function findAll(zone: Zone | null, onPart?: (hits: FoundCell[], total: number) => void): Promise<boolean> {
+		if (!finder) return false;
+		const o = finder.opts;
+		const k = matchesKey(finder.text, zone, o);
+		if (k === matchKey) return true;
+		const sheet = data.sheet ?? 0;
+		const gen = ++findGen;
+		if (source.search) {
+			const r = await searchAll(source.search, searchQuery(finder.text, sheet, zone, o), 5000, onPart, () => gen !== findGen);
+			if (!r) return false;
+			matches = r.hits;
+			matchOrder = r.order;
+			matchTotal = r.total;
+		} else if (source.find) {
+			const ms = await source.find(finder.text, zone);
+			if (gen !== findGen) return false;
+			matches = ms.map((m) => ({ ...m, sheet, k: 0, name: sheetName, text: '' }));
+			matchOrder = [sheet];
+			matchTotal = matches.length;
+		}
+		matchKey = k;
+		return true;
+	}
+
+	/** Va à l'occurrence i (sur une autre feuille : elle s'y sélectionne une fois la feuille affichée). */
+	function goFound(i: number, zone: Zone | null) {
 		if (!finder) return;
-		finder.info = '';
-		if (matches.length === 0) {
-			finder.at = null;
-			finder.count = tr('grid.find.none');
-			schedule();
+		const m = matches[i];
+		finder.current = i;
+		finder.count = hitCount(i, matchTotal);
+		if (m.sheet !== (data.sheet ?? 0)) {
+			if (!onsheet) return;
+			findGo = { ...m, count: finder.count };
+			onsheet(m.sheet);
 			return;
 		}
-		// Dans la sélection : à partir de la dernière cellule trouvée (la
-		// sélection ne bouge pas) ; sur la feuille : de la cellule active.
-		const from = zone ? (finder.at && inZone(finder.at, zone) ? finder.at : null) : active;
-		const k = nextHit(matches, from, back);
-		const m = matches[k];
-		if (zone) {
+		if (zone && !finder.opts.book) {
 			finder.at = { row: m.row, col: m.col };
 			ensureVisible(m.row, m.col);
 			schedule();
@@ -10284,21 +10358,81 @@
 			moveTo(m.row, m.col);
 			finder.at = { row: active.row, col: active.col };
 		}
-		finder.count = hitCount(k, matches.length);
+	}
+
+	/** Arrivé sur la feuille d'une occurrence (applyData) : elle se sélectionne. */
+	function findArrived(sheet: number) {
+		const g = findGo;
+		if (!g || g.sheet !== sheet) return;
+		findGo = null;
+		moveTo(g.row, g.col);
+		if (finder) {
+			finder.at = { row: active.row, col: active.col };
+			finder.count = g.count;
+		}
+	}
+
+	async function findNext(back = false) {
+		if (!finder || !finder.text) return;
+		const zone = searchZone();
+		finder.zone = zone;
+		if (!(await findAll(zone)) || !finder) return;
+		finder.info = '';
+		if (matches.length === 0) {
+			finder.at = null;
+			finder.current = -1;
+			finder.count = tr('grid.find.none');
+			schedule();
+			return;
+		}
+		// Dans la sélection : à partir de la dernière cellule trouvée (la
+		// sélection ne bouge pas) ; sur la feuille ou le classeur : de la
+		// cellule active.
+		const k = matchOrder.indexOf(data.sheet ?? 0);
+		const inSel = zone && !finder.opts.book;
+		const at = inSel ? (finder.at && inZone(finder.at, zone) ? finder.at : null) : active;
+		const i = nextFound(matches, at && k >= 0 ? { k, row: at.row, col: at.col } : null, back, finder.opts.byCols);
+		goFound(i, zone);
+	}
+
+	/** Rechercher tout : la liste des cellules trouvées, feuille après feuille. */
+	async function listAll() {
+		if (!finder || !finder.text) return;
+		const f = finder;
+		const zone = searchZone();
+		f.zone = zone;
+		f.info = '';
+		matchKey = '';
+		f.busy = true;
+		f.list = [];
+		const done = await findAll(zone, (hits, total) => {
+			f.list = [...hits];
+			f.total = total;
+		});
+		if (!done || finder !== f) return;
+		f.busy = false;
+		f.list = matches;
+		f.total = matchTotal;
+		f.current = -1;
+		f.count = matches.length ? '' : tr('grid.find.none');
 	}
 
 	/** Remplace la cellule trouvée (si elle contient le texte), puis passe à la suivante (Excel). */
 	async function replaceOne() {
-		if (!finder || !source.replace || !finder.text) return;
+		if (!finder || !finder.text || (!source.replace && !source.replaceAll)) return;
 		const zone = searchZone();
-		await findAll(zone);
-		if (!finder) return;
-		const at = zone ? finder.at : active;
-		if (at && inZone(at, zone) && matches.some((m) => m.row === at.row && m.col === at.col)) {
+		if (!(await findAll(zone)) || !finder) return;
+		const sheet = data.sheet ?? 0;
+		const at = zone && !finder.opts.book ? finder.at : active;
+		if (at && inZone(at, finder.opts.book ? null : zone) && matches.some((m) => m.sheet === sheet && m.row === at.row && m.col === at.col)) {
+			const cell = { r0: at.row, c0: at.col, r1: at.row, c1: at.col };
 			try {
-				await source.replace(finder.text, finder.by, { r0: at.row, c0: at.col, r1: at.row, c1: at.col });
+				if (source.replaceAll) {
+					const r = await source.replaceAll(searchQuery(finder.text, sheet, cell, { ...replaceLook(finder.opts), book: false }), finder.by);
+					if (finder && r.skipped) finder.info = replaceSummary(r, 'sheet');
+				} else await source.replace!(finder.text, finder.by, cell);
 			} catch (e) {
-				finder.info = errorText(e);
+				if (finder) finder.info = errorText(e);
 				return;
 			}
 			matchKey = '';
@@ -10307,16 +10441,28 @@
 	}
 
 	async function replaceAll() {
-		if (!finder || !source.replace || !finder.text) return;
-		const { text, by } = finder;
+		if (!finder || !finder.text || (!source.replace && !source.replaceAll)) return;
+		const f = finder;
+		const { text, by, opts } = f;
 		const zone = searchZone();
 		try {
-			const n = await source.replace(text, by, zone);
-			if (!finder) return;
-			finder.info = replacedLabel(n, !!zone);
-			finder.count = '';
-			finder.at = null;
+			if (source.replaceAll) {
+				const r = await source.replaceAll(searchQuery(text, data.sheet ?? 0, zone, replaceLook(opts)), by);
+				if (finder !== f) return;
+				f.info = replaceSummary(r, opts.book ? 'book' : zone ? 'selection' : 'sheet');
+			} else {
+				const n = await source.replace!(text, by, zone);
+				if (finder !== f) return;
+				f.info = replacedLabel(n, !!zone);
+			}
+			f.count = '';
+			f.at = null;
 			matchKey = '';
+			if (f.list) {
+				const info = f.info;
+				await listAll();
+				f.info = info;
+			}
 		} catch (e) {
 			if (finder) finder.info = errorText(e);
 		}
@@ -10326,8 +10472,8 @@
 	function onFinderKey(e: KeyboardEvent) {
 		e.stopPropagation();
 		const a = finderAction(e);
-		// Entrée sur un bouton : le bouton agit, pas la recherche.
-		if (!a || (e.key === 'Enter' && e.target instanceof HTMLButtonElement)) return;
+		// Entrée sur un bouton, une liste ou une case : il agit, pas la recherche.
+		if (!a || (e.key === 'Enter' && (e.target instanceof HTMLButtonElement || e.target instanceof HTMLSelectElement))) return;
 		e.preventDefault();
 		if (a === 'close') closeFinder();
 		else if (a === 'next' || a === 'prev') findNext(a === 'prev');
@@ -12031,9 +12177,9 @@
 			<!-- Entrée, F3, Échap, Ctrl+F et Ctrl+H dans toute la barre (onFinderKey) ;
 			     les boutons d'icône gardent le focus dans le champ (mousedown). -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-			<div class="finder" role="search" aria-label={tr('grid.find.aria')} onkeydown={onFinderKey}>
+			<div class="finder" class:wide={!!finder.list || finder.more} role="search" aria-label={tr('grid.find.aria')} onkeydown={onFinderKey}>
 				<div class="fd-row">
-					{#if source.replace}
+					{#if source.replace || source.replaceAll}
 						<button
 							class="fd-icon fd-toggle"
 							class:open={finder.replace}
@@ -12050,8 +12196,9 @@
 						<input
 							bind:this={findInput}
 							bind:value={finder.text}
-							oninput={() => finder && ((finder.count = ''), (finder.info = ''))}
+							oninput={findChanged}
 							placeholder={tr('grid.find.placeholder')}
+							title={source.search ? tr('grid.find.placeholder.tooltip') : undefined}
 							aria-label={tr('grid.find.placeholder')}
 							aria-describedby="fd-count"
 							spellcheck="false"
@@ -12076,26 +12223,57 @@
 						</div>
 					</div>
 				{/if}
-				<div class="fd-row fd-foot" class:fd-indent={!!source.replace}>
-					<span
-						class="fd-chip"
-						class:on={!!finder.zone}
-						title={finder.zone
-							? tr('grid.find.zone.selection.tooltip')
-							: tr('grid.find.zone.sheet.tooltip')}
-						aria-label={finder.zone ? tr('grid.find.zone.selection.aria', { range: zoneLabel(finder.zone) }) : tr('grid.find.zone.sheet.aria')}
-					>
-						<Icon name={finder.zone ? 'print-area' : 'sheet'} size={13} />
-						<span>{tr('grid.find.zone', { zone: finder.zone ? zoneLabel(finder.zone) : tr('grid.find.zone.sheet') })}</span>
-					</span>
+				<div class="fd-row fd-foot" class:fd-indent={!!(source.replace || source.replaceAll)}>
+					{#if finder.opts.book}
+						<span class="fd-chip on" aria-label={tr('grid.find.zone', { zone: tr('grid.find.zone.book') })}>
+							<Icon name="sheet" size={13} />
+							<span>{tr('grid.find.zone', { zone: tr('grid.find.zone.book') })}</span>
+						</span>
+					{:else}
+						<span
+							class="fd-chip"
+							class:on={!!finder.zone}
+							title={finder.zone
+								? tr('grid.find.zone.selection.tooltip')
+								: tr('grid.find.zone.sheet.tooltip')}
+							aria-label={finder.zone ? tr('grid.find.zone.selection.aria', { range: zoneLabel(finder.zone) }) : tr('grid.find.zone.sheet.aria')}
+						>
+							<Icon name={finder.zone ? 'print-area' : 'sheet'} size={13} />
+							<span>{tr('grid.find.zone', { zone: finder.zone ? zoneLabel(finder.zone) : tr('grid.find.zone.sheet') })}</span>
+						</span>
+					{/if}
+					{#if source.search}
+						<button class="fd-link" class:open={finder.more} onclick={() => finder && (finder.more = !finder.more)} aria-expanded={finder.more} title={tr('grid.find.options.tooltip')}
+							>{tr('grid.find.options')} {finder.more ? '<<' : '>>'}</button
+						>
+					{/if}
+					<span class="fd-spacer"></span>
+					{#if source.search && !finder.replace}
+						<button class="fd-btn" onclick={listAll} disabled={!finder.text} title={tr('grid.find.findAll.tooltip')}>{tr('grid.find.findAll')}</button>
+					{/if}
 					{#if finder.replace}
-						<span class="fd-spacer"></span>
 						<button class="fd-btn" onclick={replaceOne} disabled={!finder.text} title={tr('grid.find.replaceOne.tooltip')}>{tr('grid.find.replaceOne')}</button>
 						<button class="fd-btn primary" onclick={replaceAll} disabled={!finder.text} title={tr('grid.find.replaceAll.tooltip')}>{tr('grid.find.replaceAll')}</button>
 					{/if}
 				</div>
+				{#if source.search}
+					<FindMore
+						bind:opts={finder.opts}
+						more={finder.more}
+						replace={finder.replace}
+						hits={finder.list}
+						total={finder.total}
+						busy={finder.busy}
+						current={finder.current}
+						onchange={findChanged}
+						onpick={(i) => {
+							if (finder) finder.current = i;
+							goFound(i, searchZone());
+						}}
+					/>
+				{/if}
 				{#if finder.info}
-					<div class="fd-info" class:fd-indent={!!source.replace} role="status">{finder.info}</div>
+					<div class="fd-info" class:fd-indent={!!(source.replace || source.replaceAll)} role="status">{finder.info}</div>
 				{/if}
 			</div>
 		{/if}
@@ -13744,6 +13922,30 @@
 	.fd-btn:disabled {
 		opacity: 0.55;
 		cursor: default;
+	}
+	.finder.wide {
+		width: 460px;
+	}
+	/* « Options >> » : un lien discret, comme dans le dialogue d'un tableur. */
+	.fd-link {
+		flex: none;
+		font: inherit;
+		font-size: 11px;
+		height: 20px;
+		padding: 0 4px;
+		border: none;
+		border-radius: 3px;
+		background: none;
+		color: #217346;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.fd-link:hover {
+		background: #eef6f0;
+	}
+	.fd-link:focus-visible {
+		outline: 2px solid #217346;
+		outline-offset: 1px;
 	}
 	.fd-info {
 		color: #4b5563;

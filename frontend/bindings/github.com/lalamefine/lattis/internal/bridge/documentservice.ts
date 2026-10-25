@@ -1821,6 +1821,15 @@ export function Replace(sheet: number, text: string, by: string, $in: canvas$0.R
 }
 
 /**
+ * ReplaceAll remplace avec les mêmes options (la feuille, la sélection, une
+ * cellule ou tout le classeur), en une étape d'annulation ; les cellules
+ * protégées ou en lecture seule sont laissées et comptées.
+ */
+export function ReplaceAll(q: canvas$0.SearchQuery, by: string): $CancellablePromise<canvas$0.ReplaceResult> {
+    return $Call.ByID(3763581137, q, by);
+}
+
+/**
  * ReportError journalise une erreur de l'interface : où (composant, action),
  * message, pile et dernières actions (une par ligne). Rend le chemin du
  * journal ("" s'il n'a pas pu être écrit).
@@ -1967,6 +1976,15 @@ export function SaveScript(id: number, name: string, source: string): $Cancellab
  */
 export function Scripts(): $CancellablePromise<canvas$0.ScriptInfo[] | null> {
     return $Call.ByID(2140143930);
+}
+
+/**
+ * Search cherche avec les options du dialogue Rechercher (casse, cellule
+ * entière, jokers, valeurs, formules ou notes, par lignes ou par colonnes)
+ * dans une feuille ; dans tout le classeur, une feuille par appel (Next).
+ */
+export function Search(q: canvas$0.SearchQuery): $CancellablePromise<canvas$0.SearchResult> {
+    return $Call.ByID(1890478510, q);
 }
 
 /**

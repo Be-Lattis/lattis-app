@@ -636,11 +636,13 @@
 		"count": "第 {k} 个，共 {total} 个",
 		"replaced": {
 			"all": "{n, plural, other {已替换 # 个单元格}}（按 Ctrl+Z 撤消）",
-			"selection": "在所选内容中{n, plural, other {已替换 # 个单元格}}（按 Ctrl+Z 撤消）"
+			"selection": "在所选内容中{n, plural, other {已替换 # 个单元格}}（按 Ctrl+Z 撤消）",
+			"book": "{n, plural, other {已在工作簿中替换 # 个单元格}}（按 Ctrl+Z 撤消）"
 		},
 		"notFound": {
 			"all": "未找到单元格",
-			"selection": "在所选内容中未找到单元格"
+			"selection": "在所选内容中未找到单元格",
+			"book": "工作簿中未找到单元格"
 		},
 		"none": "无结果",
 		"aria": "查找和替换",
@@ -666,7 +668,34 @@
 		"replaceOne": "替换",
 		"replaceOne.tooltip": "替换找到的单元格，然后移至下一个",
 		"replaceAll": "全部替换",
-		"replaceAll.tooltip": "替换所有匹配项（按 Ctrl+Z 撤消）"
+		"replaceAll.tooltip": "替换所有匹配项（按 Ctrl+Z 撤消）",
+		"options": "选项",
+		"options.tooltip": "查找选项",
+		"in": "范围",
+		"in.sheet": "工作表",
+		"in.book": "工作簿",
+		"order": "搜索",
+		"order.rows": "按行",
+		"order.cols": "按列",
+		"look": "查找范围",
+		"look.formulas": "公式",
+		"look.values": "值",
+		"look.notes": "注释",
+		"look.values.replace": "替换作用于公式",
+		"case": "区分大小写",
+		"whole": "单元格完全匹配",
+		"findAll": "查找全部",
+		"findAll.tooltip": "列出找到的所有单元格",
+		"list.aria": "找到的单元格",
+		"list.sheet": "工作表",
+		"list.table": "表格",
+		"list.cell": "单元格",
+		"list.value": "值",
+		"list.count": "{n, plural, other {找到 # 个单元格}}",
+		"list.capped": "{shown, plural, other {显示 # 个}}",
+		"skipped": "{n, plural, other {跳过 # 个单元格}}",
+		"zone.book": "工作簿",
+		"placeholder.tooltip": "?：一个字符，*：任意多个（~? 和 ~* 查找它们本身）"
 	},
 	"sort": {
 		"number": {

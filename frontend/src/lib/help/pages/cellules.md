@@ -65,6 +65,10 @@ Révision › Nouvelle note (`Maj+F2`) attache une note à la cellule active : u
 
 Insertion › Lien (`Ctrl+K`) fait de la cellule un lien vers une page web, une adresse e-mail ou un endroit du classeur (feuille et cellule, tableau, cellule nommée). Une adresse web ou e-mail tapée devient un lien d'elle-même (`Ctrl+Z` le retire). Un clic sur le texte suit le lien, un clic maintenu sélectionne la cellule. La fonction `LIEN_HYPERTEXTE` fait de même dans une formule.
 
+## Rechercher et remplacer
+
+Accueil › Rechercher (`Ctrl+F`) ou Remplacer (`Ctrl+H`). **Options >>** cherche dans la feuille ou tout le classeur, par lignes ou par colonnes, dans les formules, les valeurs ou les notes, en respectant la casse ou la cellule entière. `?` vaut un caractère, `*` plusieurs (`~?` et `~*` pour les chercher). **Rechercher tout** liste les cellules trouvées ; un clic y va. **Tout remplacer** s'annule d'un seul `Ctrl+Z` ; les cellules protégées ou en lecture seule sont laissées et comptées.
+
 ## Figer les volets
 
 Affichage › Figer les volets garde des lignes et des colonnes à l'écran pendant le défilement :

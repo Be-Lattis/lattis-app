@@ -65,6 +65,10 @@ Sonst wird nichts gespeichert: Das Entfernen der Überprüfung (oder `Strg+Z`) o
 
 Einfügen › Link (`Strg+K`) macht die Zelle zu einem Link auf eine Webseite, eine E-Mail-Adresse oder eine Stelle der Mappe (Blatt und Zelle, Tabelle, benannte Zelle). Eine eingegebene Web- oder E-Mail-Adresse wird von selbst zum Link (`Strg+Z` entfernt ihn). Ein Klick auf den Text folgt dem Link, gedrückt halten wählt die Zelle aus. Die Funktion `HYPERLINK` tut dasselbe in einer Formel.
 
+## Suchen und Ersetzen {#rechercher-et-remplacer}
+
+Start › Suchen (`Strg+F`) oder Ersetzen (`Strg+H`). **Optionen >>** sucht im Blatt oder in der ganzen Arbeitsmappe, zeilen- oder spaltenweise, in Formeln, Werten oder Notizen, mit Groß-/Kleinschreibung oder ganzer Zelle. `?` steht für ein Zeichen, `*` für beliebig viele (`~?` und `~*`, um sie zu suchen). **Alle suchen** listet die gefundenen Zellen; ein Klick springt dorthin. **Alle ersetzen** wird mit einem einzigen `Strg+Z` rückgängig gemacht; geschützte oder schreibgeschützte Zellen werden übersprungen und gezählt.
+
 ## Fenster fixieren {#figer-les-volets}
 
 Ansicht › Fenster fixieren hält Zeilen und Spalten beim Scrollen auf dem Bildschirm:

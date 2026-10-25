@@ -761,6 +761,21 @@ export interface FilterValue {
 }
 
 /**
+ * Found est une cellule trouvée.
+ */
+export interface Found {
+    "sheet": number;
+    "row": number;
+    "col": number;
+    "table"?: string;
+
+    /**
+     * Text : ce qui a été trouvé (valeur, formule ou note), coupé.
+     */
+    "text": string;
+}
+
+/**
  * HeaderFooter est un en-tête ou un pied de page en trois parties. Codes :
  * &[Page], &[Pages], &[Date], &[Heure], &[Fichier], &[Chemin], &[Onglet]
  * (ou &[Feuille]).
@@ -1797,6 +1812,20 @@ export interface Rect {
 }
 
 /**
+ * ReplaceResult est le bilan de ReplaceAll.
+ */
+export interface ReplaceResult {
+    "replaced": number;
+
+    /**
+     * Skipped : cellules trouvées laissées (protection, lecture seule,
+     * refus) ; Reason : le premier motif.
+     */
+    "skipped": number;
+    "reason"?: string;
+}
+
+/**
  * ColWidth est la largeur choisie pour une colonne de la feuille.
  * RowHeight est la hauteur choisie pour une ligne de la feuille.
  */
@@ -1891,6 +1920,54 @@ export interface ScriptInfo {
     "id": number;
     "name": string;
     "source": string;
+}
+
+/**
+ * SearchQuery décrit une recherche.
+ */
+export interface SearchQuery {
+    "text": string;
+
+    /**
+     * Sheet : la feuille cherchée (0 : la première du classeur, avec Book).
+     */
+    "sheet": number;
+
+    /**
+     * Book : tout le classeur (feuilles affichées, dans l'ordre des
+     * onglets) ; Search ne cherche qu'une feuille à la fois et donne la
+     * suivante (Next), ReplaceAll les fait toutes.
+     */
+    "book": boolean;
+
+    /**
+     * In : la sélection (feuille seulement) ; nil : toute la feuille.
+     */
+    "in"?: Rect | null;
+    "byCols": boolean;
+    "look": string;
+    "case": boolean;
+    "whole": boolean;
+}
+
+/**
+ * SearchResult est le résultat d'une recherche dans une feuille.
+ */
+export interface SearchResult {
+    "sheet": number;
+    "name": string;
+    "found": Found[] | null;
+
+    /**
+     * Total : toutes les cellules trouvées dans la feuille (Found s'arrête à
+     * MaxMatches).
+     */
+    "total": number;
+
+    /**
+     * Next : la feuille à chercher ensuite (Book), 0 après la dernière.
+     */
+    "next": number;
 }
 
 /**

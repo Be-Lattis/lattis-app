@@ -636,11 +636,13 @@
 		"count": "{k} sur {total}",
 		"replaced": {
 			"all": "{n, plural, one {# cellule remplacée} other {# cellules remplacées}} (Ctrl+Z pour annuler)",
-			"selection": "{n, plural, one {# cellule remplacée} other {# cellules remplacées}} dans la sélection (Ctrl+Z pour annuler)"
+			"selection": "{n, plural, one {# cellule remplacée} other {# cellules remplacées}} dans la sélection (Ctrl+Z pour annuler)",
+			"book": "{n, plural, one {# cellule remplacée} other {# cellules remplacées}} dans le classeur (Ctrl+Z pour annuler)"
 		},
 		"notFound": {
 			"all": "Aucune cellule trouvée",
-			"selection": "Aucune cellule trouvée dans la sélection"
+			"selection": "Aucune cellule trouvée dans la sélection",
+			"book": "Aucune cellule trouvée dans le classeur"
 		},
 		"none": "Aucun résultat",
 		"aria": "Rechercher et remplacer",
@@ -666,7 +668,34 @@
 		"replaceOne": "Remplacer",
 		"replaceOne.tooltip": "Remplace la cellule trouvée, puis passe à la suivante",
 		"replaceAll": "Tout remplacer",
-		"replaceAll.tooltip": "Remplace toutes les occurrences (Ctrl+Z pour annuler)"
+		"replaceAll.tooltip": "Remplace toutes les occurrences (Ctrl+Z pour annuler)",
+		"options": "Options",
+		"options.tooltip": "Options de recherche",
+		"in": "Dans",
+		"in.sheet": "Feuille",
+		"in.book": "Classeur",
+		"order": "Rechercher",
+		"order.rows": "Par lignes",
+		"order.cols": "Par colonnes",
+		"look": "Regarder dans",
+		"look.formulas": "Formules",
+		"look.values": "Valeurs",
+		"look.notes": "Notes",
+		"look.values.replace": "Remplacer agit sur les formules",
+		"case": "Respecter la casse",
+		"whole": "Cellule entière",
+		"findAll": "Rechercher tout",
+		"findAll.tooltip": "Liste toutes les cellules trouvées",
+		"list.aria": "Cellules trouvées",
+		"list.sheet": "Feuille",
+		"list.table": "Tableau",
+		"list.cell": "Cellule",
+		"list.value": "Valeur",
+		"list.count": "{n, plural, one {# cellule trouvée} other {# cellules trouvées}}",
+		"list.capped": "{shown, plural, one {# affichée} other {# affichées}}",
+		"skipped": "{n, plural, one {# cellule laissée} other {# cellules laissées}}",
+		"zone.book": "classeur",
+		"placeholder.tooltip": "? : un caractère, * : plusieurs (~? et ~* pour les chercher)"
 	},
 	"sort": {
 		"number": {

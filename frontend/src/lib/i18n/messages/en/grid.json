@@ -636,11 +636,13 @@
 		"count": "{k} of {total}",
 		"replaced": {
 			"all": "{n, plural, one {# cell replaced} other {# cells replaced}} (Ctrl+Z to undo)",
-			"selection": "{n, plural, one {# cell replaced} other {# cells replaced}} in the selection (Ctrl+Z to undo)"
+			"selection": "{n, plural, one {# cell replaced} other {# cells replaced}} in the selection (Ctrl+Z to undo)",
+			"book": "{n, plural, one {# cell replaced} other {# cells replaced}} in the workbook (Ctrl+Z to undo)"
 		},
 		"notFound": {
 			"all": "No cells found",
-			"selection": "No cells found in the selection"
+			"selection": "No cells found in the selection",
+			"book": "No cells found in the workbook"
 		},
 		"none": "No results",
 		"aria": "Find and replace",
@@ -666,7 +668,34 @@
 		"replaceOne": "Replace",
 		"replaceOne.tooltip": "Replaces the found cell, then moves to the next one",
 		"replaceAll": "Replace all",
-		"replaceAll.tooltip": "Replaces all occurrences (Ctrl+Z to undo)"
+		"replaceAll.tooltip": "Replaces all occurrences (Ctrl+Z to undo)",
+		"options": "Options",
+		"options.tooltip": "Search options",
+		"in": "Within",
+		"in.sheet": "Sheet",
+		"in.book": "Workbook",
+		"order": "Search",
+		"order.rows": "By rows",
+		"order.cols": "By columns",
+		"look": "Look in",
+		"look.formulas": "Formulas",
+		"look.values": "Values",
+		"look.notes": "Notes",
+		"look.values.replace": "Replace works on formulas",
+		"case": "Match case",
+		"whole": "Entire cell",
+		"findAll": "Find all",
+		"findAll.tooltip": "Lists every cell found",
+		"list.aria": "Cells found",
+		"list.sheet": "Sheet",
+		"list.table": "Table",
+		"list.cell": "Cell",
+		"list.value": "Value",
+		"list.count": "{n, plural, one {# cell found} other {# cells found}}",
+		"list.capped": "{shown, plural, one {# shown} other {# shown}}",
+		"skipped": "{n, plural, one {# cell skipped} other {# cells skipped}}",
+		"zone.book": "workbook",
+		"placeholder.tooltip": "?: one character, *: any (~? and ~* to find them)"
 	},
 	"sort": {
 		"number": {

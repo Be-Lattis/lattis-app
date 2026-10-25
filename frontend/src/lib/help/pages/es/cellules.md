@@ -65,6 +65,10 @@ Revisar › Nueva nota (`Mayús+F2`) asocia una nota a la celda activa: una esqu
 
 Insertar › Vínculo (`Ctrl+K`) convierte la celda en un vínculo a una página web, una dirección de correo o un lugar del libro (hoja y celda, tabla, celda con nombre). Una dirección web o de correo escrita se convierte sola en vínculo (`Ctrl+Z` lo quita). Un clic en el texto sigue el vínculo; mantener pulsado selecciona la celda. La función `HIPERVINCULO` hace lo mismo en una fórmula.
 
+## Buscar y reemplazar {#rechercher-et-remplacer}
+
+Inicio › Buscar (`Ctrl+F`) o Reemplazar (`Ctrl+H`). **Opciones >>** busca en la hoja o en todo el libro, por filas o por columnas, en fórmulas, valores o notas, coincidiendo mayúsculas o la celda completa. `?` equivale a un carácter, `*` a varios (`~?` y `~*` para buscarlos). **Buscar todo** lista las celdas encontradas; un clic lleva a ellas. **Reemplazar todo** se deshace con un solo `Ctrl+Z`; las celdas protegidas o de solo lectura se omiten y se cuentan.
+
 ## Inmovilizar paneles {#figer-les-volets}
 
 Vista › Inmovilizar paneles mantiene filas y columnas en pantalla al desplazarse:

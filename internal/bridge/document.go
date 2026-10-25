@@ -1380,6 +1380,32 @@ func (s *DocumentService) Replace(ctx context.Context, sheet int64, text, by str
 	return n, err
 }
 
+// Search cherche avec les options du dialogue Rechercher (casse, cellule
+// entière, jokers, valeurs, formules ou notes, par lignes ou par colonnes)
+// dans une feuille ; dans tout le classeur, une feuille par appel (Next).
+func (s *DocumentService) Search(ctx context.Context, q canvas.SearchQuery) (canvas.SearchResult, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.SearchResult{}, err
+	}
+	return d.Search(ctx, q)
+}
+
+// ReplaceAll remplace avec les mêmes options (la feuille, la sélection, une
+// cellule ou tout le classeur), en une étape d'annulation ; les cellules
+// protégées ou en lecture seule sont laissées et comptées.
+func (s *DocumentService) ReplaceAll(ctx context.Context, q canvas.SearchQuery, by string) (canvas.ReplaceResult, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.ReplaceResult{}, err
+	}
+	res, err := d.ReplaceAll(ctx, q, by)
+	if err == nil && res.Replaced > 0 {
+		s.changed(ctx)
+	}
+	return res, err
+}
+
 // SetRules remplace les règles de mise en forme conditionnelle d'une colonne.
 func (s *DocumentService) SetRules(ctx context.Context, table string, i int, rules []canvas.Rule) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetRules(ctx, table, i, rules) })

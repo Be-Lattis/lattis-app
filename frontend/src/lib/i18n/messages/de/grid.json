@@ -636,11 +636,13 @@
 		"count": "{k} von {total}",
 		"replaced": {
 			"all": "{n, plural, one {# Zelle ersetzt} other {# Zellen ersetzt}} (Strg+Z zum Rückgängigmachen)",
-			"selection": "{n, plural, one {# Zelle} other {# Zellen}} in der Auswahl ersetzt (Strg+Z zum Rückgängigmachen)"
+			"selection": "{n, plural, one {# Zelle} other {# Zellen}} in der Auswahl ersetzt (Strg+Z zum Rückgängigmachen)",
+			"book": "{n, plural, one {# Zelle ersetzt} other {# Zellen ersetzt}} in der Arbeitsmappe (Strg+Z zum Rückgängigmachen)"
 		},
 		"notFound": {
 			"all": "Keine Zellen gefunden",
-			"selection": "Keine Zellen in der Auswahl gefunden"
+			"selection": "Keine Zellen in der Auswahl gefunden",
+			"book": "Keine Zelle in der Arbeitsmappe gefunden"
 		},
 		"none": "Keine Ergebnisse",
 		"aria": "Suchen und Ersetzen",
@@ -666,7 +668,34 @@
 		"replaceOne": "Ersetzen",
 		"replaceOne.tooltip": "Ersetzt die gefundene Zelle und geht dann zur nächsten",
 		"replaceAll": "Alle ersetzen",
-		"replaceAll.tooltip": "Ersetzt alle Vorkommen (Strg+Z zum Rückgängigmachen)"
+		"replaceAll.tooltip": "Ersetzt alle Vorkommen (Strg+Z zum Rückgängigmachen)",
+		"options": "Optionen",
+		"options.tooltip": "Suchoptionen",
+		"in": "Suchen in",
+		"in.sheet": "Blatt",
+		"in.book": "Arbeitsmappe",
+		"order": "Suchen",
+		"order.rows": "Zeilenweise",
+		"order.cols": "Spaltenweise",
+		"look": "Suchen in",
+		"look.formulas": "Formeln",
+		"look.values": "Werte",
+		"look.notes": "Notizen",
+		"look.values.replace": "Ersetzen wirkt auf die Formeln",
+		"case": "Groß-/Kleinschreibung",
+		"whole": "Ganze Zelle",
+		"findAll": "Alle suchen",
+		"findAll.tooltip": "Listet alle gefundenen Zellen auf",
+		"list.aria": "Gefundene Zellen",
+		"list.sheet": "Blatt",
+		"list.table": "Tabelle",
+		"list.cell": "Zelle",
+		"list.value": "Wert",
+		"list.count": "{n, plural, one {# Zelle gefunden} other {# Zellen gefunden}}",
+		"list.capped": "{shown, plural, one {# angezeigt} other {# angezeigt}}",
+		"skipped": "{n, plural, one {# Zelle übersprungen} other {# Zellen übersprungen}}",
+		"zone.book": "Arbeitsmappe",
+		"placeholder.tooltip": "?: ein Zeichen, *: beliebig viele (~? und ~*, um sie zu suchen)"
 	},
 	"sort": {
 		"number": {

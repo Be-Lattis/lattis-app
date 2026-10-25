@@ -65,6 +65,10 @@ Review › New Note (`Shift+F2`) attaches a note to the active cell: a red corne
 
 Insert › Link (`Ctrl+K`) turns the cell into a link to a web page, an e-mail address or a place in the workbook (sheet and cell, table, named cell). A web or e-mail address you type becomes a link by itself (`Ctrl+Z` removes it). A click on the text follows the link; click and hold selects the cell. The `HYPERLINK` function does the same in a formula.
 
+## Find and replace {#rechercher-et-remplacer}
+
+Home › Find (`Ctrl+F`) or Replace (`Ctrl+H`). **Options >>** searches the sheet or the whole workbook, by rows or by columns, in formulas, values or notes, with match case or entire cell. `?` stands for one character, `*` for any (`~?` and `~*` to find them). **Find all** lists the cells found; click one to go there. **Replace all** is undone with a single `Ctrl+Z`; protected or read-only cells are skipped and counted.
+
 ## Freeze panes {#figer-les-volets}
 
 View › Freeze Panes keeps rows and columns on screen while scrolling:

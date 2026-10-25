@@ -83,6 +83,13 @@ func TestMesureOperations(t *testing.T) {
 	mesure("trier par Montant", func() error { return d.SortTable(ctx, "Commandes", 3, true) })
 	mesure("annuler le tri", func() error { _, err := d.bus.Undo(ctx); return err })
 	mesure("rechercher « Client 4999 »", func() error { _, err := d.Find(ctx, sheet, "Client 4999"); return err })
+	for _, q := range []SearchQuery{
+		{Text: "client 4999"}, {Text: "Client 4999", Case: true, Whole: true}, {Text: "lyon", ByCols: true},
+		{Text: "pas là"}, {Text: "é?é"}, {Text: "13,5", Look: LookValues},
+	} {
+		q.Sheet = sheet
+		mesure(fmt.Sprintf("Rechercher tout %+v", q), func() error { _, err := d.Search(ctx, q); return err })
+	}
 	mesure("aperçu des doublons (Client, Ville)", func() error { _, err := d.DuplicatesPreview(ctx, "Commandes", []int{0, 1}); return err })
 	var pivotSheet int64
 	mesure("créer un TCD Pays × Ville, somme", func() error {

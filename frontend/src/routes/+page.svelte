@@ -92,6 +92,7 @@
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
+	import type { SearchResult } from '#lib/grid/findopts.js';
 	import { isReloadKey, shortcutOf } from '#lib/grid/shortcuts.js';
 	import { cycleRegions, modal, modalOpen } from '#lib/ui/focus.js';
 	import { clampZoom } from '#lib/grid/zoom.js';
@@ -1946,6 +1947,12 @@
 			const n = await DocumentService.Replace(sheetId, text, by, zone);
 			await reload();
 			return n;
+		},
+		search: async (q) => (await DocumentService.Search(q)) as SearchResult,
+		replaceAll: async (q, by) => {
+			const r = await DocumentService.ReplaceAll(q, by);
+			if (r.replaced) await reload();
+			return r;
 		}
 	};
 
