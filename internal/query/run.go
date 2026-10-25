@@ -49,10 +49,11 @@ type Preview struct {
 	SQL          string        `json:"sql"` // requête SQLite compilée (pour les curieux)
 }
 
-func labels(q Query) []string {
-	out := []string{"Source (" + SourceLabel(q.Source) + ")"}
+// labels : les noms de la source et des étapes, dans la langue l.
+func labels(l msg.Lang, q Query) []string {
+	out := []string{msg.Format(l, "query.label.source", msg.Args{"source": SourceLabelIn(l, q.Source)})}
 	for _, s := range q.Steps {
-		out = append(out, StepLabel(s))
+		out = append(out, StepLabelIn(l, s))
 	}
 	return out
 }
@@ -73,7 +74,7 @@ func (s *Session) Preview(ctx context.Context, env Env, q Query, upto int, fresh
 	if upto < 0 || upto > len(q.Steps) {
 		upto = len(q.Steps)
 	}
-	pv := Preview{Columns: []Column{}, Rows: [][]string{}, Labels: labels(q), Step: upto, ErrorStep: -2}
+	pv := Preview{Columns: []Column{}, Rows: [][]string{}, Labels: labels(env.lang(), q), Step: upto, ErrorStep: -2}
 	r := &run{s: s, env: env, ctx: ctx, limit: PreviewSourceRows, fresh: fresh}
 	p, err := r.compile(q, upto)
 	if err != nil {
@@ -114,14 +115,14 @@ func (s *Session) Preview(ctx context.Context, env Env, q Query, upto int, fresh
 			return pv
 		}
 	}
-	if err := s.fill(ctx, p, &pv); err != nil && pv.Error == "" {
+	if err := s.fill(ctx, env, p, &pv); err != nil && pv.Error == "" {
 		pv.Error = err.Error()
 	}
 	return pv
 }
 
 // fill remplit les colonnes et les premières lignes de l'aperçu.
-func (s *Session) fill(ctx context.Context, p *pipeline, pv *Preview) error {
+func (s *Session) fill(ctx context.Context, env Env, p *pipeline, pv *Preview) error {
 	rs, err := s.db.QueryContext(ctx, p.with(fmt.Sprintf("SELECT * FROM %s LIMIT %d", p.last, PreviewRows)))
 	if err != nil {
 		return errors.New(sqlMessage(err))
@@ -159,6 +160,11 @@ func (s *Session) fill(ctx context.Context, p *pipeline, pv *Preview) error {
 		out := make([]string, n)
 		for i, v := range row {
 			out[i] = display(castValue(v, cols[i].Type), cols[i].Type)
+			// Nombres, dates et booléens écrits comme dans la grille, dans
+			// la langue de la session (3.5, 10/23/2026, TRUE en anglais).
+			if env.Model != nil && cols[i].Type != grid.Text {
+				out[i] = env.Model.ShowValue(ctx, out[i])
+			}
 		}
 		pv.Rows = append(pv.Rows, out)
 	}

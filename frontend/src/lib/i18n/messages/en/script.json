@@ -165,7 +165,8 @@
 		},
 		"none": "No remembered host.",
 		"host": "Host to allow",
-		"allow": "Allow"
+		"allow": "Allow",
+		"placeholder": "api.example.com"
 	},
 	"ref": {
 		"title": "Lua reference",

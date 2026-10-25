@@ -14,7 +14,6 @@ package query
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/canvas"
@@ -232,8 +231,12 @@ type Column struct {
 	Type grid.Type `json:"type"`
 }
 
-// SourceLabel décrit une source en quelques mots.
-func SourceLabel(s Source) string {
+// SourceLabel décrit une source en quelques mots, en français (messages
+// d'erreur) ; SourceLabelIn dans une langue.
+func SourceLabel(s Source) string { return SourceLabelIn(msg.FR, s) }
+
+// SourceLabelIn décrit une source en quelques mots, dans la langue l.
+func SourceLabelIn(l msg.Lang, s Source) string {
 	base := func(p string) string {
 		if i := strings.LastIndexAny(p, `\/`); i >= 0 {
 			return p[i+1:]
@@ -244,11 +247,11 @@ func SourceLabel(s Source) string {
 	case SourceCSV:
 		return "CSV " + base(s.Path)
 	case SourceXLSX:
-		return fmt.Sprintf("Excel %s › %s (tableau %d)", base(s.Path), s.Sheet, s.Index+1)
+		return msg.Format(l, "query.label.xlsx", msg.Args{"file": base(s.Path), "sheet": s.Sheet, "n": s.Index + 1})
 	case SourceTable:
-		return "Tableau " + s.Table
+		return msg.Format(l, "query.label.table", msg.Args{"table": s.Table})
 	case SourceQuery:
-		return "Requête " + s.Query
+		return msg.Format(l, "query.label.query", msg.Args{"query": s.Query})
 	case SourcePostgres, SourceMySQL, SourceSQLServer, SourceLattis:
 		return KindLabel(s.Kind) + " " + s.Connection
 	case SourceSQLite:
@@ -260,70 +263,79 @@ func SourceLabel(s Source) string {
 	case SourceWeb:
 		return "Web " + hostOf(s.URL)
 	case SourceSQL:
-		return "Requête SQL du classeur"
+		return msg.Format(l, "query.label.sql", nil)
 	case SourceFormula:
-		return "Formule " + s.Formula
+		return msg.Format(l, "query.label.formula", msg.Args{"formula": s.Formula})
 	}
-	return "Source"
+	return msg.Format(l, "query.label.other", nil)
 }
 
 // StepLabel donne le nom d'une étape dans la liste des étapes appliquées,
-// comme Power Query.
-func StepLabel(s Step) string {
+// comme Power Query, en français ; StepLabelIn dans une langue.
+func StepLabel(s Step) string { return StepLabelIn(msg.FR, s) }
+
+// StepLabelIn donne le nom d'une étape dans la langue l. Il se calcule à
+// chaque affichage (rien n'est enregistré) : il suit la langue de
+// l'interface.
+func StepLabelIn(l msg.Lang, s Step) string {
+	say := func(id msg.ID, args msg.Args) string { return msg.Format(l, id, args) }
 	switch s.Op {
 	case OpFilter:
-		return "Lignes filtrées"
+		return say("query.stepLabel.filter", nil)
 	case OpRename:
-		return fmt.Sprintf("Colonne renommée (%s → %s)", s.Column, s.Name)
+		return say("query.stepLabel.rename", msg.Args{"column": s.Column, "name": s.Name})
 	case OpType:
-		return fmt.Sprintf("Type modifié (%s : %s)", s.Column, TypeLabel(s.Type))
+		return say("query.stepLabel.type", msg.Args{"column": s.Column, "type": TypeLabelIn(l, s.Type)})
 	case OpRemove:
-		return "Colonnes supprimées"
+		return say("query.stepLabel.remove", nil)
 	case OpSelect:
-		return "Autres colonnes supprimées"
+		return say("query.stepLabel.select", nil)
 	case OpSplit:
-		return "Colonne fractionnée (" + s.Column + ")"
+		return say("query.stepLabel.split", msg.Args{"column": s.Column})
 	case OpReplace:
-		return "Valeur remplacée (" + s.Column + ")"
+		return say("query.stepLabel.replace", msg.Args{"column": s.Column})
 	case OpTransform:
-		return "Texte transformé (" + s.Column + ")"
+		return say("query.stepLabel.transform", msg.Args{"column": s.Column})
 	case OpAddColumn:
-		return "Personnalisée ajoutée (" + s.Name + ")"
+		return say("query.stepLabel.addColumn", msg.Args{"name": s.Name})
 	case OpIndex:
-		return "Index ajouté"
+		return say("query.stepLabel.index", nil)
 	case OpMerge:
-		return "Requêtes fusionnées"
+		return say("query.stepLabel.merge", nil)
 	case OpAppend:
-		return "Requête ajoutée"
+		return say("query.stepLabel.append", nil)
 	case OpGroup:
-		return "Lignes groupées"
+		return say("query.stepLabel.group", nil)
 	case OpSort:
-		return "Lignes triées"
+		return say("query.stepLabel.sort", nil)
 	case OpDistinct:
-		return "Doublons supprimés"
+		return say("query.stepLabel.distinct", nil)
 	case OpTop:
-		return fmt.Sprintf("Premières lignes conservées (%d)", s.Count)
+		return say("query.stepLabel.top", msg.Args{"n": s.Count})
 	case OpUnpivot:
-		return "Colonnes dépivotées"
+		return say("query.stepLabel.unpivot", nil)
 	case OpPivot:
-		return "Colonne pivotée (" + s.Column + ")"
+		return say("query.stepLabel.pivot", msg.Args{"column": s.Column})
 	}
 	return s.Op
 }
 
-// TypeLabel nomme un type en français.
-func TypeLabel(t grid.Type) string {
+// TypeLabel nomme un type en français ; TypeLabelIn dans une langue.
+func TypeLabel(t grid.Type) string { return TypeLabelIn(msg.FR, t) }
+
+// TypeLabelIn nomme un type dans la langue l.
+func TypeLabelIn(l msg.Lang, t grid.Type) string {
 	switch t {
 	case grid.Integer:
-		return "entier"
+		return msg.Format(l, "query.typeLabel.integer", nil)
 	case grid.Decimal:
-		return "décimal"
+		return msg.Format(l, "query.typeLabel.decimal", nil)
 	case grid.Text:
-		return "texte"
+		return msg.Format(l, "query.typeLabel.text", nil)
 	case grid.Boolean:
-		return "booléen"
+		return msg.Format(l, "query.typeLabel.boolean", nil)
 	case grid.Date:
-		return "date"
+		return msg.Format(l, "query.typeLabel.date", nil)
 	}
-	return "auto"
+	return msg.Format(l, "query.typeLabel.auto", nil)
 }

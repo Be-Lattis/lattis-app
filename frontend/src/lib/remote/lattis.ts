@@ -9,7 +9,19 @@ export const PASSWORD = 'password';
 /** Libellé du bouton d'un fournisseur : « Continuer avec Google », « Continuer avec un mot de passe ». */
 export function providerButton(p: Provider): string {
 	if (p.kind === PASSWORD && (!p.label || p.label === p.id)) return t('remote.lattis.continuePassword');
-	return t('remote.lattis.continueWith', { provider: p.label || p.id });
+	// Le libellé d'origine du serveur (« Compte Lattis », en français) suit la langue.
+	const label = p.kind === PASSWORD && p.label === DEFAULT_ACCOUNT ? t('remote.lattis.defaultAccount') : p.label;
+	return t('remote.lattis.continueWith', { provider: label || p.id });
+}
+
+/** Libellé d'origine du fournisseur mot de passe d'un Serveur Lattis (schéma du serveur). */
+const DEFAULT_ACCOUNT = 'Compte Lattis';
+/** Nom affiché d'origine d'un Serveur Lattis (réglage du serveur jamais changé). */
+const DEFAULT_SERVER = 'Serveur Lattis';
+
+/** Nom affiché d'un serveur : celui d'origine (« Serveur Lattis ») dans la langue de l'interface ; un nom choisi tel quel. */
+export function serverDisplayName(name: string): string {
+	return name.trim() === DEFAULT_SERVER ? t('remote.lattis.defaultServerName') : name;
 }
 
 /** Une rangée de la page de connexion : le bouton d'un fournisseur. */

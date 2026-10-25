@@ -6,6 +6,8 @@ describe('nom de tableau par défaut', () => {
 		expect(isDefaultTableName('Tableau1')).toBe(true);
 		expect(isDefaultTableName('Tableau12')).toBe(true);
 		expect(isDefaultTableName('Feuille3')).toBe(true); // premier tableau d'une feuille ajoutée
+		// Noms par défaut des autres langues (classeur créé en anglais, en allemand…).
+		for (const n of ['Table1', 'Sheet2', 'Tabelle3', 'Tabla1', 'Hoja2', '表1']) expect(isDefaultTableName(n)).toBe(true);
 		expect(isDefaultTableName('Requête2')).toBe(true); // résultat d'une requête
 		expect(isDefaultTableName('tableau1')).toBe(true);
 	});

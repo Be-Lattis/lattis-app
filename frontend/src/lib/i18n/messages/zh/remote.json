@@ -134,7 +134,9 @@
 		"remaining": {
 			"minutes": "{m} 分 {s} 秒",
 			"seconds": "{s} 秒"
-		}
+		},
+		"defaultServerName": "Lattis 服务器",
+		"defaultAccount": "Lattis 账户"
 	},
 	"banner": {
 		"reloading": "正在重新加载…",
@@ -580,7 +582,13 @@
 		"saving": "正在保存…",
 		"saveDraft": "保存草稿",
 		"save": "保存",
-		"open": "开放表单"
+		"open": "开放表单",
+		"defaults": {
+			"submit": "提交",
+			"thanks": "谢谢！",
+			"closed": "此表单已关闭。",
+			"position": "位置"
+		}
 	},
 	"source": {
 		"mode": {

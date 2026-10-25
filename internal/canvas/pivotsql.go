@@ -70,7 +70,8 @@ func (t *tx) pivotByName(name string) (PivotConfig, bool, error) {
 	return PivotConfig{}, false, nil
 }
 
-// pivotName choisit un nom libre « TCDn » (ni tableau, ni autre TCD).
+// pivotName choisit un nom libre « TCDn » (ni tableau, ni autre TCD), dans
+// la langue de la session (« PivotTable1 »…, voir nameLang).
 func (t *tx) pivotName() (string, error) {
 	ps, err := t.allPivots()
 	if err != nil {
@@ -80,8 +81,9 @@ func (t *tx) pivotName() (string, error) {
 	for _, p := range ps {
 		taken[strings.ToLower(p.Cfg.Name)] = true
 	}
+	prefix := t.defaultName("name.pivot")
 	for n := 1; ; n++ {
-		name := fmt.Sprintf("TCD%d", n)
+		name := fmt.Sprintf("%s%d", prefix, n)
 		var k int
 		if err := t.row(`SELECT count(*) FROM _lattis_tables WHERE name = ? COLLATE NOCASE`, name).Scan(&k); err != nil {
 			return "", err

@@ -134,7 +134,9 @@
 		"remaining": {
 			"minutes": "{m} min {s} s",
 			"seconds": "{s} s"
-		}
+		},
+		"defaultServerName": "Serveur Lattis",
+		"defaultAccount": "Compte Lattis"
 	},
 	"banner": {
 		"reloading": "Rechargement…",
@@ -580,7 +582,13 @@
 		"saving": "Enregistrement…",
 		"saveDraft": "Enregistrer le brouillon",
 		"save": "Enregistrer",
-		"open": "Ouvrir le formulaire"
+		"open": "Ouvrir le formulaire",
+		"defaults": {
+			"submit": "Envoyer",
+			"thanks": "Merci !",
+			"closed": "Ce formulaire est fermé.",
+			"position": "Position"
+		}
 	},
 	"source": {
 		"mode": {

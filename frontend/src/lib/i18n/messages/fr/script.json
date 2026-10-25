@@ -165,7 +165,8 @@
 		},
 		"none": "Aucun hôte mémorisé.",
 		"host": "Hôte à autoriser",
-		"allow": "Autoriser"
+		"allow": "Autoriser",
+		"placeholder": "api.exemple.fr"
 	},
 	"ref": {
 		"title": "Référence Lua",

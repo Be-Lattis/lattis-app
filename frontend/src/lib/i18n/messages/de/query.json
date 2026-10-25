@@ -310,7 +310,8 @@
 			"headers": "Header (einer pro Zeile, „Name: Wert“)",
 			"auth": "Authentifizierung",
 			"public": "Keine (öffentliche API)",
-			"help": "Header werden in der Arbeitsmappe gespeichert: Übergeben Sie ein Token über eine Web-Verbindung."
+			"help": "Header werden in der Arbeitsmappe gespeichert: Übergeben Sie ein Token über eine Web-Verbindung.",
+			"headersPlaceholder": "Accept-Language: de"
 		},
 		"tables": "Tabellen und Sichten",
 		"search": "Suchen",
@@ -320,7 +321,9 @@
 			"dbHelp": "Filtern Sie möglichst hier: Diese Abfrage wird vom Server ausgeführt.",
 			"workbook": "SQL-Abfrage auf die Arbeitsmappe (schreibgeschützt)",
 			"sheet": "Adressen Cell[A1] ohne Blatt werden auf „{sheet}“ gelesen.",
-			"keepSystem": "Technische Spalten einer Tabelle des Lattis-Servers (lattis_…) behalten statt „Aktualisiert von“ und „Aktualisiert am“"
+			"keepSystem": "Technische Spalten einer Tabelle des Lattis-Servers (lattis_…) behalten statt „Aktualisiert von“ und „Aktualisiert am“",
+			"placeholder": "SELECT * FROM umsatz WHERE jahr = 2026",
+			"workbookPlaceholder": "SELECT * FROM Umsatz WHERE Jahr = 2026"
 		},
 		"formula": {
 			"label": "Formel (dynamische Tabelle)",

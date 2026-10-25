@@ -64,3 +64,31 @@ func TestScores(t *testing.T) {
 		t.Errorf("le plus récent : %d", Latest(s))
 	}
 }
+
+// Les noms d'onglets se reconnaissent dans toutes les langues ; ce que
+// Lattis écrit (nom de la colonne, noms des mois) suit la langue de
+// l'interface (Localized).
+func TestLocalized(t *testing.T) {
+	for _, names := range [][]string{{"January", "February", "March"}, {"Januar", "Februar", "März"}, {"Enero", "Febrero", "Marzo"}, {"Janvier", "Février", "Mars"}} {
+		s := Recognize(names)
+		if s.Kind != Month || !slices.Equal(s.Values, []string{"Janvier", "Février", "Mars"}) {
+			t.Errorf("%v : %s %v", names, s.Kind, s.Values)
+		}
+		en := Localized(s, "en")
+		if en.Column != "Month" || !slices.Equal(en.Values, []string{"January", "February", "March"}) || !slices.Equal(en.Labels, en.Values) {
+			t.Errorf("%v en anglais : %q %v %v", names, en.Column, en.Values, en.Labels)
+		}
+	}
+	if s := Localized(Recognize([]string{"April", "May", "June"}), "de"); s.Column != "Monat" || !slices.Equal(s.Values, []string{"April", "Mai", "Juni"}) {
+		t.Errorf("allemand : %q %v", s.Column, s.Values)
+	}
+	if s := Localized(Recognize([]string{"Lot 1", "Lot 2"}), "en"); s.Column != "Lot" {
+		t.Errorf("partie commune traduite : %q", s.Column)
+	}
+	if s := Localized(Recognize([]string{"Sheet1", "Sheet2"}), "en"); s.Kind != Default || s.Column != "Number" {
+		t.Errorf("noms par défaut : %s %q", s.Kind, s.Column)
+	}
+	if s := Localized(Recognize([]string{"Janvier", "Février"}), "fr"); s.Column != "Mois" || s.Values[0] != "Janvier" {
+		t.Errorf("français : %q %v", s.Column, s.Values)
+	}
+}

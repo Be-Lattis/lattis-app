@@ -162,12 +162,35 @@ func backupName(path string, format int) string {
 	return fmt.Sprintf("%s (format %d)%s", strings.TrimSuffix(path, ext), format, ext)
 }
 
-// New crée un classeur vide, jamais enregistré.
-func New(ctx context.Context) (_ *Document, err error) {
+// New crée un classeur vide, jamais enregistré, sa feuille nommée en
+// français (« Feuille1 »).
+func New(ctx context.Context) (*Document, error) { return NewIn(ctx, msg.FR) }
+
+// NewIn crée un classeur vide, jamais enregistré, sa première feuille nommée
+// dans la langue lang (« Feuille1 », « Sheet1 », « Tabelle1 », « Hoja1 ») :
+// le nom par défaut d'un classeur nouveau suit la langue de l'interface ; un
+// classeur existant garde les siens (docs/i18n.md, § 7).
+func NewIn(ctx context.Context, lang msg.Lang) (_ *Document, err error) {
 	defer trace.Since(1, trace.Doc, time.Now(), &err, "nouveau classeur")
 	a, err := archive.New(canvas.Register)
 	if err != nil {
 		return nil, err
+	}
+	// Avant la première lecture du modèle : le schéma crée « Feuille1 »
+	// (meta), renommée ici sans étape d'annulation.
+	if name := msg.Format(lang, "name.sheet", nil) + "1"; name != "Feuille1" {
+		if _, err := meta.MigrateOpen(ctx, a.DB); err != nil {
+			a.Close()
+			return nil, err
+		}
+		err := a.DB.Write(ctx, func(tx *sql.Tx) error {
+			_, err := tx.ExecContext(ctx, `UPDATE _lattis_sheets SET name = ? WHERE id = 1 AND name = 'Feuille1'`, name)
+			return err
+		})
+		if err != nil {
+			a.Close()
+			return nil, err
+		}
 	}
 	d, err := wrap(ctx, a, false)
 	if err != nil {

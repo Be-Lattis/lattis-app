@@ -1324,6 +1324,15 @@ export interface PivotConfig {
      * Name nomme le TCD (vue SQL, source de graphique) : « TCD1 »…
      */
     "name"?: string;
+
+    /**
+     * Lang : langue des libellés que le TCD écrit lui-même (« Somme de
+     * Ventes », « Sum of Sales »), fixée à sa création dans la langue de la
+     * session et gardée ensuite : les en-têtes, que citent les formules des
+     * colonnes saisies et les graphiques, ne changent pas d'un poste à
+     * l'autre. Vide : le français (TCD d'avant, scripts).
+     */
+    "lang"?: string;
     "source": string;
     "rowFields"?: string[] | null;
     "cols"?: string;

@@ -768,8 +768,9 @@ func (t *tx) tableName(sheet int64, row, col int) (string, error) {
 			}
 		}
 	}
+	prefix := t.defaultName("name.table")
 	for n := 1; ; n++ {
-		name := fmt.Sprintf("Tableau%d", n)
+		name := fmt.Sprintf("%s%d", prefix, n)
 		if ok, err := free(name); ok || err != nil {
 			return name, err
 		}

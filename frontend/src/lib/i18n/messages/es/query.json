@@ -310,7 +310,8 @@
 			"headers": "Encabezados (uno por línea, «Nombre: valor»)",
 			"auth": "Autenticación",
 			"public": "Ninguna (API pública)",
-			"help": "Los encabezados se guardan en el libro: pase un token mediante una conexión Web."
+			"help": "Los encabezados se guardan en el libro: pase un token mediante una conexión Web.",
+			"headersPlaceholder": "Accept-Language: es"
 		},
 		"tables": "Tablas y vistas",
 		"search": "Buscar",
@@ -320,7 +321,9 @@
 			"dbHelp": "Filtre aquí si puede: esta consulta la ejecuta el servidor.",
 			"workbook": "Consulta SQL sobre el libro (solo lectura)",
 			"sheet": "Las direcciones Cell[A1] sin hoja se leen en «{sheet}».",
-			"keepSystem": "Conservar las columnas técnicas de una tabla del Servidor Lattis (lattis_…) en lugar de «Actualizado por» y «Actualizado el»"
+			"keepSystem": "Conservar las columnas técnicas de una tabla del Servidor Lattis (lattis_…) en lugar de «Actualizado por» y «Actualizado el»",
+			"placeholder": "SELECT * FROM ventas WHERE anio = 2026",
+			"workbookPlaceholder": "SELECT * FROM Ventas WHERE anio = 2026"
 		},
 		"formula": {
 			"label": "Fórmula (tabla recalculada)",

@@ -21,6 +21,13 @@ export const icons = {
 	bold: '<path stroke-width="2.6" d="M16.2 7.8A6 6 0 1 0 18 12h-5"/>',
 	italic: '<path stroke-width="1.8" d="M10 5h7M7 19h7M14 5l-4 14"/>',
 	underline: '<path d="M16 7.5c-.6-1.5-2.2-2.5-4-2.5-2.3 0-4 1.3-4 3.1 0 4 8 2.3 8 6.4 0 1.9-1.8 3.1-4 3.1-2 0-3.6-1-4.2-2.6"/><path class="a" d="M5 21h14"/>',
+	// Variantes des lettres selon la langue (fontIcon) : B, F (fett), N (negrita) ;
+	// K (kursiv, cursiva) ; U (underline, unterstrichen).
+	'bold-b': '<path stroke-width="2.6" d="M8 5h4.6a3.2 3.2 0 0 1 0 6.4H8zm0 6.4h5.3a3.8 3.8 0 0 1 0 7.6H8z"/>',
+	'bold-f': '<path stroke-width="2.6" d="M16.5 5H8v14M8 11.8h6.8"/>',
+	'bold-n': '<path stroke-width="2.6" d="M7.5 19V5l9 14V5"/>',
+	'italic-k': '<path stroke-width="1.8" d="M11 5 8 19M17.5 5l-8 7.5M11.5 11l2.5 8"/>',
+	'underline-u': '<path d="M7.5 4.5v7.5a4.5 4.5 0 0 0 9 0V4.5"/><path class="a" d="M5 21h14"/>',
 	'font-color': '<path d="M7 16.5 12 4l5 12.5M8.8 12h6.4"/><rect class="af" x="4" y="18.5" width="16" height="3" rx=".75"/>',
 
 	// Alignement
@@ -240,5 +247,21 @@ export const icons = {
 } as const satisfies Record<string, string>;
 
 export type IconName = keyof typeof icons;
+
+/**
+ * Icône des commandes Gras, Italique et Souligné dans la langue de
+ * l'interface, avec les lettres de cette langue comme Excel : G, I, S en
+ * français ; B, I, U en anglais et en chinois ; F, K, U en allemand ;
+ * N, K, S en espagnol.
+ */
+export function fontIcon(cmd: 'bold' | 'italic' | 'underline', lang: string): IconName {
+	const letters: Record<string, Record<typeof cmd, IconName>> = {
+		en: { bold: 'bold-b', italic: 'italic', underline: 'underline-u' },
+		zh: { bold: 'bold-b', italic: 'italic', underline: 'underline-u' },
+		de: { bold: 'bold-f', italic: 'italic-k', underline: 'underline-u' },
+		es: { bold: 'bold-n', italic: 'italic-k', underline: 'underline' }
+	};
+	return letters[lang]?.[cmd] ?? cmd;
+}
 
 export const iconNames = Object.keys(icons) as IconName[];

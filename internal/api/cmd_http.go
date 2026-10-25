@@ -94,18 +94,20 @@ var askHost = make(chan struct{}, 1)
 // allowHost vérifie que le classeur peut joindre host, en consultant
 // l'utilisateur la première fois si ctx le permet.
 func (c *Call) allowHost(host string) error {
-	return c.allowHostFor(host, "Ce classeur veut envoyer des requêtes HTTP à « %s ». Ne l'autorisez que si vous faites confiance au classeur et à ce site : il pourra y envoyer des données du classeur.")
+	return c.allowHostFor(host, "api.netAskHttp")
 }
 
-// allowHostFor est allowHost avec le message de la demande (%s : l'hôte).
-func (c *Call) allowHostFor(host, message string) error {
+// allowHostFor est allowHost avec le message de la demande (identifiant
+// msg, paramètre {host}), dans la langue de la session.
+func (c *Call) allowHostFor(host string, message msg.ID) error {
 	return c.allowHostAsk(host, func(h string) Dialog {
+		l := c.lang()
 		return Dialog{
-			Title:   "Accès au réseau",
-			Message: fmt.Sprintf(message, h),
-			Fields:  []Field{{Name: "remember", Label: "Mémoriser pour ce classeur", Type: "checkbox"}},
-			OK:      "Autoriser",
-			Cancel:  "Refuser",
+			Title:   msg.Format(l, "api.netAskTitle", nil),
+			Message: msg.Format(l, message, msg.Args{"host": h}),
+			Fields:  []Field{{Name: "remember", Label: msg.Format(l, "api.askRemember", nil), Type: "checkbox"}},
+			OK:      msg.Format(l, "api.askAllow", nil),
+			Cancel:  msg.Format(l, "api.askRefuse", nil),
 		}
 	})
 }

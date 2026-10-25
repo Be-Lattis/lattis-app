@@ -4,7 +4,7 @@
 // local (<cache>/partages/<hôte>/<identifiant>.lattis). DocState.remote
 // vient de internal/bridge (remotedoc.go).
 import type { DocState, RecentFile } from '#bindings/internal/bridge/models.js';
-import { hostOf } from '#lib/remote/lattis.js';
+import { hostOf, serverDisplayName } from '#lib/remote/lattis.js';
 import { t } from '#lib/i18n/index.js';
 
 /** Ce qu'il faut savoir du serveur d'un classeur. */
@@ -16,7 +16,8 @@ interface ServerRef {
 /** Nom du serveur, sinon son hôte. */
 export function serverLabel(r: ServerRef | null | undefined): string {
 	if (!r) return '';
-	return r.serverName?.trim() || (r.server ? hostOf(r.server) : '');
+	const name = r.serverName?.trim();
+	return name ? serverDisplayName(name) : r.server ? hostOf(r.server) : '';
 }
 
 /** Dernier élément d'un chemin. */
@@ -49,9 +50,14 @@ export function windowTitle(title: string, badge = ''): string {
 	return `${title}${badge ? ` — ${badge}` : ''} – Lattis`;
 }
 
-/** Nom du fichier du classeur pour les propositions de nom (regroupement d'onglets…) : titre du serveur, sinon chemin, sinon titre. */
+/**
+ * Nom du fichier du classeur pour les propositions de nom (regroupement
+ * d'onglets…) : titre du serveur, sinon chemin ; "" pour un classeur jamais
+ * enregistré (son titre « Classeur sans titre » ne nomme rien : la
+ * proposition prend alors son nom par défaut, traduit).
+ */
 export function docFile(st: DocState): string {
-	return st.remote ? st.title : st.path || st.title;
+	return st.remote ? st.title : st.path || '';
 }
 
 /** Nom de fichier affiché (mise en page : &[Fichier]) : titre d'un classeur du serveur, sinon nom du fichier. */

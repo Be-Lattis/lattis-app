@@ -124,7 +124,8 @@
 		"refused": {
 			"page": "{command}: command not available in a web page."
 		},
-		"off": "Web pages are turned off. The content is kept in the workbook."
+		"off": "Web pages are turned off. The content is kept in the workbook.",
+		"urlPlaceholder": "https://example.com"
 	},
 	"clip": {
 		"chartPasted": "Chart pasted",

@@ -8,6 +8,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Textes échangés avec l'interface dans la langue de la session
@@ -49,6 +50,26 @@ type ui struct {
 
 // stored : l'écriture gardée par le classeur.
 var stored = ui{loc: formula.FR, dates: grid.FrenchDates}
+
+// nameLang : la langue des noms et des libellés que Lattis donne lui-même à
+// ce qu'il crée (Feuille2, Tableau1, TCD1, « Somme de Ventes ») : celle de
+// la session, le français sous StorageForm (un script donne partout le même
+// résultat). Un nom déjà donné ne change jamais (docs/i18n.md, § 7).
+func (t *tx) nameLang() msg.Lang {
+	if t.Ctx != nil && t.Ctx.Value(storageKey{}) != nil {
+		return msg.FR
+	}
+	return t.m.Language()
+}
+
+// defaultName : le nom par défaut id (name.sheet, name.table, name.pivot)
+// dans nameLang.
+func (t *tx) defaultName(id msg.ID) string { return msg.Format(t.nameLang(), id, nil) }
+
+// ShowValue : une valeur affichée gardée à la française (nombre « 3,5 »,
+// date jj/mm/aaaa, VRAI/FAUX) dans l'écriture de la session de ctx, comme
+// la grille (aperçu de l'éditeur de requêtes).
+func (m *Model) ShowValue(ctx context.Context, s string) string { return m.ui(ctx).valueOut(s) }
 
 // ui : l'écriture de la session pour un appel (la forme gardée sous
 // StorageForm).

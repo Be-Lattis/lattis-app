@@ -13,6 +13,8 @@
 // - Au-delà de MAX_COLORS valeurs, les plus fréquentes gardent une couleur
 //   (MAX_COLORS − 1), les autres sont grises (« Autres »).
 
+import { t } from '#lib/i18n/index.js';
+
 /** Valeurs colorées au plus (au-delà : « Autres », en gris). */
 export const MAX_COLORS = 20;
 /** Gris des valeurs regroupées (« Autres »). */
@@ -129,8 +131,8 @@ export function colorCategories(categories: string[], groups: number[], max = MA
 	const legend: LegendEntry[] = kept.map((i) => ({ label: categories[i], color: colors[i], count: counts[i] }));
 	const keptSet = new Set(kept);
 	const others = counts.reduce((s, c, i) => (keptSet.has(i) ? s : s + c), 0);
-	if (n > kept.length) legend.push({ label: `Autres (${n - kept.length} valeurs)`, color: OTHER_COLOR, count: others });
-	if (empty) legend.push({ label: '(vide)', color: EMPTY_COLOR, count: empty });
+	if (n > kept.length) legend.push({ label: t('chart.legend.others', { n: n - kept.length }), color: OTHER_COLOR, count: others });
+	if (empty) legend.push({ label: t('chart.legend.empty'), color: EMPTY_COLOR, count: empty });
 	return { colors, legend };
 }
 

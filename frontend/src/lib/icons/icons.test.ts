@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { iconNames, icons } from './icons.js';
+import { fontIcon, iconNames, icons } from './icons.js';
 
 const allowed = new Set(['path', 'rect', 'circle', 'ellipse']);
 
@@ -36,5 +36,15 @@ describe('icônes', () => {
 			expect(v).toBeGreaterThanOrEqual(0);
 			expect(v).toBeLessThanOrEqual(24);
 		}
+	});
+
+	it('Gras, Italique, Souligné : les lettres de la langue (G I S, B I U, F K U, N K S)', () => {
+		const set = (l: string) => (['bold', 'italic', 'underline'] as const).map((c) => fontIcon(c, l));
+		expect(set('fr')).toEqual(['bold', 'italic', 'underline']);
+		expect(set('en')).toEqual(['bold-b', 'italic', 'underline-u']);
+		expect(set('zh')).toEqual(['bold-b', 'italic', 'underline-u']);
+		expect(set('de')).toEqual(['bold-f', 'italic-k', 'underline-u']);
+		expect(set('es')).toEqual(['bold-n', 'italic-k', 'underline']);
+		for (const l of ['en', 'de', 'es']) for (const n of set(l)) expect(icons[n]).toBeTruthy();
 	});
 });

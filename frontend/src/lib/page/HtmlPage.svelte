@@ -302,7 +302,7 @@
 				<input
 					class="url"
 					bind:value={asking}
-					placeholder="https://exemple.fr"
+					placeholder={t('doc.page.urlPlaceholder')}
 					autofocus
 					onkeydown={(e) => {
 						e.stopPropagation();

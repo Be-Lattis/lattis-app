@@ -165,7 +165,8 @@
 		},
 		"none": "没有已记住的主机。",
 		"host": "要允许的主机",
-		"allow": "允许"
+		"allow": "允许",
+		"placeholder": "api.example.com"
 	},
 	"ref": {
 		"title": "Lua 参考",

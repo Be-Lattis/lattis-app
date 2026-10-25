@@ -9,7 +9,9 @@
 // permet de les renommer.
 import { t } from '#lib/i18n/index.js';
 
-const DEFAULT = /^(Tableau|Feuille|Requête)\d+$/i;
+// Les noms par défaut des autres langues aussi (Table1, Sheet1, Tabelle1,
+// Tabla1, Hoja1, 表1 : docs/i18n.md, § 7).
+const DEFAULT = /^(Tableau|Feuille|Requête|Table|Sheet|Tabelle|Tabla|Hoja|表)\d+$/i;
 
 /** Couleur des noms par défaut : rouge discret, lisible sur fond blanc. */
 export const DEFAULT_NAME_COLOR = '#c42b1c';

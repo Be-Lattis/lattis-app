@@ -23,7 +23,7 @@
 	import { lattis } from '#lib/remote/lattis.svelte.js';
 	import { keyLabel, pdfPrinterHint } from '#lib/web/platform.js';
 	import { isNarrow, revealX } from '#lib/ui/mobile.js';
-	import type { IconName } from '#lib/icons/icons.js';
+	import { fontIcon, type IconName } from '#lib/icons/icons.js';
 	import { kindInfo, MORE_KINDS, type ChartKind } from '#lib/chart/kinds.js';
 	import Submenu from '#lib/ui/Submenu.svelte';
 	import type { RecentFile } from '#bindings/internal/bridge/models.js';
@@ -32,7 +32,7 @@
 	import { commandTips, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
 	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
 	import { cm, FIT_CHOICES, fitLabel, fitted, hasBreaks, marginLabel, MARGINS, marginPreset, PAPERS, paperOf, SCALE_CHOICES, scaleLabel, type PageAction, type PageSetup } from './pagesetup';
-	import { t, tAny } from '#lib/i18n/index.js';
+	import { lang, t, tAny } from '#lib/i18n/index.js';
 	import frRibbon from '#lib/i18n/messages/fr/ribbon.json';
 
 	export type View = 'grid' | 'sql' | 'script';
@@ -373,9 +373,9 @@
 				launch: fmt('font'),
 				launchHint: t('ribbon.launch.font'),
 				commands: local([
-					{ label: t('ribbon.cmd.bold.label'), icon: 'bold', run: st({ b: 'toggle' }), hint: t('ribbon.cmd.bold.tooltip'), on: !!cellStyle?.b },
-					{ label: t('ribbon.cmd.italic.label'), icon: 'italic', run: st({ i: 'toggle' }), hint: t('ribbon.cmd.italic.tooltip'), on: !!cellStyle?.i },
-					{ label: t('ribbon.cmd.underline.label'), icon: 'underline', run: st({ u: 'toggle' }), hint: t('ribbon.cmd.underline.tooltip'), on: !!cellStyle?.u },
+					{ label: t('ribbon.cmd.bold.label'), icon: fontIcon('bold', lang()), run: st({ b: 'toggle' }), hint: t('ribbon.cmd.bold.tooltip'), on: !!cellStyle?.b },
+					{ label: t('ribbon.cmd.italic.label'), icon: fontIcon('italic', lang()), run: st({ i: 'toggle' }), hint: t('ribbon.cmd.italic.tooltip'), on: !!cellStyle?.i },
+					{ label: t('ribbon.cmd.underline.label'), icon: fontIcon('underline', lang()), run: st({ u: 'toggle' }), hint: t('ribbon.cmd.underline.tooltip'), on: !!cellStyle?.u },
 					{ label: t('ribbon.cmd.fontColor.label'), icon: 'font-color', run: st({ fg }), hint: t('ribbon.cmd.fontColor.tooltip'), color: 'fg' },
 					{ label: t('ribbon.cmd.fillColor.label'), icon: 'font-color', run: st({ bg }), hint: t('ribbon.cmd.fillColor.tooltip'), color: 'bg' }
 				])
@@ -928,9 +928,9 @@
 				// Comme Word : gras, italique, souligné, barré en petites icônes.
 				widest: 'icon',
 				commands: [
-					{ label: t('ribbon.cmd.bold.label'), icon: 'bold', run: st({ b: 'toggle' }), hint: t('ribbon.cmd.bold.tooltip'), on: !!cellStyle?.b },
-					{ label: t('ribbon.cmd.italic.label'), icon: 'italic', run: st({ i: 'toggle' }), hint: t('ribbon.cmd.italic.tooltip'), on: !!cellStyle?.i },
-					{ label: t('ribbon.cmd.underline.label'), icon: 'underline', run: st({ u: 'toggle' }), hint: t('ribbon.cmd.underline.tooltip'), on: !!cellStyle?.u },
+					{ label: t('ribbon.cmd.bold.label'), icon: fontIcon('bold', lang()), run: st({ b: 'toggle' }), hint: t('ribbon.cmd.bold.tooltip'), on: !!cellStyle?.b },
+					{ label: t('ribbon.cmd.italic.label'), icon: fontIcon('italic', lang()), run: st({ i: 'toggle' }), hint: t('ribbon.cmd.italic.tooltip'), on: !!cellStyle?.i },
+					{ label: t('ribbon.cmd.underline.label'), icon: fontIcon('underline', lang()), run: st({ u: 'toggle' }), hint: t('ribbon.cmd.underline.tooltip'), on: !!cellStyle?.u },
 					{ label: t('ribbon.cmd.strike.label'), icon: 'strike', run: dc('strike'), hint: t('ribbon.cmd.strike.tooltip'), on: !!docState?.strike },
 					{ label: t('ribbon.cmd.fontColor.label'), icon: 'font-color', run: st({ fg }), hint: t('ribbon.cmd.fontColor.tooltip'), color: 'fg' },
 					{ label: t('ribbon.cmd.highlight.label'), icon: 'font-color', run: st({ bg }), hint: t('ribbon.cmd.highlight.tooltip'), color: 'bg' },

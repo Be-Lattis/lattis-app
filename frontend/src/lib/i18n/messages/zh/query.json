@@ -310,7 +310,8 @@
 			"headers": "标头（每行一个，“名称: 值”）",
 			"auth": "身份验证",
 			"public": "无（公共 API）",
-			"help": "标头会保存在工作簿中：令牌请通过 Web 连接提供。"
+			"help": "标头会保存在工作簿中：令牌请通过 Web 连接提供。",
+			"headersPlaceholder": "Accept-Language: zh"
 		},
 		"tables": "表和视图",
 		"search": "搜索",
@@ -320,7 +321,9 @@
 			"dbHelp": "尽量在此筛选：此查询由服务器执行。",
 			"workbook": "对工作簿的 SQL 查询（只读）",
 			"sheet": "不带工作表的 Cell[A1] 地址从“{sheet}”读取。",
-			"keepSystem": "保留 Lattis 服务器表的技术列（lattis_…），而不是“更新者”和“更新时间”"
+			"keepSystem": "保留 Lattis 服务器表的技术列（lattis_…），而不是“更新者”和“更新时间”",
+			"placeholder": "SELECT * FROM sales WHERE year = 2026",
+			"workbookPlaceholder": "SELECT * FROM Sales WHERE year = 2026"
 		},
 		"formula": {
 			"label": "公式（动态表格）",

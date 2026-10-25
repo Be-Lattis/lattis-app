@@ -93,7 +93,9 @@
 		"outliers": "{n} 个离群值"
 	},
 	"legend": {
-		"more": "及其他 {n} 项"
+		"more": "及其他 {n} 项",
+		"others": "其他（{n} 个值）",
+		"empty": "（空白）"
 	},
 	"table": {
 		"group": "组",

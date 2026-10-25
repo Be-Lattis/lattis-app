@@ -33,7 +33,7 @@ func AllowSource(ctx context.Context, h Host, d *doc.Document, a query.Access) e
 	if a.Host == "" {
 		return nil
 	}
-	return c.allowHostFor(a.Host, "Une requête de ce classeur veut lire des données sur « %s ». Ne l'autorisez que si vous faites confiance au classeur et à ce serveur : il apprendra que vous ouvrez ce classeur, et l'adresse de la requête peut lui transmettre des informations.")
+	return c.allowHostFor(a.Host, "api.netAskSource")
 }
 
 // queryEnv : environnement des requêtes lancées par un script ou le serveur
@@ -110,12 +110,13 @@ func (c *Call) allowFile(path string) error {
 	if ok, err := check(); ok || err != nil {
 		return err
 	}
+	l := c.lang()
 	vals, err := c.dialog(Dialog{
-		Title:   "Lecture d'un fichier",
-		Message: fmt.Sprintf("Une requête de ce classeur veut lire le fichier « %s ». Ne l'autorisez que si vous attendiez cette source : son contenu sera copié dans le classeur, et partira avec lui si vous l'envoyez.", path),
-		Fields:  []Field{{Name: "remember", Label: "Mémoriser pour ce classeur", Type: "checkbox"}},
-		OK:      "Autoriser",
-		Cancel:  "Refuser",
+		Title:   msg.Format(l, "api.fileAskTitle", nil),
+		Message: msg.Format(l, "api.fileAsk", msg.Args{"path": path}),
+		Fields:  []Field{{Name: "remember", Label: msg.Format(l, "api.askRemember", nil), Type: "checkbox"}},
+		OK:      msg.Format(l, "api.askAllow", nil),
+		Cancel:  msg.Format(l, "api.askRefuse", nil),
 	})
 	if err != nil {
 		return err

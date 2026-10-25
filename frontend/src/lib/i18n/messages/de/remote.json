@@ -134,7 +134,9 @@
 		"remaining": {
 			"minutes": "{m} min {s} s",
 			"seconds": "{s} s"
-		}
+		},
+		"defaultServerName": "Lattis-Server",
+		"defaultAccount": "Lattis-Konto"
 	},
 	"banner": {
 		"reloading": "Wird neu geladen…",
@@ -580,7 +582,13 @@
 		"saving": "Wird gespeichert…",
 		"saveDraft": "Entwurf speichern",
 		"save": "Speichern",
-		"open": "Formular öffnen"
+		"open": "Formular öffnen",
+		"defaults": {
+			"submit": "Senden",
+			"thanks": "Danke!",
+			"closed": "Dieses Formular ist geschlossen.",
+			"position": "Position"
+		}
 	},
 	"source": {
 		"mode": {

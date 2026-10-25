@@ -86,7 +86,7 @@
 				add();
 			}}
 		>
-			<input bind:value={draft} placeholder="api.exemple.fr" spellcheck="false" aria-label={t('script.network.host')} />
+			<input bind:value={draft} placeholder={t('script.network.placeholder')} spellcheck="false" aria-label={t('script.network.host')} />
 			<button type="submit" disabled={!draft.trim()}>{t('script.network.allow')}</button>
 		</form>
 		{#if error}<p class="error">{error}</p>{/if}

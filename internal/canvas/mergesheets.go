@@ -314,7 +314,7 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 		if err != nil {
 			return nil, err
 		}
-		rec := series.Recognize(labels)
+		rec := t.localSeries(series.Recognize(labels))
 		cat := plan.Category
 		if cat == nil {
 			cat = &MergeCategory{Name: rec.Column, Type: rec.Type, Format: rec.Format}
@@ -378,12 +378,12 @@ func (t *tx) prepareMerge(plan MergePlan) (*mergeJob, error) {
 		name = groupName(series.Recognize(labels), srcNames)
 	}
 	if name == "" {
-		name = "Regroupement"
+		name = t.defaultName("name.merged")
 	}
 	if id := identifier(name); id != "" {
 		name = id
 	} else {
-		name = "Regroupement"
+		name = identifier(t.defaultName("name.merged"))
 	}
 	if A1Like(name) {
 		name += "_"

@@ -417,7 +417,7 @@ func (t *tx) pivotHeaders(rc refChange) (map[string]map[string]string, error) {
 		for _, v := range pc.Values {
 			w := v
 			w.Field = rc.Column(pc.Source, v.Field)
-			if a, b := pivotLabel(v), pivotLabel(w); a != b {
+			if a, b := pivotLabel(v, pc.Lang), pivotLabel(w, pc.Lang); a != b {
 				labels[strings.ToLower(a)] = b
 			}
 		}

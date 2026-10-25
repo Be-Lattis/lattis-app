@@ -226,7 +226,7 @@
 				<label class="field">{t('query.source.web.url')} <input bind:value={s.url} placeholder={t('query.source.web.urlPlaceholder')} /></label>
 				<label class="field">{t('query.source.recordPath.label')} <input bind:value={s.recordPath} placeholder={t('query.source.recordPath.placeholder')} /></label>
 				<label class="field"
-					>{t('query.source.web.headers')} <textarea rows="2" bind:value={headers} placeholder="Accept-Language: fr"></textarea></label
+					>{t('query.source.web.headers')} <textarea rows="2" bind:value={headers} placeholder={t('query.source.web.headersPlaceholder')}></textarea></label
 				>
 				<div class="field">
 					{t('query.source.web.auth')}
@@ -253,13 +253,13 @@
 						</div>
 					</div>
 				{/if}
-				<label class="field">{t('query.source.sql.label')} <textarea rows="5" bind:value={s.sql} placeholder="SELECT * FROM ventes WHERE annee = 2026"></textarea></label>
+				<label class="field">{t('query.source.sql.label')} <textarea rows="5" bind:value={s.sql} placeholder={t('query.source.sql.placeholder')}></textarea></label>
 				{#if isDB}<p class="muted">{t('query.source.sql.dbHelp')}</p>{/if}
 				{#if s.kind === 'lattis' || s.kind === 'postgres'}
 					<label class="check"><input type="checkbox" checked={!!s.systemColumns} onchange={(e) => (s.systemColumns = (e.currentTarget as HTMLInputElement).checked || undefined)} /> {t('query.source.sql.keepSystem')}</label>
 				{/if}
 			{:else if s.kind === 'sql'}
-				<label class="field">{t('query.source.sql.workbook')} <textarea rows="6" bind:value={s.sql} placeholder="SELECT * FROM Ventes WHERE annee = 2026"></textarea></label>
+				<label class="field">{t('query.source.sql.workbook')} <textarea rows="6" bind:value={s.sql} placeholder={t('query.source.sql.workbookPlaceholder')}></textarea></label>
 				{#if s.sheet}<p class="muted">{t('query.source.sql.sheet', { sheet: s.sheet })}</p>{/if}
 			{:else if s.kind === 'formula'}
 				<label class="field">{t('query.source.formula.label')} <input bind:value={s.formula} placeholder="=UNIQUE(Ventes[Client])" /></label>

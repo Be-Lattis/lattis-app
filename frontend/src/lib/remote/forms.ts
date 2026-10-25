@@ -5,7 +5,7 @@
 // pages de sections, le Markdown réduit et les liens pré-remplis. L'aperçu
 // (FormPreview.svelte) lit la même définition que le serveur.
 import qrcode from 'qrcode-generator';
-import { fmtDate, t, tAny } from '#lib/i18n/index.js';
+import { fmtDate, lang, t, tAny } from '#lib/i18n/index.js';
 
 /** Liste de validation d'une colonne (bridge.FormList). */
 export interface ColumnList {
@@ -331,7 +331,7 @@ export function newDraft(info: FormInfo, now: Date = new Date()): Draft {
 	if (pos) {
 		const used = new Set('column' in pos ? [pos.column] : [pos.latitude, pos.longitude]);
 		for (const f of fields) if (used.has(f.column ?? '')) f.include = false;
-		fields.push({ uid: uid('p'), include: true, kind: 'position', label: 'Position', ...pos });
+		fields.push({ uid: uid('p'), include: true, kind: 'position', label: t('remote.formDialog.defaults.position'), ...pos });
 	}
 	let choice: Draft['choice'] = null;
 	if (info.choice) {
@@ -342,16 +342,19 @@ export function newDraft(info: FormInfo, now: Date = new Date()): Draft {
 			if (year && Number(info.choice.value) === now.getFullYear()) choice.mode = 'year';
 		}
 	}
+	// Langue de la page publique : le français dans une interface française,
+	// l'anglais sinon (le serveur n'a que ces deux langues) ; les textes
+	// proposés, modifiables, dans la langue de l'interface.
 	return {
-		lang: 'fr',
+		lang: lang() === 'fr' ? 'fr' : 'en',
 		appearance: {
 			title: info.table,
 			intro: '',
 			accent: 'green',
-			submit_label: 'Envoyer',
-			thanks: 'Merci !',
+			submit_label: t('remote.formDialog.defaults.submit'),
+			thanks: t('remote.formDialog.defaults.thanks'),
 			another: true,
-			closed_message: 'Ce formulaire est fermé.',
+			closed_message: t('remote.formDialog.defaults.closed'),
 			privacy: '',
 			paged: false
 		},

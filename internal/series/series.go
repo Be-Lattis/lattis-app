@@ -80,8 +80,72 @@ var MonthNames = []string{"Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
 
 var enMonths = []string{"january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"}
 
-// monthWord lit un nom de mois écrit en toutes lettres ou abrégé (français
-// ou anglais : « janv. », « fev », « Sept », « March ») ; ambigu ou trop
+// Noms des mois en allemand et en espagnol (à plat, voir Fold), reconnus
+// comme le français et l'anglais.
+var (
+	deMonths = []string{"januar", "februar", "marz", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "dezember"}
+	esMonths = []string{"enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"}
+)
+
+// monthNamesIn : les noms des mois écrits dans la langue de l'interface
+// (Localized) ; le français pour une autre langue.
+var monthNamesIn = map[string][]string{
+	"en": {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"},
+	"de": {"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"},
+	"es": {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"},
+	"zh": {"一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"},
+}
+
+// columnsIn : les noms de colonne proposés (en français dans Series.Column)
+// dans les autres langues.
+var columnsIn = map[string]map[string]string{
+	"en": {"Mois": "Month", "Année": "Year", "Trimestre": "Quarter", "Semaine": "Week", "Date": "Date", "Numéro": "Number", "Lettre": "Letter", "Ville": "City", "Catégorie": "Category"},
+	"de": {"Mois": "Monat", "Année": "Jahr", "Trimestre": "Quartal", "Semaine": "Woche", "Date": "Datum", "Numéro": "Nummer", "Lettre": "Buchstabe", "Ville": "Stadt", "Catégorie": "Kategorie"},
+	"es": {"Mois": "Mes", "Année": "Año", "Trimestre": "Trimestre", "Semaine": "Semana", "Date": "Fecha", "Numéro": "Número", "Lettre": "Letra", "Ville": "Ciudad", "Catégorie": "Categoría"},
+	"zh": {"Mois": "月份", "Année": "年份", "Trimestre": "季度", "Semaine": "周", "Date": "日期", "Numéro": "编号", "Lettre": "字母", "Ville": "城市", "Catégorie": "类别"},
+}
+
+// Localized rend la catégorie s (reconnue par Recognize, en français) dans
+// la langue lang de l'interface : le nom de colonne proposé (Month, Year…)
+// et, pour une suite de mois, les noms des mois (January…), valeurs comme
+// étiquettes. Les noms d'onglets restent reconnus dans toutes les langues ;
+// seul ce que Lattis écrit change. lang vide ou "fr" : s tel quel.
+func Localized(s Series, lang string) Series {
+	cols, ok := columnsIn[lang]
+	if !ok {
+		return s
+	}
+	// Une suite de nombres ou de lettres, une forme commune, prennent la
+	// partie commune des noms (texte de l'utilisateur) : seul leur nom par
+	// défaut (Numéro, Lettre) se traduit.
+	switch s.Kind {
+	case Number, Letter, Shape:
+		if s.Column == "Numéro" || s.Column == "Lettre" {
+			s.Column = cols[s.Column]
+		}
+	default:
+		if c, ok := cols[s.Column]; ok {
+			s.Column = c
+		}
+	}
+	if s.Kind == Month {
+		names := monthNamesIn[lang]
+		tr := func(vals []string) []string {
+			out := slices.Clone(vals)
+			for i, v := range out {
+				if k := slices.Index(MonthNames, v); k >= 0 {
+					out[i] = names[k]
+				}
+			}
+			return out
+		}
+		s.Values, s.Labels = tr(s.Values), tr(s.Labels)
+	}
+	return s
+}
+
+// monthWord lit un nom de mois écrit en toutes lettres ou abrégé (français,
+// anglais, allemand ou espagnol : « janv. », « fev », « Sept », « March ») ; ambigu ou trop
 // court (« ju », « jui ») : refusé.
 func monthWord(s string) (int, bool) {
 	s = strings.TrimSuffix(Fold(s), ".")
@@ -90,7 +154,7 @@ func monthWord(s string) (int, bool) {
 	}
 	found := 0
 	for i := range 12 {
-		if strings.HasPrefix(Fold(MonthNames[i]), s) || strings.HasPrefix(enMonths[i], s) {
+		if strings.HasPrefix(Fold(MonthNames[i]), s) || strings.HasPrefix(enMonths[i], s) || strings.HasPrefix(deMonths[i], s) || strings.HasPrefix(esMonths[i], s) {
 			if found != 0 && found != i+1 {
 				return 0, false
 			}
@@ -394,8 +458,9 @@ func trimSep(s string) string {
 	return strings.TrimFunc(s, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
 }
 
-// defaultNames : préfixes des noms d'onglets par défaut (Feuille1, Sheet1).
-var defaultNames = map[string]bool{"feuille": true, "feuil": true, "sheet": true, "page": true}
+// defaultNames : préfixes des noms d'onglets par défaut (Feuille1, Sheet1,
+// Tabelle1, Hoja1).
+var defaultNames = map[string]bool{"feuille": true, "feuil": true, "sheet": true, "tabelle": true, "hoja": true, "page": true}
 
 // Recognize reconnaît la suite que forment les noms (dans l'ordre des
 // onglets). Il faut au moins deux noms, tous différents.
