@@ -46,6 +46,8 @@ export interface TableCellMenu {
 	format?: boolean;
 	rules?: boolean;
 	note?: boolean;
+	/** Commentaire en fil : « Nouveau commentaire » ou « Répondre ». */
+	comment?: boolean;
 	/** Tri, filtre (au moins une entrée). */
 	sort?: boolean;
 	/** Ligne de données (pas l'en-tête) : sous-menu Ligne « … ». */
@@ -61,7 +63,7 @@ export function tableCellMenu(o: TableCellMenu): MenuGroups {
 		[o.ref && 'ref', o.promote && 'promote', o.toNote && 'toNote', o.toHeader && 'toHeader', o.groupsOn && 'groupsOn', o.groupsOff && 'groupsOff'],
 		CLIPBOARD,
 		['clear', o.format && 'format', o.rules && 'rules'],
-		[o.note && 'note'],
+		[o.note && 'note', o.comment && 'comment'],
 		[o.sort && 'sort', o.row && 'row', o.column && 'column', o.table && 'table']
 	);
 }
@@ -97,6 +99,7 @@ export interface FreeCellMenu {
 	format?: boolean;
 	rules?: boolean;
 	note?: boolean;
+	comment?: boolean;
 	/** Insertion et suppression de lignes ou de colonnes de la feuille. */
 	lines?: boolean;
 	/** Sous-menu Tableau croisé « … ». */
@@ -108,7 +111,7 @@ export function freeCellMenu(o: FreeCellMenu): MenuGroups {
 		[o.ref && 'ref', o.asHeader && 'asHeader', o.join && 'join', o.asTable && 'asTable', o.spill && 'spillLinked', o.spill && 'spillValues', o.toValues && 'toValues', o.asGroups && 'asGroups'],
 		[...CLIPBOARD, o.pasteChart && 'pasteChart', o.pasteButton && 'pasteButton'],
 		['clear', o.format && 'format', o.rules && 'rules'],
-		[o.note && 'note'],
+		[o.note && 'note', o.comment && 'comment'],
 		[o.lines && 'insertDialog', o.lines && 'clearAll'],
 		[o.pivot && 'pivot']
 	);

@@ -558,6 +558,22 @@ export interface ColumnSpan {
 }
 
 /**
+ * Comment est un message d'un fil.
+ */
+export interface Comment {
+    "id": string;
+    "author": string;
+    "authorId": string;
+
+    /**
+     * At, Edited : dates en UTC (RFC 3339) ; Edited vide : jamais modifié.
+     */
+    "at": string;
+    "edited"?: string;
+    "text": string;
+}
+
+/**
  * CustomList est une liste personnalisée nommée (Builtin : prédéfinie).
  */
 export interface CustomList {
@@ -2922,6 +2938,20 @@ export interface Theme {
     "accents"?: string[] | null;
     "dark"?: string;
     "light"?: string;
+}
+
+/**
+ * Thread est un fil de commentaires, à sa place actuelle sur la feuille.
+ */
+export interface Thread {
+    "id": string;
+    "sheet": number;
+    "sheetName": string;
+    "row": number;
+    "col": number;
+    "table"?: string;
+    "resolved": boolean;
+    "comments": Comment[] | null;
 }
 
 /**

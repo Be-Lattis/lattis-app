@@ -75,6 +75,10 @@
 			"resetConfirm": "Reset all settings to their default values?",
 			"resetDetail": "Your themes, servers and API keys are kept.",
 			"resetOk": "Reset"
+		},
+		"userName": {
+			"label": "Your name",
+			"help": "Author of comments and versions (empty: your system user name)"
 		}
 	},
 	"shortcuts": {
@@ -164,7 +168,8 @@
 			"note": "New note (or edit the note)",
 			"link": "Link (web page, e-mail, cell)",
 			"chart": "Chart (column chart) of the active table",
-			"group": "Group / ungroup"
+			"group": "Group / ungroup",
+			"comment": "New comment (or reply)"
 		},
 		"calcul": {
 			"title": "Calculation and data",
@@ -1206,5 +1211,23 @@
 	},
 	"print": {
 		"empty": "Empty sheet."
+	},
+	"versions": {
+		"title": "Version history",
+		"none": "No versions yet: one is kept each time you save.",
+		"auto": "Save",
+		"viewing": "Open",
+		"open": "Open",
+		"restore": "Restore",
+		"restoreConfirm": "Replace the workbook with this version? The current version stays in the history.",
+		"delete": "Delete version",
+		"deleteConfirm": "Delete this version?",
+		"namePlaceholder": "Version name",
+		"save": "Save a version",
+		"note": "Up to 20 automatic versions (one per 10 minutes); named versions are kept.",
+		"unitB": "B",
+		"unitKB": "KB",
+		"unitMB": "MB",
+		"unitGB": "GB"
 	}
 }

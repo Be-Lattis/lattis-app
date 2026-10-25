@@ -551,6 +551,42 @@ CREATE TABLE _lattis_col_outline (
 ) STRICT;
 ALTER TABLE _lattis_sheets ADD COLUMN outline_above INTEGER NOT NULL DEFAULT 0;
 `,
+	// 38 → 39 : commentaires en fil (canvas/comments.go) : un fil par
+	// cellule, ancré à une cellule libre (_lattis_comment_cells, qui suit
+	// l'insertion et la suppression de lignes et de colonnes) ou à une
+	// cellule de tableau par sa ligne (_lattis_comment_rows, col : colonne du
+	// tableau ; rid -1 : en-tête), qui suit le tri et le filtre ; les
+	// messages du fil dans _lattis_comments (le premier ouvre le fil).
+	// Identifiants aléatoires (texte) : deux postes d'un classeur partagé
+	// n'en donnent jamais deux pareils.
+	`
+CREATE TABLE _lattis_comment_cells (
+	sheet    INTEGER NOT NULL REFERENCES _lattis_sheets(id),
+	row      INTEGER NOT NULL,
+	col      INTEGER NOT NULL,
+	thread   TEXT NOT NULL UNIQUE,
+	resolved INTEGER NOT NULL DEFAULT 0,
+	PRIMARY KEY (sheet, row, col)
+) STRICT;
+CREATE TABLE _lattis_comment_rows (
+	tbl      INTEGER NOT NULL,
+	rid      INTEGER NOT NULL,
+	col      INTEGER NOT NULL,
+	thread   TEXT NOT NULL UNIQUE,
+	resolved INTEGER NOT NULL DEFAULT 0,
+	PRIMARY KEY (tbl, rid, col)
+) STRICT;
+CREATE TABLE _lattis_comments (
+	id        TEXT NOT NULL PRIMARY KEY,
+	thread    TEXT NOT NULL,
+	author    TEXT NOT NULL,
+	author_id TEXT NOT NULL DEFAULT '',
+	at        TEXT NOT NULL,
+	edited    TEXT,
+	text      TEXT NOT NULL
+) STRICT;
+CREATE INDEX _lattis_comments_thread ON _lattis_comments (thread, at);
+`,
 }
 
 // Version est la version du format que ce programme écrit.

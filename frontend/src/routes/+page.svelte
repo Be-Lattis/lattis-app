@@ -80,6 +80,9 @@
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
 	import DemoEnd from '#lib/shell/DemoEnd.svelte';
 	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
+	import CommentsPane from '#lib/grid/CommentsPane.svelte';
+	import VersionHistory from '#lib/shell/VersionHistory.svelte';
+	import type { CommentHost, Thread } from '#lib/grid/comments.js';
 	import CoEditPresence from '#lib/remote/CoEditPresence.svelte';
 	import type { State as CoEditState } from '#bindings/internal/coedit/models.js';
 	import RightsDialog from '#lib/remote/RightsDialog.svelte';
@@ -240,6 +243,14 @@
 	// Classeur collaboratif : volet Conflits (ouvert de lui-même quand un
 	// conflit apparaît).
 	let conflictsOpen = $state(false);
+	// Commentaires en fil : ceux du classeur, l'auteur de ce poste, les membres à mentionner, le volet.
+	let threadsAll = $state<Thread[]>([]);
+	let commentMe = $state({ name: '', id: '' });
+	let commentMembers = $state<string[]>([]);
+	let commentsOpen = $state(false);
+	let authorOf = -1;
+	// Fichier › Historique des versions.
+	let versionsOpen = $state(false);
 	let conflicts = $state<Conflict[]>([]);
 	// Modifications mises de côté (elles échouent toujours sur le serveur) :
 	// dans le même volet, Réessayer ou Abandonner.
@@ -661,7 +672,8 @@
 			DocumentService.CoEditState().catch(() => null),
 			// Onglets semblables : métadonnées seulement, relues à chaque action.
 			DocumentService.SimilarSheets().catch(() => null),
-			loadSources()
+			loadSources(),
+			DocumentService.Threads(0).catch(() => null)
 		]);
 		side.catch(() => {}); // erreur rendue par l'await plus bas
 		// La vue d'abord (LayoutFirst) : sur un grand tableau, ce qui le
@@ -686,7 +698,17 @@
 			const src = await DocumentService.Page(sheetId);
 			if (!pageSource || pageSource.sheet !== sheetId || pageSource.source !== src) pageSource = { sheet: sheetId, source: src };
 		} else pageSource = null;
-		const [h, sc, fav, sh, co, sim] = await side;
+		const [h, sc, fav, sh, co, sim, , th] = await side;
+		threadsAll = th ?? [];
+		if (authorOf !== gen) {
+			authorOf = gen;
+			DocumentService.CommentAuthor()
+				.then((a) => {
+					commentMe = { name: a.name, id: a.id };
+					commentMembers = (a.members ?? []).map((m) => m.name);
+				})
+				.catch(() => {});
+		}
 		help = h;
 		scripts = sc ?? [];
 		favorites = fav ?? [];
@@ -1585,6 +1607,9 @@
 				case 'close':
 					await closeDoc();
 					break;
+				case 'versions':
+					if (mode === 'doc') versionsOpen = true;
+					break;
 				case 'save':
 				case 'saveAs':
 					if (mode !== 'doc') return;
@@ -2348,6 +2373,38 @@
 	// libres et mise en page aux propriétaires et concepteurs (décision 0018),
 	// comme une structure protégée (saisie dans les tableaux seulement).
 	const layoutShared = $derived(mode === 'doc' && !!share?.shared && share?.mode === 'collaborative' && !share?.canDesign && share?.gone !== 'deleted');
+
+	/** Une action sur les commentaires, puis la grille relue. */
+	async function commentAct(fn: () => Promise<DocState>) {
+		try {
+			docState = await fn();
+			await reload();
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+	// Commentaires en fil de la feuille affichée (grille) ; refusés à un éditeur d'un classeur partagé.
+	const commentHost = $derived<CommentHost | undefined>(
+		mode === 'doc'
+			? {
+					threads: threadsAll.filter((x) => x.sheet === sheetId),
+					me: commentMe,
+					members: commentMembers,
+					locked: layoutShared ? t('grid.comment.sharedLocked') : '',
+					add: (r, c, text) => commentAct(() => DocumentService.AddComment(sheetId, r, c, text)),
+					edit: (id, text) => commentAct(() => DocumentService.EditComment(id, text)),
+					remove: (id) => commentAct(() => DocumentService.DeleteComment(id)),
+					resolve: (id, v) => commentAct(() => DocumentService.ResolveThread(id, v)),
+					removeThread: (r, c) => commentAct(() => DocumentService.DeleteThread(sheetId, r, c))
+				}
+			: undefined
+	);
+
+	/** Volet Commentaires : la feuille du fil, sa cellule, le fil ouvert. */
+	async function gotoThread(th: Thread) {
+		if (th.sheet !== sheetId) await selectSheet(th.sheet);
+		sheet?.showComment(th.row, th.col);
+	}
 	const structureLocked = $derived(mode === 'doc' && (!!activeInfo?.structureProtected || bookStructure || layoutShared));
 	const sheetLocked = $derived(mode === 'doc' && (!!activeInfo?.protected || bookLocked));
 	const lockedMsg = $derived(
@@ -2548,6 +2605,9 @@
 		onoutline={mode === 'doc' ? outlineCommand : undefined}
 		onmergesheets={mode === 'doc' ? openMergeMenu : undefined}
 		onnote={mode === 'doc' ? (what) => (what === 'edit' ? sheet?.editNote() : sheet?.deleteNote()) : undefined}
+		comment={!!sheetStatus?.comment}
+		commentsPane={commentsOpen}
+		oncomment={mode === 'doc' ? (what) => (what === 'new' ? sheet?.newComment() : what === 'delete' ? sheet?.deleteComment() : (commentsOpen = !commentsOpen)) : undefined}
 		onlink={mode === 'doc' ? () => sheet?.editLink() : undefined}
 		freeze={activeInfo ? { rows: activeInfo.freezeRows, cols: activeInfo.freezeCols } : undefined}
 		onfreeze={mode === 'doc' ? (what) => sheet?.freezeActive(what) : undefined}
@@ -2707,6 +2767,7 @@
 							: undefined}
 						onstatus={(s) => (sheetStatus = s)}
 						onplacing={(p) => (placing = p)}
+						comments={commentHost}
 						onhscroll={(s) => (hscroll = s)}
 						gridlines={!layout?.sheets?.find((s) => s.id === sheetId)?.noGrid}
 						headings={!!layout?.sheets?.find((s) => s.id === sheetId)?.headings}
@@ -2918,6 +2979,9 @@
 					<MergeSheetsPanel plan={mergePlan} others={mergeOthers} group={mergeGroup} preview={(p) => DocumentService.MergePreview(p)} onmerge={doMerge} onclose={() => (mergePlan = null)} />
 				{/key}
 			{/if}
+			{#if mode === 'doc' && commentsOpen}
+				<CommentsPane threads={threadsAll} sheet={sheetId} onresolve={layoutShared ? undefined : (th, v) => commentHost?.resolve(th.id, v)} ongoto={(th) => void gotoThread(th)} onclose={() => (commentsOpen = false)} />
+			{/if}
 			{#if mode === 'doc' && conflictsOpen && (share?.mode === 'collaborative' || coedit?.active)}
 				<ConflictPanel {conflicts} {held} onheld={resolveHeld} layout={share?.layoutConflicts ?? 0} local={!!coedit?.active} busy={conflictBusy} onresolve={resolveConflict} onresolveall={resolveAllConflicts} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
 			{/if}
@@ -3017,6 +3081,19 @@
 	{/if}
 	<!-- Accord demandé avant une écriture de Claude Desktop / Code (mcp.confirmWrites). -->
 	<McpConfirm />
+	{#if versionsOpen && mode === 'doc'}
+		<VersionHistory
+			onopened={async (r) => {
+				versionsOpen = false;
+				await opened(r);
+			}}
+			onsaved={(st) => {
+				docState = st;
+				if (st.notice) notice = st.notice;
+			}}
+			onclose={() => (versionsOpen = false)}
+		/>
+	{/if}
 	{#if aboutOpen}
 		<AboutDialog onclose={() => (aboutOpen = false)} />
 	{/if}

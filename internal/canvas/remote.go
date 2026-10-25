@@ -187,6 +187,7 @@ func (t *tx) applyRemote(idt rowIDs, rt RemoteTable, keep Keep, out *RemoteAppli
 				`DELETE FROM ` + tb.sql() + ` WHERE id = ?`,
 				`DELETE FROM _lattis_invalid WHERE tbl = ` + itoa64(tb.ID) + ` AND rid = ?`,
 				`DELETE FROM _lattis_styles WHERE tbl = ` + itoa64(tb.ID) + ` AND rid = ?`,
+				`DELETE FROM _lattis_comment_rows WHERE tbl = ` + itoa64(tb.ID) + ` AND rid = ?`,
 				`DELETE FROM ` + idt.table + ` WHERE tbl = ` + itoa64(tb.ID) + ` AND rid = ?`,
 			} {
 				if _, err := t.ExecContext(t.Ctx, q, rid); err != nil {

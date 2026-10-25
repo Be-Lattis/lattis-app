@@ -258,6 +258,29 @@ export interface ColumnOrderInfo {
 }
 
 /**
+ * CommentIdentity est l'auteur des commentaires de ce poste, et les membres
+ * qu'on peut mentionner (@nom) dans un classeur partagé.
+ */
+export interface CommentIdentity {
+    "name": string;
+    "id": string;
+
+    /**
+     * Members : membres du classeur partagé (propriétaires et concepteurs
+     * seulement peuvent les lister) ; vide pour un classeur local.
+     */
+    "members": CommentMember[] | null;
+}
+
+/**
+ * CommentMember est un membre qu'on peut mentionner.
+ */
+export interface CommentMember {
+    "name": string;
+    "email"?: string;
+}
+
+/**
  * DamagedFile décrit un classeur endommagé.
  */
 export interface DamagedFile {
@@ -625,8 +648,8 @@ export interface FormSaved {
 }
 
 /**
- * FormulaHelp sert l'aide à la saisie des formules : fonctions (en
- * français) et tableaux du classeur avec leurs colonnes.
+ * FormulaHelp sert l'aide à la saisie des formules : fonctions (dans la
+ * langue de la session) et tableaux du classeur avec leurs colonnes.
  */
 export interface FormulaHelp {
     "functions": formula$0.FunctionInfo[] | null;
@@ -1254,6 +1277,39 @@ export interface UICommand {
      */
     "id"?: number;
     "message"?: string;
+}
+
+/**
+ * VersionEntry est une version pour l'interface.
+ */
+export interface VersionEntry {
+    "id": string;
+
+    /**
+     * RFC 3339
+     */
+    "at": string;
+    "author": string;
+    "size": number;
+    "name": string;
+}
+
+/**
+ * VersionList est l'historique du classeur ouvert.
+ */
+export interface VersionList {
+    /**
+     * Reason : pourquoi il n'y a pas d'historique (classeur partagé, jamais
+     * enregistré) ; vide sinon.
+     */
+    "reason"?: string;
+    "entries": VersionEntry[] | null;
+
+    /**
+     * Viewing : version ouverte en lecture seule (son identifiant), vide
+     * sinon.
+     */
+    "viewing"?: string;
 }
 
 /**

@@ -74,7 +74,8 @@
 		"help": "Help",
 		"report": "Report a problem…",
 		"about": "About Lattis…",
-		"demo": "Demo: 1M rows"
+		"demo": "Demo: 1M rows",
+		"versions": "Version history…"
 	},
 	"numberFormat": {
 		"number": "Number",
@@ -122,7 +123,8 @@
 		"links": "Links",
 		"printing": "Printing",
 		"illustrations": "Illustrations",
-		"outline": "Outline"
+		"outline": "Outline",
+		"comments": "Comments"
 	},
 	"launch": {
 		"font": "Format cells: font (Ctrl+1)",
@@ -718,6 +720,16 @@
 		"hideDetail": {
 			"label": "Hide Detail",
 			"tooltip": "Collapse the group of the active cell"
+		},
+		"comment": {
+			"new": "New comment",
+			"reply": "Reply",
+			"tooltip": "Discussion on the active cell (Ctrl+Alt+M)",
+			"delete": "Delete",
+			"deleteTooltip": "Delete the thread of the active cell",
+			"deleteNone": "Delete: the active cell has no comment",
+			"pane": "Comments",
+			"paneTooltip": "All threads, open or resolved"
 		}
 	},
 	"protect": {

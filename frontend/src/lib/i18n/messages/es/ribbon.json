@@ -74,7 +74,8 @@
 		"help": "Ayuda",
 		"report": "Notificar un problema…",
 		"about": "Acerca de Lattis…",
-		"demo": "Demo: 1 M de filas"
+		"demo": "Demo: 1 M de filas",
+		"versions": "Historial de versiones…"
 	},
 	"numberFormat": {
 		"number": "Número",
@@ -122,7 +123,8 @@
 		"links": "Vínculos",
 		"printing": "Impresión",
 		"illustrations": "Ilustraciones",
-		"outline": "Esquema"
+		"outline": "Esquema",
+		"comments": "Comentarios"
 	},
 	"launch": {
 		"font": "Formato de celdas: fuente (Ctrl+1)",
@@ -718,6 +720,16 @@
 		"hideDetail": {
 			"label": "Ocultar detalle",
 			"tooltip": "Contraer el grupo de la celda activa"
+		},
+		"comment": {
+			"new": "Nuevo comentario",
+			"reply": "Responder",
+			"tooltip": "Conversación sobre la celda activa (Ctrl+Alt+M)",
+			"delete": "Eliminar",
+			"deleteTooltip": "Eliminar el hilo de la celda activa",
+			"deleteNone": "Eliminar: la celda activa no tiene comentario",
+			"pane": "Comentarios",
+			"paneTooltip": "Todos los hilos, abiertos o resueltos"
 		}
 	},
 	"protect": {

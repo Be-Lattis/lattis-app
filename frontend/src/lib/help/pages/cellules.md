@@ -61,6 +61,10 @@ Les validations sont exportées dans un fichier .xlsx (sauf une liste tirée d'u
 
 Révision › Nouvelle note (`Maj+F2`) attache une note à la cellule active : un coin rouge la signale, et elle s'affiche au survol. Sur une cellule qui en a une, la commande devient **Modifier la note**. L'épingle de la note la garde affichée. Révision › Supprimer la note la retire.
 
+## Commentaires
+
+Révision › Nouveau commentaire (`Ctrl+Alt+M`, ou clic droit) ouvre une discussion sur la cellule active : chaque message garde son auteur et sa date, on y répond, on modifie ou supprime les siens. Un coin violet signale la cellule, le fil s'affiche au survol. **Résoudre** le classe (il se rouvre). Révision › Commentaires liste les fils de la feuille ou du classeur, ouverts ou résolus. Dans un tableau, le fil suit sa ligne (tri, filtre). Dans un classeur partagé, `@` propose les membres ; seuls propriétaires et concepteurs commentent. Les notes restent à part ; à l'export .xlsx, chaque fil devient une note.
+
 ## Liens
 
 Insertion › Lien (`Ctrl+K`) fait de la cellule un lien vers une page web, une adresse e-mail ou un endroit du classeur (feuille et cellule, tableau, cellule nommée). Une adresse web ou e-mail tapée devient un lien d'elle-même (`Ctrl+Z` le retire). Un clic sur le texte suit le lien, un clic maintenu sélectionne la cellule. La fonction `LIEN_HYPERTEXTE` fait de même dans une formule.

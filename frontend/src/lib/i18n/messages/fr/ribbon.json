@@ -74,7 +74,8 @@
 		"help": "Aide",
 		"report": "Signaler un problème…",
 		"about": "À propos de Lattis…",
-		"demo": "Démo : 1 M de lignes"
+		"demo": "Démo : 1 M de lignes",
+		"versions": "Historique des versions…"
 	},
 	"numberFormat": {
 		"number": "Nombre",
@@ -122,7 +123,8 @@
 		"links": "Liens",
 		"printing": "Impression",
 		"illustrations": "Illustrations",
-		"outline": "Plan"
+		"outline": "Plan",
+		"comments": "Commentaires"
 	},
 	"launch": {
 		"font": "Format de cellule : police (Ctrl+1)",
@@ -718,6 +720,16 @@
 		"hideDetail": {
 			"label": "Masquer le détail",
 			"tooltip": "Réduire le groupe de la cellule active"
+		},
+		"comment": {
+			"new": "Nouveau commentaire",
+			"reply": "Répondre",
+			"tooltip": "Discussion sur la cellule active (Ctrl+Alt+M)",
+			"delete": "Supprimer",
+			"deleteTooltip": "Supprimer le fil de la cellule active",
+			"deleteNone": "Supprimer : la cellule active n’a pas de commentaire",
+			"pane": "Commentaires",
+			"paneTooltip": "Tous les fils, ouverts ou résolus"
 		}
 	},
 	"protect": {

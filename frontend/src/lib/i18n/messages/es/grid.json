@@ -1843,5 +1843,35 @@
 			"var": "Var",
 			"varp": "Varp"
 		}
+	},
+	"comment": {
+		"aria": "Comentarios de {cell}",
+		"resolved": "Resuelto",
+		"resolve": "Resolver",
+		"reopen": "Reabrir",
+		"deleteThread": "Eliminar el hilo",
+		"edited": "editado",
+		"edit": "Editar",
+		"delete": "Eliminar",
+		"save": "Guardar",
+		"reply": "Responder…",
+		"placeholder": "Comentar… (@ para mencionar)",
+		"send": "Publicar",
+		"sendHint": "Ctrl+Intro",
+		"previewHint": "Ctrl+Alt+M: responder",
+		"none": "La celda activa no tiene comentario",
+		"menuNew": "Nuevo comentario",
+		"menuReply": "Responder al comentario",
+		"sharedLocked": "En este libro compartido, solo los propietarios y diseñadores pueden comentar",
+		"pane": {
+			"title": "Comentarios",
+			"filter": "Mostrar",
+			"open": "Abiertos",
+			"resolved": "Resueltos",
+			"all": "Todos",
+			"workbook": "Todo el libro",
+			"none": "Ningún comentario",
+			"replies": "{n, plural, one {# respuesta} other {# respuestas}}"
+		}
 	}
 }

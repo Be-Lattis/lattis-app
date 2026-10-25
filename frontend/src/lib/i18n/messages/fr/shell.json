@@ -75,6 +75,10 @@
 			"resetConfirm": "Remettre tous les paramètres à leur valeur par défaut ?",
 			"resetDetail": "Vos thèmes, serveurs et clés d'API sont gardés.",
 			"resetOk": "Réinitialiser"
+		},
+		"userName": {
+			"label": "Votre nom",
+			"help": "Auteur des commentaires et des versions (vide : celui de la session)"
 		}
 	},
 	"shortcuts": {
@@ -164,7 +168,8 @@
 			"note": "Nouvelle note (ou modifier la note)",
 			"link": "Lien (page web, e-mail, cellule)",
 			"chart": "Graphique (histogramme) du tableau actif",
-			"group": "Grouper / dissocier"
+			"group": "Grouper / dissocier",
+			"comment": "Nouveau commentaire (ou répondre)"
 		},
 		"calcul": {
 			"title": "Calcul et données",
@@ -1206,5 +1211,23 @@
 	},
 	"print": {
 		"empty": "Feuille vide."
+	},
+	"versions": {
+		"title": "Historique des versions",
+		"none": "Aucune version : une version est gardée à chaque enregistrement.",
+		"auto": "Enregistrement",
+		"viewing": "Ouverte",
+		"open": "Ouvrir",
+		"restore": "Restaurer",
+		"restoreConfirm": "Remplacer le classeur par cette version ? La version actuelle reste dans l’historique.",
+		"delete": "Supprimer la version",
+		"deleteConfirm": "Supprimer cette version ?",
+		"namePlaceholder": "Nom de la version",
+		"save": "Enregistrer une version",
+		"note": "20 versions automatiques au plus (une par 10 minutes) ; les versions nommées restent.",
+		"unitB": "o",
+		"unitKB": "Ko",
+		"unitMB": "Mo",
+		"unitGB": "Go"
 	}
 }

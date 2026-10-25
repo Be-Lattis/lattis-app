@@ -1843,5 +1843,35 @@
 			"var": "方差",
 			"varp": "总体方差"
 		}
+	},
+	"comment": {
+		"aria": "{cell} 的评论",
+		"resolved": "已解决",
+		"resolve": "解决",
+		"reopen": "重新打开",
+		"deleteThread": "删除对话",
+		"edited": "已编辑",
+		"edit": "编辑",
+		"delete": "删除",
+		"save": "保存",
+		"reply": "回复…",
+		"placeholder": "评论…（@ 提及）",
+		"send": "发布",
+		"sendHint": "Ctrl+Enter",
+		"previewHint": "Ctrl+Alt+M：回复",
+		"none": "活动单元格没有评论",
+		"menuNew": "新建评论",
+		"menuReply": "回复评论",
+		"sharedLocked": "此共享工作簿中，只有所有者和设计者可以评论",
+		"pane": {
+			"title": "评论",
+			"filter": "显示",
+			"open": "未解决",
+			"resolved": "已解决",
+			"all": "全部",
+			"workbook": "整个工作簿",
+			"none": "没有评论",
+			"replies": "{n, plural, other {# 条回复}}"
+		}
 	}
 }

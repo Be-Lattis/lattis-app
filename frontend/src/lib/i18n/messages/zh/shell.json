@@ -75,6 +75,10 @@
 			"resetConfirm": "将所有设置恢复为默认值？",
 			"resetDetail": "您的主题、服务器和 API 密钥将保留。",
 			"resetOk": "恢复"
+		},
+		"userName": {
+			"label": "您的姓名",
+			"help": "评论和版本的作者（留空：使用系统用户名）"
 		}
 	},
 	"shortcuts": {
@@ -164,7 +168,8 @@
 			"note": "新建注释（或编辑注释）",
 			"link": "链接（网页、电子邮件、单元格）",
 			"chart": "活动表格的图表（柱形图）",
-			"group": "组合 / 取消组合"
+			"group": "组合 / 取消组合",
+			"comment": "新建评论（或回复）"
 		},
 		"calcul": {
 			"title": "计算和数据",
@@ -1206,5 +1211,23 @@
 	},
 	"print": {
 		"empty": "空工作表。"
+	},
+	"versions": {
+		"title": "版本历史记录",
+		"none": "尚无版本：每次保存都会保留一个版本。",
+		"auto": "保存",
+		"viewing": "已打开",
+		"open": "打开",
+		"restore": "还原",
+		"restoreConfirm": "用此版本替换工作簿？当前版本会保留在历史记录中。",
+		"delete": "删除版本",
+		"deleteConfirm": "删除此版本？",
+		"namePlaceholder": "版本名称",
+		"save": "保存版本",
+		"note": "最多 20 个自动版本（每 10 分钟一个）；命名版本会保留。",
+		"unitB": "B",
+		"unitKB": "KB",
+		"unitMB": "MB",
+		"unitGB": "GB"
 	}
 }

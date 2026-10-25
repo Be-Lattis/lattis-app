@@ -150,6 +150,10 @@ func (t *tx) deleteRow(tb Table, rid int64) error {
 		undo = append(undo, st(`INSERT INTO _lattis_styles (tbl, rid, col, style) VALUES (?, ?, ?, ?)`, tb.ID, rid, col, style))
 	}
 	rs.Close()
+	// Son fil de commentaires aussi (un identifiant de ligne repris ne le retrouve pas).
+	if err := t.deleteWhere(`_lattis_comment_rows`, `tbl = ? AND rid = ?`, tb.ID, rid); err != nil {
+		return err
+	}
 	return t.apply([]stmt{
 		st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND rid = ?`, tb.ID, rid),
 		st(`DELETE FROM _lattis_styles WHERE tbl = ? AND rid = ?`, tb.ID, rid),

@@ -13,6 +13,10 @@ Un libro de Lattis es un único archivo `.lattis`: un archivo ZIP que contiene u
 
 Cerrar el libro o la ventana con cambios sin guardar pregunta primero si desea guardarlos.
 
+## Historial de versiones {#historique-des-versions}
+
+Cada guardado conserva una versión del libro junto al archivo (carpeta oculta `.lattis-versions`): una cada 10 minutos, 20 como máximo y 10 veces el tamaño del libro en total. Archivo › Historial de versiones las lista (fecha, autor, tamaño); **Guardar una versión** conserva una con nombre, que se mantiene. **Abrir** muestra una versión en solo lectura; **Restaurar** reemplaza el libro por ella y la versión anterior queda en la lista. Un libro compartido en un Lattis Server no tiene historial.
+
 ## Recuperación tras un incidente {#recuperation-apres-un-incident}
 
 Mientras trabaja, Lattis conserva una copia de trabajo del libro en su equipo. Si Lattis se detiene sin haber guardado (bloqueo, apagado forzado, corte de luz), el siguiente inicio ofrece recuperar los cambios: recuperar vuelve a abrir el libro en el estado en que estaba, con su historial de deshacer; descartar vuelve al archivo guardado.

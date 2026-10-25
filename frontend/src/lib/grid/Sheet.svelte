@@ -44,6 +44,8 @@
 	import TextToColumns from './TextToColumns.svelte';
 	import CustomSort from './CustomSort.svelte';
 	import LinkDialog from './LinkDialog.svelte';
+	import CommentThread from './CommentThread.svelte';
+	import { threadAt, threadPlace, type CommentHost } from './comments';
 	import SparklineDialog from './SparklineDialog.svelte';
 	import { a1 as sparkA1, defaultLocation, drawSparkline, freeSparkAt, sparkGeometry, sparkSvg, sparkValue, type SparkKind, type SparklineConfig, type SparklineGroup } from './sparkline';
 	import type { ErrorBars, ErrorValues, TrendFit, Trendline } from '#lib/chart/fits.js';
@@ -743,6 +745,8 @@
 		merged?: boolean;
 		/** La cellule active a une note (Révision › Modifier la note). */
 		note?: boolean;
+		/** La cellule active a un fil de commentaires (Révision › Répondre). */
+		comment?: boolean;
 		/** Tableau de la cellule active : filtré, et sa colonne n'affiche que les erreurs. */
 		filters?: boolean;
 		errorsOnly?: boolean;
@@ -813,9 +817,11 @@
 		pageBreaks?: PageBreaksView;
 		/** Pose d'un tableau croisé en cours (pivotplace.ts) : indication de la barre d'état, ou null. */
 		onplacing?: (p: { hint: string; create: boolean } | null) => void;
+		/** Commentaires en fil de la feuille (coin violet, fil au survol, Ctrl+Alt+M) ; absent : aucun. */
+		comments?: CommentHost;
 	}
 
-	let { data, source: rawSource, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing }: Props = $props();
+	let { data, source: rawSource, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing, comments }: Props = $props();
 
 	// Actions sur des cellules, lignes ou colonnes : leur zone reçoit un
 	// reflet animé jusqu'à leur fin (working.ts, drawWorking).
@@ -3649,6 +3655,7 @@
 			ctx.strokeRect(cx(t.c0) + 1, ry(t.r0) + 1, spanW(t.c0, t.c1) - 2, rspan(t.r0, t.r1) - 2);
 			ctx.restore();
 		}
+		drawCommentMarks(L);
 		ctx.restore();
 		return incomplete;
 	}
@@ -5764,6 +5771,92 @@
 		menuAction(() => set(row, col, ''));
 	}
 
+	// --- Commentaires en fil (comments.ts) -----------------------------------------
+
+	// Fil ouvert (preview : aperçu au survol, en lecture seule).
+	let commentDlg = $state<{ row: number; col: number; x: number; y: number; preview: boolean } | null>(null);
+
+	// Fils relus (ajout, réponse, collègue) : coins redessinés, ruban à jour.
+	$effect(() => {
+		void comments?.threads;
+		untrack(() => {
+			if (!mounted) return;
+			schedule();
+			refreshStatus();
+		});
+	});
+
+	/** Coin violet des cellules qui ont un fil (pâle : résolu), comme le coin rouge des notes. */
+	function drawCommentMarks(L: Layer) {
+		for (const th of comments?.threads ?? []) {
+			if (th.row < L.r0 || th.row > L.r1 || th.col < L.c0 || th.col > L.c1) continue;
+			const g = mergeOf(th.row, th.col);
+			const xr = L.cx(th.col + (g?.cols ?? 1));
+			const y = L.ry(th.row);
+			ctx.fillStyle = th.resolved ? '#c4b3e3' : '#7b4fc9';
+			ctx.beginPath();
+			ctx.moveTo(xr - 9, y + 1);
+			ctx.lineTo(xr - 1, y + 1);
+			ctx.lineTo(xr - 1, y + 9);
+			ctx.closePath();
+			ctx.fill();
+		}
+	}
+
+	/** Place du fil de la cellule (à droite de la cellule ou de sa fusion). */
+	function commentBox(row: number, col: number) {
+		const g = mergeOf(row, col);
+		const r = g?.row ?? row;
+		const c = g?.col ?? col;
+		const right = screenX(c) + cax().offset(c + (g?.cols ?? 1)) - cax().offset(c);
+		return { row: r, col: c, x: Math.min(toView(right) + 8, Math.max(8, toView(viewW) - 300)), y: Math.max(4, toView(screenY(r))) };
+	}
+
+	/** Aperçu du fil sous la souris. */
+	function updateCommentTip(cell: { row: number; col: number } | null) {
+		if (commentDlg && !commentDlg.preview) return;
+		const g = cell ? mergeOf(cell.row, cell.col) : undefined;
+		const th = cell && comments ? threadAt(comments.threads, g?.row ?? cell.row, g?.col ?? cell.col) : undefined;
+		if (!th || !cell) {
+			if (commentDlg) commentDlg = null;
+			return;
+		}
+		if (commentDlg?.row === th.row && commentDlg.col === th.col) return;
+		commentDlg = { ...commentBox(th.row, th.col), preview: true };
+	}
+
+	/** Révision › Nouveau commentaire (ou Répondre), Ctrl+Alt+M : le fil de la cellule active. */
+	export function newComment() {
+		if (!comments) return;
+		closeMenus();
+		commentDlg = { ...commentBox(active.row, active.col), preview: false };
+	}
+
+	/** Révision › Supprimer le commentaire : le fil de la cellule active. */
+	export function deleteComment() {
+		const g = mergeOf(active.row, active.col);
+		const row = g?.row ?? active.row;
+		const col = g?.col ?? active.col;
+		if (!comments || !threadAt(comments.threads, row, col)) {
+			say(tr('grid.comment.none'));
+			return;
+		}
+		const host = comments;
+		menuAction(() => host.removeThread(row, col));
+	}
+
+	/** La cellule active a-t-elle un fil (ruban : Répondre, Supprimer) ? */
+	export function activeThread(): boolean {
+		const g = mergeOf(active.row, active.col);
+		return !!comments && !!threadAt(comments.threads, g?.row ?? active.row, g?.col ?? active.col);
+	}
+
+	/** Volet Commentaires : aller à la cellule d'un fil et l'ouvrir. */
+	export function showComment(row: number, col: number) {
+		moveTo(row, col);
+		queueMicrotask(() => newComment());
+	}
+
 	// --- Liens hypertexte (hyperlink.ts) --------------------------------------------
 
 	let linkDlg = $state<{ row: number; col: number; text: string; locked: boolean; target: string; names: string[] } | null>(null);
@@ -5988,6 +6081,7 @@
 		const here = ownerAt(active.row, active.col);
 		onstatus?.({
 			note: !!noteOf(active.row, active.col),
+			comment: activeThread(),
 			filters: !!here?.t.columns.some((c) => c.filter),
 			errorsOnly: !!here?.t.columns[active.col - here.t.col]?.filter?.errors,
 			readOnly: here?.t.readOnly,
@@ -7509,7 +7603,7 @@
 
 	/** Un menu, panneau ou boîte de la grille est-il ouvert ? */
 	function menusOpen(): boolean {
-		return !!(filterDlg || cfView || dedupDlg || fnDlg || menu || freeMenu || chartMenu || linesDlg || formatDlg || validDlg || dvAlert || noteDlg || listMenu || sizeDlg);
+		return !!(filterDlg || cfView || dedupDlg || fnDlg || menu || freeMenu || chartMenu || linesDlg || formatDlg || validDlg || dvAlert || noteDlg || listMenu || sizeDlg || (commentDlg && !commentDlg.preview));
 	}
 
 	/**
@@ -7536,7 +7630,7 @@
 	function closeMenus() {
 		menu = freeMenu = chartMenu = listMenu = followMenu = null;
 		filterDlg = cfView = dedupDlg = fnDlg = linesDlg = pivotDlg = null;
-		formatDlg = noteDlg = sizeDlg = null;
+		formatDlg = noteDlg = sizeDlg = commentDlg = null;
 		// Plage source d'une validation en cours de pointage (peut-être sur
 		// une autre feuille) : le dialogue reste, retiré, jusqu'à Entrée ou Échap.
 		if (!dvPick) validDlg = null;
@@ -9083,6 +9177,7 @@
 		if (!dragging && !scroller.style.cursor && linkUnder(e)) scroller.style.cursor = 'pointer';
 		if (!dragging) updateHeaderTip(e);
 		updateNoteTip(dragging ? null : cellAt(e));
+		updateCommentTip(dragging ? null : cellAt(e));
 		if (!dragging) return;
 		const cell = cellAt(e);
 		if (!cell) return;
@@ -9277,6 +9372,9 @@
 				return true;
 			case 'note':
 				editNote();
+				return true;
+			case 'comment':
+				newComment();
 				return true;
 			case 'insertFunction':
 				openFunctions();
@@ -12059,6 +12157,8 @@
 	{:else if id === 'note'}
 		{@render linkItems()}
 		{@render noteItems()}
+	{:else if id === 'comment'}
+		<button data-shed="1" onclick={newComment}>{activeThread() ? tr('grid.comment.menuReply') : tr('grid.comment.menuNew')} <span class="keys">Ctrl+Alt+M</span></button>
 	{/if}
 {/snippet}
 
@@ -12292,7 +12392,7 @@
 				ontouchend={(e) => e.cancelable && e.preventDefault()}
 				onmousedown={onMouseDown}
 				onmousemove={onMouseMove}
-				onmouseleave={() => ((noteTip = null), hoverLocked >= 0 && ((hoverLocked = -1), schedule()))}
+				onmouseleave={() => ((noteTip = null), commentDlg?.preview && (commentDlg = null), hoverLocked >= 0 && ((hoverLocked = -1), schedule()))}
 				ondblclick={onDblClick}
 				oncontextmenu={onContextMenu}
 			>
@@ -12474,7 +12574,7 @@
 			{#each pinnedShown as p (p.x + ',' + p.y)}
 				<div class="note-tip pinned" style:left="{toView(p.x)}px" style:top="{toView(p.y)}px">{p.text}</div>
 			{/each}
-			{#if noteTip && !noteDlg}
+			{#if noteTip && !noteDlg && !commentDlg}
 				<div class="note-tip" style:left="{noteTip.x}px" style:top="{noteTip.y}px">{noteTip.text}</div>
 			{/if}
 			{#if inputTip && !noteTip}
@@ -12633,6 +12733,7 @@
 						format: !!source.applyStyle,
 						rules: !!source.setSheetRules,
 						note: !!source.setNote,
+						comment: !!comments,
 						sort: sortCount > 0,
 						row: rowItems,
 						column: cols,
@@ -12916,6 +13017,7 @@
 						format: !!source.applyStyle,
 						rules: !!source.setSheetRules,
 						note: !!source.setNote,
+						comment: !!comments,
 						lines,
 						pivot: !!pv
 					})}
@@ -13831,6 +13933,27 @@
 					</div>
 				</div>
 			</div>
+		{/if}
+		{#if commentDlg && comments}
+			{@const d = commentDlg}
+			{@const host = comments}
+			{@const th = threadAt(host.threads, d.row, d.col)}
+			{#if th || !d.preview}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div class="comment-pop" class:preview={d.preview} style:left="{d.x}px" style:top="{d.y}px" use:dismissPanel={() => commentDlg && !commentDlg.preview && ((commentDlg = null), wrap.focus())}>
+					<CommentThread
+						thread={th}
+						place={threadPlace(d)}
+						{host}
+						preview={d.preview}
+						onsend={(text) => host.add(d.row, d.col, text)}
+						onclose={() => {
+							commentDlg = null;
+							wrap.focus();
+						}}
+					/>
+				</div>
+			{/if}
 		{/if}
 		{#if noteDlg}
 			{@const d = noteDlg}
@@ -15052,6 +15175,13 @@
 	}
 	/* Note : un post-it, sans fond blanc ni cadre de saisie ; les lignes
 	   du papier suivent le texte (même interligne). */
+	.comment-pop {
+		position: absolute;
+		z-index: 7;
+	}
+	.comment-pop.preview {
+		pointer-events: none;
+	}
 	.note-dlg {
 		position: absolute;
 		z-index: 6;

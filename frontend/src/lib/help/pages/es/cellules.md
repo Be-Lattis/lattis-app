@@ -61,6 +61,10 @@ Las validaciones se exportan a un archivo .xlsx (salvo una lista tomada de una c
 
 Revisar › Nueva nota (`Mayús+F2`) asocia una nota a la celda activa: una esquina roja la señala, y se muestra al pasar el puntero. En una celda que ya tiene una, el comando se convierte en **Editar nota**. La chincheta de la nota la mantiene visible. Revisar › Eliminar nota la quita.
 
+## Comentarios {#commentaires}
+
+Revisar › Nuevo comentario (`Ctrl+Alt+M`, o clic derecho) abre una conversación sobre la celda activa: cada mensaje conserva su autor y su fecha; se responde y se editan o eliminan los propios. Una esquina violeta marca la celda y el hilo aparece al pasar el ratón. **Resolver** lo archiva (se puede reabrir). Revisar › Comentarios lista los hilos de la hoja o del libro, abiertos o resueltos. En una tabla, el hilo sigue a su fila (ordenar, filtrar). En un libro compartido, `@` propone a los miembros; solo propietarios y diseñadores comentan. Las notas siguen aparte; al exportar a .xlsx, cada hilo se convierte en una nota.
+
 ## Vínculos {#liens}
 
 Insertar › Vínculo (`Ctrl+K`) convierte la celda en un vínculo a una página web, una dirección de correo o un lugar del libro (hoja y celda, tabla, celda con nombre). Una dirección web o de correo escrita se convierte sola en vínculo (`Ctrl+Z` lo quita). Un clic en el texto sigue el vínculo; mantener pulsado selecciona la celda. La función `HIPERVINCULO` hace lo mismo en una fórmula.

@@ -74,7 +74,8 @@
 		"help": "帮助",
 		"report": "报告问题…",
 		"about": "关于 Lattis…",
-		"demo": "演示：100 万行"
+		"demo": "演示：100 万行",
+		"versions": "版本历史记录…"
 	},
 	"numberFormat": {
 		"number": "数字",
@@ -122,7 +123,8 @@
 		"links": "链接",
 		"printing": "打印",
 		"illustrations": "插图",
-		"outline": "分级显示"
+		"outline": "分级显示",
+		"comments": "评论"
 	},
 	"launch": {
 		"font": "设置单元格格式：字体 (Ctrl+1)",
@@ -718,6 +720,16 @@
 		"hideDetail": {
 			"label": "隐藏明细数据",
 			"tooltip": "折叠活动单元格所在的组"
+		},
+		"comment": {
+			"new": "新建评论",
+			"reply": "回复",
+			"tooltip": "活动单元格的讨论 (Ctrl+Alt+M)",
+			"delete": "删除",
+			"deleteTooltip": "删除活动单元格的对话",
+			"deleteNone": "删除：活动单元格没有评论",
+			"pane": "评论",
+			"paneTooltip": "所有对话，未解决或已解决"
 		}
 	},
 	"protect": {

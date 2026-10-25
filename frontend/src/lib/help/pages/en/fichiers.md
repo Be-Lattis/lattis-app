@@ -13,6 +13,10 @@ A Lattis workbook is a single `.lattis` file: a ZIP archive that contains a comp
 
 Closing the workbook or the window with unsaved changes first asks whether to save them.
 
+## Version history {#historique-des-versions}
+
+Each save keeps a version of the workbook next to the file (hidden `.lattis-versions` folder): one per 10 minutes, 20 at most, and 10 times the workbook size in total. File › Version history lists them (date, author, size); **Save a version** keeps one under a name, which stays. **Open** shows a version read-only; **Restore** replaces the workbook with it, the previous version staying in the list. A workbook shared on a Lattis Server has no history.
+
 ## Recovery after an incident {#recuperation-apres-un-incident}
 
 While you work, Lattis keeps a working copy of the workbook on your computer. If Lattis stops without having saved (crash, forced shutdown, power cut), the next start offers to recover the changes: recovering reopens the workbook in the state it was in, with its undo history; discarding goes back to the saved file.

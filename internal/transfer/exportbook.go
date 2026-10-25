@@ -143,6 +143,9 @@ func exportBook(ctx context.Context, m *canvas.Model, tg target) ([]xsheet, *fmt
 			sh.pics = sheetObjects(ctx, m, sh.objects)
 			sh.sparks = layouts[i].Sparklines
 			sh.extra = collectExtras(&sh, layouts[i], b, fm)
+			if err := addThreadNotes(ctx, m, &sh); err != nil {
+				return nil, nil, err
+			}
 		}
 		sh.rows = func(ctx context.Context, xt *xtable, send func(int, []xcell) error) error {
 			return tableRows(ctx, m, xt, fm, tg, send)

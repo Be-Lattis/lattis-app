@@ -13,6 +13,10 @@ Eine Lattis-Arbeitsmappe ist eine einzige `.lattis`-Datei: ein ZIP-Archiv mit ei
 
 Wird die Arbeitsmappe oder das Fenster mit ungespeicherten Änderungen geschlossen, fragt Lattis zuerst, ob sie gespeichert werden sollen.
 
+## Versionsverlauf {#historique-des-versions}
+
+Jedes Speichern bewahrt eine Version der Arbeitsmappe neben der Datei auf (versteckter Ordner `.lattis-versions`): eine pro 10 Minuten, höchstens 20 und insgesamt das Zehnfache der Dateigröße. Datei › Versionsverlauf listet sie auf (Datum, Verfasser, Größe); **Version speichern** bewahrt eine unter einem Namen auf, die bleibt. **Öffnen** zeigt eine Version schreibgeschützt; **Wiederherstellen** ersetzt die Arbeitsmappe durch sie, die vorherige Version bleibt in der Liste. Eine auf einem Lattis Server geteilte Arbeitsmappe hat keinen Verlauf.
+
 ## Wiederherstellung nach einem Zwischenfall {#recuperation-apres-un-incident}
 
 Während Sie arbeiten, hält Lattis eine Arbeitskopie der Arbeitsmappe auf Ihrem Computer. Beendet sich Lattis, ohne gespeichert zu haben (Absturz, erzwungenes Herunterfahren, Stromausfall), bietet der nächste Start an, die Änderungen wiederherzustellen: Wiederherstellen öffnet die Arbeitsmappe in dem Zustand, in dem sie war, mit ihrem Rückgängig-Verlauf; Verwerfen kehrt zur gespeicherten Datei zurück.

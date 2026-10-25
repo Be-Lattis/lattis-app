@@ -228,7 +228,7 @@ func Defaults() Tree {
 		"mcp": Tree{"confirmWrites": false},
 		// Thème de couleur par défaut des classeurs (décision 0017). Langue :
 		// auto suit le système (docs/i18n.md).
-		"ui": Tree{"theme": DefaultTheme, "builtinThemes": true, "language": "auto"},
+		"ui": Tree{"theme": DefaultTheme, "builtinThemes": true, "language": "auto", "userName": ""},
 		// Recherche des nouvelles versions (bureau seulement).
 		"updates": Tree{"check": true},
 		"limits": Tree{
@@ -375,6 +375,7 @@ var validators = []struct {
 	{"ui.theme", isIdent},
 	{"ui.language", oneOf("auto", "fr", "en", "de", "es", "zh")},
 	{"ui.builtinThemes", isBool},
+	{"ui.userName", isDisplayName},
 	{"updates.check", isBool},
 	{"ui.themes", isThemes},
 	{"ui.themes.*", isTheme},
@@ -471,6 +472,22 @@ func isHTTPSURL(v any) error {
 	u, err := url.Parse(s)
 	if err != nil || u.Scheme != "https" || u.Host == "" {
 		return msg.New("config.httpsExpected", nil)
+	}
+	return nil
+}
+
+// isDisplayName : nom affiché (auteur des commentaires et des versions) :
+// court, sans caractère de contrôle ; vide : le nom de l'utilisateur du
+// système.
+func isDisplayName(v any) error {
+	s, ok := v.(string)
+	if !ok || len([]rune(s)) > 80 {
+		return msg.New("config.nameExpected", nil)
+	}
+	for _, r := range s {
+		if r < ' ' || r == 0x7f {
+			return msg.New("config.nameExpected", nil)
+		}
 	}
 	return nil
 }

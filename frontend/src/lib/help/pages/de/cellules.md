@@ -61,6 +61,10 @@ Sonst wird nichts gespeichert: Das Entfernen der Überprüfung (oder `Strg+Z`) o
 
 Überprüfen › Neue Notiz (`Umschalt+F2`) heftet der aktiven Zelle eine Notiz an: Eine rote Ecke kennzeichnet sie, und sie erscheint beim Darüberfahren. Auf einer Zelle, die bereits eine hat, wird der Befehl zu **Notiz bearbeiten**. Die Stecknadel der Notiz hält sie eingeblendet. Überprüfen › Notiz löschen entfernt sie.
 
+## Kommentare {#commentaires}
+
+Überprüfen › Neuer Kommentar (`Strg+Alt+M` oder Rechtsklick) startet eine Unterhaltung zur aktiven Zelle: Jede Nachricht behält Verfasser und Datum; man antwortet und bearbeitet oder löscht die eigenen. Eine violette Ecke markiert die Zelle, die Unterhaltung erscheint beim Darüberfahren. **Erledigen** legt sie ab (sie lässt sich wieder öffnen). Überprüfen › Kommentare listet die Unterhaltungen des Blatts oder der Arbeitsmappe, offen oder erledigt. In einer Tabelle folgt die Unterhaltung ihrer Zeile (Sortieren, Filtern). In einer geteilten Arbeitsmappe schlägt `@` Mitglieder vor; nur Besitzer und Designer kommentieren. Notizen bleiben getrennt; beim Export als .xlsx wird jede Unterhaltung zu einer Notiz.
+
 ## Links {#liens}
 
 Einfügen › Link (`Strg+K`) macht die Zelle zu einem Link auf eine Webseite, eine E-Mail-Adresse oder eine Stelle der Mappe (Blatt und Zelle, Tabelle, benannte Zelle). Eine eingegebene Web- oder E-Mail-Adresse wird von selbst zum Link (`Strg+Z` entfernt ihn). Ein Klick auf den Text folgt dem Link, gedrückt halten wählt die Zelle aus. Die Funktion `HYPERLINK` tut dasselbe in einer Formel.

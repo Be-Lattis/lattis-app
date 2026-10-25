@@ -1843,5 +1843,35 @@
 			"var": "Var",
 			"varp": "Varp"
 		}
+	},
+	"comment": {
+		"aria": "Comments on {cell}",
+		"resolved": "Resolved",
+		"resolve": "Resolve",
+		"reopen": "Reopen",
+		"deleteThread": "Delete thread",
+		"edited": "edited",
+		"edit": "Edit",
+		"delete": "Delete",
+		"save": "Save",
+		"reply": "Reply…",
+		"placeholder": "Comment… (@ to mention)",
+		"send": "Post",
+		"sendHint": "Ctrl+Enter",
+		"previewHint": "Ctrl+Alt+M: reply",
+		"none": "The active cell has no comment",
+		"menuNew": "New comment",
+		"menuReply": "Reply to comment",
+		"sharedLocked": "Only owners and designers can comment in this shared workbook",
+		"pane": {
+			"title": "Comments",
+			"filter": "Show",
+			"open": "Open",
+			"resolved": "Resolved",
+			"all": "All",
+			"workbook": "Whole workbook",
+			"none": "No comments",
+			"replies": "{n, plural, one {# reply} other {# replies}}"
+		}
 	}
 }

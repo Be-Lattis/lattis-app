@@ -125,7 +125,7 @@
 		return tAny(`ribbon.numberFormat.${c === 'standard' ? 'general' : c}`);
 	};
 
-	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'reconnect' | 'detach' | 'remove' | 'save' | 'saveAs' | 'download' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
+	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'reconnect' | 'detach' | 'remove' | 'save' | 'saveAs' | 'versions' | 'download' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
 	/** Accueil › Édition (Remplissage, Effacer, Trier et filtrer), Mettre sous forme de tableau. */
 	export type EditAction = 'fillDown' | 'fillRight' | 'clearContents' | 'clearFilters' | 'formatAsTable';
 
@@ -235,6 +235,11 @@
 		onmergesheets?: () => void;
 		/** Révision › Notes. */
 		onnote?: (what: 'edit' | 'delete') => void;
+		/** Révision › Commentaires : nouveau (ou répondre), supprimer le fil, volet. */
+		oncomment?: (what: 'new' | 'delete' | 'pane') => void;
+		/** La cellule active a un fil de commentaires ; le volet Commentaires est ouvert. */
+		comment?: boolean;
+		commentsPane?: boolean;
 		/** Insertion › Lien (Ctrl+K) sur la cellule active. */
 		onlink?: () => void;
 		/** Volets figés de la feuille active, et Affichage › Figer les volets. */
@@ -270,7 +275,7 @@
 		ontheme?: (id: string) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, onsparkline, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onoutline, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, onsparkline, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onoutline, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, oncomment, comment = false, commentsPane = false, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -970,6 +975,17 @@
 				])
 			},
 			{
+				id: 'comments',
+				title: t('ribbon.group.comments'),
+				// Fils de discussion (un tableur a les deux : notes et commentaires).
+				compact: true,
+				commands: [
+					{ label: comment ? t('ribbon.cmd.comment.reply') : t('ribbon.cmd.comment.new'), icon: 'comment', size: 'big', run: oncomment ? () => oncomment('new') : undefined, hint: t('ribbon.cmd.comment.tooltip') },
+					{ label: t('ribbon.cmd.comment.delete'), icon: 'trash', size: 'small', run: oncomment && comment ? () => oncomment('delete') : undefined, hint: comment ? t('ribbon.cmd.comment.deleteTooltip') : t('ribbon.cmd.comment.deleteNone') },
+					{ label: t('ribbon.cmd.comment.pane'), icon: 'comments', size: 'small', on: commentsPane, ro: true, run: oncomment ? () => oncomment('pane') : undefined, hint: t('ribbon.cmd.comment.paneTooltip') }
+				]
+			},
+			{
 				id: 'protect',
 				title: t('ribbon.group.protect'),
 				commands: readOnly([
@@ -1622,7 +1638,7 @@
 						<button role="menuitem" disabled={disabled && a === 'close'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
-					{#each [['save', t('ribbon.file.save'), 'Ctrl+S'], ['saveAs', t('ribbon.file.saveAs'), 'F12'], ...(platform.web && !platform.demo && !shared ? [['download', t('ribbon.file.download'), '']] : []), ...(sharedWorkbooksEnabled() && !shared ? [['share', t('ribbon.file.share'), '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', t('ribbon.file.rights'), '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', t('ribbon.file.republish'), '']] : []), ...(sharedWorkbooksEnabled() && reconnect ? [['reconnect', t('ribbon.file.reconnect'), '']] : []), ...(sharedWorkbooksEnabled() && detach ? [['detach', t('ribbon.file.detach'), '']] : []), ...(sharedWorkbooksEnabled() && remove ? [['remove', t('ribbon.file.remove'), '']] : []), ['import', t('ribbon.file.import'), '']] as [a, label, keys] (a)}
+					{#each [['save', t('ribbon.file.save'), 'Ctrl+S'], ['saveAs', t('ribbon.file.saveAs'), 'F12'], ...(!platform.demo ? [['versions', t('ribbon.file.versions'), '']] : []), ...(platform.web && !platform.demo && !shared ? [['download', t('ribbon.file.download'), '']] : []), ...(sharedWorkbooksEnabled() && !shared ? [['share', t('ribbon.file.share'), '']] : []), ...(sharedWorkbooksEnabled() && rights ? [['rights', t('ribbon.file.rights'), '']] : []), ...(sharedWorkbooksEnabled() && republish ? [['republish', t('ribbon.file.republish'), '']] : []), ...(sharedWorkbooksEnabled() && reconnect ? [['reconnect', t('ribbon.file.reconnect'), '']] : []), ...(sharedWorkbooksEnabled() && detach ? [['detach', t('ribbon.file.detach'), '']] : []), ...(sharedWorkbooksEnabled() && remove ? [['remove', t('ribbon.file.remove'), '']] : []), ['import', t('ribbon.file.import'), '']] as [a, label, keys] (a)}
 						<button role="menuitem" class:danger={a === 'remove'} disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />

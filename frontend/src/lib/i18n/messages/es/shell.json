@@ -75,6 +75,10 @@
 			"resetConfirm": "¿Restablecer todos los ajustes a sus valores predeterminados?",
 			"resetDetail": "Se conservan sus temas, servidores y claves de API.",
 			"resetOk": "Restablecer"
+		},
+		"userName": {
+			"label": "Su nombre",
+			"help": "Autor de los comentarios y versiones (vacío: el del usuario del sistema)"
 		}
 	},
 	"shortcuts": {
@@ -164,7 +168,8 @@
 			"note": "Nueva nota (o modificar la nota)",
 			"link": "Vínculo (página web, correo, celda)",
 			"chart": "Gráfico (columnas) de la tabla activa",
-			"group": "Agrupar / desagrupar"
+			"group": "Agrupar / desagrupar",
+			"comment": "Nuevo comentario (o responder)"
 		},
 		"calcul": {
 			"title": "Cálculo y datos",
@@ -1206,5 +1211,23 @@
 	},
 	"print": {
 		"empty": "Hoja vacía."
+	},
+	"versions": {
+		"title": "Historial de versiones",
+		"none": "Ninguna versión: se conserva una cada vez que guarda.",
+		"auto": "Guardado",
+		"viewing": "Abierta",
+		"open": "Abrir",
+		"restore": "Restaurar",
+		"restoreConfirm": "¿Reemplazar el libro por esta versión? La versión actual queda en el historial.",
+		"delete": "Eliminar la versión",
+		"deleteConfirm": "¿Eliminar esta versión?",
+		"namePlaceholder": "Nombre de la versión",
+		"save": "Guardar una versión",
+		"note": "Hasta 20 versiones automáticas (una cada 10 minutos); las versiones con nombre se conservan.",
+		"unitB": "B",
+		"unitKB": "KB",
+		"unitMB": "MB",
+		"unitGB": "GB"
 	}
 }

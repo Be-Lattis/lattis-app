@@ -75,6 +75,10 @@
 			"resetConfirm": "Alle Einstellungen auf ihre Standardwerte zurücksetzen?",
 			"resetDetail": "Ihre Designs, Server und API-Schlüssel bleiben erhalten.",
 			"resetOk": "Zurücksetzen"
+		},
+		"userName": {
+			"label": "Ihr Name",
+			"help": "Verfasser von Kommentaren und Versionen (leer: Name des Systembenutzers)"
 		}
 	},
 	"shortcuts": {
@@ -164,7 +168,8 @@
 			"note": "Neue Notiz (oder Notiz bearbeiten)",
 			"link": "Link (Webseite, E-Mail, Zelle)",
 			"chart": "Diagramm (Säulendiagramm) der aktiven Tabelle",
-			"group": "Gruppieren / Gruppierung aufheben"
+			"group": "Gruppieren / Gruppierung aufheben",
+			"comment": "Neuer Kommentar (oder antworten)"
 		},
 		"calcul": {
 			"title": "Berechnung und Daten",
@@ -1206,5 +1211,23 @@
 	},
 	"print": {
 		"empty": "Leeres Blatt."
+	},
+	"versions": {
+		"title": "Versionsverlauf",
+		"none": "Noch keine Version: Bei jedem Speichern wird eine aufbewahrt.",
+		"auto": "Speicherung",
+		"viewing": "Geöffnet",
+		"open": "Öffnen",
+		"restore": "Wiederherstellen",
+		"restoreConfirm": "Arbeitsmappe durch diese Version ersetzen? Die aktuelle Version bleibt im Verlauf.",
+		"delete": "Version löschen",
+		"deleteConfirm": "Diese Version löschen?",
+		"namePlaceholder": "Name der Version",
+		"save": "Version speichern",
+		"note": "Höchstens 20 automatische Versionen (eine pro 10 Minuten); benannte Versionen bleiben.",
+		"unitB": "B",
+		"unitKB": "KB",
+		"unitMB": "MB",
+		"unitGB": "GB"
 	}
 }

@@ -1843,5 +1843,35 @@
 			"var": "Varianz",
 			"varp": "Varianz (Grundgesamtheit)"
 		}
+	},
+	"comment": {
+		"aria": "Kommentare zu {cell}",
+		"resolved": "Erledigt",
+		"resolve": "Erledigen",
+		"reopen": "Wieder öffnen",
+		"deleteThread": "Unterhaltung löschen",
+		"edited": "bearbeitet",
+		"edit": "Bearbeiten",
+		"delete": "Löschen",
+		"save": "Speichern",
+		"reply": "Antworten…",
+		"placeholder": "Kommentieren… (@ zum Erwähnen)",
+		"send": "Senden",
+		"sendHint": "Strg+Eingabe",
+		"previewHint": "Strg+Alt+M: antworten",
+		"none": "Die aktive Zelle hat keinen Kommentar",
+		"menuNew": "Neuer Kommentar",
+		"menuReply": "Auf Kommentar antworten",
+		"sharedLocked": "In dieser geteilten Arbeitsmappe können nur Besitzer und Designer kommentieren",
+		"pane": {
+			"title": "Kommentare",
+			"filter": "Anzeigen",
+			"open": "Offen",
+			"resolved": "Erledigt",
+			"all": "Alle",
+			"workbook": "Ganze Arbeitsmappe",
+			"none": "Keine Kommentare",
+			"replies": "{n, plural, one {# Antwort} other {# Antworten}}"
+		}
 	}
 }

@@ -29,7 +29,7 @@ const (
 )
 
 // Tables des métadonnées positionnées sur une feuille (colonnes sheet, row, col).
-var positioned = []string{"_lattis_cells", "_lattis_choice_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", "_lattis_tables", "_lattis_pivots", "_lattis_charts", "_lattis_buttons", "_lattis_objects"}
+var positioned = []string{"_lattis_cells", "_lattis_choice_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", "_lattis_tables", "_lattis_pivots", "_lattis_charts", "_lattis_buttons", "_lattis_objects", "_lattis_comment_cells"}
 
 // Objets ancrés (pas de contenu par cellule) : leur ancre recule au début
 // d'une plage supprimée au lieu de disparaître.
@@ -181,10 +181,14 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			}
 		}
 	}
-	for _, tbl := range []string{"_lattis_cells", "_lattis_choice_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", a.sizes(), a.lineStyles(), a.lineRules(), a.outline()} {
+	for _, tbl := range []string{"_lattis_cells", "_lattis_choice_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", a.sizes(), a.lineStyles(), a.lineRules(), a.outline(), "_lattis_comment_cells"} {
 		if err := t.deleteIn(tbl, a, sheet, lo, hi); err != nil {
 			return err
 		}
+	}
+	// Fils de commentaires des cellules supprimées : leurs messages aussi.
+	if err := t.dropLooseComments(); err != nil {
+		return err
 	}
 	for _, tbl := range anchored {
 		if err := t.clampAnchors(tbl, a, sheet, lo, hi); err != nil {
@@ -379,22 +383,27 @@ func (t *tx) trashRows(tb Table, ids string) error {
 			st(`CREATE TABLE ` + trash + ` AS SELECT * FROM ` + tb.sql() + ` WHERE id IN (` + ids + `)`),
 			st(`CREATE TABLE `+trash+`_inv AS SELECT * FROM _lattis_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
 			st(`CREATE TABLE `+trash+`_sty AS SELECT * FROM _lattis_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
+			st(`CREATE TABLE `+trash+`_cmt AS SELECT * FROM _lattis_comment_rows WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
 			st(`DELETE FROM _lattis_invalid WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
 			st(`DELETE FROM _lattis_styles WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
+			st(`DELETE FROM _lattis_comment_rows WHERE tbl = ? AND rid IN (SELECT id FROM `+trash+`)`, tb.ID),
 			st(`DELETE FROM ` + tb.sql() + ` WHERE id IN (SELECT id FROM ` + trash + `)`),
 		},
 		Undo: []stmt{
 			st(`INSERT INTO ` + tb.sql() + ` SELECT * FROM ` + trash),
 			st(`INSERT INTO _lattis_invalid SELECT * FROM ` + trash + `_inv`),
 			st(`INSERT INTO _lattis_styles SELECT * FROM ` + trash + `_sty`),
+			st(`INSERT INTO _lattis_comment_rows SELECT * FROM ` + trash + `_cmt`),
 			st(`DROP TABLE ` + trash),
 			st(`DROP TABLE ` + trash + `_inv`),
 			st(`DROP TABLE ` + trash + `_sty`),
+			st(`DROP TABLE ` + trash + `_cmt`),
 		},
 		Purge: []stmt{
 			st(`DROP TABLE IF EXISTS ` + trash),
 			st(`DROP TABLE IF EXISTS ` + trash + `_inv`),
 			st(`DROP TABLE IF EXISTS ` + trash + `_sty`),
+			st(`DROP TABLE IF EXISTS ` + trash + `_cmt`),
 		},
 	})
 }

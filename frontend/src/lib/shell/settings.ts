@@ -172,6 +172,17 @@ export const settingSections: SettingSection[] = [
 					return t('shell.settings.theme.label');
 				},
 				choicesOf: (list) => themeCatalog(list).map((th) => ({ value: th.id, label: themeLabel(th), swatch: [th.table, th.source] }))
+			},
+			{
+				// Auteur des commentaires et des versions d'un classeur local.
+				path: 'ui.userName',
+				kind: 'text',
+				get label() {
+					return t('shell.settings.userName.label');
+				},
+				get help() {
+					return t('shell.settings.userName.help');
+				}
 			}
 		]
 	},

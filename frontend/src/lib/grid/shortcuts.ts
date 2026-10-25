@@ -27,6 +27,7 @@ export type Shortcut =
 	| 'hideRows' // Ctrl+9 : masquer les lignes
 	| 'hideCols' // Ctrl+0 : masquer les colonnes
 	| 'note' // Maj+F2 : nouvelle note (ou la modifier)
+	| 'comment' // Ctrl+Alt+M : nouveau commentaire (ou répondre)
 	| 'insertFunction' // Maj+F3 : insérer une fonction
 	| 'pasteSpecial' // Ctrl+Alt+V : collage spécial
 	| 'group' // Alt+Maj+→ : grouper
@@ -71,6 +72,8 @@ export function shortcutOf(e: Keys): Shortcut | null {
 	if (e.altKey && ctrl && !e.shiftKey && k === 'PageUp') return 'prevChoice';
 	// Collage spécial (touche V, quel que soit le clavier).
 	if (e.altKey && ctrl && !e.shiftKey && (e.code === 'KeyV' || lower === 'v')) return 'pasteSpecial';
+	// Commentaire en fil (touche M, quel que soit le clavier).
+	if (e.altKey && ctrl && !e.shiftKey && (e.code === 'KeyM' || lower === 'm')) return 'comment';
 	// Plan : grouper, dissocier.
 	if (e.altKey && !ctrl && e.shiftKey && k === 'ArrowRight') return 'group';
 	if (e.altKey && !ctrl && e.shiftKey && k === 'ArrowLeft') return 'ungroup';

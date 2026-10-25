@@ -30,6 +30,7 @@ var layoutTables = []string{
 	"_lattis_row_rules", "_lattis_col_rules", "_lattis_pivots", "_lattis_charts",
 	"_lattis_buttons", "_lattis_pages", "_lattis_range_cells", "_lattis_page_setup",
 	"_lattis_images", "_lattis_objects", "_lattis_sparklines", "_lattis_row_outline", "_lattis_col_outline",
+	"_lattis_comment_cells", "_lattis_comment_rows", "_lattis_comments",
 }
 
 // Images d'un classeur partagé : la mise en page est un seul objet du

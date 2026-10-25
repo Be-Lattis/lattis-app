@@ -74,7 +74,8 @@
 		"help": "Hilfe",
 		"report": "Problem melden…",
 		"about": "Über Lattis…",
-		"demo": "Demo: 1 Mio. Zeilen"
+		"demo": "Demo: 1 Mio. Zeilen",
+		"versions": "Versionsverlauf…"
 	},
 	"numberFormat": {
 		"number": "Zahl",
@@ -122,7 +123,8 @@
 		"links": "Links",
 		"printing": "Drucken",
 		"illustrations": "Illustrationen",
-		"outline": "Gliederung"
+		"outline": "Gliederung",
+		"comments": "Kommentare"
 	},
 	"launch": {
 		"font": "Zellen formatieren: Schrift (Strg+1)",
@@ -718,6 +720,16 @@
 		"hideDetail": {
 			"label": "Detail ausblenden",
 			"tooltip": "Gruppe der aktiven Zelle reduzieren"
+		},
+		"comment": {
+			"new": "Neuer Kommentar",
+			"reply": "Antworten",
+			"tooltip": "Unterhaltung zur aktiven Zelle (Strg+Alt+M)",
+			"delete": "Löschen",
+			"deleteTooltip": "Unterhaltung der aktiven Zelle löschen",
+			"deleteNone": "Löschen: Die aktive Zelle hat keinen Kommentar",
+			"pane": "Kommentare",
+			"paneTooltip": "Alle Unterhaltungen, offen oder erledigt"
 		}
 	},
 	"protect": {

@@ -58,6 +58,9 @@ export const icons = {
 	'merge-cells': '<rect x="3" y="5" width="18" height="14" rx="1"/><path class="a" d="M7 12h10M9 10l-2 2 2 2M15 10l2 2-2 2"/>',
 	'cell-format': '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/><path class="a" d="M12.5 13h5M12.5 16.5h3.5"/>',
 	note: '<path d="M5 4h14v11l-5 5H5z"/><path class="a" d="M14 20v-5h5"/><path d="M8 9h8M8 12h5"/>',
+	// Commentaires en fil : une bulle (nouveau), deux bulles (volet).
+	comment: '<path d="M4.5 5.5h15v10h-8l-4 3.5v-3.5h-3z"/><path class="a" d="M8 9.5h8M8 12.5h5"/>',
+	comments: '<path d="M3.5 4.5h12v8h-6.5l-3 2.5v-2.5h-2.5z"/><path class="a" d="M17.5 8.5h3v8h-2v2.5l-3-2.5h-5.5v-1.5"/>',
 	validation: '<rect x="3.5" y="4" width="17" height="16" rx="1.5"/><path d="M14 4v16M6.5 9h5M6.5 13h5"/><path class="a" d="M15.5 10l1.5 1.5 1.5-1.5"/>',
 	// Analyse de scénarios : une cible et la flèche qui l'atteint.
 	'what-if': '<circle cx="11" cy="13" r="7.5"/><circle cx="11" cy="13" r="3.5"/><circle class="af" cx="11" cy="13" r="1.2"/><path class="a" d="M12.5 11.5 20 4M17 4h3v3"/>',

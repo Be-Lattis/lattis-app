@@ -20,6 +20,8 @@ export type {
     AIUsage,
     About,
     ColumnOrderInfo,
+    CommentIdentity,
+    CommentMember,
     DamagedFile,
     DataAudienceEntry,
     DataInsert,
@@ -68,5 +70,7 @@ export type {
     TableSourceLink,
     TableSourceRequest,
     UICommand,
+    VersionEntry,
+    VersionList,
     XLSXExport
 } from "./models.js";

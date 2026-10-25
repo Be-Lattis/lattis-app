@@ -275,6 +275,9 @@ func (t *tx) deleteSheet(sheet int64) error {
 				return err
 			}
 		}
+		if err := t.dropSheetComments(sheet, tables); err != nil {
+			return err
+		}
 		if err := t.row(`SELECT name, pos, gridlines, headings, color, hidden, freeze_rows, freeze_cols, zoom, choice FROM _lattis_sheets WHERE id = ?`, sheet).Scan(&name, &pos, &grid, &heads, &color, &hidden, &frows, &fcols, &zoom, &choice); err != nil {
 			return err
 		}

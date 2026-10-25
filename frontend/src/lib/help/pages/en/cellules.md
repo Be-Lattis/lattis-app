@@ -61,6 +61,10 @@ Validations are exported to a .xlsx file (except a list taken from a table colum
 
 Review › New Note (`Shift+F2`) attaches a note to the active cell: a red corner marks it, and it shows on hover. On a cell that has one, the command becomes **Edit Note**. The note's pin keeps it displayed. Review › Delete Note removes it.
 
+## Comments {#commentaires}
+
+Review › New comment (`Ctrl+Alt+M`, or right-click) starts a discussion on the active cell: each message keeps its author and date; you can reply, and edit or delete your own. A purple corner marks the cell and the thread shows on hover. **Resolve** files it away (it can be reopened). Review › Comments lists the threads of the sheet or workbook, open or resolved. In a table, a thread follows its row (sort, filter). In a shared workbook, `@` suggests members; only owners and designers can comment. Notes stay separate; when exporting to .xlsx, each thread becomes a note.
+
 ## Links {#liens}
 
 Insert › Link (`Ctrl+K`) turns the cell into a link to a web page, an e-mail address or a place in the workbook (sheet and cell, table, named cell). A web or e-mail address you type becomes a link by itself (`Ctrl+Z` removes it). A click on the text follows the link; click and hold selects the cell. The `HYPERLINK` function does the same in a formula.

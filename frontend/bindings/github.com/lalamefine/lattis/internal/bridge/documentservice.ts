@@ -167,6 +167,13 @@ export function About(): $CancellablePromise<$models.About> {
 }
 
 /**
+ * AddComment ajoute un commentaire à la cellule (ouvre son fil, ou y répond).
+ */
+export function AddComment(sheet: number, row: number, col: number, text: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(155059366, sheet, row, col, text);
+}
+
+/**
  * AddDoc ajoute un onglet Document avant l'onglet before (0 : à la
  * fin) et renvoie son identifiant.
  */
@@ -393,6 +400,14 @@ export function ColumnsToValues(table: string, cols: number[] | null): $Cancella
 }
 
 /**
+ * CommentAuthor donne l'auteur des commentaires de ce poste et les membres
+ * à mentionner.
+ */
+export function CommentAuthor(): $CancellablePromise<$models.CommentIdentity> {
+    return $Call.ByID(3069261628);
+}
+
+/**
  * ConnectionTables liste les tables d'une connexion du classeur
  * (PostgreSQL, MySQL, SQL Server ; vide pour une connexion Web).
  */
@@ -578,6 +593,13 @@ export function DeleteColumnSpans(spans: canvas$0.ColumnSpan[] | null): $Cancell
 }
 
 /**
+ * DeleteComment supprime un de ses commentaires (le premier : tout le fil).
+ */
+export function DeleteComment(id: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3098586874, id);
+}
+
+/**
  * DeleteConnection supprime une connexion qu'aucune requête n'utilise.
  */
 export function DeleteConnection(id: number): $CancellablePromise<$models.DocState> {
@@ -668,6 +690,20 @@ export function DeleteSparkline(id: number): $CancellablePromise<$models.DocStat
  */
 export function DeleteTables(names: string[] | null): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2144760912, names);
+}
+
+/**
+ * DeleteThread supprime le fil de commentaires de la cellule.
+ */
+export function DeleteThread(sheet: number, row: number, col: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1326422877, sheet, row, col);
+}
+
+/**
+ * DeleteVersion supprime une version gardée.
+ */
+export function DeleteVersion(id: string): $CancellablePromise<void> {
+    return $Call.ByID(3930160083, id);
 }
 
 /**
@@ -768,6 +804,13 @@ export function DropTableSourceByID(tbl: number): $CancellablePromise<void> {
  */
 export function DuplicatesPreview(table: string, cols: number[] | null): $CancellablePromise<number> {
     return $Call.ByID(1937033744, table, cols);
+}
+
+/**
+ * EditComment modifie un de ses commentaires.
+ */
+export function EditComment(id: string, text: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2664108703, id, text);
 }
 
 /**
@@ -1459,6 +1502,14 @@ export function OpenTogether(path: string): $CancellablePromise<$models.OpenResu
 }
 
 /**
+ * OpenVersion ouvre une version en lecture seule, à la place du classeur
+ * (enregistré d'abord s'il a changé).
+ */
+export function OpenVersion(id: string): $CancellablePromise<$models.OpenResult> {
+    return $Call.ByID(3026053986, id);
+}
+
+/**
  * OrderObject met un objet au premier plan (front) ou à l'arrière-plan.
  */
 export function OrderObject(id: number, front: boolean): $CancellablePromise<$models.DocState> {
@@ -1949,6 +2000,22 @@ export function ResolveSave(overwrite: boolean): $CancellablePromise<$models.Doc
 }
 
 /**
+ * ResolveThread résout (ou rouvre) un fil de commentaires.
+ */
+export function ResolveThread(thread: string, resolved: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1210139850, thread, resolved);
+}
+
+/**
+ * RestoreVersion remplace le classeur par une version : le classeur est
+ * enregistré s'il a changé, sa version actuelle gardée (« Avant
+ * restauration »), puis il est rouvert.
+ */
+export function RestoreVersion(id: string): $CancellablePromise<$models.OpenResult> {
+    return $Call.ByID(1714606144, id);
+}
+
+/**
  * RowToNote sort la dernière ligne d'un tableau : elle reste dessous, hors
  * du tableau (note ou total).
  */
@@ -2049,6 +2116,14 @@ export function SaveScenario(sheet: number, old: string, sc: canvas$0.Scenario):
  */
 export function SaveScript(id: number, name: string, source: string): $CancellablePromise<number> {
     return $Call.ByID(816874412, id, name, source);
+}
+
+/**
+ * SaveVersion enregistre le classeur, puis en garde une version sous le nom
+ * name (« Enregistrer une version… »).
+ */
+export function SaveVersion(name: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1440956213, name);
 }
 
 /**
@@ -2906,6 +2981,14 @@ export function TextToColumnsPreview(sheet: number, r0: number, r1: number, col:
 }
 
 /**
+ * Threads donne les fils de commentaires d'une feuille (0 : de tout le
+ * classeur), à leur place actuelle.
+ */
+export function Threads(sheet: number): $CancellablePromise<canvas$0.Thread[] | null> {
+    return $Call.ByID(481251323, sheet);
+}
+
+/**
  * TitleToHeader : « Utiliser comme en-têtes » ; la ligne juste au-dessus du
  * tableau donne les noms des colonnes, l'ancien en-tête devient la 1re ligne.
  */
@@ -3000,6 +3083,13 @@ export function ValidationAt(sheet: number, row: number, col: number): $Cancella
  */
 export function ValidationList(sheet: number, src: string): $CancellablePromise<canvas$0.ValidationList> {
     return $Call.ByID(3218052505, sheet, src);
+}
+
+/**
+ * Versions donne l'historique des versions du classeur ouvert.
+ */
+export function Versions(): $CancellablePromise<$models.VersionList> {
+    return $Call.ByID(2026278531);
 }
 
 /**

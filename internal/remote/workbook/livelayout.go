@@ -69,6 +69,10 @@ var layoutKeys = map[string][]string{
 	"_lattis_sparklines":   {"id"},
 	"_lattis_row_outline":  {"sheet", "row"},
 	"_lattis_col_outline":  {"sheet", "col"},
+	// Commentaires en fil (canvas/comments.go) : identifiants aléatoires.
+	"_lattis_comment_cells": {"sheet", "row", "col"},
+	"_lattis_comment_rows":  {"tbl", "rid", "col"},
+	"_lattis_comments":      {"id"},
 }
 
 // layoutOwn : colonnes que la mise en page en direct ne compare ni

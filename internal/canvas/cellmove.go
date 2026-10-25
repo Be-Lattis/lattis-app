@@ -43,7 +43,7 @@ func (t *tx) moveFree(sheet int64, r0, c0, r1, c1, dr, dc int) error {
 		}
 	}
 	inSource := `row BETWEEN ? AND ? AND col BETWEEN ? AND ?`
-	for _, tbl := range []string{"_lattis_cells", choiceCellsTable, "_lattis_cell_styles", "_lattis_names", rangeTable} {
+	for _, tbl := range []string{"_lattis_cells", choiceCellsTable, "_lattis_cell_styles", "_lattis_names", rangeTable, "_lattis_comment_cells"} {
 		// La destination est remplacée (hors cellules déplacées elles-mêmes).
 		if err := t.deleteWhere(tbl, `sheet = ? AND `+inSource+` AND NOT (`+inSource+`)`,
 			sheet, tr0, tr1, tc0, tc1, r0, r1, c0, c1); err != nil {
@@ -58,6 +58,10 @@ func (t *tx) moveFree(sheet int64, r0, c0, r1, c1, dr, dc int) error {
 		); err != nil {
 			return err
 		}
+	}
+	// Fils de commentaires remplacés à la destination : leurs messages aussi.
+	if err := t.dropLooseComments(); err != nil {
+		return err
 	}
 	return t.rewriteCellRefs(sheet, func(r, c int) (int, int, bool) {
 		switch {

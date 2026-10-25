@@ -1843,5 +1843,35 @@
 			"var": "Variance",
 			"varp": "Variance (population)"
 		}
+	},
+	"comment": {
+		"aria": "Commentaires de {cell}",
+		"resolved": "Résolu",
+		"resolve": "Résoudre",
+		"reopen": "Rouvrir",
+		"deleteThread": "Supprimer le fil",
+		"edited": "modifié",
+		"edit": "Modifier",
+		"delete": "Supprimer",
+		"save": "Enregistrer",
+		"reply": "Répondre…",
+		"placeholder": "Commenter… (@ pour mentionner)",
+		"send": "Publier",
+		"sendHint": "Ctrl+Entrée",
+		"previewHint": "Ctrl+Alt+M : répondre",
+		"none": "La cellule active n’a pas de commentaire",
+		"menuNew": "Nouveau commentaire",
+		"menuReply": "Répondre au commentaire",
+		"sharedLocked": "Dans ce classeur partagé, seuls les propriétaires et concepteurs commentent",
+		"pane": {
+			"title": "Commentaires",
+			"filter": "Afficher",
+			"open": "Ouverts",
+			"resolved": "Résolus",
+			"all": "Tous",
+			"workbook": "Tout le classeur",
+			"none": "Aucun commentaire",
+			"replies": "{n, plural, one {# réponse} other {# réponses}}"
+		}
 	}
 }

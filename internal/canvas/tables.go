@@ -84,6 +84,9 @@ func (m *Model) DeleteTables(ctx context.Context, names []string) error {
 			if err := t.deleteTable(tb); err != nil {
 				return err
 			}
+			if err := t.dropTableComments(tb.ID); err != nil {
+				return err
+			}
 			// Suppression voulue : un tableau partagé est aussi supprimé du
 			// serveur (un tableau qui disparaît autrement, actualisé,
 			// déplacé, fusionné, est refusé : oplog.Change).

@@ -13,6 +13,10 @@ Un classeur Lattis est un seul fichier `.lattis` : une archive ZIP qui contient 
 
 Fermer le classeur ou la fenêtre avec des modifications non enregistrées demande d'abord s'il faut les enregistrer.
 
+## Historique des versions
+
+Chaque enregistrement garde une version du classeur, à côté du fichier (dossier caché `.lattis-versions`) : une par tranche de 10 minutes, 20 au plus, et 10 fois la taille du classeur en tout. Fichier › Historique des versions les liste (date, auteur, taille) ; **Enregistrer une version** en garde une sous un nom, qui reste. **Ouvrir** montre une version en lecture seule ; **Restaurer** remplace le classeur par elle, la version d'avant restant dans la liste. Un classeur partagé sur un Serveur Lattis n'a pas d'historique.
+
 ## Récupération après un incident
 
 Pendant que vous travaillez, Lattis tient une copie de travail du classeur sur votre poste. Si Lattis s'arrête sans avoir enregistré (panne, arrêt forcé, coupure de courant), le démarrage suivant propose de récupérer les modifications : récupérer rouvre le classeur dans l'état où il était, avec son historique d'annulation ; abandonner revient au fichier enregistré.

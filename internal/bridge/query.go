@@ -87,7 +87,12 @@ func grantSources(ctx context.Context, d *doc.Document, q query.Query) {
 
 // saveDoc enregistre d dans path.
 func saveDoc(ctx context.Context, d *doc.Document, path string) error {
-	return d.Save(ctx, path)
+	if err := d.Save(ctx, path); err != nil {
+		return err
+	}
+	// Historique des versions (Fichier › Historique des versions).
+	keepVersion(ctx, d)
+	return nil
 }
 
 // secretsOf rend les mots de passe propres au classeur d (voir query.Secrets).
