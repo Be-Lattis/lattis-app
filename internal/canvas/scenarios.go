@@ -327,12 +327,25 @@ func (m *Model) ScenarioSummary(ctx context.Context, sheet int64, results string
 			}
 			r++
 		}
+		// Colonnes assez larges pour les libellés (« Valeurs actuelles »).
+		var wdo, wundo []stmt
+		for c := 0; c <= 1+len(all); c++ {
+			wdo = append(wdo, st(`INSERT INTO _lattis_col_widths (sheet, col, width) VALUES (?, ?, ?)`, id, c, 130))
+			wundo = append(wundo, st(`DELETE FROM _lattis_col_widths WHERE sheet = ? AND col = ?`, id, c))
+		}
+		if err := t.apply(wdo, wundo); err != nil {
+			return err
+		}
 		lines, err := t.sheetLines(id)
 		if err != nil {
 			return err
 		}
 		for _, b := range bold {
-			if err := t.styleFree(id, b.Row, b.Col, Style{"b": true}, lines.at(b.Row, b.Col)); err != nil {
+			s := Style{"b": true}
+			if b.Row == 2 {
+				s["al"] = "right" // en-têtes au-dessus des nombres
+			}
+			if err := t.styleFree(id, b.Row, b.Col, s, lines.at(b.Row, b.Col)); err != nil {
 				return err
 			}
 		}
