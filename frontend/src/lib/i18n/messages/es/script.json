@@ -165,7 +165,8 @@
 		},
 		"none": "No hay ningún host recordado.",
 		"host": "Host que se permitirá",
-		"allow": "Permitir"
+		"allow": "Permitir",
+		"placeholder": "api.ejemplo.es"
 	},
 	"ref": {
 		"title": "Referencia de Lua",

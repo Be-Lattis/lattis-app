@@ -11,7 +11,9 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/doc"
+	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 var ctx = context.Background()
@@ -582,5 +584,31 @@ func TestFormulaSource(t *testing.T) {
 	bad := save(t, d, Query{Name: "Fausse", Source: Source{Kind: SourceFormula, Formula: "=1+1", FormulaSheet: sheet}})
 	if _, err := Refresh(ctx, env(d), bad); err == nil {
 		t.Fatal("formule sans tableau : erreur attendue")
+	}
+}
+
+// Aperçu dans une session anglaise : nombres, dates et noms des étapes
+// écrits comme dans la grille, en anglais (rien n'est enregistré).
+func TestPreviewInLanguage(t *testing.T) {
+	d := newDoc(t)
+	d.SetLocale(formula.ForLanguage("en"))
+	d.SetLanguage(msg.EN)
+	s := newSession(t)
+	q := Query{Name: "Ventes", Source: Source{Kind: SourceCSV, Path: writeCSV(t, ventesCSV)}, Steps: []Step{
+		{Op: OpFilter, Conditions: []Cond{{Column: "Montant", Cmp: ">", Value: "6"}}},
+		{Op: OpRename, Column: "Montant", Name: "Total"},
+	}}
+	pv := s.Preview(ctx, env(d), q, 0, false)
+	if pv.Error != "" {
+		t.Fatal(pv.Error)
+	}
+	if pv.Rows[0][2] != "10.5" || pv.Rows[0][3] != "02/01/2026" || pv.Rows[0][4] != "01000" {
+		t.Fatalf("aperçu en anglais %v", pv.Rows)
+	}
+	if !strings.HasPrefix(pv.Labels[0], "Source (") || pv.Labels[1] != "Filtered rows" || pv.Labels[2] != "Renamed column (Montant → Total)" {
+		t.Fatalf("libellés %v", pv.Labels)
+	}
+	if StepLabelIn(msg.DE, Step{Op: OpFilter}) != "Gefilterte Zeilen" || StepLabel(Step{Op: OpFilter}) != "Lignes filtrées" {
+		t.Fatal("libellé d'étape")
 	}
 }

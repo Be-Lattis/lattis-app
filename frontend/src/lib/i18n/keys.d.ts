@@ -206,7 +206,9 @@ export interface MessageParams {
 	'chart.kind.treemap.label': Record<never, never>;
 	'chart.kind.waterfall.hint': Record<never, never>;
 	'chart.kind.waterfall.label': Record<never, never>;
+	'chart.legend.empty': Record<never, never>;
 	'chart.legend.more': { n: number | string };
+	'chart.legend.others': { n: number | string };
 	'chart.map.clickHint': Record<never, never>;
 	'chart.map.density': Record<never, never>;
 	'chart.map.legend': { name: number | string };
@@ -442,6 +444,7 @@ export interface MessageParams {
 	'doc.page.site.label': Record<never, never>;
 	'doc.page.site.tooltip': Record<never, never>;
 	'doc.page.unsaved': Record<never, never>;
+	'doc.page.urlPlaceholder': Record<never, never>;
 	'doc.page.urlSet': { name: number | string; url: number | string };
 	'doc.panel.close': Record<never, never>;
 	'doc.panel.deleteChart': Record<never, never>;
@@ -1909,14 +1912,17 @@ export interface MessageParams {
 	'query.source.sql.dbHelp': Record<never, never>;
 	'query.source.sql.keepSystem': Record<never, never>;
 	'query.source.sql.label': Record<never, never>;
+	'query.source.sql.placeholder': Record<never, never>;
 	'query.source.sql.sheet': { sheet: number | string };
 	'query.source.sql.workbook': Record<never, never>;
+	'query.source.sql.workbookPlaceholder': Record<never, never>;
 	'query.source.table': Record<never, never>;
 	'query.source.tables': Record<never, never>;
 	'query.source.title': Record<never, never>;
 	'query.source.view': Record<never, never>;
 	'query.source.web.auth': Record<never, never>;
 	'query.source.web.headers': Record<never, never>;
+	'query.source.web.headersPlaceholder': Record<never, never>;
 	'query.source.web.help': Record<never, never>;
 	'query.source.web.public': Record<never, never>;
 	'query.source.web.url': Record<never, never>;
@@ -2276,6 +2282,10 @@ export interface MessageParams {
 	'remote.formDialog.choice.field': Record<never, never>;
 	'remote.formDialog.choice.fixedAria': Record<never, never>;
 	'remote.formDialog.choice.title': { name: number | string };
+	'remote.formDialog.defaults.closed': Record<never, never>;
+	'remote.formDialog.defaults.position': Record<never, never>;
+	'remote.formDialog.defaults.submit': Record<never, never>;
+	'remote.formDialog.defaults.thanks': Record<never, never>;
 	'remote.formDialog.done': { title: number | string };
 	'remote.formDialog.draftSaved': { title: number | string };
 	'remote.formDialog.edit': Record<never, never>;
@@ -2447,6 +2457,8 @@ export interface MessageParams {
 	'remote.lattis.account.title': { servers: number | string };
 	'remote.lattis.continuePassword': Record<never, never>;
 	'remote.lattis.continueWith': { provider: number | string };
+	'remote.lattis.defaultAccount': Record<never, never>;
+	'remote.lattis.defaultServerName': Record<never, never>;
 	'remote.lattis.notConnected': Record<never, never>;
 	'remote.lattis.remaining.minutes': { m: number | string; s: number | string };
 	'remote.lattis.remaining.seconds': { s: number | string };
@@ -3520,6 +3532,7 @@ export interface MessageParams {
 	'script.network.help': Record<never, never>;
 	'script.network.host': Record<never, never>;
 	'script.network.none': Record<never, never>;
+	'script.network.placeholder': Record<never, never>;
 	'script.network.remove.label': Record<never, never>;
 	'script.network.remove.tooltip': Record<never, never>;
 	'script.network.title': Record<never, never>;

@@ -65,6 +65,7 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 		if err := t.guardWorkbook(); err != nil {
 			return err
 		}
+		cfg.Lang = t.captionLang()
 		if err := t.prepareCalc(&cfg); err != nil {
 			return err
 		}
@@ -76,8 +77,9 @@ func (m *Model) CreatePivot(ctx context.Context, cfg PivotConfig) (int64, error)
 			return err
 		}
 		name := ""
+		prefix := t.defaultName("name.pivot")
 		for n := 1; ; n++ {
-			name = fmt.Sprintf("TCD %d", n)
+			name = fmt.Sprintf("%s %d", prefix, n)
 			taken, err := t.sheetNameTaken(name, 0)
 			if err != nil {
 				return err
@@ -142,6 +144,9 @@ func (m *Model) SetPivot(ctx context.Context, id int64, cfg PivotConfig) error {
 			// par la feuille (pivothand.go, pivotstyle.go) ; le volet renvoie
 			// une configuration sans elles.
 			cfg.Hand, cfg.Styles = prev.Hand, prev.Styles
+			// Langue des libellés : celle de sa création, pour toujours
+			// (les formules citent « [Somme de Ventes] »).
+			cfg.Lang = prev.Lang
 		}
 		b, err := json.Marshal(cfg)
 		if err != nil {
@@ -418,7 +423,7 @@ func (m *Model) PlacePivot(ctx context.Context, sheet int64, row, col int, cfg P
 	return nid, err
 }
 
-/// CreatePivotAt crée un tableau croisé de configuration cfg, son coin haut
+// / CreatePivotAt crée un tableau croisé de configuration cfg, son coin haut
 // gauche en (row, col) de la feuille sheet (Insertion › Tableau croisé, puis
 // un clic sur la cellule) ; ce qu'il recouvre ou touche s'écarte (makeRoom).
 // Renvoie son identifiant.
@@ -432,6 +437,7 @@ func (m *Model) CreatePivotAt(ctx context.Context, sheet int64, row, col int, cf
 		if err := t.guard(sheet); err != nil {
 			return err
 		}
+		cfg.Lang = t.captionLang()
 		if err := t.sheetExists(sheet); err != nil {
 			return err
 		}

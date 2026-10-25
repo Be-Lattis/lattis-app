@@ -6,6 +6,7 @@ import type { Check, State, TableCheck } from '#bindings/internal/remote/workboo
 import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 import { formatValue, type ColumnType } from '#lib/grid/format.js';
 import { fmtDate, fmtTime, t, tAny } from '#lib/i18n/index.js';
+import { serverDisplayName } from './lattis.js';
 
 export const FROZEN = 'frozen';
 export const COLLABORATIVE = 'collaborative';
@@ -117,7 +118,8 @@ function hostOf(url: string): string {
 
 /** Nom du serveur d'un classeur partagé : son nom, sinon son hôte. */
 export function serverLabel(s: Pick<State, 'server' | 'serverName'>): string {
-	return s.serverName?.trim() || hostOf(s.server ?? '');
+	const name = s.serverName?.trim();
+	return name ? serverDisplayName(name) : hostOf(s.server ?? '');
 }
 
 /** Coupure due à une session à rouvrir (plutôt qu'à un serveur arrêté). */

@@ -93,7 +93,9 @@
 		"outliers": "{n} outliers"
 	},
 	"legend": {
-		"more": "and {n} more"
+		"more": "and {n} more",
+		"others": "Others ({n} values)",
+		"empty": "(blank)"
 	},
 	"table": {
 		"group": "Group",

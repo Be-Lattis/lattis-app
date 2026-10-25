@@ -124,7 +124,8 @@
 		"refused": {
 			"page": "{command}：此命令在网页中不可用。"
 		},
-		"off": "网页已禁用。内容仍保留在工作簿中。"
+		"off": "网页已禁用。内容仍保留在工作簿中。",
+		"urlPlaceholder": "https://example.com"
 	},
 	"clip": {
 		"chartPasted": "图表已粘贴",

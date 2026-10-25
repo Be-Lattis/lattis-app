@@ -54,7 +54,7 @@ func (c *Call) state() (DocState, error) {
 	if err != nil {
 		return DocState{}, nil
 	}
-	st := DocState{Open: true, Path: d.Path(), Title: "Classeur sans titre"}
+	st := DocState{Open: true, Path: d.Path(), Title: msg.Format(c.lang(), "doc.untitled", nil)}
 	if st.Path != "" {
 		st.Title = strings.TrimSuffix(filepath.Base(st.Path), filepath.Ext(st.Path))
 	}

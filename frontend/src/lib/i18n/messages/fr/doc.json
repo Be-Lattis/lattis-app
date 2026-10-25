@@ -124,7 +124,8 @@
 		"refused": {
 			"page": "{command} : commande non disponible dans une page web."
 		},
-		"off": "Les pages web sont désactivées. Le contenu est conservé dans le classeur."
+		"off": "Les pages web sont désactivées. Le contenu est conservé dans le classeur.",
+		"urlPlaceholder": "https://exemple.fr"
 	},
 	"clip": {
 		"chartPasted": "Graphique collé",

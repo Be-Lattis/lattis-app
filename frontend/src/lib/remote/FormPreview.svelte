@@ -3,6 +3,7 @@
 	// définition que le serveur, en largeur de téléphone ou d'ordinateur.
 	// Rien n'est envoyé ; « Ouvrir l'aperçu dans le navigateur » montre la
 	// vraie page.
+	import { serverDisplayName } from './lattis';
 	import { accentColor, listValues, pagesOf, reducedMarkdown, type FormColumn, type FormDefinition, type FormField } from './forms';
 
 	interface Props {
@@ -18,8 +19,8 @@
 	const en = $derived(def.lang === 'en');
 	const T = $derived(
 		en
-			? { required: 'required', next: 'Next', prev: 'Previous', pos: 'My location', another: 'Submit another response', yes: 'Yes', no: 'No', choose: 'Choose…', served: 'Form served by' }
-			: { required: 'obligatoire', next: 'Suivant', prev: 'Précédent', pos: 'Ma position', another: 'Envoyer une autre réponse', yes: 'Oui', no: 'Non', choose: 'Choisir…', served: 'Formulaire servi par' }
+			? { required: 'required', next: 'Next', prev: 'Previous', pos: 'My location', another: 'Submit another response', yes: 'Yes', no: 'No', choose: 'Choose…', served: 'Form served by', server: 'the server' }
+			: { required: 'obligatoire', next: 'Suivant', prev: 'Précédent', pos: 'Ma position', another: 'Envoyer une autre réponse', yes: 'Oui', no: 'Non', choose: 'Choisir…', served: 'Formulaire servi par', server: 'le serveur' }
 	);
 	const pages = $derived(pagesOf(def.fields, def.appearance.paged));
 	let page = $state(0);
@@ -29,7 +30,7 @@
 	const anyRequired = $derived(def.fields.some((f) => f.required && !f.hidden));
 
 	function label(f: FormField): string {
-		return f.label || columns.find((c) => c.columnId === f.column)?.name || (f.kind === 'position' ? 'Position' : '');
+		return f.label || columns.find((c) => c.columnId === f.column)?.name || (f.kind === 'position' ? (en ? 'Location' : 'Position') : '');
 	}
 	function fixed(f: FormField): string {
 		const d = f.default;
@@ -141,7 +142,7 @@
 				{/if}
 			</div>
 		{/if}
-		<footer class="fp-foot">{T.served} {serverName || 'le serveur'} · Lattis</footer>
+		<footer class="fp-foot">{T.served} {serverName ? serverDisplayName(serverName) : T.server} · Lattis</footer>
 	</div>
 </div>
 

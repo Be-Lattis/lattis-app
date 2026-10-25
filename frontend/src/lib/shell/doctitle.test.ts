@@ -58,6 +58,8 @@ describe('classeur du serveur à l’écran', () => {
 		expect(docFile(doc())).toBe('D:\\Docs\\Ventes.lattis');
 		expect(docFileName(doc())).toBe('Ventes.lattis');
 		expect(docFileName(doc({ path: '', title: 'Classeur sans titre' }))).toBe('Classeur sans titre');
+		// Jamais enregistré : pas de nom de fichier à proposer (« Classeursanstitre »).
+		expect(docFile(doc({ path: '', title: 'Untitled workbook' }))).toBe('');
 		expect(savedNotice(doc())).toBe('Enregistré : D:\\Docs\\Ventes.lattis');
 	});
 });

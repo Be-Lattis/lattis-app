@@ -175,11 +175,11 @@ export function familyLine(f: TableFamily): string {
 
 /** D'où vient la catégorie, pour le volet : « nom de l'onglet », « cellule A1 », « titre au-dessus de chaque tableau ». */
 export function sourceLabel(source: string, sources: readonly CategorySource[] = []): string {
-	const s = sources.find((x) => x.source === source);
-	if (s) return s.label;
+	// Dans la langue de l'interface (le moteur donne le libellé en français).
 	if (!source || source === 'sheet') return t('shell.merge.source.sheet');
 	if (source === 'title') return t('shell.merge.source.title');
-	return t('shell.merge.source.cell', { cell: source.replace(/^cell:/, '') });
+	if (source.startsWith('cell:')) return t('shell.merge.source.cell', { cell: source.slice(5) });
+	return sources.find((x) => x.source === source)?.label ?? source;
 }
 
 /** Colonne en lettres (0 → A). */

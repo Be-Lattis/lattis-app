@@ -310,7 +310,8 @@
 			"headers": "En-têtes (un par ligne, « Nom: valeur »)",
 			"auth": "Authentification",
 			"public": "Aucune (API publique)",
-			"help": "Les en-têtes sont enregistrés dans le classeur : passez un jeton par une connexion Web."
+			"help": "Les en-têtes sont enregistrés dans le classeur : passez un jeton par une connexion Web.",
+			"headersPlaceholder": "Accept-Language: fr"
 		},
 		"tables": "Tables et vues",
 		"search": "Rechercher",
@@ -320,7 +321,9 @@
 			"dbHelp": "Filtrez de préférence ici : cette requête est exécutée par le serveur.",
 			"workbook": "Requête SQL sur le classeur (lecture seule)",
 			"sheet": "Les adresses Cell[A1] sans feuille se lisent sur « {sheet} ».",
-			"keepSystem": "Garder les colonnes techniques d'un tableau du Serveur Lattis (lattis_…), au lieu de « Mis à jour par » et « Mis à jour le »"
+			"keepSystem": "Garder les colonnes techniques d'un tableau du Serveur Lattis (lattis_…), au lieu de « Mis à jour par » et « Mis à jour le »",
+			"placeholder": "SELECT * FROM ventes WHERE annee = 2026",
+			"workbookPlaceholder": "SELECT * FROM Ventes WHERE annee = 2026"
 		},
 		"formula": {
 			"label": "Formule (tableau dynamique)",

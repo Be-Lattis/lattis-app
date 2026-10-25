@@ -93,7 +93,9 @@
 		"outliers": "{n} extrêmes"
 	},
 	"legend": {
-		"more": "et {n} autres"
+		"more": "et {n} autres",
+		"others": "Autres ({n} valeurs)",
+		"empty": "(vide)"
 	},
 	"table": {
 		"group": "Groupe",

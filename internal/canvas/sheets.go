@@ -52,11 +52,17 @@ func (m *Model) MoveSheet(ctx context.Context, sheet int64, to int) error {
 	return m.Do(ctx, "Déplacer la feuille", func(t *tx) error { return t.moveSheet(sheet, to) })
 }
 
-func (t *tx) addSheet() (int64, error) { return t.addNamedSheet("Feuille") }
+// addSheet ajoute une feuille nommée dans la langue de la session
+// (« Feuille2 », « Sheet2 »… ; en français sous StorageForm).
+func (t *tx) addSheet() (int64, error) { return t.numberedSheet(t.defaultName("name.sheet"), true) }
 
-// addNamedSheet ajoute un onglet nommé prefix suivi d'un numéro libre (celui
+// addNamedSheet ajoute un onglet nommé prefix suivi d'un numéro libre, à
+// partir de 1.
+func (t *tx) addNamedSheet(prefix string) (int64, error) { return t.numberedSheet(prefix, false) }
+
+// numberedSheet ajoute un onglet nommé prefix suivi d'un numéro libre (celui
 // de l'onglet pour une feuille, comme Excel ; à partir de 1 sinon).
-func (t *tx) addNamedSheet(prefix string) (int64, error) {
+func (t *tx) numberedSheet(prefix string, sheet bool) (int64, error) {
 	if err := t.guardWorkbook(); err != nil {
 		return 0, err
 	}
@@ -67,7 +73,7 @@ func (t *tx) addNamedSheet(prefix string) (int64, error) {
 	}
 	name := ""
 	start := int(id)
-	if prefix != "Feuille" {
+	if !sheet {
 		start = 1
 	}
 	for n := start; ; n++ {

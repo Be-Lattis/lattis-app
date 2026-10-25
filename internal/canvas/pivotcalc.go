@@ -53,7 +53,13 @@ type PivotCalcField struct {
 // champs sont désignés par le nom de leur colonne dans le tableau source.
 type PivotConfig struct {
 	// Name nomme le TCD (vue SQL, source de graphique) : « TCD1 »…
-	Name      string        `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
+	// Lang : langue des libellés que le TCD écrit lui-même (« Somme de
+	// Ventes », « Sum of Sales »), fixée à sa création dans la langue de la
+	// session et gardée ensuite : les en-têtes, que citent les formules des
+	// colonnes saisies et les graphiques, ne changent pas d'un poste à
+	// l'autre. Vide : le français (TCD d'avant, scripts).
+	Lang      string        `json:"lang,omitempty"`
 	Source    string        `json:"source"`
 	RowFields []string      `json:"rowFields,omitempty"`
 	Cols      string        `json:"cols,omitempty"`
@@ -137,16 +143,27 @@ func (c PivotConfig) created() PivotConfig {
 	return c
 }
 
-var pivotAggs = map[string]struct{ label string }{
-	"sum":           {"Somme"},
-	"count":         {"Nombre"},
-	"countDistinct": {"Nombre distinct"},
-	"avg":           {"Moyenne"},
-	"min":           {"Min"},
-	"max":           {"Max"},
+// pivotAggs : les fonctions des valeurs, et leur nom dans les libellés
+// (msg pivot.caption.*).
+var pivotAggs = map[string]msg.ID{
+	"sum":           "pivot.caption.sum",
+	"count":         "pivot.caption.count",
+	"countDistinct": "pivot.caption.countDistinct",
+	"avg":           "pivot.caption.avg",
+	"min":           "pivot.caption.min",
+	"max":           "pivot.caption.max",
 }
 
-var pivotShows = map[string]string{"": "", "pctTotal": "% du total", "pctRow": "% de la ligne", "pctCol": "% de la colonne"}
+var pivotShows = map[string]msg.ID{"": "", "pctTotal": "pivot.caption.pctTotal", "pctRow": "pivot.caption.pctRow", "pctCol": "pivot.caption.pctCol"}
+
+// captionLang : la langue des libellés d'un TCD qu'on crée (PivotConfig.Lang) :
+// vide pour le français, comme les TCD d'avant.
+func (t *tx) captionLang() string {
+	if l := t.nameLang(); l != msg.FR {
+		return string(l)
+	}
+	return ""
+}
 
 type pivotPlan struct {
 	tb      Table
@@ -359,16 +376,25 @@ func (p pivotPlan) pivotOrder(c *Column) string {
 // sorted : un champ au moins a un tri choisi.
 func (p pivotPlan) sorted() bool { return len(p.cfg.Sort) > 0 || len(p.cfg.Orders) > 0 }
 
-func pivotLabel(v PivotValue) string {
+// pivotLabel : le nom affiché d'une valeur (« Somme de Ventes »), dans la
+// langue lang des libellés du TCD (PivotConfig.Lang, vide : français).
+func pivotLabel(v PivotValue, lang string) string {
 	if l := strings.TrimSpace(v.Label); l != "" {
 		return l
 	}
-	label := pivotAggs[v.Agg].label
-	if v.Field != "" {
-		label += " de " + v.Field
+	ln, ok := msg.Parse(lang)
+	if !ok {
+		ln = msg.FR
 	}
-	if s := pivotShows[v.Show]; s != "" {
-		label += " (" + s + ")"
+	label := v.Agg
+	if id, ok := pivotAggs[v.Agg]; ok {
+		label = msg.Format(ln, id, nil)
+	}
+	if v.Field != "" {
+		label = msg.Format(ln, "pivot.caption.of", msg.Args{"agg": label, "field": v.Field})
+	}
+	if id := pivotShows[v.Show]; id != "" {
+		label = msg.Format(ln, "pivot.caption.show", msg.Args{"label": label, "show": msg.Format(ln, id, nil)})
 	}
 	return label
 }
@@ -434,18 +460,18 @@ func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
 				name = "(vide)"
 			}
 			if len(vals) > 1 {
-				name += " · " + pivotLabel(vals[vi])
+				name += " · " + pivotLabel(vals[vi], cfg.Lang)
 			}
 			ms = append(ms, measure{vi, &k, name})
 		}
 	}
 	if p.cols == nil || !cfg.NoGrandTotal {
 		for vi := range vals {
-			name := pivotLabel(vals[vi])
+			name := pivotLabel(vals[vi], cfg.Lang)
 			if p.cols != nil {
 				name = "Total"
 				if len(vals) > 1 {
-					name += " · " + pivotLabel(vals[vi])
+					name += " · " + pivotLabel(vals[vi], cfg.Lang)
 				}
 			}
 			ms = append(ms, measure{vi, nil, name})

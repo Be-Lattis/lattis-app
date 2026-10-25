@@ -93,7 +93,9 @@
 		"outliers": "{n} valores atípicos"
 	},
 	"legend": {
-		"more": "y {n} más"
+		"more": "y {n} más",
+		"others": "Otros ({n} valores)",
+		"empty": "(vacío)"
 	},
 	"table": {
 		"group": "Grupo",

@@ -124,7 +124,8 @@
 		"refused": {
 			"page": "{command}: comando no disponible en una página web."
 		},
-		"off": "Las páginas web están desactivadas. El contenido se conserva en el libro."
+		"off": "Las páginas web están desactivadas. El contenido se conserva en el libro.",
+		"urlPlaceholder": "https://ejemplo.es"
 	},
 	"clip": {
 		"chartPasted": "Gráfico pegado",

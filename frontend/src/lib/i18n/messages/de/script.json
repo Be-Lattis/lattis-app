@@ -165,7 +165,8 @@
 		},
 		"none": "Kein gespeicherter Host.",
 		"host": "Zu erlaubender Host",
-		"allow": "Erlauben"
+		"allow": "Erlauben",
+		"placeholder": "api.beispiel.de"
 	},
 	"ref": {
 		"title": "Lua-Referenz",

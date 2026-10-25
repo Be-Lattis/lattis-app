@@ -208,7 +208,8 @@ func (s *DocumentService) replace(d *doc.Document) error {
 
 // New crée un classeur vide.
 func (s *DocumentService) New(ctx context.Context) (DocState, error) {
-	d, err := doc.New(ctx)
+	// Sa première feuille est nommée dans la langue de l'interface.
+	d, err := doc.NewIn(ctx, s.sessionLang())
 	if err != nil {
 		return DocState{}, err
 	}
@@ -520,7 +521,7 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 	if errors.Is(err, errNoDoc) {
 		return DocState{}, nil
 	}
-	st := DocState{Open: true, Path: d.Path(), Title: "Classeur sans titre"}
+	st := DocState{Open: true, Path: d.Path(), Title: s.say("doc.untitled", nil)}
 	if st.Path != "" {
 		st.Title = strings.TrimSuffix(filepath.Base(st.Path), filepath.Ext(st.Path))
 	}

@@ -310,7 +310,8 @@
 			"headers": "Headers (one per line, “Name: value”)",
 			"auth": "Authentication",
 			"public": "None (public API)",
-			"help": "Headers are saved in the workbook: pass a token through a Web connection."
+			"help": "Headers are saved in the workbook: pass a token through a Web connection.",
+			"headersPlaceholder": "Accept-Language: en"
 		},
 		"tables": "Tables and views",
 		"search": "Search",
@@ -320,7 +321,9 @@
 			"dbHelp": "Filter here if you can: this query runs on the server.",
 			"workbook": "SQL query on the workbook (read-only)",
 			"sheet": "Cell[A1] addresses without a sheet are read from “{sheet}”.",
-			"keepSystem": "Keep the technical columns of a Lattis Server table (lattis_…) instead of “Updated by” and “Updated on”"
+			"keepSystem": "Keep the technical columns of a Lattis Server table (lattis_…) instead of “Updated by” and “Updated on”",
+			"placeholder": "SELECT * FROM sales WHERE year = 2026",
+			"workbookPlaceholder": "SELECT * FROM Sales WHERE year = 2026"
 		},
 		"formula": {
 			"label": "Formula (dynamic table)",

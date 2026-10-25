@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { setLang } from '#lib/i18n/index.js';
 import type { Provider, ServerState } from '#bindings/internal/remote/auth/models.js';
-import { accountTitle, cleanLabel, connected, initials, loginRows, MAX_SERVER_LABEL, pickServer, providerButton, providerGlyph, remaining, serverLabelError, serverOption, serverUrlOk, userDetail, userName } from './lattis';
+import { accountTitle, cleanLabel, connected, initials, loginRows, MAX_SERVER_LABEL, pickServer, providerButton, providerGlyph, remaining, serverDisplayName, serverLabelError, serverOption, serverUrlOk, userDetail, userName } from './lattis';
 
 const providers: Provider[] = [
 	{ id: 'google', kind: 'google', label: 'Google' },
@@ -94,5 +95,17 @@ describe('nom choisi pour un serveur', () => {
 		expect(serverLabelError('é'.repeat(MAX_SERVER_LABEL))).toBe('');
 		expect(serverLabelError('é'.repeat(MAX_SERVER_LABEL + 1))).toBe('Nom trop long : 60 caractères au plus.');
 		expect(serverLabelError(`  ${'a'.repeat(MAX_SERVER_LABEL)}  `)).toBe('');
+	});
+});
+
+describe('noms d’origine du serveur dans la langue', () => {
+	it('« Serveur Lattis » et « Compte Lattis » suivent la langue ; un nom choisi reste', async () => {
+		await setLang('en');
+		expect(serverDisplayName('Serveur Lattis')).toBe('Lattis Server');
+		expect(serverDisplayName('LPO')).toBe('LPO');
+		expect(providerButton({ id: 'password', kind: 'password', label: 'Compte Lattis' })).toBe('Continue with Lattis account');
+		await setLang('fr');
+		expect(serverDisplayName('Serveur Lattis')).toBe('Serveur Lattis');
+		expect(providerButton({ id: 'password', kind: 'password', label: 'Compte Lattis' })).toBe('Continuer avec Compte Lattis');
 	});
 });

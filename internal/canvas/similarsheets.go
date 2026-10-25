@@ -505,7 +505,23 @@ func (t *tx) similarSheets() ([]SheetGroup, error) {
 	}
 	// Le plus grand groupe d'abord (la bulle ne parle que de lui).
 	sort.SliceStable(out, func(i, j int) bool { return len(out[i].Tables) > len(out[j].Tables) })
+	// Catégories dans la langue de la session (Month, January…).
+	for i := range out {
+		out[i].Category = t.localSeries(out[i].Category)
+		for k := range out[i].Sources {
+			out[i].Sources[k].Category = t.localSeries(out[i].Sources[k].Category)
+		}
+	}
 	return out, nil
+}
+
+// localSeries : la catégorie reconnue (en français) dans la langue des noms
+// que Lattis donne (nameLang) : nom de colonne et noms des mois.
+func (t *tx) localSeries(s series.Series) series.Series {
+	if l := t.nameLang(); l != msg.FR {
+		return series.Localized(s, string(l))
+	}
+	return s
 }
 
 // allMajority : chaque tableau a toutes les colonnes du résultat (dans un
