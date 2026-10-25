@@ -98,7 +98,9 @@ export function cellCss(st: CellStyle | undefined, look: CellLook = {}): string 
 	const out: string[] = [];
 	const bg = cssColor(st?.bg) ?? look.fill;
 	if (bg) out.push(`background:${bg}`);
-	const fg = cssColor(st?.fg) ?? look.color;
+	// Lien hypertexte : bleu souligné, comme à l'écran (une couleur choisie l'emporte).
+	const link = typeof st?.ln === 'string' && /^(https?:\/\/|mailto:|#)/i.test(st.ln);
+	const fg = cssColor(st?.fg) ?? (link ? '#0563c1' : look.color);
 	if (fg) out.push(`color:${fg}`);
 	const s = st as Record<string, unknown> | undefined;
 	if (st?.ff || s?.font) out.push(`font-family:${fontFamily(st)}`);
@@ -108,7 +110,7 @@ export function cellCss(st: CellStyle | undefined, look: CellLook = {}): string 
 	}
 	if (st?.b ?? look.bold) out.push('font-weight:600');
 	if (st?.i) out.push('font-style:italic');
-	const deco = [st?.u && 'underline', st?.x && 'line-through'].filter(Boolean);
+	const deco = [(st?.u || link) && 'underline', st?.x && 'line-through'].filter(Boolean);
 	if (deco.length) out.push(`text-decoration:${deco.join(' ')}`);
 	const al = st?.al ?? look.align;
 	if (al && al !== 'left') out.push(`text-align:${al}`);

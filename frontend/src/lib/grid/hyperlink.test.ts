@@ -1,5 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { autoLink, isEmail, isLinkClick, linkFromInput, linkKind, onLinkText, parsePlace, placeLink, quoteSheet, HOLD_MS } from './hyperlink';
+import { parseClipHtml, toClipHtml } from './clipboardHtml';
+import { cellCss } from '#lib/print/cellcss.js';
+
+describe('liens copiés, collés et imprimés', () => {
+	it('copie HTML : <a href> pour un lien web ou e-mail', () => {
+		const html = toClipHtml([['Site', 'Ici']], (_r, c) => (c === 0 ? { ln: 'https://lattis.be/?a=1&b=2' } : { ln: '#B3' }));
+		expect(html).toContain('<a href="https://lattis.be/?a=1&amp;b=2">Site</a>');
+		expect(html).not.toContain('href="#B3"');
+	});
+	it('collage HTML : le lien devient la propriété ln, les schémas refusés sont laissés', () => {
+		const c = parseClipHtml('<table><tr><td><a href="https://a.fr/x">A</a></td><td><a href="javascript:alert(1)">B</a></td><td><a href="mailto:j@b.fr">C</a></td></tr></table>');
+		expect(c?.rows[0]).toEqual(['A', 'B', 'C']);
+		expect(c?.styles[0][0]?.ln).toBe('https://a.fr/x');
+		expect(c?.styles[0][1]?.ln).toBeUndefined();
+		expect(c?.styles[0][2]?.ln).toBe('mailto:j@b.fr');
+	});
+	it('impression : bleu souligné', () => {
+		expect(cellCss({ ln: 'https://a.fr' })).toBe('color:#0563c1;text-decoration:underline');
+		expect(cellCss({ ln: 'https://a.fr', fg: '#ff0000' })).toContain('color:#ff0000');
+		expect(cellCss({ ln: 'javascript:x' })).toBe('');
+	});
+});
 
 describe('autoLink (adresse tapée dans une cellule)', () => {
 	it('reconnaît les adresses web et e-mail', () => {

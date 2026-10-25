@@ -181,6 +181,36 @@ func TestLinkPlace(t *testing.T) {
 	}
 }
 
+// Collages : une copie HTML d'ailleurs (<a href> lu en ln) pose ses liens
+// vérifiés ; le collage spécial Tout les reprend, Formats non.
+func TestPasteLinks(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	block := [][]string{{"Site", "Mal", "Rien"}}
+	styles := [][]string{{`{"ln":"https://lattis.be"}`, `{"ln":"javascript:alert(1)"}`, ""}}
+	if _, err := d.PasteBlock(ctx, 1, Rect{6, 0, 6, 0}, block, styles, PasteOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	free := func(r, c int) string {
+		var s string
+		d.db.Read().QueryRow(`SELECT style FROM _lattis_cell_styles WHERE sheet = 1 AND row = ? AND col = ?`, r, c).Scan(&s)
+		return s
+	}
+	if free(6, 0) != `{"ln":"https://lattis.be"}` || free(6, 1) != "" {
+		t.Fatalf("collage HTML : %q %q", free(6, 0), free(6, 1))
+	}
+	src := Rect{6, 0, 6, 0}
+	if _, err := d.PasteSpecial(ctx, 1, src, 1, Rect{9, 0, 9, 0}, PasteOptions{What: "all"}, [][]string{{"Site"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.PasteSpecial(ctx, 1, src, 1, Rect{10, 0, 10, 0}, PasteOptions{What: "formats"}, [][]string{{"Site"}}); err != nil {
+		t.Fatal(err)
+	}
+	if free(9, 0) != `{"ln":"https://lattis.be"}` || free(10, 0) != "" {
+		t.Fatalf("collage spécial : Tout %q, Formats %q", free(9, 0), free(10, 0))
+	}
+}
+
 func TestHyperlinkFormula(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)

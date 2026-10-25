@@ -325,6 +325,27 @@ func (m *Model) SetLink(ctx context.Context, sheet int64, row, col int, target, 
 	})
 }
 
+// pasteLinks pose les liens d'un collage (Tout, ou une copie HTML dont les
+// cellules ont un lien <a href>) ; une adresse refusée est laissée.
+func (t *tx) pasteLinks(sheet int64, area Rect, at func(r, c int) Style) error {
+	for r := area.R0; r <= area.R1; r++ {
+		for c := area.C0; c <= area.C1; c++ {
+			ln, _ := at(r, c)["ln"].(string)
+			if ln == "" {
+				continue
+			}
+			l, err := NormalizeLink(ln)
+			if err != nil || l == "" {
+				continue
+			}
+			if err := t.cellPatch(sheet, r, c, Style{"ln": l}); err != nil && !userError(err) {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // LinkPlace est la destination d'un lien dans le classeur : la feuille et
 // la plage à sélectionner (une cellule : R0 = R1, C0 = C1).
 type LinkPlace struct {

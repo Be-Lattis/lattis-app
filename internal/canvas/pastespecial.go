@@ -74,7 +74,7 @@ func (c pasteCell) blank() bool {
 
 // notFormat : propriétés de style qui ne sont pas de la mise en forme
 // (cellformat.go) ; mr et mc (fusion) sont traités à part.
-var notFormat = map[string]bool{"nt": true, "np": true, "dv": true, "mr": true, "mc": true, "hd": true, "cf": true}
+var notFormat = map[string]bool{"nt": true, "np": true, "dv": true, "mr": true, "mc": true, "hd": true, "cf": true, "ln": true}
 
 // formatKeys : les propriétés de mise en forme connues, retirées de la
 // destination quand la source ne les a pas (« format » : format de nombre
@@ -178,7 +178,11 @@ func (m *Model) PasteBlock(ctx context.Context, sheet int64, dst Rect, block [][
 			return m.Paste(ctx, sheet, dst.R0, dst.C0, tiled)
 		}
 		return m.paste(ctx, sheet, dst.R0, dst.C0, tiled, func(t *tx) error {
-			return t.pasteStyles(sheet, area, func(r, c int) Style { return cellOf(g, (r-area.R0)%h, (c-area.C0)%w).style }, false)
+			style := func(r, c int) Style { return cellOf(g, (r-area.R0)%h, (c-area.C0)%w).style }
+			if err := t.pasteStyles(sheet, area, style, false); err != nil {
+				return err
+			}
+			return t.pasteLinks(sheet, area, style)
 		})
 	}
 	u := m.ui(ctx)
@@ -431,7 +435,12 @@ func (t *tx) pasteGrid(sheet int64, dst Rect, g [][]pasteCell, opt PasteOptions,
 func (t *tx) pasteFormats(sheet int64, area Rect, what string, at func(r, c int) pasteCell) error {
 	style := func(r, c int) Style { return at(r, c).style }
 	switch what {
-	case "all", "formats":
+	case "all":
+		if err := t.pasteStyles(sheet, area, style, false); err != nil {
+			return err
+		}
+		return t.pasteLinks(sheet, area, style) // les liens, avec Tout seulement
+	case "formats":
 		return t.pasteStyles(sheet, area, style, false)
 	case "valuesNumbers":
 		return t.pasteStyles(sheet, area, style, true)

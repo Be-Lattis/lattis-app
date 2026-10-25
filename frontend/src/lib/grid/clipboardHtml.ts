@@ -280,6 +280,8 @@ interface Cell {
 	decls: Decls;
 	cols: number;
 	rows: number;
+	/** Lien <a href> de la cellule (le classeur vérifie l'adresse). */
+	href?: string;
 }
 
 /**
@@ -352,6 +354,8 @@ export function parseClipHtml(html: string): HtmlClip | null {
 		} else if (cell && !end) {
 			// Mise en forme posée par une balise autour du texte (<b>, <i>, <font color>).
 			const a = attrs(m[3]);
+			// Lien de la cellule : une adresse web ou e-mail (les autres sont laissées).
+			if (tag === 'a' && a.href && /^(https?:\/\/|mailto:)/i.test(decode(a.href).trim())) cell.href ??= decode(a.href).trim();
 			if (tag === 'b' || tag === 'strong') cell.decls['font-weight'] ??= 'bold';
 			else if (tag === 'i' || tag === 'em') cell.decls['font-style'] ??= 'italic';
 			else if (tag === 'u') cell.decls['text-decoration'] ??= 'underline';
@@ -378,7 +382,8 @@ export function parseClipHtml(html: string): HtmlClip | null {
 			while (taken.has(`${r},${c}`)) c++;
 			// Blancs du HTML réduits à une espace ; <br> : saut de ligne dans la cellule.
 			const text = decode(x.text.replace(/[ \t\r\n]+/g, ' ').replace(/ ?\u0001 ?/g, '\n')).trim();
-			const st = styleOfDecls(x.decls, base);
+			const st0 = styleOfDecls(x.decls, base);
+			const st = x.href ? { ...(st0 ?? {}), ln: x.href } : st0;
 			const merged = x.rows > 1 || x.cols > 1 ? { ...(st ?? {}), mr: x.rows, mc: x.cols } : st;
 			for (let i = 0; i < x.rows; i++)
 				for (let j = 0; j < x.cols; j++) {
@@ -488,7 +493,10 @@ export function toClipHtml(values: string[][], styleAt: (r: number, c: number) =
 			for (let i = 0; i < rs; i++) for (let j = 0; j < cs; j++) if (i || j) covered.add(`${r + i},${c + j}`);
 			const css = cssOfStyle(st);
 			const span = (rs > 1 ? ` rowspan="${rs}"` : '') + (cs > 1 ? ` colspan="${cs}"` : '');
-			out.push(`<td${span}${css ? ` style="${esc(css)}"` : ''}>${esc(v).replace(/\r?\n/g, '<br>')}</td>`);
+			const text = esc(v).replace(/\r?\n/g, '<br>');
+			// Lien web ou e-mail : un <a href>, que les autres applications reprennent.
+			const href = st?.ln && /^(https?:\/\/|mailto:)/i.test(st.ln) ? st.ln : '';
+			out.push(`<td${span}${css ? ` style="${esc(css)}"` : ''}>${href ? `<a href="${esc(href)}">${text}</a>` : text}</td>`);
 		});
 		out.push('</tr>');
 	});
