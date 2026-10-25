@@ -21,7 +21,9 @@
 	import { pasteOptions, plainPaste, type PasteKind, type PasteOptions } from './pastespecial';
 	import PasteSpecial from './PasteSpecial.svelte';
 	import { boxStyle, formatStat, isNumericText, painterPatch, parseStyle, resolveStyle, type CellStyle, type StyleLayer } from './style';
-	import { formatCell } from './numfmt';
+	import { bumpDecimals, formatCell, shownCell } from './numfmt';
+	import { FILL, plain } from './numcode';
+	import { BorderSet, borderParts, type BorderCmd, type Edge, type StylePart } from './borders';
 	import { autoHeight, BASE_PX, cellFont, fontPx, headerHeight, headerTextWidth, lineHeight, wrapLines } from './textwrap';
 	import { AutoRows } from './rowfit';
 	import { arrowNotes, arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
@@ -519,6 +521,8 @@
 		applyStyle?(r0: number, c0: number, r1: number, c1: number, patch: Record<string, unknown>): Promise<unknown>;
 		/** Met en forme des lignes (rows) ou des colonnes entières de la feuille, comme Excel. */
 		applyLineStyle?(rows: boolean, i0: number, i1: number, patch: Record<string, unknown>): Promise<unknown>;
+		/** Met en forme plusieurs plages (ou lignes et colonnes entières : line) en une étape d'annulation. */
+		applyStyleParts?(parts: (StylePart & { line?: 'rows' | 'cols' })[]): Promise<unknown>;
 		/** Note d'une cellule (texte vide : la retire). */
 		setNote?(row: number, col: number, text: string): Promise<unknown>;
 		/** Lien hypertexte d'une cellule (adresse vide : le retire) ; text non vide : nouveau texte affiché. Une étape. */
@@ -1277,6 +1281,15 @@
 		measurer ??= document.createElement('canvas').getContext('2d');
 		if (!measurer) return 0;
 		measurer.font = bold ? FONT_BOLD : FONT;
+		return measurer.measureText(s).width;
+	}
+	/** Largeur du texte affiché d'une cellule : son format, sa police et sa taille. */
+	function cellWidth(text: string, value: unknown, st: CellStyle | undefined): number {
+		if (!st) return textWidth(text);
+		const s = plain(formatCell(text, value, st));
+		measurer ??= document.createElement('canvas').getContext('2d');
+		if (!s || !measurer) return 0;
+		measurer.font = cellFont(st);
 		return measurer.measureText(s).width;
 	}
 	/**
@@ -2425,7 +2438,7 @@
 
 	function draw() {
 		frame = 0;
-		pendingBorders = [];
+		borderSet.clear();
 		if (viewPos.x !== scroller.scrollLeft || viewPos.y !== vs.top) viewPos = { x: scroller.scrollLeft, y: vs.top };
 		const t0 = performance.now();
 		drawing = false;
@@ -2724,7 +2737,8 @@
 					// Jeu d'icônes : à gauche de la cellule ; barre ou icône seule : valeur masquée.
 					const iconW = cf?.icon && !row.bad?.has(i) ? drawIconAt(cf.icon, x, y, rh(r)) : 0;
 					if (cf?.hide && !row.bad?.has(i)) continue;
-					if (cs && !row.bad?.has(i)) s = formatCell(s, row.cells[i], cs);
+					let ds = cs;
+					if (cs && !row.bad?.has(i)) [s, ds] = codeShown(s, row.cells[i], cs);
 					if (row.bad?.has(i)) {
 						// Saisie hors type : valeur brute en rouge, coin rouge comme le
 						// triangle d'Excel.
@@ -2741,7 +2755,7 @@
 						continue;
 					}
 					const align = cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type));
-					drawText(s, x + iconW, y, cw - iconW, align, cs, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
+					drawText(s, x + iconW, y, cw - iconW, align, ds, col.type === 'formula' && isErrorValue(v) ? C.error : C.text);
 					if (col.type === 'formula' && isErrorValue(v)) errorCorner(x, y);
 				}
 				ctx.restore();
@@ -2950,11 +2964,11 @@
 			// Nombres, dates et heures à droite, booléens centrés, apostrophe de tête masquée ;
 			// format de la cellule (nombre, date, heure, texte : numfmt.ts).
 			const fd = freeDisplay(rawText, f?.text);
-			const raw = fd.kind === 'text' ? fd.text : formatCell(fd.text, undefined, fstyle);
+			const [raw, dstyle] = fd.kind === 'text' ? [fd.text, fstyle] : codeShown(fd.text, undefined, fstyle);
 			const boxed = fd.align !== 'left';
 			const spread = boxed ? cw : overflowW(r, c) - (x - cx(c));
 			if (fstyle || raw.includes('\n')) {
-				drawText(raw, x, ry(r), cw, fstyle?.al ?? fd.align, fstyle, f?.error ? C.error : C.text, spread);
+				drawText(raw, x, ry(r), cw, fstyle?.al ?? fd.align, dstyle, f?.error ? C.error : C.text, spread);
 				continue;
 			}
 			ctx.fillStyle = f?.error ? C.error : C.text;
@@ -3663,7 +3677,8 @@
 			const raw = f ? f.text : cells.get(k);
 			if (raw) {
 				const num = isNumeric(raw);
-				drawText(formatCell(raw, undefined, st), x, y, gw, st?.al ?? (num ? 'right' : 'left'), st, f?.error ? C.error : C.text, gw, gh);
+				const [mt, mst] = codeShown(raw, undefined, st);
+				drawText(mt, x, y, gw, st?.al ?? (num ? 'right' : 'left'), mst, f?.error ? C.error : C.text, gw, gh);
 			}
 			if (st) borders(st, x, y, gw, gh);
 			if (st?.nt) noteCorner(x + gw, y, st);
@@ -4186,51 +4201,30 @@
 
 	// Bordures des cellules : relevées pendant le dessin des cellules, tracées
 	// après le quadrillage, sur ses lignes (deux cellules voisines partagent
-	// le même trait), pour qu'il ne les recouvre pas.
-	let pendingBorders: number[] = [];
+	// le même trait), pour qu'il ne les recouvre pas (borders.ts : style et
+	// couleur de chaque bord).
+	const borderSet = new BorderSet();
 
 	/** Bordures d'une cellule (style bt, bb, bl, br). */
-	// Bordures de couleur (bc) : une liste de traits par couleur.
-	let colorBorders = new Map<string, number[]>();
-
 	function borders(st: CellStyle, x: number, y: number, w: number, h: number) {
-		if (!st.bt && !st.bb && !st.bl && !st.br) return;
-		if (w <= 0 || h <= 0) return; // ligne ou colonne masquée
-		const X0 = Math.round(x) - 0.5;
-		const X1 = Math.round(x + w) - 0.5;
-		const Y0 = Math.round(y) - 0.5;
-		const Y1 = Math.round(y + h) - 0.5;
-		let list = pendingBorders;
-		if (st.bc) {
-			list = colorBorders.get(themed(st.bc)) ?? [];
-			colorBorders.set(themed(st.bc), list);
-		}
-		if (st.bt) list.push(X0 - 0.5, Y0, X1 + 0.5, Y0);
-		if (st.bb) list.push(X0 - 0.5, Y1, X1 + 0.5, Y1);
-		if (st.bl) list.push(X0, Y0 - 0.5, X0, Y1 + 0.5);
-		if (st.br) list.push(X1, Y0 - 0.5, X1, Y1 + 0.5);
+		borderSet.add(st, x, y, w, h);
 	}
 
 	function strokeBorders() {
-		if (!pendingBorders.length && !colorBorders.size) return;
+		if (borderSet.empty) return;
 		ctx.save();
 		ctx.beginPath();
 		ctx.rect(MARGIN, TOP_H, viewW - MARGIN, viewH - TOP_H);
 		ctx.clip();
-		ctx.lineWidth = 1;
-		for (const [color, b] of [[C.text, pendingBorders] as const, ...colorBorders]) {
-			if (!b.length) continue;
-			ctx.strokeStyle = color;
-			ctx.beginPath();
-			for (let i = 0; i < b.length; i += 4) {
-				ctx.moveTo(b[i], b[i + 1]);
-				ctx.lineTo(b[i + 2], b[i + 3]);
-			}
-			ctx.stroke();
-		}
+		borderSet.stroke(ctx, (c) => (c ? themed(c) : C.text), C.bg);
 		ctx.restore();
-		pendingBorders = [];
-		colorBorders = new Map();
+	}
+
+	/** Texte affiché et style d'une cellule : la couleur d'un code de format ([Rouge]) remplace celle du texte. */
+	function codeShown(text: string, value: unknown, st: CellStyle | undefined): [string, CellStyle | undefined] {
+		if (!st?.nc) return [formatCell(text, value, st), st];
+		const r = shownCell(text, value, st);
+		return [r.text, r.color ? { ...st, fg: r.color } : st];
 	}
 
 	/**
@@ -4291,6 +4285,9 @@
 		const lh = lineHeight(px);
 		// Renvoi à la ligne (largeur de la cellule), ou sauts de ligne (Alt+Entrée) :
 		// les lignes qui tiennent dans la hauteur.
+		// Remplissage (*x d'un code, comptabilité) : la suite du texte va à droite.
+		const fillAt = st?.wr ? -1 : s.indexOf(FILL);
+		if (st?.wr) s = plain(s);
 		const lines = st?.wr
 			? wrapLines(s, Math.max(8, cw - 12), (t) => ctx.measureText(t).width)
 			: s.includes('\n')
@@ -4301,6 +4298,14 @@
 		const top = st?.va === 'top' ? y + 2 : st?.va === 'bottom' ? y + h - 2 - total : y + (h - total) / 2;
 		lines.forEach((line, k) => {
 			const cy = top + lh * k + lh / 2;
+			if (k === 0 && fillAt >= 0) {
+				const after = Array.from(line.slice(fillAt + 1)).slice(1).join('');
+				ctx.textAlign = 'left';
+				ctx.fillText(line.slice(0, fillAt), x + 6, cy);
+				ctx.textAlign = 'right';
+				ctx.fillText(after, x + cw - 6, cy);
+				return;
+			}
 			ctx.fillText(line, tx, cy);
 			if (st?.u || st?.x || link) {
 				const w = ctx.measureText(line).width;
@@ -4330,6 +4335,11 @@
 		lastRepeat = () => applyStyle(patch); // F4
 		const p = { ...patch };
 		for (const k of ['b', 'i', 'u', 'x'] as const) if (p[k] === 'toggle') p[k] = !activeStyle()[k];
+		if ((p.dp === 'more' || p.dp === 'less') && activeStyle().nc) {
+			// Code personnalisé : une décimale de plus ou de moins dans le code.
+			p.nc = bumpDecimals(activeStyle().nc!, p.dp === 'more' ? 1 : -1);
+			delete p.dp;
+		}
 		if (p.dp === 'more' || p.dp === 'less') {
 			// Comme Excel : part des décimales affichées dans la cellule active
 			// (pas de la valeur stockée ni, pour une colonne calculée, de la formule).
@@ -4337,47 +4347,39 @@
 			p.dp = Math.max(0, Math.min(10, cur + (p.dp === 'more' ? 1 : -1)));
 		}
 		const { r0, r1, c0, c1 } = selection();
-		const w = wholeKind();
-		if (w && source.applyLineStyle) {
+		const whole = wholeKind();
+		const pen = (p.pen as Edge | undefined) ?? { style: 'thin' };
+		delete p.pen;
+		const cmd = p.border as BorderCmd | undefined;
+		delete p.border;
+		// Bordures : des morceaux de la sélection (Contour : ses quatre bords),
+		// avec le reste du correctif, en une étape d'annulation.
+		const parts: (StylePart & { line?: 'rows' | 'cols' })[] = cmd ? borderParts(cmd, pen, r0, c0, r1, c1) : [];
+		const w = whole && source.applyLineStyle ? whole : null;
+		if (w) {
 			// Lignes ou colonnes entières : la mise en forme vaut pour toutes
-			// leurs cellules, présentes et à venir (comme Excel).
-			const line = source.applyLineStyle;
+			// leurs cellules, présentes et à venir (comme Excel) ; un bord de
+			// gauche ou de droite (de lignes), du haut ou du bas (de colonnes)
+			// est sans objet.
 			const rows = w === 'rows';
-			const [i0, i1] = rows ? [r0, r1] : [c0, c1];
-			if (p.border === 'outline') {
-				menuAction(async () => {
-					await line(rows, i0, i0, rows ? { bt: true } : { bl: true });
-					await line(rows, i1, i1, rows ? { bb: true } : { br: true });
-				});
-				return;
-			}
-			menuAction(() => line(rows, i0, i1, borderPatch(p)));
-			return;
+			for (const x of parts) x.line = rows ? 'rows' : 'cols';
+			const side = rows ? ['bl', 'br'] : ['bt', 'bb'];
+			const keep = parts.filter((x) => !Object.keys(x.patch).every((k) => side.includes(k)));
+			parts.length = 0;
+			parts.push(...keep);
 		}
-		const apply = source.applyStyle;
-		if (p.border === 'outline') {
-			// Contour : chaque bord de la plage reçoit son trait.
-			menuAction(async () => {
-				await apply(r0, c0, r0, c1, { bt: true });
-				await apply(r1, c0, r1, c1, { bb: true });
-				await apply(r0, c0, r1, c0, { bl: true });
-				await apply(r0, c1, r1, c1, { br: true });
-			});
-			return;
-		}
-		menuAction(() => apply(r0, c0, r1, c1, borderPatch(p)));
+		if (Object.keys(p).length) parts.unshift({ r0, c0, r1, c1, patch: p, line: w ? (w === 'rows' ? 'rows' : 'cols') : undefined });
+		if (!parts.length) return;
+		menuAction(() => applyParts(parts));
 	}
 
-	/** Traduit border: 'all' | 'none' en propriétés de bordure. */
-	function borderPatch(p: Record<string, unknown>) {
-		if (p.border === 'all') {
-			delete p.border;
-			Object.assign(p, { bt: true, bb: true, bl: true, br: true });
-		} else if (p.border === 'none') {
-			delete p.border;
-			Object.assign(p, { bt: null, bb: null, bl: null, br: null });
+	/** Pose des morceaux de mise en forme, en une étape quand la source le permet. */
+	async function applyParts(parts: (StylePart & { line?: 'rows' | 'cols' })[]) {
+		if (parts.length > 1 && source.applyStyleParts) return source.applyStyleParts(parts);
+		for (const x of parts) {
+			if (x.line && source.applyLineStyle) await source.applyLineStyle(x.line === 'rows', x.line === 'rows' ? x.r0 : x.c0, x.line === 'rows' ? x.r1 : x.c1, x.patch);
+			else if (!x.line) await source.applyStyle!(x.r0, x.c0, x.r1, x.c1, x.patch);
 		}
-		return p;
 	}
 
 	/** Texte affiché d'une cellule (avant la mise en forme de la cellule). */
@@ -4437,9 +4439,7 @@
 	function applyFormat(patch: Record<string, unknown>, merge: boolean | null) {
 		formatDlg = null;
 		wrap.focus();
-		const { border, ...rest } = patch;
-		if (Object.keys(rest).length) applyStyle(rest);
-		if (border) applyStyle({ border });
+		if (Object.keys(patch).length) applyStyle(patch);
 		if (merge === true) mergeActive();
 		else if (merge === false) unmergeActive();
 	}
@@ -7765,13 +7765,17 @@
 				if (!want.has(c)) continue;
 				const i = c - e.t.col;
 				let m = headerWidth(e, i);
-				if (d) for (let k = d.first; k <= d.last; k++) m = Math.max(m, textWidth(e.cache.row(k)?.text[i] ?? ''));
+				if (d)
+					for (let k = d.first; k <= d.last; k++) {
+						const row = e.cache.row(k);
+						m = Math.max(m, cellWidth(row?.text[i] ?? '', row?.cells[i], styleAt(e.t.row + 1 + k, c, e)));
+					}
 				up(c, m);
 			}
 		}
 		for (const [k, raw] of cells) {
 			const [r, cc] = k.split(',').map(Number);
-			if (want.has(cc)) up(cc, textWidth(shown.get(k)?.text ?? raw, !!styleAt(r, cc, undefined)?.b));
+			if (want.has(cc)) up(cc, cellWidth(shown.get(k)?.text ?? raw, undefined, styleAt(r, cc, undefined)));
 		}
 		for (const p of pivots) {
 			const n = p.cells[0]?.length ?? 0;
@@ -11232,10 +11236,12 @@
 			let s = row.text[i] ?? '';
 			const icon = cf?.icon && !bad ? cf.icon : undefined;
 			if (cf?.hide && !bad) s = '';
-			if (cs && !bad && s) s = formatCell(s, v, cs);
+			let ps = cs;
+			if (cs && !bad && s) [s, ps] = codeShown(s, v, cs);
+			s = plain(s);
 			if (bad) return { ...base, text: s, align: 'left', color: C.error };
 			const err = col.type === 'formula' && isErrorValue(v);
-			return { ...base, text: s, icon, align: cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type)), color: err ? C.error : undefined };
+			return { ...base, style: ps, text: s, icon, align: cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type)), color: err ? C.error : undefined };
 		}
 		const band = groupBandAt(r, c);
 		if (band) {
@@ -11286,8 +11292,9 @@
 		const st = resolveStyle(styleAt(r, c, undefined), cf?.style);
 		if (raw === undefined && f === undefined) return st || cf?.bar ? { text: '', style: st, bar: cf?.bar } : undefined;
 		const fd = freeDisplay(raw ?? '', f?.text);
-		const text = cf?.hide ? '' : fd.kind === 'text' ? fd.text : formatCell(fd.text, undefined, st);
-		return { text, style: st, bar: cf?.bar, icon: cf?.icon, align: st?.al ?? fd.align, color: f?.error ? C.error : undefined, overflow: !mergeOf(r, c) };
+		const [shownText, ps] = cf?.hide ? ['', st] : fd.kind === 'text' ? [fd.text, st] : codeShown(fd.text, undefined, st);
+		const text = plain(shownText);
+		return { text, style: ps, bar: cf?.bar, icon: cf?.icon, align: st?.al ?? fd.align, color: f?.error ? C.error : undefined, overflow: !mergeOf(r, c) };
 	}
 
 	/** Graphiques de la feuille, dessinés comme à l'écran (SVG cloné ; canevas en image). */

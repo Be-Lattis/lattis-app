@@ -582,7 +582,7 @@ func (t *tx) columnFormat(tb Table, c Column) (string, error) {
 	f := map[string]any{}
 	var st map[string]any
 	if raw != "" && json.Unmarshal([]byte(raw), &st) == nil {
-		for _, k := range []string{"nf", "dp", "df", "ng"} {
+		for _, k := range []string{"nf", "dp", "df", "ng", "nc"} {
 			if x, ok := st[k]; ok && x != nil {
 				f[k] = x
 			}

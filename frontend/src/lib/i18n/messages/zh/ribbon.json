@@ -83,7 +83,11 @@
 		"date": "日期",
 		"time": "时间",
 		"text": "文本",
-		"general": "常规"
+		"general": "常规",
+		"accounting": "会计专用",
+		"fraction": "分数",
+		"scientific": "科学记数",
+		"custom": "自定义"
 	},
 	"group": {
 		"undo": "撤消",
@@ -246,7 +250,8 @@
 			"tooltip": "所选内容的数字格式",
 			"number": "数字 (0.00)",
 			"date": "短日期",
-			"more": "其他数字格式…"
+			"more": "其他数字格式…",
+			"longDate": "长日期"
 		},
 		"currency": {
 			"label": "货币",
@@ -651,6 +656,22 @@
 		"image": {
 			"label": "图片",
 			"tooltip": "插入图片（保存在工作簿中）"
+		},
+		"bordersMenu": {
+			"label": "边框",
+			"tooltip": "边框、线型和颜色",
+			"bottom": "下框线",
+			"top": "上框线",
+			"left": "左框线",
+			"right": "右框线",
+			"none": "无框线",
+			"all": "所有框线",
+			"outline": "外侧框线",
+			"inside": "内部框线",
+			"thick": "粗外侧框线",
+			"lineStyle": "线型",
+			"lineColor": "线条颜色",
+			"more": "其他边框…"
 		}
 	},
 	"protect": {

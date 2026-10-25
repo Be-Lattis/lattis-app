@@ -7,6 +7,7 @@
 // puis mise en forme conditionnelle. Une propriété à null dans une couche
 // la retire explicitement (elle masque les couches au-dessous).
 import { numberFormat, parseNumberText } from '#lib/i18n/index.js';
+import { parseCode, plain } from './numcode';
 
 export interface CellStyle {
 	b?: boolean; // gras
@@ -25,11 +26,14 @@ export interface CellStyle {
 	dp?: number; // décimales imposées (Ajouter / Réduire les décimales)
 	ng?: boolean; // nombre sans séparateur de milliers
 	df?: string; // motif d'une date ou d'une heure (« jj/mm/aaaa », « hh:mm »)
-	bt?: boolean; // bordures haut, bas, gauche, droite
-	bb?: boolean;
-	bl?: boolean;
-	br?: boolean;
-	bc?: string; // couleur des bordures
+	/** Code de format personnalisé (« # ##0,00 "kg" », voir numcode.ts) : l'emporte sur nf, dp, ng et df. */
+	nc?: string;
+	/** Bordures haut, bas, gauche, droite : true (trait fin, couleur bc) ou « style couleur » (« double #c00000 », voir borders.ts). */
+	bt?: boolean | string;
+	bb?: boolean | string;
+	bl?: boolean | string;
+	br?: boolean | string;
+	bc?: string; // couleur des bordures (par défaut)
 	// Hors mise en forme (ni effacées ni reproduites, voir internal/canvas/cellformat.go).
 	nt?: string; // note
 	np?: boolean; // note épinglée (toujours affichée)
@@ -41,7 +45,7 @@ export interface CellStyle {
 }
 
 /** Propriétés de mise en forme (format de pinceau, effacement). */
-export const STYLE_KEYS = ['b', 'i', 'u', 'x', 'ff', 'fs', 'fg', 'bg', 'al', 'va', 'wr', 'nf', 'dp', 'ng', 'df', 'bt', 'bb', 'bl', 'br', 'bc'] as const;
+export const STYLE_KEYS = ['b', 'i', 'u', 'x', 'ff', 'fs', 'fg', 'bg', 'al', 'va', 'wr', 'nf', 'dp', 'ng', 'df', 'nc', 'bt', 'bb', 'bl', 'br', 'bc'] as const;
 
 /** Couche de style telle qu'enregistrée : null retire la propriété. */
 export type StyleLayer = { [K in keyof CellStyle]?: CellStyle[K] | null };
@@ -97,7 +101,7 @@ export function boxStyle(grid: readonly (readonly (CellStyle | undefined)[])[]):
 		bl: grid.map((row) => row[0]).filter((s) => s?.bl),
 		br: grid.map((row) => row[cols - 1]).filter((s) => s?.br)
 	};
-	for (const [k, from] of Object.entries(edge)) if (from.length) out[k] = true;
+	for (const [k, from] of Object.entries(edge)) if (from.length) out[k] = from[0]![k as 'bt'];
 	const bc = [...edge.bt, ...edge.bl, ...edge.br, ...edge.bb].find((s) => s?.bc)?.bc;
 	if (bc) out.bc = bc;
 	return resolveStyle(out as StyleLayer);
@@ -154,6 +158,7 @@ const euro = () => numberFormat({ style: 'currency', currency: 'EUR' });
  * de milliers.
  */
 export function formatStat(v: number, st?: CellStyle): string {
+	if (st?.nc && !parseCode(st.nc).isDate()) return plain(parseCode(st.nc).number(v).text);
 	const f = st ? formatNumber(st.nf, v, st.dp, st.ng) : null;
 	if (f !== null) return f;
 	const a = Math.abs(v);

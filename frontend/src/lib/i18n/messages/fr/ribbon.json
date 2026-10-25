@@ -83,7 +83,11 @@
 		"date": "Date",
 		"time": "Heure",
 		"text": "Texte",
-		"general": "Standard"
+		"general": "Standard",
+		"accounting": "Comptabilité",
+		"fraction": "Fraction",
+		"scientific": "Scientifique",
+		"custom": "Personnalisé"
 	},
 	"group": {
 		"undo": "Annuler",
@@ -246,7 +250,8 @@
 			"tooltip": "Format de nombre de la sélection",
 			"number": "Nombre (0,00)",
 			"date": "Date courte (jj/mm/aaaa)",
-			"more": "Autres formats…"
+			"more": "Autres formats…",
+			"longDate": "Date longue"
 		},
 		"currency": {
 			"label": "Monétaire",
@@ -651,6 +656,22 @@
 		"image": {
 			"label": "Image",
 			"tooltip": "Insérer une image (enregistrée dans le classeur)"
+		},
+		"bordersMenu": {
+			"label": "Bordures",
+			"tooltip": "Bordures, style et couleur du trait",
+			"bottom": "Bordure inférieure",
+			"top": "Bordure supérieure",
+			"left": "Bordure gauche",
+			"right": "Bordure droite",
+			"none": "Aucune bordure",
+			"all": "Toutes les bordures",
+			"outline": "Bordures extérieures",
+			"inside": "Bordures intérieures",
+			"thick": "Bordure épaisse en encadré",
+			"lineStyle": "Style de trait",
+			"lineColor": "Couleur de trait",
+			"more": "Autres bordures…"
 		}
 	},
 	"protect": {

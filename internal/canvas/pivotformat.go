@@ -63,7 +63,7 @@ func (t *tx) pivotValueFormat(tb Table, v PivotValue, c *Column) (string, error)
 	if raw != "" {
 		var st map[string]any
 		if json.Unmarshal([]byte(raw), &st) == nil {
-			for _, k := range []string{"nf", "dp"} {
+			for _, k := range []string{"nf", "dp", "nc"} {
 				if x, ok := st[k]; ok && x != nil {
 					f[k] = x
 				}

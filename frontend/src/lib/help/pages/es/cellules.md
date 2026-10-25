@@ -6,6 +6,8 @@ Los comandos de la cinta siguen los de Excel, en los mismos lugares. Se aplican 
 
 Inicio › Fuente, Alineación y Número dan formato a la selección; el pequeño iniciador en la esquina de cada grupo, o `Ctrl+1`, abre el cuadro de diálogo **Formato de celdas** (número, alineación, fuente, borde, relleno). Un clic en la alineación ya elegida (Izquierda, Centro, Derecha) vuelve a la alineación estándar, como en Excel.
 
+**Bordes ▾** pone un borde (inferior, superior, izquierdo, derecho, externo, interno, cuadro grueso) con el **estilo de línea** (fina, media, gruesa, doble, punteada, discontinua) y el **color de línea** elegidos; la pestaña Borde de `Ctrl+1` hace lo mismo borde a borde. Formato de celdas › Número ofrece también Contabilidad, Fracción, Científica y **Personalizada**, un código de formato como en una hoja de cálculo (`# ##0,00 "kg"`, `0,00E+00`, `# ?/?`, `[Rojo]-# ##0`, secciones `positivo;negativo;cero;texto`); la función TEXTO entiende los mismos códigos.
+
 ## Colores de fuente y de relleno {#couleurs-de-police-et-de-remplissage}
 
 Inicio › Color de fuente y Color de relleno (Color de resaltado en un documento): el botón aplica el último color elegido, la flecha ▾ abre la paleta, como en Excel.

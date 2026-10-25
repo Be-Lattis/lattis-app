@@ -1093,7 +1093,7 @@
 		"category.number": "Nombre",
 		"category.number.help": "Nombre de décimales et séparateur de milliers.",
 		"category.currency": "Monétaire",
-		"category.currency.help": "Montant en euros.",
+		"category.currency.help": "Montant avec son symbole monétaire.",
 		"category.percent": "Pourcentage",
 		"category.percent.help": "La valeur multipliée par 100, suivie de %.",
 		"category.date": "Date",
@@ -1143,10 +1143,34 @@
 			"bottom": "Bas",
 			"left": "Gauche",
 			"right": "Droite",
-			"help": "Les bords choisis valent pour chaque cellule de la sélection ; « Contour » trace le tour de la sélection."
+			"help": "Choisissez un trait et une couleur, puis cliquez les bords.",
+			"line": "Trait",
+			"inside": "Intérieur"
 		},
 		"fill": "Couleur de fond",
-		"fill.none": "Aucun remplissage"
+		"fill.none": "Aucun remplissage",
+		"category.accounting": "Comptabilité",
+		"category.accounting.help": "Symbole et montants alignés, zéro en tiret.",
+		"category.fraction": "Fraction",
+		"category.fraction.help": "La partie décimale en fraction.",
+		"category.scientific": "Scientifique",
+		"category.scientific.help": "Notation scientifique : 1,23E+04.",
+		"category.custom": "Personnalisé",
+		"category.custom.help": "0 # ? chiffres, \"texte\", [Rouge], positif;négatif;zéro;texte.",
+		"symbol": "Symbole",
+		"position.before": "Avant",
+		"position.after": "Après",
+		"negRed": "Négatifs en rouge",
+		"code": "Code",
+		"fraction.0": "1 chiffre",
+		"fraction.1": "2 chiffres",
+		"fraction.2": "3 chiffres",
+		"fraction.3": "Demis",
+		"fraction.4": "Quarts",
+		"fraction.5": "Huitièmes",
+		"fraction.6": "Seizièmes",
+		"fraction.7": "Dixièmes",
+		"fraction.8": "Centièmes"
 	},
 	"readOnly": {
 		"notYours": "Ligne d'un autre membre : en tant que participant, vous ne modifiez que vos propres lignes"
@@ -1574,5 +1598,15 @@
 		"auto": "Lien créé — Ctrl+Z pour le retirer",
 		"refused": "Lien refusé : adresse non permise",
 		"removed": "Lien supprimé"
+	},
+	"border": {
+		"style": {
+			"thin": "Fin",
+			"medium": "Moyen",
+			"thick": "Épais",
+			"double": "Double",
+			"dotted": "Pointillé",
+			"dashed": "Tirets"
+		}
 	}
 }

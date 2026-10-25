@@ -10,6 +10,8 @@
 		value: T;
 		label: string;
 		disabled?: boolean;
+		/** Police CSS du libellé (liste des polices : chaque nom dans sa police). */
+		font?: string;
 	}
 
 	interface Props {
@@ -152,7 +154,7 @@
 					choose(o);
 				}}
 			>
-				<span class="check">{o.value === value ? '✓' : ''}</span>{o.label}
+				<span class="check">{o.value === value ? '✓' : ''}</span>{#if o.font}<span style:font-family={o.font}>{o.label}</span>{:else}{o.label}{/if}
 			</div>
 		{/each}
 	</div>

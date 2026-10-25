@@ -1093,7 +1093,7 @@
 		"category.number": "Number",
 		"category.number.help": "Number of decimal places and thousands separator.",
 		"category.currency": "Currency",
-		"category.currency.help": "Amount in euros.",
+		"category.currency.help": "Amount with its currency symbol.",
 		"category.percent": "Percentage",
 		"category.percent.help": "The value multiplied by 100, followed by %.",
 		"category.date": "Date",
@@ -1143,10 +1143,34 @@
 			"bottom": "Bottom",
 			"left": "Left",
 			"right": "Right",
-			"help": "The chosen edges apply to each cell of the selection; “Outline” draws around the selection."
+			"help": "Pick a line and a color, then click the edges.",
+			"line": "Line",
+			"inside": "Inside"
 		},
 		"fill": "Background color",
-		"fill.none": "No fill"
+		"fill.none": "No fill",
+		"category.accounting": "Accounting",
+		"category.accounting.help": "Symbols and amounts aligned, zero as a dash.",
+		"category.fraction": "Fraction",
+		"category.fraction.help": "The decimal part as a fraction.",
+		"category.scientific": "Scientific",
+		"category.scientific.help": "Scientific notation: 1.23E+04.",
+		"category.custom": "Custom",
+		"category.custom.help": "0 # ? digits, \"text\", [Red], positive;negative;zero;text.",
+		"symbol": "Symbol",
+		"position.before": "Before",
+		"position.after": "After",
+		"negRed": "Negatives in red",
+		"code": "Type",
+		"fraction.0": "Up to one digit",
+		"fraction.1": "Up to two digits",
+		"fraction.2": "Up to three digits",
+		"fraction.3": "Halves",
+		"fraction.4": "Quarters",
+		"fraction.5": "Eighths",
+		"fraction.6": "Sixteenths",
+		"fraction.7": "Tenths",
+		"fraction.8": "Hundredths"
 	},
 	"readOnly": {
 		"notYours": "Row of another member: as a participant, you can only change your own rows"
@@ -1574,5 +1598,15 @@
 		"auto": "Link created — Ctrl+Z to remove it",
 		"refused": "Link refused: address not allowed",
 		"removed": "Link removed"
+	},
+	"border": {
+		"style": {
+			"thin": "Thin",
+			"medium": "Medium",
+			"thick": "Thick",
+			"double": "Double",
+			"dotted": "Dotted",
+			"dashed": "Dashed"
+		}
 	}
 }

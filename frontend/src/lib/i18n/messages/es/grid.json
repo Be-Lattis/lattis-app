@@ -1093,7 +1093,7 @@
 		"category.number": "Número",
 		"category.number.help": "Número de decimales y separador de miles.",
 		"category.currency": "Moneda",
-		"category.currency.help": "Importe en euros.",
+		"category.currency.help": "Importe con su símbolo de moneda.",
 		"category.percent": "Porcentaje",
 		"category.percent.help": "El valor multiplicado por 100, seguido de %.",
 		"category.date": "Fecha",
@@ -1143,10 +1143,34 @@
 			"bottom": "Inferior",
 			"left": "Izquierdo",
 			"right": "Derecho",
-			"help": "Los lados elegidos se aplican a cada celda de la selección; «Contorno» dibuja alrededor de la selección."
+			"help": "Elija una línea y un color y haga clic en los bordes.",
+			"line": "Línea",
+			"inside": "Interior"
 		},
 		"fill": "Color de fondo",
-		"fill.none": "Sin relleno"
+		"fill.none": "Sin relleno",
+		"category.accounting": "Contabilidad",
+		"category.accounting.help": "Símbolos e importes alineados, cero como guion.",
+		"category.fraction": "Fracción",
+		"category.fraction.help": "La parte decimal como fracción.",
+		"category.scientific": "Científica",
+		"category.scientific.help": "Notación científica: 1,23E+04.",
+		"category.custom": "Personalizada",
+		"category.custom.help": "0 # ? dígitos, \"texto\", [Rojo], positivo;negativo;cero;texto.",
+		"symbol": "Símbolo",
+		"position.before": "Antes",
+		"position.after": "Después",
+		"negRed": "Negativos en rojo",
+		"code": "Tipo",
+		"fraction.0": "De un dígito",
+		"fraction.1": "De dos dígitos",
+		"fraction.2": "De tres dígitos",
+		"fraction.3": "Medios",
+		"fraction.4": "Cuartos",
+		"fraction.5": "Octavos",
+		"fraction.6": "Dieciseisavos",
+		"fraction.7": "Décimos",
+		"fraction.8": "Centésimos"
 	},
 	"readOnly": {
 		"notYours": "Fila de otro miembro: como participante, solo puede modificar sus propias filas"
@@ -1574,5 +1598,15 @@
 		"auto": "Vínculo creado — Ctrl+Z para quitarlo",
 		"refused": "Vínculo rechazado: dirección no permitida",
 		"removed": "Vínculo quitado"
+	},
+	"border": {
+		"style": {
+			"thin": "Fina",
+			"medium": "Media",
+			"thick": "Gruesa",
+			"double": "Doble",
+			"dotted": "Punteada",
+			"dashed": "Discontinua"
+		}
 	}
 }

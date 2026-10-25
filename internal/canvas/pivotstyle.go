@@ -42,7 +42,7 @@ type PivotColStyle struct {
 // pivotColumnKeys : propriétés qui suivent la colonne d'un TCD.
 var pivotColumnKeys = map[string]bool{
 	"b": true, "i": true, "u": true, "x": true, "ff": true, "fs": true, "fg": true, "bg": true,
-	"al": true, "va": true, "wr": true, "nf": true, "dp": true, "ng": true, "df": true,
+	"al": true, "va": true, "wr": true, "nf": true, "dp": true, "ng": true, "df": true, "nc": true,
 }
 
 // splitPivotPatch sépare un correctif entre ce qui va à la colonne du TCD et

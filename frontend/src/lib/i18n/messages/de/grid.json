@@ -1093,7 +1093,7 @@
 		"category.number": "Zahl",
 		"category.number.help": "Anzahl der Dezimalstellen und Tausendertrennzeichen.",
 		"category.currency": "Währung",
-		"category.currency.help": "Betrag in Euro.",
+		"category.currency.help": "Betrag mit Währungssymbol.",
 		"category.percent": "Prozent",
 		"category.percent.help": "Der Wert mit 100 multipliziert, gefolgt von %.",
 		"category.date": "Datum",
@@ -1143,10 +1143,34 @@
 			"bottom": "Unten",
 			"left": "Links",
 			"right": "Rechts",
-			"help": "Die gewählten Kanten gelten für jede Zelle der Auswahl; „Außen“ zeichnet einen Rahmen um die Auswahl."
+			"help": "Linie und Farbe wählen, dann auf die Kanten klicken.",
+			"line": "Linie",
+			"inside": "Innen"
 		},
 		"fill": "Hintergrundfarbe",
-		"fill.none": "Keine Füllung"
+		"fill.none": "Keine Füllung",
+		"category.accounting": "Buchhaltung",
+		"category.accounting.help": "Symbole und Beträge ausgerichtet, Null als Strich.",
+		"category.fraction": "Bruch",
+		"category.fraction.help": "Der Dezimalteil als Bruch.",
+		"category.scientific": "Wissenschaftlich",
+		"category.scientific.help": "Wissenschaftliche Notation: 1,23E+04.",
+		"category.custom": "Benutzerdefiniert",
+		"category.custom.help": "0 # ? Ziffern, \"Text\", [Rot], positiv;negativ;null;Text.",
+		"symbol": "Symbol",
+		"position.before": "Davor",
+		"position.after": "Danach",
+		"negRed": "Negative in Rot",
+		"code": "Typ",
+		"fraction.0": "Einstellig",
+		"fraction.1": "Zweistellig",
+		"fraction.2": "Dreistellig",
+		"fraction.3": "Halbe",
+		"fraction.4": "Viertel",
+		"fraction.5": "Achtel",
+		"fraction.6": "Sechzehntel",
+		"fraction.7": "Zehntel",
+		"fraction.8": "Hundertstel"
 	},
 	"readOnly": {
 		"notYours": "Zeile eines anderen Mitglieds: Als Teilnehmer können Sie nur Ihre eigenen Zeilen ändern"
@@ -1574,5 +1598,15 @@
 		"auto": "Link erstellt — Strg+Z entfernt ihn",
 		"refused": "Link abgelehnt: Adresse nicht erlaubt",
 		"removed": "Link entfernt"
+	},
+	"border": {
+		"style": {
+			"thin": "Dünn",
+			"medium": "Mittel",
+			"thick": "Dick",
+			"double": "Doppelt",
+			"dotted": "Gepunktet",
+			"dashed": "Gestrichelt"
+		}
 	}
 }

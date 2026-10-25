@@ -6,6 +6,8 @@ The ribbon commands follow Excel's, in the same places. They apply to the select
 
 Home › Font, Alignment and Number format the selection; the small launcher in the corner of each group, or `Ctrl+1`, opens the **Format Cells** dialog box (number, alignment, font, border, fill). Clicking the alignment already chosen (Left, Center, Right) goes back to the standard alignment, as in Excel.
 
+**Borders ▾** draws an edge (bottom, top, left, right, outside, inside, thick box) with the chosen **line style** (thin, medium, thick, double, dotted, dashed) and **line color**; the Border tab of `Ctrl+1` does the same edge by edge. Format Cells › Number also offers Accounting, Fraction, Scientific and **Custom**, a number format code as in a spreadsheet (`#,##0.00 "kg"`, `0.00E+00`, `# ?/?`, `[Red]-#,##0`, sections `positive;negative;zero;text`, `dd/mm/yyyy hh:mm`); the TEXT function understands the same codes.
+
 ## Font and fill colors {#couleurs-de-police-et-de-remplissage}
 
 Home › Font Color and Fill Color (Highlight in a Document): the button applies the last color chosen, the ▾ arrow opens the palette, as in Excel.

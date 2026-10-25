@@ -4,6 +4,8 @@ Die Befehle des Menübands folgen denen von Excel, an denselben Stellen. Sie gel
 
 ## Zellen formatieren {#mise-en-forme-des-cellules}
 
+**Rahmen ▾** setzt eine Kante (unten, oben, links, rechts, außen, innen, dicker Rahmen) mit der gewählten **Linienart** (dünn, mittel, dick, doppelt, gepunktet, gestrichelt) und **Linienfarbe**; die Registerkarte Rahmen von `Strg+1` tut dasselbe Kante für Kante. Zellen formatieren › Zahl bietet auch Buchhaltung, Bruch, Wissenschaftlich und **Benutzerdefiniert**, ein Formatcode wie in einer Tabellenkalkulation (`# ##0,00 "kg"`, `0,00E+00`, `# ?/?`, `[Rot]-# ##0`, Abschnitte `positiv;negativ;null;Text`); die Funktion TEXT versteht dieselben Codes.
+
 Start › Schriftart, Ausrichtung und Zahl formatieren die Auswahl; das kleine Startprogramm in der Ecke jeder Gruppe oder `Strg+1` öffnet das Dialogfeld **Zellen formatieren** (Zahl, Ausrichtung, Schrift, Rahmen, Ausfüllen). Ein Klick auf die bereits gewählte Ausrichtung (Links, Zentriert, Rechts) stellt wie in Excel die Standardausrichtung wieder her.
 
 ## Schrift- und Füllfarben {#couleurs-de-police-et-de-remplissage}

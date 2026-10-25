@@ -6,6 +6,8 @@ Les commandes du ruban suivent celles d'Excel, aux mêmes places. Elles s'appliq
 
 Accueil › Police, Alignement et Nombre mettent en forme la sélection ; le petit lanceur dans le coin de chaque groupe, ou `Ctrl+1`, ouvre la boîte **Format de cellule** (nombre, alignement, police, bordure, remplissage). Cliquer sur l'alignement déjà choisi (Gauche, Centrer, Droite) revient à l'alignement standard, comme dans Excel.
 
+**Bordures ▾** pose un bord (inférieur, supérieur, gauche, droit, extérieur, intérieur, épais en encadré) avec le **style de trait** (fin, moyen, épais, double, pointillé, tirets) et la **couleur de trait** choisis ; l'onglet Bordure de `Ctrl+1` fait de même bord par bord. Format de cellule › Nombre propose aussi Comptabilité, Fraction, Scientifique et **Personnalisé**, un code de format comme dans un tableur (`# ##0,00 "kg"`, `0,00E+00`, `# ?/?`, `[Rouge]-# ##0`, sections `positif;négatif;zéro;texte`, `jj/mm/aaaa hh:mm`) ; la fonction TEXTE comprend les mêmes codes.
+
 ## Couleurs de police et de remplissage
 
 Accueil › Couleur de police et Couleur de remplissage (Surlignage dans un Document) : le bouton pose la dernière couleur choisie, la flèche ▾ ouvre la palette, comme dans Excel.

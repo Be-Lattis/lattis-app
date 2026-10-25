@@ -3,7 +3,8 @@
 // pour que la page imprimée ressemble à l'écran.
 import type { CellStyle } from '#lib/grid/style.js';
 import { paint } from '#lib/grid/colors.js';
-import { fontPx, GRID_FAMILY, lineHeight } from '#lib/grid/textwrap.js';
+import { fontFamily as gridFamily, fontPx, lineHeight } from '#lib/grid/textwrap.js';
+import { edgeCss, LINE_STYLES, parseEdge } from '#lib/grid/borders.js';
 
 /** Couleur CSS d'une couleur de style (référence au thème résolue), ou undefined. */
 export function cssColor(v: unknown): string | undefined {
@@ -25,6 +26,14 @@ export function borderCss(v: unknown, color?: unknown): string | undefined {
 	if (!v) return undefined;
 	const fallback = cssColor(color) ?? '#000';
 	if (v === true) return `1px solid ${fallback}`;
+	// Bord de la grille (borders.ts) : « style couleur » (« double #c00000 »).
+	if (typeof v === 'string') {
+		const [a, b, more] = v.trim().split(/\s+/);
+		if ((LINE_STYLES as string[]).includes(a) && !more && (!b || !(STYLES.has(b.toLowerCase()) || WIDTHS[b.toLowerCase()]))) {
+			const e = parseEdge(v);
+			if (e) return edgeCss(e, cssColor(e.color) ?? fallback);
+		}
+	}
 	if (typeof v === 'string' && /^\s*none\s*$/i.test(v)) return undefined;
 	let width = '';
 	let style = '';
@@ -75,7 +84,7 @@ export function bordersCss(st: CellStyle | undefined): string[] {
 export function fontFamily(st: CellStyle | undefined): string {
 	const s = st as Record<string, unknown> | undefined;
 	const f = typeof s?.ff === 'string' && s.ff ? s.ff : typeof s?.font === 'string' && s.font ? s.font : '';
-	return f ? `"${f.replace(/["\\;{}<>]/g, '')}", ${GRID_FAMILY}` : GRID_FAMILY;
+	return gridFamily(f ? f.replace(/["\\;{}<>]/g, '') : undefined);
 }
 
 /** Présentation d'une cellule imprimée, en plus de son style. */

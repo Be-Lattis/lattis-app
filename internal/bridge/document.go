@@ -1201,6 +1201,42 @@ func (s *DocumentService) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r
 	})
 }
 
+// StylePart est un morceau d'une mise en forme en plusieurs plages (bordures
+// du ruban : contour, bord inférieur…) : un rectangle, ou des lignes
+// (Line "rows", de R0 à R1) ou des colonnes (Line "cols", de C0 à C1)
+// entières.
+type StylePart struct {
+	R0    int            `json:"r0"`
+	C0    int            `json:"c0"`
+	R1    int            `json:"r1"`
+	C1    int            `json:"c1"`
+	Line  string         `json:"line,omitempty"`
+	Patch map[string]any `json:"patch"`
+}
+
+// ApplyStyleParts met en forme plusieurs plages de la feuille, en une seule
+// étape d'annulation (Contour, Bordure épaisse en encadré).
+func (s *DocumentService) ApplyStyleParts(ctx context.Context, sheet int64, parts []StylePart) (DocState, error) {
+	return s.actw(ctx, true, func(ctx context.Context, d *doc.Document) error {
+		gctx := command.WithGroup(ctx, "Mise en forme")
+		for _, p := range parts {
+			var err error
+			switch p.Line {
+			case "rows":
+				err = d.ApplyLineStyle(gctx, sheet, true, p.R0, p.R1, p.Patch)
+			case "cols":
+				err = d.ApplyLineStyle(gctx, sheet, false, p.C0, p.C1, p.Patch)
+			default:
+				err = d.ApplyStyle(gctx, sheet, p.R0, p.C0, p.R1, p.C1, p.Patch)
+			}
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // ApplyLineStyle met en forme des lignes (rows) ou des colonnes entières
 // [i0, i1] de la feuille, comme Excel.
 func (s *DocumentService) ApplyLineStyle(ctx context.Context, sheet int64, rows bool, i0, i1 int, patch map[string]any) (DocState, error) {

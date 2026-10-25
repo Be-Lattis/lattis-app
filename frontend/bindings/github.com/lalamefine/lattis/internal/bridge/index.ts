@@ -62,6 +62,7 @@ export type {
     Setting,
     ShareRequest,
     SourceColumn,
+    StylePart,
     TableList,
     TableSourceInfo,
     TableSourceLink,

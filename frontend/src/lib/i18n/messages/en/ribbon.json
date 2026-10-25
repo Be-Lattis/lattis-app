@@ -83,7 +83,11 @@
 		"date": "Date",
 		"time": "Time",
 		"text": "Text",
-		"general": "General"
+		"general": "General",
+		"accounting": "Accounting",
+		"fraction": "Fraction",
+		"scientific": "Scientific",
+		"custom": "Custom"
 	},
 	"group": {
 		"undo": "Undo",
@@ -246,7 +250,8 @@
 			"tooltip": "Number format of the selection",
 			"number": "Number (0.00)",
 			"date": "Short date",
-			"more": "More number formats…"
+			"more": "More number formats…",
+			"longDate": "Long date"
 		},
 		"currency": {
 			"label": "Currency",
@@ -651,6 +656,22 @@
 		"image": {
 			"label": "Image",
 			"tooltip": "Insert an image (saved in the workbook)"
+		},
+		"bordersMenu": {
+			"label": "Borders",
+			"tooltip": "Borders, line style and color",
+			"bottom": "Bottom border",
+			"top": "Top border",
+			"left": "Left border",
+			"right": "Right border",
+			"none": "No border",
+			"all": "All borders",
+			"outline": "Outside borders",
+			"inside": "Inside borders",
+			"thick": "Thick box border",
+			"lineStyle": "Line style",
+			"lineColor": "Line color",
+			"more": "More borders…"
 		}
 	},
 	"protect": {

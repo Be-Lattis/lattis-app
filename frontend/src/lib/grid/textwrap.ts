@@ -46,7 +46,46 @@ export const GRID_FAMILY = '"Segoe UI", system-ui, -apple-system, sans-serif';
 export const BASE_PX = 13;
 
 /** Polices proposées (ruban, Format de cellule) ; la première est celle par défaut. */
-export const FONTS = ['Segoe UI', 'Aptos', 'Arial', 'Calibri', 'Cambria', 'Consolas', 'Courier New', 'Georgia', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana'];
+export const FONTS = ['Segoe UI', 'Aptos', 'Arial', 'Calibri', 'Cambria', 'Candara', 'Comic Sans MS', 'Consolas', 'Courier New', 'Garamond', 'Georgia', 'Helvetica', 'Impact', 'Lucida Console', 'Palatino Linotype', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana'];
+
+/**
+ * Polices de remplacement de chaque police proposée, quand elle manque au
+ * système (macOS, Linux, navigateur) : une police aux mêmes mesures d'abord
+ * (Carlito pour Calibri, Liberation pour Arial et Times New Roman), puis une
+ * famille générique.
+ */
+const FALLBACKS: Record<string, string> = {
+	Aptos: 'Calibri, Carlito, "Segoe UI", sans-serif',
+	Arial: '"Liberation Sans", Arimo, Helvetica, sans-serif',
+	Calibri: 'Carlito, "Segoe UI", sans-serif',
+	Cambria: 'Caladea, Georgia, serif',
+	Candara: 'Calibri, Carlito, sans-serif',
+	'Comic Sans MS': '"Comic Neue", cursive',
+	Consolas: 'Menlo, "DejaVu Sans Mono", "Liberation Mono", monospace',
+	'Courier New': 'Courier, "Liberation Mono", Cousine, monospace',
+	Garamond: '"EB Garamond", "Palatino Linotype", Georgia, serif',
+	Georgia: 'Gelasio, "DejaVu Serif", serif',
+	Helvetica: '"Helvetica Neue", Arial, "Liberation Sans", sans-serif',
+	Impact: '"Arial Black", sans-serif',
+	'Lucida Console': 'Monaco, "DejaVu Sans Mono", monospace',
+	'Palatino Linotype': 'Palatino, "Book Antiqua", "TeX Gyre Pagella", serif',
+	Tahoma: 'Verdana, "DejaVu Sans", sans-serif',
+	'Times New Roman': 'Times, "Liberation Serif", Tinos, serif',
+	'Trebuchet MS': '"DejaVu Sans", sans-serif',
+	Verdana: '"DejaVu Sans", sans-serif'
+};
+
+/** Famille CSS d'une police (avec ses remplaçantes) ; sans police : celle de la grille. */
+export function fontFamily(ff: string | undefined): string {
+	if (!ff || ff === FONTS[0]) return GRID_FAMILY;
+	const name = `"${ff.replace(/["\\]/g, '')}"`;
+	return FALLBACKS[ff] ? `${name}, ${FALLBACKS[ff]}` : `${name}, ${GRID_FAMILY}`;
+}
+
+/** Polices de la liste, et la police en cours si elle n'y est pas (posée par un script, un fichier importé). */
+export function fontChoices(current?: string): string[] {
+	return current && !FONTS.includes(current) ? [...FONTS, current] : FONTS;
+}
 
 /** Tailles proposées, en points. */
 export const SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72];
@@ -61,7 +100,7 @@ export function fontPx(fs: number | undefined): number {
 
 /** Police CSS d'une cellule (gras, italique, famille, taille). */
 export function cellFont(st: { b?: boolean; i?: boolean; ff?: string; fs?: number } | undefined): string {
-	const family = st?.ff ? `"${st.ff.replace(/"/g, '')}", ${GRID_FAMILY}` : GRID_FAMILY;
+	const family = fontFamily(st?.ff);
 	return `${st?.i ? 'italic ' : ''}${st?.b ? '600 ' : ''}${fontPx(st?.fs)}px ${family}`;
 }
 

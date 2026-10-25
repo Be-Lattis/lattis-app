@@ -59,6 +59,13 @@ export const icons = {
 	'border-all': '<rect x="4" y="4" width="16" height="16"/><path d="M12 4v16M4 12h16"/>',
 	'border-outline': '<rect class="a" x="4" y="4" width="16" height="16"/><path stroke-dasharray="1.5 2" d="M12 6v12M6 12h12"/>',
 	'border-none': '<path stroke-dasharray="1.5 2" d="M4 4h16v16H4zM12 4v16M4 12h16"/>',
+	// Un bord en trait plein (accent), le reste en pointillé.
+	'border-bottom': '<path stroke-dasharray="1.5 2" d="M4 20V4h16v16M12 4v16M4 12h16"/><path class="a" stroke-width="2" d="M4 20h16"/>',
+	'border-top': '<path stroke-dasharray="1.5 2" d="M4 4v16h16V4M12 4v16M4 12h16"/><path class="a" stroke-width="2" d="M4 4h16"/>',
+	'border-left': '<path stroke-dasharray="1.5 2" d="M4 4h16v16H4M12 4v16M4 12h16"/><path class="a" stroke-width="2" d="M4 4v16"/>',
+	'border-right': '<path stroke-dasharray="1.5 2" d="M20 4H4v16h16M12 4v16M4 12h16"/><path class="a" stroke-width="2" d="M20 4v16"/>',
+	'border-inside': '<path stroke-dasharray="1.5 2" d="M4 4h16v16H4z"/><path class="a" d="M12 4v16M4 12h16"/>',
+	'border-thick': '<rect class="a" stroke-width="3" x="4.5" y="4.5" width="15" height="15"/><path stroke-dasharray="1.5 2" d="M12 7v10M7 12h10"/>',
 	// Effacer : une gomme posée de biais, sa trace dessous.
 	'clear-format': '<path d="M14.5 4.5 20 10l-8.5 8.5H7L4 15.5z"/><path class="a" d="M9 10l5.5 5.5"/><path d="M13 20.5h7.5"/>',
 	// Remplissage (recopier) : une cellule pleine, sa flèche vers le bas.

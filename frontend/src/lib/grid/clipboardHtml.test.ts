@@ -65,7 +65,7 @@ describe('presse-papiers HTML', () => {
 		expect(numberFormatOf('@')).toEqual({ nf: 'text' });
 		expect(numberFormatOf('General')).toEqual({});
 		// Inconnu de Lattis : gardé tel quel.
-		expect(numberFormatOf('$#,##0.00')).toEqual({ format: '$#,##0.00' });
+		expect(numberFormatOf('$#,##0.00')).toEqual({ nc: '$#,##0.00' });
 	});
 
 	it('lit couleurs et déclarations CSS', () => {

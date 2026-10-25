@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/lalamefine/lattis/internal/canvas"
+	"github.com/lalamefine/lattis/internal/numfmt"
 )
 
 // Mise en forme exportée (.xlsx et .ods) : les couches de style de Lattis
@@ -20,8 +21,10 @@ import (
 // xfmt est la mise en forme d'une cellule exportée.
 type xfmt struct {
 	// nk : format de nombre ; 0 standard, 'n' nombre, 'p' pourcentage,
-	// 'c' euros, 'd' date ou heure (motif df), 't' texte.
+	// 'c' euros, 'd' date ou heure (motif df), 't' texte, 'x' code
+	// personnalisé (code).
 	nk    byte
+	code  string
 	dp    int8 // décimales, -1 : celles du format
 	group bool // séparateur de milliers
 	df    string
@@ -34,11 +37,9 @@ type xfmt struct {
 	al    string // left, center, right
 	va    string // top, center, bottom
 	wrap  bool
-	bt    bool
-	bb    bool
-	bl    bool
-	br    bool
-	bc    string
+	// Bords : « style couleur » (thin, medium, thick, double, dotted,
+	// dashed ; couleur RRGGBB ou vide : automatique), "" sans bord.
+	bt, bb, bl, br string
 }
 
 // fmts est le registre des mises en forme d'un export (sûr entre goroutines :
@@ -100,6 +101,13 @@ func (f *fmts) of(layers ...canvas.Style) int32 {
 			st[k] = canvas.ResolveColor(s, f.colors)
 		}
 	}
+	for _, k := range [...]string{"bt", "bb", "bl", "br"} {
+		if s, ok := st[k].(string); ok {
+			if style, c, ok := strings.Cut(s, " "); ok && canvas.IsThemeRef(c) {
+				st[k] = style + " " + canvas.ResolveColor(c, f.colors)
+			}
+		}
+	}
 	return f.id(toXfmt(st))
 }
 
@@ -156,11 +164,8 @@ func toXfmt(st canvas.Style) xfmt {
 	flag := func(k string) bool { b, _ := st[k].(bool); return b }
 	str := func(k string) string { s, _ := st[k].(string); return s }
 	x := xfmt{dp: -1, b: flag("b"), i: flag("i"), u: flag("u"), x: flag("x"), wrap: flag("wr"),
-		font: str("ff"), fg: color(st["fg"]), bg: color(st["bg"]),
-		bt: flag("bt"), bb: flag("bb"), bl: flag("bl"), br: flag("br")}
-	if x.bt || x.bb || x.bl || x.br {
-		x.bc = color(st["bc"])
-	}
+		font: str("ff"), fg: color(st["fg"]), bg: color(st["bg"])}
+	x.bt, x.bb, x.bl, x.br = edge(st["bt"], st["bc"]), edge(st["bb"], st["bc"]), edge(st["bl"], st["bc"]), edge(st["br"], st["bc"])
 	if f, ok := st["fs"].(float64); ok && f > 0 && f < 410 {
 		x.size = f
 	}
@@ -216,11 +221,42 @@ func toXfmt(st canvas.Style) xfmt {
 			x.nk = 'n'
 		}
 	}
+	if c := strings.TrimSpace(str("nc")); c != "" {
+		x.nk, x.code, x.dp, x.df, x.group = 'x', c, -1, "", false
+	}
 	x.group = x.group && (x.nk == 'n' || x.nk == 'c')
 	if x.nk != 'n' && x.nk != 'p' && x.nk != 'c' {
 		x.dp = 0 // sans objet : la mise en forme vide reste xfmt{}
 	}
 	return x
+}
+
+var edgeStyles = map[string]bool{"thin": true, "medium": true, "thick": true, "double": true, "dotted": true, "dashed": true}
+
+// edge lit un bord : true (trait fin, couleur bc), ou « style couleur ».
+func edge(v, bc any) string {
+	switch v := v.(type) {
+	case bool:
+		if v {
+			return strings.TrimSpace("thin " + color(bc))
+		}
+	case string:
+		style, c, _ := strings.Cut(strings.TrimSpace(v), " ")
+		if !edgeStyles[style] {
+			style = "thin"
+		}
+		if c = color(c); c == "" {
+			c = color(bc)
+		}
+		return strings.TrimSpace(style + " " + c)
+	}
+	return ""
+}
+
+// edgeParts sépare le style et la couleur (RRGGBB, "" : automatique) d'un bord.
+func edgeParts(e string) (style, c string) {
+	style, c, _ = strings.Cut(e, " ")
+	return style, c
 }
 
 // --- Excel ------------------------------------------------------------------
@@ -250,6 +286,8 @@ func (x xfmt) excelNumFmt() string {
 		return "@"
 	case 'd':
 		return excelDate(x.df)
+	case 'x':
+		return numfmt.ToExcel(x.code)
 	}
 	return ""
 }
@@ -312,12 +350,12 @@ func xlsxStyles(list []xfmt) string {
 	numIDs := map[string]int{}
 	fontIDs := map[[7]string]int{}
 	fillIDs := map[string]int{}
-	borderIDs := map[[5]string]int{}
+	borderIDs := map[[4]string]int{}
 	fonts.WriteString(`<font><sz val="11"/><name val="Calibri"/></font>`)
 	fontIDs[xfmt{}.fontKey()] = 0
 	fills.WriteString(`<fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>`)
 	borders.WriteString(`<border><left/><right/><top/><bottom/><diagonal/></border>`)
-	borderIDs[[5]string{"false", "false", "false", "false", ""}] = 0
+	borderIDs[[4]string{}] = 0
 	nFonts, nFills, nBorders := 1, 2, 1
 	for _, x := range list {
 		num := 0
@@ -374,22 +412,23 @@ func xlsxStyles(list []xfmt) string {
 				fmt.Fprintf(&fills, `<fill><patternFill patternType="solid"><fgColor rgb="FF%s"/><bgColor indexed="64"/></patternFill></fill>`, x.bg)
 			}
 		}
-		bk := [5]string{strconv.FormatBool(x.bl), strconv.FormatBool(x.br), strconv.FormatBool(x.bt), strconv.FormatBool(x.bb), x.bc}
+		bk := [4]string{x.bl, x.br, x.bt, x.bb}
 		border, ok := borderIDs[bk]
 		if !ok {
 			border = nBorders
 			nBorders++
 			borderIDs[bk] = border
-			side := func(tag string, on bool) {
-				if !on {
+			side := func(tag string, e string) {
+				if e == "" {
 					fmt.Fprintf(&borders, `<%s/>`, tag)
 					return
 				}
+				style, bc := edgeParts(e)
 				c := `<color auto="1"/>`
-				if x.bc != "" {
-					c = `<color rgb="FF` + x.bc + `"/>`
+				if bc != "" {
+					c = `<color rgb="FF` + bc + `"/>`
 				}
-				fmt.Fprintf(&borders, `<%s style="thin">%s</%s>`, tag, c, tag)
+				fmt.Fprintf(&borders, `<%s style="%s">%s</%s>`, tag, style, c, tag)
 			}
 			borders.WriteString(`<border>`)
 			side("left", x.bl)
@@ -462,6 +501,43 @@ func (x xfmt) odsDataStyle(name string) string {
 		return fmt.Sprintf(`<number:text-style style:name="%s"><number:text-content/></number:text-style>`, name)
 	case 'd':
 		return odsDate(name, x.df)
+	case 'x':
+		return odsCode(name, x.code)
+	}
+	return ""
+}
+
+// odsCode traduit un code personnalisé (sa première section) en style de
+// données OpenDocument, au plus près : date ou heure, scientifique,
+// pourcentage, nombre (décimales, milliers) ; "" pour un code de texte.
+func odsCode(name, code string) string {
+	f := numfmt.Parse(code)
+	if f.IsText() {
+		return fmt.Sprintf(`<number:text-style style:name="%s"><number:text-content/></number:text-style>`, name)
+	}
+	first, _, _ := strings.Cut(numfmt.ToExcel(code), ";")
+	if f.IsDate() {
+		pat := strings.NewReplacer("yyyy", "aaaa", "yy", "aa", "dddd", "jjjj", "ddd", "jjj", "dd", "jj", `\`, "", `"`, "").Replace(strings.ToLower(first))
+		return odsDate(name, pat)
+	}
+	core := regexp.MustCompile(`"[^"]*"|\\.|\[[^\]]*\]|[_*].`).ReplaceAllString(first, "")
+	_, frac, _ := strings.Cut(core, ".")
+	dp := int8(0)
+	for _, r := range frac {
+		if r == '0' || r == '#' || r == '?' {
+			dp++
+		} else {
+			break
+		}
+	}
+	group := strings.Contains(core, "#,#") || strings.Contains(core, "0,0")
+	switch {
+	case strings.ContainsAny(core, "Ee") && strings.ContainsAny(core, "+-"):
+		return fmt.Sprintf(`<number:number-style style:name="%s"><number:scientific-number number:decimal-places="%d" number:min-integer-digits="1" number:min-exponent-digits="2"/></number:number-style>`, name, dp)
+	case strings.Contains(core, "%"):
+		return fmt.Sprintf(`<number:percentage-style style:name="%s">%s<number:text>%%</number:text></number:percentage-style>`, name, odsNumber(dp, false))
+	case strings.ContainsAny(core, "0#?"):
+		return fmt.Sprintf(`<number:number-style style:name="%s">%s</number:number-style>`, name, odsNumber(dp, group))
 	}
 	return ""
 }
@@ -518,6 +594,26 @@ func odsDate(name, p string) string {
 	return fmt.Sprintf(`<number:date-style style:name="%s" number:language="fr" number:country="FR">%s</number:date-style>`, name, b.String())
 }
 
+// odsLine écrit un bord OpenDocument (épaisseur, trait, couleur).
+func odsLine(e string) string {
+	style, c := edgeParts(e)
+	if c == "" {
+		c = "000000"
+	}
+	w, kind := "0.75pt", "solid"
+	switch style {
+	case "medium":
+		w = "1.5pt"
+	case "thick":
+		w = "2.5pt"
+	case "double":
+		w, kind = "2.25pt", "double"
+	case "dotted", "dashed":
+		kind = style
+	}
+	return w + " " + kind + " #" + strings.ToLower(c)
+}
+
 // odsCellStyle écrit le style de cellule « ce<n> » (et son style de données).
 func (x xfmt) odsCellStyle(n int) string {
 	var b strings.Builder
@@ -543,16 +639,12 @@ func (x xfmt) odsCellStyle(n int) string {
 	case "bottom":
 		cell.WriteString(` style:vertical-align="bottom"`)
 	}
-	line := "0.75pt solid #000000"
-	if x.bc != "" {
-		line = "0.75pt solid #" + strings.ToLower(x.bc)
-	}
 	for _, s := range []struct {
-		on   bool
+		edge string
 		side string
 	}{{x.bt, "top"}, {x.bb, "bottom"}, {x.bl, "left"}, {x.br, "right"}} {
-		if s.on {
-			fmt.Fprintf(&cell, ` fo:border-%s="%s"`, s.side, line)
+		if s.edge != "" {
+			fmt.Fprintf(&cell, ` fo:border-%s="%s"`, s.side, odsLine(s.edge))
 		}
 	}
 	if x.al != "" {

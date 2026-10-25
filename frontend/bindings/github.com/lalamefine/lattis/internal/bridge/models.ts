@@ -1084,6 +1084,21 @@ export interface SourceColumn {
 }
 
 /**
+ * StylePart est un morceau d'une mise en forme en plusieurs plages (bordures
+ * du ruban : contour, bord inférieur…) : un rectangle, ou des lignes
+ * (Line "rows", de R0 à R1) ou des colonnes (Line "cols", de C0 à C1)
+ * entières.
+ */
+export interface StylePart {
+    "r0": number;
+    "c0": number;
+    "r1": number;
+    "c1": number;
+    "line"?: string;
+    "patch": { [_ in string]?: any } | null;
+}
+
+/**
  * TableList liste les tables et vues d'une connexion (navigateur).
  * needPassword est rempli si le serveur demande un mot de passe.
  */

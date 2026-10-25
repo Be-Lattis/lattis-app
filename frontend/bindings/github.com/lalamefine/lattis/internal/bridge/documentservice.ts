@@ -238,6 +238,14 @@ export function ApplyStyle(sheet: number, r0: number, c0: number, r1: number, c1
 }
 
 /**
+ * ApplyStyleParts met en forme plusieurs plages de la feuille, en une seule
+ * étape d'annulation (Contour, Bordure épaisse en encadré).
+ */
+export function ApplyStyleParts(sheet: number, parts: $models.StylePart[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1613716271, sheet, parts);
+}
+
+/**
  * BeforeClose exécute les écouteurs before_close ; faux si l'un d'eux
  * annule la fermeture (il a renvoyé false).
  */

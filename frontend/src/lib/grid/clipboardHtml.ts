@@ -10,10 +10,11 @@
 // ne font pas de mise en forme. L'alignement vertical en bas, celui d'office
 // des tableurs, n'est pas repris (Lattis centre verticalement).
 
+import { edgeValue, parseEdge, type LineStyle } from './borders';
 import type { CellStyle } from './style';
 
-/** Mise en forme d'une cellule collée : celle de Lattis, et des propriétés inconnues tolérées (« format »). */
-export type ClipStyle = Partial<CellStyle> & { format?: string; mr?: number; mc?: number };
+/** Mise en forme d'une cellule collée : celle de Lattis (un code de format inconnu va à nc, numcode.ts). */
+export type ClipStyle = Partial<CellStyle> & { mr?: number; mc?: number };
 
 export interface HtmlClip {
 	rows: string[][];
@@ -151,11 +152,15 @@ function fontFamily(v: string | undefined): string | null {
 }
 
 /** Une bordure tracée (« .5pt solid windowtext », pas « none » ni « 0 »). */
-function edge(v: string | undefined): { on: boolean; color: string | null } | null {
+function edge(v: string | undefined): { on: boolean; color: string | null; style: LineStyle } | null {
 	if (v === undefined) return null;
 	const s = v.trim().toLowerCase();
-	if (!s || /\b(none|hidden)\b/.test(s) || /^0(\.0+)?(pt|px)?$/.test(s)) return { on: false, color: null };
-	return { on: true, color: cssColor(s) };
+	if (!s || /\b(none|hidden)\b/.test(s) || /^0(\.0+)?(pt|px)?$/.test(s)) return { on: false, color: null, style: 'thin' };
+	// Style du trait : double, pointillé, tirets, ou l'épaisseur (moyen, épais).
+	const w = /(\d*\.?\d+)(pt|px)/.exec(s);
+	const px = w ? Number(w[1]) * (w[2] === 'pt' ? 4 / 3 : 1) : /\bthick\b/.test(s) ? 3 : /\bmedium\b/.test(s) ? 2 : 1;
+	const style: LineStyle = /\bdouble\b/.test(s) ? 'double' : /\bdotted\b/.test(s) ? 'dotted' : /\bdashed\b/.test(s) ? 'dashed' : px >= 2.5 ? 'thick' : px >= 1.5 ? 'medium' : 'thin';
+	return { on: true, color: cssColor(s), style };
 }
 
 /** Code de format d'un tableur (mso-number-format, sans guillemets ni échappements). */
@@ -174,7 +179,7 @@ function unescapeCode(v: string): string {
 
 /**
  * Format de nombre de Lattis (nf, dp, ng, df) d'un code de format de
- * tableur ; un code que Lattis n'a pas reste dans « format ».
+ * tableur ; un autre code devient un code personnalisé (nc).
  */
 export function numberFormatOf(code: string): ClipStyle {
 	const c = code.trim();
@@ -216,12 +221,14 @@ export function numberFormatOf(code: string): ClipStyle {
 		return known.includes(df) ? { nf: 'date', df } : { nf: 'date' };
 	}
 	if (/^\[?h+\]?:mm(:ss)?$/i.test(plain.trim())) return { nf: 'time', df: /ss/.test(plain) ? 'hh:mm:ss' : 'hh:mm' };
-	if (!/[0#?]/.test(plain)) return { format: c };
+	if (!/[0#?]/.test(plain)) return { nc: c };
+	// Scientifique, fraction, sections, couleurs, texte : code personnalisé (numcode.ts).
+	if (/[Ee][+-]|\/|\?|\*|_/.test(plain) || c.includes(';') || /\[(red|blue|green|black|white|yellow|cyan|magenta|color\s*\d+)\]/i.test(c) || /"[^"€]+"/.test(c)) return { nc: c };
 	const grouped = /[#0],[#0]/.test(plain);
 	if (plain.includes('%')) return decimals ? { nf: '%', dp: decimals } : { nf: '%', dp: 0 };
 	if (plain.includes('€')) return decimals === 2 ? { nf: '€' } : { nf: '€', dp: decimals };
-	// Autre symbole monétaire ($, £…) : format inconnu de Lattis, gardé tel quel.
-	if (/[$£¥]/.test(plain)) return { format: c };
+	// Autre symbole monétaire ($, £…) : code personnalisé (numcode.ts).
+	if (/[$£¥]/.test(plain)) return { nc: c };
 	const base: ClipStyle = decimals === 0 ? { nf: '0' } : decimals === 2 ? { nf: '0,00' } : { nf: '0,00', dp: decimals };
 	if (!grouped) base.ng = true;
 	return base;
@@ -261,10 +268,10 @@ export function styleOfDecls(d: Decls, base: Decls = {}): ClipStyle | null {
 		['br', 'right']
 	] as const) {
 		const e = edge(d['border-' + side]) ?? all;
-		if (e?.on) {
+		if (e?.on && e.style === 'thin') {
 			s[k] = true;
 			bc ??= e.color;
-		}
+		} else if (e?.on) s[k] = edgeValue({ style: e.style, color: e.color && e.color !== '#000000' ? e.color : undefined }) ?? true;
 	}
 	if (bc && bc !== '#000000') s.bc = bc;
 	const code = d['mso-number-format'];
@@ -448,7 +455,7 @@ function msoFormat(st: ClipStyle): string | null {
 		case 'time':
 			return (st.df ?? 'hh:mm').replace(/a/g, 'y').replace(/j/g, 'd');
 	}
-	return st.format ?? null;
+	return st.nc ?? null;
 }
 
 /** Déclarations CSS en ligne d'une mise en forme de Lattis. */
@@ -466,11 +473,18 @@ export function cssOfStyle(st: ClipStyle | null | undefined): string {
 	if (st.al) d.push('text-align:' + st.al);
 	d.push('vertical-align:' + (st.va === 'top' ? 'top' : st.va === 'bottom' ? 'bottom' : 'middle'));
 	if (st.wr) d.push('white-space:normal');
-	const line = `.5pt solid ${st.bc ?? 'windowtext'}`;
-	if (st.bt) d.push('border-top:' + line);
-	if (st.bb) d.push('border-bottom:' + line);
-	if (st.bl) d.push('border-left:' + line);
-	if (st.br) d.push('border-right:' + line);
+	for (const [k, side] of [
+		['bt', 'top'],
+		['bb', 'bottom'],
+		['bl', 'left'],
+		['br', 'right']
+	] as const) {
+		const e = parseEdge(st[k], st.bc);
+		if (!e) continue;
+		const w = { thin: '.5pt', medium: '1pt', thick: '1.5pt', double: '2pt', dotted: '.5pt', dashed: '.5pt' }[e.style];
+		const kind = e.style === 'double' || e.style === 'dotted' || e.style === 'dashed' ? e.style : 'solid';
+		d.push(`border-${side}:${w} ${kind} ${e.color ?? 'windowtext'}`);
+	}
 	const f = msoFormat(st);
 	if (f) d.push(`mso-number-format:"${f.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`);
 	return d.join(';');

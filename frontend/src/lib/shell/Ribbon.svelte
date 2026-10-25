@@ -16,7 +16,9 @@
 	import { tableTheme } from '#lib/grid/theme.svelte.js';
 	import { clearPatch, type CellStyle } from '#lib/grid/style.js';
 	import type { PasteKind } from '#lib/grid/pastespecial.js';
-	import { DEFAULT_PT, FONTS, SIZES } from '#lib/grid/textwrap.js';
+	import { DEFAULT_PT, FONTS, fontChoices, fontFamily, SIZES } from '#lib/grid/textwrap.js';
+	import { edgeCss, LINE_STYLES, type BorderCmd, type Edge } from '#lib/grid/borders.js';
+	import { categoryOf, formatPatch, type Category } from '#lib/grid/numfmt.js';
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode, type Size } from './fit';
@@ -65,7 +67,7 @@
 		color?: 'fg' | 'bg'; // commande avec un choix de couleur
 		on?: boolean; // commande à bascule, enfoncée
 		/** Commande à menu (▾) : ses choix (raccourci affiché à droite ; drapeaux hérités de la commande, sinon les leurs). */
-		items?: { label: string; icon?: IconName; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean; data?: boolean; swatch?: [string, string]; sep?: boolean }[];
+		items?: { label: string; icon?: IconName; run?: () => void; on?: boolean; keys?: string; ro?: boolean; local?: boolean; data?: boolean; swatch?: [string, string]; sep?: boolean; sub?: SubItem[]; palette?: { value: string; none: string; onpick: (c: string | null) => void } }[];
 		/** Commande qui ouvre son propre menu (▾ affiché, voir anchor). */
 		menu?: boolean;
 		/** Bouton partagé (Coller) : le bouton fait la commande, son ▾ ouvre les choix (items). */
@@ -74,6 +76,13 @@
 		size?: Size;
 		/** Liste en tête d'un groupe en lignes (Format de nombre) : le choix en cours, affiché dans la liste ; items donne les choix. */
 		combo?: string;
+	}
+	/** Choix d'un sous-menu (Style de trait ▸) : line, aperçu CSS du trait. */
+	interface SubItem {
+		label: string;
+		run?: () => void;
+		on?: boolean;
+		line?: string;
 	}
 	interface Group {
 		/** Identifiant stable (groupes masqués, menus) ; title est le libellé affiché. */
@@ -108,8 +117,10 @@
 		return Math.ceil((g.commands.length - (combo ? 1 : 0)) / Math.max(1, (g.rows ?? 1) - (combo ? 1 : 0)));
 	};
 	/** Nom du format de nombre de la cellule active (liste Format de nombre). */
-	const NF_NAMES: Record<string, string> = { '0': 'number', '0,00': 'number', '%': 'percent', '€': 'currency', date: 'date', time: 'time', text: 'text' };
-	const nfName = (nf: string) => tAny(`ribbon.numberFormat.${NF_NAMES[nf] ?? 'general'}`);
+	const nfName = (st: CellStyle | undefined) => {
+		const c = categoryOf(st);
+		return tAny(`ribbon.numberFormat.${c === 'standard' ? 'general' : c}`);
+	};
 
 	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'reconnect' | 'detach' | 'remove' | 'save' | 'saveAs' | 'download' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
 	/** Accueil › Édition (Remplissage, Effacer, Trier et filtrer), Mettre sous forme de tableau. */
@@ -272,6 +283,12 @@
 	let bg = $state('#ffff00');
 	const shown = (c: string) => String(resolveColor(c, tableTheme.current.colors));
 	const st = (patch: Record<string, unknown>) => (onstyle ? () => onstyle(patch) : undefined);
+	// Stylo des bordures (Bordures ▸ Style et Couleur de trait), comme Excel :
+	// les commandes de bordure le posent.
+	let pen = $state<Edge>({ style: 'thin' });
+	const bd = (cmd: BorderCmd) => st({ border: cmd, pen: { ...pen } });
+	/** Format de nombre d'une catégorie (liste Format de nombre). */
+	const nfCat = (c: Category, df?: string) => st(formatPatch(c, { dp: c === 'percent' || c === 'scientific' ? (c === 'percent' ? 0 : 2) : 2, df, before: false, sym: '€' }));
 	let fileOpen = $state(false);
 	// Menu Fichier posé sous son onglet, hors de la barre des onglets (qui défile sur un téléphone).
 	let filePos = $state({ x: 0, y: 0 });
@@ -412,9 +429,33 @@
 				launch: fmt('border'),
 				launchHint: t('ribbon.launch.borders'),
 				commands: local([
-					{ label: t('ribbon.cmd.bordersAll.label'), icon: 'border-all', run: st({ border: 'all' }), hint: t('ribbon.cmd.bordersAll.tooltip') },
-					{ label: t('ribbon.cmd.bordersOutline.label'), icon: 'border-outline', run: st({ border: 'outline' }), hint: t('ribbon.cmd.bordersOutline.tooltip') },
-					{ label: t('ribbon.cmd.bordersNone.label'), icon: 'border-none', run: st({ border: 'none' }), hint: t('ribbon.cmd.bordersNone.tooltip') }
+					{ label: t('ribbon.cmd.bordersAll.label'), icon: 'border-all', run: bd('all'), hint: t('ribbon.cmd.bordersAll.tooltip') },
+					{ label: t('ribbon.cmd.bordersOutline.label'), icon: 'border-outline', run: bd('outline'), hint: t('ribbon.cmd.bordersOutline.tooltip') },
+					{
+						label: t('ribbon.cmd.bordersMenu.label'),
+						icon: 'border-bottom',
+						run: onstyle ? openItems : undefined,
+						hint: t('ribbon.cmd.bordersMenu.tooltip'),
+						items: [
+							{ label: t('ribbon.cmd.bordersMenu.bottom'), icon: 'border-bottom', run: bd('bottom') },
+							{ label: t('ribbon.cmd.bordersMenu.top'), icon: 'border-top', run: bd('top') },
+							{ label: t('ribbon.cmd.bordersMenu.left'), icon: 'border-left', run: bd('left') },
+							{ label: t('ribbon.cmd.bordersMenu.right'), icon: 'border-right', run: bd('right') },
+							{ label: t('ribbon.cmd.bordersMenu.none'), icon: 'border-none', run: bd('none'), sep: true },
+							{ label: t('ribbon.cmd.bordersMenu.all'), icon: 'border-all', run: bd('all') },
+							{ label: t('ribbon.cmd.bordersMenu.outline'), icon: 'border-outline', run: bd('outline') },
+							{ label: t('ribbon.cmd.bordersMenu.inside'), icon: 'border-inside', run: bd('inside') },
+							{ label: t('ribbon.cmd.bordersMenu.thick'), icon: 'border-thick', run: bd('thickOutline') },
+							{
+								label: t('ribbon.cmd.bordersMenu.lineStyle'),
+								sep: true,
+								run: onstyle ? openItems : undefined,
+								sub: LINE_STYLES.map((ls) => ({ label: tAny(`grid.border.style.${ls}`), line: edgeCss({ style: ls }, '#1f2328'), on: pen.style === ls, run: () => (pen = { ...pen, style: ls }) }))
+							},
+							{ label: t('ribbon.cmd.bordersMenu.lineColor'), run: onstyle ? openItems : undefined, palette: { value: pen.color ?? '', none: t('grid.format.color.auto'), onpick: (c) => (pen = { ...pen, color: c ?? undefined }) } },
+							{ label: t('ribbon.cmd.bordersMenu.more'), keys: 'Ctrl+1', run: fmt('border'), sep: true }
+						]
+					}
 				])
 			},
 			{
@@ -453,22 +494,28 @@
 					{
 						label: t('ribbon.cmd.numberFormat.label'),
 						icon: 'number-format',
-						combo: nfName(cellStyle?.nf ?? ''),
+						combo: nfName(cellStyle),
 						run: onstyle ? openItems : undefined,
 						hint: t('ribbon.cmd.numberFormat.tooltip'),
 						items: [
-							{ label: t('ribbon.numberFormat.general'), run: st({ nf: null, dp: null, ng: null, df: null }), on: !cellStyle?.nf },
-							{ label: t('ribbon.cmd.numberFormat.number'), run: st({ nf: '0,00', dp: null, ng: null, df: null }), on: cellStyle?.nf === '0' || cellStyle?.nf === '0,00' },
-							{ label: t('ribbon.cmd.currency.label'), run: st({ nf: '€', ng: null, df: null }), on: cellStyle?.nf === '€' },
-							{ label: t('ribbon.cmd.percent.label'), run: st({ nf: '%', ng: null, df: null }), on: cellStyle?.nf === '%' },
-							{ label: t('ribbon.cmd.numberFormat.date'), run: st({ nf: 'date', df: 'jj/mm/aaaa', dp: null, ng: null }), on: cellStyle?.nf === 'date' },
+							{ label: t('ribbon.numberFormat.general'), run: nfCat('standard'), on: categoryOf(cellStyle) === 'standard' },
+							{ label: t('ribbon.cmd.numberFormat.number'), run: nfCat('number'), on: categoryOf(cellStyle) === 'number' },
+							{ label: t('ribbon.cmd.currency.label'), run: nfCat('currency'), on: categoryOf(cellStyle) === 'currency' },
+							{ label: t('ribbon.numberFormat.accounting'), run: nfCat('accounting'), on: categoryOf(cellStyle) === 'accounting' },
+							{ label: t('ribbon.cmd.numberFormat.date'), run: nfCat('date', 'jj/mm/aaaa'), on: cellStyle?.nf === 'date' && cellStyle.df !== 'jjjj j mmmm aaaa' },
+							{ label: t('ribbon.cmd.numberFormat.longDate'), run: nfCat('date', 'jjjj j mmmm aaaa'), on: cellStyle?.nf === 'date' && cellStyle.df === 'jjjj j mmmm aaaa' },
+							{ label: t('ribbon.numberFormat.time'), run: nfCat('time', 'hh:mm:ss'), on: categoryOf(cellStyle) === 'time' },
+							{ label: t('ribbon.cmd.percent.label'), run: nfCat('percent'), on: categoryOf(cellStyle) === 'percent' },
+							{ label: t('ribbon.numberFormat.fraction'), run: nfCat('fraction'), on: categoryOf(cellStyle) === 'fraction' },
+							{ label: t('ribbon.numberFormat.scientific'), run: nfCat('scientific'), on: categoryOf(cellStyle) === 'scientific' },
+							{ label: t('ribbon.numberFormat.text'), run: nfCat('text'), on: categoryOf(cellStyle) === 'text' },
 							{ label: t('ribbon.cmd.numberFormat.more'), keys: 'Ctrl+1', run: fmt('number') }
 						]
 					},
-					{ label: t('ribbon.cmd.currency.label'), icon: 'currency', run: st({ nf: '€', ng: null, df: null }), hint: t('ribbon.cmd.currency.tooltip') },
-					{ label: t('ribbon.cmd.percent.label'), icon: 'percent', run: st({ nf: '%', ng: null, df: null }), hint: t('ribbon.cmd.percent.tooltip') },
-					{ label: t('ribbon.cmd.date.label'), icon: 'type-date', run: st({ nf: 'date', df: 'jj/mm/aaaa', dp: null, ng: null }), hint: t('ribbon.cmd.date.tooltip') },
-					{ label: t('ribbon.cmd.fixed2.label'), icon: 'decimal-fixed', run: st({ nf: '0,00', dp: null, ng: null, df: null }), hint: t('ribbon.cmd.fixed2.tooltip') },
+					{ label: t('ribbon.cmd.currency.label'), icon: 'currency', run: st({ nf: '€', ng: null, df: null, nc: null }), hint: t('ribbon.cmd.currency.tooltip') },
+					{ label: t('ribbon.cmd.percent.label'), icon: 'percent', run: st({ nf: '%', ng: null, df: null, nc: null }), hint: t('ribbon.cmd.percent.tooltip') },
+					{ label: t('ribbon.cmd.date.label'), icon: 'type-date', run: st({ nf: 'date', df: 'jj/mm/aaaa', dp: null, ng: null, nc: null }), hint: t('ribbon.cmd.date.tooltip') },
+					{ label: t('ribbon.cmd.fixed2.label'), icon: 'decimal-fixed', run: st({ nf: '0,00', dp: null, ng: null, df: null, nc: null }), hint: t('ribbon.cmd.fixed2.tooltip') },
 					{ label: t('ribbon.cmd.decimalMore.label'), icon: 'decimal-more', run: st({ dp: 'more' }), hint: t('ribbon.cmd.decimalMore.tooltip') },
 					{ label: t('ribbon.cmd.decimalLess.label'), icon: 'decimal-less', run: st({ dp: 'less' }), hint: t('ribbon.cmd.decimalLess.tooltip') }
 				])
@@ -1715,6 +1762,21 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="drop-menu" role="menu" aria-label={c.label} style:left="{dropMenu.x}px" style:top="{dropMenu.y}px" use:dismiss={() => (dropMenu = null)}>
 				{#each c.items as it, i (i)}
+					{#if it.sub || it.palette}
+						{#if it.sep}<hr />{/if}
+						<Submenu label={it.label} disabled={!it.run}>
+							{#if it.sub}
+								{#each it.sub as si, k (k)}
+									<button role="menuitemcheckbox" aria-checked={!!si.on} class:on={si.on} onclick={() => { dropMenu = null; si.run?.(); }}
+										><span class="check" aria-hidden="true">{si.on ? '✓' : ''}</span>{#if si.line}<span class="lsw" aria-hidden="true"><i style:border-top={si.line}></i></span>{/if}<span class="item">{si.label}</span></button
+									>
+								{/each}
+							{:else if it.palette}
+								{@const pal = it.palette}
+								<div class="sub-palette"><ColorPalette value={pal.value} none={pal.none} onpick={(c) => { dropMenu = null; pal.onpick(c); }} /></div>
+							{/if}
+						</Submenu>
+					{:else}
 					<button
 						role={it.on === undefined ? 'menuitem' : 'menuitemcheckbox'}
 						aria-checked={it.on === undefined ? undefined : it.on}
@@ -1726,6 +1788,7 @@
 							it.run?.();
 						}}>{#if it.swatch}<span class="check" aria-hidden="true">{it.on ? '✓' : ''}</span><span class="swatch2" aria-hidden="true"><i style:background={it.swatch[0]}></i><i style:background={it.swatch[1]}></i></span>{:else if it.icon}<span class="ico" aria-hidden="true"><Icon name={it.icon} size={16} /></span>{:else}<span class="check" aria-hidden="true">{it.on ? '✓' : ''}</span>{/if}<span class="item">{it.label}</span>{#if it.keys}<span class="keys">{keyLabel(it.keys)}</span>{/if}</button
 					>
+					{/if}
 				{/each}
 			</div>
 		{/if}
@@ -1748,7 +1811,7 @@
 			width="{FONTS_W - 4}px"
 			title={t('ribbon.group.font')}
 			disabled={!onstyle || sheetProtected || structureProtected || layoutShared}
-			options={FONTS.map((f) => ({ value: f, label: f }))}
+			options={fontChoices(cellStyle?.ff).map((f) => ({ value: f, label: f, font: fontFamily(f) }))}
 			onchange={(v) => onstyle?.({ ff: v === FONTS[0] ? null : v })}
 		/>
 		<Select
@@ -2240,6 +2303,25 @@
 	.drop-menu button:disabled {
 		color: #9aa0a6;
 		cursor: default;
+	}
+	.drop-menu hr {
+		border: none;
+		border-top: 1px solid #e5e7eb;
+		margin: 4px 0;
+	}
+	.drop-menu .lsw {
+		display: flex;
+		align-items: center;
+		width: 56px;
+		margin-right: 8px;
+	}
+	.drop-menu .lsw i {
+		display: block;
+		width: 100%;
+		height: 0;
+	}
+	.sub-palette {
+		padding: 6px;
 	}
 	.drop-menu .check {
 		width: 18px;

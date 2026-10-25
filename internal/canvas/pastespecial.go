@@ -77,12 +77,12 @@ func (c pasteCell) blank() bool {
 var notFormat = map[string]bool{"nt": true, "np": true, "dv": true, "mr": true, "mc": true, "hd": true, "cf": true, "ln": true}
 
 // formatKeys : les propriétés de mise en forme connues, retirées de la
-// destination quand la source ne les a pas (« format » : format de nombre
-// personnalisé, toléré s'il n'est pas encore lu).
-var formatKeys = []string{"b", "i", "u", "x", "ff", "fs", "fg", "bg", "al", "va", "wr", "nf", "dp", "ng", "df", "bt", "bb", "bl", "br", "bc", "format"}
+// destination quand la source ne les a pas (nc : code de format
+// personnalisé, numfmt ; « format » : ancien nom, toléré).
+var formatKeys = []string{"b", "i", "u", "x", "ff", "fs", "fg", "bg", "al", "va", "wr", "nf", "dp", "ng", "df", "bt", "bb", "bl", "br", "bc", "nc", "format"}
 
 // numberKeys : les propriétés du format de nombre (Valeurs et formats de nombre).
-var numberKeys = map[string]bool{"nf": true, "dp": true, "ng": true, "df": true, "format": true}
+var numberKeys = map[string]bool{"nf": true, "dp": true, "ng": true, "df": true, "nc": true, "format": true}
 
 // formatPatch : le correctif qui donne à une cellule la mise en forme s de
 // la source (les propriétés absentes de s sont retirées) ; numbers : le

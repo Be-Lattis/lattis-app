@@ -83,7 +83,11 @@
 		"date": "Fecha",
 		"time": "Hora",
 		"text": "Texto",
-		"general": "General"
+		"general": "General",
+		"accounting": "Contabilidad",
+		"fraction": "Fracción",
+		"scientific": "Científica",
+		"custom": "Personalizada"
 	},
 	"group": {
 		"undo": "Deshacer",
@@ -246,7 +250,8 @@
 			"tooltip": "Formato de número de la selección",
 			"number": "Número (0,00)",
 			"date": "Fecha corta",
-			"more": "Más formatos de número…"
+			"more": "Más formatos de número…",
+			"longDate": "Fecha larga"
 		},
 		"currency": {
 			"label": "Moneda",
@@ -651,6 +656,22 @@
 		"image": {
 			"label": "Imagen",
 			"tooltip": "Insertar una imagen (guardada en el libro)"
+		},
+		"bordersMenu": {
+			"label": "Bordes",
+			"tooltip": "Bordes, estilo y color de línea",
+			"bottom": "Borde inferior",
+			"top": "Borde superior",
+			"left": "Borde izquierdo",
+			"right": "Borde derecho",
+			"none": "Sin borde",
+			"all": "Todos los bordes",
+			"outline": "Bordes externos",
+			"inside": "Bordes internos",
+			"thick": "Borde de cuadro grueso",
+			"lineStyle": "Estilo de línea",
+			"lineColor": "Color de línea",
+			"more": "Más bordes…"
 		}
 	},
 	"protect": {

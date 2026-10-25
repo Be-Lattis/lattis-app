@@ -1093,7 +1093,7 @@
 		"category.number": "数值",
 		"category.number.help": "小数位数和千位分隔符。",
 		"category.currency": "货币",
-		"category.currency.help": "以欧元表示的金额。",
+		"category.currency.help": "带货币符号的金额。",
 		"category.percent": "百分比",
 		"category.percent.help": "将值乘以 100，后跟 %。",
 		"category.date": "日期",
@@ -1143,10 +1143,34 @@
 			"bottom": "下",
 			"left": "左",
 			"right": "右",
-			"help": "所选边缘应用于所选内容的每个单元格；“外边框”沿所选内容的外围绘制。"
+			"help": "选择线条和颜色，然后单击边框。",
+			"line": "线条",
+			"inside": "内部"
 		},
 		"fill": "背景色",
-		"fill.none": "无填充"
+		"fill.none": "无填充",
+		"category.accounting": "会计专用",
+		"category.accounting.help": "符号与金额对齐，零显示为短横线。",
+		"category.fraction": "分数",
+		"category.fraction.help": "小数部分显示为分数。",
+		"category.scientific": "科学记数",
+		"category.scientific.help": "科学记数法：1.23E+04。",
+		"category.custom": "自定义",
+		"category.custom.help": "0 # ? 数字，\"文本\"，[Red]，正数;负数;零;文本。",
+		"symbol": "符号",
+		"position.before": "前",
+		"position.after": "后",
+		"negRed": "负数显示为红色",
+		"code": "类型",
+		"fraction.0": "一位数",
+		"fraction.1": "两位数",
+		"fraction.2": "三位数",
+		"fraction.3": "以 2 为分母",
+		"fraction.4": "以 4 为分母",
+		"fraction.5": "以 8 为分母",
+		"fraction.6": "以 16 为分母",
+		"fraction.7": "以 10 为分母",
+		"fraction.8": "以 100 为分母"
 	},
 	"readOnly": {
 		"notYours": "其他成员的行：作为参与者，您只能更改自己的行"
@@ -1574,5 +1598,15 @@
 		"auto": "已创建链接 — 按 Ctrl+Z 删除",
 		"refused": "链接被拒绝：不允许的地址",
 		"removed": "已删除链接"
+	},
+	"border": {
+		"style": {
+			"thin": "细线",
+			"medium": "中等",
+			"thick": "粗线",
+			"double": "双线",
+			"dotted": "点线",
+			"dashed": "虚线"
+		}
 	}
 }

@@ -511,7 +511,7 @@ end`,
 	)
 }
 
-const styleHelp = `style : bold, italic, underline, strike (booléens), font (police) et size (taille en points), color et fill (couleurs "#rrggbb", ou du thème du classeur : "theme:accent1" à "theme:accent6", "theme:dk1", "theme:lt1", "theme:dk2", "theme:lt2", suivies au besoin de ":+40" pour 40 % plus clair ou ":-25" pour 25 % plus foncé ; elles changent avec le thème), align ("left", "center" ou "right"), valign ("top", "middle" ou "bottom"), wrap (renvoyer à la ligne), format ("0", "0,00", "%", "€", "date", "time" ou "text"), decimals (nombre de décimales), no_grouping (sans séparateur de milliers), date_format (motif d'une date ou d'une heure : "jj/mm/aaaa", "jj mmm aaaa", "aaaa-mm-jj", "hh:mm"…), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right, border_color, et validation (liste déroulante : liste des valeurs permises {"Oui", "Non"}, ou plage source "=Clients[Ville]", "=Cell[A1:A10]", "=Feuille2!Cell[A1:A10]" ou "=NomDeCellule", dont les valeurs distinctes non vides sont relues à chaque ouverture de la liste et à chaque saisie). false ou "" retire la propriété.`
+const styleHelp = `style : bold, italic, underline, strike (booléens), font (police) et size (taille en points), color et fill (couleurs "#rrggbb", ou du thème du classeur : "theme:accent1" à "theme:accent6", "theme:dk1", "theme:lt1", "theme:dk2", "theme:lt2", suivies au besoin de ":+40" pour 40 % plus clair ou ":-25" pour 25 % plus foncé ; elles changent avec le thème), align ("left", "center" ou "right"), valign ("top", "middle" ou "bottom"), wrap (renvoyer à la ligne), format ("0", "0,00", "%", "€", "date", "time" ou "text"), decimals (nombre de décimales), no_grouping (sans séparateur de milliers), date_format (motif d'une date ou d'une heure : "jj/mm/aaaa", "jj mmm aaaa", "aaaa-mm-jj", "hh:mm"…), format_code (code de format personnalisé : '# ##0,00 "kg"', "0,00E+00", "# ?/?", "0;[Rouge]-0" ; l'emporte sur format), borders (les quatre bordures) ou border_top, border_bottom, border_left, border_right, border_color (couleur par défaut ; un bord vaut true pour un trait fin, ou "style couleur" : "thin", "medium", "thick", "double", "dotted" ou "dashed", suivi au besoin d'une couleur : "double #c00000"), et validation (liste déroulante : liste des valeurs permises {"Oui", "Non"}, ou plage source "=Clients[Ville]", "=Cell[A1:A10]", "=Feuille2!Cell[A1:A10]" ou "=NomDeCellule", dont les valeurs distinctes non vides sont relues à chaque ouverture de la liste et à chaque saisie). false ou "" retire la propriété.`
 
 // linkHelp : la propriété link (lien hypertexte, internal/canvas/links.go).
 const linkHelp = `link (lien hypertexte : "https://…", "mailto:…" ou "#Feuille2!B3", "#B3", "#Tableau" ; les autres schémas sont refusés ; la valeur de la cellule reste le texte affiché).`
@@ -523,12 +523,12 @@ var styleKeys = map[string]string{
 	"align": "al", "format": "nf", "decimals": "dp",
 	"border_top": "bt", "border_bottom": "bb", "border_left": "bl", "border_right": "br",
 	"strike": "x", "font": "ff", "size": "fs", "valign": "va", "wrap": "wr", "no_grouping": "ng",
-	"date_format": "df", "border_color": "bc", "validation": "dv",
+	"date_format": "df", "format_code": "nc", "border_color": "bc", "validation": "dv",
 	"link": "ln",
 }
 
 var styleRaw = map[string]bool{"b": true, "i": true, "u": true, "x": true, "ff": true, "fs": true, "fg": true, "bg": true, "al": true, "va": true, "wr": true,
-	"nf": true, "dp": true, "ng": true, "df": true, "bt": true, "bb": true, "bl": true, "br": true, "bc": true, "dv": true,
+	"nf": true, "dp": true, "ng": true, "df": true, "nc": true, "bt": true, "bb": true, "bl": true, "br": true, "bc": true, "dv": true,
 	"ln": true}
 
 func toStyle(m map[string]any) (canvas.Style, error) {

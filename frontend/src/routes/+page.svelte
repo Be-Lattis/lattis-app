@@ -1916,6 +1916,7 @@
 		moveTable: (t, row, col) => DocumentService.MoveTable(t.name, row, col).then(reload),
 		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
 		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),
+		applyStyleParts: (parts) => DocumentService.ApplyStyleParts(sheetId, parts).then(reload),
 		applyLineStyle: (rows, i0, i1, patch) => DocumentService.ApplyLineStyle(sheetId, rows, i0, i1, patch).then(reload),
 		setNote: (row, col, text) => DocumentService.SetNote(sheetId, row, col, text).then(reload),
 		pinNote: (row, col, pinned) => DocumentService.PinNote(sheetId, row, col, pinned).then(reload),
@@ -2219,7 +2220,9 @@
 	// ailleurs et à l'export (décision 0017).
 	function keepThemeFor(patch: Record<string, unknown>) {
 		if (mode !== 'doc' || docState.theme || docState.readOnly || layoutShared || activeDoc) return;
-		if (!['fg', 'bg', 'bc'].some((k) => isThemeRef(patch[k]))) return;
+		// Bords « style couleur » et stylo des bordures : la couleur après le style.
+		const edgeTheme = ['bt', 'bb', 'bl', 'br'].some((k) => typeof patch[k] === 'string' && isThemeRef((patch[k] as string).split(' ')[1])) || isThemeRef((patch.pen as { color?: string } | undefined)?.color);
+		if (!['fg', 'bg', 'bc'].some((k) => isThemeRef(patch[k])) && !edgeTheme) return;
 		const c = bookTheme.colors;
 		DocumentService.SetTheme({ id: bookTheme.id ?? undefined, name: bookTheme.name, table: c.accent1, source: c.accent2, accents: [c.accent3, c.accent4, c.accent5, c.accent6], dark: c.dk2, light: c.lt2 })
 			.then((d) => (docState = d))

@@ -83,7 +83,11 @@
 		"date": "Datum",
 		"time": "Uhrzeit",
 		"text": "Text",
-		"general": "Standard"
+		"general": "Standard",
+		"accounting": "Buchhaltung",
+		"fraction": "Bruch",
+		"scientific": "Wissenschaftlich",
+		"custom": "Benutzerdefiniert"
 	},
 	"group": {
 		"undo": "Rückgängig",
@@ -246,7 +250,8 @@
 			"tooltip": "Zahlenformat der Auswahl",
 			"number": "Zahl (0,00)",
 			"date": "Datum, kurz",
-			"more": "Mehr Zahlenformate…"
+			"more": "Mehr Zahlenformate…",
+			"longDate": "Datum, lang"
 		},
 		"currency": {
 			"label": "Währung",
@@ -651,6 +656,22 @@
 		"image": {
 			"label": "Bild",
 			"tooltip": "Bild einfügen (in der Arbeitsmappe gespeichert)"
+		},
+		"bordersMenu": {
+			"label": "Rahmen",
+			"tooltip": "Rahmen, Linienart und -farbe",
+			"bottom": "Rahmenlinie unten",
+			"top": "Rahmenlinie oben",
+			"left": "Rahmenlinie links",
+			"right": "Rahmenlinie rechts",
+			"none": "Kein Rahmen",
+			"all": "Alle Rahmenlinien",
+			"outline": "Rahmenlinien außen",
+			"inside": "Rahmenlinien innen",
+			"thick": "Dicker Rahmen",
+			"lineStyle": "Linienart",
+			"lineColor": "Linienfarbe",
+			"more": "Weitere Rahmenlinien…"
 		}
 	},
 	"protect": {

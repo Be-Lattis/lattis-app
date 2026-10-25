@@ -3,6 +3,7 @@
 
 import { formatNumber, parseStyle } from '../grid/style';
 import { DEFAULT_DATE, formatDateTime, fromSerial } from '../grid/numfmt';
+import { parseCode, plain } from '../grid/numcode';
 import { axisFormat, tickLabel } from './scale';
 
 const NBSP = ' ';
@@ -17,6 +18,10 @@ export function serialText(v: number, pattern = DEFAULT_DATE): string {
 export function valueFormat(style?: string | null): (v: number) => string {
 	const st = parseStyle(style ?? undefined);
 	if (!st) return tickLabel;
+	if (st.nc) {
+		const code = parseCode(st.nc);
+		return (v) => plain(code.number(v).text);
+	}
 	if (st.nf === 'date') return (v) => serialText(v, st.df || DEFAULT_DATE);
 	return (v) => formatNumber(st.nf ?? undefined, v, st.dp ?? undefined, st.ng ?? undefined) ?? tickLabel(v);
 }
