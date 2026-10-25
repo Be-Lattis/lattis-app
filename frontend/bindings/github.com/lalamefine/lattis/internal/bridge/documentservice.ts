@@ -523,6 +523,21 @@ export function DataShareInfo(table: string): $CancellablePromise<$models.DataSh
 }
 
 /**
+ * DataTable calcule une table de données sur la plage (valeurs fixes).
+ */
+export function DataTable(sheet: number, area: canvas$0.Rect, rowInput: string, colInput: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2954960338, sheet, area, rowInput, colInput);
+}
+
+/**
+ * DataTableAt rend la table de données déjà posée sur la plage (nil :
+ * aucune), pour la recalculer.
+ */
+export function DataTableAt(sheet: number, area: canvas$0.Rect): $CancellablePromise<canvas$0.DataTableDef | null> {
+    return $Call.ByID(3335698343, sheet, area);
+}
+
+/**
  * DeleteButton supprime un bouton.
  */
 export function DeleteButton(id: number): $CancellablePromise<$models.DocState> {
@@ -585,6 +600,13 @@ export function DeleteQuery(id: number): $CancellablePromise<$models.DocState> {
 
 export function DeleteRow(table: string, n: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1279471111, table, n);
+}
+
+/**
+ * DeleteScenario supprime un scénario.
+ */
+export function DeleteScenario(sheet: number, name: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3020763707, sheet, name);
 }
 
 /**
@@ -967,6 +989,13 @@ export function FormatAsTable(sheet: number, row: number, col: number): $Cancell
  */
 export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {
     return $Call.ByID(1854565667);
+}
+
+/**
+ * GoalSeek cherche la valeur de changing qui donne goal dans target.
+ */
+export function GoalSeek(sheet: number, target: string, goal: string, changing: string): $CancellablePromise<canvas$0.GoalSeekResult> {
+    return $Call.ByID(1365339597, sheet, target, goal, changing);
 }
 
 /**
@@ -1965,10 +1994,32 @@ export function SaveQuery(q: query$0.Query): $CancellablePromise<number> {
 }
 
 /**
+ * SaveScenario ajoute (old vide) ou modifie un scénario.
+ */
+export function SaveScenario(sheet: number, old: string, sc: canvas$0.Scenario): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3605090849, sheet, old, sc);
+}
+
+/**
  * SaveScript enregistre un script (id 0 : nouveau) et renvoie son identifiant.
  */
 export function SaveScript(id: number, name: string, source: string): $CancellablePromise<number> {
     return $Call.ByID(816874412, id, name, source);
+}
+
+/**
+ * ScenarioSummary crée l'onglet de synthèse des scénarios et rend son
+ * identifiant.
+ */
+export function ScenarioSummary(sheet: number, results: string): $CancellablePromise<number> {
+    return $Call.ByID(1640662588, sheet, results);
+}
+
+/**
+ * Scenarios rend les scénarios de la feuille.
+ */
+export function Scenarios(sheet: number): $CancellablePromise<canvas$0.Scenario[] | null> {
+    return $Call.ByID(4285819973, sheet);
 }
 
 /**
@@ -2323,6 +2374,14 @@ export function SetType(table: string, i: number, to: grid$0.Type): $Cancellable
 }
 
 /**
+ * SetWhatIfValues pose les valeurs trouvées (Conserver) ; kind : "goal" ou
+ * "solver".
+ */
+export function SetWhatIfValues(sheet: number, kind: string, cells: string[] | null, raws: string[] | null): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1939105937, sheet, kind, cells, raws);
+}
+
+/**
  * SetZoom fixe le zoom de la feuille, en pour cent (10 à 400) ; hors du
  * journal d'annulation.
  */
@@ -2667,11 +2726,25 @@ export function SheetChoiceValues(sheet: number): $CancellablePromise<canvas$0.F
 }
 
 /**
+ * ShowScenario pose les valeurs d'un scénario.
+ */
+export function ShowScenario(sheet: number, name: string): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1313137977, sheet, name);
+}
+
+/**
  * SimilarSheets donne les groupes d'onglets semblables du classeur (lecture
  * des métadonnées seulement).
  */
 export function SimilarSheets(): $CancellablePromise<canvas$0.SheetGroup[] | null> {
     return $Call.ByID(3134167991);
+}
+
+/**
+ * Solve résout un problème du solveur.
+ */
+export function Solve(sheet: number, p: canvas$0.SolverParams): $CancellablePromise<canvas$0.SolverResult> {
+    return $Call.ByID(1138946321, sheet, p);
 }
 
 /**
@@ -2854,6 +2927,13 @@ export function ValidationAt(sheet: number, row: number, col: number): $Cancella
  */
 export function ValidationList(sheet: number, src: string): $CancellablePromise<canvas$0.ValidationList> {
     return $Call.ByID(3218052505, sheet, src);
+}
+
+/**
+ * WhatIfCells vérifie des cellules variables et rend leurs valeurs actuelles.
+ */
+export function WhatIfCells(sheet: number, refs: string): $CancellablePromise<canvas$0.WhatIfCell[] | null> {
+    return $Call.ByID(2990728180, sheet, refs);
 }
 
 /**

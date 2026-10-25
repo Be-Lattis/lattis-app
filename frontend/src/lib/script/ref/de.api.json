@@ -39,6 +39,11 @@
 		"summary": "Liest eine Zelle des Blatts: Eingabe, angezeigter Wert und, in einer Tabelle, die Tabelle, die Spalte und die Zeile.",
 		"details": "Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.get{row = …}."
 	},
+	"cells.goal_seek": {
+		"signature": "cells.goal_seek(target, value, changing, [keep], [sheet]) → {found, value, result}",
+		"summary": "Zielwertsuche: sucht den Wert der Zelle changing (eine Konstante oder eine eingegebene Zelle einer Tabelle), für den die Formel der Zelle target value ergibt, und trägt ihn ein (außer bei keep = false).",
+		"details": "Sekantenverfahren, dann Eingrenzung und Brent-Verfahren (höchstens 300 Berechnungen). found ist falsch, wenn kein Wert genau value ergibt: value ist dann der nächste gefundene Wert, nur eingetragen, wenn keep = true angegeben ist. Parameter — target: Zielzelle, mit einer Formel (\"B5\"); value: Zielwert; changing: veränderbare Zelle (\"B1\"); keep: falsch: nur suchen, ohne etwas zu ändern; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: cells.goal_seek{target = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
 	"cells.merge": {
 		"signature": "cells.merge(row, col, [row2], [col2], [sheet]) → Anzahl der gelöschten Werte",
 		"summary": "Verbindet freie Zellen zu einer einzigen mit zentriertem Inhalt (in einer Tabelle oder PivotTable abgelehnt). Wie in Excel bleibt nur der Wert oben links erhalten. In einer Tabelle mit Überschriftengruppen (tables.two_level_headers) wird nur das Gruppenband verbunden: sein Feld und die Überschrift einer Spalte setzen die Spalte auf eine Ebene (einfacher Name: ihre Unterüberschrift oder die Gruppe, wenn die Überschrift automatisch war); mehrere benachbarte Felder des Bands bilden eine einzige Gruppe (die erste, die sie tragen, sonst „Gruppe“). Die Spalten werden umbenannt, die Formeln folgen.",

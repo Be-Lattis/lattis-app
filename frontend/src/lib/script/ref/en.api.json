@@ -39,6 +39,11 @@
 		"summary": "Reads a cell of the sheet: entry, displayed value and, in a table, the table, the column and the row.",
 		"details": "Parameters — row: sheet row, from 1; col: sheet column, from 1; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.get{row = …}."
 	},
+	"cells.goal_seek": {
+		"signature": "cells.goal_seek(target, value, changing, [keep], [sheet]) → {found, value, result}",
+		"summary": "Goal seek: looks for the value of the cell changing (a constant, or a typed cell of a table) for which the formula of the cell target equals value, and sets it (unless keep = false).",
+		"details": "Secant, then bracketing and Brent's method (300 evaluations at most). found is false when no value gives exactly value: value is then the closest one found, set only if keep = true is given. Parameters — target: cell to set, with a formula (\"B5\"); value: value to reach; changing: cell to change (\"B1\"); keep: false: only search, without changing anything; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: cells.goal_seek{target = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
 	"cells.merge": {
 		"signature": "cells.merge(row, col, [row2], [col2], [sheet]) → number of values cleared",
 		"summary": "Merges free cells into one, with centered content (refused in a table or a PivotTable). Like Excel, only the top-left value is kept. In a table with header groups (tables.two_level_headers), only the group band merges: its box and the header of a column put the column on one level (simple name: its subheader, or the group if the header was automatic); several neighboring boxes of the band form a single group (the first one they carry, “Group” otherwise). Columns are renamed, formulas follow.",

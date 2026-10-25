@@ -588,6 +588,15 @@ export interface DVRule {
     "at"?: string;
     "input"?: DVMessage | null;
     "error"?: DVMessage | null;
+ * DataTableDef : une table de données posée. Row : cellule d'entrée en ligne
+ * (valeurs de la première ligne), Col : en colonne (valeurs de la première
+ * colonne) ; les deux : table à deux variables.
+ */
+export interface DataTableDef {
+    "sheet": number;
+    "area": Rect;
+    "row"?: string;
+    "col"?: string;
 }
 
 /**
@@ -773,6 +782,16 @@ export interface Found {
      * Text : ce qui a été trouvé (valeur, formule ou note), coupé.
      */
     "text": string;
+ * GoalSeekResult : issue d'une recherche de valeur cible. Raw (forme
+ * gardée) est la valeur à poser par SetWhatIfValues (« Conserver »).
+ */
+export interface GoalSeekResult {
+    "found": boolean;
+    "cell": string;
+    "raw": string;
+    "value": string;
+    "result": string;
+    "evals": number;
 }
 
 /**
@@ -1914,6 +1933,19 @@ export interface RuleMark {
 }
 
 /**
+ * Scenario : un jeu de valeurs. Cells : adresses des cellules variables
+ * (B1, B2) ; Values : une valeur par cellule, dans la langue de la session à
+ * l'interface, gardée en forme du classeur.
+ */
+export interface Scenario {
+    "name": string;
+    "sheet": number;
+    "cells": string[] | null;
+    "values": string[] | null;
+    "comment"?: string;
+}
+
+/**
  * ScriptInfo est un script de la bibliothèque du classeur.
  */
 export interface ScriptInfo {
@@ -2158,6 +2190,46 @@ export interface SimilarTable {
      */
     "key": string;
     "hidden": boolean;
+}
+
+/**
+ * SolverConstraint : Ref (cellule ou plage) Op RHS. Op : "<=", ">=", "=",
+ * "int" ou "bin" (ces deux-là sur des cellules variables, sans RHS). RHS :
+ * un nombre (langue de la session) ou une adresse (une cellule, ou une
+ * plage de même taille que Ref).
+ */
+export interface SolverConstraint {
+    "ref": string;
+    "op": string;
+    "rhs"?: string;
+}
+
+/**
+ * SolverParams : le problème. Goal : "max", "min" ou "value" (Value).
+ * NonNegative : les variables sans borne inférieure sont >= 0.
+ */
+export interface SolverParams {
+    "objective": string;
+    "goal": string;
+    "value"?: string;
+    "variables": string;
+    "constraints": SolverConstraint[] | null;
+    "nonNegative": boolean;
+}
+
+/**
+ * SolverResult : Status "optimal" (linéaire, exact), "approx" (non
+ * linéaire), "infeasible", "unbounded" ou "limit" (rien de mieux dans le
+ * temps imparti). Cells et Raws (forme gardée) vont à SetWhatIfValues ;
+ * Values et Objective : affichés.
+ */
+export interface SolverResult {
+    "status": string;
+    "linear": boolean;
+    "cells": string[] | null;
+    "raws": string[] | null;
+    "values": string[] | null;
+    "objective": string;
 }
 
 /**
@@ -2506,4 +2578,12 @@ export interface Theme {
 export interface ValidationList {
     "values": string[] | null;
     "error"?: string;
+}
+
+/**
+ * WhatIfCell : une cellule d'entrée et sa valeur actuelle (session).
+ */
+export interface WhatIfCell {
+    "cell": string;
+    "value": string;
 }

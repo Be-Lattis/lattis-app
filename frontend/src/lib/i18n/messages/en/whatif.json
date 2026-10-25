@@ -1,0 +1,56 @@
+{
+	"group": "Forecast",
+	"menu": "What-if analysis",
+	"menuTip": "Goal seek, scenarios, data table, solver",
+	"keep": "Keep",
+	"goal": {
+		"title": "Goal seek",
+		"set": "Set cell",
+		"to": "To value",
+		"by": "By changing cell",
+		"found": "Solution found",
+		"notFound": "No exact solution: closest value"
+	},
+	"table": {
+		"title": "Data table",
+		"range": "Range",
+		"row": "Row input cell",
+		"col": "Column input cell",
+		"note": "Results are written as fixed values.",
+		"recalc": "Recalculate"
+	},
+	"scenarios": {
+		"title": "Scenario manager",
+		"name": "Name",
+		"cells": "Changing cells",
+		"results": "Result cells",
+		"show": "Show",
+		"add": "Add…",
+		"edit": "Edit…",
+		"summary": "Summary…",
+		"none": "No scenario on this sheet."
+	},
+	"solver": {
+		"title": "Solver",
+		"objective": "Objective",
+		"max": "Max",
+		"min": "Min",
+		"value": "Value of",
+		"vars": "Changing cells",
+		"constraints": "Constraints",
+		"ref": "Cell",
+		"op": "Relation",
+		"rhs": "Limit",
+		"add": "Add",
+		"nonNeg": "Non-negative variables",
+		"solve": "Solve",
+		"solving": "Solving…",
+		"int": "integer",
+		"bin": "binary",
+		"optimal": "Optimal solution found",
+		"approx": "Approximate solution (non-linear problem)",
+		"infeasible": "No solution meets the constraints",
+		"unbounded": "The objective is unbounded",
+		"limit": "Stopped: best solution found"
+	}
+}

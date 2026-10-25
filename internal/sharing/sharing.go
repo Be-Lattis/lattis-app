@@ -114,6 +114,9 @@ var values = map[string]bool{
 
 	// Valeurs de la colonne de catégorie d'un onglet à choix.
 	"sheets.choice": true,
+
+	// Valeur cible : rend la valeur trouvée et le résultat de la formule.
+	"cells.goal_seek": true,
 }
 
 // IsRead dit si une commande est une lecture de valeurs bornée en sample.

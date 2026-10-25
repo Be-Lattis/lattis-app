@@ -1,0 +1,56 @@
+{
+	"group": "Previsión",
+	"menu": "Análisis de hipótesis",
+	"menuTip": "Buscar objetivo, escenarios, tabla de datos, Solver",
+	"keep": "Conservar",
+	"goal": {
+		"title": "Buscar objetivo",
+		"set": "Definir la celda",
+		"to": "Con el valor",
+		"by": "Cambiando la celda",
+		"found": "Solución encontrada",
+		"notFound": "Sin solución exacta: valor más cercano"
+	},
+	"table": {
+		"title": "Tabla de datos",
+		"range": "Rango",
+		"row": "Celda de entrada (fila)",
+		"col": "Celda de entrada (columna)",
+		"note": "Los resultados se escriben como valores fijos.",
+		"recalc": "Recalcular"
+	},
+	"scenarios": {
+		"title": "Administrador de escenarios",
+		"name": "Nombre",
+		"cells": "Celdas cambiantes",
+		"results": "Celdas de resultado",
+		"show": "Mostrar",
+		"add": "Agregar…",
+		"edit": "Modificar…",
+		"summary": "Resumen…",
+		"none": "Ningún escenario en esta hoja."
+	},
+	"solver": {
+		"title": "Solver",
+		"objective": "Objetivo",
+		"max": "Máx",
+		"min": "Mín",
+		"value": "Valor de",
+		"vars": "Celdas variables",
+		"constraints": "Restricciones",
+		"ref": "Celda",
+		"op": "Relación",
+		"rhs": "Límite",
+		"add": "Agregar",
+		"nonNeg": "Variables no negativas",
+		"solve": "Resolver",
+		"solving": "Calculando…",
+		"int": "entero",
+		"bin": "binario",
+		"optimal": "Solución óptima encontrada",
+		"approx": "Solución aproximada (problema no lineal)",
+		"infeasible": "Ninguna solución cumple las restricciones",
+		"unbounded": "El objetivo no está acotado",
+		"limit": "Detenido: mejor solución encontrada"
+	}
+}

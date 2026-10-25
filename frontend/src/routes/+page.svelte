@@ -34,6 +34,8 @@
 	import { demoProgressText, firstSteps, guidePage, hideSteps, stepsShown } from '#lib/shell/welcome.js';
 	import WelcomeLanguage from '#lib/shell/WelcomeLanguage.svelte';
 	import PageSetupDialog from '#lib/shell/PageSetupDialog.svelte';
+	import WhatIf from '#lib/shell/WhatIf.svelte';
+	import type { WhatIfKind } from '#lib/shell/whatif.js';
 	import { pageAction, type PageAction, type PageSetup, type PageSetupTab } from '#lib/shell/pagesetup.js';
 	import type { PageBreaks } from '#bindings/internal/transfer/models.js';
 	import SqlView, { type Favorite } from '#lib/shell/SqlView.svelte';
@@ -211,6 +213,8 @@
 	let settingsOpen = $state(false);
 	// Onglet Mise en page : boîte ouverte (onglet), sauts de page affichés dans la grille.
 	let pageDlg = $state<PageSetupTab | null>(null);
+	/** Données › Analyse de scénarios : la boîte ouverte. */
+	let whatIf = $state<WhatIfKind | null>(null);
 	let showBreaks = $state(false);
 	let breaks = $state<PageBreaks | null>(null);
 	let aboutOpen = $state(false);
@@ -2472,6 +2476,7 @@
 			else notice = t('shell.share.formNeedsTable');
 		} : undefined}
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
+		onwhatif={mode === 'doc' ? (k) => (whatIf = k) : undefined}
 		ontextcols={mode === 'doc' ? () => sheet?.textToColumnsActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
 		onobject={mode === 'doc' ? (kind) => sheet?.insertObject(kind) : undefined}
@@ -2973,6 +2978,23 @@
 	{/if}
 	{#if exportOpen && exported}
 		<ExportReportDialog report={exported.report} format={exported.format} onclose={() => (exportOpen = false)} />
+	{/if}
+	{#if whatIf && mode === 'doc'}
+		<WhatIf
+			kind={whatIf}
+			sheet={sheetId}
+			active={sheet?.activeCell() ?? { row: 0, col: 0 }}
+			selection={sheet?.selectedRange() ?? { r0: 0, c0: 0, r1: 0, c1: 0 }}
+			onchanged={async (st) => {
+				await reload();
+				if (st?.notice) notice = st.notice;
+			}}
+			onsheet={async (id) => {
+				await reload();
+				await selectSheet(id);
+			}}
+			onclose={() => (whatIf = null)}
+		/>
 	{/if}
 	{#if pageDlg && mode === 'doc' && layout}
 		<PageSetupDialog

@@ -88,6 +88,10 @@ Las funciones financieras siguen las convenciones de Excel: un importe pagado es
 
 **Fórmulas › Mostrar vínculos** traza los vínculos de las celdas seleccionadas: flechas azules desde lo que lee su fórmula, flechas rojas hacia las fórmulas que las leen. Una columna entera (`Clientes[Ciudad]`) se señala por su encabezado; una fila concreta (`Clientes[Ciudad][1]`, `[Saldo][-1]`, la fila encontrada por `REFERENCIA`) por su celda, y un rango de filas (`Ventas[Importe][2:5]`) se enmarca. Si esa fila está oculta (filtro, pestaña de elección, fila oculta) o no se encuentra, la flecha señala la columna y la barra de estado indica por qué. Los vínculos hacia otra hoja se cuentan ahí. Un clic en la cuadrícula (o `Esc`) borra las flechas.
 
+## Análisis de hipótesis {#analyse-de-scenarios}
+
+**Datos › Análisis de hipótesis**: **Buscar objetivo** encuentra el valor de una celda que da a una fórmula el resultado deseado; el **Administrador de escenarios** guarda conjuntos de valores con nombre, los muestra y los resume en una hoja nueva; la **Tabla de datos** calcula una fórmula para una lista de valores (una o dos variables, resultados como valores fijos: vuelva a ejecutarla para recalcular); **Solver** maximiza, minimiza o alcanza un valor con restricciones (exacto para un problema lineal, aproximado si no). Nada cambia antes de **Conservar**; `Ctrl+Z` deshace.
+
 ## Recálculo {#recalcul}
 
 Las fórmulas se recalculan solas cuando cambian sus datos. `F9` lo recalcula todo; `HOY`, `AHORA` y `ALEATORIO` solo cambian al abrir y con `F9`.

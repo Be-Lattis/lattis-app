@@ -1,0 +1,56 @@
+{
+	"group": "Prognose",
+	"menu": "Was-wäre-wenn-Analyse",
+	"menuTip": "Zielwertsuche, Szenarien, Datentabelle, Solver",
+	"keep": "Übernehmen",
+	"goal": {
+		"title": "Zielwertsuche",
+		"set": "Zielzelle",
+		"to": "Zielwert",
+		"by": "Veränderbare Zelle",
+		"found": "Lösung gefunden",
+		"notFound": "Keine genaue Lösung: nächster Wert"
+	},
+	"table": {
+		"title": "Datentabelle",
+		"range": "Bereich",
+		"row": "Werte aus Zeile",
+		"col": "Werte aus Spalte",
+		"note": "Die Ergebnisse werden als feste Werte eingetragen.",
+		"recalc": "Neu berechnen"
+	},
+	"scenarios": {
+		"title": "Szenario-Manager",
+		"name": "Name",
+		"cells": "Veränderbare Zellen",
+		"results": "Ergebniszellen",
+		"show": "Anzeigen",
+		"add": "Hinzufügen…",
+		"edit": "Bearbeiten…",
+		"summary": "Zusammenfassung…",
+		"none": "Kein Szenario auf diesem Blatt."
+	},
+	"solver": {
+		"title": "Solver",
+		"objective": "Ziel",
+		"max": "Max",
+		"min": "Min",
+		"value": "Wert",
+		"vars": "Veränderbare Zellen",
+		"constraints": "Nebenbedingungen",
+		"ref": "Zelle",
+		"op": "Beziehung",
+		"rhs": "Grenze",
+		"add": "Hinzufügen",
+		"nonNeg": "Nicht negative Variablen",
+		"solve": "Lösen",
+		"solving": "Berechnung…",
+		"int": "ganzzahlig",
+		"bin": "binär",
+		"optimal": "Optimale Lösung gefunden",
+		"approx": "Näherungslösung (nichtlineares Problem)",
+		"infeasible": "Keine Lösung erfüllt die Nebenbedingungen",
+		"unbounded": "Das Ziel ist unbeschränkt",
+		"limit": "Abgebrochen: beste gefundene Lösung"
+	}
+}

@@ -1,0 +1,56 @@
+{
+	"group": "Prévision",
+	"menu": "Analyse de scénarios",
+	"menuTip": "Valeur cible, scénarios, table de données, solveur",
+	"keep": "Conserver",
+	"goal": {
+		"title": "Valeur cible",
+		"set": "Cellule à définir",
+		"to": "Valeur à atteindre",
+		"by": "Cellule à modifier",
+		"found": "Solution trouvée",
+		"notFound": "Pas de solution exacte : valeur la plus proche"
+	},
+	"table": {
+		"title": "Table de données",
+		"range": "Plage",
+		"row": "Cellule d’entrée en ligne",
+		"col": "Cellule d’entrée en colonne",
+		"note": "Les résultats sont posés en valeurs fixes.",
+		"recalc": "Recalculer"
+	},
+	"scenarios": {
+		"title": "Gestionnaire de scénarios",
+		"name": "Nom",
+		"cells": "Cellules variables",
+		"results": "Cellules résultantes",
+		"show": "Afficher",
+		"add": "Ajouter…",
+		"edit": "Modifier…",
+		"summary": "Synthèse…",
+		"none": "Aucun scénario sur cette feuille."
+	},
+	"solver": {
+		"title": "Solveur",
+		"objective": "Objectif",
+		"max": "Max",
+		"min": "Min",
+		"value": "Valeur de",
+		"vars": "Cellules variables",
+		"constraints": "Contraintes",
+		"ref": "Cellule",
+		"op": "Relation",
+		"rhs": "Limite",
+		"add": "Ajouter",
+		"nonNeg": "Variables non négatives",
+		"solve": "Résoudre",
+		"solving": "Calcul…",
+		"int": "entier",
+		"bin": "binaire",
+		"optimal": "Solution optimale trouvée",
+		"approx": "Solution approchée (problème non linéaire)",
+		"infeasible": "Aucune solution ne respecte les contraintes",
+		"unbounded": "L’objectif n’est pas borné",
+		"limit": "Calcul arrêté : meilleure solution trouvée"
+	}
+}

@@ -88,6 +88,10 @@ Les fonctions financières suivent les conventions d'Excel : une somme versée e
 
 **Formules › Afficher les liens** trace les liens des cellules sélectionnées : flèches bleues depuis ce que lit leur formule, rouges vers les formules qui les lisent. Une colonne entière (`Clients[Ville]`) est désignée par son en-tête ; une ligne précise (`Clients[Ville][1]`, `[Solde][-1]`, la ligne trouvée par `REFERENCE`) par sa cellule, et une plage de lignes (`Ventes[Montant][2:5]`) est encadrée. Si cette ligne est masquée (filtre, onglet à choix, ligne masquée) ou introuvable, la flèche vise la colonne et la barre d'état dit pourquoi. Les liens vers une autre feuille y sont comptés. Un clic dans la grille (ou `Échap`) efface les flèches.
 
+## Analyse de scénarios
+
+**Données › Analyse de scénarios** : **Valeur cible** trouve la valeur d'une cellule qui donne le résultat voulu à une formule ; **Gestionnaire de scénarios** garde des jeux de valeurs nommés, les affiche et en fait une synthèse sur un nouvel onglet ; **Table de données** calcule une formule pour une liste de valeurs (une ou deux variables, résultats en valeurs fixes : relancez-la pour recalculer) ; **Solveur** maximise, minimise ou atteint une valeur sous contraintes (exact pour un problème linéaire, approché sinon). Rien ne change avant **Conserver** ; `Ctrl+Z` annule.
+
 ## Recalcul
 
 Les formules se recalculent seules quand leurs données changent. `F9` recalcule tout ; `AUJOURDHUI`, `MAINTENANT` et `ALEA` ne changent qu'à l'ouverture et avec `F9`.

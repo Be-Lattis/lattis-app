@@ -88,6 +88,10 @@ Financial functions follow Excel's conventions: an amount paid out is negative, 
 
 **Formulas › Show links** traces the links of the selected cells: blue arrows from what their formula reads, red arrows to the formulas that read them. A whole column (`Customers[City]`) is pointed to by its header; a specific row (`Customers[City][1]`, `[Balance][-1]`, the row found by `REFERENCE`) by its cell, and a range of rows (`Sales[Amount][2:5]`) is framed. If that row is hidden (filter, choice tab, hidden row) or can't be found, the arrow points to the column and the status bar says why. Links to another sheet are counted there. Clicking in the grid (or `Esc`) clears the arrows.
 
+## What-if analysis {#analyse-de-scenarios}
+
+**Data › What-if analysis**: **Goal seek** finds the value of a cell that gives a formula the wanted result; **Scenario manager** keeps named sets of values, shows them and summarizes them on a new sheet; **Data table** computes a formula for a list of values (one or two variables, results as fixed values: run it again to recalculate); **Solver** maximizes, minimizes or reaches a value under constraints (exact for a linear problem, approximate otherwise). Nothing changes before **Keep**; `Ctrl+Z` undoes.
+
 ## Recalculation {#recalcul}
 
 Formulas recalculate on their own when their data changes. `F9` recalculates everything; `TODAY`, `NOW` and `RAND` only change on opening and with `F9`.

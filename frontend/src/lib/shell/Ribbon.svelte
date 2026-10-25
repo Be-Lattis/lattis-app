@@ -16,6 +16,7 @@
 	import { tableTheme } from '#lib/grid/theme.svelte.js';
 	import { clearPatch, type CellStyle } from '#lib/grid/style.js';
 	import type { PasteKind } from '#lib/grid/pastespecial.js';
+	import { WHATIF_KINDS, type WhatIfKind } from './whatif.js';
 	import { DEFAULT_PT, FONTS, fontChoices, fontFamily, SIZES } from '#lib/grid/textwrap.js';
 	import { edgeCss, LINE_STYLES, type BorderCmd, type Edge } from '#lib/grid/borders.js';
 	import { categoryOf, formatPatch, type Category } from '#lib/grid/numfmt.js';
@@ -168,6 +169,8 @@
 		/** Formules › Convertir en valeurs : formules de la sélection (colonnes calculées, cellules libres) remplacées par leurs valeurs. */
 		ontovalues?: () => void;
 		ondedup?: () => void;
+		/** Données › Analyse de scénarios : valeur cible, table de données, scénarios, solveur. */
+		onwhatif?: (what: WhatIfKind) => void;
 		/** Données › Convertir : assistant « Convertir le texte en colonnes ». */
 		ontextcols?: () => void;
 		onpivot?: () => void;
@@ -262,7 +265,7 @@
 		ontheme?: (id: string) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -870,6 +873,21 @@
 						]
 					},
 					{ label: t('ribbon.cmd.mergeSheets.label'), icon: 'append-queries', size: 'small', createsSheet: true, run: onmergesheets, hint: t('ribbon.cmd.mergeSheets.tooltip') }
+				]
+			},
+			{
+				id: 'forecast',
+				title: t('whatif.group'),
+				// Comme un tableur : Analyse de scénarios ▾ et ses quatre outils.
+				commands: [
+					{
+						label: t('whatif.menu'),
+						icon: 'what-if',
+						data: true,
+						run: onwhatif ? openItems : undefined,
+						hint: t('whatif.menuTip'),
+						items: WHATIF_KINDS.map((k) => ({ label: t(`whatif.${k}.title`) + '…', run: onwhatif ? () => onwhatif(k) : undefined }))
+					}
 				]
 			}
 		],

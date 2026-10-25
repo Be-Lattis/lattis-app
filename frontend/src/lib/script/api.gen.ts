@@ -72,6 +72,15 @@ export const apiReference: RefEntry[] = [
 		args: [1, 3]
 	},
 	{
+		name: "cells.goal_seek",
+		category: "cells",
+		signature: "cells.goal_seek(target, value, changing, [keep], [sheet]) → {found, value, result}",
+		summary: "Valeur cible : cherche la valeur de la cellule changing (une constante, ou une cellule saisie d'un tableau) pour laquelle la formule de la cellule target vaut value, et la pose (sauf keep = false).",
+		details: "Sécante, puis encadrement et méthode de Brent (300 calculs au plus). found est faux quand aucune valeur ne donne exactement value : value est alors la plus proche trouvée, posée seulement si keep = true est donné. Paramètres — target : cellule à définir, avec une formule (\"B5\") ; value : valeur à atteindre ; changing : cellule à modifier (\"B1\") ; keep : faux : seulement chercher, sans rien changer ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : cells.goal_seek{target = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "cells.set(50, 20, 4)\ncells.set(50, 22, \"=T50*3+2\")\nlocal r = cells.goal_seek(\"V50\", 20, \"T50\")\nprint(r.found, r.value, r.result) -- true 6 20",
+		args: [1, 5]
+	},
+	{
 		name: "cells.merge",
 		category: "cells",
 		signature: "cells.merge(row, col, [row2], [col2], [sheet]) → nombre de valeurs effacées",

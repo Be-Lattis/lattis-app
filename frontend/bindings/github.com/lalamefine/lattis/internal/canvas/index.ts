@@ -24,6 +24,7 @@ export type {
     CustomOrder,
     DVMessage,
     DVRule,
+    DataTableDef,
     DepTarget,
     Dependencies,
     Event,
@@ -32,6 +33,7 @@ export type {
     FilterCond,
     FilterValue,
     Found,
+    GoalSeekResult,
     HeaderFooter,
     KeyRow,
     Layout,
@@ -77,6 +79,7 @@ export type {
     Rule,
     RuleChanges,
     RuleMark,
+    Scenario,
     ScriptInfo,
     SearchQuery,
     SearchResult,
@@ -85,6 +88,9 @@ export type {
     SheetInfo,
     SimilarSheet,
     SimilarTable,
+    SolverConstraint,
+    SolverParams,
+    SolverResult,
     Span,
     Style,
     TableFamily,
@@ -94,5 +100,6 @@ export type {
     TextColumnsOptions,
     TextColumnsPreview,
     Theme,
-    ValidationList
+    ValidationList,
+    WhatIfCell
 } from "./models.js";

@@ -59,6 +59,8 @@ export const icons = {
 	'cell-format': '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/><path class="a" d="M12.5 13h5M12.5 16.5h3.5"/>',
 	note: '<path d="M5 4h14v11l-5 5H5z"/><path class="a" d="M14 20v-5h5"/><path d="M8 9h8M8 12h5"/>',
 	validation: '<rect x="3.5" y="4" width="17" height="16" rx="1.5"/><path d="M14 4v16M6.5 9h5M6.5 13h5"/><path class="a" d="M15.5 10l1.5 1.5 1.5-1.5"/>',
+	// Analyse de scénarios : une cible et la flèche qui l'atteint.
+	'what-if': '<circle cx="11" cy="13" r="7.5"/><circle cx="11" cy="13" r="3.5"/><circle class="af" cx="11" cy="13" r="1.2"/><path class="a" d="M12.5 11.5 20 4M17 4h3v3"/>',
 
 	// Bordures et mise en forme
 	'border-all': '<rect x="4" y="4" width="16" height="16"/><path d="M12 4v16M4 12h16"/>',

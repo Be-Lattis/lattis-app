@@ -39,6 +39,11 @@
 		"summary": "Lee una celda de la hoja: entrada, valor mostrado y, en una tabla, la tabla, la columna y la fila.",
 		"details": "Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.get{row = …}."
 	},
+	"cells.goal_seek": {
+		"signature": "cells.goal_seek(target, value, changing, [keep], [sheet]) → {found, value, result}",
+		"summary": "Buscar objetivo: busca el valor de la celda changing (una constante, o una celda escrita de una tabla) para el que la fórmula de la celda target vale value, y lo escribe (salvo keep = false).",
+		"details": "Secante, luego acotamiento y método de Brent (300 cálculos como máximo). found es falso cuando ningún valor da exactamente value: value es entonces el más cercano encontrado, escrito solo si se da keep = true. Parámetros — target: celda que se define, con una fórmula (\"B5\"); value: valor que se busca; changing: celda que se cambia (\"B1\"); keep: falso: solo buscar, sin cambiar nada; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: cells.goal_seek{target = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
 	"cells.merge": {
 		"signature": "cells.merge(row, col, [row2], [col2], [sheet]) → número de valores borrados",
 		"summary": "Combina celdas libres en una sola, con el contenido centrado (rechazado en una tabla o una tabla dinámica). Como en Excel, solo se conserva el valor de arriba a la izquierda. En una tabla con grupos de encabezados (tables.two_level_headers), solo se combina la banda de los grupos: su casilla y el encabezado de una columna ponen la columna en un nivel (nombre simple: su subencabezado, o el grupo si el encabezado era automático); varias casillas vecinas de la banda forman un solo grupo (el primero que llevan, «Grupo» si no). Las columnas se renombran, las fórmulas siguen.",

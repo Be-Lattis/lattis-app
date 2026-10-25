@@ -88,6 +88,10 @@ Finanzfunktionen folgen den Konventionen von Excel: Ein ausgezahlter Betrag ist 
 
 **Formeln › Verknüpfungen anzeigen** zeichnet die Verknüpfungen der ausgewählten Zellen: blaue Pfeile von dem, was ihre Formel liest, rote Pfeile zu den Formeln, die sie lesen. Auf eine ganze Spalte (`Kunden[Ort]`) wird über ihre Überschrift gezeigt; auf eine bestimmte Zeile (`Kunden[Ort][1]`, `[Saldo][-1]`, die von `REFERENZ` gefundene Zeile) über ihre Zelle, und ein Zeilenbereich (`Umsatz[Betrag][2:5]`) wird umrahmt. Ist diese Zeile ausgeblendet (Filter, Auswahlblatt, ausgeblendete Zeile) oder nicht auffindbar, zeigt der Pfeil auf die Spalte, und die Statusleiste nennt den Grund. Verknüpfungen zu einem anderen Blatt werden dort gezählt. Ein Klick in das Raster (oder `Esc`) entfernt die Pfeile.
 
+## Was-wäre-wenn-Analyse {#analyse-de-scenarios}
+
+**Daten › Was-wäre-wenn-Analyse**: **Zielwertsuche** findet den Wert einer Zelle, der einer Formel das gewünschte Ergebnis gibt; der **Szenario-Manager** speichert benannte Wertesätze, zeigt sie an und fasst sie auf einem neuen Blatt zusammen; die **Datentabelle** berechnet eine Formel für eine Liste von Werten (eine oder zwei Variablen, Ergebnisse als feste Werte: zum Neuberechnen erneut ausführen); der **Solver** maximiert, minimiert oder erreicht einen Wert unter Nebenbedingungen (exakt bei einem linearen Problem, sonst angenähert). Vor **Übernehmen** ändert sich nichts; `Strg+Z` macht rückgängig.
+
 ## Neuberechnung {#recalcul}
 
 Formeln berechnen sich von selbst neu, wenn sich ihre Daten ändern. `F9` berechnet alles neu; `HEUTE`, `JETZT` und `ZUFALLSZAHL` ändern sich nur beim Öffnen und mit `F9`.
