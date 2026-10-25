@@ -94,24 +94,25 @@ func (s *DocumentService) ExportSheetCSV(ctx context.Context, sheet int64, name 
 	})
 }
 
-// PrintHTML rend une feuille en pages HTML imprimables, selon sa mise en
-// page (Fichier › Imprimer / Exporter en PDF).
-func (s *DocumentService) PrintHTML(ctx context.Context, sheet int64) (string, error) {
+// PrintPlan découpe une feuille en pages selon sa mise en page (Fichier ›
+// Imprimer / Exporter en PDF) ; sizes : tailles de la grille affichée.
+// L'interface écrit le contenu des pages (frontend/src/lib/print).
+func (s *DocumentService) PrintPlan(ctx context.Context, sheet int64, sizes transfer.PrintSizes) (transfer.PrintPlan, error) {
 	d, err := s.current()
 	if err != nil {
-		return "", err
+		return transfer.PrintPlan{}, err
 	}
-	return transfer.PrintHTML(ctx, d.Model, sheet, printInfo(d))
+	return transfer.SheetPrintPlan(ctx, d.Model, sheet, sizes, printInfo(d))
 }
 
 // PageBreaks donne les sauts de page d'une feuille (traits pointillés de la
-// grille, onglet Mise en page).
-func (s *DocumentService) PageBreaks(ctx context.Context, sheet int64) (transfer.PageBreaks, error) {
+// grille, onglet Mise en page) ; sizes : tailles de la grille affichée.
+func (s *DocumentService) PageBreaks(ctx context.Context, sheet int64, sizes transfer.PrintSizes) (transfer.PageBreaks, error) {
 	d, err := s.current()
 	if err != nil {
 		return transfer.PageBreaks{}, err
 	}
-	return transfer.SheetPageBreaks(ctx, d.Model, sheet)
+	return transfer.SheetPageBreaks(ctx, d.Model, sheet, sizes)
 }
 
 // XLSXExport est le résultat d'un export .xlsx ou .ods : le fichier écrit

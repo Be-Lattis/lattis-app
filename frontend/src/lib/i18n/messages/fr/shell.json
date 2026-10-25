@@ -326,7 +326,8 @@
 			"load": "Chargement du tableau",
 			"query": "Requête SQL",
 			"publish": "Publication de {name}",
-			"republish": "Republication de {name}"
+			"republish": "Republication de {name}",
+			"print": "Impression"
 		},
 		"phase": {
 			"keep": "copie pour l'annulation",
@@ -354,7 +355,8 @@
 			"layout": "envoi de la mise en page",
 			"finish": "mise en ligne",
 			"record": "enregistrement des identifiants",
-			"save": "enregistrement du fichier"
+			"save": "enregistrement du fichier",
+			"pages": "préparation des pages"
 		}
 	},
 	"sync": {
@@ -503,7 +505,6 @@
 			"protected": "Protection de la feuille non exportée",
 			"clipped": "{n, plural, one {# cellule au-delà de 1 048 576 lignes × 16 384 colonnes non exportée} other {# cellules au-delà de 1 048 576 lignes × 16 384 colonnes non exportées}}"
 		},
-		"printCharts": "{n, plural, one {# graphique non imprimé} other {# graphiques non imprimés}}",
 		"dialog": {
 			"aria": "Détails de l'export",
 			"title": "Export {format} : détails",
@@ -1199,5 +1200,8 @@
 			"policy": "recherche coupée par l'organisation",
 			"off": "recherche désactivée"
 		}
+	},
+	"print": {
+		"empty": "Feuille vide."
 	}
 }

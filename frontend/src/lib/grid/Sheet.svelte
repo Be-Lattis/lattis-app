@@ -86,6 +86,7 @@
 	import type { BoxStatsIn } from '#lib/chart/shapes.js';
 	import type { RowFormulaPreview } from '#lib/ui/rowformula.js';
 	import { svgToPng } from '#lib/chart/image.js';
+	import type { PrintCell, PrintChart, PrintSource } from '#lib/print/sheetprint.js';
 	import PivotPanel from './PivotPanel.svelte';
 	import { panelAtCell, changeSource, startValues } from './pivotfields';
 	import { brokenPivotAt, pivotsCleared } from './pivotzone';
@@ -861,6 +862,8 @@
 	let cfToday = todaySerial();
 
 	/** Statistiques en cache, ou calculées (une promesse : demandées au classeur, redessin à l'arrivée). */
+	// Statistiques demandées au classeur (impression : attendues avant d'écrire les pages).
+	let cfWaits: Promise<unknown>[] | null = null;
 	function cfStat(k: string, compute: () => Stats | undefined | Promise<Stats | undefined>): Stats | undefined {
 		if (cfStats.has(k)) return cfStats.get(k) ?? cfStale.get(k) ?? undefined;
 		const got = compute();
@@ -870,6 +873,7 @@
 		}
 		const gen = cfGen;
 		cfStats.set(k, null);
+		cfWaits?.push(got);
 		got.then((s) => {
 			if (gen !== cfGen) return;
 			cfStats.set(k, s ?? null);
@@ -10870,6 +10874,150 @@
 		return ownerAt(active.row, active.col)?.t;
 	}
 
+	// --- Impression (lib/print/sheetprint.ts) -----------------------------------
+	// Ce que drawCells dessine, cellule par cellule, avec les mêmes fonctions
+	// (styleAt, cfAt, formatCell, freeDisplay…) : la page imprimée montre la
+	// grille, sans la sélection ni les boutons.
+
+	/** Tailles de la grille affichée (découpage des pages, DocumentService.PrintPlan). */
+	export function printSizes(): { row: number; col: number; rows: number[][]; cols: number[][] } {
+		return { row: rowAxis.def, col: colAxis.def, rows: [...rowAxis.entries()], cols: [...colAxis.entries()] };
+	}
+
+	/** Une cellule telle que la grille l'affiche (undefined : vide, sans mise en forme). */
+	function printCell(r: number, c: number): PrintCell | undefined {
+		const e = tableAt(r, c);
+		if (e) {
+			const i = c - e.t.col;
+			const col = e.t.columns[i];
+			const head = { fill: e.t.query ? C.linkHead : C.head, color: e.t.query && !col.hand ? C.linkHeadText : C.headText, bold: true, framed: true };
+			if (r === e.t.row) {
+				// Colonne sur un niveau : son nom est sur la bande (fusionnée avec l'en-tête).
+				if (singleCol(e, i) && rh(r - 1)) return { text: '', ...head };
+				return { text: headerLabel(col.name, e.t.twoLevel), style: styleAt(r, c, e), align: 'left', ...head };
+			}
+			const row = e.cache.row(r - e.t.row - 1);
+			if (!row) return { text: '', style: styleAt(r, c, e), framed: true };
+			const v = row.cells[i];
+			const bad = row.bad?.has(i);
+			const own = colRules.get(e.t.id)?.[i];
+			const cf = cfAt(r, c, { v, text: row.text[i] ?? '', error: !!bad || (col.type === 'formula' && isErrorValue(v)) }, own ? { rules: own, loc: { k: 'tbl', t: e.t.id, c: i }, mark: (_, k) => !!row.marks?.has(i * 1000 + k) } : undefined);
+			const cs = resolveStyle(styleAt(r, c, e), cf?.style);
+			const base = { style: cs, framed: true, bar: cf?.bar };
+			if (showsNull(col.type, v, bad)) return { ...base, text: NULL_MARK, align: 'center', color: C.nullMark };
+			let s = row.text[i] ?? '';
+			const icon = cf?.icon && !bad ? cf.icon : undefined;
+			if (cf?.hide && !bad) s = '';
+			if (cs && !bad && s) s = formatCell(s, v, cs);
+			if (bad) return { ...base, text: s, align: 'left', color: C.error };
+			const err = col.type === 'formula' && isErrorValue(v);
+			return { ...base, text: s, icon, align: cs?.al ?? (col.type === 'formula' ? valueAlignment(v) : alignment(col.type)), color: err ? C.error : undefined };
+		}
+		const band = groupBandAt(r, c);
+		if (band) {
+			const i = c - band.t.col;
+			const head = { fill: band.t.query ? C.linkHead : C.head, color: band.t.query ? C.linkHeadText : C.headText, bold: true, framed: true };
+			if (singleCol(band, i)) return { text: band.t.columns[i].name, style: bandStyle(band, i, i), align: 'left', ...head };
+			const s = groupSpans(band.t.columns.map((k) => k.name)).find((x) => band.t.col + x.i0 === c);
+			if (!s) return { text: '', ...head };
+			return { text: s.group ?? '', style: bandStyle(band, s.i0, s.i1), align: 'center', ...head };
+		}
+		const p = pivots.length ? pivotAt(r, c) : undefined;
+		if (p) {
+			if (r < p.row) {
+				// Filtres de rapport au-dessus du tableau croisé : champ, valeur retenue.
+				const f = (p.config.filters ?? [])[r - (p.anchor ?? p.row)];
+				if (!f || c > p.col + 1) return undefined;
+				return { text: c === p.col ? f.field : pivotFilterText(f.values), bold: c === p.col, fill: C.linkHead, framed: true };
+			}
+			const i = r - p.row;
+			const j = c - p.col;
+			const v = p.cells[i]?.[j] ?? '';
+			const st = resolveStyle(styleAt(r, c, undefined), freeCf(r, c)?.style);
+			const hs = handStart(p);
+			const tot = pivotTotalRow(p);
+			const info = j === 0 ? pivotRowOf(p, r) : undefined;
+			const fill = r === p.row || r === tot ? (r === p.row && c >= hs ? C.head : C.linkHead) : undefined;
+			return {
+				text: v ? pivotValueText(formatCell(v, undefined, st), i, j) : '',
+				style: st,
+				bold: pivotBold(p, r),
+				fill,
+				color: i === 0 && c >= hs ? C.headText : i === 0 || r === tot ? C.linkHeadText : undefined,
+				align: st?.al ?? (c >= hs && i > 0 ? handAlign(v) : j > 0 && i > 0 ? 'right' : 'left'),
+				indent: pivotLabelOffset(info) || undefined,
+				framed: true
+			};
+		}
+		for (const sp of spills) {
+			const v = sp.rows[r - sp.row]?.[c - sp.col];
+			if (!v || (r === sp.row && c === sp.col)) continue;
+			const st = styleAt(r, c, undefined);
+			return { text: formatCell(v, undefined, st), style: st, align: st?.al ?? freeDisplay('', v).align, color: isErrorValue(v) ? C.error : undefined };
+		}
+		const k = key(r, c);
+		const raw = cells.get(k);
+		const f = shown.get(k);
+		const cf = freeCf(r, c);
+		const st = resolveStyle(styleAt(r, c, undefined), cf?.style);
+		if (raw === undefined && f === undefined) return st || cf?.bar ? { text: '', style: st, bar: cf?.bar } : undefined;
+		const fd = freeDisplay(raw ?? '', f?.text);
+		const text = cf?.hide ? '' : fd.kind === 'text' ? fd.text : formatCell(fd.text, undefined, st);
+		return { text, style: st, bar: cf?.bar, icon: cf?.icon, align: st?.al ?? fd.align, color: f?.error ? C.error : undefined, overflow: !mergeOf(r, c) };
+	}
+
+	/** Graphiques de la feuille, dessinés comme à l'écran (SVG cloné ; canevas en image). */
+	function printCharts(): PrintChart[] {
+		const out: PrintChart[] = [];
+		for (const ch of charts) {
+			const el = wrap?.querySelector<HTMLElement>(`.chart[data-chart-id="${ch.id}"]`);
+			if (!el) continue;
+			const copy = el.cloneNode(true) as HTMLElement;
+			copy.querySelectorAll('.handle').forEach((h) => h.remove());
+			const live = el.querySelectorAll('canvas');
+			copy.querySelectorAll('canvas').forEach((cv, n) => {
+				const img = document.createElement('img');
+				try {
+					img.src = live[n].toDataURL('image/png');
+				} catch {
+					// Canevas teinté par une image d'un autre site (tuiles de carte) : laissé vide.
+				}
+				img.width = cv.width;
+				img.style.cssText = cv.style.cssText;
+				cv.replaceWith(img);
+			});
+			out.push({ row: ch.row, col: ch.col, x: ch.config.offX ?? 0, y: ch.config.offY ?? 0, w: ch.config.width ?? CHART_W, h: ch.config.height ?? CHART_H, html: copy.innerHTML });
+		}
+		return out;
+	}
+
+	/** Ce que la feuille donne à imprimer. */
+	export function printSource(): PrintSource {
+		const anyRules = sheetRowRules.size > 0 || sheetColRules.size > 0 || cellRules.size > 0 || [...colRules.values()].some((l) => l.some((x) => x?.length));
+		return {
+			merges: [...boxes],
+			charts: printCharts(),
+			async prepare(r0, r1, c0, c1) {
+				for (const e of entries) {
+					const a = Math.max(r0, e.t.row + 1);
+					const b = Math.min(r1, e.last);
+					if (a <= b && e.lastCol >= c0 && e.t.col <= c1) await e.cache.ensure(a - e.t.row - 1, b - e.t.row - 1);
+				}
+				if (!anyRules) return;
+				// Statistiques des règles (barres, échelles, rangs…) : demandées une
+				// fois, attendues avant d'écrire les pages.
+				cfWaits = [];
+				try {
+					for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (rh(r) && cax().size(c)) printCell(r, c);
+					await Promise.allSettled(cfWaits);
+				} finally {
+					cfWaits = null;
+				}
+			},
+			cell: printCell
+		};
+	}
+
 	/** Redonne le focus clavier à la feuille (après un dialogue, un menu…). */
 	export function focus() {
 		// Formule pointée sur une autre feuille : la barre de formule garde la main.
@@ -11180,6 +11328,7 @@
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 					<div
 						class="chart"
+						data-chart-id={ch.id}
 						role="group"
 						aria-label={ch.config.title ? tr('grid.chart.aria.titled', { title: ch.config.title }) : tr('grid.chart.aria')}
 						style:left="{box.x - viewPos.x}px"

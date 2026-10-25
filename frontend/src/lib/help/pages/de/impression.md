@@ -40,12 +40,11 @@ Nach dem Drucken oder dem Ändern des Seitenlayouts zeigen gepunktete Linien, wo
 
 ## Was gedruckt wird {#ce-qui-s-imprime}
 
-Die Werte, wie das Raster sie anzeigt, mit den Spaltenbreiten und Zeilenhöhen. Tabellenüberschriften sind fett, und verbundene Zellen bleiben verbunden. Ausgeblendete Zeilen und Spalten werden nicht gedruckt. Lattis teilt die Seiten selbst. Jede gedruckte Seite hat daher die Größe des gewählten Papiers, mit ihren Rändern, ihrer Kopfzeile und ihrer Fußzeile.
+Das Blatt, wie das Raster es anzeigt: Werte und Zahlenformate, Farben, Schriftarten, Rahmen, Ausrichtung, Zeilenumbruch, bedingte Formatierung (Farben, Balken, Symbole), verbundene Zellen, Pivot-Tabellen und Diagramme, mit den Spaltenbreiten und Zeilenhöhen. Ausgeblendete Zeilen und Spalten werden nicht gedruckt. Lattis teilt die Seiten selbst: Jede hat die Größe des gewählten Papiers, mit Rändern, Kopf- und Fußzeile. Ein großes Blatt (100.000 Zeilen und mehr) wird Seite für Seite vorbereitet, mit dem Fortschritt in der Statusleiste.
 
 Grenzen:
 
-- Zellformatierung (Farben, Schriftarten, Rahmen) und Diagramme werden noch nicht gedruckt.
-- Über 5.000 Zeilen hinaus wird das Ende nicht gedruckt: Filtern Sie das Blatt oder exportieren Sie die Arbeitsmappe.
+- Tausende Seiten: Das Druckfenster braucht eine Weile, um sie anzuzeigen. Ein Druckbereich oder ein Filter verringert ihre Zahl.
 - Lassen Sie im Druckfenster die Ränder auf „Standard“ und die Skalierung auf 100 %. Andernfalls werden die von Lattis vorbereiteten Seiten verschoben.
 - Bietet das Fenster die Option „Kopf- und Fußzeilen“ an, lassen Sie sie deaktiviert: Sie fügt die des Browsers hinzu (Datum, Adresse).
 

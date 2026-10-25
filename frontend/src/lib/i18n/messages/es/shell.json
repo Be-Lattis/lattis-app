@@ -326,7 +326,8 @@
 			"load": "Cargando la tabla",
 			"query": "Consulta SQL",
 			"publish": "Publicación de {name}",
-			"republish": "Republicación de {name}"
+			"republish": "Republicación de {name}",
+			"print": "Impresión"
 		},
 		"phase": {
 			"keep": "copia para deshacer",
@@ -354,7 +355,8 @@
 			"layout": "envío del diseño",
 			"finish": "puesta en línea",
 			"record": "registro de los identificadores",
-			"save": "guardado del archivo"
+			"save": "guardado del archivo",
+			"pages": "preparación de las páginas"
 		}
 	},
 	"sync": {
@@ -503,7 +505,6 @@
 			"protected": "Protección de hoja no exportada",
 			"clipped": "{n, plural, one {# celda más allá de 1.048.576 filas × 16.384 columnas no exportada} other {# celdas más allá de 1.048.576 filas × 16.384 columnas no exportadas}}"
 		},
-		"printCharts": "{n, plural, one {# gráfico no impreso} other {# gráficos no impresos}}",
 		"dialog": {
 			"aria": "Detalles de la exportación",
 			"title": "Exportación {format}: detalles",
@@ -1199,5 +1200,8 @@
 			"policy": "búsqueda desactivada por su organización",
 			"off": "búsqueda desactivada"
 		}
+	},
+	"print": {
+		"empty": "Hoja vacía."
 	}
 }

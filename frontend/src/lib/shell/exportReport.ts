@@ -112,8 +112,3 @@ export function exportDetails(r: ExportReport): SheetDetail[] {
 		return { name: s.name, kept, lost };
 	});
 }
-
-/** Message après l'impression d'une feuille qui a des graphiques. */
-export function printNotice(charts: number): string {
-	return charts > 0 ? t('shell.exportReport.printCharts', { n: charts }) : '';
-}

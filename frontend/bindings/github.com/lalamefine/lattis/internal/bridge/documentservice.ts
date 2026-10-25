@@ -1373,10 +1373,10 @@ export function PageAllowed(source: string): $CancellablePromise<boolean> {
 
 /**
  * PageBreaks donne les sauts de page d'une feuille (traits pointillés de la
- * grille, onglet Mise en page).
+ * grille, onglet Mise en page) ; sizes : tailles de la grille affichée.
  */
-export function PageBreaks(sheet: number): $CancellablePromise<transfer$0.PageBreaks> {
-    return $Call.ByID(3390027633, sheet);
+export function PageBreaks(sheet: number, sizes: transfer$0.PrintSizes): $CancellablePromise<transfer$0.PageBreaks> {
+    return $Call.ByID(3390027633, sheet, sizes);
 }
 
 /**
@@ -1491,11 +1491,12 @@ export function PreviewQuery(q: query$0.Query, upto: number, fresh: boolean): $C
 }
 
 /**
- * PrintHTML rend une feuille en pages HTML imprimables, selon sa mise en
- * page (Fichier › Imprimer / Exporter en PDF).
+ * PrintPlan découpe une feuille en pages selon sa mise en page (Fichier ›
+ * Imprimer / Exporter en PDF) ; sizes : tailles de la grille affichée.
+ * L'interface écrit le contenu des pages (frontend/src/lib/print).
  */
-export function PrintHTML(sheet: number): $CancellablePromise<string> {
-    return $Call.ByID(1446055356, sheet);
+export function PrintPlan(sheet: number, sizes: transfer$0.PrintSizes): $CancellablePromise<transfer$0.PrintPlan> {
+    return $Call.ByID(2123110006, sheet, sizes);
 }
 
 /**

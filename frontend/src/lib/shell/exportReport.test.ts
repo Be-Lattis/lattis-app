@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exportDetails, exportNotice, printNotice, type SheetReport } from './exportReport';
+import { exportDetails, exportNotice, type SheetReport } from './exportReport';
 
 const sheet = (o: Partial<SheetReport>): SheetReport => ({
 	name: 'Feuille1',
@@ -46,10 +46,5 @@ describe('compte rendu d’export', () => {
 		expect(d[0].lost).toContain('1 colonne calculée exportée par ses valeurs (sans équivalent : CUMUL, FILTRE)');
 		expect(d[1].lost).toContain('3 formules exportées par leur valeur (sans équivalent : CUMUL, LET)');
 		expect(d[2].lost).toEqual(['Page HTML : exportée comme une feuille vide']);
-	});
-
-	it('signale les graphiques non imprimés', () => {
-		expect(printNotice(0)).toBe('');
-		expect(printNotice(2)).toBe('2 graphiques non imprimés');
 	});
 });

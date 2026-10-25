@@ -326,7 +326,8 @@
 			"load": "Loading the table",
 			"query": "SQL query",
 			"publish": "Publishing {name}",
-			"republish": "Republishing {name}"
+			"republish": "Republishing {name}",
+			"print": "Printing"
 		},
 		"phase": {
 			"keep": "saving a copy for undo",
@@ -354,7 +355,8 @@
 			"layout": "sending the layout",
 			"finish": "going live",
 			"record": "saving row identifiers",
-			"save": "saving the file"
+			"save": "saving the file",
+			"pages": "preparing pages"
 		}
 	},
 	"sync": {
@@ -503,7 +505,6 @@
 			"protected": "Sheet protection not exported",
 			"clipped": "{n, plural, one {# cell beyond 1,048,576 rows × 16,384 columns not exported} other {# cells beyond 1,048,576 rows × 16,384 columns not exported}}"
 		},
-		"printCharts": "{n, plural, one {# chart not printed} other {# charts not printed}}",
 		"dialog": {
 			"aria": "Export details",
 			"title": "{format} export: details",
@@ -1199,5 +1200,8 @@
 			"policy": "checking turned off by your organization",
 			"off": "checking turned off"
 		}
+	},
+	"print": {
+		"empty": "Empty sheet."
 	}
 }

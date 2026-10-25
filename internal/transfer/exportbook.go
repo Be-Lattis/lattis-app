@@ -71,6 +71,7 @@ type xsheet struct {
 	// (impression).
 	page       canvas.PageSetup
 	tableRects []canvas.Rect
+	charts     []chartBox // place des graphiques (impression)
 }
 
 // Limites d'une feuille Excel : la feuille de Lattis va au-delà, l'export coupe.

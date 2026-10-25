@@ -61,7 +61,7 @@ func init() {
 		"Platform", "State", "Window", "Layout", "Settings", "About", "Recent", "RangeStats", "Find",
 		"ChartData", "PivotData", "QueryData", "Queries", "Connections", "ColumnOrder", "Citations",
 		"ValidationList", "FilterValues", "FieldValues", "Dependencies", "FormulaHelp", "CustomLists",
-		"TypeMix", "PageBreaks", "PrintHTML", "CoEditState", "ShareState", "LattisState", "AIState",
+		"TypeMix", "PageBreaks", "PrintPlan", "CoEditState", "ShareState", "LattisState", "AIState",
 		"MCPState", "Favorites", "Scripts", "HTTPHosts", "TableSources", "WorkbookTables", "ExcelTables",
 		"SaveProgress", "DemoProgress", "DemoRequested", "WorkbookReady", "FirstLaunch", "Orphans",
 		"CloseRequestSeen", "BeforeClose", "ReportError", "DialogAnswer", "SetLanguage", "Query",

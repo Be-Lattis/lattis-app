@@ -19,7 +19,7 @@ import (
 // pied de page. Une ligne JSON de _lattis_page_setup par feuille (aucune :
 // réglages par défaut), qui part et revient avec la feuille
 // (sheetPositioned) ; les lignes et colonnes suivent les insertions et
-// suppressions (shiftPageSetup). L'impression (transfer.PrintHTML) et les
+// suppressions (shiftPageSetup). L'impression (transfer.SheetPrintPlan) et les
 // exports .xlsx / .ods s'en servent.
 
 // PageSetup est la mise en page d'une feuille. Lignes et colonnes à partir

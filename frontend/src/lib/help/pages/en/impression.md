@@ -40,12 +40,11 @@ After printing or changing the page layout, dotted lines show where the pages ar
 
 ## What gets printed {#ce-qui-s-imprime}
 
-The values as the grid displays them, with the column widths and row heights. Table headers are in bold, and merged cells stay merged. Hidden rows and columns are not printed. Lattis cuts the pages itself. Each printed page therefore has the size of the chosen paper, with its margins, its header and its footer.
+The sheet as the grid displays it: values and number formats, colors, fonts, borders, alignment, wrapping, conditional formatting (colors, bars, icons), merged cells, pivot tables and charts, with the column widths and row heights. Hidden rows and columns are not printed. Lattis cuts the pages itself: each one has the size of the chosen paper, with its margins, header and footer. A large sheet (100,000 rows and more) is prepared page by page, with the progress in the status bar.
 
 Limits:
 
-- Cell formatting (colors, fonts, borders) and charts are not printed yet.
-- Beyond 5,000 rows, the end is not printed: filter the sheet or export the workbook.
+- Thousands of pages: the print window may take a while to show them. A print area or a filter reduces their number.
 - In the print window, keep the margins on “Default” and the scale at 100%. Otherwise the pages prepared by Lattis are shifted.
 - If the window offers the “Headers and footers” option, leave it unchecked: it adds the browser's own (date, address).
 

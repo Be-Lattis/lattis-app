@@ -40,12 +40,11 @@ Después de imprimir o de cambiar el diseño de página, unas líneas de puntos 
 
 ## Lo que se imprime {#ce-qui-s-imprime}
 
-Los valores tal como los muestra la cuadrícula, con los anchos de columna y los altos de fila. Los encabezados de las tablas van en negrita, y las celdas combinadas siguen combinadas. Las filas y columnas ocultas no se imprimen. Lattis corta las páginas por sí mismo. Cada página impresa tiene por tanto el tamaño del papel elegido, con sus márgenes, su encabezado y su pie de página.
+La hoja tal como la muestra la cuadrícula: valores y formatos de número, colores, fuentes, bordes, alineación, ajuste de texto, formato condicional (colores, barras, iconos), celdas combinadas, tablas dinámicas y gráficos, con los anchos de columna y los altos de fila. Las filas y columnas ocultas no se imprimen. Lattis corta las páginas por sí mismo: cada una tiene el tamaño del papel elegido, con sus márgenes, su encabezado y su pie de página. Una hoja grande (100.000 filas o más) se prepara página a página, con el avance en la barra de estado.
 
 Límites:
 
-- El formato de las celdas (colores, fuentes, bordes) y los gráficos todavía no se imprimen.
-- Por encima de 5.000 filas, el final no se imprime: filtre la hoja o exporte el libro.
+- Miles de páginas: la ventana de impresión puede tardar en mostrarlas. Un área de impresión o un filtro reduce su número.
 - En la ventana de impresión, deje los márgenes en «Predeterminado» y la escala al 100 %. Si no, las páginas preparadas por Lattis se desplazan.
 - Si la ventana ofrece la opción «Encabezados y pies de página», déjela sin marcar: agrega los del navegador (fecha, dirección).
 

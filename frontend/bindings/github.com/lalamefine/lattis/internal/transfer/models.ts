@@ -47,6 +47,104 @@ export interface PageBreaks {
 }
 
 /**
+ * PrintPage est une page imprimée : sa bande de lignes et sa bande de
+ * colonnes (rangs dans PrintPlan.Rows et Cols), son en-tête et son pied de
+ * page, codes remplacés.
+ */
+export interface PrintPage {
+    "row": number;
+    "col": number;
+    "header": canvas$0.HeaderFooter;
+    "footer": canvas$0.HeaderFooter;
+}
+
+/**
+ * PrintPlan est le découpage d'une feuille en pages, pour l'impression et
+ * l'export PDF (fenêtre d'impression du système), selon sa mise en page
+ * (onglet Mise en page) : papier et orientation, marges, échelle ou
+ * ajustement en pages, zone d'impression (sinon la plage utilisée), titres
+ * répétés, sauts de page, quadrillage et en-têtes, centrage, en-tête et pied
+ * de page.
+ * 
+ * Lattis découpe lui-même les pages : chaque page est un bloc de la taille
+ * du papier, sans marge d'imprimante, avec l'en-tête et le pied de page dans
+ * ses marges. Ainsi les colonnes répétées, l'ordre des pages et la
+ * numérotation marchent dans WebView2. Le contenu des pages (valeurs telles
+ * que la grille les affiche, mise en forme, mise en forme conditionnelle,
+ * graphiques) est écrit par l'interface (frontend/src/lib/print) avec les
+ * fonctions de la grille. Sans limite de lignes : le plan ne lit que la mise
+ * en page de la feuille, pas les lignes des tableaux.
+ */
+export interface PrintPlan {
+    "empty": boolean;
+
+    /**
+     * Papier (mm, orientation comprise) et marges (cm).
+     */
+    "paperW": number;
+    "paperH": number;
+    "margins": canvas$0.Margins;
+
+    /**
+     * Scale : échelle retenue (1 : 100 %).
+     */
+    "scale": number;
+
+    /**
+     * Rows, Cols : bandes de lignes et de colonnes [première, dernière].
+     */
+    "rows": number[][] | null;
+    "cols": number[][] | null;
+    "pages": PrintPage[] | null;
+
+    /**
+     * TitleRows, TitleCols : titres répétés (nil : aucun).
+     */
+    "titleRows": canvas$0.Span | null;
+    "titleCols": canvas$0.Span | null;
+    "area": canvas$0.Rect;
+    "gridlines": boolean;
+    "headings": boolean;
+    "centerH": boolean;
+    "centerV": boolean;
+
+    /**
+     * BlackWhite : en noir et blanc.
+     */
+    "blackWhite": boolean;
+
+    /**
+     * Tailles retenues (pixels de la feuille) : par défaut, puis celles qui
+     * en diffèrent dans la zone et les titres ([indice, taille], 0 : masquée).
+     */
+    "rowPx": number;
+    "colPx": number;
+    "heights": number[][] | null;
+    "widths": number[][] | null;
+
+    /**
+     * HeadingsW, HeadingsH : largeur des numéros de lignes, hauteur des
+     * lettres de colonnes imprimés (pixels).
+     */
+    "headingsW": number;
+    "headingsH": number;
+}
+
+/**
+ * PrintSizes sont les tailles de la grille affichée (pixels de la feuille) :
+ * hauteur et largeur par défaut, puis celles qui en diffèrent ([indice,
+ * taille], 0 : masquée). Row nul : celles enregistrées dans le classeur.
+ * Les pages se découpent ainsi sur ce que montre l'écran (largeurs des
+ * colonnes de tableaux selon leur type, hauteurs ajustées).
+ */
+export interface PrintSizes {
+    "row": number;
+    "col": number;
+    "rows": number[][] | null;
+    "cols": number[][] | null;
+}
+
+/**
  * SheetReport est le compte rendu d'une feuille.
  */
 export interface SheetReport {

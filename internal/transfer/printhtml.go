@@ -2,8 +2,8 @@ package transfer
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -12,10 +12,6 @@ import (
 	"github.com/lalamefine/lattis/internal/formula"
 	"github.com/lalamefine/lattis/internal/msg"
 )
-
-// MaxPrintRows borne les lignes d'une impression : au-delà, la page dit ce
-// qui n'est pas imprimé (filtrez ou exportez en .xlsx).
-const MaxPrintRows = 5000
 
 // maxPrintCols borne les colonnes d'une zone d'impression.
 const maxPrintCols = 2000
@@ -38,33 +34,129 @@ type PrintInfo struct {
 	Now       time.Time
 }
 
-// PrintHTML rend une feuille en pages HTML, pour l'impression et l'export
-// PDF (fenêtre d'impression du système), selon sa mise en page (onglet Mise
-// en page) : papier et orientation (@page), marges, échelle ou ajustement en
-// pages, zone d'impression (sinon la plage utilisée), titres répétés, sauts
-// de page, quadrillage et en-têtes, centrage, en-tête et pied de page.
+// PrintSizes sont les tailles de la grille affichée (pixels de la feuille) :
+// hauteur et largeur par défaut, puis celles qui en diffèrent ([indice,
+// taille], 0 : masquée). Row nul : celles enregistrées dans le classeur.
+// Les pages se découpent ainsi sur ce que montre l'écran (largeurs des
+// colonnes de tableaux selon leur type, hauteurs ajustées).
+type PrintSizes struct {
+	Row  int      `json:"row"`
+	Col  int      `json:"col"`
+	Rows [][2]int `json:"rows"`
+	Cols [][2]int `json:"cols"`
+}
+
+// PrintPage est une page imprimée : sa bande de lignes et sa bande de
+// colonnes (rangs dans PrintPlan.Rows et Cols), son en-tête et son pied de
+// page, codes remplacés.
+type PrintPage struct {
+	Row    int                 `json:"row"`
+	Col    int                 `json:"col"`
+	Header canvas.HeaderFooter `json:"header"`
+	Footer canvas.HeaderFooter `json:"footer"`
+}
+
+// PrintPlan est le découpage d'une feuille en pages, pour l'impression et
+// l'export PDF (fenêtre d'impression du système), selon sa mise en page
+// (onglet Mise en page) : papier et orientation, marges, échelle ou
+// ajustement en pages, zone d'impression (sinon la plage utilisée), titres
+// répétés, sauts de page, quadrillage et en-têtes, centrage, en-tête et pied
+// de page.
 //
-// Lattis découpe lui-même les pages (hauteurs et largeurs de la grille) :
-// chaque page est un bloc de la taille du papier, sans marge d'imprimante
-// (@page margin: 0), avec l'en-tête et le pied de page dans ses marges.
-// Ainsi les colonnes répétées, l'ordre des pages et la numérotation
-// marchent dans WebView2, qui ne sait répéter que les lignes d'en-tête d'un
-// tableau. Valeurs telles que la grille les affiche, en-têtes de tableaux en
-// gras ; sans autre mise en forme ni les graphiques.
-func PrintHTML(ctx context.Context, m *canvas.Model, sheet int64, info PrintInfo) (string, error) {
-	sh, err := printSheet(ctx, m, sheet, true)
+// Lattis découpe lui-même les pages : chaque page est un bloc de la taille
+// du papier, sans marge d'imprimante, avec l'en-tête et le pied de page dans
+// ses marges. Ainsi les colonnes répétées, l'ordre des pages et la
+// numérotation marchent dans WebView2. Le contenu des pages (valeurs telles
+// que la grille les affiche, mise en forme, mise en forme conditionnelle,
+// graphiques) est écrit par l'interface (frontend/src/lib/print) avec les
+// fonctions de la grille. Sans limite de lignes : le plan ne lit que la mise
+// en page de la feuille, pas les lignes des tableaux.
+type PrintPlan struct {
+	Empty bool `json:"empty"`
+	// Papier (mm, orientation comprise) et marges (cm).
+	PaperW  float64        `json:"paperW"`
+	PaperH  float64        `json:"paperH"`
+	Margins canvas.Margins `json:"margins"`
+	// Scale : échelle retenue (1 : 100 %).
+	Scale float64 `json:"scale"`
+	// Rows, Cols : bandes de lignes et de colonnes [première, dernière].
+	Rows  [][2]int    `json:"rows"`
+	Cols  [][2]int    `json:"cols"`
+	Pages []PrintPage `json:"pages"`
+	// TitleRows, TitleCols : titres répétés (nil : aucun).
+	TitleRows *canvas.Span `json:"titleRows"`
+	TitleCols *canvas.Span `json:"titleCols"`
+	Area      canvas.Rect  `json:"area"`
+	Gridlines bool         `json:"gridlines"`
+	Headings  bool         `json:"headings"`
+	CenterH   bool         `json:"centerH"`
+	CenterV   bool         `json:"centerV"`
+	// BlackWhite : en noir et blanc.
+	BlackWhite bool `json:"blackWhite"`
+	// Tailles retenues (pixels de la feuille) : par défaut, puis celles qui
+	// en diffèrent dans la zone et les titres ([indice, taille], 0 : masquée).
+	RowPx   int      `json:"rowPx"`
+	ColPx   int      `json:"colPx"`
+	Heights [][2]int `json:"heights"`
+	Widths  [][2]int `json:"widths"`
+	// HeadingsW, HeadingsH : largeur des numéros de lignes, hauteur des
+	// lettres de colonnes imprimés (pixels).
+	HeadingsW int `json:"headingsW"`
+	HeadingsH int `json:"headingsH"`
+}
+
+// SheetPrintPlan découpe une feuille en pages selon sa mise en page.
+func SheetPrintPlan(ctx context.Context, m *canvas.Model, sheet int64, sizes PrintSizes, info PrintInfo) (PrintPlan, error) {
+	out := PrintPlan{Scale: 1, Rows: [][2]int{}, Cols: [][2]int{}, Pages: []PrintPage{}, Heights: [][2]int{}, Widths: [][2]int{},
+		HeadingsW: headingsColPx, HeadingsH: headingsRowPx}
+	sh, err := printSheet(ctx, m, sheet)
 	if err != nil {
-		return "", err
+		return out, err
 	}
 	if info.Now.IsZero() {
 		info.Now = time.Now()
 	}
-	// Les graphiques ne sont pas imprimés : la page le dit.
-	return renderPrint(sh, info) + chartsNote(sh.rep.Charts), nil
+	p := sh.page
+	out.PaperW, out.PaperH = p.PaperMM()
+	out.Margins = p.PageMargins()
+	out.Gridlines, out.Headings, out.CenterH, out.CenterV, out.BlackWhite = p.Gridlines, p.Headings, p.CenterH, p.CenterV, p.BlackWhite
+	out.TitleRows, out.TitleCols = p.TitleRows, p.TitleCols
+	pg, ok := newPager(&sh, sizes)
+	out.RowPx, out.ColPx = pg.rowPx, pg.colPx
+	if !ok {
+		out.Empty = true
+		return out, nil
+	}
+	out.Scale, out.Rows, out.Cols, out.Area = pg.scale, pg.rows, pg.cols, pg.area
+	pages := pg.pages()
+	first := max(p.FirstPage, 1)
+	for n, at := range pages {
+		v := hfVars{page: first + n, pages: len(pages), sheet: sh.name, info: info}
+		expand := func(h canvas.HeaderFooter) canvas.HeaderFooter {
+			return canvas.HeaderFooter{Left: expandHF(h.Left, v), Center: expandHF(h.Center, v), Right: expandHF(h.Right, v)}
+		}
+		out.Pages = append(out.Pages, PrintPage{Row: at[0], Col: at[1], Header: expand(p.Header), Footer: expand(p.Footer)})
+	}
+	// Tailles particulières de la zone et des titres.
+	inSpan := func(i, lo, hi int, s *canvas.Span) bool {
+		return (i >= lo && i <= hi) || (s != nil && i >= s.From && i <= s.To)
+	}
+	for _, r := range pg.special(true) {
+		if inSpan(r, pg.area.R0, pg.area.R1, p.TitleRows) {
+			out.Heights = append(out.Heights, [2]int{r, int(pg.height(r))})
+		}
+	}
+	for _, c := range pg.special(false) {
+		if inSpan(c, pg.area.C0, pg.area.C1, p.TitleCols) {
+			out.Widths = append(out.Widths, [2]int{c, int(pg.width(c))})
+		}
+	}
+	return out, nil
 }
 
-// printSheet lit la feuille à imprimer ; rows : avec les lignes des tableaux.
-func printSheet(ctx context.Context, m *canvas.Model, sheet int64, rows bool) (xsheet, error) {
+// printSheet lit la mise en page de la feuille à imprimer (cellules libres
+// et place des tableaux, sans leurs lignes).
+func printSheet(ctx context.Context, m *canvas.Model, sheet int64) (xsheet, error) {
 	l, err := m.Layout(ctx, sheet)
 	if err != nil {
 		return xsheet{}, err
@@ -86,22 +178,41 @@ func printSheet(ctx context.Context, m *canvas.Model, sheet int64, rows bool) (x
 		t := xt.info
 		sh.tableRects = append(sh.tableRects, canvas.Rect{R0: t.Row, C0: t.Col, R1: t.Row + t.Total, C1: t.Col + len(t.Columns) - 1})
 	}
-	if !rows {
-		return sh, nil
-	}
-	for _, xt := range sh.tables {
-		err := tableRows(ctx, m, xt, nil, 0, func(r int, cells []xcell) error {
-			for j, x := range cells {
-				sh.put(r, xt.info.Col+j, x)
-			}
-			return nil
-		})
-		if err != nil {
-			return xsheet{}, err
-		}
-	}
 	sh.tables = nil
+	for _, c := range l.Charts {
+		w, h := c.Config.Width, c.Config.Height
+		if w <= 0 {
+			w = 480
+		}
+		if h <= 0 {
+			h = 288
+		}
+		sh.charts = append(sh.charts, chartBox{row: c.Row, col: c.Col, x: c.Config.OffX, y: c.Config.OffY, w: w, h: h})
+	}
 	return sh, nil
+}
+
+// chartBox est la place d'un graphique : cellule d'ancrage, décalage et
+// taille en pixels (comme la grille).
+type chartBox struct{ row, col, x, y, w, h int }
+
+// chartRects ajoute à la plage utilisée les cellules sous les graphiques
+// (imprimés avec la feuille).
+func (pg *pager) chartRects(add func(r0, c0, r1, c1 int)) {
+	for _, b := range pg.sh.charts {
+		// Dernière case sous le bord (bornée : cases masquées sans fin).
+		end := func(i, off, size int, px func(int) float64) int {
+			at := float64(off + size)
+			for n := 0; n < 10_000; n, i = n+1, i+1 {
+				if at -= px(i); at <= 0 {
+					break
+				}
+			}
+			return i
+		}
+		r0, c0 := b.row, b.col
+		add(r0, c0, end(r0, b.y, b.h, pg.height), end(c0, b.x, b.w, pg.width))
+	}
 }
 
 // pager découpe une feuille en pages.
@@ -109,16 +220,18 @@ type pager struct {
 	sh   *xsheet
 	p    canvas.PageSetup
 	area canvas.Rect
-	// more : lignes de la zone au-delà de MaxPrintRows (non imprimées).
-	more int
 	// Mise à l'échelle retenue (1 : 100 %), bandes de lignes et de colonnes.
 	scale      float64
 	rows, cols [][2]int
-	widths     map[int]int
+	// Tailles : par défaut, et particulières (masquées comprises : 0).
+	rowPx, colPx    int
+	heights, widths map[int]int
 }
 
-// usedRect est la plage utilisée : cellules et tableaux (lignes comprises).
-func usedRect(sh *xsheet) (canvas.Rect, bool) {
+// usedRect est la plage utilisée : cellules, tableaux (lignes comprises) et
+// graphiques.
+func (pg *pager) usedRect() (canvas.Rect, bool) {
+	sh := pg.sh
 	r := canvas.Rect{R0: -1}
 	add := func(r0, c0, r1, c1 int) {
 		if r.R0 < 0 {
@@ -133,18 +246,39 @@ func usedRect(sh *xsheet) (canvas.Rect, bool) {
 	for _, t := range sh.tableRects {
 		add(t.R0, t.C0, t.R1, t.C1)
 	}
+	pg.chartRects(add)
 	return r, r.R0 >= 0
 }
 
-func newPager(sh *xsheet) (*pager, bool) {
-	pg := &pager{sh: sh, p: sh.page, scale: 1, widths: map[int]int{}}
-	for _, w := range sh.widths {
-		pg.widths[w.Col] = w.Width
+func newPager(sh *xsheet, sizes PrintSizes) (*pager, bool) {
+	pg := &pager{sh: sh, p: sh.page, scale: 1, rowPx: defaultRowPx, colPx: defaultColPx, heights: map[int]int{}, widths: map[int]int{}}
+	if sizes.Row > 0 && sizes.Col > 0 {
+		// Tailles de la grille affichée.
+		pg.rowPx, pg.colPx = sizes.Row, sizes.Col
+		for _, s := range sizes.Rows {
+			pg.heights[s[0]] = max(s[1], 0)
+		}
+		for _, s := range sizes.Cols {
+			pg.widths[s[0]] = max(s[1], 0)
+		}
+	} else {
+		for r, h := range sh.heights {
+			pg.heights[r] = h
+		}
+		for _, w := range sh.widths {
+			pg.widths[w.Col] = w.Width
+		}
+	}
+	for r := range sh.hiddenR {
+		pg.heights[r] = 0
+	}
+	for c := range sh.hiddenC {
+		pg.widths[c] = 0
 	}
 	if a := pg.p.Area; a != nil {
 		pg.area = *a
 	} else {
-		r, ok := usedRect(sh)
+		r, ok := pg.usedRect()
 		if !ok {
 			return pg, false
 		}
@@ -152,40 +286,36 @@ func newPager(sh *xsheet) (*pager, bool) {
 	}
 	pg.area.C1 = min(pg.area.C1, pg.area.C0+maxPrintCols-1)
 	pg.area.R1 = min(pg.area.R1, ExcelRows-1)
-	// Au plus MaxPrintRows lignes visibles.
-	n := 0
-	for r := pg.area.R0; r <= pg.area.R1; r++ {
-		if sh.hiddenR[r] {
-			continue
-		}
-		if n++; n > MaxPrintRows {
-			pg.more = pg.area.R1 - r + 1
-			pg.area.R1 = r - 1
-			break
-		}
-	}
 	pg.paginate()
 	return pg, true
 }
 
 func (pg *pager) height(r int) float64 {
-	if pg.sh.hiddenR[r] {
-		return 0
-	}
-	if h, ok := pg.sh.heights[r]; ok {
+	if h, ok := pg.heights[r]; ok {
 		return float64(h)
 	}
-	return defaultRowPx
+	return float64(pg.rowPx)
 }
 
 func (pg *pager) width(c int) float64 {
-	if pg.sh.hiddenC[c] {
-		return 0
-	}
 	if w, ok := pg.widths[c]; ok {
 		return float64(w)
 	}
-	return defaultColPx
+	return float64(pg.colPx)
+}
+
+// special donne, triés, les lignes (ou colonnes) de taille particulière.
+func (pg *pager) special(rows bool) []int {
+	m := pg.widths
+	if rows {
+		m = pg.heights
+	}
+	out := make([]int, 0, len(m))
+	for i := range m {
+		out = append(out, i)
+	}
+	slices.Sort(out)
+	return out
 }
 
 // content donne la place du contenu d'une page (pixels CSS, échelle 1).
@@ -243,7 +373,7 @@ func bands(lo, hi int, size func(int) float64, avail float64, title *canvas.Span
 
 // paginate fixe l'échelle et les bandes ; ajustée à un nombre de pages, la
 // plus grande échelle (10 à 100 %) qui tient, sauts manuels ignorés (comme
-// Excel).
+// un tableur).
 func (pg *pager) paginate() {
 	w, h := pg.content()
 	a := pg.area
@@ -309,227 +439,6 @@ func (pg *pager) pages() [][2]int {
 	return out
 }
 
-func mm(v float64) string {
-	return strconv.FormatFloat(float64(int(v*100+0.5))/100, 'f', -1, 64) + "mm"
-}
-
-func renderPrint(sh xsheet, info PrintInfo) string {
-	var b strings.Builder
-	p := sh.page
-	pw, ph := p.PaperMM()
-	m := p.PageMargins()
-	// Bloc d'une page un peu plus court que le papier : un arrondi ne pousse
-	// pas une page blanche.
-	fmt.Fprintf(&b, `<style>@page { size: %s %s; margin: 0; } @media print { html, body { margin: 0 !important; padding: 0 !important; } }</style>`, mm(pw), mm(ph))
-	pg, ok := newPager(&sh)
-	var pages [][2]int
-	if ok {
-		pages = pg.pages()
-	}
-	total := max(len(pages), 1)
-	first := max(p.FirstPage, 1)
-	page := func(n int, body func()) {
-		cls := "lp-page"
-		if p.BlackWhite {
-			cls += " lp-bw"
-		}
-		fmt.Fprintf(&b, `<section class="%s" style="width:%s;height:%s">`, cls, mm(pw), mm(ph-0.6))
-		hf := func(h canvas.HeaderFooter, pos string, at float64) {
-			if h.Empty() {
-				return
-			}
-			fmt.Fprintf(&b, `<div class="lp-hf" style="%s:%s;left:%s;right:%s">`, pos, mm(at*10), mm(m.Left*10), mm(m.Right*10))
-			for _, part := range [][2]string{{"l", h.Left}, {"c", h.Center}, {"r", h.Right}} {
-				fmt.Fprintf(&b, `<span class="%s">%s</span>`, part[0], xmlEscape(expandHF(part[1], hfVars{page: first + n, pages: total, sheet: sh.name, info: info})))
-			}
-			b.WriteString(`</div>`)
-		}
-		hf(p.Header, "top", m.Header)
-		style := fmt.Sprintf("top:%s;left:%s;width:%s;height:%s", mm(m.Top*10), mm(m.Left*10), mm(pw-(m.Left+m.Right)*10), mm(ph-0.6-(m.Top+m.Bottom)*10))
-		if p.CenterH {
-			style += ";align-items:center"
-		}
-		if p.CenterV {
-			style += ";justify-content:center"
-		}
-		fmt.Fprintf(&b, `<div class="lp-body" style="%s">`, style)
-		body()
-		b.WriteString(`</div>`)
-		hf(p.Footer, "bottom", m.Footer)
-		b.WriteString(`</section>`)
-	}
-	if !ok {
-		page(0, func() { b.WriteString(`<p class="print-empty">Feuille vide.</p>`) })
-		return b.String()
-	}
-	for n, at := range pages {
-		page(n, func() {
-			pg.table(&b, pg.rows[at[0]], pg.cols[at[1]])
-			if n == len(pages)-1 && pg.more > 0 {
-				fmt.Fprintf(&b, `<p class="print-more">%d lignes suivantes non imprimées : filtrez la feuille ou exportez le classeur en .xlsx.</p>`, pg.more)
-			}
-		})
-	}
-	return b.String()
-}
-
-// table écrit le tableau HTML d'une page : titres répétés, puis la bande.
-func (pg *pager) table(b *strings.Builder, rb, cb [2]int) {
-	sh, p := pg.sh, pg.p
-	var rows, cols []int
-	if a, z, ok := titles(p.TitleRows, rb[0]); ok {
-		for r := a; r <= z; r++ {
-			rows = append(rows, r)
-		}
-	}
-	if a, z, ok := titles(p.TitleCols, cb[0]); ok {
-		for c := a; c <= z; c++ {
-			cols = append(cols, c)
-		}
-	}
-	for r := rb[0]; r <= rb[1]; r++ {
-		rows = append(rows, r)
-	}
-	for c := cb[0]; c <= cb[1]; c++ {
-		cols = append(cols, c)
-	}
-	rows = filterShown(rows, sh.hiddenR)
-	cols = filterShown(cols, sh.hiddenC)
-	cls := "print-grid"
-	if p.Gridlines {
-		cls += " lp-lines"
-	}
-	style := ""
-	if pg.scale != 1 {
-		style = fmt.Sprintf(` style="zoom:%s"`, strconv.FormatFloat(pg.scale, 'f', -1, 64))
-	}
-	width := 0.0
-	for _, c := range cols {
-		width += pg.width(c)
-	}
-	if p.Headings {
-		width += headingsColPx
-	}
-	fmt.Fprintf(b, `<table class="%s"%s><colgroup>`, cls, style)
-	if p.Headings {
-		fmt.Fprintf(b, `<col style="width:%dpx">`, headingsColPx)
-	}
-	for _, c := range cols {
-		fmt.Fprintf(b, `<col style="width:%dpx">`, int(pg.width(c)))
-	}
-	b.WriteString(`</colgroup><tbody>`)
-	if p.Headings {
-		fmt.Fprintf(b, `<tr class="lp-ch" style="height:%dpx"><th></th>`, headingsRowPx)
-		for _, c := range cols {
-			fmt.Fprintf(b, `<th>%s</th>`, canvas.ColLetters(c))
-		}
-		b.WriteString(`</tr>`)
-	}
-	// Fusions : la cellule de départ s'étend sur ce qui en est visible ici.
-	type span struct{ rows, cols int }
-	at := map[[2]int]span{}
-	covered := map[[2]int]bool{}
-	rowPos, colPos := map[int]int{}, map[int]int{}
-	for i, r := range rows {
-		rowPos[r] = i
-	}
-	for j, c := range cols {
-		colPos[c] = j
-	}
-	for _, g := range sh.merges {
-		i0, ok0 := rowPos[g[0]]
-		j0, ok1 := colPos[g[1]]
-		if !ok0 || !ok1 {
-			continue
-		}
-		nr, nc := 0, 0
-		for i := i0; i < len(rows) && rows[i] < g[0]+g[2]; i++ {
-			nr++
-		}
-		for j := j0; j < len(cols) && cols[j] < g[1]+g[3]; j++ {
-			nc++
-		}
-		if nr*nc <= 1 {
-			continue
-		}
-		at[[2]int{g[0], g[1]}] = span{nr, nc}
-		for i := i0; i < i0+nr; i++ {
-			for j := j0; j < j0+nc; j++ {
-				if i != i0 || j != j0 {
-					covered[[2]int{rows[i], cols[j]}] = true
-				}
-			}
-		}
-	}
-	for _, r := range rows {
-		fmt.Fprintf(b, `<tr style="height:%dpx">`, int(pg.height(r)))
-		if p.Headings {
-			fmt.Fprintf(b, `<th>%d</th>`, r+1)
-		}
-		for _, c := range cols {
-			k := [2]int{r, c}
-			if covered[k] {
-				continue
-			}
-			var cl []string
-			if pg.inTable(r, c) {
-				cl = append(cl, "t")
-			}
-			attr := ""
-			if s, ok := at[k]; ok {
-				if s.rows > 1 {
-					attr += fmt.Sprintf(` rowspan="%d"`, s.rows)
-				}
-				if s.cols > 1 {
-					attr += fmt.Sprintf(` colspan="%d"`, s.cols)
-				}
-				cl = append(cl, "c")
-			}
-			x, ok := sh.cells[k]
-			if ok {
-				if x.bold {
-					cl = append(cl, "b")
-				}
-				if x.kind == 'n' || x.kind == 'd' {
-					cl = append(cl, "n")
-				}
-				if x.kind == 'b' || x.kind == 'e' {
-					cl = append(cl, "c")
-				}
-			}
-			if len(cl) > 0 {
-				attr += ` class="` + strings.Join(cl, " ") + `"`
-			}
-			if !ok {
-				fmt.Fprintf(b, `<td%s></td>`, attr)
-				continue
-			}
-			fmt.Fprintf(b, `<td%s>%s</td>`, attr, xmlEscape(printText(x)))
-		}
-		b.WriteString(`</tr>`)
-	}
-	b.WriteString(`</tbody></table>`)
-}
-
-func (pg *pager) inTable(r, c int) bool {
-	for _, t := range pg.sh.tableRects {
-		if r >= t.R0 && r <= t.R1 && c >= t.C0 && c <= t.C1 {
-			return true
-		}
-	}
-	return false
-}
-
-func filterShown(xs []int, hidden map[int]bool) []int {
-	out := xs[:0]
-	for _, x := range xs {
-		if !hidden[x] {
-			out = append(out, x)
-		}
-	}
-	return out
-}
-
 type hfVars struct {
 	page, pages int
 	sheet       string
@@ -576,14 +485,15 @@ type PageBreaks struct {
 	Empty      bool        `json:"empty"` // rien à imprimer
 }
 
-// SheetPageBreaks calcule les sauts de page de la feuille, comme PrintHTML.
-func SheetPageBreaks(ctx context.Context, m *canvas.Model, sheet int64) (PageBreaks, error) {
+// SheetPageBreaks calcule les sauts de page de la feuille, comme
+// SheetPrintPlan (mêmes tailles : celles de la grille quand elle les donne).
+func SheetPageBreaks(ctx context.Context, m *canvas.Model, sheet int64, sizes PrintSizes) (PageBreaks, error) {
 	out := PageBreaks{Rows: []int{}, Cols: []int{}, ManualRows: []int{}, ManualCols: []int{}}
-	sh, err := printSheet(ctx, m, sheet, false)
+	sh, err := printSheet(ctx, m, sheet)
 	if err != nil {
 		return out, err
 	}
-	pg, ok := newPager(&sh)
+	pg, ok := newPager(&sh, sizes)
 	if !ok {
 		out.Empty = true
 		return out, nil
@@ -604,18 +514,8 @@ func SheetPageBreaks(ctx context.Context, m *canvas.Model, sheet int64) (PageBre
 	return out, nil
 }
 
-// chartsNote dit que les graphiques de la feuille ne sont pas imprimés.
-func chartsNote(n int) string {
-	switch n {
-	case 0:
-		return ""
-	case 1:
-		return `<p class="print-more">1 graphique non imprimé (l'impression d'une feuille ne reprend que ses cellules).</p>`
-	}
-	return fmt.Sprintf(`<p class="print-more">%d graphiques non imprimés (l'impression d'une feuille ne reprend que ses cellules).</p>`, n)
-}
-
-// printText écrit une cellule comme la grille l'affiche (locale française).
+// printText écrit une cellule comme la grille l'affiche (locale française) :
+// exports .ods et .csv.
 func printText(x xcell) string {
 	switch x.kind {
 	case 'n':

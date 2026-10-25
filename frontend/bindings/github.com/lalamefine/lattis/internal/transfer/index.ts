@@ -4,5 +4,8 @@
 export type {
     ExportReport,
     PageBreaks,
+    PrintPage,
+    PrintPlan,
+    PrintSizes,
     SheetReport
 } from "./models.js";

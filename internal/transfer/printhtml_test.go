@@ -5,33 +5,13 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/lalamefine/lattis/internal/canvas"
 )
 
-// Les graphiques ne sont pas imprimés : la page le dit.
-func TestPrintHTMLCharts(t *testing.T) {
-	ctx := context.Background()
-	d := open(t)
-	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Produit", "Prix"}, {"Pomme", "1,5"}, {"Poire", "2"}}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := d.CreateChart(ctx, 1, 5, 0, canvas.ChartConfig{Source: "Feuille1", Kind: "bar", X: "Produit", Series: []string{"Prix"}}); err != nil {
-		t.Fatal(err)
-	}
-	html, err := PrintHTML(ctx, d.Model, 1, PrintInfo{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(html, "1 graphique non imprimé") {
-		t.Errorf("graphique non signalé :\n%s", html)
-	}
-}
-
-func TestPrintHTML(t *testing.T) {
+func TestPrintPlan(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
 	if _, err := d.Paste(ctx, 1, 1, 1, [][]string{{"Produit", "Prix"}, {"Pomme & co", "1,5"}}); err != nil {
@@ -40,43 +20,109 @@ func TestPrintHTML(t *testing.T) {
 	if _, err := d.SetCell(ctx, 1, 5, 2, "=1/0"); err != nil {
 		t.Fatal(err)
 	}
-	html, err := PrintHTML(ctx, d.Model, 1, PrintInfo{})
+	plan, err := SheetPrintPlan(ctx, d.Model, 1, PrintSizes{}, PrintInfo{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{
-		`@page { size: 210mm 297mm; margin: 0; }`,
-		`<tr style="height:22px"><td class="t b">Produit</td><td class="t b">Prix</td></tr>`,
-		`<td class="t">Pomme &amp; co</td><td class="t n">1,5</td>`,
-		`<td></td><td class="c">#DIV/0!</td>`,
-	} {
-		if !strings.Contains(html, want) {
-			t.Errorf("%s attendu dans\n%s", want, html)
-		}
+	// Plage utilisée B2:C6, une page A4 portrait à 100 %.
+	if plan.Empty || plan.PaperW != 210 || plan.PaperH != 297 || plan.Scale != 1 || len(plan.Pages) != 1 {
+		t.Fatalf("plan : %+v", plan)
 	}
-	if strings.Count(html, "<tr ") != 5 || strings.Count(html, `<section class="lp-page"`) != 1 {
-		t.Errorf("plage utilisée : %d lignes\n%s", strings.Count(html, "<tr "), html)
+	if want := (canvas.Rect{R0: 1, C0: 1, R1: 5, C1: 2}); plan.Area != want {
+		t.Errorf("zone %+v, %+v attendue", plan.Area, want)
 	}
-	if strings.Contains(html, "lp-hf") || strings.Contains(html, "print-title") {
-		t.Errorf("en-tête ou titre sans mise en page\n%s", html)
+	if !reflect.DeepEqual(plan.Rows, [][2]int{{1, 5}}) || !reflect.DeepEqual(plan.Cols, [][2]int{{1, 2}}) {
+		t.Errorf("bandes : %v %v", plan.Rows, plan.Cols)
 	}
-	if _, err := PrintHTML(ctx, d.Model, 99, PrintInfo{}); err == nil {
+	if plan.RowPx != 22 || plan.ColPx != 100 || plan.Margins != canvas.MarginsNormal {
+		t.Errorf("tailles ou marges : %+v", plan)
+	}
+	if _, err := SheetPrintPlan(ctx, d.Model, 99, PrintSizes{}, PrintInfo{}); err == nil {
 		t.Error("feuille inconnue acceptée")
 	}
 	empty, err := d.AddSheet(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	html, _ = PrintHTML(ctx, d.Model, empty, PrintInfo{})
-	if !strings.Contains(html, "Feuille vide.") {
-		t.Errorf("feuille vide :\n%s", html)
+	plan, _ = SheetPrintPlan(ctx, d.Model, empty, PrintSizes{}, PrintInfo{})
+	if !plan.Empty || len(plan.Pages) != 0 {
+		t.Errorf("feuille vide : %+v", plan)
 	}
 }
 
-// sections coupe le HTML imprimé en pages.
-func sections(html string) []string {
-	parts := strings.Split(html, `<section class="lp-page`)
-	return parts[1:]
+// Tailles de la grille : les pages se découpent sur ce que montre l'écran.
+func TestPrintPlanSizes(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	for r := 0; r < 4; r++ {
+		if _, err := d.SetCell(ctx, 1, r, 0, "x"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Ligne 2 masquée (0), ligne 3 haute de 960 px : une page par ligne haute.
+	sizes := PrintSizes{Row: 20, Col: 88, Rows: [][2]int{{1, 0}, {2, 960}}, Cols: [][2]int{{0, 150}}}
+	plan, err := SheetPrintPlan(ctx, d.Model, 1, sizes, PrintInfo{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.RowPx != 20 || plan.ColPx != 88 || !reflect.DeepEqual(plan.Widths, [][2]int{{0, 150}}) || !reflect.DeepEqual(plan.Heights, [][2]int{{1, 0}, {2, 960}}) {
+		t.Errorf("tailles : %+v", plan)
+	}
+	if !reflect.DeepEqual(plan.Rows, [][2]int{{0, 1}, {2, 2}, {3, 3}}) {
+		t.Errorf("bandes : %v", plan.Rows)
+	}
+	br, _ := SheetPageBreaks(ctx, d.Model, 1, sizes)
+	if !reflect.DeepEqual(br.Rows, []int{2, 3}) {
+		t.Errorf("sauts de la grille : %+v", br)
+	}
+}
+
+// Un graphique s'imprime : il agrandit la plage utilisée.
+func TestPrintPlanCharts(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	if _, err := d.Paste(ctx, 1, 0, 0, [][]string{{"Produit", "Prix"}, {"Pomme", "1,5"}, {"Poire", "2"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.CreateChart(ctx, 1, 5, 0, canvas.ChartConfig{Source: "Feuille1", Kind: "bar", X: "Produit", Series: []string{"Prix"}}); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := SheetPrintPlan(ctx, d.Model, 1, PrintSizes{}, PrintInfo{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 480 × 288 px depuis A6 : colonnes de 100 px, lignes de 22 px.
+	if plan.Area.R1 != 5+13 || plan.Area.C1 != 4 {
+		t.Errorf("zone avec le graphique : %+v", plan.Area)
+	}
+}
+
+// Aucune limite de lignes : 100 000 lignes se découpent sans être lues.
+func TestPrintPlanLarge(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	rows := [][]string{{"N", "Libellé"}}
+	for i := 1; i <= 100_000; i++ {
+		rows = append(rows, []string{fmt.Sprint(i), "ligne"})
+	}
+	if _, err := d.Paste(ctx, 1, 0, 0, rows); err != nil {
+		t.Fatal(err)
+	}
+	t0 := time.Now()
+	plan, err := SheetPrintPlan(ctx, d.Model, 1, PrintSizes{}, PrintInfo{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Area.R1 != 100_000 || plan.Rows[len(plan.Rows)-1][1] != 100_000 {
+		t.Fatalf("fin non imprimée : zone %+v, dernière bande %v", plan.Area, plan.Rows[len(plan.Rows)-1])
+	}
+	// 44 lignes de 22 px par page A4 (marges normales).
+	if n := len(plan.Pages); n < 2200 || n > 2350 || plan.Pages[n-1].Row != n-1 {
+		t.Errorf("%d pages", n)
+	}
+	if d := time.Since(t0); d > 5*time.Second {
+		t.Errorf("plan en %v", d)
+	}
 }
 
 func TestPrintPageSetup(t *testing.T) {
@@ -98,61 +144,50 @@ func TestPrintPageSetup(t *testing.T) {
 	}
 	// Chemin du système : le nom du fichier se lit de même sous Windows et Linux.
 	info := PrintInfo{Path: filepath.Join("docs", "Stock.lattis"), Now: time.Date(2026, 10, 19, 9, 5, 0, 0, time.UTC)}
-	print := func() string {
+	plan := func() PrintPlan {
 		t.Helper()
-		html, err := PrintHTML(ctx, d.Model, 1, info)
+		p, err := SheetPrintPlan(ctx, d.Model, 1, PrintSizes{}, info)
 		if err != nil {
 			t.Fatal(err)
 		}
-		return html
+		return p
 	}
 
 	// Zone A1:B30, titre ligne 1, sauts avant les lignes 11 et 21 : trois
 	// pages, la ligne de titre en tête de chacune.
 	set(canvas.PageSetup{Area: &canvas.Rect{R0: 0, C0: 0, R1: 29, C1: 1}, TitleRows: &canvas.Span{From: 0, To: 0}, RowBreaks: []int{10, 20},
 		Header: canvas.HeaderFooter{Left: "&[Fichier]", Center: "&[Onglet]", Right: "&[Date] &[Heure]"}, Footer: canvas.HeaderFooter{Center: "Page &[Page] sur &[Pages] && fin"}})
-	html := print()
-	pages := sections(html)
-	if len(pages) != 3 {
-		t.Fatalf("%d pages\n%s", len(pages), html)
+	p := plan()
+	if len(p.Pages) != 3 || !reflect.DeepEqual(p.Rows, [][2]int{{0, 9}, {10, 19}, {20, 29}}) || !reflect.DeepEqual(p.Cols, [][2]int{{0, 1}}) {
+		t.Fatalf("pages : %+v", p)
 	}
-	for i, pg := range pages {
-		if !strings.Contains(pg, `<td class="t b">Produit</td>`) {
-			t.Errorf("page %d sans la ligne de titre", i+1)
-		}
-		if strings.Contains(pg, "Stock") && !strings.Contains(pg, "Stock.lattis") {
-			t.Errorf("page %d : colonne hors de la zone", i+1)
-		}
-		if !strings.Contains(pg, fmt.Sprintf(`<span class="c">Page %d sur 3 &amp; fin</span>`, i+1)) {
-			t.Errorf("pied de la page %d :\n%s", i+1, pg)
+	if p.TitleRows == nil || p.TitleRows.From != 0 {
+		t.Errorf("titres : %+v", p.TitleRows)
+	}
+	for i, pg := range p.Pages {
+		if want := fmt.Sprintf("Page %d sur 3 & fin", i+1); pg.Footer.Center != want {
+			t.Errorf("pied de la page %d : %q", i+1, pg.Footer.Center)
 		}
 	}
-	for _, want := range []string{`<span class="l">Stock.lattis</span>`, `<span class="c">Feuille1</span>`, `<span class="r">19/10/2026 09:05</span>`} {
-		if !strings.Contains(pages[0], want) {
-			t.Errorf("en-tête : %s attendu", want)
-		}
-	}
-	if !strings.Contains(pages[1], ">P10<") || strings.Contains(pages[1], ">P9<") || strings.Contains(pages[1], ">P20<") {
-		t.Errorf("page 2 : lignes 11 à 20 attendues\n%s", pages[1])
+	if h := p.Pages[0].Header; h.Left != "Stock.lattis" || h.Center != "Feuille1" || h.Right != "19/10/2026 09:05" {
+		t.Errorf("en-tête : %+v", h)
 	}
 
 	// Paysage A3, échelle 50 %, quadrillage et en-têtes, centrage,
 	// numérotation à partir de 5.
 	set(canvas.PageSetup{Paper: "A3", Landscape: true, Scale: 50, Gridlines: true, Headings: true, CenterH: true, CenterV: true, FirstPage: 5, Footer: canvas.HeaderFooter{Right: "&[Page]/&[Pages]"}})
-	html = print()
-	for _, want := range []string{`size: 420mm 297mm`, `style="zoom:0.5"`, `class="print-grid lp-lines"`, `<th>A</th><th>B</th><th>C</th>`, `<th>1</th>`, `align-items:center;justify-content:center`, `<span class="r">5/1</span>`} {
-		if !strings.Contains(html, want) {
-			t.Errorf("%s attendu", want)
-		}
+	p = plan()
+	if p.PaperW != 420 || p.PaperH != 297 || p.Scale != 0.5 || !p.Gridlines || !p.Headings || !p.CenterH || !p.CenterV || p.Pages[0].Footer.Right != "5/1" {
+		t.Errorf("mise en page : %+v", p)
 	}
 
 	// Ajuster à une page en hauteur : une seule page, réduite.
 	set(canvas.PageSetup{FitTall: 1, Margins: &canvas.Margins{Top: 10, Bottom: 10, Left: 2, Right: 2, Header: 1, Footer: 1}})
-	html = print()
-	if n := len(sections(html)); n != 1 || !strings.Contains(html, "zoom:0.") {
-		t.Errorf("ajusté à une page : %d pages\n%s", n, html)
+	p = plan()
+	if len(p.Pages) != 1 || p.Scale >= 1 || p.Scale < 0.1 {
+		t.Errorf("ajusté à une page : %d pages à %v", len(p.Pages), p.Scale)
 	}
-	br, err := SheetPageBreaks(ctx, d.Model, 1)
+	br, err := SheetPageBreaks(ctx, d.Model, 1, PrintSizes{})
 	if err != nil || br.Pages != 1 || br.Scale >= 100 || br.Scale < 10 || len(br.Rows) != 0 {
 		t.Errorf("sauts, ajusté : %+v %v", br, err)
 	}
@@ -160,17 +195,18 @@ func TestPrintPageSetup(t *testing.T) {
 	// Colonnes : saut avant B, colonne A répétée ; ordre « à droite, puis
 	// vers le bas » avec un saut de ligne.
 	set(canvas.PageSetup{TitleCols: &canvas.Span{From: 0, To: 0}, ColBreaks: []int{1, 2}, RowBreaks: []int{15}, AcrossFirst: true})
-	pages = sections(print())
-	if len(pages) != 6 {
-		t.Fatalf("%d pages au lieu de 6", len(pages))
+	p = plan()
+	if len(p.Pages) != 6 {
+		t.Fatalf("%d pages au lieu de 6", len(p.Pages))
 	}
-	if !strings.Contains(pages[1], ">Produit<") || !strings.Contains(pages[1], ">Prix<") || strings.Contains(pages[1], ">Stock<") {
-		t.Errorf("page 2 : colonnes A et B attendues\n%s", pages[1])
+	order := [][2]int{}
+	for _, pg := range p.Pages {
+		order = append(order, [2]int{pg.Row, pg.Col})
 	}
-	if !strings.Contains(pages[3], ">P15<") || strings.Contains(pages[3], ">Prix<") {
-		t.Errorf("page 4 (ordre à droite puis vers le bas) :\n%s", pages[3])
+	if !reflect.DeepEqual(order, [][2]int{{0, 0}, {0, 1}, {0, 2}, {1, 0}, {1, 1}, {1, 2}}) {
+		t.Errorf("ordre « à droite puis vers le bas » : %v", order)
 	}
-	br, err = SheetPageBreaks(ctx, d.Model, 1)
+	br, err = SheetPageBreaks(ctx, d.Model, 1, PrintSizes{})
 	if err != nil || !reflect.DeepEqual(br.Rows, []int{15}) || !reflect.DeepEqual(br.Cols, []int{1, 2}) || !reflect.DeepEqual(br.ManualCols, []int{1, 2}) || br.Pages != 6 {
 		t.Errorf("sauts : %+v %v", br, err)
 	}
@@ -185,14 +221,9 @@ func TestPrintPageSetup(t *testing.T) {
 		t.Fatal(err)
 	}
 	set(canvas.PageSetup{TitleRows: &canvas.Span{From: 0, To: 0}})
-	br, _ = SheetPageBreaks(ctx, d.Model, 1)
+	br, _ = SheetPageBreaks(ctx, d.Model, 1, PrintSizes{})
 	if len(br.Rows) != 2 || br.Rows[0] < 30 || br.Rows[0] > 45 {
 		t.Errorf("sauts automatiques : %+v", br)
-	}
-	for _, pg := range sections(print()) {
-		if !strings.Contains(pg, ">Produit<") {
-			t.Error("titre non répété")
-		}
 	}
 }
 

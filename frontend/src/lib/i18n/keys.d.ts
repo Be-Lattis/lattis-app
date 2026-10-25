@@ -3719,7 +3719,6 @@ export interface MessageParams {
 	'shell.exportReport.lost.twoLevel': { n: number | string };
 	'shell.exportReport.noticeAll': { path: number | string };
 	'shell.exportReport.noticeLost': { lost: number | string; path: number | string };
-	'shell.exportReport.printCharts': { n: number | string };
 	'shell.exportReport.withFunctions': { functions: number | string; text: number | string };
 	'shell.locked.anyway': Record<never, never>;
 	'shell.locked.coEditHint': Record<never, never>;
@@ -3993,6 +3992,7 @@ export interface MessageParams {
 	'shell.panel.closeAria': Record<never, never>;
 	'shell.panel.closeTooltip': Record<never, never>;
 	'shell.panel.help': Record<never, never>;
+	'shell.print.empty': Record<never, never>;
 	'shell.protect.aria': Record<never, never>;
 	'shell.protect.bookLocked': Record<never, never>;
 	'shell.protect.confirm': Record<never, never>;
@@ -4498,6 +4498,7 @@ export interface MessageParams {
 	'shell.work.op.insertRows': Record<never, never>;
 	'shell.work.op.layout': Record<never, never>;
 	'shell.work.op.load': Record<never, never>;
+	'shell.work.op.print': Record<never, never>;
 	'shell.work.op.publish': { name: number | string };
 	'shell.work.op.query': Record<never, never>;
 	'shell.work.op.redo': Record<never, never>;
@@ -4523,6 +4524,7 @@ export interface MessageParams {
 	'shell.work.phase.keyCheck': Record<never, never>;
 	'shell.work.phase.layout': Record<never, never>;
 	'shell.work.phase.order': Record<never, never>;
+	'shell.work.phase.pages': Record<never, never>;
 	'shell.work.phase.pivot': Record<never, never>;
 	'shell.work.phase.prepare': Record<never, never>;
 	'shell.work.phase.rank': Record<never, never>;

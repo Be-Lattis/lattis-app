@@ -40,12 +40,11 @@ Après une impression ou un changement de mise en page, des pointillés montrent
 
 ## Ce qui s'imprime
 
-Les valeurs telles que la grille les affiche, avec les largeurs de colonnes et les hauteurs de lignes. Les en-têtes de tableaux sont en gras, et les cellules fusionnées le restent. Les lignes et colonnes masquées ne s'impriment pas. Lattis découpe lui-même les pages. Chaque page imprimée a donc la taille du papier choisi, avec ses marges, son en-tête et son pied de page.
+La feuille telle que la grille l'affiche : valeurs et formats de nombre, couleurs, polices, bordures, alignements, renvoi à la ligne, mise en forme conditionnelle (couleurs, barres, icônes), cellules fusionnées, tableaux croisés et graphiques, avec les largeurs de colonnes et les hauteurs de lignes. Les lignes et colonnes masquées ne s'impriment pas. Lattis découpe lui-même les pages : chacune a la taille du papier choisi, avec ses marges, son en-tête et son pied de page. Une grande feuille (100 000 lignes et plus) se prépare page par page, avec l'avancement dans la barre d'état.
 
 Limites :
 
-- La mise en forme des cellules (couleurs, polices, bordures) et les graphiques ne s'impriment pas encore.
-- Au-delà de 5 000 lignes, la fin n'est pas imprimée : filtrez la feuille ou exportez le classeur.
+- Des milliers de pages : la fenêtre d'impression peut mettre du temps à les afficher. Une zone d'impression ou un filtre en réduit le nombre.
 - Dans la fenêtre d'impression, gardez les marges « Par défaut » et l'échelle à 100 %. Sinon les pages préparées par Lattis se décalent.
 - Si la fenêtre propose l'option « En-têtes et pieds de page », laissez-la décochée : elle ajoute ceux du navigateur (date, adresse).
 

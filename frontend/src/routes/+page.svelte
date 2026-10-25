@@ -29,7 +29,7 @@
 	import { tabChoiceNotice } from '#lib/grid/tabchoice.js';
 	import { headerOfferText } from '#lib/grid/titlehead.js';
 	import { popBack, pushBack, type RefSpot } from '#lib/grid/reflink.js';
-	import { printSheet } from '#lib/shell/print.js';
+	import { printSheetPages } from '#lib/print/printsheet.js';
 	import { withSaveProgress } from '#lib/shell/saveprogress.js';
 	import { demoProgressText, firstSteps, guidePage, hideSteps, stepsShown } from '#lib/shell/welcome.js';
 	import WelcomeLanguage from '#lib/shell/WelcomeLanguage.svelte';
@@ -71,7 +71,7 @@
 	import FormDialog from '#lib/remote/FormDialog.svelte';
 	import AboutDialog from '#lib/shell/AboutDialog.svelte';
 	import ExportReportDialog from '#lib/shell/ExportReportDialog.svelte';
-	import { exportNotice, printNotice, type ExportReport } from '#lib/shell/exportReport.js';
+	import { exportNotice, type ExportReport } from '#lib/shell/exportReport.js';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
 	import DemoEnd from '#lib/shell/DemoEnd.svelte';
 	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
@@ -747,7 +747,7 @@
 			return;
 		}
 		let live = true;
-		DocumentService.PageBreaks(id)
+		DocumentService.PageBreaks(id, untrack(() => sheet?.printSizes()) ?? { row: 0, col: 0, rows: [], cols: [] })
 			.then((b) => live && (breaks = b))
 			.catch(() => live && (breaks = null));
 		return () => {
@@ -1649,9 +1649,9 @@
 						break;
 					}
 					const name = layout?.sheets?.find((s) => s.id === sheetId)?.name ?? '';
-					const charts = printNotice(layout?.charts?.length ?? 0);
-					if (charts) notice = charts;
-					printSheet(await DocumentService.PrintHTML(sheetId), `${docState.title} – ${name}`);
+					if (!sheet) return;
+					// Pages écrites par lots, avancement dans la barre d'état.
+					await printSheetPages(sheetId, sheet, `${docState.title} – ${name}`);
 					// Comme Excel : après une impression, la grille montre les sauts de page.
 					showBreaks = true;
 					break;

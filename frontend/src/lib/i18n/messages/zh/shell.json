@@ -326,7 +326,8 @@
 			"load": "正在加载表格",
 			"query": "SQL 查询",
 			"publish": "正在发布 {name}",
-			"republish": "正在重新发布 {name}"
+			"republish": "正在重新发布 {name}",
+			"print": "打印"
 		},
 		"phase": {
 			"keep": "保存撤销副本",
@@ -354,7 +355,8 @@
 			"layout": "发送布局",
 			"finish": "上线",
 			"record": "记录行标识",
-			"save": "保存文件"
+			"save": "保存文件",
+			"pages": "正在准备页面"
 		}
 	},
 	"sync": {
@@ -503,7 +505,6 @@
 			"protected": "工作表保护未导出",
 			"clipped": "{n, plural, other {超出 1,048,576 行 × 16,384 列的 # 个单元格未导出}}"
 		},
-		"printCharts": "{n, plural, other {# 个图表未打印}}",
 		"dialog": {
 			"aria": "导出详细信息",
 			"title": "{format} 导出：详细信息",
@@ -1199,5 +1200,8 @@
 			"policy": "检查已被您的组织关闭",
 			"off": "检查已关闭"
 		}
+	},
+	"print": {
+		"empty": "空工作表。"
 	}
 }
