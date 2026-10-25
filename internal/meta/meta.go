@@ -497,6 +497,27 @@ CREATE TABLE _lattis_format_protection (
 	hash  TEXT NOT NULL
 ) STRICT;
 `,
+	// 35 → 36 : images, formes et zones de texte posées sur une feuille
+	// (canvas/objects.go), ancrées comme les graphiques (configuration JSON :
+	// genre, décalage, taille, couleurs, texte, rang de premier plan) ; les
+	// images elles-mêmes dans _lattis_images, une ligne par contenu
+	// (empreinte SHA-256 : deux objets de la même image la partagent).
+	`
+CREATE TABLE _lattis_objects (
+	id     INTEGER PRIMARY KEY,
+	sheet  INTEGER NOT NULL REFERENCES _lattis_sheets(id),
+	row    INTEGER NOT NULL,
+	col    INTEGER NOT NULL,
+	config TEXT NOT NULL
+) STRICT;
+CREATE TABLE _lattis_images (
+	hash   TEXT NOT NULL PRIMARY KEY, -- SHA-256 du contenu, en hexadécimal
+	type   TEXT NOT NULL,             -- image/png, image/jpeg, image/gif, image/webp
+	width  INTEGER NOT NULL,          -- taille d'origine (px)
+	height INTEGER NOT NULL,
+	data   BLOB NOT NULL
+) STRICT;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

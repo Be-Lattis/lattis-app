@@ -29,7 +29,19 @@ var layoutTables = []string{
 	"_lattis_styles", "_lattis_cell_styles", "_lattis_row_styles", "_lattis_col_styles",
 	"_lattis_row_rules", "_lattis_col_rules", "_lattis_pivots", "_lattis_charts",
 	"_lattis_buttons", "_lattis_pages", "_lattis_range_cells", "_lattis_page_setup",
+	"_lattis_images", "_lattis_objects",
 }
+
+// Images d'un classeur partagé : la mise en page est un seul objet du
+// serveur, renvoyé entier à chaque changement de mise en page. Seules les
+// images qu'un objet cite, de canvas.MaxSharedImageBytes au plus, y vont
+// (une plus lourde, posée avant le partage, reste sur le poste : les autres
+// membres voient son cadre vide) ; dans un classeur déjà partagé, une image
+// plus lourde est refusée à l'insertion (canvas.CreateImage). Une image ne
+// change jamais (clé : son empreinte), la fusion ligne à ligne n'a donc
+// rien à comparer.
+var imagesFilter = ` WHERE length(data) <= ` + strconv.Itoa(canvas.MaxSharedImageBytes) +
+	` AND hash IN (SELECT json_extract(config, '$.image') FROM _lattis_objects)`
 
 // Onglets à choix : _lattis_sheets.choice est publiée sans la valeur
 // choisie (la catégorie seule, publishedChoice), qui reste propre à chaque
@@ -106,7 +118,11 @@ func dumpLayout(ctx context.Context, q txOrDB, format int, published map[int64]b
 		for i := range cols {
 			order[i] = strconv.Itoa(i + 1)
 		}
-		rs, err := q.QueryContext(ctx, `SELECT `+quoteCols(cols)+` FROM `+name+` ORDER BY `+strings.Join(order, ", "))
+		filter := ""
+		if name == "_lattis_images" {
+			filter, order = imagesFilter, order[:1]
+		}
+		rs, err := q.QueryContext(ctx, `SELECT `+quoteCols(cols)+` FROM `+name+filter+` ORDER BY `+strings.Join(order, ", "))
 		if err != nil {
 			return nil, err
 		}

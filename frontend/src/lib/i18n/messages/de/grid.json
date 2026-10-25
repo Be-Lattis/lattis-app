@@ -1608,5 +1608,44 @@
 			"dotted": "Gepunktet",
 			"dashed": "Gestrichelt"
 		}
+	},
+	"objects": {
+		"kind": {
+			"image": "Bild",
+			"rect": "Rechteck",
+			"roundRect": "Abgerundetes Rechteck",
+			"ellipse": "Ellipse",
+			"triangle": "Dreieck",
+			"line": "Linie",
+			"arrow": "Pfeil",
+			"text": "Textfeld"
+		},
+		"duplicate": "Duplizieren",
+		"front": "In den Vordergrund",
+		"back": "In den Hintergrund",
+		"editText": "Text bearbeiten",
+		"originalSize": "Originalgröße",
+		"fill": "Füllung",
+		"line": "Kontur",
+		"noFill": "Keine Füllung",
+		"noLine": "Keine Kontur",
+		"lineWidth": "Linienstärke",
+		"transparency": "Transparenz",
+		"textColor": "Textfarbe",
+		"textSize": "Textgröße",
+		"alignLeft": "Linksbündig",
+		"alignCenter": "Zentrieren",
+		"alignRight": "Rechtsbündig",
+		"toolbar": "Objektformat",
+		"copied": "Objekt kopiert",
+		"pasted": "Objekt eingefügt",
+		"paste": "Objekt einfügen",
+		"reduced": "Bild auf {w} × {h} Pixel verkleinert",
+		"missing": "Bild auf diesem Computer nicht vorhanden",
+		"error": {
+			"type": "Bild abgelehnt: nur PNG, JPEG, GIF, WebP oder SVG",
+			"tooLarge": "Bild zu groß: höchstens 10 MB",
+			"unreadable": "Unlesbares Bild"
+		}
 	}
 }

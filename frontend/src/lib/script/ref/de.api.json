@@ -289,6 +289,21 @@
 		"summary": "Sendet eine beliebige HTTP-Anfrage (GET, POST, PUT, PATCH, DELETE…) und gibt die Antwort zurück.",
 		"details": "json kodiert eine Tabelle als JSON-Inhalt (mit dem passenden Content-Type-Header); body sendet einen Text unverändert. Die Antwort: status (200, 404…), ok (true bei einem Status 2xx), url (endgültige Adresse nach den Weiterleitungen), headers (Namen in Kleinbuchstaben), body (Text) und json (der dekodierte Inhalt, wenn die Antwort JSON ist). Ein Fehlerstatus (404, 500…) ist kein Lua-Fehler: ok prüfen; ein Netzwerkausfall oder eine Zeitüberschreitung ist einer (pcall fängt ihn ab). Vor der ersten Anfrage an einen Host fragt Lattis den Benutzer um Erlaubnis (für die Arbeitsmappe speicherbar; Registerkarte Skript › Netzwerkzugriff, um sie zu prüfen); der MCP-Server erreicht nur bereits erlaubte Hosts. Zeitlimit: standardmäßig 15 s (timeout, höchstens 120 s), nicht auf die maximale Laufzeit des Skripts angerechnet; Antwort von höchstens 10 MB; höchstens 10 Weiterleitungen; die Schaltfläche Anhalten bricht die Anfrage ab. Parameter — url: Adresse (http:// oder https://); method: Methode (standardmäßig GET); headers: Header: {Name = Wert}; body: Inhalt der Anfrage (Text); json: Inhalt der Anfrage: als JSON kodierte Tabelle; timeout: Zeitlimit in Sekunden (standardmäßig 15, höchstens 120). Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: http.request{url = …}."
 	},
+	"objects.create": {
+		"signature": "objects.create(row, col, config, [sheet])",
+		"summary": "Platziert eine Form, ein Textfeld oder ein Bild auf einem Blatt, obere linke Ecke bei row, col, und gibt seine Kennung zurück.",
+		"details": "config: {kind, width, height, offX, offY, name, fill, line, lineWidth, transparency, text, bold, italic, size, color, align, valign, flipH, flipV, data, image}. kind: \"rect\", \"roundRect\" (abgerundetes Rechteck), \"ellipse\", \"triangle\", \"line\", \"arrow\" (Pfeil), \"text\" (Textfeld) oder \"image\". width, height: Größe in Pixeln (standardmäßig je nach Art; ein Bild behält seine Proportionen, höchstens 480 Pixel breit); offX, offY: Versatz in der Ankerzelle. fill und line: Farben der Füllung und der Kontur (\"#rrggbb\", \"\": keine); lineWidth: Stärke der Kontur (Pixel); transparency: Transparenz der Füllung (0 bis 100). text: Text der Form oder des Textfelds, formatiert durch bold, italic, size (Punkt), color, align (\"left\", \"center\", \"right\") und valign (\"top\", \"middle\", \"bottom\"). flipH, flipV: Richtung einer Linie oder eines Pfeils (standardmäßig von der oberen linken zur unteren rechten Ecke, die Spitze am Ende). Ein Bild wird durch data (PNG-, JPEG-, GIF- oder WebP-Inhalt in Base64, höchstens 10 MB) oder durch image (Hash eines Bildes, das schon in der Arbeitsmappe ist, siehe objects.list) angegeben. Parameter — row: Zeile des Blatts, ab 1; col: Spalte des Blatts, ab 1; config: Art und Formatierung des Objekts; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: objects.create{row = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"objects.delete": {
+		"signature": "objects.delete(object)",
+		"summary": "Löscht ein Bild, eine Form oder ein Textfeld.",
+		"details": "Parameter — object: Objekt (Kennung oder Name). Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
+	"objects.list": {
+		"signature": "objects.list([sheet]) → { {id, kind, name, row, col, offX, offY, width, height, text, image}, ... }",
+		"summary": "Listet die Bilder, Formen und Textfelder eines Blatts auf, vom Hintergrund zum Vordergrund.",
+		"details": "Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt."
+	},
 	"pages.add": {
 		"signature": "pages.add([name], [source], [before], [kind]) → {id, name, kind}",
 		"summary": "Fügt eine Webseite (HTML, CSS und JavaScript in einem isolierten Rahmen) oder ein Dokument (kind = \"doc\": formatierter Text) hinzu und gibt {id, name, kind} zurück.",

@@ -6,7 +6,7 @@
 
 export const OBJ_CLIP = '⁣lattis-';
 
-export type ObjKind = 'chart' | 'pivot';
+export type ObjKind = 'chart' | 'pivot' | 'shape';
 export interface ObjClip {
 	kind: ObjKind;
 	config: Record<string, unknown>;
@@ -23,7 +23,7 @@ export function decodeObj(text: string): ObjClip | null {
 	const rest = text.slice(OBJ_CLIP.length);
 	const i = rest.indexOf(':');
 	const kind = rest.slice(0, i);
-	if (kind !== 'chart' && kind !== 'pivot') return null;
+	if (kind !== 'chart' && kind !== 'pivot' && kind !== 'shape') return null;
 	try {
 		const config = JSON.parse(rest.slice(i + 1));
 		return config && typeof config === 'object' ? { kind, config } : null;

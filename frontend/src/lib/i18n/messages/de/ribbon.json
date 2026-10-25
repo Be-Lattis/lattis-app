@@ -120,7 +120,8 @@
 		"paragraph": "Absatz",
 		"print": "Drucken",
 		"links": "Links",
-		"printing": "Drucken"
+		"printing": "Drucken",
+		"illustrations": "Illustrationen"
 	},
 	"launch": {
 		"font": "Zellen formatieren: Schrift (Strg+1)",
@@ -672,6 +673,18 @@
 			"lineStyle": "Linienart",
 			"lineColor": "Linienfarbe",
 			"more": "Weitere Rahmenlinien…"
+		},
+		"picture": {
+			"label": "Bild",
+			"tooltip": "Bild aus einer Datei (oder einfügen: Strg+V)"
+		},
+		"shapes": {
+			"label": "Formen",
+			"tooltip": "Rechteck, Ellipse, Pfeil…"
+		},
+		"textBox": {
+			"label": "Textfeld",
+			"tooltip": "Freier Text auf dem Blatt"
 		}
 	},
 	"protect": {

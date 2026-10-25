@@ -45,3 +45,7 @@ Hovering over a point shows its name, its color and its value. Once the map is s
 ## Copy a chart {#copier-un-graphique}
 
 A copied chart can be pasted on another sheet or in a [document](onglets), where it stays connected to its data.
+
+## Pictures, shapes and text boxes {#images-formes-et-zones-de-texte}
+
+Insert › **Picture** (or Ctrl+V of a copied image), **Shapes** or **Text Box**: the object is placed at the active cell and moves with its rows and columns. Drag it to move it, pull its handles to resize it (a picture keeps its proportions; Shift frees them), double-click a shape to type text in it. The bar above the object sets the colors, the line, the transparency and the text; Delete removes it, Ctrl+D duplicates it. A very large picture is reduced when inserted; 10 MB at most (1 MB in a shared workbook).

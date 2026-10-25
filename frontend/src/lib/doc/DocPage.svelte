@@ -582,7 +582,7 @@
 	 */
 	function pasteObject(text: string, at: { index: number; length: number }): boolean {
 		const o = objFromText(text);
-		if (!o || !quill || !guard()) return false;
+		if (!o || o.kind === 'shape' || !quill || !guard()) return false; // forme : propre aux feuilles
 		// Place sur la feuille et nom du TCD : propres à la feuille.
 		const config = { ...o.config };
 		for (const k of ['offX', 'offY', 'name']) delete config[k];
@@ -596,7 +596,8 @@
 
 	function onPaste(e: ClipboardEvent) {
 		const text = e.clipboardData?.getData('text/plain') ?? '';
-		if (!objFromText(text)) return;
+		const o = objFromText(text);
+		if (!o || o.kind === 'shape') return;
 		e.preventDefault();
 		e.stopPropagation();
 		pasteObject(text, range()!);
@@ -608,7 +609,7 @@
 		if ((e.target as HTMLElement | null)?.closest?.('input, textarea, select')) return;
 		if (!panel || (panel.kind !== 'chart' && panel.kind !== 'pivot')) return;
 		const o = objAt(panel.index);
-		if (!o) return;
+		if (!o || o.kind === 'shape') return;
 		e.preventDefault();
 		e.clipboardData?.setData('text/plain', encodeObj(o));
 		docClip.item = clip = { type: BLOT[o.kind], value: o.config };

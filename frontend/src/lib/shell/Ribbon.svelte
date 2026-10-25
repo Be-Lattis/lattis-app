@@ -36,6 +36,7 @@
 	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
 	import { cm, FIT_CHOICES, fitLabel, fitted, hasBreaks, marginLabel, MARGINS, marginPreset, PAPERS, paperOf, SCALE_CHOICES, scaleLabel, type PageAction, type PageSetup } from './pagesetup';
 	import { lang, t, tAny } from '#lib/i18n/index.js';
+	import { SHAPES, type ObjectKind } from '#lib/grid/objects.js';
 	import frRibbon from '#lib/i18n/messages/fr/ribbon.json';
 
 	export type View = 'grid' | 'sql' | 'script';
@@ -194,6 +195,8 @@
 		docState?: { block: string; align: string; strike: boolean; link: boolean; undo?: boolean; redo?: boolean };
 		/** Insertion › Bouton : bouton d'action lié à un script. */
 		onbutton?: (kind?: '' | 'checkbox' | 'select' | 'input' | 'textarea' | 'file') => void;
+		/** Insertion › Image, Formes, Zone de texte (objets posés sur la feuille). */
+		onobject?: (kind: ObjectKind) => void;
 		/** Feuille active protégée : les commandes qui la modifient sont grisées. */
 		sheetProtected?: boolean;
 		/** La feuille active elle-même est protégée (sheetProtected : verrouillée, par elle ou par le classeur). */
@@ -258,7 +261,7 @@
 		ontheme?: (id: string) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -648,6 +651,21 @@
 						hint: k === 'bar' ? t('ribbon.cmd.chart.tooltipBar', { chart: kindInfo(k)!.label }) : t('ribbon.cmd.chart.tooltip', { chart: kindInfo(k)!.label })
 					})),
 					{ label: t('ribbon.cmd.moreCharts.label'), icon: 'chart-more', run: onchart ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, icon: k.icon, run: onchart ? () => onchart(k.kind) : undefined })) }
+				])
+			},
+			{
+				id: 'illustrations',
+				title: t('ribbon.group.illustrations'),
+				commands: local([
+					{ label: t('ribbon.cmd.picture.label'), icon: 'image', run: onobject ? () => onobject('image') : undefined, hint: t('ribbon.cmd.picture.tooltip') },
+					{
+						label: t('ribbon.cmd.shapes.label'),
+						icon: 'shapes',
+						run: onobject ? openItems : undefined,
+						hint: t('ribbon.cmd.shapes.tooltip'),
+						items: SHAPES.map((k) => ({ label: tAny(`grid.objects.kind.${k}`), run: onobject ? () => onobject(k) : undefined }))
+					},
+					{ label: t('ribbon.cmd.textBox.label'), icon: 'text-box', run: onobject ? () => onobject('text') : undefined, hint: t('ribbon.cmd.textBox.tooltip') }
 				])
 			},
 			{

@@ -120,7 +120,8 @@
 		"paragraph": "Paragraphe",
 		"print": "Imprimer",
 		"links": "Liens",
-		"printing": "Impression"
+		"printing": "Impression",
+		"illustrations": "Illustrations"
 	},
 	"launch": {
 		"font": "Format de cellule : police (Ctrl+1)",
@@ -672,6 +673,18 @@
 			"lineStyle": "Style de trait",
 			"lineColor": "Couleur de trait",
 			"more": "Autres bordures…"
+		},
+		"picture": {
+			"label": "Image",
+			"tooltip": "Image d'un fichier (ou collez-la : Ctrl+V)"
+		},
+		"shapes": {
+			"label": "Formes",
+			"tooltip": "Rectangle, ellipse, flèche…"
+		},
+		"textBox": {
+			"label": "Zone de texte",
+			"tooltip": "Texte libre posé sur la feuille"
 		}
 	},
 	"protect": {

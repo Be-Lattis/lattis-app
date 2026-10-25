@@ -120,7 +120,8 @@
 		"paragraph": "Paragraph",
 		"print": "Print",
 		"links": "Links",
-		"printing": "Printing"
+		"printing": "Printing",
+		"illustrations": "Illustrations"
 	},
 	"launch": {
 		"font": "Format cells: font (Ctrl+1)",
@@ -672,6 +673,18 @@
 			"lineStyle": "Line style",
 			"lineColor": "Line color",
 			"more": "More borders…"
+		},
+		"picture": {
+			"label": "Picture",
+			"tooltip": "Picture from a file (or paste it: Ctrl+V)"
+		},
+		"shapes": {
+			"label": "Shapes",
+			"tooltip": "Rectangle, oval, arrow…"
+		},
+		"textBox": {
+			"label": "Text Box",
+			"tooltip": "Free text placed on the sheet"
 		}
 	},
 	"protect": {

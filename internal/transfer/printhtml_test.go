@@ -95,6 +95,16 @@ func TestPrintPlanCharts(t *testing.T) {
 	if plan.Area.R1 != 5+13 || plan.Area.C1 != 4 {
 		t.Errorf("zone avec le graphique : %+v", plan.Area)
 	}
+	// Une zone de texte plus loin agrandit la zone imprimée : 160 × 60 px depuis H30.
+	if _, err := d.CreateObject(ctx, 1, 29, 7, canvas.ObjectConfig{Kind: canvas.ObjText, Text: "Note"}); err != nil {
+		t.Fatal(err)
+	}
+	if plan, err = SheetPrintPlan(ctx, d.Model, 1, PrintSizes{}, PrintInfo{}); err != nil {
+		t.Fatal(err)
+	}
+	if plan.Area.R1 != 29+2 || plan.Area.C1 != 8 {
+		t.Errorf("zone avec la zone de texte : %+v", plan.Area)
+	}
 }
 
 // Aucune limite de lignes : 100 000 lignes se découpent sans être lues.

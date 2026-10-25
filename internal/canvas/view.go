@@ -183,6 +183,8 @@ type Layout struct {
 	Pivots    []PivotInfo  `json:"pivots"`  // tableaux croisés, calculés
 	Charts    []ChartInfo  `json:"charts"`  // graphiques, avec leurs données
 	Buttons   []ButtonInfo `json:"buttons"` // boutons d'action
+	// Images, formes et zones de texte, du fond vers le premier plan.
+	Objects []ObjectInfo `json:"objects"`
 	// Ranges : zones « plage » (tableaux convertis), en rectangles.
 	Ranges []Rect `json:"ranges"`
 	// Structure du classeur protégée (onglets), avec ou sans mot de passe.
@@ -471,6 +473,9 @@ func (m *Model) layout(ctx context.Context, sheet int64, later bool) (Layout, er
 			l.Pending = l.Pending || c.Pending
 		}
 		if l.Buttons, err = t.buttons(sheet); err != nil {
+			return err
+		}
+		if l.Objects, err = t.objects(sheet); err != nil {
 			return err
 		}
 		marks, err := t.rangeMarks(sheet)

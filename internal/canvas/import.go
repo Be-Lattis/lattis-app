@@ -65,6 +65,8 @@ type ImportSheet struct {
 	Cells  []ImportCell
 	Page   *PageSetup // mise en page (nil : par défaut)
 	Links  []ImportLink
+	// Objects : images et formes posées sur la feuille (fichier .xlsx).
+	Objects []ImportObject
 }
 
 // ImportLink est le lien hypertexte d'une cellule importée (adresse sous
@@ -72,6 +74,13 @@ type ImportSheet struct {
 type ImportLink struct {
 	Row, Col int
 	Target   string
+}
+
+// ImportObject est une image (Data : son contenu) ou une forme à poser.
+type ImportObject struct {
+	Row, Col int
+	Config   ObjectConfig
+	Data     []byte
 }
 
 // ImportResult décrit ce qu'Import a créé.
@@ -212,6 +221,33 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 				}
 			}
 		}
+		// Images et formes : une image illisible ou refusée est passée.
+		for si, s := range sheets {
+			for _, o := range s.Objects {
+				cfg := o.Config
+				if o.Data != nil {
+					info, err := checkImage(o.Data)
+					if err != nil {
+						continue
+					}
+					if _, err := t.Exec(`INSERT OR IGNORE INTO _lattis_images (hash, type, width, height, data) VALUES (?, ?, ?, ?, ?)`, info.Hash, info.Type, info.Width, info.Height, o.Data); err != nil {
+						return err
+					}
+					cfg.Kind, cfg.Image = ObjImage, info.Hash
+					if cfg.Width <= 0 || cfg.Height <= 0 {
+						cfg.Width, cfg.Height = FitImage(info.Width, info.Height, DefaultImageWidth)
+					}
+				} else {
+					cfg.Defaults()
+				}
+				if cfg.check() != nil {
+					continue
+				}
+				if _, err := t.insertObject(res.Sheets[si], max(0, o.Row), max(0, o.Col), cfg); err != nil {
+					return err
+				}
+			}
+		}
 		if len(res.Sheets) > 0 {
 			for _, id := range blank {
 				if err := t.dropBlankSheet(id); err != nil {
@@ -230,7 +266,7 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 func (t *tx) untouchedSheets() ([]int64, error) {
 	var used int
 	q := `SELECT (SELECT count(*) FROM _lattis_tables) + (SELECT count(*) FROM _lattis_cells) + (SELECT count(*) FROM _lattis_pivots)
-		+ (SELECT count(*) FROM _lattis_charts) + (SELECT count(*) FROM _lattis_buttons) + (SELECT count(*) FROM _lattis_protection) + (SELECT count(*) FROM _lattis_format_protection)`
+		+ (SELECT count(*) FROM _lattis_charts) + (SELECT count(*) FROM _lattis_buttons) + (SELECT count(*) FROM _lattis_objects) + (SELECT count(*) FROM _lattis_protection) + (SELECT count(*) FROM _lattis_format_protection)`
 	for _, tbl := range sheetPositioned {
 		q += ` + (SELECT count(*) FROM ` + tbl + `)`
 	}

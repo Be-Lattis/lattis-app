@@ -45,3 +45,7 @@ Le survol d'un point affiche son nom, sa couleur et sa valeur. Une fois la carte
 ## Copier un graphique
 
 Un graphique copié se colle sur une autre feuille ou dans un [document](onglets), où il reste branché sur ses données.
+
+## Images, formes et zones de texte
+
+Insertion › **Image** (ou Ctrl+V d'une image copiée), **Formes** ou **Zone de texte** : l'objet se pose à la cellule active et suit ses lignes et colonnes. Glissez-le pour le déplacer, tirez ses poignées pour le redimensionner (une image garde ses proportions ; Maj pour les libérer), double-cliquez une forme pour y taper du texte. La barre au-dessus de l'objet règle les couleurs, le trait, la transparence et le texte ; Suppr supprime, Ctrl+D duplique. Une image très grande est réduite à l'insertion ; 10 Mo au plus (1 Mo dans un classeur partagé).

@@ -43,6 +43,8 @@ type xlsxFile struct {
 	mu     sync.Mutex
 	extras map[string][2]int
 	links  map[string][]xlsxLink // par feuille lue jusqu'au bout (xlsxlinks.go)
+	// pics : images lues dans les parties de dessin (xlsxdrawing.go).
+	pics int
 }
 
 type dateKind uint8

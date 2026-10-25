@@ -40,6 +40,7 @@ func ImportXLSX(ctx context.Context, m *canvas.Model, path string) (canvas.Impor
 	if err != nil {
 		return canvas.ImportResult{}, err
 	}
+	x.pics = x.readDrawings(sheets)
 	res, err := m.Import(ctx, "Importer "+filepath.Base(path), sheets)
 	res.Warnings = slices.Concat(x.lost(), warnings, res.Warnings)
 	return res, err
@@ -80,7 +81,8 @@ func (x *xlsxFile) lost() []string {
 	if notes > 0 {
 		say("import.xlsx.comments", msg.Args{"n": notes})
 	}
-	if images > 0 {
+	// Images reprises (parties de dessin) : seules les autres sont perdues.
+	if images -= x.pics; images > 0 {
 		say("import.xlsx.images", msg.Args{"n": images})
 	}
 	for _, sh := range x.sheets {

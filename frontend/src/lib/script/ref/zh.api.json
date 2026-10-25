@@ -289,6 +289,21 @@
 		"summary": "发送任意 HTTP 请求（GET、POST、PUT、PATCH、DELETE…）并返回响应。",
 		"details": "json 将表编码为 JSON 正文（并带上相应的 Content-Type 标头）；body 按原样发送文本。响应：status（200、404…）、ok（状态为 2xx 时为 true）、url（重定向后的最终地址）、headers（名称为小写）、body（文本）和 json（响应为 JSON 时解码后的正文）。错误状态（404、500…）不是 Lua 错误：请检查 ok；网络故障或超时才是错误（用 pcall 捕获）。首次向某个主机发送请求前，Lattis 会征求用户许可（可为该工作簿记住；在“脚本”标签 › 网络访问中查看）；MCP 服务器只能访问已获许可的主机。超时：默认 15 秒（timeout，最多 120 秒），不计入脚本的最长运行时间；响应最大 10 MB；最多 10 次重定向；“停止”按钮会中断请求。参数 — url：地址（http:// 或 https://）；method：方法（默认 GET）；headers：标头：{名称 = 值}；body：请求正文（文本）；json：请求正文：编码为 JSON 的表；timeout：超时秒数（默认 15，最多 120）。可按顺序传参，或使用命名参数表：http.request{url = …}。"
 	},
+	"objects.create": {
+		"signature": "objects.create(row, col, config, [sheet])",
+		"summary": "在工作表上放置形状、文本框或图像，左上角位于 row, col，返回其标识符。",
+		"details": "config：{kind, width, height, offX, offY, name, fill, line, lineWidth, transparency, text, bold, italic, size, color, align, valign, flipH, flipV, data, image}。kind：\"rect\"、\"roundRect\"（圆角矩形）、\"ellipse\"、\"triangle\"、\"line\"、\"arrow\"（箭头）、\"text\"（文本框）或 \"image\"。width、height：以像素计的大小（默认取决于类型；图像保持比例，宽度最多 480 像素）；offX、offY：在锚定单元格内的偏移。fill 和 line：填充和轮廓的颜色（\"#rrggbb\"，\"\" 表示无）；lineWidth：轮廓粗细（像素）；transparency：填充的透明度（0 到 100）。text：形状或文本框中的文字，格式由 bold、italic、size（磅）、color、align（\"left\"、\"center\"、\"right\"）和 valign（\"top\"、\"middle\"、\"bottom\"）设定。flipH、flipV：线条或箭头的方向（默认从左上角到右下角，箭头在末端）。图像由 data（base64 编码的 PNG、JPEG、GIF 或 WebP 内容，最多 10 MB）或 image（工作簿中已有图像的哈希值，见 objects.list）给出。参数 — row：工作表的行，从 1 开始；col：工作表的列，从 1 开始；config：对象的类型和格式；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：objects.create{row = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"objects.delete": {
+		"signature": "objects.delete(object)",
+		"summary": "删除图像、形状或文本框。",
+		"details": "参数 — object：对象（标识符或名称）。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
+	"objects.list": {
+		"signature": "objects.list([sheet]) → { {id, kind, name, row, col, offX, offY, width, height, text, image}, ... }",
+		"summary": "列出工作表中的图像、形状和文本框，从底层到顶层。",
+		"details": "参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表。"
+	},
 	"pages.add": {
 		"signature": "pages.add([name], [source], [before], [kind]) → {id, name, kind}",
 		"summary": "添加一个网页（在隔离框架中显示的 HTML、CSS 和 JavaScript）或一个文档（kind = \"doc\"：富文本），并返回 {id, name, kind}。",

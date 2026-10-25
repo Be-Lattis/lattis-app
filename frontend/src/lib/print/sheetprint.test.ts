@@ -157,6 +157,13 @@ describe('impression d’une feuille', () => {
 		expect(pages[1]).toContain('class="lp-chart" style="left:110px;top:-193px');
 	});
 
+	it('imprime les images, formes et zones de texte sans fond', async () => {
+		const shape = { row: 0, col: 0, x: 4, y: 2, w: 120, h: 0, html: '<div class="obj line"></div>', plain: true };
+		const { src } = source({ '0,0': { text: 'a' } }, { charts: [shape] });
+		const html = await printHtml(plan([[0, 9]], [[0, 3]]), src);
+		expect(html).toContain('<div class="lp-chart lp-plain" style="left:4px;top:2px;width:120px;height:0px"><div class="obj line"></div></div>');
+	});
+
 	it('imprime une feuille vide', async () => {
 		const { src } = source({});
 		const html = await printHtml({ ...plan([[0, 0]], [[0, 0]]), empty: true, pages: [] }, src, { empty: 'Feuille vide.' });

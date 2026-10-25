@@ -816,6 +816,11 @@ export interface Layout {
     "buttons": ButtonInfo[] | null;
 
     /**
+     * Images, formes et zones de texte, du fond vers le premier plan.
+     */
+    "objects": ObjectInfo[] | null;
+
+    /**
      * Ranges : zones « plage » (tableaux convertis), en rectangles.
      */
     "ranges": Rect[] | null;
@@ -1207,6 +1212,99 @@ export interface NameInfo {
     "name": string;
     "row": number;
     "col": number;
+}
+
+/**
+ * ObjectConfig est la configuration d'un objet (JSON de _lattis_objects).
+ */
+export interface ObjectConfig {
+    /**
+     * Kind : image, rect, roundRect, ellipse, line, arrow, triangle, text.
+     */
+    "kind": string;
+
+    /**
+     * Name : nom donné par un script (facultatif).
+     */
+    "name"?: string;
+
+    /**
+     * Image : empreinte de l'image (_lattis_images) ; Alt : texte de
+     * remplacement (nom du fichier d'origine).
+     */
+    "image"?: string;
+    "alt"?: string;
+
+    /**
+     * Décalage dans la cellule d'ancrage et taille (px).
+     */
+    "offX"?: number;
+    "offY"?: number;
+    "width": number;
+    "height": number;
+
+    /**
+     * Z : rang de premier plan (le plus grand devant).
+     */
+    "z"?: number;
+
+    /**
+     * Fill et Line : couleurs « #rrggbb » du fond et du contour ; vide :
+     * aucun. LineWidth : épaisseur du contour (px).
+     */
+    "fill"?: string;
+    "line"?: string;
+    "lineWidth"?: number;
+
+    /**
+     * Transparency : transparence du fond, de 0 (opaque) à 100 %.
+     */
+    "transparency"?: number;
+
+    /**
+     * FlipH, FlipV : sens d'une ligne ou d'une flèche (par défaut du coin
+     * haut gauche vers le coin bas droit, la pointe au bout).
+     */
+    "flipH"?: boolean;
+    "flipV"?: boolean;
+
+    /**
+     * Texte d'une forme ou d'une zone de texte, et sa mise en forme.
+     */
+    "text"?: string;
+    "bold"?: boolean;
+    "italic"?: boolean;
+
+    /**
+     * points ; 0 : 11
+     */
+    "size"?: number;
+
+    /**
+     * « #rrggbb » ; vide : noir
+     */
+    "color"?: string;
+
+    /**
+     * left, center, right
+     */
+    "align"?: string;
+
+    /**
+     * top, middle, bottom
+     */
+    "valign"?: string;
+}
+
+/**
+ * ObjectInfo décrit un objet posé sur une feuille.
+ */
+export interface ObjectInfo {
+    "id": number;
+    "sheet"?: number;
+    "row": number;
+    "col": number;
+    "config": ObjectConfig;
 }
 
 /**

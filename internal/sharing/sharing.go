@@ -54,7 +54,7 @@ const (
 var Structure = []string{
 	// Lecture de la structure.
 	"sheets.list", "sheets.page_setup", "help.search", "tables.list", "tables.get", "formulas.functions", "queries.list", "connections.list",
-	"columns.type_preview", "columns.type_mix", "tables.key_check", "tables.indexes", "buttons.list",
+	"columns.type_preview", "columns.type_mix", "tables.key_check", "tables.indexes", "buttons.list", "objects.list",
 	// Disposition des feuilles (où sont tableaux, TCD, graphiques, cellules
 	// libres) ; hors partage complet, sans les valeurs (Filter).
 	"sheets.get",

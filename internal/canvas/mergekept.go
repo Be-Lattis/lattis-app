@@ -52,6 +52,7 @@ func (t *tx) keptSheets(tables []Table, gone map[int64]bool) ([]string, error) {
 			{`_lattis_pivots`, "mergeSheets.keptPivots"},
 			{`_lattis_charts`, "mergeSheets.keptCharts"},
 			{`_lattis_buttons`, "mergeSheets.keptButtons"},
+			{`_lattis_objects`, "mergeSheets.keptObjects"},
 		} {
 			var n int
 			if err := t.row(`SELECT count(*) FROM `+o.table+` WHERE sheet = ?`, tb.Sheet).Scan(&n); err != nil {

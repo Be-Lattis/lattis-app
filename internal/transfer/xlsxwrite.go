@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -110,6 +111,18 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 			fmt.Fprintf(&types, `<Override PartName="/xl/tables/table%d.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/>`, t.id)
 		}
 	}
+	// Dessins (images, formes) : une partie par feuille qui en a.
+	md := &xlsxMedia{names: map[string]string{}, exts: map[string]string{}}
+	drawings := make([][2]string, len(sheets))
+	for i := range sheets {
+		if d, r := drawingXML(&sheets[i], md); d != "" {
+			drawings[i] = [2]string{d, r}
+			fmt.Fprintf(&types, `<Override PartName="/xl/drawings/drawing%d.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`, i+1)
+		}
+	}
+	for _, ext := range slices.Sorted(maps.Keys(md.exts)) {
+		fmt.Fprintf(&types, `<Default Extension="%s" ContentType="%s"/>`, ext, md.exts[ext])
+	}
 	types.WriteString(`</Types>`)
 	// Excel recalcule à l'ouverture : les valeurs écrites ne servent qu'en
 	// attendant (et aux lecteurs qui ne calculent pas).
@@ -131,11 +144,15 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 		if err != nil {
 			return err
 		}
-		urls, err := writeSheet(ctx, f, &sheets[i], i == active, tables[i], fm)
+		drawing := ""
+		if drawings[i][0] != "" {
+			drawing = "rDrawing1" // identifiant à part : les liens suivent les tableaux (rIdN)
+		}
+		urls, err := writeSheet(ctx, f, &sheets[i], i == active, tables[i], fm, drawing)
 		if err != nil {
 			return err
 		}
-		if len(tables[i]) == 0 && len(urls) == 0 {
+		if len(tables[i]) == 0 && len(urls) == 0 && drawing == "" {
 			continue
 		}
 		var r strings.Builder
@@ -151,8 +168,26 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 		for k, u := range urls {
 			fmt.Fprintf(&r, `<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="%s" TargetMode="External"/>`, len(tables[i])+k+1, xmlEscape(u))
 		}
+		if drawing != "" {
+			fmt.Fprintf(&r, `<Relationship Id="%s" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing%d.xml"/>`, drawing, i+1)
+			if err := file(fmt.Sprintf("xl/drawings/drawing%d.xml", i+1), drawings[i][0]); err != nil {
+				return err
+			}
+			if err := file(fmt.Sprintf("xl/drawings/_rels/drawing%d.xml.rels", i+1), drawings[i][1]); err != nil {
+				return err
+			}
+		}
 		r.WriteString(`</Relationships>`)
 		if err := file(fmt.Sprintf("xl/worksheets/_rels/sheet%d.xml.rels", i+1), r.String()); err != nil {
+			return err
+		}
+	}
+	for _, mf := range md.files {
+		w, err := zw.CreateHeader(&zip.FileHeader{Name: "xl/media/" + mf.name, Method: zip.Store})
+		if err != nil {
+			return err
+		}
+		if _, err := w.Write(mf.data); err != nil {
 			return err
 		}
 	}
@@ -192,8 +227,9 @@ func pxWidth(px int) string {
 const defaultColPx = 100
 
 // writeSheet écrit une feuille ; rend les adresses de ses liens vers
-// l'extérieur (relations après celles des tableaux).
-func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables []xlsxTable, fm *fmts) ([]string, error) {
+// l'extérieur (relations après celles des tableaux). drawing : relation
+// de sa partie de dessin (images, formes), "" sans.
+func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables []xlsxTable, fm *fmts, drawing string) ([]string, error) {
 	var links []xlsxHyperlink
 	bw := bufio.NewWriterSize(w, 64<<10)
 	keys := s.sortedKeys()
@@ -291,6 +327,9 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 	}
 	urls := writeHyperlinks(bw, links, len(tables)+1)
 	bw.WriteString(xlsxPageXML(s.page))
+	if drawing != "" {
+		fmt.Fprintf(bw, `<drawing r:id="%s"/>`, drawing)
+	}
 	if len(tables) > 0 {
 		fmt.Fprintf(bw, `<tableParts count="%d">`, len(tables))
 		for k := range tables {

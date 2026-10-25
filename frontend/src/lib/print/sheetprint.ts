@@ -54,6 +54,8 @@ export interface PrintChart {
 	h: number;
 	/** Son dessin (SVG de la grille). */
 	html: string;
+	/** Image, forme ou zone de texte (SheetObjects) : sans fond blanc, le trait d'une ligne peut déborder de sa boîte. */
+	plain?: boolean;
 }
 
 /** Ce que la grille donne à imprimer. */
@@ -112,7 +114,8 @@ export function pageCss(plan: PrintPlan): string {
 		`#lattis-print .lp-txt { position: relative; }` +
 		`#lattis-print .lp-objs { position: absolute; overflow: hidden; }` +
 		`#lattis-print .lp-chart { position: absolute; overflow: hidden; background: #fff; }` +
-		`#lattis-print .lp-chart svg { display: block; }`
+		`#lattis-print .lp-chart svg { display: block; }` +
+		`#lattis-print .lp-chart.lp-plain { background: none; overflow: visible; }`
 	);
 }
 
@@ -318,7 +321,7 @@ export async function* printChunks(plan: PrintPlan, src: PrintSource, opts: Prin
 			const x = cax.offset(ch.col) + ch.x - x0;
 			const y = rax.offset(ch.row) + ch.y - y0;
 			if (x >= bw || y >= bh || x + ch.w <= 0 || y + ch.h <= 0) continue;
-			s += `<div class="lp-chart" style="left:${x}px;top:${y}px;width:${ch.w}px;height:${ch.h}px">${ch.html}</div>`;
+			s += `<div class="lp-chart${ch.plain ? ' lp-plain' : ''}" style="left:${x}px;top:${y}px;width:${ch.w}px;height:${ch.h}px">${ch.html}</div>`;
 		}
 		return s ? `<div class="lp-objs" style="left:${tw}px;top:${th}px;width:${bw}px;height:${bh}px">${s}</div>` : '';
 	}

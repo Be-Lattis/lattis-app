@@ -45,6 +45,11 @@ export const icons = {
 	'code-block': '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path class="a" d="M9.5 9.5 7 12l2.5 2.5M14.5 9.5 17 12l-2.5 2.5"/>',
 	link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path class="a" d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
 	image: '<rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle class="af" cx="9" cy="10" r="1.6"/><path class="a" d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/>',
+	// Formes et zone de texte posées sur une feuille
+	shapes: '<rect x="3.5" y="10.5" width="9.5" height="9.5" rx="1"/><circle class="a" cx="15.5" cy="8.5" r="5"/>',
+	'text-box': '<rect x="3.5" y="5" width="17" height="14" rx="1.5" stroke-dasharray="2.5 2"/><path class="a" d="M8 9.5h8M12 9.5v6"/>',
+	'bring-front': '<rect x="3.5" y="3.5" width="10" height="10" rx="1"/><rect class="af" x="10.5" y="10.5" width="10" height="10" rx="1"/>',
+	'send-back': '<rect class="af" x="3.5" y="3.5" width="10" height="10" rx="1"/><rect x="10.5" y="10.5" width="10" height="10" rx="1" fill="#fff"/>',
 	document: '<path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4"/><path class="a" d="M8.5 11h7M8.5 14h7M8.5 17h4.5"/>',
 	'align-top': '<path class="a" d="M4 4h16"/><path d="M12 20V8M8 12l4-4 4 4"/>',
 	'align-middle': '<path class="a" d="M4 12h16"/><path d="M12 3v6M9 6l3 3 3-3M12 21v-6M9 18l3-3 3 3"/>',

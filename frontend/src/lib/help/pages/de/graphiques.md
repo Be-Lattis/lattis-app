@@ -45,3 +45,7 @@ Beim Darüberfahren über einen Punkt werden sein Name, seine Farbe und sein Wer
 ## Ein Diagramm kopieren {#copier-un-graphique}
 
 Ein kopiertes Diagramm kann auf einem anderen Blatt oder in einem [Dokument](onglets) eingefügt werden, wo es mit seinen Daten verbunden bleibt.
+
+## Bilder, Formen und Textfelder {#images-formes-et-zones-de-texte}
+
+Einfügen › **Bild** (oder Strg+V eines kopierten Bildes), **Formen** oder **Textfeld**: Das Objekt wird an der aktiven Zelle platziert und folgt ihren Zeilen und Spalten. Ziehen Sie es, um es zu verschieben, ziehen Sie an seinen Ziehpunkten, um die Größe zu ändern (ein Bild behält seine Proportionen; Umschalt hebt das auf), doppelklicken Sie auf eine Form, um Text einzugeben. Die Leiste über dem Objekt stellt Farben, Linie, Transparenz und Text ein; Entf löscht, Strg+D dupliziert. Ein sehr großes Bild wird beim Einfügen verkleinert; höchstens 10 MB (1 MB in einer freigegebenen Arbeitsmappe).

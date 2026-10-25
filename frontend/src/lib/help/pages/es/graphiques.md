@@ -45,3 +45,7 @@ Al pasar el puntero sobre un punto se muestran su nombre, su color y su valor. U
 ## Copiar un gráfico {#copier-un-graphique}
 
 Un gráfico copiado puede pegarse en otra hoja o en un [documento](onglets), donde sigue conectado a sus datos.
+
+## Imágenes, formas y cuadros de texto {#images-formes-et-zones-de-texte}
+
+Insertar › **Imagen** (o Ctrl+V de una imagen copiada), **Formas** o **Cuadro de texto**: el objeto se coloca en la celda activa y sigue sus filas y columnas. Arrástrelo para moverlo, tire de sus controladores para cambiar su tamaño (una imagen conserva sus proporciones; Mayús las libera), haga doble clic en una forma para escribir texto. La barra sobre el objeto ajusta los colores, la línea, la transparencia y el texto; Supr lo elimina, Ctrl+D lo duplica. Una imagen muy grande se reduce al insertarla; 10 MB como máximo (1 MB en un libro compartido).

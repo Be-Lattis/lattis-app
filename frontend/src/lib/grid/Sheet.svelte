@@ -103,6 +103,8 @@
 	import { pivotRangeRef, pivotRefText } from './pivotref';
 	import { placeAt, placedMessage, placeHint, placeKey, placesOnClick, type Placement } from './pivotplace';
 	import SheetButtons from './SheetButtons.svelte';
+	import SheetObjects from './SheetObjects.svelte';
+	import { objectBox, type ObjectConfig, type ObjectKind, type SheetObject } from './objects';
 	import { BUTTON_H, BUTTON_W, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
 	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type RuleStats, type Stats, type StatsReq } from './rules';
 	import { chartMenu as chartMenuGroups, chartSubmenu, freeCellMenu, headerMenu, linesSubmenu, pivotSubmenu, tableCellMenu, tableColumnSubmenu, tableRowSubmenu } from './ctxmenu';
@@ -416,6 +418,8 @@
 		charts?: SheetChart[];
 		/** Boutons d'action de la feuille. */
 		buttons?: SheetButton[] | null;
+		/** Images, formes et zones de texte de la feuille, du fond vers le premier plan. */
+		objects?: SheetObject[] | null;
 		/** Zones « plage » (tableaux convertis) : y écrire ne refait pas de tableau. */
 		ranges?: { r0: number; c0: number; r1: number; c1: number }[];
 	}
@@ -607,6 +611,16 @@
 		setButton?(id: number, cfg: ButtonConfig): Promise<unknown>;
 		placeButton?(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): Promise<unknown>;
 		deleteButton?(id: number): Promise<unknown>;
+		/** Images, formes et zones de texte (objects.ts) : création (rend l'identifiant), présentation, place, rang, suppression. */
+		createObject?(row: number, col: number, cfg: ObjectConfig): Promise<unknown>;
+		createImage?(row: number, col: number, data: string, cfg: ObjectConfig): Promise<unknown>;
+		setObject?(id: number, cfg: ObjectConfig): Promise<unknown>;
+		placeObject?(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): Promise<unknown>;
+		placeLine?(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number, flipH: boolean, flipV: boolean): Promise<unknown>;
+		orderObject?(id: number, front: boolean): Promise<unknown>;
+		deleteObject?(id: number): Promise<unknown>;
+		/** Image du classeur en adresse data:. */
+		imageData?(hash: string): Promise<string>;
 		setPivot?(id: number, cfg: PivotConfig): Promise<unknown>;
 		/** Ajoute (old vide), modifie ou retire (formula vide) un champ calculé ; une erreur est levée telle quelle. */
 		setPivotCalc?(id: number, old: string, name: string, formula: string): Promise<unknown>;
@@ -1073,6 +1087,8 @@
 	let charts = $state.raw<SheetChart[]>([]);
 	let buttons = $state.raw<SheetButton[]>([]);
 	let buttonsLayer = $state<ReturnType<typeof SheetButtons>>();
+	let sheetObjects = $state.raw<SheetObject[]>([]);
+	let objectsLayer = $state<ReturnType<typeof SheetObjects>>();
 	// Décalage de la vue, pour placer les graphiques au-dessus de la grille.
 	let viewPos = $state({ x: 0, y: 0 });
 	let colAxis = $state.raw(new Axis(SHEET_COLS, DEF_W));
@@ -1194,6 +1210,7 @@
 		}
 		charts = d.charts ?? [];
 		buttons = d.buttons ?? [];
+		sheetObjects = d.objects ?? [];
 		controlsTick++;
 		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
 		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
@@ -1976,7 +1993,7 @@
 		// contrôles) : la barre de défilement va jusqu'à leur bord, qu'ils
 		// soient sélectionnés ou non (objextent.ts) ; de même pour les
 		// tableaux croisés et les tableaux déversés.
-		const boxes = [...charts.map(chartBox), ...buttons.map(buttonBox)];
+		const boxes = [...charts.map(chartBox), ...buttons.map(buttonBox), ...sheetObjects.map((o) => objectBox(o, objGeo))];
 		const reach = boxesReach(boxes, (y) => rax().indexAt(y), (x) => cax().indexAt(x));
 		const blocks = blocksReach([
 			...pivots.map((p) => ({ row: p.row, col: p.col, rows: p.cells.length, cols: p.cells[0]?.length ?? 0 })),
@@ -7111,6 +7128,15 @@
 		schedule();
 	}
 
+	/** Géométrie de la feuille pour les objets posés (pixels de la feuille). */
+	const objGeo = { colOffset: (c: number) => cax().offset(c), rowTop: (r: number) => rowTop(r), colAt: (x: number) => cax().indexAt(x), rowAt: (y: number) => rax().indexAt(y) };
+
+	/** Insertion › Image, Formes, Zone de texte : objet posé à la cellule active. */
+	export function insertObject(kind: ObjectKind) {
+		if (kind === 'image') objectsLayer?.pickImage();
+		else objectsLayer?.insert(kind);
+	}
+
 	/** Insertion › Contrôles (bouton, case, liste, zone de saisie, sélecteur de fichier) : contrôle à la cellule active. */
 	export function insertButton(kind: ControlKind = '') {
 		if (!source.createButton) return;
@@ -7242,6 +7268,7 @@
 		panel = null;
 		// Volet d'un contrôle : fermé aussi (ses réglages restent appliqués).
 		buttonsLayer?.closeEditor();
+		objectsLayer?.deselect();
 	}
 
 	/** Erreur de formule de la cellule (code et formule), ou null. */
@@ -10357,15 +10384,19 @@
 	}
 
 	/** Lit le presse-papiers : texte et, s'il y en a, sa version HTML (copie d'un tableur) ; null s'il est inaccessible. */
-	async function readClip(): Promise<{ text: string; html: string } | null> {
+	async function readClip(): Promise<{ text: string; html: string; image?: Blob } | null> {
 		try {
 			let text = '';
 			let html = '';
+			let image: Blob | undefined;
 			for (const it of await navigator.clipboard.read()) {
 				if (!text && it.types.includes('text/plain')) text = await (await it.getType('text/plain')).text();
 				if (!html && it.types.includes('text/html')) html = await (await it.getType('text/html')).text();
+				// Image copiée (capture, navigateur) : posée sur la feuille (SheetObjects).
+				const it2 = it.types.find((ty) => ty.startsWith('image/'));
+				if (!image && it2) image = await it.getType(it2);
 			}
-			return { text, html };
+			return { text, html, image };
 		} catch {
 			try {
 				return { text: await navigator.clipboard.readText(), html: '' };
@@ -10381,6 +10412,10 @@
 		const clip = await readClip();
 		if (!clip) {
 			say(tr('grid.clipboard.unavailable.paste'));
+			return;
+		}
+		if (clip.image && !clip.text.trim()) {
+			objectsLayer?.insertImageFile(new File([clip.image], 'image', { type: clip.image.type }));
 			return;
 		}
 		pasteText(clip.text, clip.html);
@@ -10540,6 +10575,10 @@
 		// Graphique (d'une feuille ou d'un document) ; tableau croisé
 		// d'un document, posé à la cellule active par sa configuration.
 		const obj = objFromText(text);
+		if (obj?.kind === 'shape') {
+			objectsLayer?.pasteObject(obj.config as unknown as ObjectConfig);
+			return true;
+		}
 		if (obj?.kind === 'chart') {
 			pasteChart(obj.config as unknown as ChartConfig);
 			return true;
@@ -11327,7 +11366,8 @@
 		const anyRules = sheetRowRules.size > 0 || sheetColRules.size > 0 || cellRules.size > 0 || [...colRules.values()].some((l) => l.some((x) => x?.length));
 		return {
 			merges: [...boxes],
-			charts: printCharts(),
+			// Images, formes et zones de texte au-dessus des graphiques, comme à l'écran.
+			charts: [...printCharts(), ...(objectsLayer?.printItems() ?? [])],
 			async prepare(r0, r1, c0, c1) {
 				for (const e of entries) {
 					const a = Math.max(r0, e.t.row + 1);
@@ -11714,6 +11754,27 @@
 						{/if}
 					</div>
 				{/each}
+				<SheetObjects
+					bind:this={objectsLayer}
+					objects={sheetObjects}
+					geo={objGeo}
+					{zoom}
+					view={viewPos}
+					active={() => active}
+					gridFocused={() => document.activeElement === wrap && !editing}
+					locked={!!locked || structure}
+					imageData={source.imageData}
+					oncreate={source.createObject}
+					oncreateImage={source.createImage}
+					onset={source.setObject}
+					onplace={source.placeObject}
+					onplaceLine={source.placeLine}
+					onorder={source.orderObject}
+					ondelete={source.deleteObject}
+					onwheel={(ev) => onWheel(ev)}
+					{say}
+					done={() => wrap.focus()}
+				/>
 				<SheetButtons
 					bind:this={buttonsLayer}
 					locked={!!locked || structure}

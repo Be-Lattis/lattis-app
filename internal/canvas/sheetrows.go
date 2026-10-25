@@ -29,11 +29,11 @@ const (
 )
 
 // Tables des métadonnées positionnées sur une feuille (colonnes sheet, row, col).
-var positioned = []string{"_lattis_cells", "_lattis_choice_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", "_lattis_tables", "_lattis_pivots", "_lattis_charts", "_lattis_buttons"}
+var positioned = []string{"_lattis_cells", "_lattis_choice_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", "_lattis_tables", "_lattis_pivots", "_lattis_charts", "_lattis_buttons", "_lattis_objects"}
 
 // Objets ancrés (pas de contenu par cellule) : leur ancre recule au début
 // d'une plage supprimée au lieu de disparaître.
-var anchored = []string{"_lattis_pivots", "_lattis_charts", "_lattis_buttons"}
+var anchored = []string{"_lattis_pivots", "_lattis_charts", "_lattis_buttons", "_lattis_objects"}
 
 func (a axis) sizes() string {
 	if a == rowsAxis {

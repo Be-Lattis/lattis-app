@@ -506,6 +506,31 @@ export const apiReference: RefEntry[] = [
 		args: [1, 6]
 	},
 	{
+		name: "objects.create",
+		category: "objects",
+		signature: "objects.create(row, col, config, [sheet])",
+		summary: "Pose une forme, une zone de texte ou une image sur une feuille, coin haut gauche en row, col, et renvoie son identifiant.",
+		details: "config : {kind, width, height, offX, offY, name, fill, line, lineWidth, transparency, text, bold, italic, size, color, align, valign, flipH, flipV, data, image}. kind : \"rect\", \"roundRect\" (rectangle arrondi), \"ellipse\", \"triangle\", \"line\", \"arrow\" (flèche), \"text\" (zone de texte) ou \"image\". width, height : taille en pixels (par défaut selon le genre ; une image garde ses proportions, 480 pixels de large au plus) ; offX, offY : décalage dans la cellule d'ancrage. fill et line : couleurs du fond et du contour (\"#rrggbb\", \"\" : aucun) ; lineWidth : épaisseur du contour (pixels) ; transparency : transparence du fond (0 à 100). text : texte de la forme ou de la zone de texte, mis en forme par bold, italic, size (points), color, align (\"left\", \"center\", \"right\") et valign (\"top\", \"middle\", \"bottom\"). flipH, flipV : sens d'une ligne ou d'une flèche (par défaut du coin haut gauche au coin bas droit, la pointe au bout). Une image se donne par data (contenu PNG, JPEG, GIF ou WebP en base64, 10 Mo au plus) ou par image (empreinte d'une image déjà dans le classeur, voir objects.list). Paramètres — row : ligne de la feuille, à partir de 1 ; col : colonne de la feuille, à partir de 1 ; config : genre et présentation de l'objet ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : objects.create{row = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "objects.create(2, 2, {kind = \"roundRect\", width = 180, height = 60, text = \"Objectif atteint\", bold = true})\nobjects.create(6, 2, {kind = \"arrow\", width = 120, height = 0, line = \"#c00000\", lineWidth = 3})",
+		args: [1, 4]
+	},
+	{
+		name: "objects.delete",
+		category: "objects",
+		signature: "objects.delete(object)",
+		summary: "Supprime une image, une forme ou une zone de texte.",
+		details: "Paramètres — object : objet (identifiant ou nom). Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		args: [1, 1]
+	},
+	{
+		name: "objects.list",
+		category: "objects",
+		signature: "objects.list([sheet]) → { {id, kind, name, row, col, offX, offY, width, height, text, image}, ... }",
+		summary: "Liste les images, formes et zones de texte d'une feuille, de l'arrière-plan au premier plan.",
+		details: "Paramètres — sheet : feuille (nom ou identifiant) ; absente : la feuille affichée.",
+		args: [0, 1]
+	},
+	{
 		name: "pages.add",
 		category: "sheets",
 		signature: "pages.add([name], [source], [before], [kind]) → {id, name, kind}",

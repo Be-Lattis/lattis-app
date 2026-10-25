@@ -1608,5 +1608,44 @@
 			"dotted": "Pointillé",
 			"dashed": "Tirets"
 		}
+	},
+	"objects": {
+		"kind": {
+			"image": "Image",
+			"rect": "Rectangle",
+			"roundRect": "Rectangle arrondi",
+			"ellipse": "Ellipse",
+			"triangle": "Triangle",
+			"line": "Ligne",
+			"arrow": "Flèche",
+			"text": "Zone de texte"
+		},
+		"duplicate": "Dupliquer",
+		"front": "Premier plan",
+		"back": "Arrière-plan",
+		"editText": "Modifier le texte",
+		"originalSize": "Taille d'origine",
+		"fill": "Remplissage",
+		"line": "Contour",
+		"noFill": "Aucun remplissage",
+		"noLine": "Aucun contour",
+		"lineWidth": "Épaisseur du trait",
+		"transparency": "Transparence",
+		"textColor": "Couleur du texte",
+		"textSize": "Taille du texte",
+		"alignLeft": "Aligner à gauche",
+		"alignCenter": "Centrer",
+		"alignRight": "Aligner à droite",
+		"toolbar": "Format de l'objet",
+		"copied": "Objet copié",
+		"pasted": "Objet collé",
+		"paste": "Coller l'objet",
+		"reduced": "Image réduite à {w} × {h} pixels",
+		"missing": "Image absente de ce poste",
+		"error": {
+			"type": "Image refusée : PNG, JPEG, GIF, WebP ou SVG seulement",
+			"tooLarge": "Image trop lourde : 10 Mo au plus",
+			"unreadable": "Image illisible"
+		}
 	}
 }

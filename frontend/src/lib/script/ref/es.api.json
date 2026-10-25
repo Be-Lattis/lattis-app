@@ -289,6 +289,21 @@
 		"summary": "Envía cualquier petición HTTP (GET, POST, PUT, PATCH, DELETE…) y devuelve la respuesta.",
 		"details": "json codifica una tabla como cuerpo JSON (con el encabezado Content-Type adecuado); body envía un texto tal cual. La respuesta: status (200, 404…), ok (true para un estado 2xx), url (dirección final, tras las redirecciones), headers (nombres en minúsculas), body (texto) y json (el cuerpo decodificado cuando la respuesta es JSON). Un estado de error (404, 500…) no es un error de Lua: compruebe ok; un fallo de red o un tiempo agotado sí lo es (pcall para capturarlo). Antes de la primera petición a un host, Lattis pide permiso al usuario (se puede recordar para el libro; pestaña Script › Acceso a la red para revisarlo); el servidor MCP solo llega a los hosts ya autorizados. Tiempo de espera: 15 s por defecto (timeout, 120 s como máximo), sin contar en la duración máxima del script; respuesta de 10 MB como máximo; 10 redirecciones como máximo; el botón Detener interrumpe la petición. Parámetros — url: dirección (http:// o https://); method: método (GET por defecto); headers: encabezados: {nombre = valor}; body: cuerpo de la petición (texto); json: cuerpo de la petición: tabla codificada en JSON; timeout: tiempo de espera en segundos (15 por defecto, 120 como máximo). Argumentos en orden, o una tabla de argumentos con nombre: http.request{url = …}."
 	},
+	"objects.create": {
+		"signature": "objects.create(row, col, config, [sheet])",
+		"summary": "Coloca una forma, un cuadro de texto o una imagen en una hoja, esquina superior izquierda en row, col, y devuelve su identificador.",
+		"details": "config: {kind, width, height, offX, offY, name, fill, line, lineWidth, transparency, text, bold, italic, size, color, align, valign, flipH, flipV, data, image}. kind: \"rect\", \"roundRect\" (rectángulo redondeado), \"ellipse\", \"triangle\", \"line\", \"arrow\" (flecha), \"text\" (cuadro de texto) o \"image\". width, height: tamaño en píxeles (por defecto según el tipo; una imagen conserva sus proporciones, 480 píxeles de ancho como máximo); offX, offY: desplazamiento en la celda de anclaje. fill y line: colores del relleno y del contorno (\"#rrggbb\", \"\": ninguno); lineWidth: grosor del contorno (píxeles); transparency: transparencia del relleno (0 a 100). text: texto de la forma o del cuadro de texto, con el formato de bold, italic, size (puntos), color, align (\"left\", \"center\", \"right\") y valign (\"top\", \"middle\", \"bottom\"). flipH, flipV: sentido de una línea o de una flecha (por defecto de la esquina superior izquierda a la inferior derecha, la punta al final). Una imagen se da por data (contenido PNG, JPEG, GIF o WebP en base64, 10 MB como máximo) o por image (huella de una imagen que ya está en el libro, véase objects.list). Parámetros — row: fila de la hoja, desde 1; col: columna de la hoja, desde 1; config: tipo y formato del objeto; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: objects.create{row = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"objects.delete": {
+		"signature": "objects.delete(object)",
+		"summary": "Elimina una imagen, una forma o un cuadro de texto.",
+		"details": "Parámetros — object: objeto (identificador o nombre). Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
+	"objects.list": {
+		"signature": "objects.list([sheet]) → { {id, kind, name, row, col, offX, offY, width, height, text, image}, ... }",
+		"summary": "Enumera las imágenes, formas y cuadros de texto de una hoja, del fondo al primer plano.",
+		"details": "Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada."
+	},
 	"pages.add": {
 		"signature": "pages.add([name], [source], [before], [kind]) → {id, name, kind}",
 		"summary": "Añade una página web (HTML, CSS y JavaScript mostrados en un marco aislado), o un documento (kind = \"doc\": texto enriquecido), y devuelve {id, name, kind}.",

@@ -714,7 +714,7 @@ func (t *tx) deletableSheets(tables []Table) (map[int64]bool, error) {
 		rs.Close()
 		var objs int
 		if err := t.row(`SELECT (SELECT count(*) FROM _lattis_pivots WHERE sheet = ?1) + (SELECT count(*) FROM _lattis_charts WHERE sheet = ?1)
-			+ (SELECT count(*) FROM _lattis_buttons WHERE sheet = ?1) + (SELECT count(*) FROM _lattis_pages WHERE sheet = ?1)`, tb.Sheet).Scan(&objs); err != nil {
+			+ (SELECT count(*) FROM _lattis_buttons WHERE sheet = ?1) + (SELECT count(*) FROM _lattis_objects WHERE sheet = ?1) + (SELECT count(*) FROM _lattis_pages WHERE sheet = ?1)`, tb.Sheet).Scan(&objs); err != nil {
 			return nil, err
 		}
 		out[tb.Sheet] = ok && objs == 0

@@ -120,7 +120,8 @@
 		"paragraph": "段落",
 		"print": "打印",
 		"links": "链接",
-		"printing": "打印"
+		"printing": "打印",
+		"illustrations": "插图"
 	},
 	"launch": {
 		"font": "设置单元格格式：字体 (Ctrl+1)",
@@ -672,6 +673,18 @@
 			"lineStyle": "线型",
 			"lineColor": "线条颜色",
 			"more": "其他边框…"
+		},
+		"picture": {
+			"label": "图片",
+			"tooltip": "来自文件的图片（或粘贴：Ctrl+V）"
+		},
+		"shapes": {
+			"label": "形状",
+			"tooltip": "矩形、椭圆、箭头…"
+		},
+		"textBox": {
+			"label": "文本框",
+			"tooltip": "放在工作表上的自由文本"
 		}
 	},
 	"protect": {

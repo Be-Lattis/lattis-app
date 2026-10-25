@@ -1608,5 +1608,44 @@
 			"dotted": "Dotted",
 			"dashed": "Dashed"
 		}
+	},
+	"objects": {
+		"kind": {
+			"image": "Picture",
+			"rect": "Rectangle",
+			"roundRect": "Rounded rectangle",
+			"ellipse": "Oval",
+			"triangle": "Triangle",
+			"line": "Line",
+			"arrow": "Arrow",
+			"text": "Text box"
+		},
+		"duplicate": "Duplicate",
+		"front": "Bring to Front",
+		"back": "Send to Back",
+		"editText": "Edit text",
+		"originalSize": "Original size",
+		"fill": "Fill",
+		"line": "Outline",
+		"noFill": "No fill",
+		"noLine": "No outline",
+		"lineWidth": "Line width",
+		"transparency": "Transparency",
+		"textColor": "Text color",
+		"textSize": "Text size",
+		"alignLeft": "Align left",
+		"alignCenter": "Center",
+		"alignRight": "Align right",
+		"toolbar": "Object format",
+		"copied": "Object copied",
+		"pasted": "Object pasted",
+		"paste": "Paste object",
+		"reduced": "Picture reduced to {w} × {h} pixels",
+		"missing": "Picture missing on this computer",
+		"error": {
+			"type": "Picture refused: PNG, JPEG, GIF, WebP or SVG only",
+			"tooLarge": "Picture too large: 10 MB at most",
+			"unreadable": "Unreadable picture"
+		}
 	}
 }

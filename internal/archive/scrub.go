@@ -14,7 +14,8 @@ import (
 var trashPrefixes = []string{"_lattis_trash", "_lattis_sqltrash_"}
 
 // scrub retire de l'instantané à enregistrer l'historique d'annulation
-// (_lattis_journal) et les corbeilles : le fichier .lattis ne garde jamais
+// (_lattis_journal), les corbeilles et les images qu'aucun objet ne cite
+// plus : le fichier .lattis ne garde jamais
 // ce qui a été supprimé ou modifié. La base de travail les garde, Ctrl+Z
 // marche jusqu'à la fermeture. secure_delete efface le contenu des pages
 // libérées ; la base n'est compactée (VACUUM) que si elles pèsent lourd.
@@ -53,7 +54,8 @@ func scrub(snap string, extra []func(*sqliteConn) error) error {
 	if err := st.Close(); err != nil {
 		return err
 	}
-	if !has["_lattis_journal"] && len(trash) == 0 {
+	images := has["_lattis_images"] && has["_lattis_objects"]
+	if !has["_lattis_journal"] && len(trash) == 0 && !images {
 		return nil
 	}
 	if err := c.Exec(`BEGIN IMMEDIATE`); err != nil {
@@ -66,6 +68,11 @@ func scrub(snap string, extra []func(*sqliteConn) error) error {
 	if has["_lattis_outbox"] {
 		// Étapes envoyées gardées pour annuler : sans objet sans historique.
 		stmts = append(stmts, `UPDATE _lattis_outbox SET seq = NULL WHERE seq IS NOT NULL`)
+	}
+	if images {
+		// Images qu'aucun objet ne cite plus (supprimé, insertion annulée) :
+		// gardées dans la base de travail pour Ctrl+Z, pas dans le fichier.
+		stmts = append(stmts, `DELETE FROM _lattis_images WHERE hash NOT IN (SELECT json_extract(config, '$.image') FROM _lattis_objects WHERE json_extract(config, '$.image') IS NOT NULL)`)
 	}
 	for _, n := range trash {
 		stmts = append(stmts, `DROP TABLE "`+strings.ReplaceAll(n, `"`, `""`)+`"`)

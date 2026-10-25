@@ -1608,5 +1608,44 @@
 			"dotted": "Punteada",
 			"dashed": "Discontinua"
 		}
+	},
+	"objects": {
+		"kind": {
+			"image": "Imagen",
+			"rect": "Rectángulo",
+			"roundRect": "Rectángulo redondeado",
+			"ellipse": "Elipse",
+			"triangle": "Triángulo",
+			"line": "Línea",
+			"arrow": "Flecha",
+			"text": "Cuadro de texto"
+		},
+		"duplicate": "Duplicar",
+		"front": "Traer al frente",
+		"back": "Enviar al fondo",
+		"editText": "Modificar el texto",
+		"originalSize": "Tamaño original",
+		"fill": "Relleno",
+		"line": "Contorno",
+		"noFill": "Sin relleno",
+		"noLine": "Sin contorno",
+		"lineWidth": "Grosor de línea",
+		"transparency": "Transparencia",
+		"textColor": "Color del texto",
+		"textSize": "Tamaño del texto",
+		"alignLeft": "Alinear a la izquierda",
+		"alignCenter": "Centrar",
+		"alignRight": "Alinear a la derecha",
+		"toolbar": "Formato del objeto",
+		"copied": "Objeto copiado",
+		"pasted": "Objeto pegado",
+		"paste": "Pegar el objeto",
+		"reduced": "Imagen reducida a {w} × {h} píxeles",
+		"missing": "Imagen ausente en este equipo",
+		"error": {
+			"type": "Imagen rechazada: solo PNG, JPEG, GIF, WebP o SVG",
+			"tooLarge": "Imagen demasiado pesada: 10 MB como máximo",
+			"unreadable": "Imagen ilegible"
+		}
 	}
 }

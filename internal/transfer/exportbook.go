@@ -75,6 +75,9 @@ type xsheet struct {
 	charts     []chartBox // place des graphiques (impression)
 	// book : noms exportés, pour les liens dans le classeur (nil à l'impression).
 	book *book
+	// Images, formes et zones de texte (export .xlsx : xlsxdrawing.go).
+	objects []canvas.ObjectInfo
+	pics    map[string]xpic
 }
 
 // Limites d'une feuille Excel : la feuille de Lattis va au-delà, l'export coupe.
@@ -126,6 +129,10 @@ func exportBook(ctx context.Context, m *canvas.Model, tg target) ([]xsheet, *fmt
 			return nil, nil, err
 		}
 		sh.name = names[i]
+		if tg == toXLSX {
+			sh.objects = layouts[i].Objects
+			sh.pics = sheetObjects(ctx, m, sh.objects)
+		}
 		sh.rows = func(ctx context.Context, xt *xtable, send func(int, []xcell) error) error {
 			return tableRows(ctx, m, xt, fm, tg, send)
 		}

@@ -460,6 +460,23 @@ export function CreateDataFolder(server: string, name: string, parent: string): 
 }
 
 /**
+ * CreateImage enregistre une image (data : contenu en base64, ou adresse
+ * data:…;base64,…) et la pose sur la feuille ; cfg donne la taille posée
+ * et le texte de remplacement (Alt). Rend l'identifiant de l'objet.
+ */
+export function CreateImage(sheet: number, row: number, col: number, data: string, cfg: canvas$0.ObjectConfig): $CancellablePromise<number> {
+    return $Call.ByID(3719164399, sheet, row, col, data, cfg);
+}
+
+/**
+ * CreateObject pose une forme, une zone de texte ou (cfg.Image) une image
+ * déjà enregistrée dans le classeur ; rend l'identifiant de l'objet.
+ */
+export function CreateObject(sheet: number, row: number, col: number, cfg: canvas$0.ObjectConfig): $CancellablePromise<number> {
+    return $Call.ByID(723517329, sheet, row, col, cfg);
+}
+
+/**
  * CreatePivot crée un tableau croisé sur une nouvelle feuille ; renvoie la feuille.
  */
 export function CreatePivot(cfg: canvas$0.PivotConfig): $CancellablePromise<number> {
@@ -543,6 +560,13 @@ export function DeleteConnection(id: number): $CancellablePromise<$models.DocSta
  */
 export function DeleteFavorite(id: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1877158681, id);
+}
+
+/**
+ * DeleteObject supprime un objet.
+ */
+export function DeleteObject(id: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(4149758534, id);
 }
 
 /**
@@ -962,6 +986,13 @@ export function HeaderToTitle(table: string): $CancellablePromise<$models.DocSta
 }
 
 /**
+ * ImageData rend une image du classeur en adresse data: (affichage).
+ */
+export function ImageData(hash: string): $CancellablePromise<string> {
+    return $Call.ByID(1782652187, hash);
+}
+
+/**
  * Import ajoute au classeur un fichier CSV ou un classeur Excel .xlsx
  * (path vide : boîte de dialogue), en une seule étape d'annulation.
  */
@@ -1355,6 +1386,13 @@ export function OpenTogether(path: string): $CancellablePromise<$models.OpenResu
 }
 
 /**
+ * OrderObject met un objet au premier plan (front) ou à l'arrière-plan.
+ */
+export function OrderObject(id: number, front: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3120799413, id, front);
+}
+
+/**
  * OrderSheets range les onglets dans l'ordre order (toutes les feuilles,
  * masquées comprises), en une seule étape d'annulation : glisser plusieurs
  * onglets sélectionnés.
@@ -1482,6 +1520,20 @@ export function PlaceButton(id: number, row: number, col: number, offX: number, 
  */
 export function PlaceChart(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {
     return $Call.ByID(1575878103, id, row, col, offX, offY, width, height);
+}
+
+/**
+ * PlaceLine place une ligne ou une flèche par sa boîte et son sens.
+ */
+export function PlaceLine(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number, flipH: boolean, flipV: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2310896891, id, row, col, offX, offY, width, height, flipH, flipV);
+}
+
+/**
+ * PlaceObject déplace et redimensionne un objet.
+ */
+export function PlaceObject(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2733543422, id, row, col, offX, offY, width, height);
 }
 
 /**
@@ -2090,6 +2142,13 @@ export function SetName(sheet: number, row: number, col: number, name: string): 
  */
 export function SetNote(sheet: number, row: number, col: number, text: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(2247277922, sheet, row, col, text);
+}
+
+/**
+ * SetObject change la présentation d'un objet (couleurs, trait, texte).
+ */
+export function SetObject(id: number, cfg: canvas$0.ObjectConfig): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(1029344453, id, cfg);
 }
 
 /**

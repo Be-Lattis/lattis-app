@@ -100,6 +100,10 @@ func (t *tx) copySheet(sheet int64, to int) (int64, error) {
 	}); err != nil {
 		return 0, err
 	}
+	// Images, formes et zones de texte : les copies citent les mêmes images.
+	if err := t.copyObjects(`_lattis_objects`, sheet, id, nil); err != nil {
+		return 0, err
+	}
 	return id, t.moveSheet(id, to)
 }
 

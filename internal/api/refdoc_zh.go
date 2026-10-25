@@ -15,6 +15,7 @@ var apiDocZH = func() apiDoc {
 	http := `响应：status（200、404…）、ok（状态为 2xx 时为 true）、url（重定向后的最终地址）、headers（名称为小写）、body（文本）和 json（响应为 JSON 时解码后的正文）。错误状态（404、500…）不是 Lua 错误：请检查 ok；网络故障或超时才是错误（用 pcall 捕获）。首次向某个主机发送请求前，Lattis 会征求用户许可（可为该工作簿记住；在“脚本”标签 › 网络访问中查看）；MCP 服务器只能访问已获许可的主机。超时：默认 15 秒（timeout，最多 120 秒），不计入脚本的最长运行时间；响应最大 10 MB；最多 10 次重定向；“停止”按钮会中断请求。`
 	pivot := `config：{source, rowFields, cols, values, filters, calc, name, noGrandTotal, subtotals, collapsed, collapseAll, expanded}。source 是表格，rowFields 是行字段列表，cols 是列字段，values 是 {field, agg, show} 的列表（agg："sum"、"count"、"countDistinct"、"avg"、"min" 或 "max"；show：""、"pctTotal"、"pctRow" 或 "pctCol"），filters 是 {field, values} 的列表。有多个行字段时，数据透视表以树形显示：subtotals 指定各组小计的位置（"" 在组所在行，"bottom" 在下方，"none" 不显示）；collapsed 列出已折叠的组，每组以其标签表示（{"人事"}、{"人事", "巴黎"}）；collapseAll 折叠全部，expanded 中的组除外。calc 添加计算字段，是 {name, text} 的列表：text 是基于源表格每一行各列的公式（"=ANNEE([Date])"、"=GAUCHE([Code];2)"，公式用法语书写），name 是字段名，之后可像列一样放入 rowFields、cols、values 或 filters（各行按其结果分组）。`
 	split := `options：{delims, merge, quote, fixed, breaks, columns, decimal, thousands, dest}。delims：分隔字符（";"、","、" "、"	"…）；merge = true：连续的分隔符视为一个；quote：文本识别符（向导中默认为 "\""，"'" 或 "" 表示无）。fixed = true：固定宽度，breaks 给出分割位置（以字符计）。columns：生成的每一列的格式，{format = ""（常规）、"text"、"date" 或 "skip"（不导入），order = "DMY"、"MDY"、"YMD"… 用于日期}。decimal 和 thousands：数字的分隔符（默认为 "," 和 " "）。dest：在自由单元格中的目标单元格（“E2”）。`
+	object := "config：{kind, width, height, offX, offY, name, fill, line, lineWidth, transparency, text, bold, italic, size, color, align, valign, flipH, flipV, data, image}。kind：\"rect\"、\"roundRect\"（圆角矩形）、\"ellipse\"、\"triangle\"、\"line\"、\"arrow\"（箭头）、\"text\"（文本框）或 \"image\"。width、height：以像素计的大小（默认取决于类型；图像保持比例，宽度最多 480 像素）；offX、offY：在锚定单元格内的偏移。fill 和 line：填充和轮廓的颜色（\"#rrggbb\"，\"\" 表示无）；lineWidth：轮廓粗细（像素）；transparency：填充的透明度（0 到 100）。text：形状或文本框中的文字，格式由 bold、italic、size（磅）、color、align（\"left\"、\"center\"、\"right\"）和 valign（\"top\"、\"middle\"、\"bottom\"）设定。flipH、flipV：线条或箭头的方向（默认从左上角到右下角，箭头在末端）。图像由 data（base64 编码的 PNG、JPEG、GIF 或 WebP 内容，最多 10 MB）或 image（工作簿中已有图像的哈希值，见 objects.list）给出。"
 	return apiDoc{
 		phrases: refPhrases{
 			params: "参数 — ",
@@ -127,6 +128,9 @@ var apiDocZH = func() apiDoc {
 			"pivots.create":  {S: "在新工作表上创建数据透视表并返回该工作表。", D: pivot, R: "{id, name}（工作表）"},
 			"pivots.delete":  {S: "删除数据透视表（其工作表保留）。"},
 			"pivots.set":     {S: "替换数据透视表的配置。", D: pivot},
+			"objects.create": {S: "在工作表上放置形状、文本框或图像，左上角位于 row, col，返回其标识符。", D: object},
+			"objects.delete": {S: "删除图像、形状或文本框。"},
+			"objects.list":   {S: "列出工作表中的图像、形状和文本框，从底层到顶层。", R: "{ {id, kind, name, row, col, offX, offY, width, height, text, image}, ... }"},
 			"queries.delete": {S: "删除导入查询；其表格保留在工作表上。"},
 			"queries.list": {S: "列出工作簿中的导入查询，以及它们的来源、步骤和加载的表格。",
 				R: "{ {id, name, source, steps, table, sheet, refreshed}, ... }"},
@@ -257,6 +261,8 @@ var apiDocZH = func() apiDoc {
 			"ui.show_view":  {S: "显示应用程序的一个视图：\"grid\"（工作表）、\"sql\" 或 \"script\"。"},
 		},
 		params: map[string]string{
+			"objet (identifiant ou nom)":                                               "对象（标识符或名称）",
+			"genre et présentation de l'objet":                                         "对象的类型和格式",
 			"ligne de la feuille, à partir de 1":                                       "工作表的行，从 1 开始",
 			"colonne de la feuille, à partir de 1":                                     "工作表的列，从 1 开始",
 			"texte du bouton":                                                          "按钮的文字",

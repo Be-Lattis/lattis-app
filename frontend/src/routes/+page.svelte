@@ -88,6 +88,7 @@
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
 	import type { State as ShareState } from '#bindings/internal/remote/workbook/models.js';
 	import type { ButtonConfig } from '#lib/grid/buttons.js';
+	import type { ObjectConfig } from '#lib/grid/objects.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
 	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
 	import type { Fetched } from '#lib/grid/cache.js';
@@ -1874,6 +1875,14 @@
 		setButton: (id, cfg: ButtonConfig) => DocumentService.SetButton(id, cfg).then(reload),
 		placeButton: (id, row, col, offX, offY, w, h) => DocumentService.PlaceButton(id, row, col, offX, offY, w, h).then(reload),
 		deleteButton: (id) => DocumentService.DeleteButton(id).then(reload),
+		createObject: (row, col, cfg: ObjectConfig) => DocumentService.CreateObject(sheetId, row, col, cfg as never).then(async (id) => (await reload(), id)),
+		createImage: (row, col, data, cfg: ObjectConfig) => DocumentService.CreateImage(sheetId, row, col, data, cfg as never).then(async (id) => (await reload(), id)),
+		setObject: (id, cfg: ObjectConfig) => DocumentService.SetObject(id, cfg as never).then(reload),
+		placeObject: (id, row, col, offX, offY, w, h) => DocumentService.PlaceObject(id, row, col, offX, offY, w, h).then(reload),
+		placeLine: (id, row, col, offX, offY, w, h, flipH, flipV) => DocumentService.PlaceLine(id, row, col, offX, offY, w, h, flipH, flipV).then(reload),
+		orderObject: (id, front) => DocumentService.OrderObject(id, front).then(reload),
+		deleteObject: (id) => DocumentService.DeleteObject(id).then(reload),
+		imageData: (hash) => DocumentService.ImageData(hash),
 		deletePivot: (id) => DocumentService.DeletePivot(id).then(reload),
 		movePivot: (id, row, col) => DocumentService.MovePivot(id, sheetId, row, col).then(reload),
 		copyPivot: (id, row, col) => DocumentService.CopyPivot(id, sheetId, row, col).then(reload),
@@ -2009,6 +2018,7 @@
 					})),
 					pivots: (layout.pivots ?? []).map((p) => ({ ...p, config: p.config as PivotConfig, cells: (p.cells ?? []).map((r) => r ?? []) })),
 					buttons: (layout.buttons ?? []).map((b) => ({ ...b, config: b.config as ButtonConfig })),
+					objects: (layout.objects ?? []).map((o) => ({ id: o.id, row: o.row, col: o.col, config: o.config as unknown as ObjectConfig })),
 					ranges: layout.ranges ?? []
 				}
 			: null
@@ -2455,6 +2465,7 @@
 		ondedup={mode === 'doc' ? () => sheet?.dedupActive() : undefined}
 		ontextcols={mode === 'doc' ? () => sheet?.textToColumnsActive() : undefined}
 		onbutton={mode === 'doc' ? (kind) => sheet?.insertButton(kind) : undefined}
+		onobject={mode === 'doc' ? (kind) => sheet?.insertObject(kind) : undefined}
 		context={activePage && view === 'grid' ? (activeDoc ? 'doc' : 'html') : 'sheet'}
 		ondoc={docCommand}
 		docState={activeDoc && docFmt ? docFmt : undefined}

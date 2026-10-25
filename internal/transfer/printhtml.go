@@ -189,6 +189,11 @@ func printSheet(ctx context.Context, m *canvas.Model, sheet int64) (xsheet, erro
 		}
 		sh.charts = append(sh.charts, chartBox{row: c.Row, col: c.Col, x: c.Config.OffX, y: c.Config.OffY, w: w, h: h})
 	}
+	// Images, formes et zones de texte : imprimées aussi (comme les graphiques).
+	for _, o := range l.Objects {
+		c := o.Config
+		sh.charts = append(sh.charts, chartBox{row: o.Row, col: o.Col, x: c.OffX, y: c.OffY, w: max(c.Width, 1), h: max(c.Height, 1)})
+	}
 	return sh, nil
 }
 

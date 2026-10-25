@@ -120,7 +120,8 @@
 		"paragraph": "Párrafo",
 		"print": "Imprimir",
 		"links": "Vínculos",
-		"printing": "Impresión"
+		"printing": "Impresión",
+		"illustrations": "Ilustraciones"
 	},
 	"launch": {
 		"font": "Formato de celdas: fuente (Ctrl+1)",
@@ -672,6 +673,18 @@
 			"lineStyle": "Estilo de línea",
 			"lineColor": "Color de línea",
 			"more": "Más bordes…"
+		},
+		"picture": {
+			"label": "Imagen",
+			"tooltip": "Imagen de un archivo (o péguela: Ctrl+V)"
+		},
+		"shapes": {
+			"label": "Formas",
+			"tooltip": "Rectángulo, elipse, flecha…"
+		},
+		"textBox": {
+			"label": "Cuadro de texto",
+			"tooltip": "Texto libre sobre la hoja"
 		}
 	},
 	"protect": {
