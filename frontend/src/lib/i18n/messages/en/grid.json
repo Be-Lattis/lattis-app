@@ -963,6 +963,70 @@
 			"notFound": "List not found: {error}",
 			"reading": "Reading the list…",
 			"empty": "The range of the list is empty"
+		},
+		"tab": {
+			"options": "Settings",
+			"input": "Input message",
+			"error": "Error alert"
+		},
+		"allow": "Allow",
+		"data": "Data",
+		"min": "Minimum",
+		"max": "Maximum",
+		"value": "Value",
+		"type": {
+			"any": "Any value",
+			"whole": "Whole number",
+			"decimal": "Decimal",
+			"list": "List",
+			"date": "Date",
+			"time": "Time",
+			"length": "Text length",
+			"custom": "Custom"
+		},
+		"op": {
+			"between": "between",
+			"notbetween": "not between",
+			"eq": "equal to",
+			"ne": "not equal to",
+			"gt": "greater than",
+			"lt": "less than",
+			"ge": "greater than or equal to",
+			"le": "less than or equal to"
+		},
+		"blank": "Ignore blank",
+		"boundHelp": "A value (10, 12/31/2026, 08:30) or a formula (=B1).",
+		"formulaLabel": "Formula",
+		"formulaHelp": "True when the value is allowed, written for {cell}; in a table: [@Column].",
+		"inputHelp": "Shown when the cell is selected.",
+		"msgTitle": "Title",
+		"msgText": "Message",
+		"styleLabel": "Style",
+		"style": {
+			"stop": "Stop",
+			"warning": "Warning",
+			"info": "Information"
+		},
+		"styleHelp": {
+			"stop": "Refuses the value.",
+			"warning": "Asks whether to keep the value.",
+			"info": "Warns, then keeps the value."
+		},
+		"errorPlaceholder": "Message shown when the value is not allowed",
+		"missingFormula": "Enter the formula (true when the value is allowed)",
+		"missingBounds": "Enter the minimum and the maximum",
+		"missingValue": "Enter the value",
+		"set": "Data validation set",
+		"alert": {
+			"title": "Invalid value",
+			"continue": "Continue?",
+			"yes": "Yes",
+			"no": "No",
+			"retry": "Retry"
+		},
+		"circles": {
+			"none": "No invalid data",
+			"found": "{n, plural, one {# invalid value circled} other {# invalid values circled}}"
 		}
 	},
 	"spill": {

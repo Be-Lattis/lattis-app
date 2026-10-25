@@ -53,7 +53,9 @@ Cuando el rango es la **columna clave** de otra tabla (la marcada con 🔑, por 
 
 No se guarda nada más: quitar la validación (o `Ctrl+Z`) o la clave de la tabla de destino deshace la referencia, y esta sigue los cambios de nombre de la tabla y de su columna clave. Los valores que faltan no los bloquea una restricción de la base de datos: es la validación la que los rechaza al escribirlos.
 
-Las validaciones no se exportan a Excel (.xlsx), ni se leen al importar.
+**Otras reglas**: Permitir ofrece también Número entero, Decimal, Fecha, Hora, Longitud del texto (entre, mayor que… un valor o una fórmula como `=B1`) y **Personalizada**, una fórmula verdadera cuando el valor está permitido, escrita para la celda activa (`=CONTAR.SI($A$2:$A$100;A2)=1`: sin duplicados; en una tabla, `[@Columna]`). El **Mensaje de entrada** aparece cuando se selecciona la celda; el **Mensaje de error** rechaza el valor (Detener), pregunta si se conserva (Advertencia) o solo avisa (Información). Lo pegado no se comprueba: Datos › Validación ▾ › **Rodear con un círculo datos no válidos** muestra los valores fuera de la regla, **Borrar círculos de validación** los quita.
+
+Las validaciones se exportan a un archivo .xlsx (salvo una lista tomada de una columna de tabla).
 
 ## Notas {#notes}
 

@@ -31,7 +31,8 @@
 	import { isDrag, inertia, LONG_PRESS_MS, MIN_SPEED, pinchZoom, Velocity } from './touch';
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { keepInView, seenIn, type Span as XSpan } from './keepinview';
-	import { cleanSource, dvDialog, dvPatch, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
+	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
+	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvAlertOf, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm, type DvRuleData } from './dvrule';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
 	import { findKey, finderAction, findZone, foundCell, hitCount, inZone, nextHit, replacedLabel, zoneLabel, type Zone } from './findzone';
@@ -556,6 +557,10 @@
 		 * affichée : valeurs distinctes dans l'ordre de la source, ou l'erreur.
 		 */
 		validationList?(src: string): Promise<DvList>;
+		/** Validation de la cellule (dialogue) : bornes et formule dans la langue de la session, pour cette cellule. */
+		validationAt?(row: number, col: number): Promise<DvRuleData>;
+		/** Cellules de la feuille dont la valeur ne respecte pas leur validation (Entourer les données non valides). */
+		invalidCells?(): Promise<{ row: number; col: number }[]>;
 		/** Colonne de référence (validation tirée de la clé d'un tableau) : la ligne citée par value. */
 		referenceRow?(src: string, value: string): Promise<KeyRow>;
 		/** Clé d'un tableau : les colonnes de référence qui citent value (lignes, première ligne). */
@@ -1158,6 +1163,7 @@
 		// Listes tirées d'une plage : relues (la source a pu changer).
 		dvGen++;
 		dvLists.clear();
+		dvAfterData(switching);
 		// Changement de feuille : garder la position de la feuille quittée,
 		// retrouver celle de la nouvelle (A1 si elle n'a pas été visitée).
 		const back = sheetViews.switchTo(d.sheet ?? 1, { active: { ...active }, anchor: { ...anchor }, top: vs.top, left: scroller?.scrollLeft ?? 0 });
@@ -2554,6 +2560,7 @@
 		}
 
 		if (editing) placeEditor();
+		drawValidation();
 
 		const seen = new Set<string>();
 		const pins = pinnedFrame.filter((p) => !seen.has(p.x + ',' + p.y) && !!seen.add(p.x + ',' + p.y));
@@ -4751,10 +4758,10 @@
 	 * sont pas : la cellule a quand même sa liste déroulante).
 	 */
 	function listOf(r: number, c: number): string[] | undefined {
-		const dv = dvAt(r, c);
-		const src = dvSource(dv);
-		if (src) return dvLists.get(src)?.values ?? [];
-		return Array.isArray(dv) && dv.length ? dv : undefined;
+		const l = dvListOf(dvAt(r, c));
+		if (!l) return undefined;
+		if (l.src) return dvLists.get(l.src)?.values ?? [];
+		return l.list;
 	}
 
 	// Listes tirées d'une plage, relues sur le serveur (par source) : vidées à
@@ -5047,8 +5054,10 @@
 
 	// Dialogue : valeurs saisies (text) ou plage source (src), aperçu des
 	// valeurs de la plage (relu à chaque changement de la référence).
-	let validDlg = $state<{ target: string; mode: 'list' | 'range'; text: string; src: string; error: string; preview: DvList | null; loading: boolean } | null>(null);
+	// Trois onglets (dvrule.ts) : Options, Message de saisie, Alerte d'erreur.
+	let validDlg = $state<(DvForm & { target: string; error: string; preview: DvList | null; loading: boolean }) | null>(null);
 	let previewTimer: ReturnType<typeof setTimeout> | undefined;
+	let dvDlgSeq = 0;
 
 	/** Données › Validation des données : liste des valeurs permises de la sélection. */
 	export function openValidation() {
@@ -5058,8 +5067,23 @@
 			return;
 		}
 		closeMenus();
-		validDlg = { target: validationTarget(), ...dvDialog(dvAt(active.row, active.col)), error: '', preview: null, loading: false };
-		if (validDlg.mode === 'range') refreshPreview(0);
+		const dv = dvAt(active.row, active.col);
+		validDlg = { target: validationTarget(), ...dvForm(dvRule(dv)), error: '', preview: null, loading: false };
+		if (validDlg.type === 'list' && validDlg.mode === 'range') refreshPreview(0);
+		// Bornes et formule relues dans la langue de la session, écrites pour la cellule active.
+		const seq = ++dvDlgSeq;
+		if (dvRule(dv) && !dvLegacy(dv) && source.validationAt)
+			void source
+				.validationAt(active.row, active.col)
+				.then((r) => {
+					const cur = validDlg;
+					if (!cur || seq !== dvDlgSeq || !r?.type) return;
+					const f = dvForm(r);
+					cur.min = f.min;
+					cur.max = f.max;
+					cur.formula = f.formula;
+				})
+				.catch(() => undefined);
 	}
 
 	/** Ce que vise la validation (la sélection), pour le titre du dialogue. */
@@ -5075,7 +5099,7 @@
 		const d = validDlg;
 		if (!d) return;
 		const src = cleanSource(d.src);
-		if (d.mode !== 'range' || !src || !source.validationList) {
+		if (d.type !== 'list' || d.mode !== 'range' || !src || !source.validationList) {
 			d.preview = null;
 			d.loading = false;
 			return;
@@ -5093,11 +5117,13 @@
 	function applyValidation(clear = false) {
 		const d = validDlg;
 		if (!d) return;
-		let dv: string[] | { src: string } | null = null;
+		let dv: unknown = null;
 		if (!clear) {
-			const p = dvPatch(d.mode, d.text, d.src);
+			// La formule (et une borne en formule) est écrite pour la cellule active.
+			const p = dvFromForm(d, addrA1(active.row, active.col));
 			if ('error' in p) {
 				d.error = p.error;
+				d.tab = 'options';
 				return;
 			}
 			dv = p.dv;
@@ -5106,15 +5132,16 @@
 		validDlg = null;
 		wrap.focus();
 		applyStyle({ dv });
+		const l = dvListOf(dv);
 		if (!dv) say(tr('grid.validation.removed'));
-		else if (Array.isArray(dv)) say(tr('grid.validation.list.set', { n: dv.length }));
-		else {
+		else if (l?.list) say(tr('grid.validation.list.set', { n: l.list.length }));
+		else if (l?.src) {
 			// Tirée de la clé d'un tableau : la colonne en devient une référence (décision 0016).
-			const t = onreflink && source.referenceRow ? refTarget(dv.src, sources) : null;
+			const t = onreflink && source.referenceRow ? refTarget(l.src, sources) : null;
 			const e = tableAt(active.row, active.col);
 			if (t) say(refMessage(e ? e.t.columns[active.col - e.t.col].name : d.target, t.table));
-			else say(tr('grid.validation.list.source', { src: dv.src }));
-		}
+			else say(tr('grid.validation.list.source', { src: l.src }));
+		} else say(tr('grid.validation.set'));
 	}
 
 	// « Sélectionner » : le dialogue se retire, la plage source se désigne
@@ -5190,9 +5217,109 @@
 	/** Saisie refusée par la validation de la cellule : le message, sinon null (value : la valeur de la liste). */
 	function refusal(row: number, col: number, text: string): { message: string } | { value: string } {
 		if (text.trimStart().startsWith('=')) return { value: text }; // une formule n'est pas vérifiée
+		// Validation sous forme objet (nombre, date, formule, alerte…) : vérifiée par le moteur (dvAlert).
+		if (!dvLegacy(dvAt(row, col))) return { value: text };
 		const src = dvSrcAt(row, col);
 		const r = src ? validateSource(src, dvLists.get(src), text) : validate(listOf(row, col), text);
 		return r.ok ? { value: r.value } : { message: r.message };
+	}
+
+	// --- Validation des données : alerte, message de saisie, cercles ---------------
+
+	// Saisie refusée par le moteur (dvrules.go) : Arrêt (Réessayer, Annuler),
+	// Avertissement (Continuer ? Oui, Non, Annuler), Informations (OK, Annuler).
+	let dvAlert = $state<(DvAlert & { row: number; col: number; raw: string; keep: boolean }) | null>(null);
+
+	function answerDvAlert(a: 'yes' | 'retry' | 'cancel') {
+		const d = dvAlert;
+		dvAlert = null;
+		wrap.focus();
+		if (!d) return;
+		if (a === 'yes') {
+			void write(d.row, d.col, d.raw, d.keep, undefined, 'dv');
+			return;
+		}
+		if (a === 'retry') {
+			// Le texte tapé revient dans l'éditeur.
+			active = { row: d.row, col: d.col };
+			anchor = { ...active };
+			ensureVisible(d.row, d.col);
+			startEdit(true, d.raw);
+		}
+	}
+
+	// Message de saisie de la cellule active, relevé en dessinant.
+	let inputTip = $state<{ x: number; y: number; title: string; msg: string } | null>(null);
+	// Entourer les données non valides : cellules relues après chaque mise à jour.
+	let circlesOn = false;
+	let dvCircles: { row: number; col: number }[] = [];
+	let circleSeq = 0;
+
+	async function refreshCircles(announce = false) {
+		const get = source.invalidCells;
+		if (!get) return;
+		const seq = ++circleSeq;
+		let cells: { row: number; col: number }[] = [];
+		try {
+			cells = (await get()) ?? [];
+		} catch (err) {
+			say(errorText(err));
+		}
+		if (seq !== circleSeq || !circlesOn) return;
+		dvCircles = cells;
+		if (announce) say(cells.length ? tr('grid.validation.circles.found', { n: cells.length }) : tr('grid.validation.circles.none'));
+		schedule();
+	}
+
+	/** Données › Validation ▾ › Entourer les données non valides. */
+	export function circleInvalid() {
+		circlesOn = true;
+		void refreshCircles(true);
+	}
+
+	/** Données › Validation ▾ › Effacer les cercles. */
+	export function clearCircles() {
+		circlesOn = false;
+		circleSeq++;
+		dvCircles = [];
+		schedule();
+	}
+
+	/** Feuille relue : cercles relus (effacés en changeant de feuille). */
+	function dvAfterData(switching: boolean) {
+		if (switching) clearCircles();
+		else if (circlesOn) void refreshCircles();
+	}
+
+	/** Cercles rouges autour des données non valides, et message de saisie de la cellule active. */
+	function drawValidation() {
+		if (dvCircles.length) {
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(MARGIN, TOP_H, viewW - MARGIN, viewH - TOP_H);
+			ctx.clip();
+			ctx.strokeStyle = '#e02020';
+			ctx.lineWidth = 1.5;
+			for (const { row, col } of dvCircles) {
+				const h = rh(row);
+				const w = cax().size(col);
+				const x = screenX(col);
+				const y = screenY(row);
+				if (h <= 0 || w <= 0 || x > viewW || y > viewH || x + w < MARGIN || y + h < TOP_H) continue;
+				ctx.beginPath();
+				ctx.ellipse(x + w / 2, y + h / 2, w / 2 + 3, h / 2 + 2, 0, 0, Math.PI * 2);
+				ctx.stroke();
+			}
+			ctx.restore();
+		}
+		const inp = validDlg || dvAlert || dvPick ? null : dvInputOf(dvAt(active.row, active.col));
+		let tip: typeof inputTip = null;
+		if (inp) {
+			const y = screenY(active.row) + rh(active.row) + 4;
+			const x = screenX(active.col) + Math.min(24, cax().size(active.col) / 2);
+			if (y > TOP_H && y < viewH && x > MARGIN && x < viewW) tip = { x: toView(Math.min(x, viewW - 250)), y: toView(y), ...inp };
+		}
+		if (JSON.stringify(tip) !== JSON.stringify(inputTip)) inputTip = tip;
 	}
 
 	// --- Notes (Révision) ---------------------------------------------------------
@@ -7078,7 +7205,7 @@
 
 	/** Un menu, panneau ou boîte de la grille est-il ouvert ? */
 	function menusOpen(): boolean {
-		return !!(filterDlg || cfView || dedupDlg || fnDlg || menu || freeMenu || chartMenu || linesDlg || formatDlg || validDlg || noteDlg || listMenu || sizeDlg);
+		return !!(filterDlg || cfView || dedupDlg || fnDlg || menu || freeMenu || chartMenu || linesDlg || formatDlg || validDlg || dvAlert || noteDlg || listMenu || sizeDlg);
 	}
 
 	/**
@@ -9364,7 +9491,12 @@
 			const k = message.indexOf('formule : ');
 			const q = key ? null : keyQuestion(message, e);
 			const hq = key ? null : handQuestion(message, e);
-			if (q) {
+			const dva = key === 'dv' ? null : dvAlertOf(e);
+			if (dva) {
+				// Validation des données : l'alerte demande quoi faire (Réessayer, Oui, OK…).
+				message = '';
+				dvAlert = { ...dva, row, col, raw, keep };
+			} else if (q) {
 				// Recherche dans un tableau sans clé : la boîte demande quoi utiliser.
 				message = '';
 				keyDlg = { ...q, row, col, raw, keep, choice: 'index' };
@@ -11888,6 +12020,12 @@
 			{#if noteTip && !noteDlg}
 				<div class="note-tip" style:left="{noteTip.x}px" style:top="{noteTip.y}px">{noteTip.text}</div>
 			{/if}
+			{#if inputTip && !noteTip}
+				<div class="input-tip" role="tooltip" style:left="{inputTip.x}px" style:top="{inputTip.y}px">
+					{#if inputTip.title}<b>{inputTip.title}</b>{/if}
+					{#if inputTip.msg}<span>{inputTip.msg}</span>{/if}
+				</div>
+			{/if}
 		</div>
 		{#if finder}
 			<!-- Entrée, F3, Échap, Ctrl+F et Ctrl+H dans toute la barre (onFinderKey) ;
@@ -13045,42 +13183,104 @@
 				}}
 			>
 				<div class="menu-title" title={tr('grid.validation.title', { target: d.target })}>{tr('grid.validation.title', { target: d.target })}</div>
-				<div class="dv-mode" role="radiogroup" aria-label={tr('grid.validation.source')}>
-					<label><input type="radio" name="dv-mode" value="list" bind:group={d.mode} onchange={() => (d.error = '')} /> {tr('grid.validation.mode.list')}</label>
-					<label><input type="radio" name="dv-mode" value="range" bind:group={d.mode} onchange={() => ((d.error = ''), refreshPreview(0))} /> {tr('grid.validation.mode.range')}</label>
+				<div class="dv-tabs" role="tablist">
+					{#each ['options', 'input', 'error'] as const as tab (tab)}
+						<button role="tab" aria-selected={d.tab === tab} class:on={d.tab === tab} onclick={() => (d.tab = tab)}>{tr(`grid.validation.tab.${tab}`)}</button>
+					{/each}
 				</div>
-				{#if d.mode === 'list'}
-					<p class="menu-note">
-						{tr('grid.validation.list.help')}
-					</p>
-					<div class="add"><textarea bind:value={d.text} rows="7" placeholder={tr('grid.validation.list.placeholder')}></textarea></div>
-				{:else}
-					<p class="menu-note">
-						{tr('grid.validation.range.help')}
-					</p>
-					<div class="add dv-src">
-						<input
-							type="text"
-							aria-label={tr('grid.validation.range.aria')}
-							placeholder={tr('grid.validation.range.placeholder')}
-							spellcheck="false"
-							bind:value={d.src}
-							oninput={() => ((d.error = ''), refreshPreview())}
-							onkeydown={(ev) => {
-								if (ev.key === 'Enter') applyValidation();
-							}}
-						/>
-						<button title={tr('grid.validation.pick.tooltip')} onclick={startPick}>{tr('grid.validation.pick.button')}</button>
+				{#if d.tab === 'options'}
+					<div class="dv-row">
+						<label for="dv-type">{tr('grid.validation.allow')}</label>
+						<select id="dv-type" bind:value={d.type} onchange={() => ((d.error = ''), d.type === 'list' && d.mode === 'range' && refreshPreview(0))}>
+							{#each DV_TYPES as ty (ty)}<option value={ty}>{tr(`grid.validation.type.${ty}`)}</option>{/each}
+						</select>
 					</div>
-					{#if d.loading}
-						<p class="menu-note">{tr('grid.validation.reading')}</p>
-					{:else if d.preview}
-						<p class="menu-note" class:error={!!d.preview.error || !d.preview.values.length}>{dvPreview(d.preview)}</p>
+					{#if hasBounds(d.type)}
+						<div class="dv-row">
+							<label for="dv-op">{tr('grid.validation.data')}</label>
+							<select id="dv-op" bind:value={d.op}>
+								{#each DV_OPS as op (op)}<option value={op}>{tr(`grid.validation.op.${DV_OP_KEYS[op]}`)}</option>{/each}
+							</select>
+						</div>
+						<div class="dv-row">
+							<label for="dv-min">{twoBounds(d.op) ? tr('grid.validation.min') : tr('grid.validation.value')}</label>
+							<input id="dv-min" type="text" spellcheck="false" bind:value={d.min} oninput={() => (d.error = '')} />
+						</div>
+						{#if twoBounds(d.op)}
+							<div class="dv-row">
+								<label for="dv-max">{tr('grid.validation.max')}</label>
+								<input id="dv-max" type="text" spellcheck="false" bind:value={d.max} oninput={() => (d.error = '')} />
+							</div>
+						{/if}
+						<p class="menu-note">{tr('grid.validation.boundHelp')}</p>
+					{:else if d.type === 'custom'}
+						<div class="dv-row">
+							<label for="dv-f">{tr('grid.validation.formulaLabel')}</label>
+							<input id="dv-f" type="text" spellcheck="false" placeholder="=ESTNUM({addrA1(active.row, active.col)})" bind:value={d.formula} oninput={() => (d.error = '')} />
+						</div>
+						<p class="menu-note">{tr('grid.validation.formulaHelp', { cell: addrA1(active.row, active.col) })}</p>
+					{:else if d.type === 'list'}
+						<div class="dv-mode" role="radiogroup" aria-label={tr('grid.validation.source')}>
+							<label><input type="radio" name="dv-mode" value="list" bind:group={d.mode} onchange={() => (d.error = '')} /> {tr('grid.validation.mode.list')}</label>
+							<label><input type="radio" name="dv-mode" value="range" bind:group={d.mode} onchange={() => ((d.error = ''), refreshPreview(0))} /> {tr('grid.validation.mode.range')}</label>
+						</div>
+						{#if d.mode === 'list'}
+							<p class="menu-note">
+								{tr('grid.validation.list.help')}
+							</p>
+							<div class="add"><textarea bind:value={d.text} rows="7" placeholder={tr('grid.validation.list.placeholder')}></textarea></div>
+						{:else}
+							<p class="menu-note">
+								{tr('grid.validation.range.help')}
+							</p>
+							<div class="add dv-src">
+								<input
+									type="text"
+									aria-label={tr('grid.validation.range.aria')}
+									placeholder={tr('grid.validation.range.placeholder')}
+									spellcheck="false"
+									bind:value={d.src}
+									oninput={() => ((d.error = ''), refreshPreview())}
+									onkeydown={(ev) => {
+										if (ev.key === 'Enter') applyValidation();
+									}}
+								/>
+								<button title={tr('grid.validation.pick.tooltip')} onclick={startPick}>{tr('grid.validation.pick.button')}</button>
+							</div>
+							{#if d.loading}
+								<p class="menu-note">{tr('grid.validation.reading')}</p>
+							{:else if d.preview}
+								<p class="menu-note" class:error={!!d.preview.error || !d.preview.values.length}>{dvPreview(d.preview)}</p>
+							{/if}
+						{/if}
 					{/if}
+					{#if d.type !== 'any'}
+						<label class="dv-check"><input type="checkbox" bind:checked={d.blank} /> {tr('grid.validation.blank')}</label>
+					{/if}
+				{:else if d.tab === 'input'}
+					<p class="menu-note">{tr('grid.validation.inputHelp')}</p>
+					<div class="dv-row">
+						<label for="dv-it">{tr('grid.validation.msgTitle')}</label>
+						<input id="dv-it" type="text" maxlength="32" bind:value={d.inTitle} />
+					</div>
+					<div class="add"><textarea aria-label={tr('grid.validation.msgText')} placeholder={tr('grid.validation.msgText')} maxlength="255" rows="4" bind:value={d.inMsg}></textarea></div>
+				{:else}
+					<div class="dv-row">
+						<label for="dv-st">{tr('grid.validation.styleLabel')}</label>
+						<select id="dv-st" bind:value={d.errStyle}>
+							{#each ['stop', 'warning', 'info'] as const as st (st)}<option value={st}>{tr(`grid.validation.style.${st}`)}</option>{/each}
+						</select>
+					</div>
+					<p class="menu-note">{tr(`grid.validation.styleHelp.${d.errStyle}`)}</p>
+					<div class="dv-row">
+						<label for="dv-et">{tr('grid.validation.msgTitle')}</label>
+						<input id="dv-et" type="text" maxlength="32" bind:value={d.errTitle} />
+					</div>
+					<div class="add"><textarea aria-label={tr('grid.validation.msgText')} placeholder={tr('grid.validation.errorPlaceholder')} maxlength="255" rows="4" bind:value={d.errMsg}></textarea></div>
 				{/if}
 				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
 				<div class="foot">
-					{#if listOf(active.row, active.col)}<button onclick={() => applyValidation(true)}>{tr('grid.validation.clear')}</button>{/if}
+					{#if dvRule(dvAt(active.row, active.col))}<button onclick={() => applyValidation(true)}>{tr('grid.validation.clear')}</button>{/if}
 					<span class="sp"></span>
 					<button class="primary" onclick={() => applyValidation()}>{tr('common.ok')}</button>
 					<button
@@ -13092,6 +13292,41 @@
 					>
 				</div>
 			</div>
+			</div>
+		{/if}
+		{#if dvAlert}
+			{@const d = dvAlert}
+			<div class="dlg-back" role="presentation">
+				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+				<div
+					class="rules dv-alert"
+					role="alertdialog"
+					aria-modal="true"
+					aria-label={d.title || tr('grid.validation.alert.title')}
+					tabindex="-1"
+					use:focusFirst
+					use:modal
+					onkeydown={(ev) => {
+						ev.stopPropagation();
+						if (ev.key === 'Escape') answerDvAlert('cancel');
+					}}
+				>
+					<div class="menu-title">{d.title || tr('grid.validation.alert.title')}</div>
+					<p class="dv-alert-text" class:stop={d.style === 'stop'} class:warning={d.style === 'warning'}>{d.text}</p>
+					{#if d.style === 'warning'}<p class="menu-note">{tr('grid.validation.alert.continue')}</p>{/if}
+					<div class="foot">
+						<span class="sp"></span>
+						{#if d.style === 'stop'}
+							<button class="primary" onclick={() => answerDvAlert('retry')}>{tr('grid.validation.alert.retry')}</button>
+						{:else if d.style === 'warning'}
+							<button class="primary" onclick={() => answerDvAlert('yes')}>{tr('grid.validation.alert.yes')}</button>
+							<button onclick={() => answerDvAlert('retry')}>{tr('grid.validation.alert.no')}</button>
+						{:else}
+							<button class="primary" onclick={() => answerDvAlert('yes')}>{tr('common.ok')}</button>
+						{/if}
+						<button onclick={() => answerDvAlert('cancel')}>{tr('common.cancel')}</button>
+					</div>
+				</div>
 			</div>
 		{/if}
 		{#if noteDlg}
@@ -14126,6 +14361,85 @@
 	}
 	.valid-dlg .menu-note {
 		max-width: none;
+	}
+	/* Validation des données : onglets, lignes libellé + champ, alerte. */
+	.dv-tabs {
+		display: flex;
+		gap: 2px;
+		margin: 2px 14px 6px;
+		border-bottom: 1px solid #e2e4e7;
+	}
+	.dv-tabs button {
+		border: none;
+		background: none;
+		padding: 4px 8px;
+		border-bottom: 2px solid transparent;
+		color: #4b5563;
+		cursor: pointer;
+	}
+	.dv-tabs button.on {
+		border-bottom-color: var(--accent, #1a73e8);
+		color: #111827;
+	}
+	.dv-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 3px 14px;
+	}
+	.dv-row label {
+		width: 82px;
+		flex: none;
+	}
+	.dv-row input,
+	.dv-row select {
+		flex: 1;
+		min-width: 0;
+		font: inherit;
+		padding: 3px 6px;
+		border: 1px solid #c9cdd2;
+		border-radius: 3px;
+	}
+	.dv-check {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin: 6px 14px 0;
+	}
+	.valid-dlg .dv-check input {
+		width: auto;
+	}
+	.dv-alert {
+		width: 360px;
+		min-width: 0;
+	}
+	.dv-alert-text {
+		margin: 6px 14px;
+		padding-left: 10px;
+		border-left: 3px solid #2f80ed;
+		white-space: pre-wrap;
+	}
+	.dv-alert-text.stop {
+		border-left-color: #d93025;
+	}
+	.dv-alert-text.warning {
+		border-left-color: #e8a400;
+	}
+	.input-tip {
+		position: absolute;
+		z-index: 6;
+		max-width: 240px;
+		padding: 5px 8px;
+		background: #fff;
+		border: 1px solid #c9cdd2;
+		border-radius: var(--float-radius);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+		white-space: pre-wrap;
+		pointer-events: none;
+		font-size: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
 	}
 	.dv-mode {
 		display: flex;

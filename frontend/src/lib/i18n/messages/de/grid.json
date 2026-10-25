@@ -963,6 +963,70 @@
 			"notFound": "Liste nicht gefunden: {error}",
 			"reading": "Liste wird gelesen…",
 			"empty": "Der Bereich der Liste ist leer"
+		},
+		"tab": {
+			"options": "Einstellungen",
+			"input": "Eingabemeldung",
+			"error": "Fehlermeldung"
+		},
+		"allow": "Zulassen",
+		"data": "Daten",
+		"min": "Minimum",
+		"max": "Maximum",
+		"value": "Wert",
+		"type": {
+			"any": "Jeden Wert",
+			"whole": "Ganze Zahl",
+			"decimal": "Dezimal",
+			"list": "Liste",
+			"date": "Datum",
+			"time": "Zeit",
+			"length": "Textlänge",
+			"custom": "Benutzerdefiniert"
+		},
+		"op": {
+			"between": "zwischen",
+			"notbetween": "nicht zwischen",
+			"eq": "gleich",
+			"ne": "ungleich",
+			"gt": "größer als",
+			"lt": "kleiner als",
+			"ge": "größer oder gleich",
+			"le": "kleiner oder gleich"
+		},
+		"blank": "Leere Zellen ignorieren",
+		"boundHelp": "Ein Wert (10, 31.12.2026, 08:30) oder eine Formel (=B1).",
+		"formulaLabel": "Formel",
+		"formulaHelp": "Wahr, wenn der Wert zulässig ist, geschrieben für {cell}; in einer Tabelle: [@Spalte].",
+		"inputHelp": "Wird angezeigt, wenn die Zelle ausgewählt ist.",
+		"msgTitle": "Titel",
+		"msgText": "Meldung",
+		"styleLabel": "Typ",
+		"style": {
+			"stop": "Stopp",
+			"warning": "Warnung",
+			"info": "Information"
+		},
+		"styleHelp": {
+			"stop": "Lehnt den Wert ab.",
+			"warning": "Fragt, ob der Wert bleiben soll.",
+			"info": "Weist darauf hin und behält den Wert."
+		},
+		"errorPlaceholder": "Meldung, wenn der Wert nicht zulässig ist",
+		"missingFormula": "Geben Sie die Formel an (wahr, wenn der Wert zulässig ist)",
+		"missingBounds": "Geben Sie Minimum und Maximum an",
+		"missingValue": "Geben Sie den Wert an",
+		"set": "Datenüberprüfung festgelegt",
+		"alert": {
+			"title": "Ungültiger Wert",
+			"continue": "Fortfahren?",
+			"yes": "Ja",
+			"no": "Nein",
+			"retry": "Wiederholen"
+		},
+		"circles": {
+			"none": "Keine ungültigen Daten",
+			"found": "{n, plural, one {# ungültiger Wert eingekreist} other {# ungültige Werte eingekreist}}"
 		}
 	},
 	"spill": {

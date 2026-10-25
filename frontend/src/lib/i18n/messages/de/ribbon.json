@@ -525,7 +525,10 @@
 		},
 		"validation": {
 			"label": "Datenüberprüfung",
-			"tooltip": "Dropdownliste: Nur ihre Werte sind in der Auswahl zulässig"
+			"tooltip": "Begrenzt, was in die Auswahl eingegeben werden kann: Liste, Zahl, Datum, Formel…",
+			"dialog": "Datenüberprüfung…",
+			"circle": "Ungültige Daten einkreisen",
+			"clear": "Gültigkeitskreise löschen"
 		},
 		"mergeSheets": {
 			"label": "Blätter zusammenführen…",

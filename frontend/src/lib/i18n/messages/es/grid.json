@@ -963,6 +963,70 @@
 			"notFound": "Lista no encontrada: {error}",
 			"reading": "Leyendo la lista…",
 			"empty": "El rango de la lista está vacío"
+		},
+		"tab": {
+			"options": "Configuración",
+			"input": "Mensaje de entrada",
+			"error": "Mensaje de error"
+		},
+		"allow": "Permitir",
+		"data": "Datos",
+		"min": "Mínimo",
+		"max": "Máximo",
+		"value": "Valor",
+		"type": {
+			"any": "Cualquier valor",
+			"whole": "Número entero",
+			"decimal": "Decimal",
+			"list": "Lista",
+			"date": "Fecha",
+			"time": "Hora",
+			"length": "Longitud del texto",
+			"custom": "Personalizada"
+		},
+		"op": {
+			"between": "entre",
+			"notbetween": "no está entre",
+			"eq": "igual a",
+			"ne": "no igual a",
+			"gt": "mayor que",
+			"lt": "menor que",
+			"ge": "mayor o igual que",
+			"le": "menor o igual que"
+		},
+		"blank": "Omitir blancos",
+		"boundHelp": "Un valor (10, 31/12/2026, 08:30) o una fórmula (=B1).",
+		"formulaLabel": "Fórmula",
+		"formulaHelp": "Verdadera cuando el valor está permitido, escrita para {cell}; en una tabla: [@Columna].",
+		"inputHelp": "Se muestra cuando se selecciona la celda.",
+		"msgTitle": "Título",
+		"msgText": "Mensaje",
+		"styleLabel": "Estilo",
+		"style": {
+			"stop": "Detener",
+			"warning": "Advertencia",
+			"info": "Información"
+		},
+		"styleHelp": {
+			"stop": "Rechaza el valor.",
+			"warning": "Pregunta si se conserva el valor.",
+			"info": "Avisa y conserva el valor."
+		},
+		"errorPlaceholder": "Mensaje si el valor no está permitido",
+		"missingFormula": "Indique la fórmula (verdadera cuando el valor está permitido)",
+		"missingBounds": "Indique el mínimo y el máximo",
+		"missingValue": "Indique el valor",
+		"set": "Validación de datos aplicada",
+		"alert": {
+			"title": "Valor no válido",
+			"continue": "¿Continuar?",
+			"yes": "Sí",
+			"no": "No",
+			"retry": "Reintentar"
+		},
+		"circles": {
+			"none": "No hay datos no válidos",
+			"found": "{n, plural, one {# dato no válido rodeado} other {# datos no válidos rodeados}}"
 		}
 	},
 	"spill": {

@@ -525,7 +525,10 @@
 		},
 		"validation": {
 			"label": "Data validation",
-			"tooltip": "Drop-down list: only its values are allowed in the selection"
+			"tooltip": "Limits what can be entered in the selection: list, number, date, formula…",
+			"dialog": "Data Validation…",
+			"circle": "Circle Invalid Data",
+			"clear": "Clear Validation Circles"
 		},
 		"mergeSheets": {
 			"label": "Combine tabs…",

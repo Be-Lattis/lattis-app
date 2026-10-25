@@ -93,6 +93,10 @@ func (m *Model) SetCell(ctx context.Context, sheet int64, row, col int, raw stri
 		t.undoBirth = true
 		err := t.input(sheet, row, col, raw, &ev)
 		t.keyAsk = false // rattachement de fin d'action : sans question
+		if err == nil && entryCheck(ctx) && !isFormula(raw) {
+			// Validation des données (dvrules.go) : un refus annule la saisie.
+			err = t.checkEntry(sheet, row, col)
+		}
 		ev.Keyed = t.keyed
 		if ev.Created != "" {
 			ev.AutoKey = t.autoKeyed

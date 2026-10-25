@@ -78,6 +78,8 @@ type xsheet struct {
 	// Images, formes et zones de texte (export .xlsx : xlsxdrawing.go).
 	objects []canvas.ObjectInfo
 	pics    map[string]xpic
+	// validations : <dataValidations> de la feuille (.xlsx).
+	validations string
 }
 
 // Limites d'une feuille Excel : la feuille de Lattis va au-delà, l'export coupe.
@@ -410,6 +412,10 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 		sh.tables = append(sh.tables, xt)
 	}
 	sh.rep.Rules = len(rules)
+	if b != nil && b.target == toXLSX {
+		// Validations des données écrites dans le fichier (xlsxvalidation.go).
+		sh.validations, sh.rep.Lists = sheetValidationsXML(l)
+	}
 	return sh, nil
 }
 

@@ -1040,6 +1040,14 @@ export function InsertSheetRows(sheet: number, at: number, n: number): $Cancella
 }
 
 /**
+ * InvalidCells donne les cellules de la feuille dont la valeur ne respecte
+ * pas leur validation (Entourer les données non valides).
+ */
+export function InvalidCells(sheet: number): $CancellablePromise<canvas$0.CellPos[] | null> {
+    return $Call.ByID(2055820170, sheet);
+}
+
+/**
  * JoinTable ajoute au tableau voisin une cellule libre gardée hors du
  * tableau (note, total, remarque).
  */
@@ -1987,6 +1995,10 @@ export function SetCell(sheet: number, row: number, col: number, raw: string): $
  * SetCellKeyed est SetCell avec la réponse à la question de la clé (refus
  * « clé à choisir ») : "index" (numéros de ligne) ou "column" (la colonne
  * cherchée devient la clé), dans la même étape d'annulation que la saisie.
+ * 
+ * La saisie respecte la validation des données de la cellule (refus
+ * validation.refusedEntry) ; key "dv" : l'utilisateur a accepté la valeur
+ * après l'alerte (Avertissement : Oui, Informations : OK).
  */
 export function SetCellKeyed(sheet: number, row: number, col: number, raw: string, key: string): $CancellablePromise<canvas$0.Event> {
     return $Call.ByID(2143571244, sheet, row, col, raw, key);
@@ -2805,6 +2817,15 @@ export function UnprotectWorkbook(password: string): $CancellablePromise<$models
  */
 export function UpdateTableSource(req: $models.TableSourceRequest): $CancellablePromise<$models.TableSourceLink> {
     return $Call.ByID(466382212, req);
+}
+
+/**
+ * ValidationAt donne la validation des données de la cellule (dialogue
+ * Validation des données), formules et valeurs dans la langue de la
+ * session ; Type vide : aucune.
+ */
+export function ValidationAt(sheet: number, row: number, col: number): $CancellablePromise<canvas$0.DVRule> {
+    return $Call.ByID(2580363744, sheet, row, col);
 }
 
 /**

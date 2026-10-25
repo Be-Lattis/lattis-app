@@ -963,6 +963,70 @@
 			"notFound": "Liste introuvable : {error}",
 			"reading": "Lecture de la liste…",
 			"empty": "La plage de la liste est vide"
+		},
+		"tab": {
+			"options": "Options",
+			"input": "Message de saisie",
+			"error": "Alerte d'erreur"
+		},
+		"allow": "Autoriser",
+		"data": "Données",
+		"min": "Minimum",
+		"max": "Maximum",
+		"value": "Valeur",
+		"type": {
+			"any": "Tout",
+			"whole": "Nombre entier",
+			"decimal": "Décimal",
+			"list": "Liste",
+			"date": "Date",
+			"time": "Heure",
+			"length": "Longueur du texte",
+			"custom": "Personnalisé"
+		},
+		"op": {
+			"between": "comprise entre",
+			"notbetween": "non comprise entre",
+			"eq": "égale à",
+			"ne": "différente de",
+			"gt": "supérieure à",
+			"lt": "inférieure à",
+			"ge": "supérieure ou égale à",
+			"le": "inférieure ou égale à"
+		},
+		"blank": "Ignorer si vide",
+		"boundHelp": "Une valeur (10, 31/12/2026, 08:30) ou une formule (=B1).",
+		"formulaLabel": "Formule",
+		"formulaHelp": "Vraie quand la valeur est permise, écrite pour {cell} ; dans un tableau : [@Colonne].",
+		"inputHelp": "Montré quand la cellule est sélectionnée.",
+		"msgTitle": "Titre",
+		"msgText": "Message",
+		"styleLabel": "Style",
+		"style": {
+			"stop": "Arrêt",
+			"warning": "Avertissement",
+			"info": "Informations"
+		},
+		"styleHelp": {
+			"stop": "Refuse la valeur.",
+			"warning": "Demande s'il faut garder la valeur.",
+			"info": "Prévient, puis garde la valeur."
+		},
+		"errorPlaceholder": "Message montré si la valeur n'est pas permise",
+		"missingFormula": "Indiquez la formule (vraie quand la valeur est permise)",
+		"missingBounds": "Indiquez le minimum et le maximum",
+		"missingValue": "Indiquez la valeur",
+		"set": "Validation des données posée",
+		"alert": {
+			"title": "Valeur non valide",
+			"continue": "Continuer ?",
+			"yes": "Oui",
+			"no": "Non",
+			"retry": "Réessayer"
+		},
+		"circles": {
+			"none": "Aucune donnée non valide",
+			"found": "{n, plural, one {# donnée non valide entourée} other {# données non valides entourées}}"
 		}
 	},
 	"spill": {

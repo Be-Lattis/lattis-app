@@ -226,6 +226,9 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 	if err != nil {
 		return err
 	}
+	if patch, err = m.ui(ctx).dvIn(patch); err != nil {
+		return err
+	}
 	if err := normalizeDV(patch); err != nil {
 		return err
 	}
@@ -295,6 +298,7 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				continue
 			}
 			colID := tb.Cols[c-tb.Col].ID
+			tp := dvForTable(patch, tb, c) // formule de validation : [@Colonne]
 			if r0 <= tb.Row && tb.Row <= r1 {
 				if err := t.styleTable(tb.ID, -1, colID, patch, lines.at(tb.Row, c)); err != nil { // en-tête
 					return err
@@ -307,7 +311,7 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 			if first == tb.Row+1 && last == tb.Bottom() {
 				// Toute la colonne : style de colonne, et les styles de cellule
 				// pour les mêmes propriétés s'effacent.
-				if err := t.styleTableColumn(tb, colID, c, patch, lines); err != nil {
+				if err := t.styleTableColumn(tb, colID, c, tp, lines); err != nil {
 					return err
 				}
 				continue
@@ -324,7 +328,7 @@ func (m *Model) ApplyStyle(ctx context.Context, sheet int64, r0, c0, r1, c1 int,
 				if cells++; cells > MaxStyleCells {
 					return msg.New("style.tooManyCells", msg.Args{"max": MaxStyleCells})
 				}
-				if err := t.styleTable(tb.ID, id, colID, patch, over(lines.at(first+i, c), colStyle)); err != nil {
+				if err := t.styleTable(tb.ID, id, colID, tp, over(lines.at(first+i, c), colStyle)); err != nil {
 					return err
 				}
 			}
@@ -362,6 +366,10 @@ func (m *Model) ApplyLineStyle(ctx context.Context, sheet int64, rows bool, i0, 
 	}
 	if i0 < 0 || i1-i0+1 > MaxStyleLines {
 		return msg.New("style.tooManyLines", msg.Args{"max": MaxStyleLines})
+	}
+	patch, err := m.ui(ctx).dvIn(patch)
+	if err != nil {
+		return err
 	}
 	if err := normalizeDV(patch); err != nil {
 		return err
@@ -437,7 +445,7 @@ func (m *Model) ApplyLineStyle(ctx context.Context, sheet int64, rows bool, i0, 
 						if err := count(); err != nil {
 							return err
 						}
-						if err := t.styleTable(tb.ID, id, col.ID, patch, over(lines.cols[c], colStyle)); err != nil {
+						if err := t.styleTable(tb.ID, id, col.ID, dvForTable(patch, tb, c), over(lines.cols[c], colStyle)); err != nil {
 							return err
 						}
 					}

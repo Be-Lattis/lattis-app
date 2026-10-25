@@ -525,7 +525,10 @@
 		},
 		"validation": {
 			"label": "数据验证",
-			"tooltip": "下拉列表：所选内容中只允许其中的值"
+			"tooltip": "限制选区中可输入的内容：序列、数字、日期、公式…",
+			"dialog": "数据验证…",
+			"circle": "圈释无效数据",
+			"clear": "清除验证标识圈"
 		},
 		"mergeSheets": {
 			"label": "合并选项卡…",

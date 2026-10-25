@@ -221,7 +221,8 @@
 		/** Accueil › Cellules › Format : masquer ou afficher les lignes ou colonnes de la sélection. */
 		onlines?: (rows: boolean, hide: boolean) => void;
 		/** Données › Validation des données (liste déroulante). */
-		onvalidation?: () => void;
+		/** Données › Validation ▾ : le dialogue, Entourer les données non valides, Effacer les cercles. */
+		onvalidation?: (what?: 'dialog' | 'circle' | 'clear') => void;
 		/** Données › Regrouper des onglets… (onglets aux mêmes colonnes réunis en un seul tableau). */
 		onmergesheets?: () => void;
 		/** Révision › Notes. */
@@ -854,7 +855,20 @@
 				commands: [
 					{ label: t('ribbon.cmd.textToColumns.label'), icon: 'text-columns', size: 'big', run: ontextcols, hint: t('ribbon.cmd.textToColumns.tooltip') },
 					{ label: t('ribbon.cmd.dedup.label'), icon: 'remove-duplicates', size: 'small', data: true, run: ondedup, hint: t('ribbon.cmd.dedup.tooltip') },
-					{ label: t('ribbon.cmd.validation.label'), icon: 'validation', size: 'small', local: true, run: onvalidation, hint: t('ribbon.cmd.validation.tooltip') },
+					{
+						label: t('ribbon.cmd.validation.label'),
+						icon: 'validation',
+						size: 'small',
+						local: true,
+						split: true,
+						run: onvalidation ? () => onvalidation('dialog') : undefined,
+						hint: t('ribbon.cmd.validation.tooltip'),
+						items: [
+							{ label: t('ribbon.cmd.validation.dialog'), run: onvalidation ? () => onvalidation('dialog') : undefined },
+							{ label: t('ribbon.cmd.validation.circle'), run: onvalidation ? () => onvalidation('circle') : undefined },
+							{ label: t('ribbon.cmd.validation.clear'), run: onvalidation ? () => onvalidation('clear') : undefined }
+						]
+					},
 					{ label: t('ribbon.cmd.mergeSheets.label'), icon: 'append-queries', size: 'small', createsSheet: true, run: onmergesheets, hint: t('ribbon.cmd.mergeSheets.tooltip') }
 				]
 			}

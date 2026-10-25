@@ -525,7 +525,10 @@
 		},
 		"validation": {
 			"label": "Validation des données",
-			"tooltip": "Liste déroulante : seules ses valeurs sont permises dans la sélection"
+			"tooltip": "Limite ce qui peut être saisi dans la sélection : liste, nombre, date, formule…",
+			"dialog": "Validation des données…",
+			"circle": "Entourer les données non valides",
+			"clear": "Effacer les cercles"
 		},
 		"mergeSheets": {
 			"label": "Regrouper des onglets…",

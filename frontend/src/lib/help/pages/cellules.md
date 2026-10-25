@@ -53,7 +53,9 @@ Quand la plage est la **colonne clé** d'un autre tableau (celle marquée 🔑, 
 
 Rien d'autre n'est enregistré : retirer la validation (ou `Ctrl+Z`) ou la clé du tableau visé défait la référence, et elle suit le renommage du tableau et de sa colonne clé. Les valeurs absentes ne sont pas bloquées par une contrainte de la base : c'est la validation qui les refuse à la saisie.
 
-Les validations ne sont pas exportées vers Excel (.xlsx), ni lues à l'import.
+**Autres règles** : Autoriser propose aussi Nombre entier, Décimal, Date, Heure, Longueur du texte (comprise entre, supérieure à… une valeur ou une formule comme `=B1`) et **Personnalisé**, une formule vraie quand la valeur est permise, écrite pour la cellule active (`=NB.SI($A$2:$A$100;A2)=1` : pas de doublon ; dans un tableau, `[@Colonne]`). Le **Message de saisie** s'affiche quand la cellule est sélectionnée ; l'**Alerte d'erreur** refuse la valeur (Arrêt), demande s'il faut la garder (Avertissement) ou prévient seulement (Informations). Un collage n'est pas vérifié : Données › Validation ▾ › **Entourer les données non valides** montre les valeurs hors règle, **Effacer les cercles** les retire.
+
+Les validations sont exportées dans un fichier .xlsx (sauf une liste tirée d'une colonne de tableau).
 
 ## Notes
 

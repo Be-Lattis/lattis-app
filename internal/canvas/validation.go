@@ -73,6 +73,15 @@ func normalizeDV(patch Style) error {
 		}
 		src = x
 	case map[string]any:
+		if x["type"] != nil {
+			// Forme objet (dvrules.go) : nombre, date, formule, messages…
+			dv, err := normalizeDVRule(x)
+			if err != nil {
+				return err
+			}
+			patch["dv"] = dv
+			return nil
+		}
 		s, _ := x["src"].(string)
 		if strings.TrimSpace(s) == "" {
 			return msg.New("validation.emptySource", nil)
@@ -313,19 +322,25 @@ func distinctValues(vals []formula.Value) []string {
 
 // dvStyleTables : couches de style qui portent une validation, avec la
 // feuille où se lit une adresse sans feuille.
-var dvStyleTables = []struct{ table, keys, sheet string }{
-	{"_lattis_cell_styles", "sheet, row, col", "sheet"},
-	{"_lattis_row_styles", "sheet, row, -1", "sheet"},
-	{"_lattis_col_styles", "sheet, -1, col", "sheet"},
-	{"_lattis_styles", "tbl, rid, col", "(SELECT sheet FROM _lattis_tables WHERE id = tbl)"},
+var dvStyleTables = []struct{ table, keys, sheet, self string }{
+	{"_lattis_cell_styles", "sheet, row, col", "sheet", "''"},
+	{"_lattis_row_styles", "sheet, row, -1", "sheet", "''"},
+	{"_lattis_col_styles", "sheet, -1, col", "sheet", "''"},
+	{"_lattis_styles", "tbl, rid, col", "(SELECT sheet FROM _lattis_tables WHERE id = tbl)", "coalesce((SELECT name FROM _lattis_tables WHERE id = tbl), '')"},
 }
 
 // rewriteDVSources applique fn (source, feuille de la couche) aux sources
 // des validations tirées d'une plage ; fn rend la nouvelle source et vrai si
 // elle change.
 func (t *tx) rewriteDVSources(fn func(src string, sheet int64) (string, bool)) error {
+	return t.rewriteDVTexts(func(src string, sheet int64, _ string) (string, bool) { return fn(src, sheet) })
+}
+
+// rewriteDVTexts est rewriteDVSources avec, pour une couche de tableau, le
+// nom du tableau (ses [Colonne] et [@Colonne]).
+func (t *tx) rewriteDVTexts(fn func(src string, sheet int64, self string) (string, bool)) error {
 	for _, q := range dvStyleTables {
-		rs, err := t.query(`SELECT ` + q.keys + `, coalesce(` + q.sheet + `, 0), style FROM ` + q.table + ` WHERE style LIKE '%"dv":{%'`)
+		rs, err := t.query(`SELECT ` + q.keys + `, coalesce(` + q.sheet + `, 0), ` + q.self + `, style FROM ` + q.table + ` WHERE style LIKE '%"dv":{%'`)
 		if err != nil {
 			return err
 		}
@@ -337,8 +352,8 @@ func (t *tx) rewriteDVSources(fn func(src string, sheet int64) (string, bool)) e
 		for rs.Next() {
 			var k [3]int64
 			var sheet int64
-			var s string
-			if err := rs.Scan(&k[0], &k[1], &k[2], &sheet, &s); err != nil {
+			var self, s string
+			if err := rs.Scan(&k[0], &k[1], &k[2], &sheet, &self, &s); err != nil {
 				rs.Close()
 				return err
 			}
@@ -346,15 +361,26 @@ func (t *tx) rewriteDVSources(fn func(src string, sheet int64) (string, bool)) e
 			if json.Unmarshal([]byte(s), &st) != nil {
 				continue
 			}
-			src, ok := DVSource(st["dv"])
+			// La source d'une liste, et les formules d'une validation objet
+			// (bornes « =… », formule personnalisée) : les autres champs restent.
+			dv, ok := st["dv"].(map[string]any)
 			if !ok {
 				continue
 			}
-			neu, ok := fn(src, sheet)
-			if !ok || neu == src {
+			changed := false
+			for _, k := range []string{"src", "formula", "min", "max"} {
+				s, ok := dv[k].(string)
+				if !ok || s == "" || (k != "src" && !strings.HasPrefix(s, "=")) {
+					continue
+				}
+				if neu, ok := fn(s, sheet, self); ok && neu != s {
+					dv[k], changed = neu, true
+				}
+			}
+			if !changed {
 				continue
 			}
-			st["dv"] = map[string]any{"src": neu}
+			st["dv"] = dv
 			if enc, err := encodeJSON(st); err == nil {
 				ups = append(ups, up{k, s, enc})
 			}
@@ -393,7 +419,7 @@ func dvWhere(table string, k [3]int64) (string, []any) {
 // rewriteValidations : renommages de tableaux, colonnes, feuilles et
 // cellules nommées dans les sources des validations.
 func (t *tx) rewriteValidations(rc refChange) error {
-	return t.rewriteDVSources(func(src string, _ int64) (string, bool) {
-		return formula.RenameRefs(src, formula.FR, rc.Renames, "")
+	return t.rewriteDVTexts(func(src string, _ int64, self string) (string, bool) {
+		return formula.RenameRefs(src, formula.FR, rc.Renames, self)
 	})
 }

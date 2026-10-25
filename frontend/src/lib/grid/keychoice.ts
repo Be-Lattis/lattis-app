@@ -8,7 +8,7 @@
 // jointure demandée par canvas.ErrHandKey (« jointure à choisir : … »).
 import { msgCause } from '#lib/i18n/index.js';
 
-export type KeyChoice = 'index' | 'column' | `hand:${string}`;
+export type KeyChoice = 'index' | 'column' | 'dv' | `hand:${string}`;
 
 export interface KeyQuestion {
 	table: string;

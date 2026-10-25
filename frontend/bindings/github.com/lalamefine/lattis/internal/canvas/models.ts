@@ -186,6 +186,14 @@ export interface CellInfo {
 }
 
 /**
+ * CellPos : une cellule de la feuille.
+ */
+export interface CellPos {
+    "row": number;
+    "col": number;
+}
+
+/**
  * CellStyle est la mise en forme d'une cellule hors tableau.
  */
 export interface CellStyle {
@@ -553,6 +561,33 @@ export interface CustomOrder {
     "list"?: string;
     "values": string[] | null;
     "desc"?: boolean;
+}
+
+/**
+ * DVMessage : message de saisie (input) ou alerte d'erreur (error, avec
+ * son style).
+ */
+export interface DVMessage {
+    "style"?: string;
+    "title"?: string;
+    "msg"?: string;
+}
+
+/**
+ * DVRule est une validation des données sous forme objet.
+ */
+export interface DVRule {
+    "type": string;
+    "op"?: string;
+    "min"?: string;
+    "max"?: string;
+    "formula"?: string;
+    "list"?: string[] | null;
+    "src"?: string;
+    "blank"?: boolean | null;
+    "at"?: string;
+    "input"?: DVMessage | null;
+    "error"?: DVMessage | null;
 }
 
 /**

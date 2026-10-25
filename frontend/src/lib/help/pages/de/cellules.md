@@ -53,7 +53,9 @@ Ist der Bereich die **Schlüsselspalte** einer anderen Tabelle (die mit 🔑 mar
 
 Sonst wird nichts gespeichert: Das Entfernen der Überprüfung (oder `Strg+Z`) oder des Schlüssels der Zieltabelle hebt den Bezug auf, und er folgt dem Umbenennen der Tabelle und ihrer Schlüsselspalte. Fehlende Werte werden nicht durch eine Datenbankeinschränkung blockiert: Es ist die Überprüfung, die sie bei der Eingabe ablehnt.
 
-Überprüfungen werden weder nach Excel (.xlsx) exportiert noch beim Import gelesen.
+**Weitere Regeln**: Zulassen bietet auch Ganze Zahl, Dezimal, Datum, Zeit, Textlänge (zwischen, größer als… ein Wert oder eine Formel wie `=B1`) und **Benutzerdefiniert**, eine Formel, die wahr ist, wenn der Wert zulässig ist, geschrieben für die aktive Zelle (`=ZÄHLENWENN($A$2:$A$100;A2)=1`: keine Duplikate; in einer Tabelle `[@Spalte]`). Die **Eingabemeldung** erscheint, wenn die Zelle ausgewählt ist; die **Fehlermeldung** lehnt den Wert ab (Stopp), fragt, ob er bleiben soll (Warnung), oder weist nur darauf hin (Information). Einfügen wird nicht geprüft: Daten › Überprüfung ▾ › **Ungültige Daten einkreisen** zeigt die Werte außerhalb der Regel, **Gültigkeitskreise löschen** entfernt die Kreise.
+
+Überprüfungen werden in eine .xlsx-Datei exportiert (außer einer Liste aus einer Tabellenspalte).
 
 ## Notizen {#notes}
 

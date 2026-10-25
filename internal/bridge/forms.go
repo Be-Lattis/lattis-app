@@ -398,6 +398,10 @@ func formList(ctx context.Context, d *doc.Document, sheet int64, dv any, pub map
 		return l
 	case map[string]any:
 		src, ok := canvas.DVSource(v)
+		if list, _, isList := canvas.DVValues(v); isList && !ok {
+			// Liste saisie sous forme objet (alerte, message : dvrules.go).
+			return &FormList{Fixed: true, Values: append([]string{}, list...)}
+		}
 		if !ok {
 			return nil
 		}

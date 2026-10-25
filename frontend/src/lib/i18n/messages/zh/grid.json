@@ -963,6 +963,70 @@
 			"notFound": "未找到列表：{error}",
 			"reading": "正在读取列表…",
 			"empty": "列表的区域为空"
+		},
+		"tab": {
+			"options": "设置",
+			"input": "输入信息",
+			"error": "出错警告"
+		},
+		"allow": "允许",
+		"data": "数据",
+		"min": "最小值",
+		"max": "最大值",
+		"value": "值",
+		"type": {
+			"any": "任何值",
+			"whole": "整数",
+			"decimal": "小数",
+			"list": "序列",
+			"date": "日期",
+			"time": "时间",
+			"length": "文本长度",
+			"custom": "自定义"
+		},
+		"op": {
+			"between": "介于",
+			"notbetween": "未介于",
+			"eq": "等于",
+			"ne": "不等于",
+			"gt": "大于",
+			"lt": "小于",
+			"ge": "大于或等于",
+			"le": "小于或等于"
+		},
+		"blank": "忽略空值",
+		"boundHelp": "一个值（10、2026/12/31、08:30）或公式（=B1）。",
+		"formulaLabel": "公式",
+		"formulaHelp": "值允许时为真，按 {cell} 编写；在表格中：[@列]。",
+		"inputHelp": "选中单元格时显示。",
+		"msgTitle": "标题",
+		"msgText": "信息",
+		"styleLabel": "样式",
+		"style": {
+			"stop": "停止",
+			"warning": "警告",
+			"info": "信息"
+		},
+		"styleHelp": {
+			"stop": "拒绝该值。",
+			"warning": "询问是否保留该值。",
+			"info": "提示后保留该值。"
+		},
+		"errorPlaceholder": "值不允许时显示的信息",
+		"missingFormula": "请填写公式（值允许时为真）",
+		"missingBounds": "请填写最小值和最大值",
+		"missingValue": "请填写值",
+		"set": "已设置数据验证",
+		"alert": {
+			"title": "无效值",
+			"continue": "是否继续？",
+			"yes": "是",
+			"no": "否",
+			"retry": "重试"
+		},
+		"circles": {
+			"none": "没有无效数据",
+			"found": "{n, plural, other {已圈出 # 个无效值}}"
 		}
 	},
 	"spill": {

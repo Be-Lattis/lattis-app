@@ -525,7 +525,10 @@
 		},
 		"validation": {
 			"label": "Validación de datos",
-			"tooltip": "Lista desplegable: solo sus valores se permiten en la selección"
+			"tooltip": "Limita lo que se puede escribir en la selección: lista, número, fecha, fórmula…",
+			"dialog": "Validación de datos…",
+			"circle": "Rodear con un círculo datos no válidos",
+			"clear": "Borrar círculos de validación"
 		},
 		"mergeSheets": {
 			"label": "Combinar pestañas…",

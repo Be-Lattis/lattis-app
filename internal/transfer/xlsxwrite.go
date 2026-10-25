@@ -25,8 +25,9 @@ import (
 // accompagne toujours la formule. Mise en forme : formats de nombre et de
 // date, police, couleurs, alignement, bordures, largeurs, hauteurs, lignes
 // et colonnes masquées, fusions, volets figés, mise en page (impression).
-// Ni graphiques, ni mise en forme conditionnelle, ni notes, ni validations :
-// le compte rendu (ExportReport) dit ce qui n'est pas exporté tel quel.
+// Validations des données (xlsxvalidation.go). Ni graphiques, ni mise en
+// forme conditionnelle, ni notes : le compte rendu (ExportReport) dit ce
+// qui n'est pas exporté tel quel.
 
 // ExportXLSX écrit tout le classeur au format .xlsx et rend le compte rendu,
 // dont les cellules hors des limites d'Excel (1 048 576 lignes × 16 384
@@ -325,6 +326,7 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 	if len(merges) > 0 {
 		fmt.Fprintf(bw, `<mergeCells count="%d">%s</mergeCells>`, len(merges), strings.Join(merges, ""))
 	}
+	bw.WriteString(s.validations)
 	urls := writeHyperlinks(bw, links, len(tables)+1)
 	bw.WriteString(xlsxPageXML(s.page))
 	if drawing != "" {

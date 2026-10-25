@@ -1850,6 +1850,8 @@
 			const l = await DocumentService.ValidationList(sheetId, src);
 			return { values: l.values ?? [], error: l.error || undefined };
 		},
+		validationAt: (row, col) => DocumentService.ValidationAt(sheetId, row, col),
+		invalidCells: async () => (await DocumentService.InvalidCells(sheetId)) ?? [],
 		referenceRow: (src, value) => DocumentService.ReferenceRow(src, value),
 		citations: async (table, value) => (await DocumentService.Citations(table, value)) ?? [],
 		createChart: (row, col, cfg) => DocumentService.CreateChart(sheetId, row, col, cfg).then(reload),
@@ -2487,7 +2489,7 @@
 		onmerge={mode === 'doc' ? () => sheet?.mergeActive(true) : undefined}
 		onwrap={mode === 'doc' ? () => sheet?.toggleWrap() : undefined}
 		onlines={mode === 'doc' ? (rows, hide) => sheet?.hideLines(rows, hide) : undefined}
-		onvalidation={mode === 'doc' ? () => sheet?.openValidation() : undefined}
+		onvalidation={mode === 'doc' ? (w) => (w === 'circle' ? sheet?.circleInvalid() : w === 'clear' ? sheet?.clearCircles() : sheet?.openValidation()) : undefined}
 		onmergesheets={mode === 'doc' ? openMergeMenu : undefined}
 		onnote={mode === 'doc' ? (what) => (what === 'edit' ? sheet?.editNote() : sheet?.deleteNote()) : undefined}
 		onlink={mode === 'doc' ? () => sheet?.editLink() : undefined}

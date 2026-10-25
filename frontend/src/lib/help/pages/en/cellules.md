@@ -53,7 +53,9 @@ When the range is the **key column** of another table (the one marked 🔑, for 
 
 Nothing else is saved: removing the validation (or `Ctrl+Z`) or the target table's key undoes the reference, and it follows renaming of the table and of its key column. Missing values are not blocked by a database constraint: it is the validation that refuses them on entry.
 
-Validations are not exported to Excel (.xlsx), nor read on import.
+**Other rules**: Allow also offers Whole number, Decimal, Date, Time, Text length (between, greater than… a value or a formula such as `=B1`) and **Custom**, a formula that is true when the value is allowed, written for the active cell (`=COUNTIF($A$2:$A$100,A2)=1`: no duplicates; in a table, `[@Column]`). The **Input message** shows when the cell is selected; the **Error alert** refuses the value (Stop), asks whether to keep it (Warning) or only warns (Information). Pasting is not checked: Data › Validation ▾ › **Circle Invalid Data** shows the values that break the rule, **Clear Validation Circles** removes the circles.
+
+Validations are exported to a .xlsx file (except a list taken from a table column).
 
 ## Notes {#notes}
 
