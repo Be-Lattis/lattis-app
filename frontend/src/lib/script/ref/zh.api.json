@@ -442,6 +442,11 @@
 		"summary": "描述工作表的内容：表格、自由单元格、名称、数据透视表、图表和按钮。",
 		"details": "位置（row, col）从 1 开始计数。表格中的值用 tables.rows 或 db.query 读取。参数 — sheet：工作表（名称或标识符）；省略时：显示的工作表。"
 	},
+	"sheets.group_lines": {
+		"signature": "sheets.group_lines(axis, from, [to], [ungroup], [sheet])",
+		"summary": "在分级显示中组合（或取消组合）工作表的整行或整列（数据 › 组合）：增加（或减少）一级。",
+		"details": "参数 — axis：\"rows\"（行）或 \"cols\"（列）；from：第一行或第一列，从 1 开始；to：最后一行或最后一列（省略时：from）；ungroup：真：取消组合而不是组合；sheet：工作表（名称或标识符）；省略时：显示的工作表。可按顺序传参，或使用命名参数表：sheets.group_lines{axis = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
+	},
 	"sheets.hide": {
 		"signature": "sheets.hide(sheet, [hidden])",
 		"summary": "隐藏工作表（隐藏），或重新显示（hidden = false）。",

@@ -528,6 +528,29 @@ CREATE TABLE _lattis_sparklines (
 	config TEXT NOT NULL
 ) STRICT;
 `,
+	// 37 → 38 : plan de la feuille (Données › Grouper, canvas/outline.go) :
+	// niveau de groupe (1 à 8) de chaque ligne ou colonne groupée ; folded :
+	// groupes réduits qui s'arrêtent sur cette ligne (bit n-1 : niveau n),
+	// propre à chaque poste dans un classeur partagé. outline_above de la
+	// feuille : synthèse au-dessus des détails (bit 1, lignes) ou à leur
+	// gauche (bit 2, colonnes) ; 0 : dessous et à droite.
+	`
+CREATE TABLE _lattis_row_outline (
+	sheet  INTEGER NOT NULL,
+	row    INTEGER NOT NULL,
+	level  INTEGER NOT NULL,
+	folded INTEGER NOT NULL DEFAULT 0,
+	PRIMARY KEY (sheet, row)
+) STRICT;
+CREATE TABLE _lattis_col_outline (
+	sheet  INTEGER NOT NULL,
+	col    INTEGER NOT NULL,
+	level  INTEGER NOT NULL,
+	folded INTEGER NOT NULL DEFAULT 0,
+	PRIMARY KEY (sheet, col)
+) STRICT;
+ALTER TABLE _lattis_sheets ADD COLUMN outline_above INTEGER NOT NULL DEFAULT 0;
+`,
 }
 
 // Version est la version du format que ce programme écrit.

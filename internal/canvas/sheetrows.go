@@ -110,10 +110,13 @@ func (t *tx) insertLines(sheet int64, a axis, at, n int) error {
 			}
 		}
 	}
-	for _, tbl := range append(positioned, a.sizes(), a.lineStyles(), a.lineRules()) {
+	for _, tbl := range append(positioned, a.sizes(), a.lineStyles(), a.lineRules(), a.outline()) {
 		if err := t.shiftPos(tbl, a, sheet, at, n); err != nil {
 			return err
 		}
+	}
+	if err := t.outlineInserted(sheet, a, at, n); err != nil {
+		return err
 	}
 	move := func(i int) (int, bool) {
 		if i >= at {
@@ -178,7 +181,7 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			}
 		}
 	}
-	for _, tbl := range []string{"_lattis_cells", "_lattis_choice_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", a.sizes(), a.lineStyles(), a.lineRules()} {
+	for _, tbl := range []string{"_lattis_cells", "_lattis_choice_cells", "_lattis_cell_styles", "_lattis_range_cells", "_lattis_names", a.sizes(), a.lineStyles(), a.lineRules(), a.outline()} {
 		if err := t.deleteIn(tbl, a, sheet, lo, hi); err != nil {
 			return err
 		}
@@ -188,7 +191,7 @@ func (t *tx) deleteLines(sheet int64, a axis, lo, hi int) error {
 			return err
 		}
 	}
-	for _, tbl := range append(positioned, a.sizes(), a.lineStyles(), a.lineRules()) {
+	for _, tbl := range append(positioned, a.sizes(), a.lineStyles(), a.lineRules(), a.outline()) {
 		if err := t.shiftPos(tbl, a, sheet, hi+1, -n); err != nil {
 			return err
 		}

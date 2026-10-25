@@ -17,6 +17,7 @@
 	import { clearPatch, type CellStyle } from '#lib/grid/style.js';
 	import type { PasteKind } from '#lib/grid/pastespecial.js';
 	import { WHATIF_KINDS, type WhatIfKind } from './whatif.js';
+	import type { OutlineAction } from '#lib/grid/outline.js';
 	import { DEFAULT_PT, FONTS, fontChoices, fontFamily, SIZES } from '#lib/grid/textwrap.js';
 	import { edgeCss, LINE_STYLES, type BorderCmd, type Edge } from '#lib/grid/borders.js';
 	import { categoryOf, formatPatch, type Category } from '#lib/grid/numfmt.js';
@@ -218,6 +219,8 @@
 		onprotect?: (what: 'sheet' | 'structure' | 'workbook') => void;
 		/** Données › Obtenir des données : nouvelle requête d'import, volet des requêtes, tout actualiser. */
 		ondata?: (what: DataAction) => void;
+		/** Données › Plan : grouper, dissocier, détail, sous-total. */
+		onoutline?: (what: OutlineAction | 'subtotal') => void;
 		/** Format de cellule (Ctrl+1) : lanceurs des groupes Police, Alignement et Nombre. */
 		onformat?: (tab: FormatTab) => void;
 		/** Fusionner et centrer (bascule), renvoyer à la ligne (bascule). */
@@ -267,7 +270,7 @@
 		ontheme?: (id: string) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, onsparkline, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, onsparkline, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onoutline, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -307,6 +310,7 @@
 		fileOpen = !fileOpen;
 	}
 	const data = (what: DataAction) => (ondata ? () => ondata(what) : undefined);
+	const ol = (what: OutlineAction | 'subtotal') => (onoutline ? () => onoutline(what) : undefined);
 	const cells = (op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') => (oncells ? () => oncells(op) : undefined);
 	// Palette ouverte sous le bouton Couleur ou Remplissage, comme dans Excel.
 	let palette = $state<'fg' | 'bg' | null>(null);
@@ -897,6 +901,33 @@
 						hint: t('whatif.menuTip'),
 						items: WHATIF_KINDS.map((k) => ({ label: t(`whatif.${k}.title`) + '…', run: onwhatif ? () => onwhatif(k) : undefined }))
 					}
+				]
+			},
+			{
+				id: 'outline',
+				title: t('ribbon.group.outline'),
+				// Comme un tableur : Grouper, Dissocier et Sous-total en grand,
+				// Afficher et Masquer le détail en petit (permis à tous : présentation).
+				compact: true,
+				commands: [
+					{
+						label: t('ribbon.cmd.group.label'), icon: 'group', size: 'big', run: onoutline ? openItems : undefined, hint: t('ribbon.cmd.group.tooltip'),
+						items: [
+							{ label: t('ribbon.cmd.outline.rows'), keys: 'Alt+Maj+→', run: ol('groupRows') },
+							{ label: t('ribbon.cmd.outline.cols'), run: ol('groupCols') }
+						]
+					},
+					{
+						label: t('ribbon.cmd.ungroup.label'), icon: 'ungroup', size: 'big', run: onoutline ? openItems : undefined, hint: t('ribbon.cmd.ungroup.tooltip'),
+						items: [
+							{ label: t('ribbon.cmd.outline.rows'), keys: 'Alt+Maj+←', run: ol('ungroupRows') },
+							{ label: t('ribbon.cmd.outline.cols'), run: ol('ungroupCols') },
+							{ label: t('ribbon.cmd.outline.clear'), sep: true, run: ol('clear') }
+						]
+					},
+					{ label: t('ribbon.cmd.subtotal.label'), icon: 'subtotal', size: 'big', createsSheet: true, run: ol('subtotal'), hint: t('ribbon.cmd.subtotal.tooltip') },
+					{ label: t('ribbon.cmd.showDetail.label'), icon: 'detail-show', size: 'small', ro: true, run: ol('show'), hint: t('ribbon.cmd.showDetail.tooltip') },
+					{ label: t('ribbon.cmd.hideDetail.label'), icon: 'detail-hide', size: 'small', ro: true, run: ol('hide'), hint: t('ribbon.cmd.hideDetail.tooltip') }
 				]
 			}
 		],

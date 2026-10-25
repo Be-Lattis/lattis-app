@@ -84,6 +84,9 @@ type xsheet struct {
 	// extra : règles conditionnelles, notes et graphiques (export .xlsx :
 	// xlsxcfwrite.go, xlsxchartwrite.go).
 	extra *sheetExtras
+	// outline : plan de la feuille (groupes), nil sans groupe ; ses groupes
+	// réduits sont dans hiddenR et hiddenC.
+	outline *canvas.Outline
 }
 
 // Limites d'une feuille Excel : la feuille de Lattis va au-delà, l'export coupe.
@@ -275,6 +278,16 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 			sh.colFmt[ls.Index] = n
 		}
 	}
+	// Plan : les groupes réduits masquent leurs lignes et colonnes.
+	if o := l.Outline; o != nil {
+		sh.outline = o
+		for _, r := range o.HiddenRows {
+			sh.hiddenR[r] = true
+		}
+		for _, c := range o.HiddenCols {
+			sh.hiddenC[c] = true
+		}
+	}
 	own := map[[2]int]canvas.Style{}
 	for _, c := range l.Styles {
 		st := parseStyle(c.Style)
@@ -437,6 +450,14 @@ func (sh *xsheet) marks() []int {
 	}
 	for r := range sh.hiddenR {
 		set[r] = true
+	}
+	if o := sh.outline; o != nil {
+		for _, l := range o.Rows {
+			set[l.Index] = true
+		}
+		for r := range outlineCollapsed(o.Rows, o.RowsAbove) {
+			set[r] = true
+		}
 	}
 	for _, g := range sh.merges {
 		for r := g[0]; r < g[0]+g[2]; r++ {

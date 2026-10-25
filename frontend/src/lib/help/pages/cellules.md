@@ -79,6 +79,10 @@ Affichage › Figer les volets garde des lignes et des colonnes à l'écran pend
 
 Le réglage appartient à la feuille et s'enregistre avec le classeur.
 
+## Grouper et sous-totaux
+
+Données › Grouper (Alt+Maj+→) groupe les lignes ou les colonnes sélectionnées, sur huit niveaux ; Dissocier (Alt+Maj+←) les en retire. La barre du plan, à gauche ou au-dessus de la grille, réduit un groupe [−] ou le rouvre [+] ; les boutons 1 2 3 du coin affichent le plan jusqu'à ce niveau. Les lignes d'un tableau ne se groupent pas : Données › Sous-total pose, sur une feuille à côté, ses lignes coupées à chaque changement d'une colonne, avec une ligne SOUS.TOTAL par groupe, un total général et le plan ; le tableau ne change pas. Dans un classeur partagé, les groupes sont partagés, réduire ou rouvrir reste sur votre poste.
+
 ## Thème de couleur
 
 Affichage › Thème choisit la couleur des tableaux du classeur : celle des tableaux ordinaires (vert par défaut) et celle des tableaux chargés par une source externe ou une requête (bleu par défaut). Chaque thème du menu montre ses deux couleurs ; l'en-tête, son texte, le cadre, les icônes et la pastille du nom en sont tirés, avec un texte toujours lisible sur l'en-tête.

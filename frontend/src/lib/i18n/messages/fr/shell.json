@@ -163,7 +163,8 @@
 			"filter": "Filtre de la colonne (efface les filtres s'il y en a)",
 			"note": "Nouvelle note (ou modifier la note)",
 			"link": "Lien (page web, e-mail, cellule)",
-			"chart": "Graphique (histogramme) du tableau actif"
+			"chart": "Graphique (histogramme) du tableau actif",
+			"group": "Grouper / dissocier"
 		},
 		"calcul": {
 			"title": "Calcul et données",

@@ -79,6 +79,10 @@ Vista › Inmovilizar paneles mantiene filas y columnas en pantalla al desplazar
 
 La configuración pertenece a la hoja y se guarda con el libro.
 
+## Agrupar y subtotales {#grouper-et-sous-totaux}
+
+Datos › Agrupar (Alt+Mayús+→) agrupa las filas o columnas seleccionadas, hasta ocho niveles; Desagrupar (Alt+Mayús+←) las quita. La barra del esquema, a la izquierda o encima de la cuadrícula, contrae un grupo [−] o lo expande [+]; los botones 1 2 3 de la esquina muestran el esquema hasta ese nivel. Las filas de una tabla no se agrupan: Datos › Subtotal pone sus filas en una hoja al lado, cortadas en cada cambio de una columna, con una fila SUBTOTALES por grupo, un total general y el esquema; la tabla no cambia. En un libro compartido, los grupos se comparten; contraer o expandir queda en su equipo.
+
 ## Tema de color {#theme-de-couleur}
 
 Vista › Tema elige el color de las tablas del libro: el de las tablas normales (verde de forma predeterminada) y el de las tablas cargadas por un origen externo o una consulta (azul de forma predeterminada). Cada tema del menú muestra sus dos colores; el encabezado, su texto, el marco, los iconos y la etiqueta del nombre se derivan de ellos, con un texto siempre legible sobre el encabezado.

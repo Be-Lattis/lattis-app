@@ -121,7 +121,8 @@
 		"print": "Imprimir",
 		"links": "Vínculos",
 		"printing": "Impresión",
-		"illustrations": "Ilustraciones"
+		"illustrations": "Ilustraciones",
+		"outline": "Esquema"
 	},
 	"launch": {
 		"font": "Formato de celdas: fuente (Ctrl+1)",
@@ -692,6 +693,31 @@
 		"sparklines": {
 			"label": "Minigráficos",
 			"tooltip": "Gráfico pequeño en una celda, o en cada fila de una tabla"
+		},
+		"group": {
+			"label": "Agrupar",
+			"tooltip": "Agrupar las filas o columnas seleccionadas (Alt+Mayús+→)"
+		},
+		"ungroup": {
+			"label": "Desagrupar",
+			"tooltip": "Desagrupar las filas o columnas seleccionadas (Alt+Mayús+←)"
+		},
+		"outline": {
+			"rows": "Filas",
+			"cols": "Columnas",
+			"clear": "Borrar esquema"
+		},
+		"subtotal": {
+			"label": "Subtotal",
+			"tooltip": "Totales por grupo de una tabla, en una hoja al lado"
+		},
+		"showDetail": {
+			"label": "Mostrar detalle",
+			"tooltip": "Expandir el grupo de la celda activa"
+		},
+		"hideDetail": {
+			"label": "Ocultar detalle",
+			"tooltip": "Contraer el grupo de la celda activa"
 		}
 	},
 	"protect": {

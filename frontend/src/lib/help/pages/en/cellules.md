@@ -79,6 +79,10 @@ View › Freeze Panes keeps rows and columns on screen while scrolling:
 
 The setting belongs to the sheet and is saved with the workbook.
 
+## Group and subtotals {#grouper-et-sous-totaux}
+
+Data › Group (Alt+Shift+→) groups the selected rows or columns, on up to eight levels; Ungroup (Alt+Shift+←) removes them. The outline bar, left of or above the grid, collapses a group [−] or expands it [+]; the 1 2 3 buttons in the corner show the outline down to that level. Rows of a table are not grouped: Data › Subtotal puts its rows on a sheet alongside, split at each change in a column, with a SUBTOTAL row per group, a grand total and the outline; the table is unchanged. In a shared workbook, groups are shared; collapsing or expanding stays on your computer.
+
 ## Color theme {#theme-de-couleur}
 
 View › Theme chooses the color of the workbook's tables: that of ordinary tables (green by default) and that of tables loaded by an external source or a query (blue by default). Each theme in the menu shows its two colors; the header, its text, the frame, the icons and the name badge are derived from them, with text that is always readable on the header.

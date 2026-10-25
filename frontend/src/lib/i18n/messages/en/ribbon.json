@@ -121,7 +121,8 @@
 		"print": "Print",
 		"links": "Links",
 		"printing": "Printing",
-		"illustrations": "Illustrations"
+		"illustrations": "Illustrations",
+		"outline": "Outline"
 	},
 	"launch": {
 		"font": "Format cells: font (Ctrl+1)",
@@ -692,6 +693,31 @@
 		"sparklines": {
 			"label": "Sparklines",
 			"tooltip": "Small chart in a cell, or in each row of a table"
+		},
+		"group": {
+			"label": "Group",
+			"tooltip": "Group the selected rows or columns (Alt+Shift+→)"
+		},
+		"ungroup": {
+			"label": "Ungroup",
+			"tooltip": "Ungroup the selected rows or columns (Alt+Shift+←)"
+		},
+		"outline": {
+			"rows": "Rows",
+			"cols": "Columns",
+			"clear": "Clear Outline"
+		},
+		"subtotal": {
+			"label": "Subtotal",
+			"tooltip": "Totals per group of a table, on a sheet alongside"
+		},
+		"showDetail": {
+			"label": "Show Detail",
+			"tooltip": "Expand the group of the active cell"
+		},
+		"hideDetail": {
+			"label": "Hide Detail",
+			"tooltip": "Collapse the group of the active cell"
 		}
 	},
 	"protect": {

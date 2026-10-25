@@ -29,7 +29,7 @@ var layoutTables = []string{
 	"_lattis_styles", "_lattis_cell_styles", "_lattis_row_styles", "_lattis_col_styles",
 	"_lattis_row_rules", "_lattis_col_rules", "_lattis_pivots", "_lattis_charts",
 	"_lattis_buttons", "_lattis_pages", "_lattis_range_cells", "_lattis_page_setup",
-	"_lattis_images", "_lattis_objects", "_lattis_sparklines",
+	"_lattis_images", "_lattis_objects", "_lattis_sparklines", "_lattis_row_outline", "_lattis_col_outline",
 }
 
 // Images d'un classeur partagé : la mise en page est un seul objet du
@@ -46,6 +46,10 @@ var imagesFilter = ` WHERE length(data) <= ` + strconv.Itoa(canvas.MaxSharedImag
 // Onglets à choix : _lattis_sheets.choice est publiée sans la valeur
 // choisie (la catégorie seule, publishedChoice), qui reste propre à chaque
 // poste (voir choice.go ; loader.mergeChoices la remet).
+
+// Plan des feuilles (canvas/outline.go) : les niveaux des groupes sont
+// publiés ; l'état réduit (folded) reste propre à chaque poste en direct
+// (layoutOwn), pris du serveur à l'ouverture.
 
 // Hors de la liste, volontairement : les données des tableaux (tables du
 // serveur), les scripts (publish_script), les saisies invalides (refusées à

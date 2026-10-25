@@ -125,6 +125,8 @@
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, pointedRef, previewShift, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
 	import { editorLeave, formulaTyping, fxLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import { parseGoto, type GotoTable } from './goto';
+	import OutlineBar from './OutlineBar.svelte';
+	import { bandSize, detailTarget, outlineDepth, type OutlineAction, type OutlineGeom, type SheetOutline } from './outline';
 	import { cellNameProblem, columnNameProblem, refusedName, tableNameProblem, type NameProblem } from '#lib/ui/names.js';
 	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 	import {
@@ -435,6 +437,8 @@
 		sparklines?: SparklineGroup[] | null;
 		/** Zones « plage » (tableaux convertis) : y écrire ne refait pas de tableau. */
 		ranges?: { r0: number; c0: number; r1: number; c1: number }[];
+		/** Plan de la feuille (Données › Grouper), null sans groupe. */
+		outline?: SheetOutline | null;
 	}
 
 	/** Cible d'une saisie, pour la source. */
@@ -553,6 +557,12 @@
 		unmergeCells?(r0: number, c0: number, r1: number, c1: number): Promise<unknown>;
 		/** Masque (ou affiche) des lignes (rows) ou des colonnes i0 à i1. */
 		setLinesHidden?(rows: boolean, i0: number, i1: number, hide: boolean): Promise<unknown>;
+		/** Plan (Données › Grouper) : grouper ou dissocier des lignes (rows) ou des colonnes i0 à i1, effacer le plan. */
+		groupLines?(rows: boolean, i0: number, i1: number, group: boolean): Promise<unknown>;
+		clearOutline?(): Promise<unknown>;
+		/** Réduit (fold) ou rouvre le groupe de niveau level qui contient la ligne line ; affiche le plan jusqu'au niveau level. */
+		foldGroup?(rows: boolean, level: number, line: number, fold: boolean): Promise<unknown>;
+		showOutlineLevel?(rows: boolean, level: number): Promise<unknown>;
 		/** Fige les volets (0, 0 : les libère). */
 		setFreeze?(rows: number, cols: number): Promise<unknown>;
 		/** Cherche un texte dans la zone (la sélection), ou dans toute la feuille (null). */
@@ -1266,11 +1276,13 @@
 		sheetColStyles = new Map((d.colStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
 		merges = mergeList(freeStyles);
 		boxes = [...merges, ...bandMerges(d.tables, isSplit)];
-		hiddenRows = hiddenLines(sheetRowStyles);
+		outline = d.outline ?? null;
+		styleHiddenRows = hiddenLines(sheetRowStyles);
+		hiddenRows = new Set([...styleHiddenRows, ...(outline?.hiddenRows ?? [])]);
 		styleHiddenCols = hiddenLines(sheetColStyles);
 		// Onglet à choix sur une valeur : la colonne de catégorie (la même
 		// partout) n'est pas affichée ; elle revient avec « (Toutes) ».
-		hiddenCols = new Set([...styleHiddenCols, ...choiceHiddenCols(d.choice, d.tables, d.cells)]);
+		hiddenCols = new Set([...styleHiddenCols, ...(outline?.hiddenCols ?? []), ...choiceHiddenCols(d.choice, d.tables, d.cells)]);
 		sheetRowRules = new Map((d.rowRules ?? []).map((s) => [s.index, parseRules(s.rules) ?? []]));
 		sheetColRules = new Map((d.colRules ?? []).map((s) => [s.index, parseRules(s.rules) ?? []]));
 		colStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.style))]));
@@ -1388,6 +1400,12 @@
 	// Colonnes masquées par l'utilisateur (Masquer) : repères et Afficher ;
 	// hiddenCols y ajoute la colonne de catégorie d'un onglet à choix.
 	let styleHiddenCols = new Set<number>();
+	// Lignes masquées par l'utilisateur ; hiddenRows y ajoute celles des
+	// groupes réduits du plan (outline.ts), sans repère : leur bouton [+] est
+	// dans la barre du plan.
+	let styleHiddenRows = new Set<number>();
+	let outline = $state.raw<SheetOutline | null>(null);
+	let outlineBar = $state<ReturnType<typeof OutlineBar>>();
 	// Hauteurs automatiques (voir rowfit.ts) : cellules libres à chaque mise en
 	// page, lignes de tableau à mesure qu'elles s'affichent.
 	const autoRows = new AutoRows();
@@ -2593,6 +2611,7 @@
 		// Une clé plus large que toutes celles vues : gouttière élargie à
 		// l'image suivante (les clés ne sont connues qu'une fois chargées).
 		if (keyGrew) schedule();
+		outlineBar?.paint();
 		endAnimFrame();
 
 		const t1 = performance.now();
@@ -3782,7 +3801,7 @@
 		ctx.stroke();
 		// Lignes masquées : un repère à leur place (on s'en souvient), un clic
 		// les réaffiche.
-		for (const [i0, i1] of hiddenRuns(hiddenRows)) {
+		for (const [i0, i1] of hiddenRuns(styleHiddenRows)) {
 			if (i1 < r0 - 1 || i0 > r1 + 1) continue;
 			const y = Math.round(ry(i0));
 			if (y <= TOP_H) continue;
@@ -4740,11 +4759,73 @@
 		return hiddenMarks.find((m) => x >= m.x - 2 && x <= m.x + m.w + 2 && y >= m.y - 2 && y <= m.y + m.h + 2);
 	}
 
+	// --- Plan (Données › Grouper, outline.ts) ------------------------------------
+
+	const olW = $derived(bandSize(outlineDepth(outline?.rows)));
+	const olH = $derived(bandSize(outlineDepth(outline?.cols)));
+	$effect(() => {
+		void olW;
+		void olH;
+		// La grille rétrécit de la barre : ses dimensions sont à reprendre.
+		untrack(() => resizeCanvas());
+	});
+	/** Place des lignes et colonnes à l'écran, pour la barre du plan. */
+	function outlineGeom(): OutlineGeom | null {
+		if (!mounted) return null;
+		return {
+			zoom,
+			top: TOP_H,
+			margin: MARGIN,
+			row: (r) => (rh(r) ? [screenY(r), rh(r)] : null),
+			col: (c) => (cax().size(c) ? [screenX(c), cax().size(c)] : null)
+		};
+	}
+	function foldOutline(rows: boolean, level: number, line: number, fold: boolean) {
+		const f = source.foldGroup;
+		if (f) void menuAction(() => f(rows, level, line, fold));
+	}
+	function outlineLevel(rows: boolean, level: number) {
+		const f = source.showOutlineLevel;
+		if (f) void menuAction(() => f(rows, level));
+	}
+	/**
+	 * Données › Plan (et Alt+Maj+→ / ←) : Grouper ou Dissocier les lignes de
+	 * la sélection (ses colonnes si des colonnes entières sont choisies),
+	 * Effacer le plan, Afficher ou Masquer le détail du groupe de la cellule
+	 * active.
+	 */
+	export function outlineAction(what: OutlineAction) {
+		const { r0, r1, c0, c1 } = selection();
+		const cols = what === 'groupCols' || what === 'ungroupCols' || ((what === 'group' || what === 'ungroup') && wholeKind() === 'cols');
+		if (what === 'clear') {
+			const f = source.clearOutline;
+			if (f) void menuAction(() => f());
+			return;
+		}
+		if (what === 'show' || what === 'hide') {
+			// Colonnes : quand la sélection n'est que des colonnes, ou que les lignes n'ont pas de groupe.
+			const onCols = wholeKind() === 'cols' || (!outline?.rows?.length && !!outline?.cols?.length);
+			const lines = onCols ? outline?.cols : outline?.rows;
+			const before = onCols ? !!outline?.colsLeft : !!outline?.rowsAbove;
+			const at = detailTarget(lines, before, onCols ? active.col : active.row, what === 'hide');
+			if (!at) {
+				say(tr('grid.outline.nothing'));
+				return;
+			}
+			foldOutline(!onCols, at.level, at.line, what === 'hide');
+			return;
+		}
+		const f = source.groupLines;
+		if (!f) return;
+		const group = what === 'group' || what === 'groupRows' || what === 'groupCols';
+		void menuAction(() => (cols ? f(false, c0, c1, group) : f(true, r0, r1, group)));
+	}
+
 	/** Lignes ou colonnes masquées dans la sélection (pour proposer Afficher). */
 	function hiddenIn(rows: boolean): boolean {
 		const { r0, r1, c0, c1 } = selection();
 		const [i0, i1] = rows ? [r0, r1] : [c0, c1];
-		for (const i of rows ? hiddenRows : styleHiddenCols) if (i >= i0 - 1 && i <= i1 + 1) return true;
+		for (const i of rows ? styleHiddenRows : styleHiddenCols) if (i >= i0 - 1 && i <= i1 + 1) return true;
 		return false;
 	}
 
@@ -4760,7 +4841,7 @@
 		if (!set) return;
 		const { r0, r1, c0, c1 } = selection();
 		let [i0, i1] = rows ? [r0, r1] : [c0, c1];
-		const hidden = rows ? hiddenRows : styleHiddenCols;
+		const hidden = rows ? styleHiddenRows : styleHiddenCols;
 		while (i0 > 0 && hidden.has(i0 - 1)) i0--;
 		while (hidden.has(i1 + 1)) i1++;
 		menuAction(() => set(rows, i0, i1, false));
@@ -9109,6 +9190,10 @@
 			case 'pasteSpecial':
 				void pasteSpecial();
 				return true;
+			case 'group':
+			case 'ungroup':
+				outlineAction(sc);
+				return true;
 			case 'repeat':
 				if (lastRepeat) lastRepeat();
 				else say(tr('grid.repeat.nothing'));
@@ -12089,6 +12174,9 @@
 	{/if}
 
 	<div class="body">
+	<!-- Barre du plan (Données › Grouper) à gauche et au-dessus de la grille. -->
+	<div class="ol-frame" style:padding-left="{olW}px" style:padding-top="{olH}px">
+	{#if olW || olH}<OutlineBar bind:this={outlineBar} {outline} geom={outlineGeom} onfold={foldOutline} onlevel={outlineLevel} />{/if}
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" aria-label={tr('grid.sheet.aria', { name: sheetName })} aria-rowcount={-1} aria-colcount={-1} aria-activedescendant={a11yId} aria-keyshortcuts="Shift+F10" data-region-focus onkeydown={onKeyDown}>
 		<GridA11y cellId={a11yId} {speech} row={active.row + 1} col={active.col + 1} editing={editing || fxEditing} selection={speechSel} />
@@ -13712,6 +13800,7 @@
 			</div>
 		{/if}
 	</div>
+	</div>
 	{#if panel?.kind === 'pivot'}
 		{@const pv = pivots.find((p) => p.id === panel!.id)}
 		{#if pv}
@@ -14089,6 +14178,16 @@
 		border-bottom: 1px solid #d3e7dc;
 		white-space: nowrap;
 		overflow: hidden;
+	}
+	.ol-frame {
+		position: relative;
+		flex: 1;
+		min-width: 0;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+		box-sizing: border-box;
+		background: #f5f6f7;
 	}
 	.wrap {
 		position: relative;

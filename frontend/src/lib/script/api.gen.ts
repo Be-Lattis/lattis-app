@@ -767,6 +767,15 @@ export const apiReference: RefEntry[] = [
 		args: [0, 1]
 	},
 	{
+		name: "sheets.group_lines",
+		category: "sheets",
+		signature: "sheets.group_lines(axis, from, [to], [ungroup], [sheet])",
+		summary: "Groupe (ou dissocie) des lignes ou des colonnes entières de la feuille dans le plan (Données › Grouper) : un niveau de plus (ou de moins).",
+		details: "Paramètres — axis : \"rows\" (lignes) ou \"cols\" (colonnes) ; from : première ligne ou colonne, à partir de 1 ; to : dernière ligne ou colonne (absente : from) ; ungroup : vrai : dissocier au lieu de grouper ; sheet : feuille (nom ou identifiant) ; absente : la feuille affichée. Arguments dans l'ordre, ou une table d'arguments nommés : sheets.group_lines{axis = …}. Annulable : tout ce que le script modifie s'annule d'un coup (Ctrl+Z).",
+		example: "sheets.group_lines{axis = \"cols\", from = 20, to = 22}",
+		args: [1, 5]
+	},
+	{
 		name: "sheets.hide",
 		category: "sheets",
 		signature: "sheets.hide(sheet, [hidden])",

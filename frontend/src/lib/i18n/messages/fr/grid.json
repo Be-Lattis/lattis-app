@@ -1768,5 +1768,36 @@
 		"same": "Même échelle",
 		"sameHint": "Mêmes minimum et maximum pour tout le groupe",
 		"remove": "Supprimer"
+	},
+	"outline": {
+		"rows": "Plan des lignes",
+		"cols": "Plan des colonnes",
+		"nothing": "Aucun groupe ici"
+	},
+	"subtotal": {
+		"title": "Sous-total",
+		"table": "Tableau",
+		"by": "À chaque changement de",
+		"func": "Utiliser la fonction",
+		"columns": "Ajouter un sous-total à",
+		"replace": "Remplacer les sous-totaux existants",
+		"breaks": "Saut de page entre les groupes",
+		"below": "Synthèse sous les données",
+		"note": "Résultat sur une feuille à côté ; le tableau ne change pas.",
+		"noColumn": "Choisissez une colonne à totaliser",
+		"noTable": "Sous-total : placez-vous sur une feuille avec un tableau",
+		"fn": {
+			"sum": "Somme",
+			"count": "Nombre",
+			"average": "Moyenne",
+			"max": "Max",
+			"min": "Min",
+			"product": "Produit",
+			"countNums": "Nombre de nombres",
+			"stdev": "Écart type",
+			"stdevp": "Écart type (population)",
+			"var": "Variance",
+			"varp": "Variance (population)"
+		}
 	}
 }

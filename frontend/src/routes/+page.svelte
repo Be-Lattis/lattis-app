@@ -36,6 +36,9 @@
 	import PageSetupDialog from '#lib/shell/PageSetupDialog.svelte';
 	import WhatIf from '#lib/shell/WhatIf.svelte';
 	import type { WhatIfKind } from '#lib/shell/whatif.js';
+	import SubtotalDialog from '#lib/grid/SubtotalDialog.svelte';
+	import type { SubtotalOptions, SubtotalTable } from '#lib/grid/subtotal.js';
+	import type { OutlineAction, SheetOutline } from '#lib/grid/outline.js';
 	import { pageAction, type PageAction, type PageSetup, type PageSetupTab } from '#lib/shell/pagesetup.js';
 	import type { PageBreaks } from '#bindings/internal/transfer/models.js';
 	import SqlView, { type Favorite } from '#lib/shell/SqlView.svelte';
@@ -216,6 +219,8 @@
 	let pageDlg = $state<PageSetupTab | null>(null);
 	/** Données › Analyse de scénarios : la boîte ouverte. */
 	let whatIf = $state<WhatIfKind | null>(null);
+	// Données › Sous-total : la boîte, ouverte sur les tableaux de la feuille.
+	let subtotalDlg = $state<{ tables: SubtotalTable[]; table?: string; column?: number } | null>(null);
 	let showBreaks = $state(false);
 	let breaks = $state<PageBreaks | null>(null);
 	let aboutOpen = $state(false);
@@ -1949,6 +1954,10 @@
 		},
 		unmergeCells: (r0, c0, r1, c1) => DocumentService.UnmergeCells(sheetId, r0, c0, r1, c1).then(reload),
 		setLinesHidden: (rows, i0, i1, hide) => DocumentService.SetLinesHidden(sheetId, rows, i0, i1, hide).then(reload),
+		groupLines: (rows, i0, i1, group) => (group ? DocumentService.GroupLines(sheetId, rows, i0, i1) : DocumentService.UngroupLines(sheetId, rows, i0, i1)).then(reload),
+		clearOutline: () => DocumentService.ClearOutline(sheetId).then(reload),
+		foldGroup: (rows, level, line, fold) => DocumentService.FoldGroup(sheetId, rows, level, line, fold).then(reload),
+		showOutlineLevel: (rows, level) => DocumentService.ShowOutlineLevel(sheetId, rows, level).then(reload),
 		setFreeze: (rows, cols) => DocumentService.SetFreeze(sheetId, rows, cols).then(reload),
 		find: async (text, zone) => (await DocumentService.Find(sheetId, text, zone)) ?? [],
 		replace: async (text, by, zone) => {
@@ -2037,6 +2046,7 @@
 					buttons: (layout.buttons ?? []).map((b) => ({ ...b, config: b.config as ButtonConfig })),
 					objects: (layout.objects ?? []).map((o) => ({ id: o.id, row: o.row, col: o.col, config: o.config as unknown as ObjectConfig })),
 					sparklines: (layout.sparklines ?? []) as SparklineGroup[],
+					outline: (layout.outline ?? null) as SheetOutline | null,
 					ranges: layout.ranges ?? []
 				}
 			: null
@@ -2151,6 +2161,32 @@
 		await new Promise((r) => requestAnimationFrame(r));
 		sheet?.revealObject(name);
 		sheet?.focus();
+	}
+
+	/** Données › Plan : la grille groupe et dissocie ; Sous-total ouvre sa boîte sur les tableaux de la feuille. */
+	function outlineCommand(what: OutlineAction | 'subtotal') {
+		if (what !== 'subtotal') {
+			sheet?.outlineAction(what);
+			return;
+		}
+		const tables: SubtotalTable[] = (layout?.tables ?? []).map((tb) => ({
+			name: tb.name,
+			columns: (tb.columns ?? []).map((c) => c.name),
+			numeric: (tb.columns ?? []).map((c) => ['integer', 'decimal'].includes(c.formula ? c.result : c.type))
+		}));
+		if (!tables.length) {
+			notice = t('grid.subtotal.noTable');
+			return;
+		}
+		const here = sheet?.tableHere();
+		const at = here ? sheet!.activeCell().col - here.col : undefined;
+		subtotalDlg = { tables, table: here?.name, column: at };
+	}
+
+	async function runSubtotal(o: SubtotalOptions) {
+		const id = await DocumentService.Subtotal(o);
+		subtotalDlg = null;
+		await selectSheet(id);
 	}
 
 	async function selectSheet(id: number) {
@@ -2508,6 +2544,7 @@
 		onwrap={mode === 'doc' ? () => sheet?.toggleWrap() : undefined}
 		onlines={mode === 'doc' ? (rows, hide) => sheet?.hideLines(rows, hide) : undefined}
 		onvalidation={mode === 'doc' ? (w) => (w === 'circle' ? sheet?.circleInvalid() : w === 'clear' ? sheet?.clearCircles() : sheet?.openValidation()) : undefined}
+		onoutline={mode === 'doc' ? outlineCommand : undefined}
 		onmergesheets={mode === 'doc' ? openMergeMenu : undefined}
 		onnote={mode === 'doc' ? (what) => (what === 'edit' ? sheet?.editNote() : sheet?.deleteNote()) : undefined}
 		onlink={mode === 'doc' ? () => sheet?.editLink() : undefined}
@@ -3001,6 +3038,9 @@
 			}}
 			onclose={() => (whatIf = null)}
 		/>
+	{/if}
+	{#if subtotalDlg && mode === 'doc'}
+		<SubtotalDialog tables={subtotalDlg.tables} table={subtotalDlg.table} column={subtotalDlg.column} onok={runSubtotal} oncancel={() => ((subtotalDlg = null), sheet?.focus())} />
 	{/if}
 	{#if pageDlg && mode === 'doc' && layout}
 		<PageSetupDialog

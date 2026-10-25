@@ -1768,5 +1768,36 @@
 		"same": "Gleiche Skala",
 		"sameHint": "Gleiches Minimum und Maximum für die ganze Gruppe",
 		"remove": "Löschen"
+	},
+	"outline": {
+		"rows": "Zeilengliederung",
+		"cols": "Spaltengliederung",
+		"nothing": "Hier keine Gruppe"
+	},
+	"subtotal": {
+		"title": "Teilergebnis",
+		"table": "Tabelle",
+		"by": "Bei jeder Änderung in",
+		"func": "Unter Verwendung von",
+		"columns": "Teilergebnis addieren zu",
+		"replace": "Vorhandene Teilergebnisse ersetzen",
+		"breaks": "Seitenumbruch zwischen Gruppen",
+		"below": "Ergebnisse unterhalb der Daten",
+		"note": "Das Ergebnis kommt auf ein Blatt daneben; die Tabelle bleibt unverändert.",
+		"noColumn": "Wählen Sie eine Spalte zum Summieren",
+		"noTable": "Teilergebnis: wechseln Sie zu einem Blatt mit einer Tabelle",
+		"fn": {
+			"sum": "Summe",
+			"count": "Anzahl",
+			"average": "Mittelwert",
+			"max": "Max",
+			"min": "Min",
+			"product": "Produkt",
+			"countNums": "Anzahl Zahlen",
+			"stdev": "Standardabweichung",
+			"stdevp": "Standardabweichung (Grundgesamtheit)",
+			"var": "Varianz",
+			"varp": "Varianz (Grundgesamtheit)"
+		}
 	}
 }

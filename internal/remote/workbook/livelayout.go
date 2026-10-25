@@ -67,6 +67,8 @@ var layoutKeys = map[string][]string{
 	"_lattis_images":       {"hash"},
 	"_lattis_objects":      {"id"},
 	"_lattis_sparklines":   {"id"},
+	"_lattis_row_outline":  {"sheet", "row"},
+	"_lattis_col_outline":  {"sheet", "col"},
 }
 
 // layoutOwn : colonnes que la mise en page en direct ne compare ni
@@ -77,6 +79,9 @@ var layoutKeys = map[string][]string{
 var layoutOwn = map[string]map[string]bool{
 	"_lattis_sheets": {"choice": true, "zoom": true},
 	"_lattis_tables": {"name": true, "key_col": true, "filter": true, "no_key_hint": true},
+	// Plan : groupe réduit ou ouvert, comme le filtre (canvas/outline.go).
+	"_lattis_row_outline": {"folded": true},
+	"_lattis_col_outline": {"folded": true},
 }
 
 // dataColumnOwn : colonnes d'une colonne saisie d'un tableau publié suivies

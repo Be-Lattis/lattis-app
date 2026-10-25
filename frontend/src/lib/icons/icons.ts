@@ -102,6 +102,12 @@ export const icons = {
 	'delete-row': '<rect x="3.5" y="3.5" width="17" height="5" rx="1"/><rect x="3.5" y="15.5" width="17" height="5" rx="1"/><path class="a" d="m10 10 4 4m0-4-4 4"/>',
 	'insert-column': '<rect x="3.5" y="3.5" width="5" height="17" rx="1"/><rect x="15.5" y="3.5" width="5" height="17" rx="1"/><path class="a" d="M12 9.5v5M9.5 12h5"/>',
 	'delete-column': '<rect x="3.5" y="3.5" width="5" height="17" rx="1"/><rect x="15.5" y="3.5" width="5" height="17" rx="1"/><path class="a" d="m10 10 4 4m0-4-4 4"/>',
+	// Plan (Données › Grouper) : lignes réunies par un crochet, bouton [−] ou [+].
+	group: '<path d="M10 5.5h10.5M10 10h10.5M10 14.5h10.5"/><path class="a" d="M5.5 5v10.5"/><rect class="a" x="3" y="16.5" width="5" height="5" rx="1"/><path class="a" d="M4.5 19h2"/>',
+	ungroup: '<path d="M10 5.5h10.5M10 10h10.5M10 14.5h10.5"/><path class="a" d="M5.5 5v2.5m0 3v2.5"/><rect class="a" x="3" y="16.5" width="5" height="5" rx="1"/><path class="a" d="M4.5 19h2M5.5 18v2"/>',
+	'detail-show': '<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path class="a" d="M8 12h8M12 8v8"/>',
+	'detail-hide': '<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path class="a" d="M8 12h8"/>',
+	subtotal: '<path d="M3.5 5h9M3.5 9h9M3.5 15h9M3.5 19h9"/><path class="a" d="M21 5.5h-5.5l3 6.5-3 6.5H21"/>',
 	'remove-duplicates': '<rect x="3.5" y="3.5" width="11" height="11" rx="1.5"/><path d="M9.5 18v1a1.5 1.5 0 0 0 1.5 1.5h8a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 19 9.5h-1"/><path class="a" d="m7 7 4 4m0-4-4 4"/>',
 	'text-columns': '<rect x="3" y="4.5" width="7" height="15" rx="1"/><path d="M5 9h3M5 12h3M5 15h3"/><path class="a" d="M11 12h3.5M13 10l1.75 2L13 14"/><rect x="15.5" y="4.5" width="5.5" height="15" rx="1"/><path d="M18.25 4.5v15"/>',
 	'convert-type': '<path d="M4 8h11M12 5l3 3-3 3"/><path class="a" d="M20 16H9M12 13l-3 3 3 3"/>',

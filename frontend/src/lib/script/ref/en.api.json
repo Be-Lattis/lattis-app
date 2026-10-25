@@ -442,6 +442,11 @@
 		"summary": "Describes the content of a sheet: tables, free cells, names, PivotTables, charts and buttons.",
 		"details": "Positions (row, col) count from 1. The values of the tables are read with tables.rows or db.query. Parameters — sheet: sheet (name or identifier); missing: the displayed sheet."
 	},
+	"sheets.group_lines": {
+		"signature": "sheets.group_lines(axis, from, [to], [ungroup], [sheet])",
+		"summary": "Groups (or ungroups) whole rows or columns of the sheet in the outline (Data › Group): one level more (or less).",
+		"details": "Parameters — axis: \"rows\" or \"cols\" (columns); from: first row or column, from 1; to: last row or column (missing: from); ungroup: true: ungroup instead of grouping; sheet: sheet (name or identifier); missing: the displayed sheet. Arguments in order, or a table of named arguments: sheets.group_lines{axis = …}. Undoable: everything the script changes is undone at once (Ctrl+Z)."
+	},
 	"sheets.hide": {
 		"signature": "sheets.hide(sheet, [hidden])",
 		"summary": "Hides a sheet (Hide) or shows it again (hidden = false).",

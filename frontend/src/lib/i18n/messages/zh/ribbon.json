@@ -121,7 +121,8 @@
 		"print": "打印",
 		"links": "链接",
 		"printing": "打印",
-		"illustrations": "插图"
+		"illustrations": "插图",
+		"outline": "分级显示"
 	},
 	"launch": {
 		"font": "设置单元格格式：字体 (Ctrl+1)",
@@ -692,6 +693,31 @@
 		"sparklines": {
 			"label": "迷你图",
 			"tooltip": "单元格中的小图表，或表格每行一个"
+		},
+		"group": {
+			"label": "组合",
+			"tooltip": "组合所选行或列 (Alt+Shift+→)"
+		},
+		"ungroup": {
+			"label": "取消组合",
+			"tooltip": "取消组合所选行或列 (Alt+Shift+←)"
+		},
+		"outline": {
+			"rows": "行",
+			"cols": "列",
+			"clear": "清除分级显示"
+		},
+		"subtotal": {
+			"label": "分类汇总",
+			"tooltip": "按组汇总表格，结果放在旁边的工作表"
+		},
+		"showDetail": {
+			"label": "显示明细数据",
+			"tooltip": "展开活动单元格所在的组"
+		},
+		"hideDetail": {
+			"label": "隐藏明细数据",
+			"tooltip": "折叠活动单元格所在的组"
 		}
 	},
 	"protect": {

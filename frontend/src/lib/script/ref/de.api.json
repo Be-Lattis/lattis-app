@@ -442,6 +442,11 @@
 		"summary": "Beschreibt den Inhalt eines Blatts: Tabellen, freie Zellen, Namen, PivotTables, Diagramme und Schaltflächen.",
 		"details": "Die Positionen (row, col) zählen ab 1. Die Werte der Tabellen liest man mit tables.rows oder db.query. Parameter — sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt."
 	},
+	"sheets.group_lines": {
+		"signature": "sheets.group_lines(axis, from, [to], [ungroup], [sheet])",
+		"summary": "Gruppiert ganze Zeilen oder Spalten des Blatts in der Gliederung (Daten › Gruppieren) oder hebt die Gruppierung auf: eine Ebene mehr (oder weniger).",
+		"details": "Parameter — axis: \"rows\" (Zeilen) oder \"cols\" (Spalten); from: erste Zeile oder Spalte, ab 1; to: letzte Zeile oder Spalte (fehlt sie: from); ungroup: wahr: Gruppierung aufheben statt gruppieren; sheet: Blatt (Name oder Kennung); fehlt es: das angezeigte Blatt. Argumente in der Reihenfolge oder eine Tabelle benannter Argumente: sheets.group_lines{axis = …}. Rückgängig machbar: Alles, was das Skript ändert, wird auf einmal rückgängig gemacht (Strg+Z)."
+	},
 	"sheets.hide": {
 		"signature": "sheets.hide(sheet, [hidden])",
 		"summary": "Blendet ein Blatt aus (Ausblenden) oder wieder ein (hidden = false).",

@@ -121,7 +121,8 @@
 		"print": "Imprimer",
 		"links": "Liens",
 		"printing": "Impression",
-		"illustrations": "Illustrations"
+		"illustrations": "Illustrations",
+		"outline": "Plan"
 	},
 	"launch": {
 		"font": "Format de cellule : police (Ctrl+1)",
@@ -692,6 +693,31 @@
 		"sparklines": {
 			"label": "Sparklines",
 			"tooltip": "Petit graphique dans une cellule, ou dans chaque ligne d’un tableau"
+		},
+		"group": {
+			"label": "Grouper",
+			"tooltip": "Grouper les lignes ou colonnes sélectionnées (Alt+Maj+→)"
+		},
+		"ungroup": {
+			"label": "Dissocier",
+			"tooltip": "Dissocier les lignes ou colonnes sélectionnées (Alt+Maj+←)"
+		},
+		"outline": {
+			"rows": "Lignes",
+			"cols": "Colonnes",
+			"clear": "Effacer le plan"
+		},
+		"subtotal": {
+			"label": "Sous-total",
+			"tooltip": "Totaux par groupe d'un tableau, sur une feuille à côté"
+		},
+		"showDetail": {
+			"label": "Afficher le détail",
+			"tooltip": "Rouvrir le groupe de la cellule active"
+		},
+		"hideDetail": {
+			"label": "Masquer le détail",
+			"tooltip": "Réduire le groupe de la cellule active"
 		}
 	},
 	"protect": {

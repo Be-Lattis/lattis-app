@@ -332,6 +332,13 @@ export function ClearKey(table: string): $CancellablePromise<$models.DocState> {
 }
 
 /**
+ * ClearOutline efface le plan de la feuille.
+ */
+export function ClearOutline(sheet: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2652720475, sheet);
+}
+
+/**
  * ClearRange efface une zone en une seule étape d'annulation (tableaux
  * entièrement compris supprimés ; all : mise en forme des cellules libres
  * comprise, comme Supprimer).
@@ -895,6 +902,14 @@ export function FirstLaunchDone(): $CancellablePromise<void> {
 }
 
 /**
+ * FoldGroup réduit (fold) ou rouvre le groupe de niveau level qui contient
+ * la ligne (ou colonne) line.
+ */
+export function FoldGroup(sheet: number, rows: boolean, level: number, line: number, fold: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(2624061860, sheet, rows, level, line, fold);
+}
+
+/**
  * ForgetConnectionPassword oublie le mot de passe d'une connexion (session
  * et trousseau).
  */
@@ -1010,6 +1025,13 @@ export function FormulaHelp(): $CancellablePromise<$models.FormulaHelp> {
  */
 export function GoalSeek(sheet: number, target: string, goal: string, changing: string): $CancellablePromise<canvas$0.GoalSeekResult> {
     return $Call.ByID(1365339597, sheet, target, goal, changing);
+}
+
+/**
+ * GroupLines groupe les lignes (rows) ou les colonnes [i0, i1].
+ */
+export function GroupLines(sheet: number, rows: boolean, i0: number, i1: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(850974568, sheet, rows, i0, i1);
 }
 
 /**
@@ -2747,6 +2769,13 @@ export function SheetChoiceValues(sheet: number): $CancellablePromise<canvas$0.F
 }
 
 /**
+ * ShowOutlineLevel affiche le plan jusqu'au niveau level (boutons 1 2 3).
+ */
+export function ShowOutlineLevel(sheet: number, rows: boolean, level: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3528329415, sheet, rows, level);
+}
+
+/**
  * ShowScenario pose les valeurs d'un scénario.
  */
 export function ShowScenario(sheet: number, name: string): $CancellablePromise<$models.DocState> {
@@ -2803,6 +2832,14 @@ export function StopSQL(): $CancellablePromise<void> {
  */
 export function StopScript(): $CancellablePromise<void> {
     return $Call.ByID(862558389);
+}
+
+/**
+ * Subtotal pose les sous-totaux d'un tableau sur une feuille à côté ; rend
+ * cette feuille.
+ */
+export function Subtotal(o: canvas$0.SubtotalOptions): $CancellablePromise<number> {
+    return $Call.ByID(3242542334, o);
 }
 
 /**
@@ -2890,6 +2927,13 @@ export function TypeMix(table: string, i: number): $CancellablePromise<canvas$0.
  */
 export function Undo(): $CancellablePromise<$models.DocState> {
     return $Call.ByID(74815564);
+}
+
+/**
+ * UngroupLines dissocie les lignes ou les colonnes [i0, i1].
+ */
+export function UngroupLines(sheet: number, rows: boolean, i0: number, i1: number): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3790806799, sheet, rows, i0, i1);
 }
 
 /**

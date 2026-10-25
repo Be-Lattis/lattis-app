@@ -502,6 +502,47 @@ sheets.unprotect_workbook("secret")`,
 			},
 		},
 		&Command{
+			Name:    "sheets.group_lines",
+			Label:   "Grouper ou dissocier",
+			Summary: "Groupe (ou dissocie) des lignes ou des colonnes entières de la feuille dans le plan (Données › Grouper) : un niveau de plus (ou de moins).",
+			Params: []Param{{Name: "axis", Type: String, Desc: `"rows" (lignes) ou "cols" (colonnes)`},
+				{Name: "from", Type: Integer, Desc: "première ligne ou colonne, à partir de 1"},
+				{Name: "to", Type: Integer, Desc: "dernière ligne ou colonne (absente : from)", Optional: true},
+				{Name: "ungroup", Type: Boolean, Desc: "vrai : dissocier au lieu de grouper", Optional: true}, pSheet},
+			Write:   true,
+			Example: `sheets.group_lines{axis = "cols", from = 20, to = 22}`,
+			Run: func(c *Call) (any, error) {
+				s, err := c.sheet("sheet")
+				if err != nil {
+					return nil, err
+				}
+				axis, err := c.Str("axis")
+				if err != nil {
+					return nil, err
+				}
+				if axis != "rows" && axis != "cols" {
+					return nil, msg.New("api.axisExpected", nil)
+				}
+				i0, err := c.Pos("from", 0)
+				if err != nil {
+					return nil, err
+				}
+				i1, err := c.Pos("to", i0)
+				if err != nil {
+					return nil, err
+				}
+				ungroup, err := c.Bool("ungroup")
+				if err != nil {
+					return nil, err
+				}
+				d, _ := c.Doc()
+				if ungroup {
+					return nil, d.UngroupLines(c, s.ID, axis == "rows", i0, i1)
+				}
+				return nil, d.GroupLines(c, s.ID, axis == "rows", i0, i1)
+			},
+		},
+		&Command{
 			Name:    "sheets.freeze",
 			Label:   "Figer les volets",
 			Summary: "Fige les volets : les premières lignes et colonnes restent affichées pendant le défilement (0 et 0 : libère les volets).",

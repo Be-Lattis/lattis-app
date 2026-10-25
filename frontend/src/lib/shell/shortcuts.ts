@@ -123,6 +123,7 @@ const groups: ShortcutGroup[] = [
 		['Ctrl+Maj+L', 'filter'],
 		['Maj+F2', 'note'],
 		['Ctrl+K', 'link'],
+		['Alt+Maj+→ / Alt+Maj+←', 'group'],
 		['Alt+F1 / F11', 'chart']
 	]),
 	group('calcul', [

@@ -187,6 +187,9 @@ type Layout struct {
 	Objects []ObjectInfo `json:"objects"`
 	// Graphiques sparkline (sparkline.go).
 	Sparklines []SparklineInfo `json:"sparklines"`
+	// Outline : plan de la feuille (groupes de lignes et de colonnes), nil
+	// sans groupe.
+	Outline *Outline `json:"outline,omitempty"`
 	// Ranges : zones « plage » (tableaux convertis), en rectangles.
 	Ranges []Rect `json:"ranges"`
 	// Structure du classeur protégée (onglets), avec ou sans mot de passe.
@@ -481,6 +484,9 @@ func (m *Model) layout(ctx context.Context, sheet int64, later bool) (Layout, er
 			return err
 		}
 		if l.Sparklines, err = t.sparklines(sheet, l.Cells); err != nil {
+			return err
+		}
+		if l.Outline, err = t.outlineOf(sheet); err != nil {
 			return err
 		}
 		marks, err := t.rangeMarks(sheet)

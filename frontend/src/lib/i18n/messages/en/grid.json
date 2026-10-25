@@ -1768,5 +1768,36 @@
 		"same": "Same scale",
 		"sameHint": "Same minimum and maximum for the whole group",
 		"remove": "Delete"
+	},
+	"outline": {
+		"rows": "Row outline",
+		"cols": "Column outline",
+		"nothing": "No group here"
+	},
+	"subtotal": {
+		"title": "Subtotal",
+		"table": "Table",
+		"by": "At each change in",
+		"func": "Use function",
+		"columns": "Add subtotal to",
+		"replace": "Replace current subtotals",
+		"breaks": "Page break between groups",
+		"below": "Summary below data",
+		"note": "The result goes on a sheet alongside; the table stays unchanged.",
+		"noColumn": "Choose a column to total",
+		"noTable": "Subtotal: go to a sheet with a table",
+		"fn": {
+			"sum": "Sum",
+			"count": "Count",
+			"average": "Average",
+			"max": "Max",
+			"min": "Min",
+			"product": "Product",
+			"countNums": "Count Numbers",
+			"stdev": "StdDev",
+			"stdevp": "StdDevp",
+			"var": "Var",
+			"varp": "Varp"
+		}
 	}
 }

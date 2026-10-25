@@ -442,6 +442,11 @@
 		"summary": "Describe el contenido de una hoja: tablas, celdas libres, nombres, tablas dinámicas, gráficos y botones.",
 		"details": "Las posiciones (row, col) se cuentan desde 1. Los valores de las tablas se leen con tables.rows o db.query. Parámetros — sheet: hoja (nombre o identificador); si falta: la hoja mostrada."
 	},
+	"sheets.group_lines": {
+		"signature": "sheets.group_lines(axis, from, [to], [ungroup], [sheet])",
+		"summary": "Agrupa (o desagrupa) filas o columnas enteras de la hoja en el esquema (Datos › Agrupar): un nivel más (o menos).",
+		"details": "Parámetros — axis: \"rows\" (filas) o \"cols\" (columnas); from: primera fila o columna, desde 1; to: última fila o columna (si falta: from); ungroup: verdadero: desagrupar en lugar de agrupar; sheet: hoja (nombre o identificador); si falta: la hoja mostrada. Argumentos en orden, o una tabla de argumentos con nombre: sheets.group_lines{axis = …}. Se puede deshacer: todo lo que el script modifica se deshace de una vez (Ctrl+Z)."
+	},
 	"sheets.hide": {
 		"signature": "sheets.hide(sheet, [hidden])",
 		"summary": "Oculta una hoja (Ocultar) o la vuelve a mostrar (hidden = false).",

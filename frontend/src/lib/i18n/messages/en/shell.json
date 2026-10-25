@@ -163,7 +163,8 @@
 			"filter": "Column filter (clears the filters if there are any)",
 			"note": "New note (or edit the note)",
 			"link": "Link (web page, e-mail, cell)",
-			"chart": "Chart (column chart) of the active table"
+			"chart": "Chart (column chart) of the active table",
+			"group": "Group / ungroup"
 		},
 		"calcul": {
 			"title": "Calculation and data",

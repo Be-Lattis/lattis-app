@@ -64,6 +64,8 @@ func (m *Model) Dump(ctx context.Context) (string, error) {
 		{"styles de colonnes", `SELECT * FROM _lattis_col_styles ORDER BY sheet, col`},
 		{"règles de lignes", `SELECT * FROM _lattis_row_rules ORDER BY sheet, row`},
 		{"règles de colonnes", `SELECT * FROM _lattis_col_rules ORDER BY sheet, col`},
+		{"plan des lignes", `SELECT * FROM _lattis_row_outline ORDER BY sheet, row`},
+		{"plan des colonnes", `SELECT * FROM _lattis_col_outline ORDER BY sheet, col`},
 		{"noms", `SELECT * FROM _lattis_names ORDER BY name`},
 		{"largeurs", `SELECT * FROM _lattis_col_widths ORDER BY sheet, col`},
 		{"hauteurs", `SELECT * FROM _lattis_row_heights ORDER BY sheet, row`},

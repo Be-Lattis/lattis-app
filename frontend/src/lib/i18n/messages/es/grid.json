@@ -1768,5 +1768,36 @@
 		"same": "Misma escala",
 		"sameHint": "Mismo mínimo y máximo para todo el grupo",
 		"remove": "Eliminar"
+	},
+	"outline": {
+		"rows": "Esquema de filas",
+		"cols": "Esquema de columnas",
+		"nothing": "Ningún grupo aquí"
+	},
+	"subtotal": {
+		"title": "Subtotal",
+		"table": "Tabla",
+		"by": "Para cada cambio en",
+		"func": "Usar función",
+		"columns": "Agregar subtotal a",
+		"replace": "Reemplazar subtotales actuales",
+		"breaks": "Salto de página entre grupos",
+		"below": "Resumen debajo de los datos",
+		"note": "El resultado va en una hoja al lado; la tabla no cambia.",
+		"noColumn": "Elija una columna para totalizar",
+		"noTable": "Subtotal: vaya a una hoja con una tabla",
+		"fn": {
+			"sum": "Suma",
+			"count": "Cuenta",
+			"average": "Promedio",
+			"max": "Máx",
+			"min": "Mín",
+			"product": "Producto",
+			"countNums": "Contar números",
+			"stdev": "Desvest",
+			"stdevp": "Desvestp",
+			"var": "Var",
+			"varp": "Varp"
+		}
 	}
 }

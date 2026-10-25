@@ -948,6 +948,12 @@ export interface Layout {
     "sparklines": SparklineInfo[] | null;
 
     /**
+     * Outline : plan de la feuille (groupes de lignes et de colonnes), nil
+     * sans groupe.
+     */
+    "outline"?: Outline | null;
+
+    /**
      * Ranges : zones « plage » (tableaux convertis), en rectangles.
      */
     "ranges": Rect[] | null;
@@ -1432,6 +1438,32 @@ export interface ObjectInfo {
     "row": number;
     "col": number;
     "config": ObjectConfig;
+}
+
+/**
+ * Outline est le plan d'une feuille, avec les lignes et colonnes que ses
+ * groupes réduits masquent.
+ */
+export interface Outline {
+    "rows": OutlineLine[] | null;
+    "cols": OutlineLine[] | null;
+
+    /**
+     * RowsAbove, ColsLeft : synthèse au-dessus des détails (à leur gauche).
+     */
+    "rowsAbove"?: boolean;
+    "colsLeft"?: boolean;
+    "hiddenRows": number[] | null;
+    "hiddenCols": number[] | null;
+}
+
+/**
+ * OutlineLine est une ligne (ou colonne) groupée.
+ */
+export interface OutlineLine {
+    "index": number;
+    "level": number;
+    "folded"?: number;
 }
 
 /**
@@ -2423,6 +2455,37 @@ export interface SparklineInfo {
  * grasse dans une ligne en gras).
  */
 export type Style = { [_ in string]?: any } | null;
+
+/**
+ * SubtotalOptions : la boîte Sous-total.
+ */
+export interface SubtotalOptions {
+    "table": string;
+
+    /**
+     * By : à chaque changement de cette colonne.
+     */
+    "by": string;
+
+    /**
+     * Func : code de SOUS.TOTAL (1 à 11 : 9 somme, 3 nombre, 1 moyenne…).
+     */
+    "func": number;
+
+    /**
+     * Columns : colonnes où ajouter un sous-total.
+     */
+    "columns": string[] | null;
+
+    /**
+     * Replace : refaire la feuille des sous-totaux du tableau (sinon une
+     * nouvelle) ; PageBreaks : saut de page entre les groupes ; Below :
+     * synthèse sous les données (sinon au-dessus).
+     */
+    "replace": boolean;
+    "pageBreaks": boolean;
+    "below": boolean;
+}
 
 /**
  * TableFamily est une famille de tableaux appariés d'un onglet à l'autre.

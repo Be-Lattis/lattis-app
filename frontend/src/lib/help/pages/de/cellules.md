@@ -79,6 +79,10 @@ Ansicht › Fenster fixieren hält Zeilen und Spalten beim Scrollen auf dem Bild
 
 Die Einstellung gehört zum Blatt und wird mit der Arbeitsmappe gespeichert.
 
+## Gruppieren und Teilergebnisse {#grouper-et-sous-totaux}
+
+Daten › Gruppieren (Alt+Umschalt+→) gruppiert die ausgewählten Zeilen oder Spalten, auf bis zu acht Ebenen; Gruppierung aufheben (Alt+Umschalt+←) entfernt sie. Die Gliederungsleiste links oder über dem Raster reduziert eine Gruppe [−] oder erweitert sie [+]; die Schaltflächen 1 2 3 in der Ecke zeigen die Gliederung bis zu dieser Ebene. Zeilen einer Tabelle werden nicht gruppiert: Daten › Teilergebnis legt ihre Zeilen auf ein Blatt daneben, getrennt bei jeder Änderung einer Spalte, mit einer TEILERGEBNIS-Zeile je Gruppe, einem Gesamtergebnis und der Gliederung; die Tabelle bleibt unverändert. In einer geteilten Arbeitsmappe werden die Gruppen geteilt; Reduzieren oder Erweitern bleibt auf Ihrem Rechner.
+
 ## Farbdesign {#theme-de-couleur}
 
 Ansicht › Design wählt die Farbe der Tabellen der Arbeitsmappe: die der gewöhnlichen Tabellen (standardmäßig grün) und die der Tabellen, die aus einer externen Quelle oder von einer Abfrage geladen werden (standardmäßig blau). Jedes Design im Menü zeigt seine zwei Farben; Überschrift, deren Text, Rahmen, Symbole und Namensschild werden daraus abgeleitet, mit einem Text, der auf der Überschrift immer lesbar ist.

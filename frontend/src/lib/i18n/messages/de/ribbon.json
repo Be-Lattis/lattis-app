@@ -121,7 +121,8 @@
 		"print": "Drucken",
 		"links": "Links",
 		"printing": "Drucken",
-		"illustrations": "Illustrationen"
+		"illustrations": "Illustrationen",
+		"outline": "Gliederung"
 	},
 	"launch": {
 		"font": "Zellen formatieren: Schrift (Strg+1)",
@@ -692,6 +693,31 @@
 		"sparklines": {
 			"label": "Sparklines",
 			"tooltip": "Kleines Diagramm in einer Zelle oder in jeder Tabellenzeile"
+		},
+		"group": {
+			"label": "Gruppieren",
+			"tooltip": "Ausgewählte Zeilen oder Spalten gruppieren (Alt+Umschalt+→)"
+		},
+		"ungroup": {
+			"label": "Gruppierung aufheben",
+			"tooltip": "Gruppierung der ausgewählten Zeilen oder Spalten aufheben (Alt+Umschalt+←)"
+		},
+		"outline": {
+			"rows": "Zeilen",
+			"cols": "Spalten",
+			"clear": "Gliederung entfernen"
+		},
+		"subtotal": {
+			"label": "Teilergebnis",
+			"tooltip": "Summen je Gruppe einer Tabelle, auf einem Blatt daneben"
+		},
+		"showDetail": {
+			"label": "Detail einblenden",
+			"tooltip": "Gruppe der aktiven Zelle erweitern"
+		},
+		"hideDetail": {
+			"label": "Detail ausblenden",
+			"tooltip": "Gruppe der aktiven Zelle reduzieren"
 		}
 	},
 	"protect": {

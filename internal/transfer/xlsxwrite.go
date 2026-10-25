@@ -276,9 +276,13 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 	bw.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`)
 	pr := xlsxPageSetUpPr(s.page)
+	if o := s.outline; o != nil && (o.RowsAbove || o.ColsLeft) {
+		pr = fmt.Sprintf(`<outlinePr summaryBelow="%d" summaryRight="%d"/>`, b2i(!o.RowsAbove), b2i(!o.ColsLeft)) + pr
+	}
 	if c := color(s.info.Color); c != "" {
 		pr = fmt.Sprintf(`<tabColor rgb="FF%s"/>`, c) + pr
 	}
+	rowLevels, rowCollapsed := outlineAttrs(s.outline, true)
 	if pr != "" {
 		fmt.Fprintf(bw, `<sheetPr>%s</sheetPr>`, pr)
 	}
@@ -327,6 +331,7 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 	} else {
 		bw.WriteString(`/></sheetViews>`)
 	}
+	writeOutlineFormat(bw, s.outline)
 	writeCols(bw, s)
 	bw.WriteString(`<sheetData>`)
 	if err := mergeRows(ctx, s, keys, s.marks(), func(r int, cols []int, cells []xcell) error {
@@ -339,6 +344,12 @@ func writeSheet(ctx context.Context, w io.Writer, s *xsheet, active bool, tables
 		}
 		if s.hiddenR[r] {
 			bw.WriteString(` hidden="1"`)
+		}
+		if lv := rowLevels[r]; lv > 0 {
+			fmt.Fprintf(bw, ` outlineLevel="%d"`, lv)
+		}
+		if rowCollapsed[r] {
+			bw.WriteString(` collapsed="1"`)
 		}
 		bw.WriteString(`>`)
 		for i, c := range cells {
@@ -402,6 +413,13 @@ func writeCols(bw *bufio.Writer, s *xsheet) {
 	for c := range s.hiddenC {
 		set[c] = true
 	}
+	levels, collapsed := outlineAttrs(s.outline, false)
+	for c := range levels {
+		set[c] = true
+	}
+	for c := range collapsed {
+		set[c] = true
+	}
 	var cols []int
 	for c := range set {
 		if c < ExcelCols {
@@ -424,6 +442,12 @@ func writeCols(bw *bufio.Writer, s *xsheet) {
 		}
 		if s.hiddenC[c] {
 			bw.WriteString(` hidden="1"`)
+		}
+		if lv := levels[c]; lv > 0 {
+			fmt.Fprintf(bw, ` outlineLevel="%d"`, lv)
+		}
+		if collapsed[c] {
+			bw.WriteString(` collapsed="1"`)
 		}
 		bw.WriteString(` customWidth="1"/>`)
 	}

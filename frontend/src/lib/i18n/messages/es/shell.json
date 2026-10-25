@@ -163,7 +163,8 @@
 			"filter": "Filtro de columna (borra los filtros si los hay)",
 			"note": "Nueva nota (o modificar la nota)",
 			"link": "Vínculo (página web, correo, celda)",
-			"chart": "Gráfico (columnas) de la tabla activa"
+			"chart": "Gráfico (columnas) de la tabla activa",
+			"group": "Agrupar / desagrupar"
 		},
 		"calcul": {
 			"title": "Cálculo y datos",
