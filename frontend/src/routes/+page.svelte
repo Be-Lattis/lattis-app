@@ -1524,6 +1524,8 @@
 		// page de ce qui est affiché (SQL, Script, onglet HTML ou Document).
 		const helpKey = (e: KeyboardEvent) => {
 			if (e.key !== 'F1' || e.ctrlKey || e.altKey || e.metaKey) return;
+			// Éditeur SQL : F1 ouvre la référence SQL du mot sous le curseur (SqlEditor).
+			if (document.activeElement instanceof HTMLElement && document.activeElement.closest('[data-own-f1]')) return;
 			e.preventDefault();
 			e.stopPropagation();
 			const el = document.activeElement;

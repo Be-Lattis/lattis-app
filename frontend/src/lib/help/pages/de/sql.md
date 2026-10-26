@@ -16,6 +16,7 @@ ORDER BY Summe DESC
 - `Strg+Eingabe` führt die Auswahl aus, sonst die Anweisung unter dem Cursor (Anweisungen werden durch `;` oder eine Leerzeile getrennt).
 - `Strg+Leertaste` schlägt Tabellen- und Spaltennamen vor; `Alt+↑` / `Alt+↓` blättern durch den Verlauf.
 - Das Ergebnis zeigt höchstens 1.000 Zeilen.
+- Die Schaltfläche **Referenz** (oder `F1` auf einem Schlüsselwort im Editor) zeigt gängige Syntax, nützliche Funktionen und die Regeln von Lattis; jeder Eintrag hat ein Beispiel zum Einfügen, mit den Namen Ihrer Tabellen.
 
 [PivotTables](tcd) werden wie Tabellen abgefragt. `Cell_A1` verweist auf eine freie Zelle des angezeigten Blatts.
 

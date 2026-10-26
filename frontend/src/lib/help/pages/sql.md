@@ -16,6 +16,7 @@ ORDER BY Total DESC
 - `Ctrl+Entrée` exécute la sélection, sinon l'instruction sous le curseur (les instructions se séparent par `;` ou une ligne vide).
 - `Ctrl+Espace` propose les noms des tableaux et des colonnes ; `Alt+Haut` / `Alt+Bas` parcourent l'historique.
 - Le résultat montre 1 000 lignes au plus.
+- Le bouton **Référence** (ou `F1` sur un mot-clé dans l'éditeur) ouvre la syntaxe courante, les fonctions utiles et les règles propres à Lattis ; chaque entrée a un exemple à insérer, écrit avec les noms de vos tableaux.
 
 Les [tableaux croisés](tcd) s'interrogent comme des tables. `Cell_A1` désigne une cellule libre de la feuille affichée.
 

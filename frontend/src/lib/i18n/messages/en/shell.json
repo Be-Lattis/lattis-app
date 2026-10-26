@@ -1172,7 +1172,9 @@
 		"copyToSheetTooltip": "Copies the result into a new table, on a new sheet",
 		"copyToSheet": "Copy",
 		"linkToSheetTooltip": "Creates a refreshable table linked to the query, on a new sheet",
-		"linkToSheet": "Reference"
+		"linkToSheet": "Reference",
+		"reference": "Reference",
+		"referenceTooltip": "Syntax, functions and examples to insert (F1 on a keyword)"
 	},
 	"update": {
 		"available": "A new version is available, click here to update automatically",

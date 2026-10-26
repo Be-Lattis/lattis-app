@@ -35,5 +35,21 @@
 	"editor": {
 		"ambiguous": "该列存在于多个表格中：请指定表格",
 		"placeholder": "SELECT … FROM 表格 — 按 Ctrl+Space 显示名称"
+	},
+	"ref": {
+		"title": "SQL 参考",
+		"help": "SQL 查询帮助",
+		"search": "搜索：join、日期、大写…",
+		"results": "{n, plural, other {# 个结果}}",
+		"insert": "插入示例",
+		"noMatch": "没有匹配的条目。",
+		"section": {
+			"syntax": "常用语法",
+			"window": "窗口函数",
+			"write": "修改数据",
+			"functions": "常用函数",
+			"dates": "日期",
+			"lattis": "Lattis 特性"
+		}
 	}
 }

@@ -1172,7 +1172,9 @@
 		"copyToSheetTooltip": "Copie le résultat dans un nouveau tableau, sur une nouvelle feuille",
 		"copyToSheet": "Copier",
 		"linkToSheetTooltip": "Crée sur une nouvelle feuille un tableau lié à la requête, actualisable",
-		"linkToSheet": "Référencer"
+		"linkToSheet": "Référencer",
+		"reference": "Référence",
+		"referenceTooltip": "Syntaxe, fonctions et exemples à insérer (F1 sur un mot-clé)"
 	},
 	"update": {
 		"available": "Une nouvelle version est disponible, cliquez ici pour mettre à jour automatiquement",

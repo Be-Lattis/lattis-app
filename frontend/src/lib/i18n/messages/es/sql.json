@@ -35,5 +35,21 @@
 	"editor": {
 		"ambiguous": "Columna presente en varias tablas: especifique la tabla",
 		"placeholder": "SELECT … FROM Tabla — Ctrl+Espacio para los nombres"
+	},
+	"ref": {
+		"title": "Referencia SQL",
+		"help": "Ayuda sobre las consultas SQL",
+		"search": "Buscar: join, fecha, mayúsculas…",
+		"results": "{n, plural, one {# resultado} other {# resultados}}",
+		"insert": "Insertar el ejemplo",
+		"noMatch": "Ninguna entrada coincide.",
+		"section": {
+			"syntax": "Sintaxis habitual",
+			"window": "Funciones de ventana",
+			"write": "Modificar los datos",
+			"functions": "Funciones útiles",
+			"dates": "Fechas",
+			"lattis": "Particularidades de Lattis"
+		}
 	}
 }

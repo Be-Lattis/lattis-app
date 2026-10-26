@@ -35,5 +35,21 @@
 	"editor": {
 		"ambiguous": "Spalte in mehreren Tabellen vorhanden: Geben Sie die Tabelle an",
 		"placeholder": "SELECT … FROM Tabelle — Strg+Leertaste für Namen"
+	},
+	"ref": {
+		"title": "SQL-Referenz",
+		"help": "Hilfe zu SQL-Abfragen",
+		"search": "Suchen: join, Datum, Großbuchstaben…",
+		"results": "{n, plural, one {# Ergebnis} other {# Ergebnisse}}",
+		"insert": "Beispiel einfügen",
+		"noMatch": "Kein Eintrag passt.",
+		"section": {
+			"syntax": "Gängige Syntax",
+			"window": "Fensterfunktionen",
+			"write": "Daten ändern",
+			"functions": "Nützliche Funktionen",
+			"dates": "Datum",
+			"lattis": "Besonderheiten von Lattis"
+		}
 	}
 }

@@ -4671,6 +4671,8 @@ export interface MessageParams {
 	'shell.sqlView.objectTooltipRename': Record<never, never>;
 	'shell.sqlView.objects': Record<never, never>;
 	'shell.sqlView.pivot': Record<never, never>;
+	'shell.sqlView.reference': Record<never, never>;
+	'shell.sqlView.referenceTooltip': Record<never, never>;
 	'shell.sqlView.remove': Record<never, never>;
 	'shell.sqlView.rename': Record<never, never>;
 	'shell.sqlView.renameAria': Record<never, never>;
@@ -4988,6 +4990,18 @@ export interface MessageParams {
 	'sql.example.update': { name: number | string };
 	'sql.example.updateWarn': Record<never, never>;
 	'sql.example.value': Record<never, never>;
+	'sql.ref.help': Record<never, never>;
+	'sql.ref.insert': Record<never, never>;
+	'sql.ref.noMatch': Record<never, never>;
+	'sql.ref.results': { n: number | string };
+	'sql.ref.search': Record<never, never>;
+	'sql.ref.section.dates': Record<never, never>;
+	'sql.ref.section.functions': Record<never, never>;
+	'sql.ref.section.lattis': Record<never, never>;
+	'sql.ref.section.syntax': Record<never, never>;
+	'sql.ref.section.window': Record<never, never>;
+	'sql.ref.section.write': Record<never, never>;
+	'sql.ref.title': Record<never, never>;
 	'sql.rows': { n: number | string };
 	'sql.when.minutes': { n: number | string };
 	'sql.when.now': Record<never, never>;

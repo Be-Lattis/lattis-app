@@ -16,6 +16,7 @@ ORDER BY Total DESC
 - `Ctrl+Entrar` ejecuta la selección, si no la instrucción bajo el cursor (las instrucciones se separan con `;` o una línea vacía).
 - `Ctrl+Espacio` sugiere nombres de tablas y columnas; `Alt+Arriba` / `Alt+Abajo` recorren el historial.
 - El resultado muestra como máximo 1.000 filas.
+- El botón **Referencia** (o `F1` sobre una palabra clave en el editor) muestra la sintaxis habitual, funciones útiles y las reglas propias de Lattis; cada entrada tiene un ejemplo para insertar, escrito con los nombres de sus tablas.
 
 Las [tablas dinámicas](tcd) se consultan como las tablas. `Cell_A1` designa una celda libre de la hoja mostrada.
 

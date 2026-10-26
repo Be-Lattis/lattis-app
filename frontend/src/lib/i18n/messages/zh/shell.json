@@ -1172,7 +1172,9 @@
 		"copyToSheetTooltip": "将结果复制到新工作表上的新表格中",
 		"copyToSheet": "复制",
 		"linkToSheetTooltip": "在新工作表上创建链接到查询的可刷新表格",
-		"linkToSheet": "引用"
+		"linkToSheet": "引用",
+		"reference": "参考",
+		"referenceTooltip": "语法、函数和可插入的示例（在关键字上按 F1）"
 	},
 	"update": {
 		"available": "有新版本可用，点击此处自动更新",

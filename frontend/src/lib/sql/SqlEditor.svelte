@@ -21,9 +21,11 @@
 		onrun: (sql: string) => void;
 		/** Alt+↑ / Alt+↓ : requête précédente / suivante de l'historique. */
 		onhistory?: (step: 1 | -1) => string | null;
+		/** F1 : référence SQL du mot sous le curseur ('' : aucun mot). */
+		onhelp?: (word: string) => void;
 	}
 
-	let { value = $bindable(), catalog, onrun, onhistory }: Props = $props();
+	let { value = $bindable(), catalog, onrun, onhistory, onhelp }: Props = $props();
 
 	let host: HTMLDivElement;
 	let view: EditorView | undefined;
@@ -153,6 +155,15 @@
 		};
 	}
 
+	/** F1 : le mot sous le curseur (ou juste avant) part à la référence. */
+	function help(v: EditorView) {
+		if (!onhelp) return false;
+		const at = v.state.selection.main.head;
+		const w = v.state.wordAt(at) ?? (at > 0 ? v.state.wordAt(at - 1) : null);
+		onhelp(w ? v.state.sliceDoc(w.from, w.to) : '');
+		return true;
+	}
+
 	onMount(() => {
 		view = new EditorView({
 			parent: host,
@@ -175,6 +186,7 @@
 						{ key: 'Mod-Enter', run: (v) => runCurrent(v) },
 						{ key: 'Alt-ArrowUp', run: step(1) },
 						{ key: 'Alt-ArrowDown', run: step(-1) },
+						{ key: 'F1', run: help },
 						...closeBracketsKeymap,
 						...completionKeymap,
 						...historyKeymap,
@@ -211,6 +223,31 @@
 		view.focus();
 	}
 
+	/**
+	 * Insère une requête comme instruction à part (lignes vides autour) : à
+	 * la place de la sélection, sinon après l'instruction sous le curseur ;
+	 * le curseur à sa fin, Ctrl+Entrée l'exécute seule. Ctrl+Z la retire.
+	 */
+	export function insertBlock(text: string) {
+		if (!view) {
+			value = value.trim() ? `${value.trimEnd()}\n\n${text}` : text;
+			return;
+		}
+		const doc = view.state.doc.toString();
+		let { from, to } = view.state.selection.main;
+		if (from === to) {
+			const st = statementAt(doc, from);
+			if (st.text && from >= st.from && from <= st.to) from = to = st.to + (doc[st.to] === ';' ? 1 : 0);
+		}
+		const before = doc.slice(0, from);
+		const after = doc.slice(to);
+		const pre = !before.trim() ? '' : before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+		const post = !after.trim() ? '' : after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : '\n\n';
+		const insert = pre + text + post;
+		view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + pre.length + text.length }, scrollIntoView: true });
+		view.focus();
+	}
+
 	/** Remplace tout le contenu (exemple, favori) ; Ctrl+Z le rend. */
 	export function load(text: string) {
 		if (!view) {
@@ -234,7 +271,8 @@
 	}
 </script>
 
-<div class="editor" bind:this={host}></div>
+<!-- data-own-f1 : F1 y ouvre la référence SQL, pas l'aide (+page.svelte). -->
+<div class="editor" bind:this={host} data-own-f1={onhelp ? '' : undefined}></div>
 
 <style>
 	.editor {

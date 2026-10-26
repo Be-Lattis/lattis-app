@@ -1172,7 +1172,9 @@
 		"copyToSheetTooltip": "Copia el resultado en una nueva tabla, en una hoja nueva",
 		"copyToSheet": "Copiar",
 		"linkToSheetTooltip": "Crea en una hoja nueva una tabla vinculada a la consulta, actualizable",
-		"linkToSheet": "Vincular"
+		"linkToSheet": "Vincular",
+		"reference": "Referencia",
+		"referenceTooltip": "Sintaxis, funciones y ejemplos para insertar (F1 sobre una palabra clave)"
 	},
 	"update": {
 		"available": "Hay una nueva versión disponible, haga clic aquí para actualizar automáticamente",

@@ -16,6 +16,7 @@ ORDER BY Total DESC
 - `Ctrl+Enter` runs the selection, otherwise the statement under the cursor (statements are separated by `;` or an empty line).
 - `Ctrl+Space` suggests table and column names; `Alt+Up` / `Alt+Down` go through the history.
 - The result shows 1,000 rows at most.
+- The **Reference** button (or `F1` on a keyword in the editor) opens the common syntax, useful functions and Lattis-specific rules; each entry has an example to insert, written with your tables' names.
 
 [PivotTables](tcd) are queried like tables. `Cell_A1` refers to a free cell of the displayed sheet.
 

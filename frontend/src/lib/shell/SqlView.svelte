@@ -23,6 +23,8 @@
 	import { formatValue, typeLabel } from '#lib/grid/format.js';
 	import { alterRename } from '#lib/sql/rename.js';
 	import SqlEditor from '#lib/sql/SqlEditor.svelte';
+	import SqlReference from '#lib/sql/SqlReference.svelte';
+	import { entryFor } from '#lib/sql/reference.svelte.js';
 	import { Catalog, displayHeaders, quote, translate, type SqlObject } from '#lib/sql/names.js';
 	import { load, record, save, search, when, type HistoryEntry } from '#lib/sql/history.js';
 	import { isWrite } from '#lib/sql/write.js';
@@ -194,6 +196,32 @@
 		bar.addEventListener('pointerup', up);
 		bar.addEventListener('pointercancel', up);
 	}
+	// Panneau Référence : ouvert ou non (retenu d'une session à l'autre) ;
+	// refFocus : entrée demandée par F1 dans l'éditeur.
+	const REF_KEY = 'lattis.sql.reference';
+	let showRef = $state(readRef());
+	let refFocus = $state<{ id: string; seq: number } | null>(null);
+	function readRef(): boolean {
+		try {
+			return localStorage.getItem(REF_KEY) === '1';
+		} catch {
+			return false;
+		}
+	}
+	function setRef(on: boolean) {
+		showRef = on;
+		try {
+			localStorage.setItem(REF_KEY, on ? '1' : '0');
+		} catch {
+			// stockage indisponible : vaut pour la session
+		}
+	}
+	function refHelp(word: string) {
+		const e = entryFor(word);
+		if (e) refFocus = { id: e.id, seq: (refFocus?.seq ?? 0) + 1 };
+		setRef(true);
+	}
+
 	let sent = $state('');
 	let error = $state('');
 	let running = $state(false);
@@ -657,10 +685,11 @@
 					onclick={() => (starred ? removeFavorite(starred) : addFavorite(editor?.selectedOrAll() ?? sql))}>{starred ? '★' : '☆'} {t('shell.sqlView.favorite')}</button
 				>
 			{/if}
+			<button class="ref-btn" class:on={showRef} aria-pressed={showRef} onclick={() => setRef(!showRef)} title={t('shell.sqlView.referenceTooltip')}><Icon name="book" size={14} />{t('shell.sqlView.reference')}</button>
 			<span class="muted hint" title={t('shell.sqlView.hintTooltip')}>{t('shell.sqlView.hint')}</span>
 		</div>
 		<div class="code" style:height="{codeH}px">
-			<SqlEditor bind:this={editor} bind:value={sql} {catalog} onrun={execute} onhistory={step} />
+			<SqlEditor bind:this={editor} bind:value={sql} {catalog} onrun={execute} onhistory={step} onhelp={refHelp} />
 		</div>
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<div
@@ -721,6 +750,8 @@
 			{/if}
 		</div>
 	</section>
+	{#if showRef}<SqlReference {objects} insert={(text) => editor?.insertBlock(text)} close={() => setRef(false)} focus={refFocus} />{/if}
+
 </div>
 
 <style>
@@ -823,6 +854,28 @@
 	}
 	.fav-btn:hover {
 		background: #f5f9f6;
+	}
+	.ref-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		--icon-accent: #217346;
+		font: inherit;
+		background: #fff;
+		color: #1f2328;
+		border: 1px solid #d4d7db;
+		border-radius: 3px;
+		padding: 3px 10px;
+		cursor: pointer;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+	.ref-btn:hover {
+		background: #f5f9f6;
+	}
+	.ref-btn.on {
+		background: #e3efe7;
+		border-color: #217346;
 	}
 	.fav-btn.on,
 	.star.on {
