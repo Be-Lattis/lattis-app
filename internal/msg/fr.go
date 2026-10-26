@@ -634,6 +634,7 @@ var fr = map[ID]string{
 	"query.demoOffline":           "démo : aucune connexion réseau (« {host} »)",
 	"query.accessInternalAddress": "accès refusé : « {host} » désigne une adresse interne du serveur ({ip})",
 	"query.accessUploadsOnly":     "accès refusé : sur ce serveur, une requête ne lit que les fichiers envoyés depuis le navigateur ({file})",
+	"doc.pathOutsideSession":      "accès refusé : sur ce serveur, seuls les fichiers envoyés depuis le navigateur s'ouvrent ({file})",
 	"query.averageType":           "moyenne de « {column} » : colonne de type {type}",
 	"query.column.updatedAt":      "Mis à jour le",
 	"query.column.updatedBy":      "Mis à jour par",

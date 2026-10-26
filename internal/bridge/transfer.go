@@ -45,6 +45,9 @@ func (s *DocumentService) Import(ctx context.Context, path string) (ImportResult
 		}
 		path = p
 	}
+	if err := s.sessionPath(path); err != nil {
+		return ImportResult{}, err
+	}
 	res, err := transfer.ImportFile(ctx, d.Model, path)
 	if err != nil {
 		return ImportResult{}, err

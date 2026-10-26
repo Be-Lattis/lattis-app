@@ -412,6 +412,23 @@ func (s *DocumentService) ConnectionTables(ctx context.Context, name string) (Ta
 	return TableList{Tables: ts}, err
 }
 
+// sessionPath vérifie un chemin de fichier reçu de l'interface (Open,
+// Import…). Sur un serveur (moteur web, démo publique), le navigateur peut
+// envoyer n'importe quel chemin par le WebSocket : seuls ceux du
+// répertoire de la session (envois, cache des classeurs partagés, copies de
+// travail) sont permis, comme pour les sources des requêtes (query.Guard).
+// Sur un poste, tout chemin.
+func (s *DocumentService) sessionPath(p string) error {
+	g, ok := s.sys().(query.Guarded)
+	if !ok || g.QueryGuard() == nil {
+		return nil
+	}
+	if g.QueryGuard().CheckPath(p) != nil {
+		return msg.Wrap(query.ErrDenied, "doc.pathOutsideSession", msg.Args{"file": filepath.Base(p)})
+	}
+	return nil
+}
+
 // FileTables liste les tables et vues d'un fichier de base (kind : "sqlite").
 func (s *DocumentService) FileTables(ctx context.Context, kind, path string) ([]query.DBTable, error) {
 	ctx = query.GuardFrom(ctx, s.sys())

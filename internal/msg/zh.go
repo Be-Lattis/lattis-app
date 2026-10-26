@@ -634,6 +634,7 @@ var zh = map[ID]string{
 	"query.demoOffline":           "演示：不允许网络连接（“{host}”）",
 	"query.accessInternalAddress": "访问被拒绝：“{host}”是服务器的内部地址（{ip}）",
 	"query.accessUploadsOnly":     "访问被拒绝：在此服务器上，查询只能读取从浏览器上传的文件（{file}）",
+	"doc.pathOutsideSession":      "访问被拒绝：在此服务器上，只能打开从浏览器上传的文件（{file}）",
 	"query.averageType":           "“{column}”的平均值：列的类型为 {type}",
 	"query.column.updatedAt":      "更新时间",
 	"query.column.updatedBy":      "更新者",

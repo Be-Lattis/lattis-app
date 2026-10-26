@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -261,6 +263,57 @@ func TestEngineUploadAndDownload(t *testing.T) {
 	json.Unmarshal(<-done, &imp)
 	if !imp.Cancelled {
 		t.Fatalf("Import annulé = %+v", imp)
+	}
+}
+
+// Les méthodes qui prennent un chemin (Open, Import…) ne lisent que les
+// fichiers du répertoire de la session : un message WebSocket écrit à la
+// main ne peut pas ouvrir le cache d'un autre utilisateur du serveur.
+func TestEnginePathsOutsideSession(t *testing.T) {
+	e, srv := newEngine(t, Options{})
+	c := dial(t, srv)
+	c.mustCall("DocumentService.New")
+
+	outside := filepath.Join(t.TempDir(), "autre.csv")
+	if err := os.WriteFile(outside, []byte("a;b\n1;2\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range []struct {
+		method string
+		args   []any
+	}{
+		{"DocumentService.Import", []any{outside}},
+		{"DocumentService.Open", []any{outside}},
+		{"DocumentService.OpenLocalCopy", []any{outside}},
+		{"DocumentService.OpenLocked", []any{outside, true}},
+		{"DocumentService.OpenTogether", []any{outside}},
+		{"DocumentService.Salvage", []any{outside}},
+		{"DocumentService.Import", []any{"relatif.csv"}},
+		{"DocumentService.Import", []any{filepath.Join(e.host.dir, "..", "autre.csv")}},
+	} {
+		_, err := c.call(m.method, m.args...)
+		if err == nil || err.Data == nil {
+			t.Fatalf("%s %v accepté", m.method, m.args)
+		}
+		if cause, _ := err.Data.Cause.(map[string]any); cause == nil || cause["id"] != "doc.pathOutsideSession" {
+			t.Fatalf("%s : cause %#v", m.method, err.Data.Cause)
+		}
+	}
+
+	// Un fichier de la session (envoyé par le navigateur) s'importe.
+	inside := filepath.Join(e.host.dir, "uploads", "x", "ventes.csv")
+	if err := os.MkdirAll(filepath.Dir(inside), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(inside, []byte("produit;quantite\npomme;3\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var imp struct {
+		Tables []string `json:"tables"`
+	}
+	json.Unmarshal(c.mustCall("DocumentService.Import", inside), &imp)
+	if len(imp.Tables) != 1 {
+		t.Fatalf("Import dans la session = %+v", imp)
 	}
 }
 

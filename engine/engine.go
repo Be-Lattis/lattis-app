@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -81,6 +82,13 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 	if o.Dir == "" {
 		return nil, errors.New("engine : Options.Dir manquant")
 	}
+	// Absolu : les chemins reçus du navigateur sont comparés à Dir
+	// (query.Guard.CheckPath).
+	dir, err := filepath.Abs(o.Dir)
+	if err != nil {
+		return nil, err
+	}
+	o.Dir = dir
 	if err := os.MkdirAll(o.Dir, 0o700); err != nil {
 		return nil, err
 	}

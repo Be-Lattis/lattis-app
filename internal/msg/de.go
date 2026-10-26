@@ -633,6 +633,7 @@ var de = map[ID]string{
 	"query.demoOffline":           "Demo: keine Netzwerkverbindungen („{host}“)",
 	"query.accessInternalAddress": "Zugriff verweigert: „{host}“ ist eine interne Adresse des Servers ({ip})",
 	"query.accessUploadsOnly":     "Zugriff verweigert: Auf diesem Server liest eine Abfrage nur Dateien, die aus dem Browser hochgeladen wurden ({file})",
+	"doc.pathOutsideSession":      "Zugriff verweigert: Auf diesem Server lassen sich nur Dateien öffnen, die aus dem Browser hochgeladen wurden ({file})",
 	"query.averageType":           "Mittelwert von „{column}“: Spalte vom Typ {type}",
 	"query.column.updatedAt":      "Aktualisiert am",
 	"query.column.updatedBy":      "Aktualisiert von",

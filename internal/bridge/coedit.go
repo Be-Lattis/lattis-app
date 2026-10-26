@@ -174,6 +174,9 @@ func (s *DocumentService) openQuestion(path string) (q *FileQuestion, coEdit boo
 // (20 s au plus). Sans réponse, la question d'avant revient
 // (OpenResult.Locked, sans « Travailler à plusieurs »).
 func (s *DocumentService) OpenTogether(ctx context.Context, path string) (OpenResult, error) {
+	if err := s.sessionPath(path); err != nil {
+		return OpenResult{}, err
+	}
 	tk, err := coedit.Join(ctx, path, coeditTiming)
 	var none *coedit.NoAnswerError
 	if errors.As(err, &none) {

@@ -232,6 +232,9 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 		}
 		path = p
 	}
+	if err := s.sessionPath(path); err != nil {
+		return OpenResult{}, err
+	}
 	if r := sharedFile(path); r != nil {
 		return OpenResult{Shared: r}, nil
 	}
@@ -268,6 +271,9 @@ func sharedFile(path string) *RecentFile {
 // OpenLocalCopy ouvre le fichier path tel quel, même celui d'un classeur
 // partagé en direct (serveur injoignable, ou choix de l'utilisateur).
 func (s *DocumentService) OpenLocalCopy(ctx context.Context, path string) (OpenResult, error) {
+	if err := s.sessionPath(path); err != nil {
+		return OpenResult{}, err
+	}
 	if q, together := s.openQuestion(path); q != nil {
 		return OpenResult{Locked: q, CoEdit: together}, nil
 	}
@@ -278,6 +284,9 @@ func (s *DocumentService) OpenLocalCopy(ctx context.Context, path string) (OpenR
 // seule (Enregistrer sous seulement), ou quand même (sans prendre son
 // verrou ; l'enregistrement vérifie encore que le fichier n'a pas changé).
 func (s *DocumentService) OpenLocked(ctx context.Context, path string, readOnly bool) (OpenResult, error) {
+	if err := s.sessionPath(path); err != nil {
+		return OpenResult{}, err
+	}
 	mode := doc.OpenAnyway
 	if readOnly {
 		mode = doc.OpenReadOnly
@@ -308,6 +317,9 @@ func (s *DocumentService) open(ctx context.Context, path string, mode doc.OpenMo
 // Salvage récupère les données lisibles d'un classeur endommagé dans un
 // nouveau classeur sans titre (le fichier endommagé n'est pas modifié).
 func (s *DocumentService) Salvage(ctx context.Context, path string) (SalvageResult, error) {
+	if err := s.sessionPath(path); err != nil {
+		return SalvageResult{}, err
+	}
 	d, rep, err := doc.Salvage(ctx, path)
 	if err != nil {
 		return SalvageResult{}, msg.Wrap(err, "doc.recoverFailed", msg.Args{"err": err})

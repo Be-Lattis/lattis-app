@@ -632,6 +632,7 @@ var en = map[ID]string{
 	"query.demoOffline":           "demo: no network connections (“{host}”)",
 	"query.accessInternalAddress": "access denied: “{host}” is an internal address of the server ({ip})",
 	"query.accessUploadsOnly":     "access denied: on this server, a query only reads files uploaded from the browser ({file})",
+	"doc.pathOutsideSession":      "access denied: on this server, only files uploaded from the browser can be opened ({file})",
 	"query.averageType":           "average of “{column}”: column of type {type}",
 	"query.column.updatedAt":      "Updated on",
 	"query.column.updatedBy":      "Updated by",
