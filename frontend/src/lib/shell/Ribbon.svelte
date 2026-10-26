@@ -549,8 +549,7 @@
 						local: true,
 						run: onrules ? () => onrules(anchor.x, anchor.y) : undefined,
 						hint: t('ribbon.cmd.conditional.tooltip')
-					},
-					{ label: t('ribbon.cmd.formatAsTable.label'), icon: 'table', run: ed('formatAsTable'), hint: t('ribbon.cmd.formatAsTable.tooltip') }
+					}
 				]
 			},
 			{

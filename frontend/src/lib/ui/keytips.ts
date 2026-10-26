@@ -57,7 +57,6 @@ const COMMAND_CODES: [label: MessageKey, code: string, launcher?: boolean][] = [
 	['ribbon.cmd.decimalLess.label', '9'],
 	['ribbon.group.number', 'FM', true],
 	['ribbon.cmd.conditional.label', 'L'],
-	['ribbon.cmd.formatAsTable.label', 'T'],
 	['ribbon.cmd.insert.label', 'I'],
 	['ribbon.cmd.delete.label', 'D'],
 	['ribbon.cmd.format.label', 'O'],

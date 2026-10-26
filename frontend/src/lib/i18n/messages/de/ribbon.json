@@ -285,10 +285,6 @@
 			"label": "Bedingte Formatierung",
 			"tooltip": "Zellen anhand ihrer Werte hervorheben"
 		},
-		"formatAsTable": {
-			"label": "Als Tabelle formatieren",
-			"tooltip": "Aus dem Bereich der aktiven Zelle eine Tabelle mit Überschriften machen (Strg+L)"
-		},
 		"insert": {
 			"label": "Einfügen",
 			"tooltip": "Zeile oder Spalte einfügen",

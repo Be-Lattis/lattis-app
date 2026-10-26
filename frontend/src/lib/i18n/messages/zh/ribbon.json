@@ -285,10 +285,6 @@
 			"label": "条件格式",
 			"tooltip": "根据值突出显示单元格"
 		},
-		"formatAsTable": {
-			"label": "套用表格格式",
-			"tooltip": "将活动单元格所在区域创建为带标题的表格 (Ctrl+L)"
-		},
 		"insert": {
 			"label": "插入",
 			"tooltip": "插入行或列",

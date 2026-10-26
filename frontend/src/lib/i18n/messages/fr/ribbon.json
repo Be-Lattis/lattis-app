@@ -285,10 +285,6 @@
 			"label": "Mise en forme conditionnelle",
 			"tooltip": "Mettre en évidence des cellules selon leurs valeurs"
 		},
-		"formatAsTable": {
-			"label": "Mettre sous forme de tableau",
-			"tooltip": "Faire un tableau de la plage de la cellule active, avec en-têtes (Ctrl+L)"
-		},
 		"insert": {
 			"label": "Insérer",
 			"tooltip": "Insérer une ligne ou une colonne",

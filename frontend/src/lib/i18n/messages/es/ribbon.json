@@ -285,10 +285,6 @@
 			"label": "Formato condicional",
 			"tooltip": "Resaltar celdas según sus valores"
 		},
-		"formatAsTable": {
-			"label": "Dar formato como tabla",
-			"tooltip": "Crear una tabla a partir del rango de la celda activa, con encabezados (Ctrl+L)"
-		},
 		"insert": {
 			"label": "Insertar",
 			"tooltip": "Insertar una fila o una columna",

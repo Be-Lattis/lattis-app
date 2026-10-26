@@ -285,10 +285,6 @@
 			"label": "Conditional formatting",
 			"tooltip": "Highlight cells based on their values"
 		},
-		"formatAsTable": {
-			"label": "Format as table",
-			"tooltip": "Make a table from the active cell's range, with headers (Ctrl+L)"
-		},
 		"insert": {
 			"label": "Insert",
 			"tooltip": "Insert a row or a column",

@@ -3467,8 +3467,6 @@ export interface MessageParams {
 	'ribbon.cmd.format.showColumns': Record<never, never>;
 	'ribbon.cmd.format.showRows': Record<never, never>;
 	'ribbon.cmd.format.tooltip': Record<never, never>;
-	'ribbon.cmd.formatAsTable.label': Record<never, never>;
-	'ribbon.cmd.formatAsTable.tooltip': Record<never, never>;
 	'ribbon.cmd.freeze.cell': Record<never, never>;
 	'ribbon.cmd.freeze.col': Record<never, never>;
 	'ribbon.cmd.freeze.label': Record<never, never>;
