@@ -57,6 +57,12 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Classeur collaboratif : les valeurs tapées ou collées dans une colonne vide d'un tableau partagé, qui lui donnent son type (nombres, dates, dates avec heure), partent bien au serveur et apparaissent chez les collègues, y compris après une annulation, un rétablissement ou une modification faite hors ligne ; auparavant seul le changement de type partait.
 
+### Sécurité
+
+- Application web et démo en ligne : seuls les fichiers envoyés depuis le navigateur s'ouvrent ou s'importent ; un autre fichier du serveur est refusé.
+- Application web : une connexion PostgreSQL, MySQL ou SQL Server ne peut plus joindre une adresse interne du serveur par un nom de domaine qui change d'adresse, ni par « Tester la connexion ».
+- Import .ods et .xlsx : un fichier piégé (texte ou lignes répétées à l'excès, partie compressée de façon anormale) est refusé au lieu de saturer la mémoire.
+
 ## 0.4.4-beta (22/10/2026)
 
 ### Nouveautés
