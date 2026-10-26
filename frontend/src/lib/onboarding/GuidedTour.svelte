@@ -246,19 +246,6 @@
 			animation: none;
 		}
 	}
-	@media (prefers-color-scheme: dark) {
-		.bubble {
-			--tour-bg: #242a30;
-			--tour-fg: #eef0f2;
-			--tour-muted: #a9b0b8;
-			--tour-border: #3d454d;
-			--tour-accent: #3fa46d;
-			--tour-code: #1b2025;
-		}
-		.ring {
-			--tour-accent: #3fa46d;
-		}
-	}
 	.arrow {
 		position: absolute;
 		width: 10px;
