@@ -10,18 +10,18 @@ describe('groups', () => {
 describe('cellule de tableau', () => {
 	const all = { format: true, rules: true, note: true, sort: true, row: true, column: true, table: true };
 
-	it('suit l’ordre demandé : objets, presse-papiers, mise en forme, note, tri', () => {
-		expect(flat(tableCellMenu(all))).toBe('row column table | cut copy paste pasteSpecial | clear format rules | note | sort');
+	it('suit l’ordre demandé : objets, presse-papiers, mise en forme, note (tri dans Colonne)', () => {
+		expect(flat(tableCellMenu(all))).toBe('row column table | cut copy paste pasteSpecial | clear format rules | note');
 	});
 
 	it('met la situation après les objets, entre deux séparateurs', () => {
-		expect(flat(tableCellMenu({ ...all, ref: true, toNote: true }))).toBe('row column table | ref toNote | cut copy paste pasteSpecial | clear format rules | note | sort');
+		expect(flat(tableCellMenu({ ...all, ref: true, toNote: true }))).toBe('row column table | ref toNote | cut copy paste pasteSpecial | clear format rules | note');
 		expect(flat(tableCellMenu({ ...all, promote: true }))).toMatch(/^row column table \| promote \| cut/);
 	});
 
 	it('en-tête : du texte ou des groupes au-dessus, pas de sous-menu Ligne', () => {
 		const head = { ...all, row: false };
-		expect(flat(tableCellMenu({ ...head, toHeader: true, groupsOn: true }))).toBe('column table | toHeader groupsOn | cut copy paste pasteSpecial | clear format rules | note | sort');
+		expect(flat(tableCellMenu({ ...head, toHeader: true, groupsOn: true }))).toBe('column table | toHeader groupsOn | cut copy paste pasteSpecial | clear format rules | note');
 		expect(flat(tableCellMenu({ ...head, groupsOff: true }))).toMatch(/^column table \| groupsOff \| cut copy paste/);
 	});
 
@@ -39,6 +39,10 @@ describe('cellule de tableau', () => {
 			'rename typeKey validation tabChoice toValues | insertLeft insertRight deleteColumn'
 		);
 		expect(flat(tableColumnSubmenu({}))).toBe('rename | insertLeft insertRight deleteColumn');
+		// Tri et filtre en tête du sous-menu Colonne ; plus d'entrée « Trier et filtrer » à part.
+		expect(flat(tableColumnSubmenu({ sort: true }))).toBe('sort | rename | insertLeft insertRight deleteColumn');
+		expect(flat(tableCellMenu({ sort: true, column: true }))).not.toContain('sort');
+		expect(flat(tableCellMenu({ sort: true }))).toBe('cut copy paste pasteSpecial | clear | sort');
 	});
 });
 

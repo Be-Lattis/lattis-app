@@ -12832,7 +12832,7 @@
 			{@const promoteRow = !why && !m.header && !!source.promoteHeader && m.e.t.rows > 0 && !m.e.t.query && !m.e.t.twoLevel && m.n === 0 && allGenerated(m.e.t.columns.map((c) => c.name))}
 			{@const toNote = !why && !m.header && !!source.rowToNote && m.n === m.e.t.rows - 1}
 			{@const headAbove = m.header && !m.e.t.query && titleAboveFilled(m.e.t, (r, c) => cells.get(key(r, c)))}
-			{@const columnGroups = tableColumnSubmenu({ typeKey: !!source.setType && !col?.formula && !why, validation: !!source.applyStyle && !col?.formula, tabChoice: !!source.setTabChoice && !!col, toValues: toValues.length > 0 })}
+			{@const columnGroups = tableColumnSubmenu({ sort: sortCount > 0, typeKey: !!source.setType && !col?.formula && !why, validation: !!source.applyStyle && !col?.formula, tabChoice: !!source.setTabChoice && !!col, toValues: toValues.length > 0 })}
 			{@const menuGroups = m.rowOnly
 				? headerMenu({
 						promote: promoteRow,
@@ -12898,7 +12898,9 @@
 						{/if}
 					{/snippet}
 					{#snippet columnItem(id: string)}
-						{#if id === 'rename'}
+						{#if id === 'sort'}
+							{@render sortItems()}
+						{:else if id === 'rename'}
 							<button
 								onclick={() => {
 									const t = m.e.t;

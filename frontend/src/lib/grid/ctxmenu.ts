@@ -10,7 +10,8 @@
 //   3. effacer et mettre en forme (contenu, format de cellule, mise en forme
 //      conditionnelle) ;
 //   4. la note, le commentaire ;
-//   5. Trier et filtrer (un sous-menu, mais pas un objet : il reste en bas).
+//   5. Trier et filtrer, seulement sans sous-menu Colonne : sinon le tri et
+//      le filtre sont en tête de ce sous-menu (26/10).
 // Toute entrée qui ouvre un sous-menu (▸) est en gras (Submenu.svelte).
 // Chaque fonction rend des groupes d'identifiants d'entrées : Sheet.svelte
 // les affiche dans cet ordre, un séparateur entre deux groupes ; les groupes
@@ -67,7 +68,8 @@ export function tableCellMenu(o: TableCellMenu): MenuGroups {
 		CLIPBOARD,
 		['clear', o.format && 'format', o.rules && 'rules'],
 		[o.note && 'note', o.comment && 'comment'],
-		[o.sort && 'sort']
+		// Tri et filtre : dans le sous-menu Colonne quand il y est (demande de Louis, 26/10).
+		[o.sort && !o.column && 'sort']
 	);
 }
 
@@ -76,9 +78,9 @@ export function tableRowSubmenu(): MenuGroups {
 	return groups(['insertAbove', 'insertBelow', 'deleteRow']);
 }
 
-/** Sous-menu Colonne « … » d'une colonne de tableau ; sa suppression en dernier. */
-export function tableColumnSubmenu(o: { typeKey?: boolean; validation?: boolean; tabChoice?: boolean; toValues?: boolean }): MenuGroups {
-	return groups(['rename', o.typeKey && 'typeKey', o.validation && 'validation', o.tabChoice && 'tabChoice', o.toValues && 'toValues'], ['insertLeft', 'insertRight', 'deleteColumn']);
+/** Sous-menu Colonne « … » d'une colonne de tableau : tri et filtre en tête, sa suppression en dernier. */
+export function tableColumnSubmenu(o: { sort?: boolean; typeKey?: boolean; validation?: boolean; tabChoice?: boolean; toValues?: boolean }): MenuGroups {
+	return groups([o.sort && 'sort'], ['rename', o.typeKey && 'typeKey', o.validation && 'validation', o.tabChoice && 'tabChoice', o.toValues && 'toValues'], ['insertLeft', 'insertRight', 'deleteColumn']);
 }
 
 /** Cellule libre (hors tableau). */
