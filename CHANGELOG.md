@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Fichier › Exporter › Script SQL (.sql) : les tableaux et tableaux croisés deviennent un script `CREATE TABLE` + `INSERT` à rejouer dans une base de données, en SQL standard ou adapté à PostgreSQL, MySQL, SQL Server ou SQLite, pour tout le classeur, la feuille active ou le tableau actif.
+
 ## 0.5.0-beta (26/10/2026)
 
 ### Nouveautés

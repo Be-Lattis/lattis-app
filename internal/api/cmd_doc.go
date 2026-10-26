@@ -224,6 +224,49 @@ func init() {
 			},
 		},
 		&Command{
+			Name: "doc.export_sql", Summary: "Exporte les tableaux (et tableaux croisés, en valeurs) en script SQL : CREATE TABLE puis INSERT par lots de 500 lignes, pour une base quelconque.", NoLua: true,
+			Returns: "{path, tables, rows, nulls} (nulls : valeurs hors type ou en erreur écrites NULL)",
+			Details: "dialect : \"standard\" (par défaut : SQL de la norme, guillemets doubles, DATE '…', TRUE/FALSE), \"postgresql\", \"mysql\", \"sqlserver\" ou \"sqlite\" (noms, booléens, types et transaction de chaque base). Sans sheet ni table : tout le classeur. Les cellules libres ne sont pas exportées ; une colonne calculée donne ses valeurs, sa formule en commentaire ; la colonne clé donne la PRIMARY KEY.",
+			Params: []Param{
+				{Name: "path", Type: String, Desc: "chemin du fichier .sql à écrire"},
+				{Name: "dialect", Type: String, Desc: "standard, postgresql, mysql, sqlserver ou sqlite", Optional: true},
+				{Name: "sheet", Type: Ref, Desc: "feuille (nom ou identifiant) ; absente : tout le classeur", Optional: true},
+				{Name: "table", Type: String, Desc: "un seul tableau ou tableau croisé, par son nom", Optional: true},
+			},
+			Run: func(c *Call) (any, error) {
+				d, err := c.Doc()
+				if err != nil {
+					return nil, err
+				}
+				p, _ := c.Str("path")
+				if strings.TrimSpace(p) == "" {
+					return nil, msg.New("api.pathExpected", msg.Args{"ext": ".sql"})
+				}
+				if !strings.EqualFold(filepath.Ext(p), ".sql") {
+					p += ".sql"
+				}
+				o := transfer.SQLOptions{}
+				dia, _ := c.Str("dialect")
+				o.Dialect = strings.ToLower(dia)
+				o.Table, _ = c.Str("table")
+				if c.Has("sheet") {
+					s, err := c.sheet("sheet")
+					if err != nil {
+						return nil, err
+					}
+					o.Sheet = s.ID
+				}
+				if d.Path() != "" {
+					o.Source = filepath.Base(d.Path())
+				}
+				rep, err := transfer.ExportSQLFile(c, d.Model, p, o)
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"path": p, "tables": rep.Tables, "rows": rep.Rows, "nulls": rep.Nulls}, nil
+			},
+		},
+		&Command{
 			Name: "doc.recalc", Label: "Recalculer", Summary: "Renouvelle AUJOURDHUI, MAINTENANT et ALEA (F9).", Write: true,
 			Run: func(c *Call) (any, error) {
 				d, err := c.Doc()

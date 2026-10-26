@@ -76,6 +76,7 @@
 	import FormDialog from '#lib/remote/FormDialog.svelte';
 	import AboutDialog from '#lib/shell/AboutDialog.svelte';
 	import ExportReportDialog from '#lib/shell/ExportReportDialog.svelte';
+	import SqlExportDialog, { type SqlDialect, type SqlScope } from '#lib/shell/SqlExportDialog.svelte';
 	import { exportNotice, type ExportReport } from '#lib/shell/exportReport.js';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
 	import DemoEnd from '#lib/shell/DemoEnd.svelte';
@@ -236,6 +237,8 @@
 	// que son message est affiché) et la boîte de détails.
 	let exported = $state<{ notice: string; report: ExportReport; format: string } | null>(null);
 	let exportOpen = $state(false);
+	// Fichier › Exporter › Script SQL : la boîte (tableau actif proposé).
+	let sqlExport = $state<{ table?: string } | null>(null);
 	// Classeur partagé sur un Serveur Lattis : état (bandeau, Fichier ›
 	// Republier), boîtes Partager / Republier et Ouvrir depuis un serveur.
 	let share = $state<ShareState | null>(null);
@@ -1767,6 +1770,10 @@
 					}
 					break;
 				}
+				case 'exportSql':
+					if (mode !== 'doc') return;
+					sqlExport = { table: sheet?.activeTable() ?? undefined };
+					return;
 				case 'print': {
 					// Feuille active selon sa mise en page ; le PDF passe par la
 					// fenêtre d'impression (imprimante PDF du système).
@@ -1790,6 +1797,19 @@
 					settingsOpen = true;
 					break;
 			}
+		} catch (e) {
+			notice = err(e);
+		}
+		sheet?.focus();
+	}
+
+	/** Écrit le script SQL choisi dans la boîte (avancement dans la barre d'état). */
+	async function exportSql(dialect: SqlDialect, scope: SqlScope) {
+		const table = sqlExport?.table;
+		sqlExport = null;
+		try {
+			const r = await DocumentService.ExportSQL({ dialect, sheet: scope === 'sheet' ? sheetId : 0, table: scope === 'table' ? (table ?? '') : '', source: '' });
+			if (r.path) notice = t('shell.notice.sqlExported', { n: r.report.tables, path: r.path });
 		} catch (e) {
 			notice = err(e);
 		}
@@ -3187,6 +3207,9 @@
 	{/if}
 	{#if aboutOpen}
 		<AboutDialog onclose={() => (aboutOpen = false)} />
+	{/if}
+	{#if sqlExport}
+		<SqlExportDialog table={sqlExport.table} onexport={exportSql} onclose={() => (sqlExport = null)} />
 	{/if}
 	{#if exportOpen && exported}
 		<ExportReportDialog report={exported.report} format={exported.format} onclose={() => (exportOpen = false)} />

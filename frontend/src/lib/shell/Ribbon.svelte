@@ -129,7 +129,7 @@
 		return tAny(`ribbon.numberFormat.${c === 'standard' ? 'general' : c}`);
 	};
 
-	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'reconnect' | 'detach' | 'remove' | 'save' | 'saveAs' | 'versions' | 'download' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
+	export type FileAction = 'new' | 'open' | 'openRemote' | 'share' | 'rights' | 'republish' | 'reconnect' | 'detach' | 'remove' | 'save' | 'saveAs' | 'versions' | 'download' | 'import' | 'export' | 'exportSheet' | 'exportXlsx' | 'exportOds' | 'exportSql' | 'print' | 'about' | 'close' | 'demo' | 'settings' | 'help' | 'report';
 	/** Accueil › Édition (Remplissage, Effacer, Trier et filtrer), Mettre sous forme de tableau. */
 	export type EditAction = 'fillDown' | 'fillRight' | 'clearContents' | 'clearFilters' | 'formatAsTable';
 
@@ -1654,9 +1654,9 @@
 						<button role="menuitem" class:danger={a === 'remove'} disabled={disabled && a !== 'import'} onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
 					{/each}
 					<hr />
-					<!-- Exporter : CSV du tableau ou de la feuille, classeur .xlsx ou .ods ; l'impression reste à part. -->
+					<!-- Exporter : CSV du tableau ou de la feuille, classeur .xlsx ou .ods, script SQL ; l'impression reste à part. -->
 					<Submenu label={t('ribbon.file.export')} {disabled}>
-						{#each [['export', t('ribbon.file.exportTable')], ['exportSheet', t('ribbon.file.exportSheet')], ['exportXlsx', t('ribbon.file.exportXlsx')], ['exportOds', t('ribbon.file.exportOds')]] as [a, label] (a)}
+						{#each [['export', t('ribbon.file.exportTable')], ['exportSheet', t('ribbon.file.exportSheet')], ['exportXlsx', t('ribbon.file.exportXlsx')], ['exportOds', t('ribbon.file.exportOds')], ['exportSql', t('ribbon.file.exportSql')]] as [a, label] (a)}
 							<button role="menuitem" onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span></button>
 						{/each}
 					</Submenu>

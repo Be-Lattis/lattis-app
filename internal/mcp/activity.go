@@ -45,7 +45,7 @@ func Writes(c *api.Command, args map[string]any) bool {
 	}
 	switch c.Name {
 	case "scripts.run", "buttons.run", "doc.undo", "doc.redo", "doc.new", "doc.open",
-		"doc.export_csv", "doc.export_xlsx", "doc.export_ods":
+		"doc.export_csv", "doc.export_xlsx", "doc.export_ods", "doc.export_sql":
 		return true
 	case "doc.save":
 		p, _ := args["path"].(string)

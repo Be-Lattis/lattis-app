@@ -1046,6 +1046,15 @@ export interface RightsView {
 }
 
 /**
+ * SQLExport est le résultat d'un export SQL : le fichier écrit (vide si
+ * l'utilisateur a annulé) et ce que contient le script.
+ */
+export interface SQLExport {
+    "path": string;
+    "report": transfer$0.SQLReport;
+}
+
+/**
  * SalvageResult est le résultat d'une récupération de données.
  */
 export interface SalvageResult {

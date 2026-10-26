@@ -69,7 +69,7 @@ func init() {
 		// classeur, est une modification).
 		"SetActiveSheet", "SetSelection",
 		// Enregistrer (télécharge le classeur) et exports.
-		"Save", "Download", "ResolveSave", "ExportXLSX", "ExportODS", "ExportCSV", "ExportSheetCSV",
+		"Save", "Download", "ResolveSave", "ExportXLSX", "ExportODS", "ExportSQL", "ExportCSV", "ExportSheetCSV",
 	} {
 		demoAfterEnd["DocumentService."+m] = true
 	}

@@ -343,7 +343,8 @@
 			"query": "SQL query",
 			"publish": "Publishing {name}",
 			"republish": "Republishing {name}",
-			"print": "Printing"
+			"print": "Printing",
+			"exportSql": "SQL export"
 		},
 		"phase": {
 			"keep": "saving a copy for undo",
@@ -372,7 +373,8 @@
 			"finish": "going live",
 			"record": "saving row identifiers",
 			"save": "saving the file",
-			"pages": "preparing pages"
+			"pages": "preparing pages",
+			"export": "writing the script"
 		}
 	},
 	"sync": {
@@ -545,6 +547,7 @@
 		"noTableToExport": "No table to export on this sheet",
 		"tableExported": "Table “{table}” exported: {path}",
 		"sheetExported": "Sheet “{name}” exported: {path}",
+		"sqlExported": "{n, plural, one {1 table exported to SQL} other {# tables exported to SQL}}: {path}",
 		"autoKey": ", key set on {column}",
 		"keyed": "Key set on “{column}” for REFERENCE",
 		"undoBirth": " (Ctrl+Z: undo it, the cells stay free)",
@@ -710,6 +713,17 @@
 		"removeTooltip": "Remove “{name}” from my themes (workbooks keep their colors)",
 		"remove": "Remove",
 		"apply": "Apply"
+	},
+	"sqlExport": {
+		"title": "Export to SQL",
+		"dialect": "Dialect",
+		"standard": "Standard (default)",
+		"scope": "Content",
+		"workbook": "Whole workbook",
+		"sheet": "Active sheet",
+		"table": "Table {name}",
+		"hint": "Tables and PivotTables, as values.",
+		"export": "Export"
 	},
 	"select": {
 		"aria": "{label}: {value}"

@@ -69,6 +69,7 @@
 		"exportSheet": "Toda la hoja en CSV…",
 		"exportXlsx": "El libro de Excel (.xlsx)…",
 		"exportOds": "El libro OpenDocument (.ods)…",
+		"exportSql": "Script SQL (.sql)…",
 		"print": "Imprimir / PDF…",
 		"settings": "Configuración…",
 		"help": "Ayuda",

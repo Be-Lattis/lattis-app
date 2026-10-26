@@ -3725,6 +3725,7 @@ export interface MessageParams {
 	'ribbon.file.export': Record<never, never>;
 	'ribbon.file.exportOds': Record<never, never>;
 	'ribbon.file.exportSheet': Record<never, never>;
+	'ribbon.file.exportSql': Record<never, never>;
 	'ribbon.file.exportTable': Record<never, never>;
 	'ribbon.file.exportXlsx': Record<never, never>;
 	'ribbon.file.help': Record<never, never>;
@@ -4328,6 +4329,7 @@ export interface MessageParams {
 	'shell.notice.scriptError': { error: number | string };
 	'shell.notice.scriptsNeedWorkbook': Record<never, never>;
 	'shell.notice.sheetExported': { name: number | string; path: number | string };
+	'shell.notice.sqlExported': { n: number | string; path: number | string };
 	'shell.notice.tableExported': { path: number | string; table: number | string };
 	'shell.notice.tableLinked': { table: number | string };
 	'shell.notice.tableRecalculated': { table: number | string };
@@ -4666,6 +4668,15 @@ export interface MessageParams {
 	'shell.shortcuts.saisie.repeat': Record<never, never>;
 	'shell.shortcuts.saisie.title': Record<never, never>;
 	'shell.shortcuts.saisie.today': Record<never, never>;
+	'shell.sqlExport.dialect': Record<never, never>;
+	'shell.sqlExport.export': Record<never, never>;
+	'shell.sqlExport.hint': Record<never, never>;
+	'shell.sqlExport.scope': Record<never, never>;
+	'shell.sqlExport.sheet': Record<never, never>;
+	'shell.sqlExport.standard': Record<never, never>;
+	'shell.sqlExport.table': { name: number | string };
+	'shell.sqlExport.title': Record<never, never>;
+	'shell.sqlExport.workbook': Record<never, never>;
 	'shell.sqlView.addFavorite': Record<never, never>;
 	'shell.sqlView.alreadyFavorite': Record<never, never>;
 	'shell.sqlView.changed': Record<never, never>;
@@ -4959,6 +4970,7 @@ export interface MessageParams {
 	'shell.work.op.deleteColumn': { name: number | string };
 	'shell.work.op.deleteColumns': Record<never, never>;
 	'shell.work.op.deleteRows': Record<never, never>;
+	'shell.work.op.exportSql': Record<never, never>;
 	'shell.work.op.format': Record<never, never>;
 	'shell.work.op.insertColumn': Record<never, never>;
 	'shell.work.op.insertRows': Record<never, never>;
@@ -4981,6 +4993,7 @@ export interface MessageParams {
 	'shell.work.phase.count': Record<never, never>;
 	'shell.work.phase.delete': Record<never, never>;
 	'shell.work.phase.drop': Record<never, never>;
+	'shell.work.phase.export': Record<never, never>;
 	'shell.work.phase.finish': Record<never, never>;
 	'shell.work.phase.formulas': Record<never, never>;
 	'shell.work.phase.index': Record<never, never>;

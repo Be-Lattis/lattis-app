@@ -110,7 +110,7 @@ var values = map[string]bool{
 	// Ordres personnalisés et listes du classeur : des valeurs des colonnes.
 	"columns.sort_order": true, "tables.sort_lists": true,
 	"scripts.run": true, "buttons.run": true, "controls.fire": true,
-	"doc.export_csv": true, "doc.export_xlsx": true, "doc.export_ods": true,
+	"doc.export_csv": true, "doc.export_xlsx": true, "doc.export_ods": true, "doc.export_sql": true,
 
 	// Valeurs de la colonne de catégorie d'un onglet à choix.
 	"sheets.choice": true,

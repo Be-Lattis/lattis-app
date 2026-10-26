@@ -69,6 +69,7 @@
 		"exportSheet": "整个工作表导出为 CSV…",
 		"exportXlsx": "Excel 工作簿 (.xlsx)…",
 		"exportOds": "OpenDocument 工作簿 (.ods)…",
+		"exportSql": "SQL 脚本 (.sql)…",
 		"print": "打印 / PDF…",
 		"settings": "设置…",
 		"help": "帮助",

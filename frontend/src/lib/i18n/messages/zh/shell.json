@@ -343,7 +343,8 @@
 			"query": "SQL 查询",
 			"publish": "正在发布 {name}",
 			"republish": "正在重新发布 {name}",
-			"print": "打印"
+			"print": "打印",
+			"exportSql": "SQL 导出"
 		},
 		"phase": {
 			"keep": "保存撤销副本",
@@ -372,7 +373,8 @@
 			"finish": "上线",
 			"record": "记录行标识",
 			"save": "保存文件",
-			"pages": "正在准备页面"
+			"pages": "正在准备页面",
+			"export": "写入脚本"
 		}
 	},
 	"sync": {
@@ -545,6 +547,7 @@
 		"noTableToExport": "此工作表上没有可导出的表格",
 		"tableExported": "表格“{table}”已导出：{path}",
 		"sheetExported": "工作表“{name}”已导出：{path}",
+		"sqlExported": "{n, plural, other {已将 # 个表格导出为 SQL}}：{path}",
 		"autoKey": "，已将键设置在 {column} 上",
 		"keyed": "已为 REFERENCE 将键设置在“{column}”上",
 		"undoBirth": "（Ctrl+Z：撤消，单元格保持为自由单元格）",
@@ -710,6 +713,17 @@
 		"removeTooltip": "从我的主题中移除“{name}”（工作簿保留其颜色）",
 		"remove": "移除",
 		"apply": "应用"
+	},
+	"sqlExport": {
+		"title": "导出为 SQL",
+		"dialect": "方言",
+		"standard": "标准（默认）",
+		"scope": "内容",
+		"workbook": "整个工作簿",
+		"sheet": "当前工作表",
+		"table": "表格 {name}",
+		"hint": "表格和数据透视表，以值导出。",
+		"export": "导出"
 	},
 	"select": {
 		"aria": "{label}：{value}"

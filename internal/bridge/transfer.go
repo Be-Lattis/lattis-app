@@ -143,6 +143,45 @@ func (s *DocumentService) ExportODS(ctx context.Context) (XLSXExport, error) {
 	return s.exportBook(ctx, ".ods", "Exporter le classeur au format OpenDocument", FileFilter{"Classeur OpenDocument", "*.ods"}, transfer.ExportODSFile)
 }
 
+// SQLExport est le résultat d'un export SQL : le fichier écrit (vide si
+// l'utilisateur a annulé) et ce que contient le script.
+type SQLExport struct {
+	Path   string             `json:"path"`
+	Report transfer.SQLReport `json:"report"`
+}
+
+// ExportSQL écrit un script SQL (CREATE TABLE, INSERT par lots) des
+// tableaux du classeur, d'une feuille (o.Sheet) ou d'un tableau (o.Table),
+// dans le dialecte o.Dialect ; avancement dans la barre d'état.
+func (s *DocumentService) ExportSQL(ctx context.Context, o transfer.SQLOptions) (_ SQLExport, err error) {
+	d, err := s.current()
+	if err != nil {
+		return SQLExport{}, err
+	}
+	name := docBaseName(d)
+	o.Source = name
+	if d.Path() != "" && remoteDoc(d) == nil {
+		o.Source = filepath.Base(d.Path())
+	}
+	if o.Table != "" {
+		name = o.Table
+	}
+	var rep transfer.SQLReport
+	p, err := s.sys().SaveFile(FileDialog{
+		Title:     "Exporter en SQL",
+		Filename:  name + ".sql",
+		Directory: docFolder(d),
+		Filters:   []FileFilter{{"Script SQL", "*.sql"}},
+		Ext:       ".sql",
+	}, func(p string) (err error) {
+		wctx, t := s.track(ctx, true)
+		defer s.untrack(t, &err)
+		rep, err = transfer.ExportSQLFile(wctx, d.Model, p, o)
+		return err
+	})
+	return SQLExport{Path: p, Report: rep}, err
+}
+
 func (s *DocumentService) exportBook(ctx context.Context, ext, title string, filter FileFilter, export func(context.Context, *canvas.Model, string) (transfer.ExportReport, error)) (XLSXExport, error) {
 	d, err := s.current()
 	if err != nil {

@@ -96,6 +96,7 @@ Pour des données à actualiser (fichier JSON ou Parquet, base SQLite, PostgreSQ
 
 - **CSV** : le tableau actif ou toute la feuille. Dans un CSV pour Excel, un texte qui commence par `=`, `+`, `-` ou `@` est précédé d'une apostrophe, pour qu'Excel ne l'exécute pas comme une formule.
 - **Excel (`.xlsx`) et OpenDocument (`.ods`)** : tout le classeur. Les tableaux deviennent des tableaux Excel, les formules sont traduites quand le format a un équivalent, sinon exportées par leur valeur. Les tableaux croisés partent en valeurs ; graphiques, mise en forme conditionnelle, listes de validation et notes partent en `.xlsx` ; les scripts ne sont pas exportés. Un compte rendu dit ce qui n'est pas parti tel quel.
+- **SQL (`.sql`)** : un script `CREATE TABLE` puis `INSERT` des tableaux et des tableaux croisés (en valeurs), pour tout le classeur, la feuille active ou le tableau actif. Le dialecte Standard convient à la plupart des bases ; PostgreSQL, MySQL, SQL Server et SQLite ajustent noms, types et booléens à leur base. La colonne clé devient la clé primaire ; une colonne calculée part en valeurs, sa formule en commentaire ; les cellules libres ne sont pas exportées.
 - **PDF** : Fichier › Imprimer, avec l'imprimante « Microsoft Print to PDF » (voir [Mise en page et impression](impression)).
 
 ## Classeur d'exemple

@@ -96,6 +96,7 @@ Für Daten, die aktualisiert werden sollen (JSON- oder Parquet-Datei, SQLite-Dat
 
 - **CSV**: die aktive Tabelle oder das ganze Blatt. In einer CSV für Excel wird einem Text, der mit `=`, `+`, `-` oder `@` beginnt, ein Apostroph vorangestellt, damit Excel ihn nicht als Formel ausführt.
 - **Excel (`.xlsx`) und OpenDocument (`.ods`)**: die ganze Arbeitsmappe. Tabellen werden zu Excel-Tabellen, Formeln werden übersetzt, wenn das Format eine Entsprechung hat, sonst als ihr Wert exportiert. PivotTables gehen als Werte hinaus; Diagramme, bedingte Formatierung, Auswahllisten und Notizen gehen in `.xlsx` hinaus; Skripte werden nicht exportiert. Ein Bericht nennt, was nicht unverändert hinausging.
+- **SQL (`.sql`)**: ein Skript mit `CREATE TABLE` und dann `INSERT` für die Tabellen und PivotTables (als Werte), für die ganze Arbeitsmappe, das aktive Blatt oder die aktive Tabelle. Der Dialekt Standard passt zu den meisten Datenbanken; PostgreSQL, MySQL, SQL Server und SQLite passen Namen, Typen und Wahrheitswerte an ihre Datenbank an. Die Schlüsselspalte wird zum Primärschlüssel; eine berechnete Spalte geht als Werte hinaus, ihre Formel als Kommentar; freie Zellen werden nicht exportiert.
 - **PDF**: Datei › Drucken, mit dem Drucker „Microsoft Print to PDF“ (siehe [Seitenlayout und Drucken](impression)).
 
 ## Beispielarbeitsmappe {#classeur-d-exemple}

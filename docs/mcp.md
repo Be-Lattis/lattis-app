@@ -56,7 +56,7 @@ schéma de chaque outil (`tools/list`).
 
 | Famille | Outils |
 |---|---|
-| Classeur | `doc_state`, `doc_undo`, `doc_redo`, `doc_new`, `doc_open`, `doc_save`, `doc_import`, `doc_export_csv`, `doc_export_xlsx`, `doc_export_ods`, `doc_recalc`, `doc_theme`, `doc_set_theme` (thème de couleur du classeur : deux couleurs de base) |
+| Classeur | `doc_state`, `doc_undo`, `doc_redo`, `doc_new`, `doc_open`, `doc_save`, `doc_import`, `doc_export_csv`, `doc_export_xlsx`, `doc_export_ods`, `doc_export_sql`, `doc_recalc`, `doc_theme`, `doc_set_theme` (thème de couleur du classeur : deux couleurs de base) |
 | SQL | `db_query` (lecture, noms affichés, 10 000 lignes au plus), `db_execute` (INSERT, UPDATE, DELETE annulables) |
 | Feuilles | `sheets_list`, `sheets_get`, `sheets_add`, `sheets_rename`, `sheets_move`, `sheets_copy`, `sheets_hide`, `sheets_color`, `sheets_delete`, `sheets_set_column_width`, `sheets_set_row_height`, `sheets_hide_lines`, `sheets_group_lines`, `sheets_freeze`, `sheets_page_setup`, `sheets_set_page_setup`, `sheets_find`, `sheets_replace`, `sheets_protect`, `sheets_unprotect`, `sheets_protect_structure`, `sheets_unprotect_structure`, `sheets_protect_workbook`, `sheets_unprotect_workbook` ; onglet à choix : `sheets_choose_by`, `sheets_choose_by_formula`, `sheets_set_choice`, `sheets_new_choice`, `sheets_clear_choice`, `sheets_choice` |
 | Cellules | `cells_get`, `cells_read`, `cells_set`, `cells_paste` (`range` : en plage), `cells_clear`, `cells_to_values` (Convertir en valeurs : formules de la plage et colonnes calculées touchées), `cells_style`, `cells_style_lines`, `cells_merge`, `cells_unmerge`, `cells_note`, `cells_name`, `cells_dependencies`, `cells_text_to_columns`, `cells_goal_seek` (Valeur cible ; partage complet seulement) |
@@ -91,6 +91,9 @@ valeurs, formules exportées par leur valeur avec les fonctions en cause comme C
 FILTRE, mise en forme conditionnelle, notes, validations, boutons, tableaux chargés par une
 requête, onglets page ou document, protection), plus les scripts du classeur. L'assistant
 peut ainsi prévenir l'utilisateur de ce qui manquera dans Excel ou LibreOffice.
+`doc_export_sql` écrit un script SQL (`CREATE TABLE`, puis `INSERT` par lots de 500 lignes) des
+tableaux et des tableaux croisés (en valeurs) ; `dialect` : `standard` (par défaut), `postgresql`,
+`mysql`, `sqlserver` ou `sqlite`. Il rend `{path, tables, rows, nulls}`.
 Une formule écrite par `cells_set` qui cherche dans un tableau sans clé (`REFERENCE`,
 `REFERENCE.APPROCHEE`, `EXISTE`, `RECHERCHEV` ou `RECHERCHEX` convertie) ne pose jamais de
 clé d'elle-même : elle est refusée par « clé à choisir : « Produits » n'a pas de clé… »,
@@ -137,7 +140,7 @@ les mêmes règles que l'assistant intégré (`internal/sharing`) :
 
 | Réglage | Outils et résultats |
 |---|---|
-| `schema-only` (par défaut) | Les outils qui lisent des valeurs ne sont pas proposés : `tables_rows`, `db_query`, `cells_get`, `cells_read`, `columns_values`, `queries_preview`, `sheets_find`, `sheets_choice`, `columns_sort_order`, `tables_sort_lists`, `pages_get`, `scripts_run`, `buttons_run`, `controls_fire`, `doc_export_csv`, `doc_export_xlsx`, `doc_export_ods`, `cells_goal_seek`. `sheets_get` ne rend que la place et la nature des cellules libres (texte, nombre, formule), sans la configuration des tableaux croisés et des graphiques ; `tables_list` résume les colonnes d'un tableau croisé tirées des valeurs de son champ en colonnes ; `queries_list` masque les valeurs des en-têtes HTTP, des paramètres d'adresse et des filtres ; `controls_list` et `controls_get` sans la valeur des contrôles ; `sheets_replace` sans le nombre de cellules modifiées. |
+| `schema-only` (par défaut) | Les outils qui lisent des valeurs ne sont pas proposés : `tables_rows`, `db_query`, `cells_get`, `cells_read`, `columns_values`, `queries_preview`, `sheets_find`, `sheets_choice`, `columns_sort_order`, `tables_sort_lists`, `pages_get`, `scripts_run`, `buttons_run`, `controls_fire`, `doc_export_csv`, `doc_export_xlsx`, `doc_export_ods`, `doc_export_sql`, `cells_goal_seek`. `sheets_get` ne rend que la place et la nature des cellules libres (texte, nombre, formule), sans la configuration des tableaux croisés et des graphiques ; `tables_list` résume les colonnes d'un tableau croisé tirées des valeurs de son champ en colonnes ; `queries_list` masque les valeurs des en-têtes HTTP, des paramètres d'adresse et des filtres ; `controls_list` et `controls_get` sans la valeur des contrôles ; `sheets_replace` sans le nombre de cellules modifiées. |
 | `sample` | En plus, `tables_rows`, `db_query`, `cells_get`, `cells_read`, `columns_values` et `sheets_find`, bornés à chaque appel : 20 lignes, 30 éléments d'une liste, 200 caractères par valeur, 8 000 caractères en tout. `sheets_get` reste sans le contenu des cellules. |
 | `full` | Tous les outils, sans borne. |
 

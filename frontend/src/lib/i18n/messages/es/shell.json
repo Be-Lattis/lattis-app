@@ -343,7 +343,8 @@
 			"query": "Consulta SQL",
 			"publish": "Publicación de {name}",
 			"republish": "Republicación de {name}",
-			"print": "Impresión"
+			"print": "Impresión",
+			"exportSql": "Exportación SQL"
 		},
 		"phase": {
 			"keep": "copia para deshacer",
@@ -372,7 +373,8 @@
 			"finish": "puesta en línea",
 			"record": "registro de los identificadores",
 			"save": "guardado del archivo",
-			"pages": "preparación de las páginas"
+			"pages": "preparación de las páginas",
+			"export": "escritura del script"
 		}
 	},
 	"sync": {
@@ -545,6 +547,7 @@
 		"noTableToExport": "No hay ninguna tabla que exportar en esta hoja",
 		"tableExported": "Tabla «{table}» exportada: {path}",
 		"sheetExported": "Hoja «{name}» exportada: {path}",
+		"sqlExported": "{n, plural, one {1 tabla exportada a SQL} other {# tablas exportadas a SQL}}: {path}",
 		"autoKey": ", clave definida en {column}",
 		"keyed": "Clave definida en «{column}» para REFERENCIA",
 		"undoBirth": " (Ctrl+Z: la deshace, las celdas quedan libres)",
@@ -710,6 +713,17 @@
 		"removeTooltip": "Quitar «{name}» de mis temas (los libros conservan sus colores)",
 		"remove": "Quitar",
 		"apply": "Aplicar"
+	},
+	"sqlExport": {
+		"title": "Exportar a SQL",
+		"dialect": "Dialecto",
+		"standard": "Estándar (predeterminado)",
+		"scope": "Contenido",
+		"workbook": "Todo el libro",
+		"sheet": "Hoja activa",
+		"table": "Tabla {name}",
+		"hint": "Tablas y tablas dinámicas, en valores.",
+		"export": "Exportar"
 	},
 	"select": {
 		"aria": "{label}: {value}"

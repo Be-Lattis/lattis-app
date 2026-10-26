@@ -849,6 +849,15 @@ export function ExportODS(): $CancellablePromise<$models.XLSXExport> {
 }
 
 /**
+ * ExportSQL écrit un script SQL (CREATE TABLE, INSERT par lots) des
+ * tableaux du classeur, d'une feuille (o.Sheet) ou d'un tableau (o.Table),
+ * dans le dialecte o.Dialect ; avancement dans la barre d'état.
+ */
+export function ExportSQL(o: transfer$0.SQLOptions): $CancellablePromise<$models.SQLExport> {
+    return $Call.ByID(2573445760, o);
+}
+
+/**
  * ExportSheetCSV écrit toute une feuille en CSV (de A1 à la dernière cellule
  * utilisée, tableaux et cellules libres à leur place). Renvoie le fichier
  * écrit, vide si l'utilisateur a annulé.

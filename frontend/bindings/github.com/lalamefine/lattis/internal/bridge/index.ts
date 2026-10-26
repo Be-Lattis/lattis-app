@@ -58,6 +58,7 @@ export type {
     RightsColumn,
     RightsTable,
     RightsView,
+    SQLExport,
     SalvageResult,
     SaveProgress,
     ScriptResult,

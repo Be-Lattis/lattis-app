@@ -69,6 +69,7 @@
 		"exportSheet": "Das ganze Blatt als CSV…",
 		"exportXlsx": "Die Excel-Arbeitsmappe (.xlsx)…",
 		"exportOds": "Die OpenDocument-Arbeitsmappe (.ods)…",
+		"exportSql": "SQL-Skript (.sql)…",
 		"print": "Drucken / PDF…",
 		"settings": "Einstellungen…",
 		"help": "Hilfe",

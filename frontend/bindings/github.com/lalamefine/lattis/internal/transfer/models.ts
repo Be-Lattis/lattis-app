@@ -145,6 +145,34 @@ export interface PrintSizes {
 }
 
 /**
+ * SQLOptions : dialecte et portée de l'export. Sheet : une feuille (0 : tout
+ * le classeur) ; Table : un seul tableau (ou tableau croisé) par son nom.
+ */
+export interface SQLOptions {
+    /**
+     * SQLDialect ; "" : standard
+     */
+    "dialect": string;
+    "sheet": number;
+    "table": string;
+
+    /**
+     * Source : nom du classeur, cité en tête du script.
+     */
+    "source": string;
+}
+
+/**
+ * SQLReport dit ce que contient le script : tableaux, lignes, et valeurs
+ * écrites NULL faute de mieux (saisies hors type, erreurs de formule).
+ */
+export interface SQLReport {
+    "tables": number;
+    "rows": number;
+    "nulls": number;
+}
+
+/**
  * SheetReport est le compte rendu d'une feuille.
  */
 export interface SheetReport {

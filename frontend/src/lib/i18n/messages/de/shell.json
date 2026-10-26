@@ -343,7 +343,8 @@
 			"query": "SQL-Abfrage",
 			"publish": "Veröffentlichung von {name}",
 			"republish": "Neuveröffentlichung von {name}",
-			"print": "Drucken"
+			"print": "Drucken",
+			"exportSql": "SQL-Export"
 		},
 		"phase": {
 			"keep": "Kopie für Rückgängig",
@@ -372,7 +373,8 @@
 			"finish": "Freigabe",
 			"record": "Speichern der Zeilenkennungen",
 			"save": "Speichern der Datei",
-			"pages": "Seiten werden vorbereitet"
+			"pages": "Seiten werden vorbereitet",
+			"export": "Skript wird geschrieben"
 		}
 	},
 	"sync": {
@@ -545,6 +547,7 @@
 		"noTableToExport": "Keine Tabelle zum Exportieren auf diesem Blatt",
 		"tableExported": "Tabelle „{table}“ exportiert: {path}",
 		"sheetExported": "Blatt „{name}“ exportiert: {path}",
+		"sqlExported": "{n, plural, one {1 Tabelle als SQL exportiert} other {# Tabellen als SQL exportiert}}: {path}",
 		"autoKey": ", Schlüssel auf {column} gesetzt",
 		"keyed": "Schlüssel auf „{column}“ für REFERENZ gesetzt",
 		"undoBirth": " (Strg+Z: rückgängig machen, die Zellen bleiben frei)",
@@ -710,6 +713,17 @@
 		"removeTooltip": "„{name}“ aus meinen Designs entfernen (Arbeitsmappen behalten ihre Farben)",
 		"remove": "Entfernen",
 		"apply": "Übernehmen"
+	},
+	"sqlExport": {
+		"title": "Als SQL exportieren",
+		"dialect": "Dialekt",
+		"standard": "Standard (Vorgabe)",
+		"scope": "Inhalt",
+		"workbook": "Ganze Arbeitsmappe",
+		"sheet": "Aktives Blatt",
+		"table": "Tabelle {name}",
+		"hint": "Tabellen und PivotTables, als Werte.",
+		"export": "Exportieren"
 	},
 	"select": {
 		"aria": "{label}: {value}"

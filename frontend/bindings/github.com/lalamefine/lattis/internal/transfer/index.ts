@@ -7,5 +7,7 @@ export type {
     PrintPage,
     PrintPlan,
     PrintSizes,
+    SQLOptions,
+    SQLReport,
     SheetReport
 } from "./models.js";
