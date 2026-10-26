@@ -29,6 +29,7 @@
 	import { arrowNotes, arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
 	import { stepZoom } from './zoom';
 	import { isDrag, inertia, LONG_PRESS_MS, MIN_SPEED, pinchZoom, Velocity } from './touch';
+	import { PanGesture, pansWith, SpaceHold } from './pan';
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { keepInView, seenIn, type Span as XSpan } from './keepinview';
 	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
@@ -7943,6 +7944,99 @@
 		fling = requestAnimationFrame(step);
 	}
 
+	// --- Main (pan.ts) --------------------------------------------------------------
+	// Clic droit ou du milieu glissé, ou Espace + clic gauche glissé : la
+	// feuille suit le pointeur. Pas de menu contextuel après un glissé.
+	const pan = new PanGesture<MouseEvent>();
+	const space = new SpaceHold();
+	let panCursor = $state<'' | 'grab' | 'grabbing'>('');
+
+	/** Appui d'un bouton qui fait glisser la feuille : true si le clic s'arrête là. */
+	function panDown(e: MouseEvent): boolean {
+		const sp = e.button === 0 && space.down && !editing && !fxEditing;
+		if (!pansWith(e.button, sp)) return false;
+		pan.begin(e.button, e.clientX, e.clientY);
+		if (e.button === 2) return false; // le clic droit garde son rôle (cellule, menu)
+		e.preventDefault(); // milieu : pas de défilement automatique du navigateur
+		if (sp) space.click();
+		wrap.focus();
+		return true;
+	}
+
+	function panMove(e: MouseEvent) {
+		if (!pan.active) return;
+		const was = pan.panning;
+		const d = pan.move(e.clientX, e.clientY);
+		if (!d) return;
+		if (!was) {
+			stopFling();
+			stopGlide();
+			holdWhileScrolling();
+			noteTip = null;
+			dragging = false;
+			headerDrag = null;
+			panCursor = 'grabbing';
+		}
+		e.preventDefault();
+		const k = zoomK();
+		scrollByPx(d.dx / k, d.dy / k);
+	}
+
+	function panUp(e: MouseEvent) {
+		const r = pan.end(e.button, performance.now());
+		if (!r) return;
+		panCursor = space.down && !editing && !fxEditing ? 'grab' : '';
+		// Clic droit sans glissé dont le menu est arrivé à l'appui (macOS) : il s'ouvre maintenant.
+		if (r.menu) onContextMenu(r.menu);
+	}
+
+	/** Menu contextuel (capture sur la fenêtre) : retenu ou écarté pendant le geste. */
+	function panMenu(e: MouseEvent) {
+		if (pan.menu(e, performance.now()) === 'open') return;
+		e.preventDefault();
+		e.stopPropagation();
+	}
+
+	function panReset() {
+		pan.cancel();
+		space.reset();
+		panCursor = '';
+	}
+
+	/** Espace en attente saisie dans la cellule active (suivie de extra). */
+	function typeSpace(extra = '') {
+		if ((locked && !hold) || dvPick || editing || fxEditing) return;
+		startEdit(true, ' ' + extra);
+	}
+
+	/** Espace sur la grille (hors saisie) : la main ; l'espace se saisit au relâcher, sans clic entre-temps. */
+	function spaceKey(e: KeyboardEvent): boolean {
+		if (fxEditing) return false;
+		const mod = e.ctrlKey || e.metaKey || e.altKey;
+		if (e.key === ' ' && !mod && !e.shiftKey) {
+			e.preventDefault();
+			if (!e.repeat && !space.down) {
+				space.press();
+				if (!pan.active) panCursor = 'grab';
+			}
+			return true;
+		}
+		// Frappe rapide (« a b ») : l'espace tenue passe avant la touche suivante.
+		if (space.down && !['Shift', 'Control', 'Alt', 'Meta'].includes(e.key) && space.flush() && e.key.length === 1 && !mod) {
+			e.preventDefault();
+			typeSpace(e.key);
+			return true;
+		}
+		return false;
+	}
+
+	function onSpaceUp(e: KeyboardEvent) {
+		if ((e.key !== ' ' && e.code !== 'Space') || !space.down) return;
+		const typed = space.release();
+		if (!pan.active) panCursor = '';
+		if (typed && wrap?.contains(document.activeElement)) typeSpace();
+	}
+
 	function onPointerDown(e: PointerEvent) {
 		if (e.pointerType !== 'touch') return onScrollbarDown(e);
 		// Pas d'événements souris simulés : le geste est traité ici.
@@ -8630,6 +8724,7 @@
 
 	function onMouseDown(e: MouseEvent) {
 		if (!scroller) return;
+		if (panDown(e)) return;
 		if (hold) {
 			pointAway(e);
 			return;
@@ -8870,7 +8965,7 @@
 		if (pressLink(e)) return;
 		wrap.focus();
 		moveTo(cell.row, cell.col, e.shiftKey);
-		dragging = true;
+		dragging = e.button === 0; // clic droit glissé : la feuille glisse (pan.ts)
 	}
 
 	/**
@@ -9094,6 +9189,7 @@
 	}
 
 	function onMouseMove(e: MouseEvent) {
+		if (pan.panning) return; // la feuille glisse (pan.ts) : ni survol ni sélection
 		{
 			const hc = entries.some((x) => x.t.access === 'participant') ? cellAt(e) : null;
 			const hl = hc && lockedRowAt(hc.row, hc.col) ? hc.row : -1;
@@ -9437,6 +9533,7 @@
 		// Touche maintenue : le cadre suit sans animation.
 		if (e.repeat) noAnimUntil = performance.now() + 150;
 		if (editing) return;
+		if (spaceKey(e)) return;
 		// Plage source d'une validation pointée : Entrée la reprend, Échap
 		// annule ; on ne saisit rien dans la grille, on s'y déplace seulement.
 		if (dvPick) {
@@ -11859,6 +11956,11 @@
 		};
 		window.addEventListener('mouseup', up);
 		window.addEventListener('mousemove', onDragMove);
+		window.addEventListener('mousemove', panMove);
+		window.addEventListener('mouseup', panUp);
+		window.addEventListener('contextmenu', panMenu, true);
+		window.addEventListener('keyup', onSpaceUp);
+		window.addEventListener('blur', panReset);
 		const timer = setInterval(refreshStatus, 250);
 		window.addEventListener('copy', onCopy);
 		window.addEventListener('keydown', onGlobalKey);
@@ -11873,6 +11975,11 @@
 			stopFling();
 			window.removeEventListener('mouseup', up);
 			window.removeEventListener('mousemove', onDragMove);
+			window.removeEventListener('mousemove', panMove);
+			window.removeEventListener('mouseup', panUp);
+			window.removeEventListener('contextmenu', panMenu, true);
+			window.removeEventListener('keyup', onSpaceUp);
+			window.removeEventListener('blur', panReset);
 			stopAutoScroll();
 			clearInterval(timer);
 			window.removeEventListener('copy', onCopy);
@@ -12393,6 +12500,8 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="scroller"
+				class:grab={panCursor === 'grab'}
+				class:grabbing={panCursor === 'grabbing'}
 				bind:this={scroller}
 				onscroll={onScroll}
 				onpointerdown={onPointerDown}
@@ -14448,6 +14557,13 @@
 		position: absolute;
 		left: 0;
 		top: 0;
+	}
+	/* Main (pan.ts) : Espace tenue, puis feuille saisie ; passe devant le curseur du survol. */
+	.scroller.grab {
+		cursor: grab !important;
+	}
+	.scroller.grabbing {
+		cursor: grabbing !important;
 	}
 	.scroller {
 		position: absolute;
