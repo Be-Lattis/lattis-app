@@ -42,7 +42,11 @@ Una columna calculada todavía no puede usarse como campo.
 
 ## Resumen y presentación de los valores {#synthese-et-affichage-des-valeurs}
 
-Resúmenes: Suma, Cuenta, Recuento distinto, Promedio, Mín, Máx. Una columna de números se suma de forma predeterminada, las demás se cuentan. La presentación también puede ser un porcentaje: del total general, del total de la columna o del total de la fila. Se elige un formato de número (moneda, porcentaje, decimales) para cada valor.
+Resúmenes: Suma, Cuenta, Recuento distinto, Promedio, Mín, Máx. Una columna de números se suma por defecto, las demás se cuentan. **Mostrar valores como** (Configuración de campo de valor) también calcula: % del total general, de la columna, de la fila, de la fila o columna principal, del total principal; % de, diferencia y % de diferencia respecto de un elemento (o el anterior, el siguiente) de un campo base; total acumulado y % acumulado; rango; índice. Un formato de número (moneda, porcentaje, decimales) se elige por valor. Una columna calculada de la tabla de origen sirve de campo como las demás.
+
+## Columnas, grupos y segmentaciones {#colonnes-groupes-et-segments}
+
+Varios campos en **Columnas** dan encabezados anidados, con un subtotal por grupo y una casilla −/+ para contraer un grupo. **Agrupar…** (menú ▾ de un campo de fecha o número en el panel) ordena una fecha por años, trimestres, meses o días (varios niveles a la vez: Años y Trimestres pasan a ser campos delante de la fecha) y un número por intervalos (comienzo, final, paso); **Desagrupar** vuelve a los valores. **Insertar segmentación** coloca en la hoja un panel de botones que filtra la tabla dinámica: clic para un valor, Ctrl+clic para añadir más, el embudo para volver a todo; clic derecho para filtrar también otras tablas dinámicas del mismo origen. **Insertar escala de tiempo** hace lo mismo con los períodos de una fecha (Mayús+clic: un rango).
 
 ## Ordenar y filtrar las etiquetas {#trier-et-filtrer-les-etiquettes}
 

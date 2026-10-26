@@ -776,7 +776,7 @@
 			"filters": "Filtres",
 			"filters.hint": "Glissez ici un champ pour filtrer tout le rapport",
 			"cols": "Colonnes",
-			"cols.hint": "Ses valeurs deviennent des colonnes (un champ)",
+			"cols.hint": "Glissez ici les champs dont les valeurs deviennent des colonnes",
 			"rows": "Lignes",
 			"rows.hint": "Glissez ici les champs qui regroupent les lignes",
 			"values": "Valeurs",
@@ -794,7 +794,18 @@
 			"none": "Aucun calcul",
 			"pctTotal": "% du total général",
 			"pctCol": "% du total de la colonne",
-			"pctRow": "% du total de la ligne"
+			"pctRow": "% du total de la ligne",
+			"pctOf": "% de",
+			"pctParentRow": "% du total de la ligne parente",
+			"pctParentCol": "% du total de la colonne parente",
+			"pctParent": "% du total parent",
+			"diff": "Différence par rapport à",
+			"pctDiff": "% différence par rapport à",
+			"runTotal": "Résultat cumulé par",
+			"pctRunTotal": "% résultat cumulé par",
+			"rankAsc": "Rang du plus petit au plus grand",
+			"rankDesc": "Rang du plus grand au plus petit",
+			"index": "Index"
 		},
 		"format": {
 			"auto": "Automatique (format de la source)",
@@ -925,7 +936,40 @@
 		"nameBadge": {
 			"tooltip": "Tableau croisé « {name} » : il se lit dans les formules comme un tableau ({name}[Colonne]) ; cliquer pour ouvrir son volet"
 		},
-		"computing": "Tableau croisé : calcul…"
+		"computing": "Tableau croisé : calcul…",
+		"valueSettings.baseField": "Champ de base",
+		"valueSettings.baseItem": "Élément de base",
+		"valueSettings.prev": "(précédent)",
+		"valueSettings.next": "(suivant)",
+		"valueSettings.noBase": "Placez d’abord un champ en lignes ou en colonnes.",
+		"group": {
+			"years": "Années",
+			"quarters": "Trimestres",
+			"months": "Mois",
+			"days": "Jours",
+			"menu": "Grouper…",
+			"ungroup": "Dissocier",
+			"title": "Grouper « {field} »",
+			"by": "Par",
+			"start": "Début",
+			"end": "Fin",
+			"step": "Intervalle",
+			"noLevel": "Choisissez au moins un niveau.",
+			"badStep": "Intervalle positif, fin après le début.",
+			"quarter": "T{n}"
+		},
+		"slicer": {
+			"insert": "Insérer un segment",
+			"timeline": "Insérer une chronologie",
+			"clear": "Effacer le filtre",
+			"connect": "Filtre aussi",
+			"remove": "Supprimer le segment",
+			"columns": "Colonnes de boutons",
+			"all": "Toutes les périodes",
+			"hint": "Ctrl+clic : plusieurs éléments",
+			"hintTimeline": "Maj+clic : une plage",
+			"empty": "Aucune valeur"
+		}
 	},
 	"readFail": "Le tableau « {table} » n'a pas pu être relu ; il sera rechargé.",
 	"refLink": {

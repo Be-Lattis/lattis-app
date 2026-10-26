@@ -776,7 +776,7 @@
 			"filters": "Filter",
 			"filters.hint": "Ziehen Sie ein Feld hierher, um den ganzen Bericht zu filtern",
 			"cols": "Spalten",
-			"cols.hint": "Seine Werte werden zu Spalten (ein Feld)",
+			"cols.hint": "Felder hierher ziehen, deren Werte zu Spalten werden",
 			"rows": "Zeilen",
 			"rows.hint": "Ziehen Sie die Felder hierher, die die Zeilen gruppieren",
 			"values": "Werte",
@@ -794,7 +794,18 @@
 			"none": "Keine Berechnung",
 			"pctTotal": "% des Gesamtergebnisses",
 			"pctCol": "% des Spaltengesamtergebnisses",
-			"pctRow": "% des Zeilengesamtergebnisses"
+			"pctRow": "% des Zeilengesamtergebnisses",
+			"pctOf": "% von",
+			"pctParentRow": "% des Ergebnisses der übergeordneten Zeile",
+			"pctParentCol": "% des Ergebnisses der übergeordneten Spalte",
+			"pctParent": "% des übergeordneten Ergebnisses",
+			"diff": "Differenz von",
+			"pctDiff": "% Differenz von",
+			"runTotal": "Ergebnis in",
+			"pctRunTotal": "% des Ergebnisses in",
+			"rankAsc": "Rangfolge nach Größe (aufsteigend)",
+			"rankDesc": "Rangfolge nach Größe (absteigend)",
+			"index": "Index"
 		},
 		"format": {
 			"auto": "Automatisch (Format der Quelle)",
@@ -925,7 +936,40 @@
 		"nameBadge": {
 			"tooltip": "PivotTable „{name}“: Formeln lesen sie wie eine Tabelle ({name}[Spalte]); klicken, um ihren Bereich zu öffnen"
 		},
-		"computing": "Pivot-Tabelle: wird berechnet…"
+		"computing": "Pivot-Tabelle: wird berechnet…",
+		"valueSettings.baseField": "Basisfeld",
+		"valueSettings.baseItem": "Basiselement",
+		"valueSettings.prev": "(vorheriges)",
+		"valueSettings.next": "(nächstes)",
+		"valueSettings.noBase": "Zuerst ein Feld in Zeilen oder Spalten setzen.",
+		"group": {
+			"years": "Jahre",
+			"quarters": "Quartale",
+			"months": "Monate",
+			"days": "Tage",
+			"menu": "Gruppieren…",
+			"ungroup": "Gruppierung aufheben",
+			"title": "„{field}“ gruppieren",
+			"by": "Nach",
+			"start": "Start",
+			"end": "Ende",
+			"step": "Intervall",
+			"noLevel": "Mindestens eine Ebene wählen.",
+			"badStep": "Positives Intervall, Ende nach Start.",
+			"quarter": "Q{n}"
+		},
+		"slicer": {
+			"insert": "Datenschnitt einfügen",
+			"timeline": "Zeitachse einfügen",
+			"clear": "Filter löschen",
+			"connect": "Filtert auch",
+			"remove": "Datenschnitt löschen",
+			"columns": "Schaltflächenspalten",
+			"all": "Alle Zeiträume",
+			"hint": "Strg+Klick: mehrere Elemente",
+			"hintTimeline": "Umschalt+Klick: ein Bereich",
+			"empty": "Keine Werte"
+		}
 	},
 	"readFail": "Die Tabelle „{table}“ konnte nicht erneut gelesen werden; sie wird neu geladen.",
 	"refLink": {

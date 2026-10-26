@@ -15,8 +15,17 @@ import (
 // nombre de lignes), la fonction et l'affichage (valeur ou pourcentage).
 type PivotValue struct {
 	Field string `json:"field,omitempty"`
-	Agg   string `json:"agg"`            // sum, count, countDistinct, avg, min, max
-	Show  string `json:"show,omitempty"` // "", pctTotal, pctRow, pctCol
+	Agg   string `json:"agg"` // sum, count, countDistinct, avg, min, max
+	// Show : « Afficher les valeurs » (pivotshow.go) : "", pctTotal, pctCol,
+	// pctRow, pctOf, pctParentRow, pctParentCol, pctParent, diff, pctDiff,
+	// runTotal, pctRunTotal, rankAsc, rankDesc, index.
+	Show string `json:"show,omitempty"`
+	// BaseField : champ de base (en lignes ou en colonnes) des calculs qui en
+	// demandent un ; BaseItem son élément de base (pctOf, diff, pctDiff), ou
+	// BasePos "prev" / "next" (élément précédent, suivant).
+	BaseField string `json:"baseField,omitempty"`
+	BaseItem  string `json:"baseItem,omitempty"`
+	BasePos   string `json:"basePos,omitempty"`
 	// Label remplace le nom affiché (« Somme de Ventes ») : le nom
 	// personnalisé d'Excel.
 	Label string `json:"label,omitempty"`
@@ -33,6 +42,10 @@ type PivotFilter struct {
 	// que par le champ Field : celui de l'onglet à choix par une formule
 	// (Choice), Field n'en est que le nom.
 	Formula string `json:"formula,omitempty"`
+	// Period : filtre d'une chronologie (pivotslicer.go) : Values sont des
+	// périodes ("2024", "2024-T2", "2024-03", "2024-03-15") de ce niveau
+	// (years, quarters, months, days) de la date Field.
+	Period string `json:"period,omitempty"`
 }
 
 // PivotCalcField est un champ calculé (« Champ calculé… ») : une formule
@@ -59,9 +72,12 @@ type PivotConfig struct {
 	// session et gardée ensuite : les en-têtes, que citent les formules des
 	// colonnes saisies et les graphiques, ne changent pas d'un poste à
 	// l'autre. Vide : le français (TCD d'avant, scripts).
-	Lang      string        `json:"lang,omitempty"`
-	Source    string        `json:"source"`
-	RowFields []string      `json:"rowFields,omitempty"`
+	Lang      string   `json:"lang,omitempty"`
+	Source    string   `json:"source"`
+	RowFields []string `json:"rowFields,omitempty"`
+	// ColFields : champs en colonnes, du plus large au plus fin (en-têtes
+	// imbriqués, pivotcube.go). Cols est l'ancien format (un seul champ).
+	ColFields []string      `json:"colFields,omitempty"`
 	Cols      string        `json:"cols,omitempty"`
 	Values    []PivotValue  `json:"values,omitempty"`
 	Filters   []PivotFilter `json:"filters,omitempty"`
@@ -91,6 +107,20 @@ type PivotConfig struct {
 	CollapseAll bool       `json:"collapseAll,omitempty"`
 	Collapsed   [][]string `json:"collapsed,omitempty"`
 	Expanded    [][]string `json:"expanded,omitempty"`
+	// Même chose pour les groupes des champs en colonnes.
+	ColCollapseAll bool       `json:"colCollapseAll,omitempty"`
+	ColCollapsed   [][]string `json:"colCollapsed,omitempty"`
+	ColExpanded    [][]string `json:"colExpanded,omitempty"`
+
+	// Groups : champs groupés (« Grouper… », pivotgroup.go) : dates par
+	// années, trimestres, mois, jours ; nombres par intervalles.
+	Groups []PivotGroup `json:"groups,omitempty"`
+
+	// Slicers : segments et chronologies posés sur la feuille du TCD
+	// (pivotslicer.go) ; leur sélection filtre le TCD, et les autres TCD de
+	// même source qu'ils désignent (Linked, posé à la lecture).
+	Slicers []PivotSlicer `json:"slicers,omitempty"`
+	Linked  []PivotFilter `json:"linked,omitempty"`
 
 	// Hand : colonnes saisies à droite du TCD (pivothand.go, décision 0008) :
 	// leurs noms et formules ; les valeurs sont rangées par étiquettes de
@@ -115,7 +145,7 @@ type PivotConfig struct {
 // stored : la configuration telle qu'on l'enregistre (sans le filtre de
 // l'onglet à choix, qui se repose à chaque lecture).
 func (c PivotConfig) stored() PivotConfig {
-	c.Choice = nil
+	c.Choice, c.Linked = nil, nil
 	return c
 }
 
@@ -127,7 +157,10 @@ func (c PivotConfig) normalized() PivotConfig {
 	if len(c.Values) == 0 && (c.Value != "" || c.Agg != "") {
 		c.Values = []PivotValue{{Field: c.Value, Agg: c.Agg}}
 	}
-	c.Rows, c.Value, c.Agg = "", "", ""
+	if len(c.ColFields) == 0 && c.Cols != "" {
+		c.ColFields = []string{c.Cols}
+	}
+	c.Rows, c.Value, c.Agg, c.Cols = "", "", "", ""
 	return c
 }
 
@@ -154,7 +187,23 @@ var pivotAggs = map[string]msg.ID{
 	"max":           "pivot.caption.max",
 }
 
-var pivotShows = map[string]msg.ID{"": "", "pctTotal": "pivot.caption.pctTotal", "pctRow": "pivot.caption.pctRow", "pctCol": "pivot.caption.pctCol"}
+var pivotShows = map[string]msg.ID{
+	"": "", "pctTotal": "pivot.caption.pctTotal", "pctRow": "pivot.caption.pctRow", "pctCol": "pivot.caption.pctCol",
+	"pctOf": "pivot.caption.pctOf", "pctParentRow": "pivot.caption.pctParentRow", "pctParentCol": "pivot.caption.pctParentCol",
+	"pctParent": "pivot.caption.pctParent", "diff": "pivot.caption.diff", "pctDiff": "pivot.caption.pctDiff",
+	"runTotal": "pivot.caption.runTotal", "pctRunTotal": "pivot.caption.pctRunTotal",
+	"rankAsc": "pivot.caption.rankAsc", "rankDesc": "pivot.caption.rankDesc", "index": "pivot.caption.index",
+}
+
+// showNeedsBase : calculs qui demandent un champ de base (et, pour pctOf,
+// diff et pctDiff, un élément de base).
+func showNeedsBase(show string) bool {
+	switch show {
+	case "pctOf", "diff", "pctDiff", "pctParent", "runTotal", "pctRunTotal", "rankAsc", "rankDesc":
+		return true
+	}
+	return false
+}
 
 // captionLang : la langue des libellés d'un TCD qu'on crée (PivotConfig.Lang) :
 // vide pour le français, comme les TCD d'avant.
@@ -168,39 +217,84 @@ func (t *tx) captionLang() string {
 type pivotPlan struct {
 	tb      Table
 	rows    []*Column
-	cols    *Column
+	cols    []*Column // champs en colonnes, du plus large au plus fin
 	vals    []*Column // nil : nombre de lignes
 	cfg     PivotConfig
 	filters []string
 	args    []any
-	// extra : expressions des champs calculés (« expr AS c_N »), lues
-	// dans la source (from) sous les colonnes calc.
+	// extra : expressions des champs calculés et des groupes
+	// (« expr AS c_N »), lues dans la source (from) sous les colonnes calc.
 	extra []string
 	calc  map[int64]bool
 	// source : colonne calculée du tableau derrière un champ de calc.
 	source map[int64]Column
+	// exprs : expression de chaque colonne de extra (un groupe la relit :
+	// un alias ne se lit pas dans le même SELECT) ; labels : texte affiché
+	// d'une colonne de groupe (SQL sur sa clé c_N), rangée dans l'ordre de
+	// sa clé (pivotgroup.go).
+	exprs  map[int64]string
+	labels map[int64]string
+	// computed : requête de la source avec les valeurs de ses colonnes
+	// calculées (computedSource), quand l'une d'elles sert de champ.
+	computed string
+	// bases : champ de base de chaque valeur (pivotshow.go).
+	bases []pivotBase
+}
+
+// pivotBase désigne le champ de base d'une valeur : son axe (colonnes ou
+// lignes) et son rang ; level -1 : aucun (ou absent du TCD).
+type pivotBase struct {
+	col   bool
+	level int
 }
 
 // pivotCalcBase numérote les colonnes des champs calculés d'un TCD, au-delà
 // de celles d'un tableau.
 const pivotCalcBase = 1 << 40
 
-// from est la source des requêtes du TCD : le tableau, avec les valeurs de
-// ses champs calculés.
+// from est la source des requêtes du TCD : le tableau (avec ses colonnes
+// calculées si l'une sert de champ), et les valeurs de ses champs calculés.
 func (p pivotPlan) from() string {
-	if len(p.extra) == 0 {
-		return p.tb.sql()
+	base := p.tb.sql()
+	if p.computed != "" {
+		base = "(" + p.computed + ") AS " + p.tb.sql()
 	}
-	return "(SELECT *, " + strings.Join(p.extra, ", ") + " FROM " + p.tb.sql() + ") AS " + p.tb.sql()
+	if len(p.extra) == 0 {
+		return base
+	}
+	return "(SELECT *, " + strings.Join(p.extra, ", ") + " FROM " + base + ") AS " + p.tb.sql()
 }
 
 // text est le texte affiché d'un champ (voir textExpr : direct pour un
-// texte ; slt_label pour un champ calculé).
+// texte ; slt_label pour un champ calculé ; l'étiquette d'un groupe).
 func (p pivotPlan) text(c *Column) string {
+	if l, ok := p.labels[c.ID]; ok {
+		return "coalesce(" + l + ", '')"
+	}
 	if p.calc[c.ID] {
 		return formula.LabelFunc + "(" + colSQL(c.ID) + ")"
 	}
 	return textExpr(*c)
+}
+
+// addExtra ajoute à la source une colonne d'expression e ; rend son numéro.
+func (p *pivotPlan) addExtra(e string) int64 {
+	id := int64(pivotCalcBase + len(p.extra))
+	p.extra = append(p.extra, e+" AS "+colSQL(id))
+	if p.exprs == nil {
+		p.exprs = map[int64]string{}
+	}
+	p.exprs[id] = e
+	return id
+}
+
+// exprOf : l'expression d'une colonne dans la source (en ligne pour une
+// colonne de extra).
+func (p pivotPlan) exprOf(c *Column) string {
+	if e, ok := p.exprs[c.ID]; ok {
+		return "(" + e + ")"
+	}
+	return colSQL(c.ID)
 }
 
 // calcColumn ajoute à la source la valeur de la formule en (anglais
@@ -221,13 +315,34 @@ func (t *tx) calcColumn(p *pivotPlan, name, en string) (*Column, error) {
 		}
 		return nil, msg.Wrap(ErrPivot, "pivot.fieldMissingColumns", msg.Args{"field": name, "columns": quoteList(miss), "table": p.tb.Name})
 	}
-	id := int64(pivotCalcBase + len(p.extra))
-	p.extra = append(p.extra, e+" AS "+colSQL(id))
+	id := p.addExtra(e)
 	if p.calc == nil {
 		p.calc = map[int64]bool{}
 	}
 	p.calc[id] = true
 	return &Column{ID: id, Name: name, Type: grid.Text}, nil
+}
+
+// computedField : une colonne calculée du tableau source comme champ. La
+// source est lue avec les valeurs de ses colonnes calculées (comme le tri et
+// le filtre d'une colonne calculée, computedfilter.go) : toute formule de
+// colonne s'y prête (ligne précédente, recherche dans un autre tableau…).
+// La colonne garde son numéro (et donc sa mise en forme), au type de son
+// résultat.
+func (t *tx) computedField(p *pivotPlan, c Column) (*Column, error) {
+	if p.computed == "" {
+		src, ok, err := t.computedSource(p.tb)
+		if err != nil || !ok {
+			return nil, msg.Wrap(ErrPivot, "pivot.computedNotField", msg.Args{"column": c.Name})
+		}
+		p.computed = src
+	}
+	typ := t.computedResult(p.tb, c)
+	if typ == "" {
+		typ = grid.Text
+	}
+	c.Formula, c.Type = "", typ
+	return &c, nil
 }
 
 func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
@@ -238,47 +353,49 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		return p, msg.Wrap(ErrPivot, "pivot.tableNotFound", msg.Args{"table": cfg.Source})
 	}
 	p.tb = tb
-	calc := map[string]*Column{}
-	find := func(name string) (*Column, error) {
+	known := map[string]*Column{}
+	// base : un champ calculé ou une colonne du tableau (sans les groupes).
+	base := func(name string) (*Column, error) {
 		for _, f := range cfg.Calc {
 			if !strings.EqualFold(f.Name, name) {
 				continue
 			}
-			if c, ok := calc[strings.ToLower(f.Name)]; ok {
+			if c, ok := known[strings.ToLower(f.Name)]; ok {
 				return c, nil
 			}
 			c, err := t.calcColumn(&p, f.Name, f.Formula)
 			if err != nil {
 				return nil, err
 			}
-			calc[strings.ToLower(f.Name)] = c
+			known[strings.ToLower(f.Name)] = c
 			return c, nil
 		}
 		for i := range tb.Cols {
-			if strings.EqualFold(tb.Cols[i].Name, name) {
-				if tb.Cols[i].Formula != "" {
-					// Colonne calculée : sa formule, ligne par ligne, comme un
-					// champ calculé du TCD ; sa mise en forme reste celle de la
-					// colonne (format €).
-					key := "=" + strings.ToLower(tb.Cols[i].Name)
-					if c, ok := calc[key]; ok {
-						return c, nil
-					}
-					c, err := t.calcColumn(&p, tb.Cols[i].Name, tb.Cols[i].Formula)
-					if err != nil {
-						return nil, msg.Wrap(ErrPivot, "pivot.computedNotField", msg.Args{"column": name})
-					}
-					if p.source == nil {
-						p.source = map[int64]Column{}
-					}
-					p.source[c.ID] = tb.Cols[i]
-					calc[key] = c
-					return c, nil
-				}
+			if !strings.EqualFold(tb.Cols[i].Name, name) {
+				continue
+			}
+			if tb.Cols[i].Formula == "" {
 				return &tb.Cols[i], nil
 			}
+			key := "=" + strings.ToLower(tb.Cols[i].Name)
+			if c, ok := known[key]; ok {
+				return c, nil
+			}
+			c, err := t.computedField(&p, tb.Cols[i])
+			if err != nil {
+				return nil, err
+			}
+			known[key] = c
+			return c, nil
 		}
 		return nil, msg.Wrap(ErrPivot, "pivot.columnNotFound", msg.Args{"column": name, "table": tb.Name})
+	}
+	// find : base, ou un champ groupé (Date par mois, Années…).
+	find := func(name string) (*Column, error) {
+		if c, ok, err := t.groupField(&p, name, base, known); ok || err != nil {
+			return c, err
+		}
+		return base(name)
 	}
 	for _, f := range cfg.RowFields {
 		c, err := find(f)
@@ -287,10 +404,12 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		}
 		p.rows = append(p.rows, c)
 	}
-	if cfg.Cols != "" {
-		if p.cols, err = find(cfg.Cols); err != nil {
+	for _, f := range cfg.ColFields {
+		c, err := find(f)
+		if err != nil {
 			return p, err
 		}
+		p.cols = append(p.cols, c)
 	}
 	for _, v := range cfg.Values {
 		if _, ok := pivotAggs[v.Agg]; !ok {
@@ -301,13 +420,25 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 		}
 		var c *Column
 		if v.Field != "" {
-			if c, err = find(v.Field); err != nil {
-				return p, err
+			// Un champ groupé s'agrège sur ses valeurs d'origine (comme un tableur).
+			if c, err = base(v.Field); err != nil {
+				if c, err = find(v.Field); err != nil {
+					return p, err
+				}
 			}
 		} else if v.Agg != "count" {
 			return p, msg.Wrap(ErrPivot, "pivot.chooseValues", nil)
 		}
 		p.vals = append(p.vals, c)
+		b := pivotBase{level: -1}
+		if showNeedsBase(v.Show) {
+			if i := foldIndex(cfg.RowFields, v.BaseField); i >= 0 {
+				b.level = i
+			} else if i := foldIndex(cfg.ColFields, v.BaseField); i >= 0 {
+				b = pivotBase{col: true, level: i}
+			}
+		}
+		p.bases = append(p.bases, b)
 	}
 	// Ordres personnalisés donnés par le nom d'une liste.
 	for k, o := range p.cfg.Orders {
@@ -323,8 +454,8 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 	}
 	// Filtres d'étiquettes : seulement ceux des champs encore en lignes ou en
 	// colonnes (un champ déplacé ailleurs ne filtre plus par son ▾).
-	shown := map[string]bool{strings.ToLower(cfg.Cols): cfg.Cols != ""}
-	for _, f := range cfg.RowFields {
+	shown := map[string]bool{}
+	for _, f := range append(append([]string{}, cfg.RowFields...), cfg.ColFields...) {
 		shown[strings.ToLower(f)] = true
 	}
 	all := append([]PivotFilter{}, cfg.Filters...)
@@ -336,30 +467,60 @@ func (t *tx) pivotPlan(raw PivotConfig) (pivotPlan, error) {
 			all = append(all, f)
 		}
 	}
+	// Segments et chronologies : les leurs, et ceux d'autres TCD reliés.
+	all = append(all, slicerFilters(cfg.Slicers)...)
+	all = append(all, cfg.Linked...)
 	for _, f := range all {
-		var c *Column
-		if f.Formula != "" {
-			if c, err = t.calcColumn(&p, f.Field, f.Formula); err != nil {
+		if len(f.Values) == 0 {
+			continue // aucune valeur choisie : toutes les lignes
+		}
+		var e string
+		switch {
+		case f.Formula != "":
+			c, err := t.calcColumn(&p, f.Field, f.Formula)
+			if err != nil {
 				continue // la source n'a pas les colonnes : pas de filtre
 			}
-		} else if c, err = find(f.Field); err != nil {
-			return p, err
+			e = p.text(c)
+		case f.Period != "":
+			c, err := base(f.Field)
+			if err != nil {
+				continue // champ disparu : la chronologie ne filtre plus
+			}
+			e = periodSQL(f.Period, pivotDateSQL(p.exprOf(c)))
+		default:
+			c, err := find(f.Field)
+			if err != nil {
+				return p, err
+			}
+			e = p.text(c)
 		}
 		marks := make([]string, len(f.Values))
 		for i, v := range f.Values {
 			marks[i] = "?"
 			p.args = append(p.args, v)
 		}
-		if len(marks) == 0 {
-			continue // aucune valeur choisie : toutes les lignes
-		}
-		p.filters = append(p.filters, p.text(c)+" IN ("+strings.Join(marks, ", ")+")")
+		p.filters = append(p.filters, e+" IN ("+strings.Join(marks, ", ")+")")
 	}
 	return p, nil
 }
 
+// foldIndex : rang de name dans list (sans tenir compte de la casse), -1.
+func foldIndex(list []string, name string) int {
+	if name == "" {
+		return -1
+	}
+	for i, s := range list {
+		if strings.EqualFold(s, name) {
+			return i
+		}
+	}
+	return -1
+}
+
 // pivotOrder est le tri des étiquettes d'un champ (ORDER BY, valeurs
-// d'origine : 9 avant 10), ou "" pour l'ordre de la source.
+// d'origine : 9 avant 10), ou "" pour l'ordre de la source. Un champ groupé
+// suit l'ordre de ses groupes (2024 avant 2025, janvier avant février).
 func (p pivotPlan) pivotOrder(c *Column) string {
 	if k, ok := foldKey(p.cfg.Orders, c.Name); ok && len(p.cfg.Orders[k].Values) > 0 {
 		return OrderBy(p.text(c), "min("+colSQL(c.ID)+")", p.cfg.Orders[k])
@@ -370,11 +531,37 @@ func (p pivotPlan) pivotOrder(c *Column) string {
 	case "desc":
 		return "min(" + colSQL(c.ID) + ") DESC"
 	}
+	if _, ok := p.labels[c.ID]; ok {
+		return "min(" + colSQL(c.ID) + ") ASC"
+	}
 	return ""
 }
 
-// sorted : un champ au moins a un tri choisi.
-func (p pivotPlan) sorted() bool { return len(p.cfg.Sort) > 0 || len(p.cfg.Orders) > 0 }
+// sorted : un champ au moins a un tri choisi (ou suit l'ordre de ses groupes).
+func (p pivotPlan) sorted() bool {
+	return len(p.cfg.Sort) > 0 || len(p.cfg.Orders) > 0 || len(p.labels) > 0
+}
+
+// axisOrder : ORDER BY des étiquettes des champs d'un axe (alias names),
+// champ par champ dans la hiérarchie : un champ non trié garde l'ordre de
+// première apparition de son groupe ; les vides de chaque champ viennent en
+// dernier dans leur groupe, quel que soit le tri (comme un tableur). La
+// requête rend min(_pos) sous l'alias o.
+func (p pivotPlan) axisOrder(fields []*Column, names []string) []string {
+	if len(fields) == 1 && !p.sorted() {
+		return []string{names[0] + " = ''", "o"}
+	}
+	var order []string
+	for i, c := range fields {
+		order = append(order, names[i]+" = ''")
+		if o := p.pivotOrder(c); o != "" {
+			order = append(order, o)
+		} else {
+			order = append(order, "min(min(_pos)) OVER (PARTITION BY "+strings.Join(names[:i+1], ", ")+")")
+		}
+	}
+	return append(order, "o")
+}
 
 // pivotLabel : le nom affiché d'une valeur (« Somme de Ventes »), dans la
 // langue lang des libellés du TCD (PivotConfig.Lang, vide : français).
@@ -382,10 +569,7 @@ func pivotLabel(v PivotValue, lang string) string {
 	if l := strings.TrimSpace(v.Label); l != "" {
 		return l
 	}
-	ln, ok := msg.Parse(lang)
-	if !ok {
-		ln = msg.FR
-	}
+	ln := pivotLang(lang)
 	label := v.Agg
 	if id, ok := pivotAggs[v.Agg]; ok {
 		label = msg.Format(ln, id, nil)
@@ -399,367 +583,21 @@ func pivotLabel(v PivotValue, lang string) string {
 	return label
 }
 
+// pivotLang : la langue des libellés d'un TCD (vide : français).
+func pivotLang(lang string) msg.Lang {
+	ln, ok := msg.Parse(lang)
+	if !ok {
+		return msg.FR
+	}
+	return ln
+}
+
 func pivotAgg(agg, v string) string {
 	switch agg {
 	case "countDistinct":
 		return "count(DISTINCT " + v + ")"
 	}
 	return agg + "(" + v + ")"
-}
-
-// pivotCells calcule le tableau croisé en deux passes : les valeurs distinctes
-// du champ des colonnes, puis un agrégat par colonne et par valeur
-// (CASE WHEN), groupé par les champs des lignes.
-func (t *tx) pivotCellsRaw(raw PivotConfig) ([][]string, error) {
-	p, err := t.pivotPlan(raw)
-	if err != nil {
-		return nil, err
-	}
-	cfg := p.cfg
-	where := ""
-	if len(p.filters) > 0 {
-		where = " WHERE " + strings.Join(p.filters, " AND ")
-	}
-	// Valeurs distinctes du champ des colonnes.
-	var keys []string
-	if p.cols != nil {
-		// Les vides en dernier, quel que soit le tri (comme Excel).
-		order := "k = '', min(_pos)"
-		if o := p.pivotOrder(p.cols); o != "" {
-			order = "k = '', " + o + ", min(_pos)"
-		}
-		rs, err := t.query(`SELECT `+p.text(p.cols)+` AS k FROM `+p.from()+where+` GROUP BY k ORDER BY `+order+` LIMIT ?`, append(append([]any{}, p.args...), MaxPivotCols+1)...)
-		if err != nil {
-			return nil, err
-		}
-		for rs.Next() {
-			var k string
-			if err := rs.Scan(&k); err != nil {
-				rs.Close()
-				return nil, err
-			}
-			keys = append(keys, k)
-		}
-		rs.Close()
-		if len(keys) > MaxPivotCols {
-			return nil, msg.Wrap(ErrPivot, "pivot.tooManyColumns", msg.Args{"max": MaxPivotCols, "column": p.cols.Name})
-		}
-	}
-	// Colonnes de mesure : (clé de colonne, valeur), puis les totaux.
-	type measure struct {
-		v     int     // rang dans Values
-		key   *string // nil : toutes les colonnes (total)
-		label string
-	}
-	var ms []measure
-	vals := cfg.Values
-	for _, k := range keys {
-		for vi := range vals {
-			name := k
-			if name == "" {
-				name = "(vide)"
-			}
-			if len(vals) > 1 {
-				name += " · " + pivotLabel(vals[vi], cfg.Lang)
-			}
-			ms = append(ms, measure{vi, &k, name})
-		}
-	}
-	if p.cols == nil || !cfg.NoGrandTotal {
-		for vi := range vals {
-			name := pivotLabel(vals[vi], cfg.Lang)
-			if p.cols != nil {
-				name = "Total"
-				if len(vals) > 1 {
-					name += " · " + pivotLabel(vals[vi], cfg.Lang)
-				}
-			}
-			ms = append(ms, measure{vi, nil, name})
-		}
-	}
-	// Une passe groupée par (lignes, colonne) plutôt qu'un CASE WHEN par
-	// valeur du champ des colonnes : chaque agrégat ne lit la source qu'une fois.
-	plain := make([]string, len(vals))
-	for vi := range vals {
-		v := "1"
-		if c := p.vals[vi]; c != nil {
-			v = colSQL(c.ID)
-		}
-		plain[vi] = pivotAgg(vals[vi].Agg, v)
-	}
-	var exprs []string
-	var totals []int // rang dans ms des colonnes de total
-	for i, m := range ms {
-		if m.key == nil {
-			exprs = append(exprs, plain[m.v])
-			totals = append(totals, i)
-		}
-	}
-	header := make([]string, 0, len(p.rows)+len(ms))
-	for _, c := range p.rows {
-		header = append(header, c.Name)
-	}
-	if len(p.rows) == 0 {
-		header = append(header, "")
-	}
-	for _, m := range ms {
-		header = append(header, m.label)
-	}
-	nk := len(p.rows)
-	label := func(k any) string {
-		s := formula.FromResult(k).String()
-		if s == "" {
-			s = "(vide)"
-		}
-		return s
-	}
-	// byCol[lignes][colonne] : agrégats de chaque valeur.
-	byCol := map[string]map[string][]any{}
-	if len(keys) > 0 {
-		sel := make([]string, 0, nk+1+len(plain))
-		group := make([]string, 0, nk+1)
-		for i, c := range p.rows {
-			sel = append(sel, p.text(c)+" AS k"+strconv.Itoa(i))
-			group = append(group, "k"+strconv.Itoa(i))
-		}
-		sel = append(sel, p.text(p.cols)+" AS kc")
-		group = append(group, "kc")
-		sel = append(sel, plain...)
-		rs, err := t.query(`SELECT `+strings.Join(sel, ", ")+` FROM `+p.from()+where+` GROUP BY `+strings.Join(group, ", "), p.args...)
-		if err != nil {
-			return nil, err
-		}
-		for rs.Next() {
-			row := make([]any, len(sel))
-			ptrs := make([]any, len(sel))
-			for i := range row {
-				ptrs[i] = &row[i]
-			}
-			if err := rs.Scan(ptrs...); err != nil {
-				rs.Close()
-				return nil, err
-			}
-			ks := make([]string, nk)
-			for i := range nk {
-				ks[i] = label(row[i])
-			}
-			rk := strings.Join(ks, "\x00")
-			if byCol[rk] == nil {
-				byCol[rk] = map[string][]any{}
-			}
-			byCol[rk][formula.FromResult(row[nk]).String()] = row[nk+1:]
-		}
-		err = rs.Err()
-		rs.Close()
-		if err != nil {
-			return nil, err
-		}
-	}
-	// Lignes : groupes, puis total général.
-	type line struct {
-		keys []string
-		nums []any
-	}
-	var lines []line
-	// assemble range les mesures dans l'ordre des colonnes affichées.
-	assemble := func(rk string, tot []any) []any {
-		nums := make([]any, len(ms))
-		for j, i := range totals {
-			nums[i] = tot[j]
-		}
-		for i, m := range ms {
-			if m.key == nil {
-				continue
-			}
-			if vs, ok := byCol[rk][*m.key]; ok {
-				nums[i] = vs[m.v]
-			} else if a := vals[m.v].Agg; a == "count" || a == "countDistinct" {
-				nums[i] = int64(0)
-			}
-		}
-		return nums
-	}
-	scan := func(q string, args []any, withKeys bool) error {
-		rs, err := t.query(q, args...)
-		if err != nil {
-			return err
-		}
-		defer rs.Close()
-		for rs.Next() {
-			n := len(exprs)
-			if withKeys {
-				n += nk + 1
-			}
-			row := make([]any, n)
-			ptrs := make([]any, n)
-			for i := range row {
-				ptrs[i] = &row[i]
-			}
-			if err := rs.Scan(ptrs...); err != nil {
-				return err
-			}
-			l := line{}
-			if withKeys {
-				for _, k := range row[:nk] {
-					l.keys = append(l.keys, label(k))
-				}
-				l.nums = assemble(strings.Join(l.keys, "\x00"), row[nk+1:])
-			} else {
-				l.keys = []string{"Total"}
-				l.nums = row
-			}
-			lines = append(lines, l)
-		}
-		return rs.Err()
-	}
-	if nk > 0 {
-		sel := make([]string, nk)
-		group := make([]string, nk)
-		for i, c := range p.rows {
-			sel[i] = p.text(c) + " AS k" + strconv.Itoa(i)
-			group[i] = "k" + strconv.Itoa(i)
-		}
-		// Ordre de la source (première apparition), sauf tri choisi sur un
-		// champ (▾ de son étiquette).
-		cols := append(append(sel, "min(_pos) AS o"), exprs...)
-		// Champ par champ, dans la hiérarchie : un champ non trié garde
-		// l'ordre de première apparition de son groupe ; les vides de
-		// chaque champ viennent en dernier dans leur groupe, quel que soit
-		// le tri (comme Excel).
-		order := []string{"k0 = ''", "o"}
-		if nk > 1 || p.sorted() {
-			order = order[:0]
-			for i, c := range p.rows {
-				order = append(order, group[i]+" = ''")
-				if o := p.pivotOrder(c); o != "" {
-					order = append(order, o)
-				} else {
-					order = append(order, "min(min(_pos)) OVER (PARTITION BY "+strings.Join(group[:i+1], ", ")+")")
-				}
-			}
-			order = append(order, "o")
-		}
-		args := append(append([]any{}, p.args...), MaxPivotRows+1)
-		if err := scan(`SELECT `+strings.Join(cols, ", ")+` FROM `+p.from()+where+` GROUP BY `+strings.Join(group, ", ")+` ORDER BY `+strings.Join(order, ", ")+` LIMIT ?`, args, true); err != nil {
-			return nil, err
-		}
-		if len(lines) > MaxPivotRows {
-			return nil, msg.Wrap(ErrPivot, "pivot.tooManyRows", msg.Args{"max": MaxPivotRows})
-		}
-	}
-	var total *line
-	if len(ms) > 0 && (nk == 0 || !cfg.NoGrandTotal || hasPct(vals)) {
-		// Total général : par valeur du champ des colonnes, puis tout confondu.
-		grand := map[string][]any{}
-		if len(keys) > 0 {
-			rs, err := t.query(`SELECT `+p.text(p.cols)+` AS kc, `+strings.Join(plain, ", ")+` FROM `+p.from()+where+` GROUP BY kc`, p.args...)
-			if err != nil {
-				return nil, err
-			}
-			for rs.Next() {
-				row := make([]any, 1+len(plain))
-				ptrs := make([]any, len(row))
-				for i := range row {
-					ptrs[i] = &row[i]
-				}
-				if err := rs.Scan(ptrs...); err != nil {
-					rs.Close()
-					return nil, err
-				}
-				grand[formula.FromResult(row[0]).String()] = row[1:]
-			}
-			err = rs.Err()
-			rs.Close()
-			if err != nil {
-				return nil, err
-			}
-		}
-		tot := make([]any, len(exprs))
-		if len(exprs) > 0 {
-			ptrs := make([]any, len(tot))
-			for i := range tot {
-				ptrs[i] = &tot[i]
-			}
-			if err := t.row(`SELECT `+strings.Join(exprs, ", ")+` FROM `+p.from()+where, p.args...).Scan(ptrs...); err != nil {
-				return nil, err
-			}
-		}
-		saved := byCol
-		byCol = map[string]map[string][]any{"\x01": grand}
-		lines = append(lines, line{keys: []string{"Total"}, nums: assemble("\x01", tot)})
-		byCol = saved
-		total = &lines[len(lines)-1]
-		if nk > 0 && cfg.NoGrandTotal {
-			lines = lines[:len(lines)-1]
-		}
-	}
-	// Mise en forme, avec les pourcentages.
-	num := func(v any) (float64, bool) {
-		f := formula.FromResult(v)
-		return f.Num, f.Kind == formula.Number
-	}
-	// Colonne du total de ligne pour une valeur donnée.
-	rowTotal := map[int]int{}
-	for i, m := range ms {
-		if m.key == nil {
-			rowTotal[m.v] = i
-		}
-	}
-	out := [][]string{header}
-	for _, l := range lines {
-		row := append([]string{}, l.keys...)
-		if nk > 1 && len(l.keys) == 1 {
-			for len(row) < nk {
-				row = append(row, "")
-			}
-		}
-		for i, v := range l.nums {
-			m := ms[i]
-			show := vals[m.v].Show
-			x, ok := num(v)
-			if show == "" || !ok {
-				row = append(row, formula.FromResult(v).String())
-				continue
-			}
-			var base float64
-			switch show {
-			case "pctTotal":
-				if total != nil {
-					if j, ok := rowTotal[m.v]; ok {
-						base, _ = num(total.nums[j])
-					} else {
-						base, _ = num(total.nums[i])
-					}
-				}
-			case "pctCol":
-				if total != nil {
-					base, _ = num(total.nums[i])
-				}
-			case "pctRow":
-				if j, ok := rowTotal[m.v]; ok {
-					base, _ = num(l.nums[j])
-				} else {
-					base = x
-				}
-			}
-			if base == 0 {
-				row = append(row, "")
-				continue
-			}
-			row = append(row, percent(x/base))
-		}
-		out = append(out, row)
-	}
-	return out, nil
-}
-
-func hasPct(vals []PivotValue) bool {
-	for _, v := range vals {
-		if v.Show != "" {
-			return true
-		}
-	}
-	return false
 }
 
 // percent écrit une part à la française : 0.125 → « 12,5 % ».

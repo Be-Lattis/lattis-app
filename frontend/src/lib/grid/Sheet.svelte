@@ -66,7 +66,10 @@
 	import { tableUnderTitle, titleAboveFilled } from './titlehead';
 	import { grown as growFrame, type Grown } from './grown';
 	import { pivotColLayer, pivotLayer, pivotValueText } from './pivotformat';
-	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setFolded, type PivotRowInfo } from './pivottree';
+	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setColFolded, setFolded, type PivotRowInfo } from './pivottree';
+	import type { PivotGroup } from './pivotgroup';
+	import { newSlicer, withSlicer, type PivotSlicer, type PivotSlicerInfo } from './pivotslicer';
+	import SheetSlicers from './SheetSlicers.svelte';
 	import { fillSeries, shiftTableColumns } from './fill';
 	import { citeLabel, refMessage, refTarget, type Citation, type KeyRow } from './reflink';
 	import { gridPalette } from './theme';
@@ -170,7 +173,10 @@
 	export interface PivotValue {
 		field?: string; // vide : nombre de lignes
 		agg: 'sum' | 'count' | 'countDistinct' | 'avg' | 'min' | 'max';
-		show?: string; // '', pctTotal, pctRow, pctCol
+		show?: string; // '', pctTotal, pctRow, pctCol… (voir shows dans pivotfields.ts)
+		baseField?: string; // champ de base (% de, différence, cumul, rang…)
+		baseItem?: string; // élément de base (% de, différence)
+		basePos?: 'prev' | 'next'; // ou l'élément précédent, suivant
 		label?: string; // nom personnalisé (« Somme de Ventes » sinon)
 		format?: string; // format de nombre imposé (style JSON : nf, dp)
 	}
@@ -179,7 +185,8 @@
 		name?: string; // « TCD1 » : vue SQL et source de graphique
 		source: string;
 		rowFields?: string[];
-		cols?: string;
+		/** Champs en colonnes, du plus large au plus fin (en-têtes imbriqués). */
+		colFields?: string[];
 		values?: PivotValue[];
 		filters?: { field: string; values: string[] }[];
 		/**
@@ -201,6 +208,14 @@
 		collapseAll?: boolean;
 		collapsed?: (string[] | null)[] | null;
 		expanded?: (string[] | null)[] | null;
+		/** Même chose pour les groupes des champs en colonnes. */
+		colCollapseAll?: boolean;
+		colCollapsed?: (string[] | null)[] | null;
+		colExpanded?: (string[] | null)[] | null;
+		/** Champs groupés (dates par années…, nombres par intervalles), voir pivotgroup.ts. */
+		groups?: PivotGroup[];
+		/** Segments et chronologies posés sur la feuille, voir pivotslicer.ts. */
+		slicers?: PivotSlicer[];
 	}
 
 	/** Ligne du total général d'un TCD (la dernière), -1 quand il est masqué (« Totaux généraux » décoché ; sans champ en lignes, le total est la seule ligne). */
@@ -231,6 +246,11 @@
 		cells: string[][]; // en-tête, groupes, total
 		/** Arborescence (plusieurs champs en lignes) : une description par ligne sous l'en-tête. */
 		rows?: PivotRowInfo[] | null;
+		/** Plusieurs champs en colonnes : lignes d'en-tête au-dessus de cells[0], et description de chaque colonne. */
+		colHead?: (string[] | null)[] | null;
+		cols?: PivotRowInfo[] | null;
+		/** Éléments des segments (config.slicers), dans l'ordre. */
+		slicers?: PivotSlicerInfo[] | null;
 		/** Format de nombre par défaut de chaque colonne (style JSON, voir pivotformat.ts). */
 		formats?: string[] | null;
 		/** Mise en forme de chaque colonne, de ses lignes et de son en-tête (style JSON, voir pivotformat.ts). */
@@ -625,6 +645,8 @@
 		createPivotAt?(row: number, col: number, cfg: PivotConfig): Promise<unknown>;
 		/** Valeurs distinctes d'une colonne d'un tableau (filtre d'un TCD). */
 		pivotFieldValues?(table: string, field: string): Promise<{ text: string; count: number }[]>;
+		/** Valeurs d'un champ d'un TCD de configuration cfg (groupes, champs calculés compris). */
+		pivotValues?(cfg: PivotConfig, field: string): Promise<{ text: string; count: number }[]>;
 		createChart?(row: number, col: number, cfg: ChartConfig): Promise<unknown>;
 		setChart?(id: number, cfg: ChartConfig): Promise<unknown>;
 		moveChart?(id: number, row: number, col: number): Promise<unknown>;
@@ -1237,7 +1259,7 @@
 			// (une seule cellule, sans contenu), avec son propre message.
 			if (p.pending) p = { ...p, error: p.error || '…', cells: [] };
 			const f = p.error ? 0 : (p.config.filters?.length ?? 0);
-			return { ...p, anchor: p.row, row: p.row + (f ? f + 1 : 0) };
+			return { ...p, anchor: p.row, row: p.row + (f ? f + 1 : 0) + (p.error ? 0 : (p.colHead?.length ?? 0)) };
 		});
 		if (openPivotOnLoad && pivots.length) {
 			openPivotOnLoad = false;
@@ -3015,7 +3037,9 @@
 				ctx.restore();
 				pivotDrop(cx(p.col + 1) + w1, ry(r), rh(r), f.values.length > 0);
 			});
-			if (pr1 < r0 || p.row > r1 || pc1 < c0 || p.col > c1) continue;
+			if (pr1 < r0 || pivotHead(p) > r1 || pc1 < c0 || p.col > c1) continue;
+			// En-têtes imbriqués (plusieurs champs en colonnes), au-dessus de l'en-tête.
+			drawPivotColHead(p, pc1, r0, r1, { cx, ry, spanW });
 			// Ligne du total général : la dernière, quand il est affiché.
 			const tot = pivotTotalRow(p);
 			// En-tête et total sur fond gris, sauf remplissage choisi.
@@ -3033,12 +3057,15 @@
 					// Arborescence : retrait du niveau et case −/+ des groupes (colonne des étiquettes).
 					const info = j === 0 ? pivotRowOf(p, p.row + i) : undefined;
 					if (info?.group) pivotFoldBox(cx(c) + pivotBoxLeft(info.depth), ry(p.row + i), rh(p.row + i), !!info.collapsed);
+					// Groupe de colonnes plié : case + devant son étiquette.
+					const folded = i === 0 && !!p.cols?.[j]?.collapsed;
+					if (folded) pivotFoldBox(cx(c) + pivotBoxLeft(0), ry(p.row), rh(p.row), true);
 					if (!v) return;
 					const bold = pivotBold(p, p.row + i);
 					// Mise en forme posée sur les cellules du TCD, leurs lignes ou colonnes (format de nombre, décimales, police…).
 					const st = resolveStyle(styleAt(p.row + i, c, undefined), freeCf(p.row + i, c)?.style);
 					const style = bold ? { ...st, b: st?.b ?? true } : st;
-					const ind = pivotLabelOffset(info);
+					const ind = pivotLabelOffset(info) + (folded ? PIVOT_BOX + 5 : 0);
 					// Recalculé : seules les cellules dont la valeur change s'éclairent.
 					paintFlash(flashOf(`p${p.id}:${i},${j}`, v, p.row + i, c), cx(c), ry(p.row + i), cax().size(c), rh(p.row + i));
 					drawText(pivotValueText(formatCell(v, undefined, st), i, j), cx(c) + ind, ry(p.row + i), cax().size(c) - ind, st?.al ?? (c >= hs && i > 0 ? handAlign(v) : j > 0 && i > 0 ? 'right' : 'left'), style, i === 0 && c >= hs ? C.headText : i === 0 || p.row + i === tot ? C.linkHeadText : C.text);
@@ -3054,7 +3081,7 @@
 			ctx.save();
 			ctx.strokeStyle = C.linkBorder;
 			ctx.lineWidth = 1;
-			ctx.strokeRect(Math.round(cx(p.col)) + 0.5, Math.round(ry(p.row)) + 0.5, spanW(p.col, pc1) - 1, rspan(p.row, pr1) - 1);
+			ctx.strokeRect(Math.round(cx(p.col)) + 0.5, Math.round(ry(pivotHead(p))) + 0.5, spanW(p.col, pc1) - 1, rspan(pivotHead(p), pr1) - 1);
 			// Traits sous l'en-tête et au-dessus du total.
 			ctx.beginPath();
 			for (const y of tot >= 0 ? [ry(p.row + 1), ry(tot)] : [ry(p.row + 1)]) {
@@ -3075,9 +3102,9 @@
 				ctx.font = FONT_SMALL;
 				const bh = 13;
 				const bx = Math.round(cx(p.col)) - 0.5;
-				const by = Math.round(ry(p.row)) - 0.5;
+				const by = Math.round(ry(pivotHead(p))) - 0.5;
 				let aboveFree = true;
-				for (let r = p.row - 1; aboveFree && r >= 0 && ry(r + 1) > by - bh; r--) {
+				for (let r = pivotHead(p) - 1; aboveFree && r >= 0 && ry(r + 1) > by - bh; r--) {
 					if (!rh(r)) continue;
 					for (let c = p.col; c <= pc1; c++) {
 						const v = cells.get(key(r, c));
@@ -3168,7 +3195,7 @@
 			for (const p of pivots) {
 				if (p.error) continue;
 				const pc1 = p.col + p.cells[0].length - 1;
-				ctx.rect(cx(p.col) + 1, ry(p.row) + 1, spanW(p.col, pc1) - 2, rspan(p.row, p.row + p.cells.length - 1) - 2);
+				ctx.rect(cx(p.col) + 1, ry(pivotHead(p)) + 1, spanW(p.col, pc1) - 2, rspan(pivotHead(p), p.row + p.cells.length - 1) - 2);
 			}
 			ctx.clip('evenodd');
 		}
@@ -4093,8 +4120,78 @@
 		ctx.restore();
 	}
 
+	/** Première ligne des en-têtes d'un TCD (au-dessus de p.row avec plusieurs champs en colonnes). */
+	function pivotHead(p: SheetPivot): number {
+		return p.row - (p.error ? 0 : (p.colHead?.length ?? 0));
+	}
+
+	/** En-têtes imbriqués d'un TCD : étiquette d'un groupe de colonnes au-dessus de sa première colonne, avec sa case −. */
+	function drawPivotColHead(p: SheetPivot, pc1: number, r0: number, r1: number, g: { cx: (c: number) => number; ry: (r: number) => number; spanW: (c0: number, c1: number) => number }) {
+		const { cx, ry, spanW } = g;
+		const head = p.colHead ?? [];
+		head.forEach((row, d) => {
+			const hr = row ?? [];
+			const r = pivotHead(p) + d;
+			if (r < r0 || r > r1 || !rh(r)) return;
+			for (let c = p.col; c <= pc1; c++)
+				if (!styleAt(r, c, undefined)?.bg) {
+					ctx.fillStyle = C.linkHead;
+					ctx.fillRect(cx(c), ry(r), cax().size(c), rh(r));
+				}
+			hr.forEach((v, j) => {
+				if (!v) return;
+				const c = p.col + j;
+				let end = j + 1;
+				while (end < hr.length && !hr[end] && (p.cols?.[end]?.path?.length ?? 0) > d + 1 && p.cols?.[end]?.path?.[d] === v) end++;
+				pivotFoldBox(cx(c) + pivotBoxLeft(0), ry(r), rh(r), false);
+				const ind = pivotBoxLeft(0) + PIVOT_BOX + 1;
+				const st = resolveStyle(styleAt(r, c, undefined), undefined);
+				drawText(v, cx(c) + ind, ry(r), spanW(c, Math.min(pc1, p.col + end - 1)) - ind, 'left', { ...st, b: st?.b ?? true }, C.linkHeadText);
+			});
+		});
+	}
+
+	/** Clic sur la case −/+ d'un groupe de colonnes : le plie ou le déplie. */
+	function toggleColFold(ev: MouseEvent, p: SheetPivot, cell: { row: number; col: number }): boolean {
+		if (!p.cols || !source.setPivot || cell.row < pivotHead(p) || cell.row > p.row) return false;
+		const j = cell.col - p.col;
+		const d = cell.row - pivotHead(p);
+		const info = p.cols[j];
+		const x = toLocal(ev).x - screenX(cell.col);
+		if (!info?.path || x < pivotBoxLeft(0) - 3 || x > pivotBoxLeft(0) + PIVOT_BOX + 3) return false;
+		let path: string[] | null = null;
+		let fold = false;
+		if (cell.row === p.row && info.collapsed) path = info.path;
+		else if (cell.row < p.row && p.colHead?.[d]?.[j] && info.path.length > d + 1) {
+			path = info.path.slice(0, d + 1);
+			fold = true;
+		}
+		if (!path) return false;
+		moveTo(cell.row, cell.col);
+		const set = source.setPivot;
+		const cfg = setColFolded(p.config, path, fold);
+		menuAction(() => set(p.id, cfg));
+		return true;
+	}
+
+	/** Nouveau segment (ou chronologie) du champ field, posé à droite du TCD. */
+	function addSlicer(p: SheetPivot, field: string, timeline: boolean) {
+		const set = source.setPivot;
+		if (!set) return;
+		const s = newSlicer(p.config, field, p.anchor ?? p.row, p.col + (p.cells[0]?.length ?? 1) - 1, timeline);
+		menuAction(() => set(p.id, withSlicer(p.config, p.config.slicers?.length ?? 0, s)), true);
+	}
+
+	/** Valeurs d'un champ d'un TCD (groupes et champs calculés compris). */
+	function pivotValuesOf(cfg: PivotConfig, field: string): Promise<{ text: string; count: number }[]> {
+		if (source.pivotValues) return source.pivotValues(cfg, field);
+		return source.pivotFieldValues?.(cfg.source, field) ?? Promise.resolve([]);
+	}
+
 	/** Le clic tombe-t-il sur une case −/+ de TCD ? Plie ou déplie alors le groupe (une étape d'annulation). */
 	function togglePivotFold(ev: MouseEvent, cell: { row: number; col: number }): boolean {
+		const pc = pivotAt(cell.row, cell.col);
+		if (pc && toggleColFold(ev, pc, cell)) return true;
 		const p = pivotAt(cell.row, cell.col);
 		if (!p?.rows || cell.col !== p.col || !source.setPivot) return false;
 		const info = pivotRowOf(p, cell.row);
@@ -6098,7 +6195,7 @@
 		d.values = [];
 		d.loading = !!source.pivotFieldValues;
 		const mine = () => pivotDlg?.p.id === p.id && pivotDlg.field === field;
-		source.pivotFieldValues?.(p.config.source, field).then(
+		pivotValuesOf(p.config, field).then(
 			(vals) => {
 				if (!mine()) return;
 				pivotDlg!.values = vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) }));
@@ -6164,7 +6261,7 @@
 		pivotDlg = null;
 		customDlg = {
 			field,
-			loadValues: async () => ((await source.pivotFieldValues?.(p.config.source, field)) ?? []).map((v) => v.text),
+			loadValues: async () => (await pivotValuesOf(p.config, field)).map((v) => v.text),
 			loadOrder: async () => p.config.orders?.[field] ?? null,
 			apply: (o) => {
 				const cfg: PivotConfig = { ...p.config, orders: { ...p.config.orders, [field]: o }, sort: withoutField(p.config.sort, field) };
@@ -12257,6 +12354,16 @@
 					{say}
 					done={() => wrap.focus()}
 				/>
+				<SheetSlicers
+					{pivots}
+					geo={{ colOffset: (c) => cax().offset(c), rowTop, colAt: (x) => cax().indexAt(x), rowAt: (y) => rax().indexAt(y) }}
+					{zoom}
+					view={viewPos}
+					locked={!!locked || structure}
+					onset={source.setPivot ? (id, cfg) => menuAction(() => source.setPivot!(id, cfg), true) : undefined}
+					onwheel={(ev) => onWheel(ev)}
+					{say}
+				/>
 				<SheetButtons
 					bind:this={buttonsLayer}
 					locked={!!locked || structure}
@@ -13809,7 +13916,8 @@
 				config={pv.config}
 				fields={sourceColumns(pv.config.source)}
 				error={pv.error}
-				filterValues={source.pivotFieldValues ? (f) => source.pivotFieldValues!(pv.config.source, f) : undefined}
+				filterValues={source.pivotValues || source.pivotFieldValues ? (f) => pivotValuesOf(pv.config, f) : undefined}
+				onslicer={source.setPivot ? (f, tl) => addSlicer(pv, f, tl) : undefined}
 				tabChoice={source.setTabChoice ? (f) => tabChoiceFor(pv.config.source, f, { field: true }) : undefined}
 				ontabchoice={(f, it) => runTabChoice(pv.config.source, f, it)}
 				customLists={source.customLists}

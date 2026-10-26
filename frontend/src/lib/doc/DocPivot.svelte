@@ -95,6 +95,10 @@
 	{:else if rows.length}
 		<table>
 			<thead>
+				<!-- Plusieurs champs en colonnes : en-têtes imbriqués au-dessus. -->
+				{#each info?.colHead ?? [] as hr, d (d)}
+					<tr class="colhead">{#each hr ?? [] as h, j (j)}<th class:num={j > 0}>{h}</th>{/each}</tr>
+				{/each}
 				<tr>{#each rows[0] as h, j (j)}<th class:num={j > 0}>{h}</th>{/each}</tr>
 			</thead>
 			<tbody>

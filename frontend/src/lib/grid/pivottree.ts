@@ -71,6 +71,26 @@ export function setFolded<T extends FoldConfig>(cfg: T, path: readonly string[],
 	return out;
 }
 
+/** Groupes pliés des champs en colonnes (mêmes règles que ceux des lignes). */
+export interface ColFoldConfig {
+	colCollapseAll?: boolean;
+	colCollapsed?: (string[] | null)[] | null;
+	colExpanded?: (string[] | null)[] | null;
+}
+
+/** Configuration où le groupe de colonnes path est plié (fold) ou déplié. */
+export function setColFolded<T extends ColFoldConfig>(cfg: T, path: readonly string[], fold: boolean): T {
+	const f = setFolded({ collapseAll: cfg.colCollapseAll, collapsed: cfg.colCollapsed, expanded: cfg.colExpanded }, path, fold);
+	const out = { ...cfg };
+	delete out.colCollapseAll;
+	delete out.colCollapsed;
+	delete out.colExpanded;
+	if (f.collapseAll) out.colCollapseAll = true;
+	if (f.collapsed) out.colCollapsed = f.collapsed;
+	if (f.expanded) out.colExpanded = f.expanded;
+	return out;
+}
+
 /** Configuration toute pliée (Réduire tout) ou toute dépliée (Développer tout). */
 export function foldAll<T extends FoldConfig>(cfg: T, fold: boolean): T {
 	const out = { ...cfg };

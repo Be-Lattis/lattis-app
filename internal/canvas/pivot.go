@@ -25,6 +25,13 @@ type PivotInfo struct {
 	// arborescence (plusieurs champs en lignes) : niveau, groupe −/+,
 	// sous-total. Absent avec un seul champ en lignes.
 	Rows []PivotRowInfo `json:"rows"`
+	// ColHead : lignes d'en-tête au-dessus de Cells[0] avec plusieurs champs
+	// en colonnes (l'étiquette d'un groupe au-dessus de sa première colonne) ;
+	// Cols décrit chaque colonne (groupe plié, sous-total, total), comme Rows.
+	ColHead [][]string     `json:"colHead,omitempty"`
+	Cols    []PivotRowInfo `json:"cols,omitempty"`
+	// Slicers : éléments des segments (PivotConfig.Slicers), dans l'ordre.
+	Slicers []PivotSlicerInfo `json:"slicers,omitempty"`
 	// Formats : format de nombre par défaut de chaque colonne (style JSON,
 	// vide : aucun) : celui de la colonne source, ou deux décimales pour une
 	// moyenne ou des décimaux. La mise en forme des cellules l'emporte.
@@ -200,7 +207,7 @@ func pivotRect(p PivotInfo) Rect {
 	if p.Error != "" || len(p.Cells) == 0 {
 		return Rect{p.Row, p.Col, p.Row, p.Col}
 	}
-	h := len(p.Cells)
+	h := len(p.Cells) + len(p.ColHead)
 	if n := len(p.Config.Filters); n > 0 {
 		h += n + 1
 	}
@@ -252,12 +259,14 @@ func (t *tx) pivotsIn(sheet int64, later bool) ([]PivotInfo, error) {
 			out[i].Pending = true
 			continue
 		}
-		cells, rows, err := t.pivotCells(out[i].Config)
+		v, err := t.pivotViewOf(out[i].Config)
 		if err != nil {
 			out[i].Error = strings.TrimPrefix(err.Error(), ErrPivot.Error()+" : ")
 			continue
 		}
-		out[i].Cells, out[i].Rows = cells, rows
+		cells := v.cells
+		out[i].Cells, out[i].Rows, out[i].ColHead, out[i].Cols = cells, v.rows, v.colHead, v.cols
+		t.pivotSlicersAttach(&out[i])
 		if out[i].Formats, err = t.pivotFormats(out[i].Config, cells); err != nil {
 			return nil, err
 		}
@@ -307,11 +316,12 @@ func (m *Model) PivotData(ctx context.Context, cfg PivotConfig) PivotInfo {
 			return err
 		}
 		calcText(&out.Config, t.ui())
-		cells, rows, err := t.pivotCells(out.Config)
+		v, err := t.pivotViewOf(out.Config)
 		if err != nil {
 			return err
 		}
-		out.Cells, out.Rows = cells, rows
+		cells := v.cells
+		out.Cells, out.Rows, out.ColHead, out.Cols = cells, v.rows, v.colHead, v.cols
 		out.Formats, err = t.pivotFormats(out.Config, cells)
 		return err
 	})

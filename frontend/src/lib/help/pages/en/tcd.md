@@ -42,7 +42,11 @@ A calculated column can't be used as a field yet.
 
 ## Value summary and display {#synthese-et-affichage-des-valeurs}
 
-Summaries: Sum, Count, Distinct count, Average, Min, Max. A column of numbers is summed by default, the others counted. The display can also be a percentage: of the grand total, of the column total or of the row total. A number format (currency, percentage, decimals) is chosen per value.
+Summaries: Sum, Count, Distinct count, Average, Min, Max. A column of numbers is summed by default, the others counted. **Show values as** (Value field settings) also computes: % of grand total, of column, of row, of parent row or column, of parent total; % of, difference and % difference from an item (or the previous, the next) of a base field; running total and % running total; rank; index. A number format (currency, percentage, decimals) is chosen per value. A calculated column of the source table works as a field like the others.
+
+## Columns, groups and slicers {#colonnes-groupes-et-segments}
+
+Several fields in **Columns** give nested headers, with a subtotal per group and a −/+ box to collapse a group. **Group…** (▾ menu of a date or number field in the pane) arranges a date by years, quarters, months or days (several levels at once: Years and Quarters become fields before the date) and a number by intervals (start, end, step); **Ungroup** goes back to the values. **Insert slicer** places on the sheet a panel of buttons that filters the PivotTable: click for one value, Ctrl+click to add more, the funnel to take everything back; right-click to also filter other PivotTables on the same source. **Insert timeline** does the same with the periods of a date (Shift+click: a range).
 
 ## Sort and filter labels {#trier-et-filtrer-les-etiquettes}
 

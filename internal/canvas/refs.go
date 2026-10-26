@@ -352,6 +352,7 @@ func renamePivotConfig(m map[string]any, rc refChange) bool {
 		changed = renameField(m, k, rc.Renames, src) || changed
 	}
 	changed = renameFieldList(m, "rowFields", rc.Renames, src) || changed
+	changed = renameFieldList(m, "colFields", rc.Renames, src) || changed
 	// Champs calculés : leurs [Colonne] sont celles du tableau source.
 	calc, _ := m["calc"].([]any)
 	for _, v := range calc {
@@ -363,7 +364,7 @@ func renamePivotConfig(m map[string]any, rc refChange) bool {
 			}
 		}
 	}
-	for _, k := range []string{"values", "filters", "items"} {
+	for _, k := range []string{"values", "filters", "items", "groups", "slicers"} {
 		list, _ := m[k].([]any)
 		for _, v := range list {
 			if f, ok := v.(map[string]any); ok {
@@ -409,7 +410,7 @@ func (t *tx) pivotHeaders(rc refChange) (map[string]map[string]string, error) {
 		}
 		pc = pc.normalized()
 		labels := map[string]string{}
-		for _, f := range append(append([]string{}, pc.RowFields...), pc.Cols) {
+		for _, f := range append(append([]string{}, pc.RowFields...), pc.ColFields...) {
 			if n := rc.Column(pc.Source, f); f != "" && n != f {
 				labels[strings.ToLower(f)] = n
 			}

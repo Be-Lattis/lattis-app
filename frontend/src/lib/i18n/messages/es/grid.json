@@ -776,7 +776,7 @@
 			"filters": "Filtros",
 			"filters.hint": "Arrastre aquí un campo para filtrar todo el informe",
 			"cols": "Columnas",
-			"cols.hint": "Sus valores pasan a ser columnas (un campo)",
+			"cols.hint": "Arrastre aquí los campos cuyos valores se convierten en columnas",
 			"rows": "Filas",
 			"rows.hint": "Arrastre aquí los campos que agrupan las filas",
 			"values": "Valores",
@@ -794,7 +794,18 @@
 			"none": "Sin cálculo",
 			"pctTotal": "% del total general",
 			"pctCol": "% del total de columnas",
-			"pctRow": "% del total de filas"
+			"pctRow": "% del total de filas",
+			"pctOf": "% de",
+			"pctParentRow": "% del total de fila principal",
+			"pctParentCol": "% del total de columna principal",
+			"pctParent": "% del total principal",
+			"diff": "Diferencia de",
+			"pctDiff": "% de la diferencia de",
+			"runTotal": "Total en",
+			"pctRunTotal": "% del total en",
+			"rankAsc": "Clasificar de menor a mayor",
+			"rankDesc": "Clasificar de mayor a menor",
+			"index": "Índice"
 		},
 		"format": {
 			"auto": "Automático (formato del origen)",
@@ -925,7 +936,40 @@
 		"nameBadge": {
 			"tooltip": "Tabla dinámica «{name}»: las fórmulas la leen como una tabla ({name}[Columna]); haga clic para abrir su panel"
 		},
-		"computing": "Tabla dinámica: calculando…"
+		"computing": "Tabla dinámica: calculando…",
+		"valueSettings.baseField": "Campo base",
+		"valueSettings.baseItem": "Elemento base",
+		"valueSettings.prev": "(anterior)",
+		"valueSettings.next": "(siguiente)",
+		"valueSettings.noBase": "Coloque primero un campo en filas o columnas.",
+		"group": {
+			"years": "Años",
+			"quarters": "Trimestres",
+			"months": "Meses",
+			"days": "Días",
+			"menu": "Agrupar…",
+			"ungroup": "Desagrupar",
+			"title": "Agrupar «{field}»",
+			"by": "Por",
+			"start": "Comienzo",
+			"end": "Final",
+			"step": "Intervalo",
+			"noLevel": "Elija al menos un nivel.",
+			"badStep": "Intervalo positivo, final después del comienzo.",
+			"quarter": "T{n}"
+		},
+		"slicer": {
+			"insert": "Insertar segmentación",
+			"timeline": "Insertar escala de tiempo",
+			"clear": "Borrar filtro",
+			"connect": "Filtra también",
+			"remove": "Eliminar segmentación",
+			"columns": "Columnas de botones",
+			"all": "Todos los períodos",
+			"hint": "Ctrl+clic: varios elementos",
+			"hintTimeline": "Mayús+clic: un rango",
+			"empty": "Sin valores"
+		}
 	},
 	"readFail": "No se pudo volver a leer la tabla «{table}»; se volverá a cargar.",
 	"refLink": {

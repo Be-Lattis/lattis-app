@@ -1653,6 +1653,16 @@ func (s *DocumentService) FieldValues(ctx context.Context, table, field string) 
 	return d.FieldValues(ctx, table, field)
 }
 
+// PivotFieldValues donne les valeurs distinctes d'un champ d'un tableau
+// croisé (colonne, colonne calculée, champ calculé, champ groupé).
+func (s *DocumentService) PivotFieldValues(ctx context.Context, cfg canvas.PivotConfig, field string) ([]canvas.FilterValue, error) {
+	d, err := s.current()
+	if err != nil {
+		return nil, err
+	}
+	return d.PivotFieldValues(ctx, cfg, field)
+}
+
 // ValidationList lit la liste d'une validation tirée d'une plage (src :
 // Tableau[Colonne], Cell[A1:A10], Feuille2!Cell[A1:A10] ou une cellule
 // nommée), pour une cellule de la feuille sheet : valeurs distinctes dans

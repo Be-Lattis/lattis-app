@@ -506,11 +506,12 @@ func (t *tx) pivotPlaces(sheet int64) ([]pivotPlace, error) {
 		if err := t.pivotChoice(sheet, &p.cfg); err != nil {
 			return nil, err
 		}
-		cells, rows, err := t.pivotCells(p.cfg)
-		if err != nil || len(cells) == 0 || len(cells[0]) == 0 {
+		v, err := t.pivotViewOf(p.cfg)
+		if err != nil || len(v.cells) == 0 || len(v.cells[0]) == 0 {
 			continue // TCD en erreur : seule sa cellule de message
 		}
-		p.cells, p.rows = cells, rows
+		p.cells, p.rows = v.cells, v.rows
+		p.top += len(v.colHead) // en-têtes imbriqués des colonnes au-dessus
 		out = append(out, p)
 	}
 	return out, nil

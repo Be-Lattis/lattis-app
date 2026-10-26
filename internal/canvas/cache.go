@@ -36,16 +36,64 @@ func (t *tx) spillFree(sheet int64, raw string) ([][]string, bool, formula.Value
 	return r.rows, r.ok, r.err
 }
 
+// pivotDeps : les tableaux que lit le calcul d'un TCD, ou faux s'il peut en
+// lire d'autres (champ calculé, onglet à choix par une formule, colonne
+// calculée de la source : formules, recherches…).
+func (t *tx) pivotDeps(cfg PivotConfig) ([]string, bool) {
+	tb, err := t.tableByName(cfg.Source)
+	if err != nil || cfg.byFormula() {
+		return nil, false
+	}
+	for _, c := range tb.Cols {
+		if c.Formula != "" && pivotUses(cfg, c.Name) {
+			return nil, false
+		}
+	}
+	return []string{tb.sql()}, true
+}
+
+// pivotUses : le TCD cite le champ name (zones, filtres, groupes, segments).
+func pivotUses(cfg PivotConfig, name string) bool {
+	names := append(append([]string{}, cfg.RowFields...), cfg.ColFields...)
+	names = append(names, cfg.Cols)
+	for _, v := range cfg.Values {
+		names = append(names, v.Field)
+	}
+	for _, list := range [][]PivotFilter{cfg.Filters, cfg.Items, cfg.Linked} {
+		for _, f := range list {
+			names = append(names, f.Field)
+		}
+	}
+	for _, g := range cfg.Groups {
+		names = append(names, g.Field)
+	}
+	for _, s := range cfg.Slicers {
+		names = append(names, s.Field)
+	}
+	return foldIndex(names, name) >= 0
+}
+
+// pivotCube calcule les agrégats d'un TCD (pivotcube.go), gardés en cache
+// tant que sa source ne change pas.
+func (t *tx) pivotCube(cfg PivotConfig) (*pivotCube, error) {
+	cfg = cfg.normalized().cubed()
+	key := keyOf("pivotcube:", cfg)
+	run := func() (*pivotCube, error) {
+		work.Phase(t.Ctx, "pivot")
+		return t.pivotCubeRaw(cfg)
+	}
+	if deps, ok := t.pivotDeps(cfg); ok {
+		return cachedOn(t, key, deps, run)
+	}
+	return cached(t, key, run)
+}
+
 // pivotFlat calcule un TCD à plat (une colonne par champ des lignes) : la
 // vue SQL et les graphiques le lisent ainsi.
 func (t *tx) pivotFlat(cfg PivotConfig) ([][]string, error) {
 	cfg = cfg.flat()
-	// Un TCD ne lit que son tableau source (pas de colonne calculée comme champ).
-	if tb, err := t.tableByName(cfg.Source); err == nil && !cfg.byFormula() {
-		return cachedOn(t, keyOf("pivot:", cfg), []string{tb.sql()}, func() ([][]string, error) {
-			work.Phase(t.Ctx, "pivot")
-			return t.pivotCellsRaw(cfg)
-		})
+	if deps, ok := t.pivotDeps(cfg); ok {
+		return cachedOn(t, keyOf("pivot:", cfg), deps, func() ([][]string, error) { return t.pivotCellsRaw(cfg) })
 	}
 	return cached(t, keyOf("pivot:", cfg), func() ([][]string, error) { return t.pivotCellsRaw(cfg) })
 }
@@ -54,36 +102,40 @@ func (t *tx) pivotFlat(cfg PivotConfig) ([][]string, error) {
 // champs en lignes (rows : une description par ligne sous l'en-tête), à plat
 // sinon (rows nil).
 func (t *tx) pivotCells(cfg PivotConfig) ([][]string, []PivotRowInfo, error) {
+	v, err := t.pivotViewOf(cfg)
+	return v.cells, v.rows, err
+}
+
+// pivotViewOf est pivotCells avec les en-têtes imbriqués des colonnes.
+func (t *tx) pivotViewOf(cfg PivotConfig) (pivotView, error) {
 	cfg.Hand = nil // colonnes saisies : ajoutées après le calcul (pivothand.go)
 	cfg.Styles = nil
+	cfg.Slicers = calcSlicers(cfg.Slicers) // leur place ne change pas le calcul
 	calc := func() (pivotView, error) {
 		work.Phase(t.Ctx, "pivot")
 		return t.pivotViewRaw(cfg)
 	}
-	var v pivotView
-	var err error
-	if tb, terr := t.tableByName(cfg.Source); terr == nil && !cfg.byFormula() {
-		v, err = cachedOn(t, keyOf("pivotview:", cfg), []string{tb.sql()}, calc)
-	} else {
-		v, err = cached(t, keyOf("pivotview:", cfg), calc)
+	if deps, ok := t.pivotDeps(cfg); ok {
+		return cachedOn(t, keyOf("pivotview:", cfg), deps, calc)
 	}
-	return v.cells, v.rows, err
+	return cached(t, keyOf("pivotview:", cfg), calc)
 }
 
 // pivotLater dit si le calcul du TCD (pivotCells) parcourrait un grand
 // tableau (plus de quickRows lignes) sans être en cache (LayoutFirst).
 func (t *tx) pivotLater(cfg PivotConfig) bool {
 	cfg.Hand, cfg.Styles = nil, nil
+	cfg.Slicers = calcSlicers(cfg.Slicers)
 	tb, err := t.tableByName(cfg.Source)
 	if err != nil || tb.Rows <= quickRows {
 		return false
 	}
 	key := keyOf("pivotview:", cfg)
-	if cfg.byFormula() {
-		_, ok := peek[pivotView](t, key)
+	if deps, ok := t.pivotDeps(cfg); ok {
+		_, ok := peekOn[pivotView](t, key, deps)
 		return !ok
 	}
-	_, ok := peekOn[pivotView](t, key, []string{tb.sql()})
+	_, ok := peek[pivotView](t, key)
 	return !ok
 }
 

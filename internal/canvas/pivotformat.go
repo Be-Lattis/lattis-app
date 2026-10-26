@@ -48,10 +48,16 @@ func (t *tx) pivotFormats(cfg PivotConfig, cells [][]string) ([]string, error) {
 }
 
 func (t *tx) pivotValueFormat(tb Table, v PivotValue, c *Column) (string, error) {
-	if v.Show == "" && v.Format != "" && json.Valid([]byte(v.Format)) {
+	// Une différence ou un cumul reste un montant (format de la valeur) ; un
+	// pourcentage s'écrit déjà en %, un rang en entier ; un index, deux décimales.
+	amount := v.Show == "" || v.Show == "diff" || v.Show == "runTotal"
+	if amount && v.Format != "" && json.Valid([]byte(v.Format)) {
 		return v.Format, nil
 	}
-	if v.Show != "" || c == nil || v.Agg == "count" || v.Agg == "countDistinct" {
+	if v.Show == "index" {
+		return `{"dp":2}`, nil
+	}
+	if !amount || c == nil || v.Agg == "count" || v.Agg == "countDistinct" {
 		return "", nil
 	}
 	var raw string

@@ -776,7 +776,7 @@
 			"filters": "Filters",
 			"filters.hint": "Drag a field here to filter the whole report",
 			"cols": "Columns",
-			"cols.hint": "Its values become columns (one field)",
+			"cols.hint": "Drag here the fields whose values become columns",
 			"rows": "Rows",
 			"rows.hint": "Drag here the fields that group the rows",
 			"values": "Values",
@@ -794,7 +794,18 @@
 			"none": "No calculation",
 			"pctTotal": "% of grand total",
 			"pctCol": "% of column total",
-			"pctRow": "% of row total"
+			"pctRow": "% of row total",
+			"pctOf": "% of",
+			"pctParentRow": "% of parent row total",
+			"pctParentCol": "% of parent column total",
+			"pctParent": "% of parent total",
+			"diff": "Difference from",
+			"pctDiff": "% difference from",
+			"runTotal": "Running total in",
+			"pctRunTotal": "% running total in",
+			"rankAsc": "Rank smallest to largest",
+			"rankDesc": "Rank largest to smallest",
+			"index": "Index"
 		},
 		"format": {
 			"auto": "Automatic (source format)",
@@ -925,7 +936,40 @@
 		"nameBadge": {
 			"tooltip": "PivotTable “{name}”: formulas read it like a table ({name}[Column]); click to open its pane"
 		},
-		"computing": "PivotTable: calculating…"
+		"computing": "PivotTable: calculating…",
+		"valueSettings.baseField": "Base field",
+		"valueSettings.baseItem": "Base item",
+		"valueSettings.prev": "(previous)",
+		"valueSettings.next": "(next)",
+		"valueSettings.noBase": "First put a field in rows or columns.",
+		"group": {
+			"years": "Years",
+			"quarters": "Quarters",
+			"months": "Months",
+			"days": "Days",
+			"menu": "Group…",
+			"ungroup": "Ungroup",
+			"title": "Group “{field}”",
+			"by": "By",
+			"start": "Start",
+			"end": "End",
+			"step": "Interval",
+			"noLevel": "Choose at least one level.",
+			"badStep": "Positive interval, end after start.",
+			"quarter": "Q{n}"
+		},
+		"slicer": {
+			"insert": "Insert slicer",
+			"timeline": "Insert timeline",
+			"clear": "Clear filter",
+			"connect": "Also filters",
+			"remove": "Delete slicer",
+			"columns": "Button columns",
+			"all": "All periods",
+			"hint": "Ctrl+click: several items",
+			"hintTimeline": "Shift+click: a range",
+			"empty": "No values"
+		}
 	},
 	"readFail": "The table “{table}” couldn't be reread; it will be reloaded.",
 	"refLink": {

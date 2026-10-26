@@ -776,7 +776,7 @@
 			"filters": "筛选",
 			"filters.hint": "将字段拖到此处可筛选整个报表",
 			"cols": "列",
-			"cols.hint": "其值变为列（一个字段）",
+			"cols.hint": "将其值作为列的字段拖到此处",
 			"rows": "行",
 			"rows.hint": "将用于对行分组的字段拖到此处",
 			"values": "值",
@@ -794,7 +794,18 @@
 			"none": "无计算",
 			"pctTotal": "总计的百分比",
 			"pctCol": "列汇总的百分比",
-			"pctRow": "行汇总的百分比"
+			"pctRow": "行汇总的百分比",
+			"pctOf": "百分比",
+			"pctParentRow": "父行汇总的百分比",
+			"pctParentCol": "父列汇总的百分比",
+			"pctParent": "父级汇总的百分比",
+			"diff": "差异",
+			"pctDiff": "差异百分比",
+			"runTotal": "按某一字段汇总",
+			"pctRunTotal": "按某一字段汇总的百分比",
+			"rankAsc": "升序排列",
+			"rankDesc": "降序排列",
+			"index": "指数"
 		},
 		"format": {
 			"auto": "自动（源格式）",
@@ -925,7 +936,40 @@
 		"nameBadge": {
 			"tooltip": "数据透视表“{name}”：公式像表格一样读取它（{name}[列]）；单击打开其窗格"
 		},
-		"computing": "数据透视表：正在计算…"
+		"computing": "数据透视表：正在计算…",
+		"valueSettings.baseField": "基本字段",
+		"valueSettings.baseItem": "基本项",
+		"valueSettings.prev": "(上一个)",
+		"valueSettings.next": "(下一个)",
+		"valueSettings.noBase": "请先在行或列中放置字段。",
+		"group": {
+			"years": "年",
+			"quarters": "季度",
+			"months": "月",
+			"days": "日",
+			"menu": "组合…",
+			"ungroup": "取消组合",
+			"title": "组合“{field}”",
+			"by": "步长",
+			"start": "起始于",
+			"end": "终止于",
+			"step": "间隔",
+			"noLevel": "请至少选择一个级别。",
+			"badStep": "间隔须为正，终止须在起始之后。",
+			"quarter": "第{n}季度"
+		},
+		"slicer": {
+			"insert": "插入切片器",
+			"timeline": "插入日程表",
+			"clear": "清除筛选",
+			"connect": "同时筛选",
+			"remove": "删除切片器",
+			"columns": "按钮列数",
+			"all": "所有期间",
+			"hint": "Ctrl+单击：多个项",
+			"hintTimeline": "Shift+单击：一个范围",
+			"empty": "无值"
+		}
 	},
 	"readFail": "无法重新读取表格“{table}”；将重新加载它。",
 	"refLink": {

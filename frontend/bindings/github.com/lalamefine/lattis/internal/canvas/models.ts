@@ -1635,6 +1635,12 @@ export interface PivotConfig {
     "lang"?: string;
     "source": string;
     "rowFields"?: string[] | null;
+
+    /**
+     * ColFields : champs en colonnes, du plus large au plus fin (en-têtes
+     * imbriqués, pivotcube.go). Cols est l'ancien format (un seul champ).
+     */
+    "colFields"?: string[] | null;
     "cols"?: string;
     "values"?: PivotValue[] | null;
     "filters"?: PivotFilter[] | null;
@@ -1687,6 +1693,27 @@ export interface PivotConfig {
     "expanded"?: (string[] | null)[] | null;
 
     /**
+     * Même chose pour les groupes des champs en colonnes.
+     */
+    "colCollapseAll"?: boolean;
+    "colCollapsed"?: (string[] | null)[] | null;
+    "colExpanded"?: (string[] | null)[] | null;
+
+    /**
+     * Groups : champs groupés (« Grouper… », pivotgroup.go) : dates par
+     * années, trimestres, mois, jours ; nombres par intervalles.
+     */
+    "groups"?: PivotGroup[] | null;
+
+    /**
+     * Slicers : segments et chronologies posés sur la feuille du TCD
+     * (pivotslicer.go) ; leur sélection filtre le TCD, et les autres TCD de
+     * même source qu'ils désignent (Linked, posé à la lecture).
+     */
+    "slicers"?: PivotSlicer[] | null;
+    "linked"?: PivotFilter[] | null;
+
+    /**
      * Hand : colonnes saisies à droite du TCD (pivothand.go, décision 0008) :
      * leurs noms et formules ; les valeurs sont rangées par étiquettes de
      * lignes dans _lattis_hand_kept (owner « pivot:<id> »).
@@ -1727,6 +1754,40 @@ export interface PivotFilter {
      * (Choice), Field n'en est que le nom.
      */
     "formula"?: string;
+
+    /**
+     * Period : filtre d'une chronologie (pivotslicer.go) : Values sont des
+     * périodes ("2024", "2024-T2", "2024-03", "2024-03-15") de ce niveau
+     * (years, quarters, months, days) de la date Field.
+     */
+    "period"?: string;
+}
+
+/**
+ * PivotGroup est un champ groupé.
+ */
+export interface PivotGroup {
+    "field": string;
+
+    /**
+     * By : niveaux d'une date, du plus large au plus fin : years, quarters,
+     * months, days ; vide : intervalles de nombres (Start, End, Step).
+     */
+    "by"?: string[] | null;
+
+    /**
+     * Names : noms des champs ajoutés pour les niveaux plus larges que le
+     * dernier (By sans son dernier) ; à défaut, « Années »…
+     */
+    "names"?: string[] | null;
+
+    /**
+     * Intervalles : depuis Start (0 sans), par pas de Step ; les nombres
+     * sous Start ou au-dessus de End forment « <Start » et « >End ».
+     */
+    "start"?: number | null;
+    "end"?: number | null;
+    "step"?: number;
 }
 
 /**
@@ -1780,6 +1841,19 @@ export interface PivotInfo {
      * sous-total. Absent avec un seul champ en lignes.
      */
     "rows": PivotRowInfo[] | null;
+
+    /**
+     * ColHead : lignes d'en-tête au-dessus de Cells[0] avec plusieurs champs
+     * en colonnes (l'étiquette d'un groupe au-dessus de sa première colonne) ;
+     * Cols décrit chaque colonne (groupe plié, sous-total, total), comme Rows.
+     */
+    "colHead"?: (string[] | null)[] | null;
+    "cols"?: PivotRowInfo[] | null;
+
+    /**
+     * Slicers : éléments des segments (PivotConfig.Slicers), dans l'ordre.
+     */
+    "slicers"?: PivotSlicerInfo[] | null;
 
     /**
      * Formats : format de nombre par défaut de chaque colonne (style JSON,
@@ -1851,6 +1925,55 @@ export interface PivotRowInfo {
 }
 
 /**
+ * PivotSlicer est un segment (Kind vide) ou une chronologie ("timeline").
+ */
+export interface PivotSlicer {
+    "field": string;
+
+    /**
+     * Values : valeurs gardées (vide : toutes) ; pour une chronologie, des
+     * périodes de son niveau (« 2024-03 »).
+     */
+    "values"?: string[] | null;
+    "kind"?: string;
+
+    /**
+     * Level : niveau d'une chronologie : years, quarters, months (défaut), days.
+     */
+    "level"?: string;
+
+    /**
+     * Place sur la feuille, comme un graphique : cellule d'ancrage, décalage
+     * et taille en pixels (0 : taille par défaut).
+     */
+    "row": number;
+    "col": number;
+    "offX"?: number;
+    "offY"?: number;
+    "width"?: number;
+    "height"?: number;
+
+    /**
+     * Columns : boutons par ligne (1 par défaut).
+     */
+    "columns"?: number;
+
+    /**
+     * Pivots : autres TCD (par leur nom) que le segment filtre aussi.
+     */
+    "pivots"?: string[] | null;
+}
+
+/**
+ * PivotSlicerInfo : les éléments d'un segment (valeurs du champ dans toute
+ * la source, avec leur nombre de lignes), dans l'ordre de PivotConfig.Slicers.
+ */
+export interface PivotSlicerInfo {
+    "items": FilterValue[] | null;
+    "error"?: string;
+}
+
+/**
  * PivotValue est un champ de la zone Valeurs : la colonne agrégée (vide :
  * nombre de lignes), la fonction et l'affichage (valeur ou pourcentage).
  */
@@ -1863,9 +1986,20 @@ export interface PivotValue {
     "agg": string;
 
     /**
-     * "", pctTotal, pctRow, pctCol
+     * Show : « Afficher les valeurs » (pivotshow.go) : "", pctTotal, pctCol,
+     * pctRow, pctOf, pctParentRow, pctParentCol, pctParent, diff, pctDiff,
+     * runTotal, pctRunTotal, rankAsc, rankDesc, index.
      */
     "show"?: string;
+
+    /**
+     * BaseField : champ de base (en lignes ou en colonnes) des calculs qui en
+     * demandent un ; BaseItem son élément de base (pctOf, diff, pctDiff), ou
+     * BasePos "prev" / "next" (élément précédent, suivant).
+     */
+    "baseField"?: string;
+    "baseItem"?: string;
+    "basePos"?: string;
 
     /**
      * Label remplace le nom affiché (« Somme de Ventes ») : le nom

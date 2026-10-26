@@ -57,99 +57,66 @@ func (c PivotConfig) folded(path []string) bool {
 // plat (et son cache) n'en dépend pas.
 func (c PivotConfig) flat() PivotConfig {
 	c.Subtotals, c.CollapseAll, c.Collapsed, c.Expanded = "", false, nil, nil
+	c.ColCollapseAll, c.ColCollapsed, c.ColExpanded = false, nil, nil
 	c.Hand = nil   // colonnes saisies : ajoutées après le calcul
 	c.Styles = nil // mise en forme : sans effet sur le calcul (ni sur son cache)
+	c.Slicers = calcSlicers(c.Slicers)
 	return c
 }
 
-// truncated garde les n premiers champs des lignes, sans total général : les
-// sous-totaux du niveau n-1. Les valeurs gardées par le ▾ d'un champ retiré
-// filtrent toujours (un sous-total ne compte que les lignes affichées).
-func (c PivotConfig) truncated(n int) PivotConfig {
-	s := c.flat()
-	s.RowFields = append([]string{}, c.RowFields[:n]...)
-	s.NoGrandTotal = true
-	deeper := map[string]bool{}
-	for _, f := range c.RowFields[n:] {
-		deeper[strings.ToLower(f)] = true
-	}
-	s.Filters = append([]PivotFilter{}, c.Filters...)
-	s.Items = nil
-	for _, it := range c.Items {
-		if deeper[strings.ToLower(it.Field)] {
-			s.Filters = append(s.Filters, it)
-		} else {
-			s.Items = append(s.Items, it)
-		}
-	}
-	return s
+// cubed : ce dont dépendent les agrégats (pivotCube) : ni les totaux
+// affichés, ni le nom ou la langue des libellés.
+func (c PivotConfig) cubed() PivotConfig {
+	c = c.flat()
+	c.NoGrandTotal, c.Name = false, ""
+	return c
 }
 
 type pivotView struct {
 	cells [][]string
 	rows  []PivotRowInfo
+	// colHead : lignes d'en-tête au-dessus de cells[0] (plusieurs champs en
+	// colonnes) ; cols : description de chaque colonne (groupe, sous-total).
+	colHead [][]string
+	cols    []PivotRowInfo
 }
 
-// pivotViewRaw met le calcul à plat en arborescence (plusieurs champs en
-// lignes) ; avec un seul champ, il est rendu tel quel.
+// pivotViewRaw met le TCD en forme : en arborescence avec plusieurs champs
+// en lignes, en-têtes imbriqués avec plusieurs champs en colonnes ; sinon,
+// le calcul à plat tel quel.
 func (t *tx) pivotViewRaw(raw PivotConfig) (pivotView, error) {
 	cfg := raw.normalized()
-	flat, err := t.pivotFlat(cfg)
-	if err != nil || !cfg.compact() || len(flat) == 0 {
+	if !cfg.compact() && len(cfg.ColFields) < 2 {
+		flat, err := t.pivotFlat(cfg)
 		return pivotView{cells: flat}, err
 	}
-	nk := len(cfg.RowFields)
-	// Sous-totaux de chaque niveau de groupe, par chemin d'étiquettes.
-	subs := make([]map[string][]string, nk-1)
-	for d := range nk - 1 {
-		cells, err := t.pivotFlat(cfg.truncated(d + 1))
-		if err != nil {
-			return pivotView{}, err
-		}
-		m := map[string][]string{}
-		for _, r := range cells[1:] {
-			if len(r) > d {
-				m[strings.Join(r[:d+1], "\x00")] = r[d+1:]
-			}
-		}
-		subs[d] = m
+	cb, err := t.pivotCube(cfg)
+	if err != nil {
+		return pivotView{}, err
 	}
-	body := flat[1:]
-	var total []string
-	if !cfg.NoGrandTotal && len(body) > 0 {
-		total, body = body[len(body)-1], body[:len(body)-1]
-	}
-	// Arbre des groupes, dans l'ordre de première apparition (celui du
-	// calcul à plat, tri des étiquettes compris).
-	type node struct {
-		label string
-		path  []string
-		vals  []string
-		kids  []*node
-		index map[string]*node
-	}
-	root := &node{index: map[string]*node{}}
-	for _, r := range body {
-		if len(r) < nk {
-			continue
+	entries := cb.colEntries(cfg, false)
+	measures := cb.header(cfg, entries, false)
+	totalLine := len(cfg.Values) > 0 && (cb.nr == 0 || !cfg.NoGrandTotal)
+	if !cfg.compact() {
+		// Un champ en lignes (ou aucun) : une colonne par champ.
+		header := append([]string{}, cfg.RowFields...)
+		if cb.nr == 0 {
+			header = append(header, "")
 		}
-		n := root
-		for d := range nk {
-			k := r[d]
-			c := n.index[k]
-			if c == nil {
-				c = &node{label: k, path: append([]string{}, r[:d+1]...), index: map[string]*node{}}
-				n.index[k] = c
-				n.kids = append(n.kids, c)
-			}
-			n = c
+		out := pivotView{cells: [][]string{append(header, measures...)}}
+		for _, r := range cb.rows {
+			out.cells = append(out.cells, append(append([]string{}, r...), cb.line(r, entries)...))
 		}
-		n.vals = r[nk:]
+		if totalLine {
+			out.cells = append(out.cells, append([]string{"Total"}, cb.line(nil, entries)...))
+		}
+		out.colHead, out.cols = pivotColHead(cb, entries, len(header)), pivotColsInfo(cb, entries, len(header))
+		return out, nil
 	}
-	nm := len(flat[0]) - nk
+	nk := cb.nr
+	nm := len(measures)
 	blank := func() []string { return make([]string, nm) }
-	header := append([]string{PivotRowsLabel}, flat[0][nk:]...)
-	out := pivotView{cells: [][]string{header}}
+	out := pivotView{cells: [][]string{append([]string{PivotRowsLabel}, measures...)}}
 	add := func(label string, vals []string, info PivotRowInfo) {
 		if len(vals) != nm {
 			vals = blank()
@@ -157,39 +124,56 @@ func (t *tx) pivotViewRaw(raw PivotConfig) (pivotView, error) {
 		out.cells = append(out.cells, append([]string{label}, vals...))
 		out.rows = append(out.rows, info)
 	}
-	var emit func(n *node, d int)
-	emit = func(n *node, d int) {
-		for _, c := range n.kids {
+	// Arbre des groupes, dans l'ordre des lignes de détail (tri des
+	// étiquettes compris).
+	var emit func(prefix []string, d int)
+	emit = func(prefix []string, d int) {
+		for _, k := range cb.children(0, prefix) {
+			path := append(append([]string{}, prefix...), k)
 			if d == nk-1 {
-				add(c.label, c.vals, PivotRowInfo{Depth: d, Path: c.path})
+				add(k, cb.line(path, entries), PivotRowInfo{Depth: d, Path: path})
 				continue
 			}
-			sub := subs[d][strings.Join(c.path, "\x00")]
-			info := PivotRowInfo{Depth: d, Group: true, Path: c.path}
-			if cfg.folded(c.path) {
+			info := PivotRowInfo{Depth: d, Group: true, Path: path}
+			if cfg.folded(path) {
 				// Plié : le sous-total sur la ligne du groupe, quel que soit
-				// l'emplacement choisi (comme Excel).
+				// l'emplacement choisi (comme un tableur).
 				info.Collapsed = true
-				add(c.label, sub, info)
+				add(k, cb.line(path, entries), info)
 				continue
 			}
 			switch cfg.Subtotals {
 			case SubtotalsBottom:
-				add(c.label, nil, info)
-				emit(c, d+1)
-				add("Total "+c.label, sub, PivotRowInfo{Depth: d, Subtotal: true, Path: c.path})
+				add(k, nil, info)
+				emit(path, d+1)
+				add("Total "+k, cb.line(path, entries), PivotRowInfo{Depth: d, Subtotal: true, Path: path})
 			case SubtotalsNone:
-				add(c.label, nil, info)
-				emit(c, d+1)
+				add(k, nil, info)
+				emit(path, d+1)
 			default:
-				add(c.label, sub, info)
-				emit(c, d+1)
+				add(k, cb.line(path, entries), info)
+				emit(path, d+1)
 			}
 		}
 	}
-	emit(root, 0)
-	if total != nil {
-		add(total[0], total[nk:], PivotRowInfo{Total: true})
+	emit(nil, 0)
+	if totalLine {
+		add("Total", cb.line(nil, entries), PivotRowInfo{Total: true})
 	}
+	out.colHead, out.cols = pivotColHead(cb, entries, 1), pivotColsInfo(cb, entries, 1)
 	return out, nil
+}
+
+// pivotFullHeader : le nom complet de chaque colonne affichée (« 2024 · T1 »
+// avec plusieurs champs en colonnes), comme les nomment les formules.
+func pivotFullHeader(v pivotView) []string {
+	out := append([]string{}, v.cells[0]...)
+	for j := range out {
+		if j < len(v.cols) {
+			if p := v.cols[j].Path; len(p) > 1 && !v.cols[j].Total {
+				out[j] = strings.Join(append(append([]string{}, p[:len(p)-1]...), out[j]), " · ")
+			}
+		}
+	}
+	return out
 }

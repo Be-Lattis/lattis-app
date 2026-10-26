@@ -44,7 +44,7 @@ describe('changer la source', () => {
 		name: 'TCD1',
 		source: 'Requête1',
 		rowFields: ['Pays', 'Ville'],
-		cols: 'Année',
+		colFields: ['Année'],
 		values: [{ field: 'Ventes', agg: 'sum' }, { agg: 'count' }],
 		filters: [{ field: 'Canal', values: ['Web'] }],
 		items: [{ field: 'Ville', values: ['Lyon'] }],
@@ -60,7 +60,7 @@ describe('changer la source', () => {
 		expect(c.source).toBe('Ventes2');
 		expect(c.name).toBe('TCD1');
 		expect(c.rowFields).toEqual(['pays']);
-		expect(c.cols).toBeUndefined();
+		expect(c.colFields).toBeUndefined();
 		expect(c.values).toEqual([{ field: 'Ventes', agg: 'sum' }, { agg: 'count' }]);
 		expect(c.filters).toEqual([{ field: 'Canal', values: ['Web'] }]);
 		expect(c.items).toBeUndefined();

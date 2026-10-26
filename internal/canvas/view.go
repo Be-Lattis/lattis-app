@@ -569,8 +569,8 @@ func (m *Model) AllTables(ctx context.Context) ([]TableNames, error) {
 				continue
 			}
 			tn := TableNames{Name: p.Cfg.Name, Kind: "pivot", Sheet: p.Sheet, Key: -1, SQL: `"` + p.Cfg.Name + `"`, Rows: nrows}
-			if cfg := p.Cfg.normalized(); cfg.Cols != "" {
-				tn.ColsField, tn.ColsFrom = cfg.Cols, min(len(cfg.RowFields), len(cols))+1
+			if cfg := p.Cfg.normalized(); len(cfg.ColFields) > 0 {
+				tn.ColsField, tn.ColsFrom = strings.Join(cfg.ColFields, " · "), min(len(cfg.RowFields), len(cols))+1
 			}
 			for i, c := range cols {
 				tn.Columns = append(tn.Columns, c)

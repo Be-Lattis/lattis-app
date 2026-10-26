@@ -42,7 +42,11 @@ Eine berechnete Spalte kann noch nicht als Feld verwendet werden.
 
 ## Zusammenfassung und Anzeige der Werte {#synthese-et-affichage-des-valeurs}
 
-Zusammenfassungen: Summe, Anzahl, Eindeutige Anzahl, Mittelwert, Min, Max. Eine Zahlenspalte wird standardmäßig summiert, die anderen gezählt. Die Anzeige kann auch ein Prozentsatz sein: des Gesamtergebnisses, der Spaltensumme oder der Zeilensumme. Ein Zahlenformat (Währung, Prozent, Dezimalstellen) wird pro Wert gewählt.
+Zusammenfassungen: Summe, Anzahl, Eindeutige Anzahl, Mittelwert, Min, Max. Eine Zahlenspalte wird standardmäßig summiert, die anderen gezählt. **Werte anzeigen als** (Wertfeldeinstellungen) berechnet auch: % des Gesamtergebnisses, der Spalte, der Zeile, der übergeordneten Zeile oder Spalte, des übergeordneten Ergebnisses; % von, Differenz und % Differenz zu einem Element (oder dem vorherigen, dem nächsten) eines Basisfelds; kumuliertes Ergebnis und % kumuliert; Rang; Index. Ein Zahlenformat (Währung, Prozent, Dezimalstellen) wird pro Wert gewählt. Eine berechnete Spalte der Quelltabelle dient wie die anderen als Feld.
+
+## Spalten, Gruppen und Datenschnitte {#colonnes-groupes-et-segments}
+
+Mehrere Felder in **Spalten** ergeben verschachtelte Überschriften, mit einem Teilergebnis pro Gruppe und einem −/+-Kästchen zum Reduzieren. **Gruppieren…** (Menü ▾ eines Datums- oder Zahlenfelds im Bereich) ordnet ein Datum nach Jahren, Quartalen, Monaten oder Tagen (mehrere Ebenen zugleich: Jahre und Quartale werden Felder vor dem Datum) und eine Zahl nach Intervallen (Start, Ende, Schritt); **Gruppierung aufheben** kehrt zu den Werten zurück. **Datenschnitt einfügen** legt auf dem Blatt ein Feld mit Schaltflächen ab, das die PivotTable filtert: Klick für einen Wert, Strg+Klick für weitere, der Trichter nimmt alles zurück; Rechtsklick, um auch andere PivotTables derselben Quelle zu filtern. **Zeitachse einfügen** macht dasselbe mit den Zeiträumen eines Datums (Umschalt+Klick: ein Bereich).
 
 ## Beschriftungen sortieren und filtern {#trier-et-filtrer-les-etiquettes}
 

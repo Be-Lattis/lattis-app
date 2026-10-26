@@ -34,12 +34,14 @@ export const ROW_COUNT = '';
 export const aggs = (): [PivotValue['agg'], string][] => (['sum', 'count', 'countDistinct', 'avg', 'min', 'max'] as const).map((a) => [a, tAny(`grid.pivot.agg.${a}`)]);
 
 /** Calculs « Afficher les valeurs » : [valeur, libellé]. */
-export const shows = (): [string, string][] => [
-	['', t('grid.pivot.show.none')],
-	['pctTotal', t('grid.pivot.show.pctTotal')],
-	['pctCol', t('grid.pivot.show.pctCol')],
-	['pctRow', t('grid.pivot.show.pctRow')]
-];
+export const SHOWS = ['', 'pctTotal', 'pctCol', 'pctRow', 'pctOf', 'pctParentRow', 'pctParentCol', 'pctParent', 'diff', 'pctDiff', 'runTotal', 'pctRunTotal', 'rankAsc', 'rankDesc', 'index'] as const;
+export const shows = (): [string, string][] => SHOWS.map((s) => [s, tAny(`grid.pivot.show.${s || 'none'}`)]);
+
+/** Calculs qui demandent un champ de base ; base : et un élément de base. */
+export const needsBaseField = (show: string) => ['pctOf', 'diff', 'pctDiff', 'pctParent', 'runTotal', 'pctRunTotal', 'rankAsc', 'rankDesc'].includes(show);
+export const needsBaseItem = (show: string) => ['pctOf', 'diff', 'pctDiff'].includes(show);
+/** Calcul affiché en pourcentage (sans format de nombre). */
+export const isPctShow = (show: string) => show.startsWith('pct');
 
 /** Formats de nombre proposés pour une valeur (style JSON, voir numfmt.ts). */
 export const formats = (): [string, string][] => [
@@ -53,8 +55,8 @@ export const formats = (): [string, string][] => [
 
 export const isNumericType = (type: string) => type === 'integer' || type === 'decimal';
 
-/** Une colonne calculée ne sert pas (encore) de champ : voir pivotPlan côté Go. */
-export const isUsable = (f: PivotField) => f.type !== 'formula';
+/** Tout champ sert (une colonne calculée aussi : voir computedField côté Go). */
+export const isUsable = (f: PivotField) => !!f.name;
 
 /** Icône du type de champ (voir icons.ts). */
 export function fieldIcon(type: string): 'type-number' | 'type-text' | 'type-date' | 'type-boolean' | 'function' {
@@ -63,6 +65,7 @@ export function fieldIcon(type: string): 'type-number' | 'type-text' | 'type-dat
 		case 'decimal':
 			return 'type-number';
 		case 'date':
+		case 'group': // niveau d'une date groupée (Années…)
 			return 'type-date';
 		case 'boolean':
 			return 'type-boolean';
@@ -106,7 +109,7 @@ export function zoneItems(c: PivotConfig, z: Zone): string[] {
 		case 'rows':
 			return c.rowFields ?? [];
 		case 'cols':
-			return c.cols ? [c.cols] : [];
+			return c.colFields ?? [];
 		case 'filters':
 			return (c.filters ?? []).map((f) => f.field);
 		case 'values':
@@ -122,7 +125,7 @@ export function usedFields(c: PivotConfig): Set<string> {
 }
 
 /** Le rapport est vide : ni lignes, ni colonnes, ni valeurs. */
-export const isEmpty = (c: PivotConfig) => !c.rowFields?.length && !c.cols && !c.values?.length;
+export const isEmpty = (c: PivotConfig) => !c.rowFields?.length && !c.colFields?.length && !c.values?.length;
 
 // Copie profonde (les objets du pont Go ne passent pas structuredClone).
 export const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -130,7 +133,7 @@ export const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 /** Nettoie une configuration : listes vides et options inutiles retirées. */
 function tidy(c: PivotConfig): PivotConfig {
 	if (!c.rowFields?.length) delete c.rowFields;
-	if (!c.cols) delete c.cols;
+	if (!c.colFields?.length) delete c.colFields;
 	if (!c.values?.length) delete c.values;
 	if (!c.filters?.length) delete c.filters;
 	return c;
@@ -140,7 +143,7 @@ function tidy(c: PivotConfig): PivotConfig {
 export function removeAt(cfg: PivotConfig, z: Zone, i: number): PivotConfig {
 	const c = clone(cfg);
 	if (z === 'rows') c.rowFields = (c.rowFields ?? []).filter((_, k) => k !== i);
-	else if (z === 'cols') c.cols = undefined;
+	else if (z === 'cols') c.colFields = (c.colFields ?? []).filter((_, k) => k !== i);
 	else if (z === 'filters') c.filters = (c.filters ?? []).filter((_, k) => k !== i);
 	else c.values = (c.values ?? []).filter((_, k) => k !== i);
 	return tidy(c);
@@ -150,7 +153,7 @@ export function removeAt(cfg: PivotConfig, z: Zone, i: number): PivotConfig {
 export function removeField(cfg: PivotConfig, field: string): PivotConfig {
 	const c = clone(cfg);
 	c.rowFields = (c.rowFields ?? []).filter((f) => f !== field);
-	if (c.cols === field) c.cols = undefined;
+	c.colFields = (c.colFields ?? []).filter((f) => f !== field);
 	c.filters = (c.filters ?? []).filter((f) => f.field !== field);
 	c.values = (c.values ?? []).filter((v) => (v.field ?? ROW_COUNT) !== field);
 	return tidy(c);
@@ -165,13 +168,16 @@ export function removeField(cfg: PivotConfig, field: string): PivotConfig {
  */
 export function changeSource(cfg: PivotConfig, source: string, fields: PivotField[]): PivotConfig {
 	const c = clone(cfg);
-	const names = new Map(fields.filter((f) => f.type !== 'formula').map((f) => [f.name.toLowerCase(), f.name]));
+	const names = new Map(fields.map((f) => [f.name.toLowerCase(), f.name]));
 	const keep = (f: string) => names.get(f.toLowerCase());
 	c.source = source;
-	// Champs calculés : leurs formules citent les colonnes de l'ancienne source.
+	// Champs calculés : leurs formules citent les colonnes de l'ancienne source ;
+	// groupes et segments repartent de zéro.
 	delete c.calc;
+	delete c.groups;
+	delete c.slicers;
 	c.rowFields = (c.rowFields ?? []).map(keep).filter((f): f is string => !!f);
-	c.cols = c.cols ? keep(c.cols) : undefined;
+	c.colFields = (c.colFields ?? []).map(keep).filter((f): f is string => !!f);
 	c.values = (c.values ?? []).flatMap((v) => {
 		if (!v.field) return [v];
 		const f = keep(v.field);
@@ -208,8 +214,7 @@ export const accepts = (z: Zone, field: string) => z === 'values' || field !== R
 /**
  * Ajoute un champ à une zone, au rang at (à la fin par défaut). Comme Excel,
  * un champ n'est que dans une zone parmi Filtres, Colonnes et Lignes : il
- * quitte les deux autres. La zone Colonnes ne prend qu'un champ : le nouveau
- * remplace l'ancien. En Valeurs, un champ peut revenir plusieurs fois ; value
+ * quitte les deux autres. En Valeurs, un champ peut revenir plusieurs fois ; value
  * garde les réglages d'une valeur déplacée.
  */
 export function insertAt(cfg: PivotConfig, z: Zone, field: string, fields: PivotField[], at?: number, value?: PivotValue): PivotConfig {
@@ -225,10 +230,10 @@ export function insertAt(cfg: PivotConfig, z: Zone, field: string, fields: Pivot
 	}
 	const keep = z === 'filters' ? (c.filters ?? []).find((f) => f.field === field) : undefined;
 	c.rowFields = (c.rowFields ?? []).filter((f) => f !== field);
-	if (c.cols === field) c.cols = undefined;
+	c.colFields = (c.colFields ?? []).filter((f) => f !== field);
 	c.filters = (c.filters ?? []).filter((f) => f.field !== field);
 	if (z === 'rows') c.rowFields = put(c.rowFields, field);
-	else if (z === 'cols') c.cols = field;
+	else if (z === 'cols') c.colFields = put(c.colFields, field);
 	else c.filters = put(c.filters, keep ?? { field, values: [] }); // aucune valeur choisie : toutes les lignes
 	return tidy(c);
 }
@@ -289,7 +294,7 @@ export function setValue(cfg: PivotConfig, i: number, patch: Partial<PivotValue>
 	c.values = (c.values ?? []).map((v, k) => {
 		if (k !== i) return v;
 		const n: PivotValue = { ...v, ...patch };
-		for (const key of ['show', 'label', 'format'] as const) if (!n[key]) delete n[key];
+		for (const key of ['show', 'label', 'format', 'baseField', 'baseItem', 'basePos'] as const) if (!n[key]) delete n[key];
 		return n;
 	});
 	return c;

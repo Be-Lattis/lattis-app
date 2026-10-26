@@ -42,7 +42,11 @@ Une colonne calculée ne sert pas encore de champ.
 
 ## Synthèse et affichage des valeurs
 
-Synthèses : Somme, Nombre, Nombre distinct, Moyenne, Min, Max. Une colonne de nombres est sommée par défaut, les autres comptées. L'affichage peut aussi être un pourcentage : du total général, du total de la colonne ou du total de la ligne. Un format de nombre (monétaire, pourcentage, décimales) se choisit par valeur.
+Synthèses : Somme, Nombre, Nombre distinct, Moyenne, Min, Max. Une colonne de nombres est sommée par défaut, les autres comptées. **Afficher les valeurs** (Paramètres des champs de valeurs) calcule aussi : % du total général, de la colonne, de la ligne, de la ligne ou de la colonne parente, du total parent ; % de, différence et % de différence par rapport à un élément (ou au précédent, au suivant) d'un champ de base ; résultat cumulé et % cumulé ; rang ; index. Un format de nombre (monétaire, pourcentage, décimales) se choisit par valeur. Une colonne calculée du tableau source sert de champ comme les autres.
+
+## Colonnes, groupes et segments
+
+Plusieurs champs en **Colonnes** donnent des en-têtes imbriqués, avec un sous-total par groupe et une case −/+ pour plier un groupe. **Grouper…** (menu ▾ d'un champ date ou nombre dans le volet) range une date par années, trimestres, mois ou jours (plusieurs niveaux à la fois : Années et Trimestres deviennent des champs devant la date) et un nombre par intervalles (début, fin, pas) ; **Dissocier** revient aux valeurs. **Insérer un segment** pose sur la feuille un panneau de boutons qui filtre le TCD : clic pour une valeur, Ctrl+clic pour en ajouter, l'entonnoir pour tout reprendre ; clic droit pour filtrer aussi d'autres TCD de même source. **Insérer une chronologie** fait de même avec les périodes d'une date (Maj+clic : une plage).
 
 ## Trier et filtrer les étiquettes
 

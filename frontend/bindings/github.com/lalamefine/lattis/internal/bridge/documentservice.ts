@@ -1582,6 +1582,14 @@ export function PivotData(cfg: canvas$0.PivotConfig): $CancellablePromise<canvas
 }
 
 /**
+ * PivotFieldValues donne les valeurs distinctes d'un champ d'un tableau
+ * croisé (colonne, colonne calculée, champ calculé, champ groupé).
+ */
+export function PivotFieldValues(cfg: canvas$0.PivotConfig, field: string): $CancellablePromise<canvas$0.FilterValue[] | null> {
+    return $Call.ByID(650157032, cfg, field);
+}
+
+/**
  * PlaceButton déplace et redimensionne un bouton.
  */
 export function PlaceButton(id: number, row: number, col: number, offX: number, offY: number, width: number, height: number): $CancellablePromise<$models.DocState> {

@@ -38,6 +38,9 @@
 		filterSummary,
 		insertAt,
 		isEmpty,
+		isPctShow,
+		needsBaseField,
+		needsBaseItem,
 		isUsable,
 		matchField,
 		moveCommands,
@@ -53,6 +56,7 @@
 		type PivotField,
 		type Zone
 	} from './pivotfields.js';
+	import { DATE_LEVELS, derivedFields, derivedGroup, groupOf, levelName, setGroup, suggestStep } from './pivotgroup.js';
 
 	interface Props {
 		/** Bord gauche à tirer (faux : inclus dans un volet qui se redimensionne lui-même). */
@@ -96,9 +100,11 @@
 		calcPreview?: (formula: string) => Promise<RowFormulaPreview>;
 		oncalc?: (old: string, name: string, formula: string) => unknown;
 		formulaHelp?: RowFormulaHelp;
+		/** Insérer un segment (ou une chronologie) du champ, posé à côté du TCD. */
+		onslicer?: (field: string, timeline: boolean) => unknown;
 	}
 
-	let { config, fields, error = '', filterValues, onchange, ondelete, sources = [], onsource, pickSource = false, onclose, resizable = true, locked = '', customLists, setCustomLists, tabChoice, ontabchoice, handNote = '', onforgethand, calcPreview, oncalc, formulaHelp }: Props = $props();
+	let { config, fields, error = '', filterValues, onchange, ondelete, sources = [], onsource, pickSource = false, onclose, resizable = true, locked = '', customLists, setCustomLists, tabChoice, ontabchoice, handNote = '', onforgethand, calcPreview, oncalc, formulaHelp, onslicer }: Props = $props();
 
 	/** « Champ calculé… » : boîte ouverte (old : nom du champ modifié, vide pour un nouveau). */
 	let calcEdit = $state<{ old: string; name: string; formula: string } | null>(null);
@@ -128,7 +134,12 @@
 		change(c);
 	}
 
-	const flds = $derived<PivotField[]>([...fields.map((f) => ({ name: f.name, type: f.type ?? (f.numeric ? 'decimal' : 'text') })), ...(config.calc ?? []).map((c) => ({ name: c.name, type: 'calc' }))]);
+	// Champs : colonnes de la source, champs calculés, niveaux ajoutés par un groupe de dates (Années…).
+	const flds = $derived.by<PivotField[]>(() => [
+		...fields.map((f) => ({ name: f.name, type: f.type ?? (f.numeric ? 'decimal' : 'text') })),
+		...(config.calc ?? []).map((c) => ({ name: c.name, type: 'calc' })),
+		...derivedFields(draft).map((d) => ({ name: d.name, type: 'group' }))
+	]);
 	const ZONE_ICONS: Record<Zone, IconName> = { filters: 'filter', cols: 'pivot-columns', rows: 'pivot-rows', values: 'autosum' };
 
 	let panelEl: HTMLElement;
@@ -168,6 +179,12 @@
 			delete c.expanded;
 			delete c.collapseAll;
 		}
+		if (JSON.stringify(c.colFields ?? []) !== JSON.stringify(draft.colFields ?? [])) {
+			c = { ...c };
+			delete c.colCollapsed;
+			delete c.colExpanded;
+			delete c.colCollapseAll;
+		}
 		draft = c;
 		dirty = true;
 		clearTimeout(timer);
@@ -180,7 +197,11 @@
 		dirty = false;
 		// L'écriture rend le focus à la grille : il reste dans le volet.
 		const keep = document.activeElement;
-		const sent = onchange(clone(draft));
+		// Les segments se changent sur la feuille : ceux de la configuration reçue.
+		const out = clone(draft);
+		if (config.slicers) out.slicers = clone(config.slicers);
+		else delete out.slicers;
+		const sent = onchange(out);
 		if (keep instanceof HTMLElement && panelEl?.contains(keep) && keep.isConnected) keep.focus({ preventScroll: true });
 		// Écriture refusée : la configuration ne change pas, le brouillon y revient.
 		if (sent instanceof Promise)
@@ -253,7 +274,7 @@
 			const r = c.getBoundingClientRect();
 			return r.top + r.height / 2;
 		});
-		const at = zone === 'cols' ? 0 : dropIndex(mids, e.clientY);
+		const at = dropIndex(mids, e.clientY);
 		if (target?.zone !== zone || target.at !== at) target = { zone, at };
 	}
 
@@ -396,7 +417,9 @@
 			items.push({ label: t('grid.pivot.menu.customSort'), checked: custom, disabled: !filterValues, run: () => (customField = field) });
 			items.push({ label: t('grid.pivot.menu.sourceOrder'), checked: !custom && !draft.sort?.[field], run: () => sortField(field, null) });
 			items.push({ label: '', sep: true });
+			groupItems(field, items);
 		}
+		if (zone !== 'values' && field !== ROW_COUNT) slicerItems(field, items);
 		if (zone !== 'values' && field !== ROW_COUNT && tabChoice) {
 			const tc = tabChoice(field);
 			items.push({ label: tc.label, title: tc.title, disabled: tc.disabled || !!locked, run: () => ontabchoice?.(field, tc) });
@@ -421,6 +444,10 @@
 			items.push({ label: t('grid.pivot.menu.removeCalc'), danger: true, run: () => removeCalc(calc.name) });
 			items.push({ label: '', sep: true });
 		}
+		if (field !== ROW_COUNT) {
+			groupItems(field, items);
+			slicerItems(field, items);
+		}
 		for (const { zone, title } of ZONES)
 			items.push({
 				label: t('grid.pivot.menu.addTo', { zone: title }),
@@ -430,6 +457,100 @@
 		items.push({ label: '', sep: true });
 		items.push({ label: t('grid.pivot.menu.removeFromReport'), disabled: !used.has(field), danger: true, run: () => change(removeField(draft, field)) });
 		openMenu(opener, field === ROW_COUNT ? t('grid.pivot.rowCount') : field, items, byKey);
+	}
+
+	// --- Grouper (dates, nombres) et segments ---
+
+	/** Le champ groupé derrière un champ (Années → Date), ou lui-même. */
+	const groupedField = (f: string) => derivedGroup(draft, f)?.field ?? f;
+	const isDate = (f: string) => fieldType(groupedField(f)) === 'date' || !!groupOf(draft, groupedField(f))?.by?.length;
+	const isNumber = (f: string) => ['integer', 'decimal'].includes(fieldType(f));
+
+	function groupItems(field: string, items: Item[]) {
+		const f = groupedField(field);
+		if (!isDate(f) && !isNumber(f)) return;
+		items.push({ label: t('grid.pivot.group.menu'), run: () => openGroup(f) });
+		if (groupOf(draft, f)) items.push({ label: t('grid.pivot.group.ungroup'), run: () => change(setGroup(draft, f, null)) });
+		items.push({ label: '', sep: true });
+	}
+
+	function slicerItems(field: string, items: Item[]) {
+		if (!onslicer) return;
+		const go = async (tl: boolean) => {
+			await flush();
+			onslicer?.(tl ? groupedField(field) : field, tl);
+		};
+		items.push({ label: t('grid.pivot.slicer.insert'), run: () => go(false) });
+		if (isDate(field)) items.push({ label: t('grid.pivot.slicer.timeline'), run: () => go(true) });
+		items.push({ label: '', sep: true });
+	}
+
+	let grp = $state<{ field: string; date: boolean; by: string[]; start: string; end: string; step: string; error: string; pos: Pos; opener: HTMLElement } | null>(null);
+
+	async function openGroup(field: string) {
+		const opener = menu?.opener ?? panelEl;
+		const w = panelEl.clientWidth - 16;
+		const g = groupOf(draft, field);
+		const date = isDate(field);
+		grp = {
+			field,
+			date,
+			by: g?.by?.length ? [...g.by] : date ? ['years', 'quarters', 'months'] : [],
+			start: g?.start?.toString() ?? '',
+			end: g?.end?.toString() ?? '',
+			step: g?.step?.toString() ?? '',
+			error: '',
+			pos: { ...place(opener, w, 260, panelEl.getBoundingClientRect().left + 8), width: w },
+			opener
+		};
+		await tick();
+		popEl?.querySelector<HTMLInputElement>('input')?.focus();
+		if (!date && !g && filterValues) {
+			// Intervalles proposés : du minimum au maximum du champ.
+			try {
+				const nums = (await filterValues(field)).map((v) => Number(v.text.replace(/\s/g, '').replace(',', '.'))).filter((n) => !isNaN(n));
+				if (nums.length && grp?.field === field) {
+					const sg = suggestStep(Math.min(...nums), Math.max(...nums));
+					grp.start = String(sg.start);
+					grp.end = String(sg.end);
+					grp.step = String(sg.step);
+				}
+			} catch {
+				/* sans proposition */
+			}
+		}
+	}
+
+	function applyGroup() {
+		const g = grp;
+		if (!g) return;
+		const num = (s: string) => (s.trim() === '' ? undefined : Number(s.replace(/\s/g, '').replace(',', '.')));
+		if (g.date) {
+			const by = DATE_LEVELS.filter((l) => g.by.includes(l));
+			if (!by.length) return void (g.error = t('grid.pivot.group.noLevel'));
+			change(
+				setGroup(
+					draft,
+					g.field,
+					{ by: [...by] },
+					flds.filter((f) => f.type !== 'group').map((f) => f.name)
+				)
+			);
+		} else {
+			const start = num(g.start);
+			const end = num(g.end);
+			const step = num(g.step);
+			if (!step || step <= 0 || isNaN(step) || (start !== undefined && end !== undefined && end < start) || [start, end].some((x) => x !== undefined && isNaN(x)))
+				return void (g.error = t('grid.pivot.group.badStep'));
+			change(setGroup(draft, g.field, { start, end, step }));
+		}
+		closeGroup();
+	}
+
+	function closeGroup(refocus = true) {
+		const g = grp;
+		grp = null;
+		if (refocus && g?.opener.isConnected) g.opener.focus();
 	}
 
 	/** Retire un champ calculé (et des zones) ; le brouillon en attente part d'abord. */
@@ -459,7 +580,7 @@
 		change(next);
 		let k = at ?? zoneItems(next, to).length - 1;
 		if (to === zone && at !== undefined && at > i) k--;
-		focusChip(to, to === 'cols' ? 0 : k);
+		focusChip(to, k);
 	}
 
 	function removeAndFocus(zone: Zone, i: number) {
@@ -480,14 +601,31 @@
 
 	// --- Paramètres d'une valeur (nom, synthèse, affichage, format) ---
 
-	let settings = $state<{ i: number; label: string; agg: string; show: string; format: string; field: string; pos: Pos; opener: HTMLElement } | null>(null);
+	let settings = $state<{ i: number; label: string; agg: string; show: string; format: string; field: string; baseField: string; baseItem: string; items: string[]; pos: Pos; opener: HTMLElement } | null>(null);
+	/** Champs de base possibles : ceux des lignes et des colonnes. */
+	const baseFields = $derived([...(draft.rowFields ?? []), ...(draft.colFields ?? [])]);
+
+	/** Éléments du champ de base (élément de base : ':prev', ':next' ou 'v:' + valeur). */
+	async function loadBaseItems(field: string) {
+		const s = settings;
+		if (!s || !field || !filterValues) return;
+		try {
+			const vals = await filterValues(field);
+			if (settings && settings.baseField === field) settings.items = vals.map((v) => v.text);
+		} catch {
+			/* liste vide */
+		}
+	}
 
 	async function openSettings(zone: Zone, i: number) {
 		const opener = panelEl.querySelectorAll<HTMLElement>(`[data-zone="${zone}"] .chip-btn`)[i];
 		const v = draft.values![i];
 		const w = panelEl.clientWidth - 16;
 		const pos = { ...place(opener, w, 300, panelEl.getBoundingClientRect().left + 8), width: w };
-		settings = { i, label: v.label ?? '', agg: v.agg, show: v.show ?? '', format: v.format ?? '', field: v.field ?? '', pos, opener };
+		const bf = v.baseField ?? baseFields[0] ?? '';
+		const bi = v.basePos ? ':' + v.basePos : v.baseItem !== undefined ? 'v:' + v.baseItem : ':prev';
+		settings = { i, label: v.label ?? '', agg: v.agg, show: v.show ?? '', format: v.format ?? '', field: v.field ?? '', baseField: bf, baseItem: bi, items: [], pos, opener };
+		loadBaseItems(bf);
 		await tick();
 		panelEl.ownerDocument.querySelector<HTMLInputElement>('.pivot-pop input')?.focus();
 	}
@@ -501,7 +639,20 @@
 	function applySettings() {
 		const s = settings;
 		if (!s) return;
-		change(setValue(draft, s.i, { label: s.label.trim() || undefined, agg: s.agg as never, show: s.show || undefined, format: s.show ? undefined : s.format || undefined }));
+		const base = needsBaseField(s.show);
+		const item = needsBaseItem(s.show);
+		const plain = !isPctShow(s.show) && !['rankAsc', 'rankDesc', 'index'].includes(s.show);
+		change(
+			setValue(draft, s.i, {
+				label: s.label.trim() || undefined,
+				agg: s.agg as never,
+				show: s.show || undefined,
+				format: plain ? s.format || undefined : undefined,
+				baseField: base ? s.baseField || undefined : undefined,
+				basePos: item && s.baseItem.startsWith(':') ? (s.baseItem.slice(1) as 'prev' | 'next') : undefined,
+				baseItem: item && s.baseItem.startsWith('v:') ? s.baseItem.slice(2) : undefined
+			})
+		);
 		closeSettings();
 	}
 
@@ -549,6 +700,7 @@
 		menu = null;
 		settings = null;
 		filt = null;
+		grp = null;
 	}
 
 	const posStyle = (p: Pos) => `left:${p.left}px;${p.top !== undefined ? `top:${p.top}px;` : `bottom:${p.bottom}px;`}${p.width ? `width:${p.width}px;` : ''}`;
@@ -657,8 +809,8 @@
 					{#each items as name, i (z.zone + ':' + i + ':' + name)}
 						{@const v = z.zone === 'values' ? draft.values![i] : undefined}
 						{@const f = z.zone === 'filters' ? draft.filters![i] : undefined}
-						{#if tgt === i && z.zone !== 'cols'}<li class="ins" aria-hidden="true"></li>{/if}
-						<li class="chip" class:replace={z.zone === 'cols' && tgt >= 0} draggable="true" ondragstart={(e) => startDrag(e, name, { zone: z.zone, i })} ondragend={endDrag}>
+						{#if tgt === i}<li class="ins" aria-hidden="true"></li>{/if}
+						<li class="chip" draggable="true" ondragstart={(e) => startDrag(e, name, { zone: z.zone, i })} ondragend={endDrag}>
 							<button
 								class="chip-btn"
 								aria-haspopup="menu"
@@ -673,14 +825,14 @@
 								<span class="ticon"><Icon name={v && !v.field ? 'autosum' : fieldIcon(fieldType(name))} size={14} /></span>
 								<span class="cname">
 									{v ? valueLabel(v) : name}
-									{#if v?.show}<span class="tag">%</span>{/if}
+									{#if v?.show}<span class="tag">{isPctShow(v.show) ? '%' : 'ƒ'}</span>{/if}
 									{#if f}<span class="fsum" class:active={f.values.length > 0}>{filterSummary(f.values)}</span>{/if}
 								</span>
 								<span class="chev"><Icon name="chevron-down" size={12} /></span>
 							</button>
 						</li>
 					{/each}
-					{#if tgt >= items.length && z.zone !== 'cols'}<li class="ins" aria-hidden="true"></li>{/if}
+					{#if tgt >= items.length}<li class="ins" aria-hidden="true"></li>{/if}
 					{#if !items.length}
 						<li class="empty">{z.hint}</li>
 					{/if}
@@ -713,7 +865,7 @@
 
 	<footer>
 		<label class="opt"><input type="checkbox" checked={!draft.noGrandTotal} onchange={(e) => change({ ...clone(draft), noGrandTotal: !(e.currentTarget as HTMLInputElement).checked || undefined })} /> {t('grid.pivot.grandTotals')}</label>
-		{#if (draft.rowFields?.length ?? 0) > 1}
+		{#if (draft.rowFields?.length ?? 0) > 1 || (draft.colFields?.length ?? 0) > 1}
 			<!-- Plusieurs champs en lignes : arborescence, sous-totaux des groupes (Excel). -->
 			<label class="opt subtotals"
 				>{t('grid.pivot.subtotals')}
@@ -797,10 +949,42 @@
 			/></label
 		>
 		<label class="line">{t('grid.pivot.valueSettings.show')}<Select value={s.show} width="100%" options={shows().map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.show = v)} /></label>
+		{#if needsBaseField(s.show)}
+			{#if baseFields.length}
+				<label class="line"
+					>{t('grid.pivot.valueSettings.baseField')}<Select
+						value={s.baseField}
+						width="100%"
+						options={baseFields.map((f) => ({ value: f, label: f }))}
+						onchange={(f) => {
+							s.baseField = f;
+							s.items = [];
+							loadBaseItems(f);
+						}}
+					/></label
+				>
+				{#if needsBaseItem(s.show)}
+					<label class="line"
+						>{t('grid.pivot.valueSettings.baseItem')}<Select
+							value={s.baseItem}
+							width="100%"
+							options={[
+								{ value: ':prev', label: t('grid.pivot.valueSettings.prev') },
+								{ value: ':next', label: t('grid.pivot.valueSettings.next') },
+								...s.items.map((v) => ({ value: 'v:' + v, label: v === '' ? t('grid.filter.blanks') : v }))
+							]}
+							onchange={(v) => (s.baseItem = v)}
+						/></label
+					>
+				{/if}
+			{:else}
+				<p class="pop-note">{t('grid.pivot.valueSettings.noBase')}</p>
+			{/if}
+		{/if}
 		<label class="line"
-			>{t('grid.pivot.valueSettings.format')}<Select value={s.show ? '' : s.format} width="100%" disabled={!!s.show} options={formats().map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.format = v)} /></label
+			>{t('grid.pivot.valueSettings.format')}<Select value={isPctShow(s.show) ? '' : s.format} width="100%" disabled={isPctShow(s.show)} options={formats().map(([v, label]) => ({ value: v, label }))} onchange={(v) => (s.format = v)} /></label
 		>
-		{#if s.show}<p class="pop-note">{t('grid.pivot.valueSettings.pctFormat')}</p>{/if}
+		{#if isPctShow(s.show)}<p class="pop-note">{t('grid.pivot.valueSettings.pctFormat')}</p>{/if}
 		<div class="foot">
 			<button class="primary" onclick={applySettings}>{t('common.ok')}</button>
 			<button onclick={() => closeSettings()}>{t('common.cancel')}</button>
@@ -860,6 +1044,52 @@
 		<div class="foot">
 			<button class="primary" disabled={!f.values} onclick={applyFilter}>{t('common.ok')}</button>
 			<button onclick={() => closeFilter()}>{t('common.cancel')}</button>
+		</div>
+	</div>
+{/if}
+
+{#if grp}
+	{@const g = grp}
+	<div
+		class="pivot-pop"
+		bind:this={popEl}
+		role="dialog"
+		tabindex="-1"
+		aria-label={t('grid.pivot.group.title', { field: g.field })}
+		style={posStyle(g.pos)}
+		use:dismissPanel={() => closeGroup(focusIn(popEl))}
+		onkeydown={(e) => {
+			e.stopPropagation();
+			if (e.key === 'Escape') closeGroup();
+			if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) applyGroup();
+		}}
+	>
+		<div class="pop-title">{t('grid.pivot.group.title', { field: g.field })}</div>
+		{#if g.date}
+			<p class="pop-note">{t('grid.pivot.group.by')}</p>
+			<div class="values">
+				{#each DATE_LEVELS as l (l)}
+					<label
+						><input
+							type="checkbox"
+							checked={g.by.includes(l)}
+							onchange={(e) => {
+								g.by = (e.currentTarget as HTMLInputElement).checked ? [...g.by, l] : g.by.filter((x) => x !== l);
+								g.error = '';
+							}}
+						/><span class="what">{levelName(l)}</span></label
+					>
+				{/each}
+			</div>
+		{:else}
+			<label class="line">{t('grid.pivot.group.start')}<input bind:value={g.start} inputmode="decimal" /></label>
+			<label class="line">{t('grid.pivot.group.end')}<input bind:value={g.end} inputmode="decimal" /></label>
+			<label class="line">{t('grid.pivot.group.step')}<input bind:value={g.step} inputmode="decimal" /></label>
+		{/if}
+		{#if g.error}<p class="pop-note err">{g.error}</p>{/if}
+		<div class="foot">
+			<button class="primary" onclick={applyGroup}>{t('common.ok')}</button>
+			<button onclick={() => closeGroup()}>{t('common.cancel')}</button>
 		</div>
 	</div>
 {/if}
@@ -1124,10 +1354,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 3px;
-	}
-	.chip.replace {
-		opacity: 0.45;
-		text-decoration: line-through;
 	}
 	.chip-btn {
 		display: flex;

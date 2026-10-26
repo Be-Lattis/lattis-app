@@ -252,7 +252,7 @@ func TestPivotCalcField(t *testing.T) {
 	if err := d.SetPivotCalcField(ctx, id, "An", "Année", "=ANNEE([Date])"); err != nil {
 		t.Fatal(err)
 	}
-	if p := pivot(); p.Config.Cols != "Année" || p.Config.Sort["Année"] != "desc" {
+	if p := pivot(); fmt.Sprint(p.Config.ColFields) != "[Année]" ||p.Config.Sort["Année"] != "desc" {
 		t.Fatalf("renommé : %+v", p.Config)
 	}
 	if err := d.SetPivotCalcField(ctx, id, "Taille", "", ""); err != nil {

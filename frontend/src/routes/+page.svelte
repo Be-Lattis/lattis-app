@@ -1857,6 +1857,7 @@
 		placePivot: (row, col, cfg) => DocumentService.PlacePivot(sheetId, row, col, cfg).then(reload),
 		createPivotAt: (row, col, cfg) => DocumentService.CreatePivotAt(sheetId, row, col, cfg).then(reload),
 		pivotFieldValues: async (table, field) => (await DocumentService.FieldValues(table, field)) ?? [],
+		pivotValues: async (cfg, field) => (await DocumentService.PivotFieldValues(cfg as never, field)) ?? [],
 		validationList: async (src) => {
 			const l = await DocumentService.ValidationList(sheetId, src);
 			return { values: l.values ?? [], error: l.error || undefined };

@@ -806,6 +806,10 @@ func choiceValue(ch *SheetChoice) formula.Value {
 // décoché sur la source ne compte que si elle est sur la feuille du TCD.
 func (t *tx) pivotChoice(sheet int64, cfg *PivotConfig) error {
 	cfg.Choice = nil
+	// Segments d'autres TCD reliés à celui-ci (pivotslicer.go).
+	if err := t.pivotLinks(cfg); err != nil {
+		return err
+	}
 	ch, err := t.sheetChoice(sheet)
 	if err != nil || ch == nil || ch.All {
 		return err

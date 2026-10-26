@@ -189,8 +189,28 @@ func renamePivotField(cfg PivotConfig, old, neu string) PivotConfig {
 		}
 	}
 	cfg.RowFields = rows
+	var cols []string
+	for _, f := range cfg.ColFields {
+		switch {
+		case !same(f):
+			cols = append(cols, f)
+		case neu != "":
+			cols = append(cols, neu)
+		}
+	}
+	cfg.ColFields = cols
 	if same(cfg.Cols) {
 		cfg.Cols = neu
+	}
+	for i := range cfg.Groups {
+		if same(cfg.Groups[i].Field) && neu != "" {
+			cfg.Groups[i].Field = neu
+		}
+	}
+	for i := range cfg.Slicers {
+		if same(cfg.Slicers[i].Field) && neu != "" {
+			cfg.Slicers[i].Field = neu
+		}
 	}
 	var vals []PivotValue
 	for _, v := range cfg.Values {

@@ -70,7 +70,7 @@ describe('zones', () => {
 	const cfg: PivotConfig = {
 		...base,
 		rowFields: ['Pays', 'Ville'],
-		cols: 'Date',
+		colFields: ['Date'],
 		values: [{ field: 'Ventes', agg: 'avg', label: 'CA moyen' }, { agg: 'count' }],
 		filters: [{ field: 'Qté', values: ['1'] }]
 	};
@@ -80,13 +80,13 @@ describe('zones', () => {
 		expect(c.rowFields).toEqual(['Ville']);
 		expect(zoneItems(c, 'filters')).toEqual(['Qté', 'Pays']);
 		expect(insertAt(cfg, 'rows', 'Date', fields, 0)).toMatchObject({ rowFields: ['Date', 'Pays', 'Ville'] });
-		expect(insertAt(cfg, 'rows', 'Date', fields, 0).cols).toBeUndefined();
+		expect(insertAt(cfg, 'rows', 'Date', fields, 0).colFields).toBeUndefined();
 	});
-	it('Colonnes ne prend qu’un champ : le nouveau remplace l’ancien', () => {
-		const c = insertAt(cfg, 'cols', 'Pays', fields);
-		expect(c.cols).toBe('Pays');
+	it('Colonnes prend plusieurs champs (en-têtes imbriqués)', () => {
+		const c = insertAt(cfg, 'cols', 'Pays', fields, 0);
+		expect(c.colFields).toEqual(['Pays', 'Date']);
 		expect(c.rowFields).toEqual(['Ville']);
-		expect(usedFields(c).has('Date')).toBe(false);
+		expect(moveItem(c, 'cols', 1, 'cols', fields, 0).colFields).toEqual(['Date', 'Pays']);
 	});
 	it('un champ peut revenir plusieurs fois en Valeurs', () => {
 		expect(zoneItems(insertAt(cfg, 'values', 'Ventes', fields), 'values')).toEqual(['Ventes', ROW_COUNT, 'Ventes']);
@@ -117,7 +117,7 @@ describe('zones', () => {
 		expect(d.filters).toEqual([{ field: 'Pays', values: [] }, { field: 'Qté', values: ['1'] }]);
 	});
 	it('retirer : un élément, ou un champ de toutes les zones', () => {
-		expect(removeAt(cfg, 'cols', 0).cols).toBeUndefined();
+		expect(removeAt(cfg, 'cols', 0).colFields).toBeUndefined();
 		expect(removeAt(cfg, 'values', 1).values).toEqual([{ field: 'Ventes', agg: 'avg', label: 'CA moyen' }]);
 		const c = removeField(insertAt(cfg, 'values', 'Pays', fields), 'Pays');
 		expect(c.rowFields).toEqual(['Ville']);

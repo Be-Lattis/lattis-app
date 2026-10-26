@@ -62,7 +62,8 @@ func (t *tx) pivotFormulaTableRaw(low string) (*formula.Table, error) {
 func (t *tx) pivotTableOf(p pivotRow) (*formula.Table, error) {
 	cfg := p.Cfg
 	ft := &formula.Table{Name: cfg.Name, Sheet: p.Sheet}
-	cells, rows, err := t.pivotCells(cfg)
+	view, err := t.pivotViewOf(cfg)
+	cells, rows := view.cells, view.rows
 	if err != nil || len(cells) == 0 {
 		// TCD en erreur : un tableau sans colonne (ses références donnent #REF!).
 		ft.SQL = "(SELECT NULL AS id, NULL AS _pos WHERE 0)"
@@ -79,7 +80,9 @@ func (t *tx) pivotTableOf(p pivotRow) (*formula.Table, error) {
 			return nil, err
 		}
 	}
-	header := cells[0]
+	// Avec plusieurs champs en colonnes, chaque colonne porte son chemin
+	// (TCD1[2024 · T1]).
+	header := pivotFullHeader(view)
 	compact := rows != nil
 	taken := map[string]bool{}
 	var sel []string
