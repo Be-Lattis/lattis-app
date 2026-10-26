@@ -2,6 +2,10 @@
 
 Lattis works like a spreadsheet: an endless grid, a ribbon at the top, sheet tabs at the bottom. The difference is underneath: every table you type becomes a real database table, typed and queryable in SQL.
 
+## Guided tour {#visite-guidee}
+
+In three minutes, the guided tour shows the essentials on a small new workbook: a typed table, a calculated column, two tables linked with REFERENCE, a pivot table with its chart, then an SQL query. Do each action, or click Next to let Lattis do it; Skip (or `Esc`) stops it. It is offered at first launch and can be restarted from Help (? › Guided tour).
+
 ## Detected tables {#tableaux-detectes}
 
 Type a few rows anywhere on the sheet: a header row, then values. Lattis recognizes the block of data and turns it into a **table**: the header is highlighted, each column gets a type, and the table gets a name you can change in the table name box, to the left of the formula bar (type the new name, then Enter). The first table on a sheet takes the tab's name (without spaces: “Sales 2026” gives `Sales2026`), the next ones Table1, Table2… Renaming the tab also renames the table that carries its name (not the other way around); that table doesn't show its name badge, since the tab already shows it.

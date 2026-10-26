@@ -1,0 +1,54 @@
+{
+	"bubble": {
+		"progress": "{n}/{total}",
+		"next": "下一步",
+		"nextTooltip": "由 Lattis 代为完成（Enter）",
+		"finish": "完成",
+		"skip": "跳过",
+		"skipTooltip": "停止导览（Esc）；可从帮助（?）重新开始",
+		"aria": "导览，第 {n} 步，共 {total} 步",
+		"sample": "要输入的行"
+	},
+	"error": "此步骤未能完成：请再次点击“下一步”。",
+	"start": "开始导览（3 分钟）",
+	"startTooltip": "在一个新的小工作簿上完成五个步骤",
+	"help": "导览",
+	"steps": {
+		"table": {
+			"act": "从 A1 开始输入这三行，或点击“下一步”。",
+			"done": "Lattis 已将其变为表格：标题加粗，类型已识别。"
+		},
+		"computed": {
+			"act": "在 {head} 输入 {total}，然后在 {cell} 输入此公式：",
+			"done": "一个公式即可填满整列。"
+		},
+		"reference": {
+			"act": "在 {head} 输入 {category}，然后在 {cell} 输入此公式，它按产品在 {products} 中查找：",
+			"done": "类别跟随产品，排序后也不变。"
+		},
+		"pivot": {
+			"act": "点击表格，然后点击 {tab} › {pivot}，再点一个空单元格。",
+			"chart": "选中数据透视表中的单元格，点击 {tab} › {chart}。",
+			"done": "数据透视表和图表会随表格更新。"
+		},
+		"sql": {
+			"act": "打开 {tab} 选项卡。",
+			"run": "现成的查询：点击 {run}。",
+			"done": "完成！帮助（?）可解答问题，也可重新开始本导览。"
+		}
+	},
+	"sample": {
+		"sheet": "销售",
+		"products": "产品表",
+		"product": "产品",
+		"quantity": "数量",
+		"price": "价格",
+		"total": "总计",
+		"category": "类别",
+		"apples": "苹果",
+		"carrots": "胡萝卜",
+		"pears": "梨",
+		"fruit": "水果",
+		"vegetables": "蔬菜"
+	}
+}

@@ -18,6 +18,7 @@
 	import Markdown from './Markdown.svelte';
 	import { closeHelp, helpState } from './state.svelte';
 	import { reportIssue } from '#lib/shell/report.js';
+	import { requestTour } from '#lib/onboarding/request.svelte.js';
 	import { lang, t } from '#lib/i18n/index.js';
 
 	// over : posée au-dessus d'une boîte modale, hors de la zone des volets.
@@ -130,6 +131,7 @@
 		<button class="icon" title={t('help.back')} aria-label={t('help.back')} disabled={!history.length} onclick={back}>←</button>
 		<Icon name="book" size={16} />
 		<strong>{t('help.title')}</strong>
+		<button class="link report" title={t('onboarding.startTooltip')} onclick={() => (close(), requestTour())}>{t('onboarding.help')}</button>
 		<button class="link report" title={t('help.report.tooltip')} onclick={reportIssue}>{t('help.report.label')}</button>
 		<button class="icon close" title={t('help.close.tooltip')} aria-label={t('help.close.aria')} onclick={close}>✕</button>
 	</header>

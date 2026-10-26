@@ -7653,6 +7653,16 @@
 		schedule();
 	}
 
+	/** Rectangle à l'écran (pixels de la fenêtre) d'une plage : bulles de la visite guidée (lib/onboarding). */
+	export function cellBox(r0: number, c0: number, r1: number, c1: number): DOMRect | null {
+		if (!scroller) return null;
+		const k = zoomK();
+		const r = scroller.getBoundingClientRect();
+		const x0 = screenX(c0);
+		const y0 = screenY(r0);
+		return new DOMRect(r.left + x0 * k, r.top + y0 * k, (screenX(c1) + cax().size(c1) - x0) * k, (screenY(r1) + rh(r1) - y0) * k);
+	}
+
 	/** Géométrie de la feuille pour les objets posés (pixels de la feuille). */
 	const objGeo = { colOffset: (c: number) => cax().offset(c), rowTop: (r: number) => rowTop(r), colAt: (x: number) => cax().indexAt(x), rowAt: (y: number) => rax().indexAt(y) };
 

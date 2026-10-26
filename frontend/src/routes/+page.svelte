@@ -118,6 +118,11 @@
 	import { functionAt, viewTarget } from '#lib/help/help.js';
 	import { helpState, openHelp } from '#lib/help/state.svelte.js';
 	import { errorText, fmtDateTime, t } from '#lib/i18n/index.js';
+	import GuidedTour from '#lib/onboarding/GuidedTour.svelte';
+	import { sample as tourSample, type TourHost } from '#lib/onboarding/steps.js';
+	import { storageMemory, type TourMemory, type TourOutcome } from '#lib/onboarding/tour.js';
+	import { tourRequest } from '#lib/onboarding/request.svelte.js';
+	import { reducedMotion } from '#lib/grid/anim.js';
 
 	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
 
@@ -570,6 +575,88 @@
 			firstRun = false;
 			DocumentService.FirstLaunchDone().catch(() => {});
 		}
+	});
+
+	// Visite guidée (lib/onboarding) : proposée par l'accueil du premier
+	// lancement tant qu'elle n'a été ni faite ni passée sur ce poste
+	// (DocumentService.TourState) ; lancée à chaque ouverture de la démo
+	// publique (retenue pour la session du navigateur) ; relancée depuis
+	// l'aide (? › Visite guidée). Elle se déroule sur un classeur neuf.
+	let guided = $state<ReturnType<typeof GuidedTour>>();
+	let tourSeen = $state<TourOutcome | ''>('');
+	let tourRequested = tourRequest.seq;
+	let demoTourTried = false;
+	const tourMemory = (): TourMemory =>
+		platform.demo
+			? storageMemory(() => (typeof sessionStorage === 'undefined' ? null : sessionStorage))
+			: {
+					read: () => tourSeen || null,
+					write: (v) => {
+						tourSeen = v;
+						DocumentService.SetTourState(v).catch(() => {});
+					}
+				};
+	const tourHost: TourHost = {
+		layout: () => layout,
+		view: () => view,
+		reduced: () => reducedMotion() || !animate,
+		setCell: async (row, col, raw) => {
+			await DocumentService.SetCell(sheetId, row, col, raw);
+			await reload();
+		},
+		paste: async (row, col, block) => {
+			await DocumentService.Paste(sheetId, row, col, block);
+			await reload();
+		},
+		setKey: async (table, i) => {
+			await DocumentService.SetKey(table, i);
+			await reload();
+		},
+		renameTable: async (from, to) => {
+			await DocumentService.RenameTable(from, to);
+			await reload();
+		},
+		createPivotAt: async (row, col, cfg) => {
+			await DocumentService.CreatePivotAt(sheetId, row, col, cfg as never);
+			await reload();
+		},
+		chartActive: () => sheet?.chartActive('bar'),
+		select: (row, col) => sheet?.selectRange(row, col, row, col),
+		focusGrid: () => sheet?.focus(),
+		cellBox: (r0, c0, r1, c1) => sheet?.cellBox(r0, c0, r1, c1) ?? null
+	};
+	/** Lance la visite : sur le classeur ouvert s'il est neuf et vide, sinon sur un nouveau. */
+	async function startTour() {
+		if (mode === 'demo') return;
+		const blank = mode === 'doc' && !docState.dirty && !docState.path && !docState.remote && !layout?.tables?.length && !layout?.cells?.length && (layout?.sheets?.length ?? 0) <= 1;
+		try {
+			if (!blank) await startDoc();
+			view = 'grid';
+			await DocumentService.RenameSheet(sheetId, tourSample().sheet);
+			await reload();
+			await guided?.start();
+		} catch (e) {
+			notice = err(e);
+		}
+	}
+	$effect(() => {
+		if (tourRequest.seq !== tourRequested) {
+			tourRequested = tourRequest.seq;
+			untrack(() => startTour());
+		}
+	});
+	// Démo publique : la visite à chaque ouverture (sauf faite ou passée dans cette session).
+	$effect(() => {
+		if (platform.demo && mode === 'doc' && layout && guided && !demoTourTried) {
+			demoTourTried = true;
+			if (!tourMemory().read()) untrack(() => startTour());
+		}
+	});
+	// Le classeur relu ou la vue changée : l'étape en cours se vérifie.
+	$effect(() => {
+		void layout;
+		void view;
+		untrack(() => guided?.poll());
 	});
 
 	const err = (e: unknown) => errorText(e);
@@ -1426,6 +1513,7 @@
 				}
 				loadRecent();
 				firstRun = await DocumentService.FirstLaunch().catch(() => false);
+				if (firstRun) tourSeen = ((await DocumentService.TourState().catch(() => '')) as TourOutcome | '') || '';
 				// Le moteur survit à la page (web : rechargement, onglet fermé
 				// puis rouvert ; bureau : rechargement de la fenêtre, wails3 dev) :
 				// on reprend le classeur qu'il a ouvert, au lieu d'en créer un
@@ -2716,7 +2804,8 @@
 					<p>{t('shell.welcome.noWorkbook')}</p>
 				{/if}
 				<div class="actions">
-					<button class="primary ico" onclick={() => file('new')}><Icon name="new-file" size={14} />{t('shell.welcome.new')}</button>
+					{#if firstRun && !tourSeen}<button class="primary ico" title={t('onboarding.startTooltip')} onclick={startTour}><Icon name="play" size={14} />{t('onboarding.start')}</button>{/if}
+					<button class="ico" class:primary={!firstRun || !!tourSeen} onclick={() => file('new')}><Icon name="new-file" size={14} />{t('shell.welcome.new')}</button>
 					<button class="ico" onclick={() => file('open')}><Icon name="open" size={14} />{t('ribbon.file.open')}</button>
 					<button class="ico" onclick={() => file('import')} title={t('shell.welcome.importTooltip')}><Icon name="database" size={14} />{t('ribbon.file.import')}</button>
 					{#if sharedWorkbooksEnabled()}<button class="ico" onclick={() => file('openRemote')}><Icon name="web" size={14} />{t('ribbon.file.openRemote')}</button>{/if}
@@ -3535,6 +3624,7 @@
 		{#if data && view === 'grid' && !activePage}<ZoomBar {zoom} onzoom={setZoom} />{/if}
 	</footer>
 </div>
+<GuidedTour bind:this={guided} host={tourHost} memory={tourMemory()} />
 
 <style>
 	.delete-list {

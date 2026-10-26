@@ -1,0 +1,54 @@
+{
+	"bubble": {
+		"progress": "{n}/{total}",
+		"next": "Next",
+		"nextTooltip": "Lattis does it for you (Enter)",
+		"finish": "Finish",
+		"skip": "Skip",
+		"skipTooltip": "Stop the tour (Esc); restart it from Help (?)",
+		"aria": "Guided tour, step {n} of {total}",
+		"sample": "Rows to type"
+	},
+	"error": "This step couldn’t be done: click Next again.",
+	"start": "Take the tour (3 min)",
+	"startTooltip": "Five steps on a small new workbook",
+	"help": "Guided tour",
+	"steps": {
+		"table": {
+			"act": "Type these three rows starting at A1, or click Next.",
+			"done": "Lattis made it a table: bold header, guessed types."
+		},
+		"computed": {
+			"act": "Type {total} in {head}, then this formula in {cell}:",
+			"done": "One formula fills the whole column."
+		},
+		"reference": {
+			"act": "Type {category} in {head}, then in {cell} this formula, which looks up {products} by product:",
+			"done": "The category follows the product, even after sorting."
+		},
+		"pivot": {
+			"act": "Click in the table, then {tab} › {pivot} and an empty cell.",
+			"chart": "With a pivot table cell selected, click {tab} › {chart}.",
+			"done": "The pivot table and chart follow the table."
+		},
+		"sql": {
+			"act": "Open the {tab} tab.",
+			"run": "A ready-made query: click {run}.",
+			"done": "All done! Help (?) answers your questions and restarts this tour."
+		}
+	},
+	"sample": {
+		"sheet": "Sales",
+		"products": "Products",
+		"product": "Product",
+		"quantity": "Quantity",
+		"price": "Price",
+		"total": "Total",
+		"category": "Category",
+		"apples": "Apples",
+		"carrots": "Carrots",
+		"pears": "Pears",
+		"fruit": "Fruit",
+		"vegetables": "Vegetables"
+	}
+}

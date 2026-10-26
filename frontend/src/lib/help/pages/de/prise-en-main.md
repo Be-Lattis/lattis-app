@@ -2,6 +2,10 @@
 
 Lattis funktioniert wie eine Tabellenkalkulation: ein endloses Raster, oben ein Menüband, unten die Blattregister. Der Unterschied liegt darunter: Jede Tabelle, die Sie eingeben, wird zu einer echten Datenbanktabelle, mit Datentypen und per SQL abfragbar.
 
+## Geführte Tour {#visite-guidee}
+
+In drei Minuten zeigt die geführte Tour das Wichtigste in einer kleinen neuen Arbeitsmappe: eine eingetippte Tabelle, eine berechnete Spalte, zwei mit REFERENZ verknüpfte Tabellen, eine Pivot-Tabelle mit Diagramm, dann eine SQL-Abfrage. Führen Sie jeden Schritt selbst aus oder klicken Sie auf Weiter, damit Lattis ihn erledigt; Überspringen (oder `Esc`) beendet sie. Sie wird beim ersten Start angeboten und lässt sich über die Hilfe neu starten (? › Geführte Tour).
+
 ## Erkannte Tabellen {#tableaux-detectes}
 
 Geben Sie irgendwo auf dem Blatt ein paar Zeilen ein: eine Überschriftenzeile, dann Werte. Lattis erkennt den Datenblock und macht daraus eine **Tabelle**: Die Überschrift wird hervorgehoben, jede Spalte erhält einen Typ, und die Tabelle erhält einen Namen, den Sie im Tabellennamenfeld links neben der Bearbeitungsleiste ändern können (neuen Namen eingeben, dann Eingabe). Die erste Tabelle eines Blatts übernimmt den Namen des Registers (ohne Leerzeichen: „Umsatz 2026“ ergibt `Umsatz2026`), die folgenden heißen Tabelle1, Tabelle2… Wird das Register umbenannt, wird auch die Tabelle umbenannt, die seinen Namen trägt (nicht umgekehrt); diese Tabelle zeigt kein Namensschild, da das Register ihn bereits anzeigt.

@@ -1,0 +1,54 @@
+{
+	"bubble": {
+		"progress": "{n}/{total}",
+		"next": "Suivant",
+		"nextTooltip": "Lattis le fait pour vous (Entrée)",
+		"finish": "Terminer",
+		"skip": "Passer",
+		"skipTooltip": "Arrêter la visite (Échap) ; elle se relance depuis l’aide (?)",
+		"aria": "Visite guidée, étape {n} sur {total}",
+		"sample": "Lignes à taper"
+	},
+	"error": "L’étape n’a pas pu se faire : cliquez de nouveau Suivant.",
+	"start": "Faire la visite (3 min)",
+	"startTooltip": "Cinq étapes sur un petit classeur neuf",
+	"help": "Visite guidée",
+	"steps": {
+		"table": {
+			"act": "Tapez ces trois lignes à partir de A1, ou cliquez Suivant.",
+			"done": "Lattis en a fait un tableau : en-tête en gras, types devinés."
+		},
+		"computed": {
+			"act": "Tapez {total} en {head}, puis cette formule en {cell} :",
+			"done": "Une seule formule remplit toute la colonne."
+		},
+		"reference": {
+			"act": "Tapez {category} en {head}, puis en {cell} cette formule, qui cherche dans {products} par le produit :",
+			"done": "La catégorie suit le produit, même après un tri."
+		},
+		"pivot": {
+			"act": "Cliquez dans le tableau, puis {tab} › {pivot} et une case libre.",
+			"chart": "Une case du tableau croisé sélectionnée, cliquez {tab} › {chart}.",
+			"done": "Tableau croisé et graphique suivent le tableau."
+		},
+		"sql": {
+			"act": "Ouvrez l’onglet {tab}.",
+			"run": "Une requête toute prête : cliquez {run}.",
+			"done": "C’est fini ! L’aide (?) répond à vos questions et relance cette visite."
+		}
+	},
+	"sample": {
+		"sheet": "Ventes",
+		"products": "Produits",
+		"product": "Produit",
+		"quantity": "Quantité",
+		"price": "Prix",
+		"total": "Total",
+		"category": "Catégorie",
+		"apples": "Pommes",
+		"carrots": "Carottes",
+		"pears": "Poires",
+		"fruit": "Fruits",
+		"vegetables": "Légumes"
+	}
+}

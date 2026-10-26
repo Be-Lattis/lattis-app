@@ -1,0 +1,54 @@
+{
+	"bubble": {
+		"progress": "{n}/{total}",
+		"next": "Siguiente",
+		"nextTooltip": "Lattis lo hace por usted (Intro)",
+		"finish": "Terminar",
+		"skip": "Omitir",
+		"skipTooltip": "Detener la visita (Esc); se reinicia desde la ayuda (?)",
+		"aria": "Visita guiada, paso {n} de {total}",
+		"sample": "Filas para escribir"
+	},
+	"error": "No se pudo hacer este paso: vuelva a hacer clic en Siguiente.",
+	"start": "Hacer la visita (3 min)",
+	"startTooltip": "Cinco pasos en un pequeño libro nuevo",
+	"help": "Visita guiada",
+	"steps": {
+		"table": {
+			"act": "Escriba estas tres filas desde A1, o haga clic en Siguiente.",
+			"done": "Lattis lo ha convertido en tabla: encabezado en negrita, tipos deducidos."
+		},
+		"computed": {
+			"act": "Escriba {total} en {head} y luego esta fórmula en {cell}:",
+			"done": "Una sola fórmula rellena toda la columna."
+		},
+		"reference": {
+			"act": "Escriba {category} en {head} y luego en {cell} esta fórmula, que busca en {products} por producto:",
+			"done": "La categoría sigue al producto, incluso tras ordenar."
+		},
+		"pivot": {
+			"act": "Haga clic en la tabla, luego en {tab} › {pivot} y en una celda libre.",
+			"chart": "Con una celda de la tabla dinámica seleccionada, haga clic en {tab} › {chart}.",
+			"done": "La tabla dinámica y el gráfico siguen a la tabla."
+		},
+		"sql": {
+			"act": "Abra la pestaña {tab}.",
+			"run": "Una consulta lista: haga clic en {run}.",
+			"done": "¡Listo! La ayuda (?) responde a sus preguntas y reinicia esta visita."
+		}
+	},
+	"sample": {
+		"sheet": "Ventas",
+		"products": "Productos",
+		"product": "Producto",
+		"quantity": "Cantidad",
+		"price": "Precio",
+		"total": "Total",
+		"category": "Categoría",
+		"apples": "Manzanas",
+		"carrots": "Zanahorias",
+		"pears": "Peras",
+		"fruit": "Frutas",
+		"vegetables": "Verduras"
+	}
+}

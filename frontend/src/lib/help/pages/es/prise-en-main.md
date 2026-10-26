@@ -2,6 +2,10 @@
 
 Lattis funciona como una hoja de cálculo: una cuadrícula sin fin, una cinta de opciones arriba, pestañas de hojas abajo. La diferencia está debajo: cada tabla que escribe se convierte en una verdadera tabla de base de datos, con tipos y consultable en SQL.
 
+## Visita guiada {#visite-guidee}
+
+En tres minutos, la visita guiada muestra lo esencial en un pequeño libro nuevo: una tabla escrita, una columna calculada, dos tablas vinculadas con REFERENCIA, una tabla dinámica con su gráfico y una consulta SQL. Haga cada acción, o haga clic en Siguiente para que Lattis la haga; Omitir (o `Esc`) la detiene. Se propone en el primer inicio y se reinicia desde la ayuda (? › Visita guiada).
+
 ## Tablas detectadas {#tableaux-detectes}
 
 Escriba unas cuantas filas en cualquier lugar de la hoja: una fila de encabezados y luego valores. Lattis reconoce el bloque de datos y lo convierte en una **tabla**: el encabezado se resalta, cada columna recibe un tipo, y la tabla recibe un nombre que puede cambiar en el cuadro de nombre de tabla, a la izquierda de la barra de fórmulas (escriba el nuevo nombre y luego Entrar). La primera tabla de una hoja toma el nombre de la pestaña (sin espacios: «Ventas 2026» da `Ventas2026`), las siguientes Tabla1, Tabla2… Cambiar el nombre de la pestaña también cambia el de la tabla que lleva su nombre (no al revés); esa tabla no muestra su etiqueta de nombre, ya que la pestaña ya lo muestra.

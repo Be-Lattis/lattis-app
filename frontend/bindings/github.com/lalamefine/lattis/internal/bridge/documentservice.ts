@@ -2485,6 +2485,14 @@ export function SetTheme(th: canvas$0.Theme | null): $CancellablePromise<$models
 }
 
 /**
+ * SetTourState retient la fin de la visite guidée : "done" ou "skipped"
+ * (autre valeur : ignorée). Édition web : rien.
+ */
+export function SetTourState(state: string): $CancellablePromise<void> {
+    return $Call.ByID(3162045261, state);
+}
+
+/**
  * SetTwoLevel affiche (ou non) les en-têtes d'un tableau sur deux lignes
  * (groupe « Groupe.Sous » dans une bande au-dessus de l'en-tête).
  */
@@ -2994,6 +3002,15 @@ export function Threads(sheet: number): $CancellablePromise<canvas$0.Thread[] | 
  */
 export function TitleToHeader(table: string): $CancellablePromise<$models.DocState> {
     return $Call.ByID(3462914548, table);
+}
+
+/**
+ * TourState dit ce qu'est devenue la visite guidée sur ce poste : "done",
+ * "skipped", ou "" (jamais faite ; aussi en édition web, et quand le
+ * témoin est illisible).
+ */
+export function TourState(): $CancellablePromise<string> {
+    return $Call.ByID(3699053317);
 }
 
 /**

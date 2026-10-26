@@ -2,6 +2,10 @@
 
 Lattis s'utilise comme un tableur : une grille sans fin, un ruban en haut, les onglets des feuilles en bas. La différence est dessous : chaque tableau que vous tapez devient une vraie table de base de données, typée et interrogeable en SQL.
 
+## Visite guidée
+
+En trois minutes, la visite guidée montre l'essentiel sur un petit classeur neuf : un tableau tapé, une colonne calculée, deux tableaux reliés par REFERENCE, un tableau croisé avec son graphique, puis une requête SQL. Faites chaque action, ou cliquez Suivant pour que Lattis la fasse ; Passer (ou `Échap`) l'arrête. Elle est proposée au premier lancement et se relance depuis l'aide (? › Visite guidée).
+
 ## Tableaux détectés
 
 Tapez quelques lignes n'importe où sur la feuille : une ligne d'en-têtes, puis des valeurs. Lattis reconnaît l'îlot de données et en fait un **tableau** : l'en-tête est mis en valeur, chaque colonne reçoit un type, et le tableau prend un nom que vous pouvez changer dans la zone du nom du tableau, à gauche de la barre de formule (tapez le nouveau nom, puis Entrée). Le premier tableau d'une feuille prend le nom de l'onglet (sans espace : « Ventes 2026 » donne `Ventes2026`), les suivants Tableau1, Tableau2… Renommer l'onglet renomme aussi le tableau qui porte son nom (l'inverse ne se fait pas) ; ce tableau n'affiche pas la pastille de son nom, puisque l'onglet le montre déjà.

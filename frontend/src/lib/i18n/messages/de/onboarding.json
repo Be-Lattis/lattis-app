@@ -1,0 +1,54 @@
+{
+	"bubble": {
+		"progress": "{n}/{total}",
+		"next": "Weiter",
+		"nextTooltip": "Lattis erledigt es für Sie (Eingabe)",
+		"finish": "Fertig",
+		"skip": "Überspringen",
+		"skipTooltip": "Tour beenden (Esc); über die Hilfe (?) neu starten",
+		"aria": "Geführte Tour, Schritt {n} von {total}",
+		"sample": "Einzutippende Zeilen"
+	},
+	"error": "Dieser Schritt ist fehlgeschlagen: klicken Sie erneut auf Weiter.",
+	"start": "Tour starten (3 Min.)",
+	"startTooltip": "Fünf Schritte in einer kleinen neuen Arbeitsmappe",
+	"help": "Geführte Tour",
+	"steps": {
+		"table": {
+			"act": "Tippen Sie diese drei Zeilen ab A1 ein oder klicken Sie auf Weiter.",
+			"done": "Lattis hat daraus eine Tabelle gemacht: Kopfzeile fett, Typen erkannt."
+		},
+		"computed": {
+			"act": "Tippen Sie {total} in {head}, dann diese Formel in {cell}:",
+			"done": "Eine einzige Formel füllt die ganze Spalte."
+		},
+		"reference": {
+			"act": "Tippen Sie {category} in {head}, dann in {cell} diese Formel, die in {products} nach dem Produkt sucht:",
+			"done": "Die Kategorie folgt dem Produkt, auch nach dem Sortieren."
+		},
+		"pivot": {
+			"act": "Klicken Sie in die Tabelle, dann auf {tab} › {pivot} und eine freie Zelle.",
+			"chart": "Mit einer Zelle der Pivot-Tabelle ausgewählt, klicken Sie auf {tab} › {chart}.",
+			"done": "Pivot-Tabelle und Diagramm folgen der Tabelle."
+		},
+		"sql": {
+			"act": "Öffnen Sie die Registerkarte {tab}.",
+			"run": "Eine fertige Abfrage: klicken Sie auf {run}.",
+			"done": "Fertig! Die Hilfe (?) beantwortet Ihre Fragen und startet diese Tour neu."
+		}
+	},
+	"sample": {
+		"sheet": "Verkäufe",
+		"products": "Produkte",
+		"product": "Produkt",
+		"quantity": "Menge",
+		"price": "Preis",
+		"total": "Gesamt",
+		"category": "Kategorie",
+		"apples": "Äpfel",
+		"carrots": "Karotten",
+		"pears": "Birnen",
+		"fruit": "Obst",
+		"vegetables": "Gemüse"
+	}
+}
