@@ -1322,6 +1322,8 @@ var zh = map[ID]string{
 	"transfer.notXlsxUnreadable": "{kind}（无法读取的工作簿：{err}）",
 	"transfer.notOds":            "此文件不是 OpenDocument .ods 电子表格",
 	"transfer.notOdsUnreadable":  "无法读取的 .ods 电子表格：{err}",
+	"transfer.zipBomb": "文件被拒绝：部分 {part} 的压缩异常",
+	"transfer.odsTooLarge": ".ods 电子表格被拒绝：其重复行超出 Lattis 一次可读取的范围",
 	"import.ods.formulas":        "{n, plural, other {# 个公式已作为值导入}}",
 	"transfer.rangeTooLarge":     "区域过大：{n} 个单元格，最多 {max} 个（请使用 tables.rows 或 db.query 读取表格）",
 	"transfer.sheetError":        "工作表 {sheet}：{err}",

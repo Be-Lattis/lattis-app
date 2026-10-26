@@ -1322,6 +1322,8 @@ var fr = map[ID]string{
 	"transfer.notXlsxUnreadable": "{kind} (classeur illisible : {err})",
 	"transfer.notOds":            "ce fichier n'est pas un classeur OpenDocument .ods",
 	"transfer.notOdsUnreadable":  "classeur .ods illisible : {err}",
+	"transfer.zipBomb": "fichier refusé : la partie {part} est compressée de façon anormale",
+	"transfer.odsTooLarge": "classeur .ods refusé : ses lignes répétées dépassent ce que Lattis lit en une fois",
 	"import.ods.formulas":        "{n, plural, one {1 formule importée en valeur} other {# formules importées en valeurs}}",
 	"transfer.rangeTooLarge":     "plage trop grande : {n} cellules, {max} au plus (lisez les tableaux avec tables.rows ou db.query)",
 	"transfer.sheetError":        "feuille {sheet} : {err}",

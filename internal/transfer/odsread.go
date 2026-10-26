@@ -43,7 +43,20 @@ type odsReader struct {
 	st      *bookStyles
 	dates   []dateKind
 	formula int
+	// produced : octets des feuilles réécrites au format .xlsx (maxODSSheetXML).
+	produced int64
 }
+
+// Bornes de la lecture d'un .ods (fichier reçu : bombe de décompression ou
+// de répétition) : texte d'une cellule (limite d'Excel) et feuilles
+// réécrites en mémoire, toutes ensemble.
+const (
+	maxCellText    = 32767
+	maxODSSheetXML = 512 << 20
+)
+
+// errODSTooLarge : feuilles réécrites au-delà de maxODSSheetXML.
+var errODSTooLarge = msg.New("transfer.odsTooLarge", nil)
 
 // odsLen lit une longueur (2.5cm, 1in, 12pt, 30mm, 96px) en pixels.
 func odsLen(s string) (float64, bool) {
@@ -484,8 +497,12 @@ func (o *odsReader) body(d *xmlScanner) ([]*odsInSheet, error) {
 				}
 			case "s":
 				if cellAttrs != nil {
+					// Espaces répétés : pas au-delà du texte d'une cellule
+					// (text:c="2000000000" allouerait 2 Go d'un coup).
 					k, _ := strconv.Atoi(string(d.attr("c")))
-					text.WriteString(strings.Repeat(" ", max(k, 1)))
+					if n := min(max(k, 1), maxCellText-text.Len()); n > 0 {
+						text.WriteString(strings.Repeat(" ", n))
+					}
 				}
 			case "tab":
 				if cellAttrs != nil {
@@ -529,7 +546,12 @@ func (o *odsReader) body(d *xmlScanner) ([]*odsInSheet, error) {
 					}
 					for k := 0; k < min(reps, 100_000); k++ {
 						r := strconv.Itoa(row + k + 1)
-						fmt.Fprintf(&sh.data, `<row r="%s"%s>%s</row>`, r, rowAttrs, strings.ReplaceAll(rowBuf.String(), rowMarkODS, r))
+						n, _ := fmt.Fprintf(&sh.data, `<row r="%s"%s>%s</row>`, r, rowAttrs, strings.ReplaceAll(rowBuf.String(), rowMarkODS, r))
+						// Lignes répétées : la feuille réécrite en mémoire reste
+						// bornée (un petit fichier ne fait pas des dizaines de Go).
+						if o.produced += int64(n); o.produced > maxODSSheetXML {
+							return nil, errODSTooLarge
+						}
 					}
 				}
 				row += rowRepeat
@@ -615,6 +637,10 @@ func openODS(path string) (*xlsxFile, int, error) {
 	if err != nil {
 		return nil, 0, fmt.Errorf("%w (%v)", ErrNotODS, err)
 	}
+	if err := checkZip(zr); err != nil {
+		zr.Close()
+		return nil, 0, err
+	}
 	x := &xlsxFile{zr: zr}
 	o := &odsReader{cells: map[string]*odsStyle{}, data: map[string]canvas.Style{}, kinds: map[string]dateKind{}, colW: map[string]int{}, rowH: map[string]int{}, index: map[string]int{},
 		st: &bookStyles{xfs: []canvas.Style{nil}, enc: []string{""}, theme: defaultTheme, indexed: defaultIndexed}, dates: []dateKind{notDate}}
@@ -647,6 +673,9 @@ func openODS(path string) (*xlsxFile, int, error) {
 	}
 	if err != nil {
 		zr.Close()
+		if err == errODSTooLarge {
+			return nil, 0, err
+		}
 		return nil, 0, msg.Wrap(ErrNotODS, "transfer.notOdsUnreadable", msg.Args{"err": err})
 	}
 	x.st, x.dates = o.st, o.dates

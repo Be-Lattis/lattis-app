@@ -93,12 +93,34 @@ func openXLSX(name string) (*xlsxFile, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w (%v)", ErrNotXLSX, err)
 	}
+	if err := checkZip(zr); err != nil {
+		zr.Close()
+		return nil, err
+	}
 	x := &xlsxFile{zr: zr}
 	if err := x.load(); err != nil {
 		zr.Close()
 		return nil, err
 	}
 	return x, nil
+}
+
+// checkZip refuse un classeur .xlsx ou .ods reçu dont une partie est
+// compressée de façon anormale (bombe de décompression) : mêmes bornes que
+// l'archive .lattis (archive.bomb). Le lecteur ZIP de Go ne rend jamais plus
+// que la taille annoncée, contrôlée ici.
+func checkZip(zr *zip.ReadCloser) error {
+	for _, f := range zr.File {
+		size := f.UncompressedSize64
+		ratio := uint64(2000)
+		if f.Method == zip.Deflate {
+			ratio = 500
+		}
+		if size >= 1<<40 || f.Method != zip.Store && size > 64<<20 && size/ratio > f.CompressedSize64 {
+			return msg.New("transfer.zipBomb", msg.Args{"part": f.Name})
+		}
+	}
+	return nil
 }
 
 func (x *xlsxFile) Close() error { return x.zr.Close() }

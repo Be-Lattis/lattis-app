@@ -3,6 +3,7 @@ package transfer
 import (
 	"archive/zip"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/canvas"
 	"github.com/lalamefine/lattis/internal/grid"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Un classeur .ods (ici écrit par l'export de Lattis) s'importe avec ses
@@ -149,5 +151,52 @@ func writeZipParts(t *testing.T, p string, parts map[string]string) {
 	}
 	if err := f.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Un .ods reçu ne fait pas exploser la mémoire (audit de sécurité du 26/10,
+// M2) : espaces répétés, lignes répétées pleines, partie compressée à
+// l'excès.
+func TestODSImportBombs(t *testing.T) {
+	ctx := context.Background()
+	head := `<?xml version="1.0" encoding="UTF-8"?>
+<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0">
+<office:body><office:spreadsheet><table:table table:name="F">`
+	tail := `</table:table></office:spreadsheet></office:body></office:document-content>`
+	ods := func(name, rows string) string {
+		p := filepath.Join(t.TempDir(), name)
+		writeZipParts(t, p, map[string]string{"mimetype": "application/vnd.oasis.opendocument.spreadsheet", "content.xml": head + rows + tail})
+		return p
+	}
+	id := func(err error) msg.ID {
+		var me *msg.Error
+		if errors.As(err, &me) {
+			return me.ID
+		}
+		return ""
+	}
+
+	// text:c="2000000000" : le texte s'arrête à la limite d'une cellule.
+	p := ods("espaces.ods", `<table:table-row><table:table-cell office:value-type="string"><text:p>a<text:s text:c="2000000000"/>b</text:p></table:table-cell></table:table-row>`)
+	if _, err := ImportODS(ctx, open(t).Model, p); err != nil {
+		t.Fatalf("espaces répétés : %v", err)
+	}
+
+	// Une ligne pleine répétée un million de fois : refusée, pas réécrite.
+	p = ods("lignes.ods", `<table:table-row table:number-rows-repeated="1048576"><table:table-cell office:value-type="float" office:value="1" table:number-columns-repeated="16384"/></table:table-row>`)
+	if _, err := ImportODS(ctx, open(t).Model, p); id(err) != "transfer.odsTooLarge" {
+		t.Fatalf("lignes répétées : %v", err)
+	}
+
+	// Une partie de 80 Mo de zéros (quelques dizaines de Ko compressés).
+	p = filepath.Join(t.TempDir(), "zip.ods")
+	writeZipParts(t, p, map[string]string{"mimetype": "application/vnd.oasis.opendocument.spreadsheet", "content.xml": head + tail, "Pictures/x": strings.Repeat("\x00", 80<<20)})
+	if _, err := ImportODS(ctx, open(t).Model, p); id(err) != "transfer.zipBomb" {
+		t.Fatalf("bombe ZIP .ods : %v", err)
+	}
+	x := filepath.Join(t.TempDir(), "zip.xlsx")
+	writeZipParts(t, x, map[string]string{"xl/workbook.xml": "<workbook/>", "xl/media/x": strings.Repeat("\x00", 80<<20)})
+	if _, err := ImportXLSX(ctx, open(t).Model, x); id(err) != "transfer.zipBomb" {
+		t.Fatalf("bombe ZIP .xlsx : %v", err)
 	}
 }

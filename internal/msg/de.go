@@ -1321,6 +1321,8 @@ var de = map[ID]string{
 	"transfer.notXlsxUnreadable": "{kind} (unlesbare Arbeitsmappe: {err})",
 	"transfer.notOds":            "diese Datei ist keine OpenDocument-Tabelle (.ods)",
 	"transfer.notOdsUnreadable":  "unlesbare .ods-Tabelle: {err}",
+	"transfer.zipBomb": "Datei abgelehnt: Teil {part} ist ungewöhnlich stark komprimiert",
+	"transfer.odsTooLarge": ".ods-Tabelle abgelehnt: Ihre wiederholten Zeilen überschreiten, was Lattis auf einmal liest",
 	"import.ods.formulas":        "{n, plural, one {1 Formel als Wert importiert} other {# Formeln als Werte importiert}}",
 	"transfer.rangeTooLarge":     "Bereich zu groß: {n} Zellen, höchstens {max} (lesen Sie Tabellen mit tables.rows oder db.query)",
 	"transfer.sheetError":        "Tabellenblatt {sheet}: {err}",
