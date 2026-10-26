@@ -92,7 +92,7 @@ Probability distributions ([NORM.DIST](fonction:NORM.DIST), [T.DIST](fonction:T.
 
 ## What-if analysis {#analyse-de-scenarios}
 
-**Data › What-if analysis**: **Goal seek** finds the value of a cell that gives a formula the wanted result; **Scenario manager** keeps named sets of values, shows them and summarizes them on a new sheet; **Data table** computes a formula for a list of values (one or two variables, results as fixed values: run it again to recalculate); **Solver** maximizes, minimizes or reaches a value under constraints (exact for a linear problem, approximate otherwise). Nothing changes before **Keep**; `Ctrl+Z` undoes.
+**Data › What-if analysis**: **Goal seek** finds the value of a cell that gives a formula the wanted result; **Scenario manager** keeps named sets of values, shows them and summarizes them on a new sheet; **Data table** computes a formula for a list of values (one or two variables, results as fixed values: run it again to recalculate); **Solver** maximizes, minimizes or reaches a value under constraints (exact for a linear problem, approximate otherwise). Nothing changes before **Keep**; `Ctrl+Z` undoes. Turn it on in File › Settings › Features.
 
 ## Recalculation {#recalcul}
 

@@ -89,6 +89,26 @@ export const settingSections: SettingSection[] = [
 				}
 			},
 			{
+				path: 'features.whatIf',
+				kind: 'bool',
+				get label() {
+					return t('shell.settings.whatIf.label');
+				},
+				get help() {
+					return t('shell.settings.whatIf.help');
+				}
+			},
+			{
+				path: 'features.sparklines',
+				kind: 'bool',
+				get label() {
+					return t('shell.settings.sparklines.label');
+				},
+				get help() {
+					return t('shell.settings.sparklines.help');
+				}
+			},
+			{
 				path: 'ai.enabled',
 				kind: 'bool',
 				get label() {

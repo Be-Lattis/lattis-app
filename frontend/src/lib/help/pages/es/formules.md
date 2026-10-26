@@ -92,7 +92,7 @@ También están disponibles distribuciones de probabilidad ([DISTR.NORM.N](fonct
 
 ## Análisis de hipótesis {#analyse-de-scenarios}
 
-**Datos › Análisis de hipótesis**: **Buscar objetivo** encuentra el valor de una celda que da a una fórmula el resultado deseado; el **Administrador de escenarios** guarda conjuntos de valores con nombre, los muestra y los resume en una hoja nueva; la **Tabla de datos** calcula una fórmula para una lista de valores (una o dos variables, resultados como valores fijos: vuelva a ejecutarla para recalcular); **Solver** maximiza, minimiza o alcanza un valor con restricciones (exacto para un problema lineal, aproximado si no). Nada cambia antes de **Conservar**; `Ctrl+Z` deshace.
+**Datos › Análisis de hipótesis**: **Buscar objetivo** encuentra el valor de una celda que da a una fórmula el resultado deseado; el **Administrador de escenarios** guarda conjuntos de valores con nombre, los muestra y los resume en una hoja nueva; la **Tabla de datos** calcula una fórmula para una lista de valores (una o dos variables, resultados como valores fijos: vuelva a ejecutarla para recalcular); **Solver** maximiza, minimiza o alcanza un valor con restricciones (exacto para un problema lineal, aproximado si no). Nada cambia antes de **Conservar**; `Ctrl+Z` deshace. Actívelo en Archivo › Configuración › Funciones.
 
 ## Recálculo {#recalcul}
 

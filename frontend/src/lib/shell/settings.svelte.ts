@@ -101,6 +101,16 @@ export function sharedWorkbooksEnabled(): boolean {
 	return !platform.demo && boolSetting(userSettings.list, 'features.sharedWorkbooks', true);
 }
 
+/** Analyse de scénarios activée (opt-in, features.whatIf) : Données › Prévision. */
+export function whatIfEnabled(): boolean {
+	return boolSetting(userSettings.list, 'features.whatIf');
+}
+
+/** Création de graphiques sparkline activée (opt-in, features.sparklines) : ceux d'un classeur restent dessinés. */
+export function sparklinesEnabled(): boolean {
+	return boolSetting(userSettings.list, 'features.sparklines');
+}
+
 /** L'Assistant IA est activé (opt-in, coupé par défaut ; jamais dans la démo publique). */
 export function aiEnabled(): boolean {
 	return !platform.demo && boolSetting(userSettings.list, 'ai.enabled');

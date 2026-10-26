@@ -56,4 +56,4 @@ Chart pane › **Analysis** (bars, lines, areas, scatter, bubbles): pick a serie
 
 ## Sparklines {#sparklines}
 
-Insert › **Sparklines**: a small chart in a cell (line, column, win/loss). Select the columns of a table row (Jan to Dec): every row of the table gets its own, new rows included. Outside a table, give the data range and the location. The same menu, on a cell that has one, sets the highlighted points, the colors and the axis, or deletes it.
+Insert › **Sparklines**: a small chart in a cell (line, column, win/loss). Select the columns of a table row (Jan to Dec): every row of the table gets its own, new rows included. Outside a table, give the data range and the location. The same menu, on a cell that has one, sets the highlighted points, the colors and the axis, or deletes it. Creating them is turned on in File › Settings › Features; those in a workbook are always shown.

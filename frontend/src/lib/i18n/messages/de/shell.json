@@ -19,6 +19,14 @@
 			"label": "Gemeinsam in einem freigegebenen Ordner arbeiten",
 			"help": "Eine Arbeitsmappe in einem freigegebenen Ordner gemeinsam bearbeiten."
 		},
+		"whatIf": {
+			"label": "Was-wäre-wenn-Analyse",
+			"help": "Zielwertsuche, Datentabelle, Szenarien und Solver auf der Registerkarte Daten."
+		},
+		"sparklines": {
+			"label": "Sparklines",
+			"help": "Minidiagramme in einer Zelle (Einfügen › Sparklines)."
+		},
 		"aiEnabled": {
 			"label": "KI-Assistent",
 			"help": "Ein Assistent, der die Arbeitsmappe analysiert und bearbeitet (Alt+I)."

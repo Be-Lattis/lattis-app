@@ -9,7 +9,8 @@
 	// par Entrée ou → ; ← le referme et rend le focus à son entrée. Posé à
 	// droite du menu, à gauche quand la place manque, remonté s'il dépasse en
 	// bas (menu.ts). Les entrées viennent du menu parent, avec son style ; celle
-	// du sous-menu suit les variables --menu-item-* du menu.
+	// du sous-menu suit les variables --menu-item-* du menu, en gras : une entrée
+	// qui se déplie se distingue d'une action (demande de Louis, 26/10).
 	import { tick, type Snippet } from 'svelte';
 	import { visibleBox } from '#lib/grid/dismiss.js';
 	import { byKeyboard, menuItems } from './focus.js';
@@ -140,6 +141,7 @@
 		border: none;
 		border-radius: 0;
 		font: inherit;
+		font-weight: 600;
 		color: inherit;
 		white-space: nowrap;
 		cursor: pointer;

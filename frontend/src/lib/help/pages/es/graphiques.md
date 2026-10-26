@@ -56,4 +56,4 @@ Panel del gráfico › **Análisis** (barras, líneas, áreas, dispersión, burb
 
 ## Minigráficos {#sparklines}
 
-Insertar › **Minigráficos**: un gráfico pequeño en una celda (línea, columna, ganancia/pérdida). Seleccione las columnas de una fila de una tabla (Ene a Dic): cada fila de la tabla recibe el suyo, filas nuevas incluidas. Fuera de una tabla, indique el rango de datos y la ubicación. El mismo menú, en una celda que tiene uno, ajusta los puntos resaltados, los colores y el eje, o lo elimina.
+Insertar › **Minigráficos**: un gráfico pequeño en una celda (línea, columna, ganancia/pérdida). Seleccione las columnas de una fila de una tabla (Ene a Dic): cada fila de la tabla recibe el suyo, filas nuevas incluidas. Fuera de una tabla, indique el rango de datos y la ubicación. El mismo menú, en una celda que tiene uno, ajusta los puntos resaltados, los colores y el eje, o lo elimina. Su creación se activa en Archivo › Configuración › Funciones; los de un libro se muestran siempre.

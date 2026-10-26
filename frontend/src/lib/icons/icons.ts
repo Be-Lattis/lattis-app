@@ -47,6 +47,13 @@ export const icons = {
 	image: '<rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle class="af" cx="9" cy="10" r="1.6"/><path class="a" d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/>',
 	// Formes et zone de texte posées sur une feuille
 	shapes: '<rect x="3.5" y="10.5" width="9.5" height="9.5" rx="1"/><circle class="a" cx="15.5" cy="8.5" r="5"/>',
+	// Insertion › Formes ▾ : une icône par forme (grid/objects.ts SHAPES).
+	'shape-rect': '<rect x="3.5" y="6" width="17" height="12"/>',
+	'shape-round-rect': '<rect x="3.5" y="6" width="17" height="12" rx="3.5"/>',
+	'shape-ellipse': '<ellipse cx="12" cy="12" rx="8.5" ry="6.5"/>',
+	'shape-triangle': '<path d="M12 4.5 20.5 19h-17z"/>',
+	'shape-line': '<path d="M4.5 19.5 19.5 4.5"/>',
+	'shape-arrow': '<path d="M4.5 19.5 19.5 4.5M12.5 4.5h7v7"/>',
 	'text-box': '<rect x="3.5" y="5" width="17" height="14" rx="1.5" stroke-dasharray="2.5 2"/><path class="a" d="M8 9.5h8M12 9.5v6"/>',
 	'bring-front': '<rect x="3.5" y="3.5" width="10" height="10" rx="1"/><rect class="af" x="10.5" y="10.5" width="10" height="10" rx="1"/>',
 	'send-back': '<rect class="af" x="3.5" y="3.5" width="10" height="10" rx="1"/><rect x="10.5" y="10.5" width="10" height="10" rx="1" fill="#fff"/>',
@@ -149,6 +156,10 @@ export const icons = {
 	'chart-bubble': '<path d="M4 4v16h16"/><circle class="af" cx="9" cy="14" r="2.5"/><circle class="af" cx="15.5" cy="8.5" r="3.5"/><circle cx="17" cy="16" r="1.5"/>',
 	'chart-stock': '<path d="M4 4v16h16M8 6v11M13 9v9M17.5 5v8"/><rect class="af" x="6.5" y="9" width="3" height="5"/><rect x="11.5" y="11" width="3" height="4"/><rect class="af" x="16" y="7" width="3" height="4"/>',
 	sparkline: '<rect x="3" y="5" width="18" height="14" rx="1"/><path class="a" d="M5.5 15l3-4 3 2.5 3.5-5 3.5 3"/>',
+	// Insertion › Sparklines ▾ : courbe, histogramme, positif/négatif.
+	'spark-line': '<path d="M3.5 15.5l4-5 4 3.5 4-6.5 5 4"/>',
+	'spark-column': '<path d="M3.5 20h17"/><rect class="af" x="5" y="12" width="2.5" height="8" rx=".4"/><rect class="af" x="10.75" y="6" width="2.5" height="14" rx=".4"/><rect class="af" x="16.5" y="9.5" width="2.5" height="10.5" rx=".4"/>',
+	'spark-winloss': '<path d="M3.5 12h17"/><rect class="af" x="5" y="6" width="2.5" height="6" rx=".4"/><rect x="10.75" y="12" width="2.5" height="6" rx=".4"/><rect class="af" x="16.5" y="6" width="2.5" height="6" rx=".4"/>',
 
 	// Formules
 	function: '<path d="M12.5 4.5H11a2.5 2.5 0 0 0-2.5 2.2L7 18.3a2.5 2.5 0 0 1-2.5 2.2H4M5.5 10h6"/><path class="a" d="m14 11 6 8m0-8-6 8"/>',

@@ -24,7 +24,7 @@
 	import { ZOOM_LEVELS, zoomLabel } from '#lib/grid/zoom.js';
 	import Select from '#lib/ui/Select.svelte';
 	import { estimate, fit, groupWidth, type GroupShape, type Measure, type Mode, type Size } from './fit';
-	import { networkSourcesEnabled, platform, scriptingEnabled, sharedWorkbooksEnabled } from './settings.svelte.js';
+	import { networkSourcesEnabled, platform, scriptingEnabled, sharedWorkbooksEnabled, sparklinesEnabled, whatIfEnabled } from './settings.svelte.js';
 	import { lattis } from '#lib/remote/lattis.svelte.js';
 	import { keyLabel, pdfPrinterHint } from '#lib/web/platform.js';
 	import { isNarrow, revealX } from '#lib/ui/mobile.js';
@@ -40,6 +40,10 @@
 	import { lang, t, tAny } from '#lib/i18n/index.js';
 	import { SHAPES, type ObjectKind } from '#lib/grid/objects.js';
 	import frRibbon from '#lib/i18n/messages/fr/ribbon.json';
+	/** Icône de chaque forme du menu Insertion › Formes ▾. */
+	const SHAPE_ICONS: Partial<Record<ObjectKind, IconName>> = { rect: 'shape-rect', roundRect: 'shape-round-rect', ellipse: 'shape-ellipse', triangle: 'shape-triangle', line: 'shape-line', arrow: 'shape-arrow' };
+	/** Icône de chaque genre du menu Insertion › Sparklines ▾. */
+	const SPARK_ICONS: Record<'line' | 'column' | 'winloss', IconName> = { line: 'spark-line', column: 'spark-column', winloss: 'spark-winloss' };
 
 	export type View = 'grid' | 'sql' | 'script';
 	export type FormatTab = 'number' | 'align' | 'font' | 'border' | 'fill';
@@ -665,13 +669,19 @@
 						hint: k === 'bar' ? t('ribbon.cmd.chart.tooltipBar', { chart: kindInfo(k)!.label }) : t('ribbon.cmd.chart.tooltip', { chart: kindInfo(k)!.label })
 					})),
 					{ label: t('ribbon.cmd.moreCharts.label'), icon: 'chart-more', run: onchart ? openItems : undefined, hint: moreHint, items: MORE_KINDS.map((k) => ({ label: k.label, icon: k.icon, run: onchart ? () => onchart(k.kind) : undefined })) },
-					{
-						label: t('ribbon.cmd.sparklines.label'),
-						icon: 'sparkline',
-						run: onsparkline ? openItems : undefined,
-						hint: t('ribbon.cmd.sparklines.tooltip'),
-						items: (['line', 'column', 'winloss'] as const).map((k) => ({ label: tAny(`grid.sparkline.kind.${k}`), run: onsparkline ? () => onsparkline(k) : undefined }))
-					}
+					// Fonctionnalité à activer (features.sparklines) : coupée, les graphiques
+					// sparkline d'un classeur restent dessinés et imprimés.
+					...(sparklinesEnabled()
+						? [
+								{
+									label: t('ribbon.cmd.sparklines.label'),
+									icon: 'sparkline' as const,
+									run: onsparkline ? openItems : undefined,
+									hint: t('ribbon.cmd.sparklines.tooltip'),
+									items: (['line', 'column', 'winloss'] as const).map((k) => ({ label: tAny(`grid.sparkline.kind.${k}`), icon: SPARK_ICONS[k], run: onsparkline ? () => onsparkline(k) : undefined }))
+								}
+							]
+						: [])
 				])
 			},
 			{
@@ -684,7 +694,7 @@
 						icon: 'shapes',
 						run: onobject ? openItems : undefined,
 						hint: t('ribbon.cmd.shapes.tooltip'),
-						items: SHAPES.map((k) => ({ label: tAny(`grid.objects.kind.${k}`), run: onobject ? () => onobject(k) : undefined }))
+						items: SHAPES.map((k) => ({ label: tAny(`grid.objects.kind.${k}`), icon: SHAPE_ICONS[k], run: onobject ? () => onobject(k) : undefined }))
 					},
 					{ label: t('ribbon.cmd.textBox.label'), icon: 'text-box', run: onobject ? () => onobject('text') : undefined, hint: t('ribbon.cmd.textBox.tooltip') }
 				])
@@ -896,16 +906,19 @@
 				id: 'forecast',
 				title: t('whatif.group'),
 				// Comme un tableur : Analyse de scénarios ▾ et ses quatre outils.
-				commands: [
-					{
-						label: t('whatif.menu'),
-						icon: 'what-if',
-						data: true,
-						run: onwhatif ? openItems : undefined,
-						hint: t('whatif.menuTip'),
-						items: WHATIF_KINDS.map((k) => ({ label: t(`whatif.${k}.title`) + '…', run: onwhatif ? () => onwhatif(k) : undefined }))
-					}
-				]
+				// Fonctionnalité à activer (features.whatIf) : coupée, le groupe disparaît.
+				commands: whatIfEnabled()
+					? [
+							{
+								label: t('whatif.menu'),
+								icon: 'what-if',
+								data: true,
+								run: onwhatif ? openItems : undefined,
+								hint: t('whatif.menuTip'),
+								items: WHATIF_KINDS.map((k) => ({ label: t(`whatif.${k}.title`) + '…', run: onwhatif ? () => onwhatif(k) : undefined }))
+							}
+						]
+					: []
 			},
 			{
 				id: 'outline',
@@ -1250,7 +1263,7 @@
 			// stockage indisponible : le choix vaut pour la session
 		}
 	}
-	const visibleGroups = $derived(isView(tab) ? [] : (ribbons[tab] ?? []).filter((g) => !hiddenGroups.includes(`${tab}|${g.id}`)));
+	const visibleGroups = $derived(isView(tab) ? [] : (ribbons[tab] ?? []).filter((g) => g.commands.length > 0 && !hiddenGroups.includes(`${tab}|${g.id}`)));
 	const hiddenHere = $derived((ribbons[tab] ?? []).filter((g) => hiddenGroups.includes(`${tab}|${g.id}`)).map((g) => ({ id: g.id, title: g.title })));
 
 	type ShapesArr = GroupShape[];

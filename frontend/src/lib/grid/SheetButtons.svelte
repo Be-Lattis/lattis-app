@@ -591,7 +591,7 @@
 		{/if}
 	{/snippet}
 	<div class="menu" style:zoom={unzoom} style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
-		<!-- Presse-papiers, puis le sous-menu du contrôle (ctxmenu.ts). -->
+		<!-- Le sous-menu du contrôle, puis le presse-papiers (ctxmenu.ts). -->
 		{#each controlMenu() as g, gi (gi)}
 			{#if gi}<hr />{/if}
 			{#each g as id (id)}{@render item(id)}{/each}

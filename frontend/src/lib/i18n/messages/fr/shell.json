@@ -19,6 +19,14 @@
 			"label": "Travailler à plusieurs sur un dossier partagé",
 			"help": "Modifier à plusieurs un classeur posé sur un dossier partagé."
 		},
+		"whatIf": {
+			"label": "Analyse de scénarios",
+			"help": "Valeur cible, table de données, scénarios et solveur dans l'onglet Données."
+		},
+		"sparklines": {
+			"label": "Graphiques sparkline",
+			"help": "Mini-graphiques dans une cellule (Insertion › Sparklines)."
+		},
 		"aiEnabled": {
 			"label": "Assistant IA",
 			"help": "Un assistant qui analyse et modifie le classeur (Alt+I)."

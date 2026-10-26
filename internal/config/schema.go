@@ -194,6 +194,12 @@ type Features struct {
 	// partagé (NAS) ; désactivé, un classeur ouvert ailleurs s'ouvre en
 	// lecture seule ou « quand même », comme avant (décision 0011).
 	CoEditing *bool `json:"coEditing,omitempty"`
+	// WhatIf : Analyse de scénarios (valeur cible, table de données,
+	// scénarios, solveur) dans l'onglet Données. Fonctionnalité à activer.
+	WhatIf *bool `json:"whatIf,omitempty"`
+	// Sparklines : création de graphiques sparkline (Insertion ›
+	// Sparklines) ; ceux d'un classeur restent dessinés. À activer.
+	Sparklines *bool `json:"sparklines,omitempty"`
 }
 
 // Toggle est un interrupteur.
@@ -222,6 +228,9 @@ func Defaults() Tree {
 			"allowUserLattisServers": true,
 			// Travail à plusieurs sur un dossier partagé (décision 0011).
 			"coEditing": true,
+			// Fonctionnalités à activer (Fichier › Paramètres › Fonctionnalités).
+			"whatIf":     false,
+			"sparklines": false,
 		},
 		"ai": Tree{"enabled": false, "provider": "anthropic", "dataSharing": "schema-only",
 			"localUrl": "http://localhost:11434/v1"}, // Ollama
@@ -334,7 +343,7 @@ func coerce(path string, v any) (any, bool) {
 }
 
 var boolPaths = []string{"allowPolicyOverride", "features.mcp.enabled", "features.allowUserConnections",
-	"features.htmlPages", "features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.coEditing", "features.luaHttp.restrict", "ai.enabled",
+	"features.htmlPages", "features.htmlTabs", "features.sharedWorkbooks", "features.allowUserLattisServers", "features.coEditing", "features.whatIf", "features.sparklines", "features.luaHttp.restrict", "ai.enabled",
 	"ai.keepConversation", "mcp.confirmWrites", "ui.builtinThemes", "updates.check"}
 
 func boolPath(path string) bool {
@@ -361,6 +370,8 @@ var validators = []struct {
 	{"features.htmlTabs", isBool}, // ancien réglage, sans effet
 	{"features.sharedWorkbooks", isBool},
 	{"features.coEditing", isBool},
+	{"features.whatIf", isBool},
+	{"features.sparklines", isBool},
 	{"features.allowUserLattisServers", isBool},
 	{"features.luaHttp.restrict", isBool},
 	{"features.luaHttp.allowedDomains", isStringList},

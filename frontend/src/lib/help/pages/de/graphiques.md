@@ -56,4 +56,4 @@ Diagrammbereich › **Analyse** (Säulen, Linien, Flächen, Punkte, Blasen): Rei
 
 ## Sparklines {#sparklines}
 
-Einfügen › **Sparklines**: ein kleines Diagramm in einer Zelle (Linie, Säule, Gewinn/Verlust). Die Spalten einer Tabellenzeile wählen (Jan bis Dez): jede Tabellenzeile erhält ihre eigene, neue Zeilen eingeschlossen. Außerhalb einer Tabelle Datenbereich und Position angeben. Dasselbe Menü auf einer Zelle mit Sparkline stellt hervorgehobene Punkte, Farben und Achse ein oder löscht sie.
+Einfügen › **Sparklines**: ein kleines Diagramm in einer Zelle (Linie, Säule, Gewinn/Verlust). Die Spalten einer Tabellenzeile wählen (Jan bis Dez): jede Tabellenzeile erhält ihre eigene, neue Zeilen eingeschlossen. Außerhalb einer Tabelle Datenbereich und Position angeben. Dasselbe Menü auf einer Zelle mit Sparkline stellt hervorgehobene Punkte, Farben und Achse ein oder löscht sie. Das Erstellen wird unter Datei › Einstellungen › Funktionen eingeschaltet; vorhandene Sparklines werden immer angezeigt.

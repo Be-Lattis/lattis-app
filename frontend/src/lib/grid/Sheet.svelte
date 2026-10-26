@@ -12766,9 +12766,9 @@
 					<button onclick={() => deleteTable(m.e.t)}>{tr('grid.menu.deleteTable')}</button>
 					<button onclick={() => (menu = { ...m, confirmDelete: false })}>{tr('common.cancel')}</button>
 				{:else}
-					<!-- Ordre (demande de Louis, ctxmenu.ts) : les actions propres à la situation ;
-					     le presse-papiers ; effacement et mise en forme ; la note ; un sous-menu par
-					     objet, titré de son nom (tri et filtre, ligne, colonne, tableau). -->
+					<!-- Ordre (demande de Louis, ctxmenu.ts) : un sous-menu par objet, titré de son nom
+					     (ligne, colonne, tableau) ; les actions propres à la situation ; le presse-papiers ;
+					     effacement et mise en forme ; la note ; tri et filtre. -->
 					{#snippet rowItem(id: string)}
 						{#if id === 'insertAbove'}
 							<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n)))}>{tr('grid.menu.insertAbove')}</button>
@@ -13094,9 +13094,9 @@
 				{/if}
 			{/snippet}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (freeMenu = null)}>
-				<!-- Ordre (demande de Louis, ctxmenu.ts), comme sur un tableau : la situation ; le
-				     presse-papiers ; effacement et mise en forme ; la note ; insertion et
-				     suppression ; un sous-menu par objet (ligne ou colonne de la feuille, tableau croisé). -->
+				<!-- Ordre (demande de Louis, ctxmenu.ts), comme sur un tableau : le sous-menu de
+				     l'objet (tableau croisé) ; la situation ; le presse-papiers ; effacement et mise
+				     en forme ; la note ; insertion et suppression. -->
 				{#each menuGroups as g, gi (gi)}
 					{#if gi}<hr />{/if}
 					{#each g as id (id)}{@render item(id)}{/each}
@@ -13226,7 +13226,7 @@
 				{/if}
 			{/snippet}
 			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (chartMenu = null)}>
-				<!-- Presse-papiers, puis le sous-menu du graphique (ctxmenu.ts). -->
+				<!-- Le sous-menu du graphique, puis le presse-papiers (ctxmenu.ts). -->
 				{#each chartMenuGroups({ image: m.ch.config.kind !== 'map' && !m.ch.error }) as g, gi (gi)}
 					{#if gi}<hr />{/if}
 					{#each g as id (id)}{@render chartItem(id)}{/each}

@@ -106,6 +106,15 @@ L'utilisateur la choisit dans Fichier › Paramètres › Affichage ; posée dan
 
 une recherche est un `GET` de l'API GitHub, dès que l'application est chargée puis au plus toutes les 12 heures, sans cookie ni identifiant (`User-Agent: Lattis/<version> (<système>)`) ; rien n'est téléchargé sans le clic de l'utilisateur, et rien n'est installé sans empreinte publiée (détail : [release/publier.md](release/publier.md#mise-à-jour-automatique)). L'utilisateur la coupe dans Fichier › Paramètres › Mises à jour ; un parc qui distribue lui-même les versions (Intune, winget, MSIX) pose `"updates": { "check": false }` dans la stratégie (`HKLM\SOFTWARE\Policies\Lattis`, valeur `updates.check` en `REG_DWORD` 0, ou `policy.json`) : plus aucune requête ni proposition, le réglage est grisé. Variable : `LATTIS_UPDATES__CHECK=0`. Sans objet en édition web ; un paquet MSIX ne cherche jamais (Windows le met à jour). L'installeur `Lattis-windows-x64-setup.exe` installe au choix pour l'utilisateur (sans droits d'administration) ou pour tous les utilisateurs du poste (Program Files, droits d'administration) ; en déploiement : `Lattis-windows-x64-setup.exe /S /AllUsers` ou `/S /CurrentUser` (options : [release/publier.md](release/publier.md#fichiers-publiés-et-liens-de-téléchargement)). Une installation pour tous les utilisateurs demande les droits d'administration à chaque mise à jour (invite UAC), un poste sans ces droits ne peut donc pas l'appliquer : couper la recherche (et déployer les versions soi-même), ou préférer l'installation pour l'utilisateur ou le MSIX.
 
+### Fonctionnalités à activer
+
+| Clé | Rôle | Défaut |
+|---|---|---|
+| `features.whatIf` | Données › Prévision › Analyse de scénarios (valeur cible, table de données, scénarios, solveur) | `false` |
+| `features.sparklines` | Insertion › Sparklines (création ; celles d'un classeur restent dessinées et imprimées) | `false` |
+
+L'utilisateur les coche dans Fichier › Paramètres › Fonctionnalités ; une stratégie peut les imposer (`"features": { "whatIf": true }`, ou `REG_DWORD` 1 sous `HKLM\SOFTWARE\Policies\Lattis`). Coupées, seul le ruban change : un classeur qui contient des scénarios ou des sparklines s'ouvre comme avant, et les scripts gardent `cells.goal_seek`. Variables : `LATTIS_FEATURES__WHATIF`, `LATTIS_FEATURES__SPARKLINES`.
+
 ### Pages web
 
 | Clé | Rôle | Défaut |

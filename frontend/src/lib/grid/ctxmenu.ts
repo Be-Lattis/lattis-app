@@ -1,15 +1,17 @@
 // Menus du clic droit de la grille : l'ordre de leurs entrées (demande de
 // Louis). Partout le même raisonnement :
-//   0. les actions propres à la situation (dernière ligne, première ligne,
+//   0. un sous-menu par objet sous le clic, titré de son nom : Ligne « … »,
+//      Colonne « … », Tableau « … », Tableau croisé « … », Graphique « … »,
+//      Bouton « … » (contextuels, donc en tête, 26/10) ;
+//   1. les actions propres à la situation (dernière ligne, première ligne,
 //      en-tête avec du texte ou des groupes au-dessus, cellule libre près d'un
 //      tableau, résultat déversé…), seulement quand il y en a ;
-//   1. le presse-papiers (Couper, Copier, Coller) ;
-//   2. effacer et mettre en forme (contenu, format de cellule, mise en forme
+//   2. le presse-papiers (Couper, Copier, Coller) ;
+//   3. effacer et mettre en forme (contenu, format de cellule, mise en forme
 //      conditionnelle) ;
-//   3. la note ;
-//   4. un sous-menu par objet, titré de son nom : Trier et filtrer, Ligne
-//      « … », Colonne « … », Tableau « … », Tableau croisé « … »,
-//      Graphique « … », Bouton « … ».
+//   4. la note, le commentaire ;
+//   5. Trier et filtrer (un sous-menu, mais pas un objet : il reste en bas).
+// Toute entrée qui ouvre un sous-menu (▸) est en gras (Submenu.svelte).
 // Chaque fonction rend des groupes d'identifiants d'entrées : Sheet.svelte
 // les affiche dans cet ordre, un séparateur entre deux groupes ; les groupes
 // vides disparaissent (pas de séparateur en trop).
@@ -60,11 +62,12 @@ export interface TableCellMenu {
 
 export function tableCellMenu(o: TableCellMenu): MenuGroups {
 	return groups(
+		[o.row && 'row', o.column && 'column', o.table && 'table'],
 		[o.ref && 'ref', o.promote && 'promote', o.toNote && 'toNote', o.toHeader && 'toHeader', o.groupsOn && 'groupsOn', o.groupsOff && 'groupsOff'],
 		CLIPBOARD,
 		['clear', o.format && 'format', o.rules && 'rules'],
 		[o.note && 'note', o.comment && 'comment'],
-		[o.sort && 'sort', o.row && 'row', o.column && 'column', o.table && 'table']
+		[o.sort && 'sort']
 	);
 }
 
@@ -108,12 +111,12 @@ export interface FreeCellMenu {
 
 export function freeCellMenu(o: FreeCellMenu): MenuGroups {
 	return groups(
+		[o.pivot && 'pivot'],
 		[o.ref && 'ref', o.asHeader && 'asHeader', o.join && 'join', o.asTable && 'asTable', o.spill && 'spillLinked', o.spill && 'spillValues', o.toValues && 'toValues', o.asGroups && 'asGroups'],
 		[...CLIPBOARD, o.pasteChart && 'pasteChart', o.pasteButton && 'pasteButton'],
 		['clear', o.format && 'format', o.rules && 'rules'],
 		[o.note && 'note', o.comment && 'comment'],
-		[o.lines && 'insertDialog', o.lines && 'clearAll'],
-		[o.pivot && 'pivot']
+		[o.lines && 'insertDialog', o.lines && 'clearAll']
 	);
 }
 
@@ -136,15 +139,16 @@ export interface HeaderMenu {
 
 // Gouttière (numéro de ligne, lettre de colonne) : on vise presque toujours
 // la ligne ou la colonne ; ses actions (insertion, taille, affichage) sont en
-// tête du menu, après la situation, sans sous-menu (demande de Louis, 21/10).
+// tête du menu, sans sous-menu (demande de Louis, 21/10), suivies du
+// sous-menu Tableau « … », puis de la situation.
 // 'linesTop' : les groupes de linesSubmenu, montés tels quels.
 export function headerMenu(o: HeaderMenu): MenuGroups {
 	return groups(
-		[o.promote && 'promote', o.toNote && 'toNote', o.asGroups && 'asGroups'],
 		[o.lines && 'linesTop'],
+		[o.table && 'table'],
+		[o.promote && 'promote', o.toNote && 'toNote', o.asGroups && 'asGroups'],
 		[...CLIPBOARD, o.pasteChart && 'pasteChart', o.pasteButton && 'pasteButton'],
-		['clear', o.format && 'format', o.rules && 'rules'],
-		[o.table && 'table']
+		['clear', o.format && 'format', o.rules && 'rules']
 	);
 }
 
@@ -158,9 +162,9 @@ export function pivotSubmenu(o: { fold?: boolean; source?: boolean; move?: boole
 	return groups([o.fold && 'expand', o.fold && 'collapse'], [o.fold && 'expandAll', o.fold && 'collapseAll'], [o.source && 'source', o.move && 'move'], [o.remove && 'delete']);
 }
 
-/** Graphique : presse-papiers, puis son sous-menu. */
+/** Graphique : son sous-menu, puis le presse-papiers. */
 export function chartMenu(o: { image?: boolean }): MenuGroups {
-	return groups(['cut', 'copy', o.image && 'copyImage', 'pasteHere'], ['chart']);
+	return groups(['chart'], ['cut', 'copy', o.image && 'copyImage', 'pasteHere']);
 }
 
 /** Sous-menu Graphique « … ». */
@@ -168,9 +172,9 @@ export function chartSubmenu(o: { edit?: boolean }): MenuGroups {
 	return groups([o.edit && 'edit'], ['delete']);
 }
 
-/** Bouton ou contrôle : presse-papiers, puis son sous-menu. */
+/** Bouton ou contrôle : son sous-menu, puis le presse-papiers. */
 export function controlMenu(): MenuGroups {
-	return groups(['cut', 'copy'], ['control']);
+	return groups(['control'], ['cut', 'copy']);
 }
 
 /** Sous-menu Bouton « … » (ou Case à cocher, Liste…). */

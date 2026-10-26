@@ -56,4 +56,4 @@ Volet du graphique › **Analyse** (barres, courbes, aires, nuages, bulles) : ch
 
 ## Sparklines
 
-Insertion › **Sparklines** : un petit graphique dans une cellule (courbe, histogramme, positif/négatif). Sélectionnez les colonnes d'une ligne d'un tableau (Jan à Déc) : chaque ligne du tableau reçoit le sien, lignes ajoutées comprises. Hors tableau, donnez la plage des données et l'emplacement. Le même menu, sur une cellule qui en a un, règle les points mis en valeur, les couleurs et l'axe, ou le supprime.
+Insertion › **Sparklines** : un petit graphique dans une cellule (courbe, histogramme, positif/négatif). Sélectionnez les colonnes d'une ligne d'un tableau (Jan à Déc) : chaque ligne du tableau reçoit le sien, lignes ajoutées comprises. Hors tableau, donnez la plage des données et l'emplacement. Le même menu, sur une cellule qui en a un, règle les points mis en valeur, les couleurs et l'axe, ou le supprime. Leur création s'active dans Fichier › Paramètres › Fonctionnalités ; celles d'un classeur restent toujours affichées.

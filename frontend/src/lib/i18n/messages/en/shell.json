@@ -19,6 +19,14 @@
 			"label": "Work together on a shared folder",
 			"help": "Edit together a workbook stored in a shared folder."
 		},
+		"whatIf": {
+			"label": "What-if analysis",
+			"help": "Goal seek, data table, scenarios and solver in the Data tab."
+		},
+		"sparklines": {
+			"label": "Sparklines",
+			"help": "Tiny charts inside a cell (Insert › Sparklines)."
+		},
 		"aiEnabled": {
 			"label": "AI assistant",
 			"help": "An assistant that analyzes and edits the workbook (Alt+I)."

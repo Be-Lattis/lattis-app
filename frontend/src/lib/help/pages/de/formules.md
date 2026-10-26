@@ -92,7 +92,7 @@ Auch verfügbar: Wahrscheinlichkeitsverteilungen ([NORM.VERT](fonction:NORM.VERT
 
 ## Was-wäre-wenn-Analyse {#analyse-de-scenarios}
 
-**Daten › Was-wäre-wenn-Analyse**: **Zielwertsuche** findet den Wert einer Zelle, der einer Formel das gewünschte Ergebnis gibt; der **Szenario-Manager** speichert benannte Wertesätze, zeigt sie an und fasst sie auf einem neuen Blatt zusammen; die **Datentabelle** berechnet eine Formel für eine Liste von Werten (eine oder zwei Variablen, Ergebnisse als feste Werte: zum Neuberechnen erneut ausführen); der **Solver** maximiert, minimiert oder erreicht einen Wert unter Nebenbedingungen (exakt bei einem linearen Problem, sonst angenähert). Vor **Übernehmen** ändert sich nichts; `Strg+Z` macht rückgängig.
+**Daten › Was-wäre-wenn-Analyse**: **Zielwertsuche** findet den Wert einer Zelle, der einer Formel das gewünschte Ergebnis gibt; der **Szenario-Manager** speichert benannte Wertesätze, zeigt sie an und fasst sie auf einem neuen Blatt zusammen; die **Datentabelle** berechnet eine Formel für eine Liste von Werten (eine oder zwei Variablen, Ergebnisse als feste Werte: zum Neuberechnen erneut ausführen); der **Solver** maximiert, minimiert oder erreicht einen Wert unter Nebenbedingungen (exakt bei einem linearen Problem, sonst angenähert). Vor **Übernehmen** ändert sich nichts; `Strg+Z` macht rückgängig. Unter Datei › Einstellungen › Funktionen einschalten.
 
 ## Neuberechnung {#recalcul}
 

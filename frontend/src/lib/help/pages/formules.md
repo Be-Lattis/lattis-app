@@ -92,7 +92,7 @@ Lois de probabilité ([LOI.NORMALE.N](fonction:LOI.NORMALE.N), [LOI.STUDENT.N](f
 
 ## Analyse de scénarios
 
-**Données › Analyse de scénarios** : **Valeur cible** trouve la valeur d'une cellule qui donne le résultat voulu à une formule ; **Gestionnaire de scénarios** garde des jeux de valeurs nommés, les affiche et en fait une synthèse sur un nouvel onglet ; **Table de données** calcule une formule pour une liste de valeurs (une ou deux variables, résultats en valeurs fixes : relancez-la pour recalculer) ; **Solveur** maximise, minimise ou atteint une valeur sous contraintes (exact pour un problème linéaire, approché sinon). Rien ne change avant **Conserver** ; `Ctrl+Z` annule.
+**Données › Analyse de scénarios** : **Valeur cible** trouve la valeur d'une cellule qui donne le résultat voulu à une formule ; **Gestionnaire de scénarios** garde des jeux de valeurs nommés, les affiche et en fait une synthèse sur un nouvel onglet ; **Table de données** calcule une formule pour une liste de valeurs (une ou deux variables, résultats en valeurs fixes : relancez-la pour recalculer) ; **Solveur** maximise, minimise ou atteint une valeur sous contraintes (exact pour un problème linéaire, approché sinon). Rien ne change avant **Conserver** ; `Ctrl+Z` annule. À activer dans Fichier › Paramètres › Fonctionnalités.
 
 ## Recalcul
 

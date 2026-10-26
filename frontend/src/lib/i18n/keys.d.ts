@@ -4495,6 +4495,8 @@ export interface MessageParams {
 	'shell.settings.sections.view': Record<never, never>;
 	'shell.settings.sharedWorkbooks.help': Record<never, never>;
 	'shell.settings.sharedWorkbooks.label': Record<never, never>;
+	'shell.settings.sparklines.help': Record<never, never>;
+	'shell.settings.sparklines.label': Record<never, never>;
 	'shell.settings.sqlReadSeconds.help': Record<never, never>;
 	'shell.settings.sqlReadSeconds.label': Record<never, never>;
 	'shell.settings.sqlWriteSeconds.help': Record<never, never>;
@@ -4507,6 +4509,8 @@ export interface MessageParams {
 	'shell.settings.updatesCheck.label': Record<never, never>;
 	'shell.settings.userName.help': Record<never, never>;
 	'shell.settings.userName.label': Record<never, never>;
+	'shell.settings.whatIf.help': Record<never, never>;
+	'shell.settings.whatIf.label': Record<never, never>;
 	'shell.share.addTableConfirm': { table: number | string; workbook: number | string };
 	'shell.share.addingTable': { table: number | string };
 	'shell.share.connected': { server: number | string };

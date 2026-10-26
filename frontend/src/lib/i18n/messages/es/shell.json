@@ -19,6 +19,14 @@
 			"label": "Trabajar juntos en una carpeta compartida",
 			"help": "Editar entre varios un libro guardado en una carpeta compartida."
 		},
+		"whatIf": {
+			"label": "Análisis de hipótesis",
+			"help": "Buscar objetivo, tabla de datos, escenarios y Solver en la pestaña Datos."
+		},
+		"sparklines": {
+			"label": "Minigráficos",
+			"help": "Gráficos pequeños dentro de una celda (Insertar › Minigráficos)."
+		},
 		"aiEnabled": {
 			"label": "Asistente de IA",
 			"help": "Un asistente que analiza y modifica el libro (Alt+I)."
