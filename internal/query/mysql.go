@@ -62,8 +62,12 @@ func mysqlConfig(c DBConfig, password string) *mysql.Config {
 // mysqlDSN écrit la chaîne de connexion (tests, messages).
 func mysqlDSN(c DBConfig, password string) string { return mysqlConfig(c, password).FormatDSN() }
 
-func openMySQL(c DBConfig, password string) (*sql.DB, error) {
-	conn, err := mysql.NewConnector(mysqlConfig(c, password))
+func openMySQL(c DBConfig, password string, dial DialFunc) (*sql.DB, error) {
+	cfg := mysqlConfig(c, password)
+	if dial != nil {
+		cfg.DialFunc = dial
+	}
+	conn, err := mysql.NewConnector(cfg)
 	if err != nil {
 		return nil, err
 	}

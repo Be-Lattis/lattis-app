@@ -226,7 +226,7 @@ type dialect struct {
 	label string
 	// open ouvre une connexion à un serveur (sans la tester) ; openFile
 	// ouvre un fichier (SQLite) en lecture seule.
-	open     func(c DBConfig, password string) (*sql.DB, error)
+	open     func(c DBConfig, password string, dial DialFunc) (*sql.DB, error)
 	openFile func(path string) (*sql.DB, error)
 	// authFailed reconnaît un refus d'authentification.
 	authFailed func(err error) bool
@@ -311,7 +311,7 @@ func connectDB(ctx context.Context, sec *Secrets, c Connection) (*sql.DB, *diale
 		// Mot de passe enregistré, pas encore autorisé pour ce classeur.
 		return nil, nil, &ErrPassword{Connection: c.Name, Account: c.Account(), Message: "mot de passe enregistré à autoriser", Stored: true}
 	}
-	db, err := d.open(c.Config, pw)
+	db, err := d.open(c.Config, pw, dialOf(ctx))
 	if err != nil {
 		return nil, nil, msg.Wrap(err, "connection.error", msg.Args{"connection": c.Name, "err": err})
 	}
@@ -360,7 +360,12 @@ func TestConnection(ctx context.Context, sec *Secrets, c Connection, password st
 	if err != nil {
 		return err
 	}
-	db, err := d.open(c.Config, password)
+	if g := GuardOf(ctx); g != nil {
+		if err := g.Check(ctx, Access{Host: ConnectionHost(c)}); err != nil {
+			return msg.Wrap(err, "connection.error", msg.Args{"connection": c.Name, "err": err})
+		}
+	}
+	db, err := d.open(c.Config, password, dialOf(ctx))
 	if err != nil {
 		return msg.Wrap(err, "connection.error", msg.Args{"connection": c.Name, "err": err})
 	}

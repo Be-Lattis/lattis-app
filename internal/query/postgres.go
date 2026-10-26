@@ -81,11 +81,15 @@ func pgDSN(c DBConfig, password string) string {
 	return strings.Join(parts, " ")
 }
 
-// openPG ouvre une connexion (sans la tester).
-func openPG(c DBConfig, password string) (*sql.DB, error) {
+// openPG ouvre une connexion (sans la tester) ; dial : connexions par
+// Guard.DialContext (moteur web), nil : celles du système.
+func openPG(c DBConfig, password string, dial DialFunc) (*sql.DB, error) {
 	cfg, err := pgx.ParseConfig(pgDSN(c, password))
 	if err != nil {
 		return nil, err
+	}
+	if dial != nil {
+		cfg.DialFunc = pgconn.DialFunc(dial)
 	}
 	db := stdlib.OpenDB(*cfg)
 	db.SetMaxOpenConns(1)

@@ -65,10 +65,14 @@ func sqlServerDSN(c DBConfig, password string) string {
 	return u.String()
 }
 
-func openSQLServer(c DBConfig, password string) (*sql.DB, error) {
+func openSQLServer(c DBConfig, password string, dial DialFunc) (*sql.DB, error) {
 	conn, err := mssql.NewConnector(sqlServerDSN(c, password))
 	if err != nil {
 		return nil, err
+	}
+	if dial != nil {
+		// Le pilote résout le nom lui-même : Dial reçoit l'adresse IP.
+		conn.Dialer = dialer(dial)
 	}
 	db := sql.OpenDB(conn)
 	db.SetMaxOpenConns(1)

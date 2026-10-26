@@ -117,3 +117,43 @@ func TestGuardedSources(t *testing.T) {
 		t.Fatalf("navigateur de fichier : %v", err)
 	}
 }
+
+// Bases de données : le pilote résout le nom à nouveau après Check ; la
+// connexion passe par Guard.DialContext, qui refuse l'adresse interne
+// obtenue (audit de sécurité du 26/10, M4). Ici, le nom est public pour
+// Check (resolve) et « localhost » pour le pilote.
+func TestGuardDatabaseRebinding(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	var hits atomic.Int32
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			hits.Add(1)
+			c.Close()
+		}
+	}()
+	port := ln.Addr().(*net.TCPAddr).Port
+	g := &Guard{resolve: func(context.Context, string) ([]net.IP, error) {
+		return []net.IP{net.ParseIP("93.184.216.34")}, nil
+	}}
+	ctx := WithGuard(context.Background(), g)
+	for _, kind := range []string{KindPostgres, KindSQLServer} {
+		c := Connection{Name: kind, Kind: kind, Config: DBConfig{Host: "localhost", Port: port, Database: "x", User: "u", SSLMode: "disable"}}
+		if _, _, err := connectDB(ctx, NewSecrets(false, ""), c); err == nil || !strings.Contains(err.Error(), "adresse interne") {
+			t.Fatalf("%s : %v", kind, err)
+		}
+		if err := TestConnection(ctx, NewSecrets(false, ""), c, "secret", false); err == nil || !strings.Contains(err.Error(), "adresse interne") {
+			t.Fatalf("%s avec mot de passe : %v", kind, err)
+		}
+	}
+	if hits.Load() != 0 {
+		t.Fatalf("%d connexions vers le bouclage", hits.Load())
+	}
+}

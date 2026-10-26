@@ -238,6 +238,26 @@ func (g *Guard) DialContext(ctx context.Context, network, addr string) (net.Conn
 	return nil, err
 }
 
+// DialFunc ouvre une connexion réseau (pilotes de bases de données).
+type DialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
+
+// dialer adapte une DialFunc à l'interface Dialer d'un pilote.
+type dialer DialFunc
+
+func (d dialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	return d(ctx, network, addr)
+}
+
+// dialOf : connexions des bases de données par le Guard de ctx, qui
+// vérifie l'adresse au moment même de la connexion (le contrôle de Check
+// précède une nouvelle résolution DNS du pilote) ; nil sans Guard.
+func dialOf(ctx context.Context) DialFunc {
+	if g := GuardOf(ctx); g != nil {
+		return g.DialContext
+	}
+	return nil
+}
+
 // Transport donne un transport HTTP dont les connexions passent par
 // DialContext (et jamais par un mandataire).
 func (g *Guard) Transport() *http.Transport {
