@@ -161,7 +161,8 @@
 		"modelUsed": "Model used",
 		"connect": {
 			"label": "Connection",
-			"tooltip": "Connection: API key, Claude subscription, model"
+			"tooltip": "Connection: API key, Claude subscription, model",
+			"connected": "Connected"
 		},
 		"new": {
 			"label": "New",

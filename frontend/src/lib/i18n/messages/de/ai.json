@@ -161,7 +161,8 @@
 		"modelUsed": "Verwendetes Modell",
 		"connect": {
 			"label": "Verbindung",
-			"tooltip": "Verbindung: API-Schlüssel, Claude-Abonnement, Modell"
+			"tooltip": "Verbindung: API-Schlüssel, Claude-Abonnement, Modell",
+			"connected": "Verbunden"
 		},
 		"new": {
 			"label": "Neu",

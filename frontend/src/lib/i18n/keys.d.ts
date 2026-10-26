@@ -72,6 +72,7 @@ export interface MessageParams {
 	'ai.goto.tooltip': { target: number | string };
 	'ai.panel.close.tooltip': Record<never, never>;
 	'ai.panel.compact': Record<never, never>;
+	'ai.panel.connect.connected': Record<never, never>;
 	'ai.panel.connect.label': Record<never, never>;
 	'ai.panel.connect.tooltip': Record<never, never>;
 	'ai.panel.contextTooltip': Record<never, never>;

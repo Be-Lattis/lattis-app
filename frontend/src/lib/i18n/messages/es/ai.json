@@ -161,7 +161,8 @@
 		"modelUsed": "Modelo usado",
 		"connect": {
 			"label": "Conexión",
-			"tooltip": "Conexión: clave de API, suscripción a Claude, modelo"
+			"tooltip": "Conexión: clave de API, suscripción a Claude, modelo",
+			"connected": "Conectado"
 		},
 		"new": {
 			"label": "Nueva",

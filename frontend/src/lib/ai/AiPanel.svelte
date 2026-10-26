@@ -258,7 +258,7 @@
 		<span class="spacer"></span>
 		{#if st?.enabled}
 			<button class="hd" class:on={showConnect} aria-pressed={showConnect} title={t('ai.panel.connect.tooltip')} onclick={() => (connectOpen = !showConnect)}
-				><Icon name="key" size={14} />{t('ai.panel.connect.label')}</button
+				><Icon name="key" size={14} />{connected ? t('ai.panel.connect.connected') : t('ai.panel.connect.label')}</button
 			>
 			<button class="hd" title={t('ai.panel.new.tooltip')} disabled={chat.busy || !chat.items.length} onclick={() => newConversation().catch((e) => (chat.error = errorText(e)))}
 				><Icon name="plus" size={14} />{t('ai.panel.new.label')}</button

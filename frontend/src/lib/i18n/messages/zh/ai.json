@@ -161,7 +161,8 @@
 		"modelUsed": "所用模型",
 		"connect": {
 			"label": "连接",
-			"tooltip": "连接：API 密钥、Claude 订阅、模型"
+			"tooltip": "连接：API 密钥、Claude 订阅、模型",
+			"connected": "已连接"
 		},
 		"new": {
 			"label": "新建",
