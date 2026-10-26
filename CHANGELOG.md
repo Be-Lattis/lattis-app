@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.5.0-beta (26/10/2026)
+
 ### Nouveautés
 
 - Démo en ligne : la visite guidée se termine par « Ouvrir un classeur d'exemple », pour explorer ensuite un classeur complet.
