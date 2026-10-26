@@ -11,7 +11,8 @@
 	import { Tour, type TourAside, type TourMemory, type TourOutcome, type TourSnapshot } from './tour';
 	import { lattisSteps, type TourHost } from './steps';
 
-	let { host, memory, onend }: { host: TourHost; memory?: TourMemory; onend?: (o: TourOutcome) => void } = $props();
+	// extra : un bouton de plus sur la dernière bulle (démo : ouvrir un classeur d'exemple).
+	let { host, memory, onend, extra }: { host: TourHost; memory?: TourMemory; onend?: (o: TourOutcome) => void; extra?: { label: string; run: () => void } } = $props();
 
 	let tour: Tour<TourHost> | null = null;
 	let snap = $state<TourSnapshot | null>(null);
@@ -181,7 +182,16 @@
 				<span class="count">{t('onboarding.bubble.progress', { n: snap.index + 1, total: snap.total })}</span>
 			</span>
 			{#if !last}<button class="link" data-skip="" onclick={() => tour?.skip()} title={t('onboarding.bubble.skipTooltip')}>{t('onboarding.bubble.skip')}</button>{/if}
-			<button class="primary" bind:this={nextBtn} disabled={snap.busy} onclick={() => tour?.next()} title={snap.phase === 'act' ? t('onboarding.bubble.nextTooltip') : undefined}>
+			{#if last && extra}
+				<button
+					class="primary"
+					onclick={async () => {
+						await tour?.next();
+						extra.run();
+					}}>{extra.label}</button
+				>
+			{/if}
+			<button class={last && extra ? 'link' : 'primary'} bind:this={nextBtn} disabled={snap.busy} onclick={() => tour?.next()} title={snap.phase === 'act' ? t('onboarding.bubble.nextTooltip') : undefined}>
 				{last ? t('onboarding.bubble.finish') : t('onboarding.bubble.next')}
 			</button>
 		</div>

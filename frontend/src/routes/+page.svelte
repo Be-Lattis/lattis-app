@@ -3624,7 +3624,12 @@
 		{#if data && view === 'grid' && !activePage}<ZoomBar {zoom} onzoom={setZoom} />{/if}
 	</footer>
 </div>
-<GuidedTour bind:this={guided} host={tourHost} memory={tourMemory()} />
+<GuidedTour
+	bind:this={guided}
+	host={tourHost}
+	memory={tourMemory()}
+	extra={platform.demo ? { label: t('onboarding.bubble.openSample'), run: () => openDemoPreset({ demo: 'med', title: 'medium' } as RecentFile) } : undefined}
+/>
 
 <style>
 	.delete-list {

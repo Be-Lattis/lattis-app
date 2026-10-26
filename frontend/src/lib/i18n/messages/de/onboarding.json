@@ -7,7 +7,8 @@
 		"skip": "Überspringen",
 		"skipTooltip": "Tour beenden (Esc); über die Hilfe (?) neu starten",
 		"aria": "Geführte Tour, Schritt {n} von {total}",
-		"sample": "Einzutippende Zeilen"
+		"sample": "Einzutippende Zeilen",
+		"openSample": "Beispielmappe öffnen"
 	},
 	"error": "Dieser Schritt ist fehlgeschlagen: klicken Sie erneut auf Weiter.",
 	"start": "Tour starten (3 Min.)",

@@ -7,7 +7,8 @@
 		"skip": "Skip",
 		"skipTooltip": "Stop the tour (Esc); restart it from Help (?)",
 		"aria": "Guided tour, step {n} of {total}",
-		"sample": "Rows to type"
+		"sample": "Rows to type",
+		"openSample": "Open a sample workbook"
 	},
 	"error": "This step couldn’t be done: click Next again.",
 	"start": "Take the tour (3 min)",

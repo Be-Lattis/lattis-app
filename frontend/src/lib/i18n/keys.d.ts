@@ -2000,6 +2000,7 @@ export interface MessageParams {
 	'onboarding.bubble.finish': Record<never, never>;
 	'onboarding.bubble.next': Record<never, never>;
 	'onboarding.bubble.nextTooltip': Record<never, never>;
+	'onboarding.bubble.openSample': Record<never, never>;
 	'onboarding.bubble.progress': { n: number | string; total: number | string };
 	'onboarding.bubble.sample': Record<never, never>;
 	'onboarding.bubble.skip': Record<never, never>;

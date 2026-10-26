@@ -8,6 +8,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Nouveautés
 
+- Démo en ligne : la visite guidée se termine par « Ouvrir un classeur d'exemple », pour explorer ensuite un classeur complet.
 - Clic droit glissé, clic du milieu glissé ou Espace + glisser fait défiler la feuille en la tenant ; un clic droit sans bouger ouvre toujours le menu.
 - Onglet SQL : bouton « Référence » (ou `F1` sur un mot-clé dans l'éditeur), un volet de syntaxe courante, fonctions utiles, dates et règles propres à Lattis, avec recherche et un exemple à insérer d'un clic, écrit avec les noms des tableaux du classeur.
 - Visite guidée de trois minutes sur un petit classeur neuf (tableau tapé, colonne calculée, REFERENCE, tableau croisé et graphique, onglet SQL) : proposée au premier lancement, lancée à chaque ouverture de la démo en ligne, relancée depuis l'aide (? › Visite guidée) ; Suivant fait l'action à votre place, Passer l'arrête.

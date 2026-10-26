@@ -7,7 +7,8 @@
 		"skip": "Omitir",
 		"skipTooltip": "Detener la visita (Esc); se reinicia desde la ayuda (?)",
 		"aria": "Visita guiada, paso {n} de {total}",
-		"sample": "Filas para escribir"
+		"sample": "Filas para escribir",
+		"openSample": "Abrir un libro de ejemplo"
 	},
 	"error": "No se pudo hacer este paso: vuelva a hacer clic en Siguiente.",
 	"start": "Hacer la visita (3 min)",

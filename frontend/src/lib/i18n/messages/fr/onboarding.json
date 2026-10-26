@@ -7,7 +7,8 @@
 		"skip": "Passer",
 		"skipTooltip": "Arrêter la visite (Échap) ; elle se relance depuis l’aide (?)",
 		"aria": "Visite guidée, étape {n} sur {total}",
-		"sample": "Lignes à taper"
+		"sample": "Lignes à taper",
+		"openSample": "Ouvrir un classeur d'exemple"
 	},
 	"error": "L’étape n’a pas pu se faire : cliquez de nouveau Suivant.",
 	"start": "Faire la visite (3 min)",
