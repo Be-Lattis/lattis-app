@@ -6,12 +6,15 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.5.1-beta (27/10/2026)
+
 ### Nouveautés
 
 - Fichier › Exporter › Script SQL (.sql) : les tableaux et tableaux croisés deviennent un script `CREATE TABLE` + `INSERT` à rejouer dans une base de données, en SQL standard ou adapté à PostgreSQL, MySQL, SQL Server ou SQLite, pour tout le classeur, la feuille active ou le tableau actif.
 
 ### Changements
 
+- Assistant IA : le bouton de l'en-tête dit « Connecté » quand une connexion est active.
 - Clic droit ou du milieu glissé, ou Espace + clic gauche glissé, déplacent aussi la feuille quand on part d'un graphique, d'une image, d'une forme, d'un bouton ou d'un segment ; le clic gauche déplace toujours l'objet et le clic droit sans bouger ouvre son menu.
 
 ### Corrections
