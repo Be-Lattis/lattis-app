@@ -50,3 +50,22 @@ export function keepInView(o: Span, scroll: number, view: number, frozen: number
 	}
 	return Math.max(0, s);
 }
+
+/**
+ * Largeur de la grille passée de oldW à newW (même zoom) : 'keep' si elle
+ * a rétréci (un volet s'ouvre, l'objet est gardé à l'écran), 'stay' sinon
+ * (volet fermé : la feuille ne bouge pas, elle s'élargit à droite).
+ */
+export function afterWidthChange(oldW: number, newW: number): 'keep' | 'stay' {
+	return oldW > 0 && newW < oldW ? 'keep' : 'stay';
+}
+
+/**
+ * Place à droite de la grille jusqu'au bord de la fenêtre (volets ouverts,
+ * dans la feuille ou autour), en px de la feuille (k : zoom). La zone qui
+ * défile la réserve d'avance : à la fermeture d'un volet, la grille
+ * s'élargit sans que le navigateur ramène la barre en arrière.
+ */
+export function sideRoom(windowRight: number, gridRight: number, k: number): number {
+	return Math.max(0, windowRight - gridRight) / (k > 0 ? k : 1);
+}

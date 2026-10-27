@@ -19,6 +19,18 @@ export function pansWith(button: number, space: boolean): boolean {
 	return button === 1 || button === 2 || (button === 0 && space);
 }
 
+/**
+ * Appui sur un objet posé sur la feuille (graphique, image, forme, bouton,
+ * segment…) : 'pan' la feuille prend le geste et l'objet ne le voit pas
+ * (milieu, Espace + gauche) ; 'menu' la feuille glisse si l'on bouge, et
+ * sans glissé l'objet garde son menu (droit) ; 'object' l'objet le traite
+ * (gauche seul : il se sélectionne et se déplace, comme avant).
+ */
+export function onObject(button: number, space: boolean): 'pan' | 'menu' | 'object' {
+	if (!pansWith(button, space)) return 'object';
+	return button === 2 ? 'menu' : 'pan';
+}
+
 /** Ce que devient un événement contextmenu : ouvert, retenu jusqu'au relâcher, ou écarté. */
 export type MenuFate = 'open' | 'defer' | 'drop';
 

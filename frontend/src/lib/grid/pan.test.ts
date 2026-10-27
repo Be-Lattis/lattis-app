@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MENU_GRACE_MS, PAN_SLOP, PanGesture, pansWith, SpaceHold } from './pan';
+import { MENU_GRACE_MS, onObject, PAN_SLOP, PanGesture, pansWith, SpaceHold } from './pan';
 
 describe('main sur la feuille (pan.ts)', () => {
 	it('boutons qui font glisser : droit, milieu, gauche avec Espace', () => {
@@ -7,6 +7,15 @@ describe('main sur la feuille (pan.ts)', () => {
 		expect(pansWith(1, false)).toBe(true);
 		expect(pansWith(0, false)).toBe(false);
 		expect(pansWith(0, true)).toBe(true);
+	});
+
+	it('sur un objet : milieu et Espace + gauche pour la feuille, droit partagé, gauche à l’objet', () => {
+		expect(onObject(1, false)).toBe('pan');
+		expect(onObject(0, true)).toBe('pan');
+		expect(onObject(2, false)).toBe('menu');
+		expect(onObject(2, true)).toBe('menu');
+		expect(onObject(0, false)).toBe('object');
+		expect(onObject(3, false)).toBe('object');
 	});
 
 	it('sous le seuil, rien ne glisse ; au-delà, tout le chemin depuis l’appui', () => {

@@ -10,6 +10,14 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Fichier › Exporter › Script SQL (.sql) : les tableaux et tableaux croisés deviennent un script `CREATE TABLE` + `INSERT` à rejouer dans une base de données, en SQL standard ou adapté à PostgreSQL, MySQL, SQL Server ou SQLite, pour tout le classeur, la feuille active ou le tableau actif.
 
+### Changements
+
+- Clic droit ou du milieu glissé, ou Espace + clic gauche glissé, déplacent aussi la feuille quand on part d'un graphique, d'une image, d'une forme, d'un bouton ou d'un segment ; le clic gauche déplace toujours l'objet et le clic droit sans bouger ouvre son menu.
+
+### Corrections
+
+- Fermer un volet à droite (graphique, tableau croisé, assistant, commentaires…) ne fait plus sauter la feuille : elle garde sa position et s'élargit.
+
 ## 0.5.0-beta (26/10/2026)
 
 ### Nouveautés

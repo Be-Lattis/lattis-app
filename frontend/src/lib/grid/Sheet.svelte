@@ -29,9 +29,9 @@
 	import { arrowNotes, arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
 	import { stepZoom } from './zoom';
 	import { isDrag, inertia, LONG_PRESS_MS, MIN_SPEED, pinchZoom, Velocity } from './touch';
-	import { PanGesture, pansWith, SpaceHold } from './pan';
+	import { onObject, PanGesture, pansWith, SpaceHold } from './pan';
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
-	import { keepInView, seenIn, type Span as XSpan } from './keepinview';
+	import { afterWidthChange, keepInView, seenIn, sideRoom, type Span as XSpan } from './keepinview';
 	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
 	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvAlertOf, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm, type DvRuleData } from './dvrule';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
@@ -2088,8 +2088,9 @@
 		// Volet ouvert à droite (graphique, carte, tableau croisé…) : la zone
 		// qui défile garde la largeur qu'elle aura volet fermé. Sinon, en
 		// quittant l'objet, le volet se ferme, la grille s'élargit et le
-		// navigateur ramène la barre en arrière : la feuille sautait.
-		const side = wrap ? Math.max(0, (wrap.parentElement?.clientWidth ?? 0) - wrap.clientWidth) / zoomK() : 0;
+		// navigateur ramène la barre en arrière : la feuille sautait. Mesuré
+		// jusqu'au bord de la fenêtre : volets de la feuille et de l'application.
+		const side = wrap ? sideRoom(document.documentElement.clientWidth, wrap.getBoundingClientRect().right, zoomK()) : 0;
 		const lastVisibleCol = cax().indexAt(scroller.scrollLeft + cw + side);
 		extentCols = Math.min(SHEET_COLS, Math.max(usedCol + 1, lastVisibleCol + 1, holdCols, scrollHoldCols));
 		vs.content = rowTop(rows);
@@ -7986,8 +7987,27 @@
 		const r = pan.end(e.button, performance.now());
 		if (!r) return;
 		panCursor = space.down && !editing && !fxEditing ? 'grab' : '';
-		// Clic droit sans glissé dont le menu est arrivé à l'appui (macOS) : il s'ouvre maintenant.
-		if (r.menu) onContextMenu(r.menu);
+		// Clic droit sans glissé dont le menu est arrivé à l'appui (macOS) : il
+		// s'ouvre maintenant ; sur un objet posé sur la feuille, le sien.
+		const m = r.menu;
+		if (!m) return;
+		const at = m.target instanceof Element ? m.target : null;
+		if (at && !scroller?.contains(at) && wrap?.contains(at)) at.dispatchEvent(new MouseEvent('contextmenu', m));
+		else onContextMenu(m);
+	}
+
+	/**
+	 * Appui sur un objet posé sur la feuille (capture sur leur calque) : clic
+	 * du milieu ou Espace + gauche font glisser la feuille sans toucher à
+	 * l'objet ; le clic droit glissé aussi, et sans glissé l'objet ouvre son
+	 * menu. Le clic gauche seul reste à l'objet.
+	 */
+	function objectPanDown(e: MouseEvent) {
+		const sp = e.button === 0 && space.down && !editing && !fxEditing;
+		const r = onObject(e.button, sp);
+		if (r === 'object') return;
+		panDown(e);
+		if (r === 'pan') e.stopPropagation();
 	}
 
 	/** Menu contextuel (capture sur la fenêtre) : retenu ou écarté pendant le geste. */
@@ -11906,7 +11926,7 @@
 			if (frame) cancelAnimationFrame(frame);
 			draw();
 			// Volet ouvert à droite : l'objet cliqué ne passe pas dessous.
-			if (oldW > 0 && cw < oldW) keepFocusAfterShrink(oldW);
+			if (afterWidthChange(oldW, cw) === 'keep') keepFocusAfterShrink(oldW);
 			// Clavier à l'écran (téléphone) : la cellule en saisie reste visible au-dessus.
 			else if (editing && oldH > 0 && ch < oldH) ensureVisible(active.row, active.col);
 		});
@@ -12518,7 +12538,9 @@
 				<div bind:this={spacer}></div>
 			</div>
 			<!-- Calque découpé à la zone des cellules : les graphiques ne passent pas sur les barres de défilement. -->
-			<div class="charts" style:left="{MARGIN}px" style:top="{TOP_H}px" style:width="{Math.max(0, viewW - MARGIN)}px" style:height="{Math.max(0, viewH - TOP_H)}px">
+			<!-- Main (pan.ts) : milieu, droit glissé ou Espace + gauche font aussi glisser la feuille depuis un objet. -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="charts" class:grabbing={panCursor === 'grabbing'} style:left="{MARGIN}px" style:top="{TOP_H}px" style:width="{Math.max(0, viewW - MARGIN)}px" style:height="{Math.max(0, viewH - TOP_H)}px" onmousedowncapture={objectPanDown}>
 				{#each charts as ch (ch.id)}
 					{@const box = chartBox(ch)}
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -14564,7 +14586,8 @@
 	.scroller.grab {
 		cursor: grab !important;
 	}
-	.scroller.grabbing {
+	.scroller.grabbing,
+	.charts.grabbing :global(*) {
 		cursor: grabbing !important;
 	}
 	.scroller {

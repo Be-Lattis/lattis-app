@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { keepInView, seenIn, wholeIn } from './keepinview';
+import { afterWidthChange, keepInView, seenIn, sideRoom, wholeIn } from './keepinview';
 
 // Colonnes de 100 px.
 const axis = { offset: (i: number) => i * 100, indexAt: (x: number) => Math.floor(x / 100) };
@@ -53,5 +53,25 @@ describe('objet gardé à l’écran quand un volet s’ouvre', () => {
 
 	it('défilement jamais négatif', () => {
 		expect(keepInView({ x0: 0, x1: 50 }, 30, 700, 0)).toBe(0);
+	});
+});
+
+describe('volet fermé : la feuille ne bouge pas', () => {
+	it('gardé à l’écran à l’ouverture seulement', () => {
+		expect(afterWidthChange(1000, 700)).toBe('keep');
+		expect(afterWidthChange(700, 1000)).toBe('stay');
+		expect(afterWidthChange(700, 700)).toBe('stay');
+		// Premier affichage (ou zoom changé) : rien à garder.
+		expect(afterWidthChange(0, 700)).toBe('stay');
+	});
+
+	it('place des volets réservée à droite, en px de la feuille', () => {
+		// Volet de 300 px à droite de la grille (fenêtre de 1300 px).
+		expect(sideRoom(1300, 1000, 1)).toBe(300);
+		expect(sideRoom(1300, 1000, 1.5)).toBe(200);
+		// Aucun volet : rien à réserver, jamais négatif.
+		expect(sideRoom(1300, 1300, 1)).toBe(0);
+		expect(sideRoom(1300, 1310, 1)).toBe(0);
+		expect(sideRoom(1300, 1000, 0)).toBe(300);
 	});
 });
