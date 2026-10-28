@@ -74,11 +74,11 @@ func UserSettings(c *Config) []UserSetting {
 		s := UserSetting{Path: p, Value: v, Locked: c.Locked(p), ReadOnly: slices.Contains(UserVisible, p)}
 		if o, ok := c.Origin(p); ok {
 			s.Source = o.Source
-			s.Fixed = !s.Locked && o.Rank > RankUser
 		}
+		s.Fixed = !s.Locked && c.Imposed(p)
 		if p == "ui.themes" {
 			s.Managed = themeOrigins(c)
-			s.Locked = false // un thème imposé n'empêche pas d'ajouter les siens
+			s.Locked, s.Fixed = false, false // un thème imposé n'empêche pas d'ajouter les siens
 		}
 		out = append(out, s)
 	}
@@ -100,7 +100,9 @@ func (l *Loader) userFile() string {
 // SetUser écrit path = v dans le config.json de l'utilisateur (créé au
 // besoin, les autres clés gardées), puis recharge la configuration, qui
 // devient la configuration courante. Refusé pour une clé hors de
-// UserEditable, une valeur invalide ou une clé imposée par une stratégie.
+// UserEditable, une valeur invalide, une clé imposée par une stratégie ou
+// posée par une couche plus prioritaire (--set, LATTIS_*, Registre), où
+// l'écrire serait sans effet.
 func (l *Loader) SetUser(ctx context.Context, path string, v any) (*Config, error) {
 	if !Editable(path) {
 		return nil, msg.New("config.notEditable", msg.Args{"path": path})
@@ -119,8 +121,12 @@ func (l *Loader) SetUser(ctx context.Context, path string, v any) (*Config, erro
 	}
 	userMu.Lock()
 	defer userMu.Unlock()
-	if l.Load(ctx).Locked(path) {
+	cur := l.Load(ctx)
+	if cur.Locked(path) {
 		return nil, msg.New("config.locked", msg.Args{"path": path})
+	}
+	if !themePath(path) && cur.Imposed(path) {
+		return nil, msg.New("config.fixed", msg.Args{"path": path})
 	}
 	t, err := l.readUser()
 	if err != nil {
@@ -162,7 +168,7 @@ func activeLoader() *Loader {
 // ResetUser remet les réglages paths à leur valeur par défaut (Fichier ›
 // Paramètres › Réinitialiser) : ils sont retirés du config.json de
 // l'utilisateur, ses autres clés (serveurs, thèmes créés…) gardées. Un
-// réglage imposé par une stratégie n'est pas touché. Refusé pour une clé
+// réglage imposé (stratégie, --set, LATTIS_*, Registre) n'est pas touché. Refusé pour une clé
 // hors de UserEditable ; ui.themes (thèmes créés par l'utilisateur) n'est
 // jamais remis à zéro ici.
 func (l *Loader) ResetUser(ctx context.Context, paths []string) (*Config, error) {
@@ -191,7 +197,7 @@ func (l *Loader) ResetUser(ctx context.Context, paths []string) (*Config, error)
 	}
 	changed := false
 	for _, p := range paths {
-		if !cur.Locked(p) && deletePath(t, p) {
+		if !cur.Imposed(p) && deletePath(t, p) {
 			changed = true
 		}
 	}

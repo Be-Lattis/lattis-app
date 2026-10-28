@@ -71,8 +71,8 @@
 			"help": "Neue Versionen in der Statusleiste anbieten."
 		},
 		"numberRange": "{label}: eine ganze Zahl von {min} bis {max}",
-		"locked": "🔒 Durch die Richtlinie Ihrer Organisation festgelegt.",
-		"fixed": "Festgelegt durch {source}: eine Änderung hier hat keine Wirkung.",
+		"locked": "Von Ihrer Organisation festgelegt",
+		"fixed": "Festgelegt durch {source}",
 		"fixedOther": "eine andere Konfiguration",
 		"dialog": {
 			"title": "Einstellungen",

@@ -913,6 +913,7 @@ var de = map[ID]string{
 	"config.idExpected":           "Bezeichner erwartet",
 	"config.integerRange":         "ganze Zahl von {min} bis {max} erwartet",
 	"config.invalidJson":          "ungültiges JSON: {err}",
+	"config.fixed":                "{path}: Einstellung von Ihrer Organisation festgelegt",
 	"config.locked":               "{path}: Einstellung durch die Richtlinie Ihrer Organisation festgelegt",
 	"config.notEditable":          "{path}: Einstellung kann nicht über die Oberfläche geändert werden",
 	"config.positiveNumber":       "positive Zahl erwartet",

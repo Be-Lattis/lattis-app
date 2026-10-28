@@ -71,8 +71,8 @@
 			"help": "Proposer les nouvelles versions dans la barre d'état."
 		},
 		"numberRange": "{label} : un nombre entier de {min} à {max}",
-		"locked": "🔒 Imposé par la stratégie de votre organisation.",
-		"fixed": "Fixé par {source} : le changer ici est sans effet.",
+		"locked": "Défini par votre organisation",
+		"fixed": "Défini par {source}",
 		"fixedOther": "une autre configuration",
 		"dialog": {
 			"title": "Paramètres",

@@ -4,7 +4,7 @@ The **Assistant ✦** helps you build an analysis: it reads the structure of you
 
 ## Turn on the assistant {#activer-l-assistant}
 
-The assistant is off by default. The **Assistant ✦** button, at the top right of the ribbon (`Alt+I`), opens its pane: check **Turn on the AI Assistant**. The same setting is in File › Settings › Features. In a company, the organization's policy can turn it off or impose it.
+The assistant is off by default: check **AI assistant** in File › Settings › Features. The **Assistant ✦** button then appears at the top right of the ribbon (`Alt+I`) and opens its pane; unchecked, there is no button, shortcut or pane. In a company, the organization's policy can turn it off or impose it.
 
 ## Connect {#se-connecter}
 

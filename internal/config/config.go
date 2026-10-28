@@ -358,6 +358,19 @@ func (c *Config) Origin(path string) (Origin, bool) {
 	return o, ok
 }
 
+// Imposed dit si une clé, ou l'une de ses parties, est posée par une couche
+// plus prioritaire que l'utilisateur (stratégie, --set, LATTIS_*, Registre) :
+// Fichier › Paramètres ne peut pas la changer.
+func (c *Config) Imposed(path string) bool {
+	lp := strings.ToLower(path)
+	for k, o := range c.origins {
+		if (o.Locked || o.Rank > RankUser) && (k == lp || strings.HasPrefix(k, lp+".") || strings.HasPrefix(lp, k+".")) {
+			return true
+		}
+	}
+	return false
+}
+
 // Locked dit si une clé, ou l'une de ses parties, est imposée par une
 // stratégie.
 func (c *Config) Locked(path string) bool {

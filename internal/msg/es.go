@@ -912,6 +912,7 @@ var es = map[ID]string{
 	"config.idExpected":           "se espera un identificador",
 	"config.integerRange":         "se espera un entero de {min} a {max}",
 	"config.invalidJson":          "JSON no válido: {err}",
+	"config.fixed":                "{path}: ajuste definido por su organización",
 	"config.locked":               "{path}: ajuste impuesto por la directiva de su organización",
 	"config.notEditable":          "{path}: ajuste no modificable desde la interfaz",
 	"config.positiveNumber":       "se espera un número positivo",

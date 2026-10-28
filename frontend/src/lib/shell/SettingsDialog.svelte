@@ -2,14 +2,16 @@
 	// Fichier › Paramètres : les réglages de l'utilisateur, par section
 	// (liste déclarative settingSections). Un réglage changé est écrit tout de
 	// suite dans le config.json de l'utilisateur et s'applique sans
-	// redémarrer ; un réglage imposé par une stratégie est grisé.
+	// redémarrer ; un réglage imposé par l'organisation est grisé, avec un
+	// cadenas (info-bulle : qui l'impose).
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import { onMount } from 'svelte';
-	import { findSetting, parseNumberSetting, settingNote, settingSections, visibleSections } from './settings';
+	import { findSetting, parseNumberSetting, settingImposed, settingNote, settingSections, visibleSections } from './settings';
 	import { loadSettings, mcpAvailable, resetSettings, setSetting, userSettings } from './settings.svelte.js';
 	import { errorText, t } from '#lib/i18n/index.js';
 	import UpdateCheck from './UpdateCheck.svelte';
+	import Icon from '#lib/icons/Icon.svelte';
 
 	interface Props {
 		onclose: () => void;
@@ -95,27 +97,29 @@
 				{#each section.settings as d (d.path)}
 					{@const st = findSetting(userSettings.list, d.path)}
 					{@const note = settingNote(st)}
+					{@const off = settingImposed(st)}
 					<div class="setting">
 						{#if d.kind === 'bool'}
-							<label class:off={st?.locked}>
+							<label class:off>
 								<input
 									type="checkbox"
 									checked={st?.value === true}
-									disabled={!st || st.locked || busy === d.path}
+									disabled={!st || off || busy === d.path}
 									onchange={(e) => change(d.path, e.currentTarget.checked)}
 								/>
 								<span>{d.label}</span>
+								{@render lock()}
 							</label>
 						{:else if d.kind === 'choice'}
-							<p class="label" class:off={st?.locked}>{d.label}</p>
+							<p class="label" class:off>{d.label}{@render lock()}</p>
 							{#each d.choices ?? [] as c (c.value)}
-								<label class="choice" class:off={st?.locked}>
+								<label class="choice" class:off>
 									<input
 										type="radio"
 										name={d.path}
 										value={c.value}
 										checked={st?.value === c.value}
-										disabled={!st || st.locked || busy === d.path}
+										disabled={!st || off || busy === d.path}
 										onchange={() => change(d.path, c.value)}
 									/>
 									{#if c.swatch}<span class="swatch" aria-hidden="true">{#each c.swatch as col, i (i)}<span style:background={col}></span>{/each}</span>{/if}
@@ -123,19 +127,19 @@
 								</label>
 							{/each}
 						{:else if d.kind === 'text'}
-							<label class="text" class:off={st?.locked}>
-								<span>{d.label}</span>
+							<label class="text" class:off>
+								<span>{d.label}{@render lock()}</span>
 								<input
 									type="text"
 									spellcheck="false"
 									value={typeof st?.value === 'string' ? st.value : ''}
 									placeholder={d.placeholder}
-									disabled={!st || st.locked || busy === d.path}
+									disabled={!st || off || busy === d.path}
 									onchange={(e) => change(d.path, e.currentTarget.value.trim())}
 								/>
 							</label>
 						{:else if d.kind === 'number'}
-							<label class="text number" class:off={st?.locked}>
+							<label class="text number" class:off>
 								<span>{d.label}</span>
 								<input
 									type="number"
@@ -143,7 +147,7 @@
 									max={d.max}
 									step="1"
 									value={typeof st?.value === 'number' ? st.value : ''}
-									disabled={!st || st.locked || busy === d.path}
+									disabled={!st || off || busy === d.path}
 									onchange={(e) => {
 										const v = parseNumberSetting(d, e.currentTarget.value);
 										if (typeof v === 'number') change(d.path, v);
@@ -154,15 +158,18 @@
 									}}
 								/>
 								{#if d.unit}<span class="unit">{d.unit}</span>{/if}
+								{@render lock()}
 							</label>
 						{/if}
 						{#if d.help}<p class="muted">{d.help}</p>{/if}
-						{#if note}<p class="note">{note}</p>{/if}
 					</div>
+					{#snippet lock()}
+						{#if note}<span class="lock" title={note} aria-label={note} role="img"><Icon name="lock" size={13} /></span>{/if}
+					{/snippet}
 				{/each}
 				{#if section.id === 'updates'}
 					{@const st = findSetting(userSettings.list, 'updates.check')}
-					<UpdateCheck setting={`${st?.value}:${st?.locked}`} />
+					<UpdateCheck setting={`${st?.value}:${settingImposed(st)}`} />
 				{/if}
 				{#if error}<p class="error">{error}</p>{/if}
 			</section>
@@ -323,9 +330,14 @@
 		color: #6b7280;
 		font-size: 12px;
 	}
-	.note {
-		color: #92400e;
-		font-size: 12px;
+	/* Cadenas d'un réglage imposé : l'info-bulle dit qui l'impose. */
+	.lock {
+		display: inline-flex;
+		margin-left: 4px;
+		color: #6b7280;
+		font-weight: normal;
+		vertical-align: -2px;
+		cursor: help;
 	}
 	.error {
 		color: #c0392b;

@@ -4,7 +4,7 @@ El **Asistente ✦** le ayuda a construir un análisis: lee la estructura de sus
 
 ## Activar el asistente {#activer-l-assistant}
 
-El asistente está desactivado de forma predeterminada. El botón **Asistente ✦**, arriba a la derecha de la cinta (`Alt+I`), abre su panel: active **Activar el Asistente de IA**. El mismo ajuste está en Archivo › Configuración › Funciones. En una empresa, la directiva de la organización puede desactivarlo o imponerlo.
+El asistente está desactivado de forma predeterminada: marque **Asistente de IA** en Archivo › Configuración › Funciones. El botón **Asistente ✦** aparece entonces arriba a la derecha de la cinta (`Alt+I`) y abre su panel; desmarcado, no hay botón, atajo ni panel. En una empresa, la directiva de la organización puede desactivarlo o imponerlo.
 
 ## Conectarse {#se-connecter}
 

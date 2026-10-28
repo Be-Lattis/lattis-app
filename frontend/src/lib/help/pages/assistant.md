@@ -4,7 +4,7 @@ L'**Assistant ✦** aide à construire une analyse : il lit la structure de vos 
 
 ## Activer l'assistant
 
-L'assistant est coupé par défaut. Le bouton **Assistant ✦**, en haut à droite du ruban (`Alt+I`), ouvre son volet : cochez **Activer l'assistant IA**. Le même réglage se trouve dans Fichier › Paramètres › Fonctionnalités. Dans une entreprise, la stratégie de l'organisation peut le couper ou l'imposer.
+L'assistant est coupé par défaut : cochez **Assistant IA** dans Fichier › Paramètres › Fonctionnalités. Le bouton **Assistant ✦** apparaît alors en haut à droite du ruban (`Alt+I`) et ouvre son volet ; décoché, ni bouton, ni raccourci, ni volet. Dans une entreprise, la stratégie de l'organisation peut le couper ou l'imposer.
 
 ## Se connecter
 

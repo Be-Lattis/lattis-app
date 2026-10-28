@@ -19,6 +19,8 @@ De la plus prioritaire à la moins prioritaire :
 
 Une clé posée par une stratégie est verrouillée : l'environnement, le Registre et les fichiers ne peuvent pas la changer. Seule une stratégie qui pose `"allowPolicyOverride": true` laisse `LATTIS_ALLOW_POLICY_OVERRIDE=1` la faire passer sous l'environnement (tests, dépannage).
 
+Dans Fichier › Paramètres, un réglage posé par une stratégie, `--set`, `LATTIS_*` ou le Registre est grisé avec un cadenas (info-bulle « Défini par votre organisation », ou la couche qui le pose) : l'interface refuse de l'écrire et « Réinitialiser » ne le touche pas. Cela vaut pour toutes ses cases, l'Assistant IA compris (`ai.enabled` coupé : ni bouton, ni Alt+I, ni volet), et pour `ai.provider` et `ai.model`.
+
 Les objets sont fusionnés clé par clé : une couche peut ne changer que `connections.erp.config.host`. `null` retire une clé posée plus bas. Une valeur invalide est ignorée pour cette clé seulement, et la couche suivante la fournit.
 
 ## Format

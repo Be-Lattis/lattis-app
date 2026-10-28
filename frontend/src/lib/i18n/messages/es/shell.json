@@ -71,8 +71,8 @@
 			"help": "Ofrecer las nuevas versiones en la barra de estado."
 		},
 		"numberRange": "{label}: un número entero de {min} a {max}",
-		"locked": "🔒 Definido por la directiva de su organización.",
-		"fixed": "Definido por {source}: cambiarlo aquí no tiene efecto.",
+		"locked": "Definido por su organización",
+		"fixed": "Definido por {source}",
 		"fixedOther": "otra configuración",
 		"dialog": {
 			"title": "Configuración",

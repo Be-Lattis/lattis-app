@@ -10,6 +10,7 @@
 	import Icon from '#lib/icons/Icon.svelte';
 	import Select from '#lib/ui/Select.svelte';
 	import { askAssistant } from '#lib/ai/state.svelte.js';
+	import { aiEnabled } from '#lib/shell/settings.svelte.js';
 	import { tick, untrack } from 'svelte';
 	import { typeLabel } from './data';
 	import { FILTER_OPS, MY_TEAMS, checkFreeFilter, filterPrompt, filterSQL, filterSentence, meLabel, opsFor, parseFilter, quoteIdent, teamLabel, type Condition, type FilterOp } from './rights';
@@ -149,7 +150,7 @@
 			<button type="button" role="radio" aria-checked={mode === 'form'} class:on={mode === 'form'} disabled={disabled || !canForm} title={canForm ? t('remote.filter.mode.form.tooltip') : t('remote.filter.mode.form.disabled')} onclick={() => switchMode('form')}>{t('remote.filter.mode.form.label')}</button>
 			<button type="button" role="radio" aria-checked={mode === 'sql'} class:on={mode === 'sql'} {disabled} onclick={() => switchMode('sql')}>{t('remote.filter.mode.sql')}</button>
 		</span>
-		{#if assist}
+		{#if assist && aiEnabled()}
 			<button type="button" class="assist" {disabled} onclick={ask} title={t('remote.filter.assist.tooltip')}>
 				<Icon name="sparkle" size={13} />{t('remote.filter.assist.label')}
 			</button>

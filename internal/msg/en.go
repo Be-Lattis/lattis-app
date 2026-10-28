@@ -912,6 +912,7 @@ var en = map[ID]string{
 	"config.idExpected":           "identifier expected",
 	"config.integerRange":         "integer from {min} to {max} expected",
 	"config.invalidJson":          "invalid JSON: {err}",
+	"config.fixed":                "{path}: setting defined by your organization",
 	"config.locked":               "{path}: setting enforced by your organization's policy",
 	"config.notEditable":          "{path}: setting cannot be changed from the interface",
 	"config.positiveNumber":       "positive number expected",

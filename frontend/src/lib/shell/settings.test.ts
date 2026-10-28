@@ -16,7 +16,7 @@ describe('paramètres', () => {
 	});
 
 	it('réglage verrouillé ou fixé ailleurs', () => {
-		expect(settingNote({ path: 'x', value: true, locked: true })).toContain('🔒');
+		expect(settingNote({ path: 'x', value: true, locked: true })).toBe('Défini par votre organisation');
 		expect(settingNote({ path: 'x', value: true, fixed: true, source: 'variables LATTIS_*' })).toContain('variables LATTIS_*');
 		expect(settingNote({ path: 'x', value: true })).toBe('');
 		expect(settingNote(undefined)).toBe('');

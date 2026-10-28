@@ -6,6 +6,11 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Changements
+
+- Assistant IA décoché dans Fichier › Paramètres › Fonctionnalités : son bouton du ruban, Alt+I, son volet et « Rédiger avec l’assistant » disparaissent ; le recocher les rend aussitôt.
+- Fichier › Paramètres : un réglage défini par votre organisation (stratégie, variables LATTIS_*, Registre) est grisé avec un cadenas, ne peut être changé par aucun autre moyen, et « Réinitialiser » le garde.
+
 ## 0.5.1-beta (27/10/2026)
 
 ### Nouveautés

@@ -1675,7 +1675,7 @@
 		</div>
 		<span class="sep"></span>
 		<!-- Bascule du volet de l'Assistant IA (pas un onglet : la grille reste) ;
-		     visible même désactivé, le volet propose alors de l'activer. -->
+		     absente quand l'assistant est décoché (Fichier › Paramètres). -->
 		{#if onai}
 			<button class="tab ai" data-tab="ai" data-label={tabLabel('ai')} class:on={ai} aria-pressed={ai} aria-keyshortcuts="Alt+{TAB_TIPS.ai}" {disabled} onclick={onai} title={ai ? t('ribbon.aiButton.close') : t('ribbon.aiButton.open')}
 				>{t('ribbon.aiButton.label')} <Icon name="sparkle" size={13} /></button

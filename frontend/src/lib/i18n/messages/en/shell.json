@@ -71,8 +71,8 @@
 			"help": "Offer new versions in the status bar."
 		},
 		"numberRange": "{label}: a whole number from {min} to {max}",
-		"locked": "🔒 Set by your organization's policy.",
-		"fixed": "Set by {source}: changing it here has no effect.",
+		"locked": "Set by your organization",
+		"fixed": "Set by {source}",
 		"fixedOther": "another configuration",
 		"dialog": {
 			"title": "Settings",

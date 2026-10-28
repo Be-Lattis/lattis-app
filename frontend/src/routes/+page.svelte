@@ -54,7 +54,7 @@
 	import type { ControlInfo } from '#lib/script/controls.js';
 	import McpPanel from '#lib/shell/McpPanel.svelte';
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { demoEnd, htmlPagesEnabled, loadSettings, mcpAvailable, platform, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
+	import { aiEnabled, demoEnd, htmlPagesEnabled, loadSettings, mcpAvailable, platform, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
 	import ThemeDialog from '#lib/shell/ThemeDialog.svelte';
 	import { resolveTheme, themeCatalog, themeExtras, themeId, themeLabel, workbookTheme, type WorkbookTheme } from '#lib/grid/theme.js';
 	import { isThemeRef } from '#lib/grid/colors.js';
@@ -145,6 +145,10 @@
 	// Message de la barre d'état : effacé seul au bout d'un moment (noticeTtl),
 	// et à chaque changement d'onglet.
 	let noticeAt = 0;
+	// Assistant décoché (Fichier › Paramètres) : son volet se ferme, son bouton disparaît.
+	$effect(() => {
+		if (!aiEnabled()) untrack(() => ((aiChat.open = false), (aiChat.over = false)));
+	});
 	$effect(() => {
 		const m = notice;
 		if (!m) return;
@@ -2648,7 +2652,7 @@
 		undo={mode === 'doc' ? docState.undo : ''}
 		redo={mode === 'doc' ? docState.redo : ''}
 		ai={aiChat.open}
-		onai={platform.demo ? undefined : () => (aiChat.open ? (aiChat.open = false) : openAssistant())}
+		onai={!aiEnabled() ? undefined : () => (aiChat.open ? (aiChat.open = false) : openAssistant())}
 		onview={(v) => {
 			if (v !== view) sheet?.closeOverlays();
 			view = v;
@@ -3096,7 +3100,7 @@
 			{#if mode === 'doc' && conflictsOpen && (share?.mode === 'collaborative' || coedit?.active)}
 				<ConflictPanel {conflicts} {held} onheld={resolveHeld} layout={share?.layoutConflicts ?? 0} local={!!coedit?.active} busy={conflictBusy} onresolve={resolveConflict} onresolveall={resolveAllConflicts} ongoto={gotoConflict} onclose={() => (conflictsOpen = false)} />
 			{/if}
-			{#if aiChat.open && !aiChat.over && (mode === 'doc' || mode === 'closed')}
+			{#if aiChat.open && !aiChat.over && aiEnabled() && (mode === 'doc' || mode === 'closed')}
 				<AiPanel
 					hasDoc={mode === 'doc'}
 					context={aiContext}
@@ -3115,7 +3119,7 @@
 		<HelpPanel over />
 	{/if}
 	<!-- Assistant ouvert depuis une boîte modale (« Rédiger avec l'assistant ») : au-dessus d'elle. -->
-	{#if aiChat.open && aiChat.over && (mode === 'doc' || mode === 'closed')}
+	{#if aiChat.open && aiChat.over && aiEnabled() && (mode === 'doc' || mode === 'closed')}
 		<AiPanel
 			over
 			hasDoc={mode === 'doc'}

@@ -333,7 +333,16 @@ export function boolSetting(list: readonly SettingState[], path: string, def = f
 	return typeof v === 'boolean' ? v : def;
 }
 
-/** Note d'un réglage qu'on ne peut pas changer ici ('' sinon). */
+/**
+ * Réglage imposé (stratégie de l'organisation, ou couche plus prioritaire :
+ * LATTIS_*, --set, Registre) : grisé, avec un cadenas, et le serveur refuse
+ * de l'écrire.
+ */
+export function settingImposed(s: SettingState | undefined): boolean {
+	return !!(s?.locked || s?.fixed);
+}
+
+/** Info-bulle du cadenas d'un réglage imposé ('' sinon). */
 export function settingNote(s: SettingState | undefined): string {
 	if (s?.locked) return t('shell.settings.locked');
 	if (s?.fixed) return t('shell.settings.fixed', { source: s.source ?? t('shell.settings.fixedOther') });

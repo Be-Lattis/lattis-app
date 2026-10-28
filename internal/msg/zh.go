@@ -914,6 +914,7 @@ var zh = map[ID]string{
 	"config.idExpected":           "应为标识符",
 	"config.integerRange":         "应为 {min} 到 {max} 之间的整数",
 	"config.invalidJson":          "JSON 无效：{err}",
+	"config.fixed":                "{path}：此设置由您的组织定义",
 	"config.locked":               "{path}：此设置由您组织的策略强制执行",
 	"config.notEditable":          "{path}：无法从界面更改此设置",
 	"config.positiveNumber":       "应为正数",

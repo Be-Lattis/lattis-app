@@ -4,7 +4,7 @@
 	// entre dans le groupe, les flèches changent de langue. Masqué quand
 	// l'organisation impose la langue.
 	import { errorText, t } from '#lib/i18n/index.js';
-	import { findSetting } from './settings';
+	import { findSetting, settingImposed } from './settings';
 	import { setSetting, userSettings } from './settings.svelte.js';
 	import { languageChoices, languageValue } from './welcome';
 
@@ -22,7 +22,7 @@
 	}
 </script>
 
-{#if setting && !setting.locked}
+{#if setting && !settingImposed(setting)}
 	<fieldset class="lang">
 		<legend>{t('shell.welcome.first.language')}</legend>
 		<div class="choices">

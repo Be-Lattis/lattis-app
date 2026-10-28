@@ -71,8 +71,8 @@
 			"help": "在状态栏中提示新版本。"
 		},
 		"numberRange": "{label}：{min} 到 {max} 之间的整数",
-		"locked": "🔒 由你所在组织的策略设置。",
-		"fixed": "由 {source} 设置：在此处更改无效。",
+		"locked": "由您的组织设置",
+		"fixed": "由 {source} 设置",
 		"fixedOther": "其他配置",
 		"dialog": {
 			"title": "设置",
