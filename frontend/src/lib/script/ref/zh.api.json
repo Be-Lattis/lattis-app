@@ -271,8 +271,9 @@
 		"details": "事件：\"open\"（工作簿已打开：{path, title}）；\"before_save\"（保存之前（Ctrl+S、另存为）：{path, as}；返回 false 则取消保存）；\"save\"（保存之后：{path}）；\"before_close\"（关闭工作簿或窗口之前：{path, dirty}；返回 false 则取消关闭）；\"sheet\"（显示的标签已切换：{sheet, sheet_id, previous, previous_id}）；\"selection\"（选择已改变，在鼠标或键盘停止操作后：{sheet, sheet_id, row, col, row2, col2, address, table, column}）；\"change\"（用户修改了单元格（输入、粘贴、清除、移动、添加或删除表格行）：{sheet, sheet_id, row, col, row2, col2, address, table, column, value, old, source}）；\"sheet_add\"（添加（或复制）了工作表：{sheet, sheet_id}）；\"sheet_delete\"（删除了工作表：{sheet, sheet_id}）；\"recalc\"（公式已重新计算（F9、重新计算）：{}）。每个表还带有 event（事件名称）；行和列从 1 开始计数，与 ui.selection 相同。value 和 old（之后和之前显示的值）只在输入单个单元格时提供。只有用户的操作会触发这些事件：脚本（包括侦听器）所做的修改、选择或显示都不会触发，因此侦听器绝不会触发自身。侦听器是库中已保存脚本的全局函数，调用时传入事件的表（也在全局变量 event 中）；它保存在工作簿中，脚本结束后依然有效。同一事件的侦听器按订阅顺序执行；它们所做的一切修改一次撤消（Ctrl+Z）。出错的侦听器会在状态栏和控制台中报告一次，不会阻塞界面。before_save 和 before_close 最多有 5 秒（不含对话框）；出错既不阻止保存，也不阻止关闭。 handler 是函数本身或其名称；script 默认为当前运行的脚本（它必须已保存在库中）。同一函数订阅两次不会有任何变化。参数 — event：\"open\"、\"before_save\"、\"save\"、\"before_close\"、\"sheet\"、\"selection\"、\"change\"、\"sheet_add\"、\"sheet_delete\" 或 \"recalc\"；handler：脚本的全局函数（或其名称）；script：函数所在的脚本（省略时：当前运行的脚本）。可按顺序传参，或使用命名参数表：events.on{event = …}。可撤消：脚本所做的一切修改一次撤消（Ctrl+Z）。"
 	},
 	"formulas.functions": {
-		"signature": "formulas.functions()",
-		"summary": "列出公式中的函数（法语名称）及其语法和说明。"
+		"signature": "formulas.functions([query], [category])",
+		"summary": "列出公式中的函数（法语名称）及其语法和说明。",
+		"details": "不带参数：所有函数。带 query（名称或用途：\"查找\"、\"日期\"、\"SUMIF\"）或 category：最多 30 个函数，最接近的在前。参数 — query：要查找的名称或用途；category：类别（“日期”、“文本”…）。可按顺序传参，或使用命名参数表：formulas.functions{query = …}。"
 	},
 	"help.search": {
 		"signature": "help.search([query], [page]) → { {page, title, text}, ... } 或 {id, title, text} 或 { {id, title}, ... }",

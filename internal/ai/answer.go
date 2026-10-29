@@ -148,10 +148,16 @@ func StructureUpdate(st string) string {
 	return strings.Replace(st, structureHead, structureChanged, 1)
 }
 
-// Structure décrit le classeur (tableaux, feuilles, colonnes et leurs
-// types, nombre de lignes) pour le premier message d'une conversation ;
-// vide s'il n'y a pas de tableau ou si la lecture échoue.
+// Structure décrit le classeur pour le premier message d'une conversation
+// (digest, formules en français : StructureIn) ; vide s'il n'y a pas de
+// tableau ou si la lecture échoue.
 func Structure(ctx context.Context, host api.Host, mode string) string {
+	return StructureIn(ctx, host, mode, "fr")
+}
+
+// thinStructure : une ligne par tableau (feuille, colonnes et leurs types,
+// nombre de lignes), quand le digest ne peut pas se construire.
+func thinStructure(ctx context.Context, host api.Host, mode string) string {
 	res, err := api.Invoke(api.WithoutPrompt(ctx), host, "tables.list", map[string]any{})
 	if err != nil {
 		return ""

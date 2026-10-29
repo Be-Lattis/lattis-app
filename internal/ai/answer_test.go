@@ -50,7 +50,7 @@ func TestShowResult(t *testing.T) {
 	if res, _ := Exec(h, Full)(ctx, showTool, json.RawMessage(many)); !strings.Contains(res, `"total":"plus de 10000"`) || len(shown) != 1 || !shown[0].More || !shown[0].Truncated {
 		t.Fatalf("total plafonné : %.200s / %+v", res, shown)
 	}
-	if s := Structure(context.Background(), h, SchemaOnly); !strings.Contains(s, "« Ventes »") || !strings.Contains(s, "Montant") || strings.Contains(s, "C1") {
+	if s := Structure(context.Background(), h, SchemaOnly); !strings.Contains(s, "Ventes · feuille") || !strings.Contains(s, "Montant") || strings.Contains(s, "C1") {
 		t.Fatalf("structure : %s", s)
 	}
 }

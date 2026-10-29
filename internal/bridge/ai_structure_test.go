@@ -44,7 +44,7 @@ func TestAIStructureResent(t *testing.T) {
 		t.Fatal(err)
 	}
 	p.replies = []ai.Reply{final("Vu.")}
-	if m := send(2, "Analyse le nouveau tableau"); !strings.HasPrefix(m, "[Structure modifiée") || !strings.Contains(m, "Ville (text)") {
+	if m := send(2, "Analyse le nouveau tableau"); !strings.HasPrefix(m, "[Structure modifiée") || !strings.Contains(m, "Ville txt unique") {
 		t.Fatalf("message envoyé : %q", m)
 	}
 	p.replies = []ai.Reply{final("Rien de neuf.")}

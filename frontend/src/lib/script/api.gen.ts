@@ -474,9 +474,10 @@ export const apiReference: RefEntry[] = [
 	{
 		name: "formulas.functions",
 		category: "workbook",
-		signature: "formulas.functions()",
+		signature: "formulas.functions([query], [category])",
 		summary: "Liste les fonctions des formules (noms français), avec leur syntaxe et leur description.",
-		args: [0, 0]
+		details: "Sans paramètre : toutes les fonctions. Avec query (nom ou usage : \"recherche\", \"date\", \"SOMME.SI\") ou category : au plus 30 fonctions, les plus proches d'abord. Paramètres — query : nom ou usage cherché ; category : catégorie (« Dates », « Texte »…). Arguments dans l'ordre, ou une table d'arguments nommés : formulas.functions{query = …}.",
+		args: [0, 2]
 	},
 	{
 		name: "help.search",

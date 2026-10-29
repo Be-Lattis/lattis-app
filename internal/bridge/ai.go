@@ -291,13 +291,16 @@ func (s *DocumentService) aiTurn() (ai.Turn, string, error) {
 	}
 	sharing := c.String("ai.dataSharing", ai.SchemaOnly)
 	h := host{s}
+	// Langue de l'interface : celle des réponses et de l'écriture des
+	// formules (comme dans la grille de l'utilisateur).
+	lang := string(s.sessionLang())
 	return ai.Turn{
 		Provider: p,
 		Cred:     ai.Credentials{Key: key, Endpoint: c.String("ai.endpoint", "")},
 		Model:    model,
-		System:   ai.SystemWith(sharing, s.htmlPages()),
+		System:   ai.SystemFor(sharing, s.htmlPages(), lang),
 		Tools:    ai.ToolsWith(sharing, s.htmlPages()),
-		Exec:     ai.Exec(h, sharing),
+		Exec:     ai.ExecIn(h, sharing, lang),
 		Label:    ai.Label,
 		Write:    ai.IsWrite,
 		Target:   ai.Target,
@@ -364,6 +367,7 @@ func (s *DocumentService) aiAnswer(ctx context.Context, run int, text *string, v
 	s.ai.mu.Unlock()
 
 	h := host{s}
+	lang := string(s.sessionLang())
 	emit := func(e ai.Event) {
 		if e.Kind == ai.EventToolDone && e.Write && !e.Error {
 			s.ai.mu.Lock()
@@ -379,14 +383,14 @@ func (s *DocumentService) aiAnswer(ctx context.Context, run int, text *string, v
 	if resume {
 		err = s.ai.session.Resume(gctx, turn, emit)
 	} else {
-		msg := ai.Compose(*text, ai.View{Sheet: view.Sheet, Table: view.Table, Selection: view.Selection}, notes)
+		msg := ai.Compose(*text, ai.View{Sheet: view.Sheet, Table: view.Table, Selection: view.Selection, Today: time.Now().Format("2006-01-02")}, notes)
 		// Premier message : la structure du classeur, pour répondre sans
 		// explorer ; ensuite, de nouveau si elle a changé hors des réponses
 		// (import, Ctrl+Z, conversation reprise).
 		// Conversation longue : résumée d'abord (« Session compactée »), la
 		// structure repart alors entière.
 		compacted := s.ai.session.NeedsCompact() && s.ai.session.Compact(gctx, turn, emit) == nil
-		st := ai.Structure(ctx, h, sharing)
+		st := ai.StructureIn(ctx, h, sharing, lang)
 		s.ai.mu.Lock()
 		known := s.ai.structure
 		s.ai.mu.Unlock()
@@ -400,7 +404,7 @@ func (s *DocumentService) aiAnswer(ctx context.Context, run int, text *string, v
 	// La structure que le modèle connaît désormais (ses propres
 	// modifications comprises).
 	if !ai.Unsent(err) {
-		st := ai.Structure(context.WithoutCancel(ctx), h, sharing)
+		st := ai.StructureIn(context.WithoutCancel(ctx), h, sharing, lang)
 		s.ai.mu.Lock()
 		if s.ai.gen == gen {
 			s.ai.structure = st

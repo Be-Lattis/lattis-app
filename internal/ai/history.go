@@ -121,6 +121,7 @@ type View struct {
 	Sheet     string // feuille active
 	Table     string // tableau sous le curseur
 	Selection string // sélection lisible (« Commandes[Montant][3:10] », « B2:D5 »)
+	Today     string // date du jour (AAAA-MM-JJ) ; "" : non donnée
 }
 
 // Compose écrit le message envoyé au modèle : remarques (annulations…),
@@ -141,6 +142,9 @@ func Compose(text string, v View, notes []string) string {
 	}
 	if v.Selection != "" {
 		ctx = append(ctx, "sélection "+oneLine(v.Selection))
+	}
+	if v.Today != "" {
+		ctx = append(ctx, "aujourd'hui "+oneLine(v.Today))
 	}
 	if len(ctx) > 0 {
 		b.WriteString("[Contexte : " + strings.Join(ctx, ", ") + "]\n")

@@ -291,7 +291,10 @@ const instructions = `Lattis est un tableur relationnel : chaque tableau d'une f
 	"\n- Ligne de groupes au-dessus des en-têtes (BOISEMENT sur Nom, Statut…) : tables_two_level_headers(table, true) ; les colonnes s'appellent alors « Groupe.Sous », sauf celles sur un niveau (nom simple : groupe seul au-dessus d'un en-tête automatique ou répété)." +
 	"\n- Clé d'un tableau (valeurs uniques, recherches REFERENCE) : tables_key_check puis tables_set_key, ou tables_keep_row_numbers pour chercher par numéro de ligne." +
 	"\n- Colonne calculée : columns_insert puis une formule par nom de colonne (=[Prix]*[Quantité]) ; formules d'Excel traduites (RECHERCHEV devient REFERENCE)." +
-	"\n- Tableau croisé : pivots_create ; graphique : charts_create ; mise en page et impression : sheets_set_page_setup."
+	"\n- Tableau croisé : pivots_create ; graphique : charts_create ; mise en page et impression : sheets_set_page_setup." +
+	"\n\nFormules : toujours dans l'écriture française, quelle que soit la langue de l'utilisateur : noms français des fonctions (SOMME.SI, SI, ARRONDI ; les noms anglais sont acceptés et traduits), arguments séparés par « ; », décimale avec une virgule (1,2). [Colonne] désigne la valeur de la ligne, Tableau[Colonne] toute une colonne, Cell[A1] une cellule libre ; REFERENCE(Tableau[Colonne]; [Clé]) cherche dans un tableau qui a une clé. formulas_functions(query) cherche une fonction (sans paramètre, le catalogue entier est très long). Une fonction ou une colonne inconnue ne refuse pas la formule : elle donne #NOM? ou #REF! ; relisez le résultat (db_query, tables_rows) avant de conclure." +
+	"\nSQL (db_query) : SQLite, noms entre guillemets doubles, dates en texte AAAA-MM-JJ (strftime('%Y-%m', \"Date\")), booléens 0 et 1." +
+	"\nRéponses : le résultat d'abord, en une phrase ; pas de récit des étapes."
 
 func toolResult(v any, isErr bool) map[string]any {
 	var text string

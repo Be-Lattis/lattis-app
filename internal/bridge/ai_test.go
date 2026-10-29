@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/lalamefine/lattis/internal/ai"
 	"github.com/lalamefine/lattis/internal/api"
@@ -129,7 +130,7 @@ func TestAIConversation(t *testing.T) {
 	if err := s.AISend(ctx, 1, "Crée une feuille", AIContext{Sheet: "Feuille1", Selection: "B2:D5"}); err != nil {
 		t.Fatal(err)
 	}
-	if p.last != "[Contexte : feuille active « Feuille1 », sélection B2:D5]\n\nCrée une feuille" {
+	if p.last != "[Contexte : feuille active « Feuille1 », sélection B2:D5, aujourd'hui "+time.Now().Format("2006-01-02")+"]\n\nCrée une feuille" {
 		t.Fatalf("message envoyé : %q", p.last)
 	}
 	if d := h.done(1); d.Changes != 1 || !d.Undo {
@@ -178,7 +179,7 @@ func TestAIConversation(t *testing.T) {
 	if err := s.AISend(ctx, 2, "Fais plutôt un bilan", AIContext{}); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(p.last, "[Remarque : L'utilisateur a annulé les modifications de votre réponse précédente.]\n\nFais plutôt") {
+	if !strings.HasPrefix(p.last, "[Remarque : L'utilisateur a annulé les modifications de votre réponse précédente.]\n[Contexte : aujourd'hui ") || !strings.HasSuffix(p.last, "]\n\nFais plutôt un bilan") {
 		t.Fatalf("message envoyé : %q", p.last)
 	}
 

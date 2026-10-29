@@ -280,7 +280,20 @@ func init() {
 		&Command{
 			Name:    "formulas.functions",
 			Summary: "Liste les fonctions des formules (noms français), avec leur syntaxe et leur description.",
-			Run:     func(c *Call) (any, error) { return formula.Functions(formula.FR), nil },
+			Details: "Sans paramètre : toutes les fonctions. Avec query (nom ou usage : \"recherche\", \"date\", \"SOMME.SI\") ou category : au plus 30 fonctions, les plus proches d'abord.",
+			Params: []Param{
+				{Name: "query", Type: String, Desc: "nom ou usage cherché", Optional: true},
+				{Name: "category", Type: String, Desc: "catégorie (« Dates », « Texte »…)", Optional: true},
+			},
+			Run: func(c *Call) (any, error) {
+				q, _ := c.Str("query")
+				cat, _ := c.Str("category")
+				all := formula.Functions(formula.FR)
+				if q == "" && cat == "" {
+					return all, nil
+				}
+				return formula.Search(all, q, cat, 30), nil
+			},
 		},
 
 		// --- SQL (MCP ; les scripts ont db.query et db.execute) -----------------

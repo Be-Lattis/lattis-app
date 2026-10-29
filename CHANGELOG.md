@@ -10,6 +10,9 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Assistant IA décoché dans Fichier › Paramètres › Fonctionnalités : son bouton du ruban, Alt+I, son volet et « Rédiger avec l’assistant » disparaissent ; le recocher les rend aussitôt.
 - Fichier › Paramètres : un réglage défini par votre organisation (stratégie, variables LATTIS_*, Registre) est grisé avec un cadenas, ne peut être changé par aucun autre moyen, et « Réinitialiser » le garde.
+- Assistant IA : il répond dans la langue de l'interface et écrit les formules comme votre grille (noms des fonctions, `;` ou `,`, virgule ou point décimal).
+- Assistant IA : il connaît d'emblée les clés, les formules, les tableaux croisés, les graphiques et le nombre de valeurs distinctes des colonnes, et corrige les erreurs (#NOM?, #REF!…) des formules qu'il écrit avant de répondre.
+- Assistant IA : réponses plus courtes, qui commencent par le résultat.
 
 ## 0.5.1-beta (27/10/2026)
 

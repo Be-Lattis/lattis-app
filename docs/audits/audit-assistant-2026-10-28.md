@@ -152,3 +152,75 @@ Aujourd'hui : {date}.
 - `formulas_functions` : « Cherche des fonctions de formule par nom ou par usage (`query`: "recherche", "date", "SOMME.SI") ; rend au plus 30 fonctions avec leur syntaxe. »
 - `pivots_create` : « Crée un TCD sur une nouvelle feuille. config : `{source, rowFields, cols, values:[{field, agg: sum|count|avg|min|max}], filters}`. Choisissez des champs en lignes à peu de valeurs distinctes (digest). Détails : help_search("tableau croisé"). »
 - `tables_profile` : « Pour chaque colonne : type, valeurs distinctes, vides, résultat et erreurs des colonnes calculées (en *sample* et *full* : min, max, valeurs fréquentes). Le digest en donne déjà l'essentiel : à appeler pour un tableau modifié. »
+
+## 6. Suite (29/10/2026) : P1 faits
+
+Les cinq P1 sont en place, avec la recherche dans `formulas_functions` (P2). Mesures prises de la même façon (démo `med`, essai Go jetable retiré ensuite, aucun appel payant), partage « Structure seulement », sans pages web.
+
+| Mesure | Avant | Après |
+|---|---|---|
+| Consigne (fr) | 7 759 car. ≈ 2,2 k jetons | 9 411 car. ≈ 2,7 k jetons (règles de réponse, agir ou demander, vérification, SQL, écriture des formules selon la langue) |
+| Outils (84) | 71 910 car. ≈ 19,4 k jetons | 72 268 car. ≈ 19,5 k jetons (descriptions inchangées, P2 à faire) |
+| **Fixe par appel** | **79 669 car. ≈ 22,8 k jetons** | **81 679 car. ≈ 23,3 k jetons** |
+| Structure (1er message) | 1 997 car. ≈ 0,6 k jetons, 2 ms | digest 4 236 car. ≈ 1,3 k jetons (budget 6 000 car.), 360 ms la première fois, 210 ms ensuite |
+| `formulas_functions` | 140 248 car. ≈ 38 k jetons | 3 438 car. sans paramètre (noms par catégorie) ; ≈ 3 800 car. pour `query: "recherche"` (30 fonctions au plus) |
+| `cells_set` d'une formule | `{"created":"","widened":"",…}` | `ok` et une ligne « Vérification » (voir plus bas) |
+
+Ce qui a changé :
+
+- **Digest** (`internal/ai/digest.go`, `StructureIn`) : clé ou « sans clé (clé possible : …) », type et valeurs distinctes par colonne, formule des colonnes calculées avec le type du résultat et les erreurs, colonnes de référence (`→ T[C]`), tableaux croisés (source, champs, colonnes lues), graphiques, cellules nommées, feuilles sans tableau. Aucune valeur de cellule dans aucun partage ; sans partage, les colonnes d'un TCD tirées des valeurs d'un champ restent masquées. Au-delà du budget, les petits tableaux passent à une ligne, puis « … N autres : tables_list ». Au-delà de 20 000 lignes, les valeurs distinctes se comptent sur les 5 000 premières (« ≥ N », dit dans le digest). Valeurs distinctes en cache par version de la structure du tableau ; résultats et erreurs des colonnes calculées recomptés à chaque fois. Ancien format en repli.
+- **Bilan des écritures** (`internal/ai/report.go`) : champs vides retirés (`ok`). Après `cells_set` ou `cells_paste` d'une formule : erreurs par code, première cellule en erreur et cause (fonction, tableau ou colonne inconnus, avec les noms proches), ou « aucune erreur (résultat : nombre) ». Un collage qui crée un tableau garde les formules en texte : le bilan le dit et donne la cellule où saisir la formule.
+- **Langue** : le pont passe la langue de la session (`sessionLang`, celle que l'interface transmet par `SetLanguage`) à `SystemFor`, `ExecIn` et `StructureIn`. La langue est prise côté pont plutôt qu'ajoutée à `AIContext` : elle y est déjà, sans changer les liaisons. Les formules passent de la langue de la session au français (forme gardée par l'API) à l'entrée des outils et reviennent dans la langue de la session à la sortie. Une session en français ne convertit rien. En anglais, une formule écrite en français reste acceptée. La date du jour part dans la ligne « [Contexte : …] ».
+- **Consigne** : réponse (résultat d'abord, trois phrases au plus, pas de récit), agir ou demander, vérification (lire le bilan, clé avant REFERENCE, SQL SQLite, relire `sheets_get` après un TCD ou un graphique), réponse dans la langue de l'utilisateur, exemples de formules réécrits pour la langue.
+- **Erreurs** : écriture des formules de la session après une erreur d'analyse, noms proches (« « Vents » : vouliez-vous Ventes ? ») ou liste des tableaux, noms d'outils avec `_`.
+- **MCP** : consignes complétées (écriture française des formules, `formulas_functions(query)`, #NOM? et #REF! à relire, SQL, réponses courtes).
+
+Digest de `med` :
+
+```
+[Structure du classeur (jointe par Lattis) — 9 feuille(s), 6 tableau(x), 3 tableau(x) croisé(s), 10 graphique(s) :
+Commandes · feuille Ventes · 2000 ligne(s) · clé N° commande
+  N° commande ent. clé | Date commande date 729 | Client txt 1017 | Ville txt 24 | Produit txt 20 | Catégorie txt 6
+  Quantité ent. 10 | Prix unitaire déc. 1793 | Montant HT déc. 1947 | Payé bool 2 | Mode de paiement txt 5 | Vendeur txt 8
+  Région txt 12
+  Montant TTC =ARRONDI([Montant HT]*1,2; 2) → nombre
+  Code postal =REFERENCE(Villes[Code postal]; [Ville]) → texte
+Villes · feuille Villes · 24 ligne(s) · clé Ville
+  Ville txt clé | Code postal txt unique | Région txt 12 | Latitude déc. unique | Longitude déc. unique | Population ent. unique
+  Commandes =NB.SI(Commandes[Ville]; [Ville]) → nombre
+  CA HT =SOMME.SI(Commandes[Ville]; [Ville]; Commandes[Montant HT]) → nombre
+  CA pour 1 000 hab. =ARRONDI([CA HT]/[Population]*1000; 2) → nombre
+VentesMensuelles · feuille Ventes mensuelles · 24 ligne(s) · sans clé (clé possible : Mois)
+  Mois txt unique | Commandes ent. 22 | CA HT déc. unique | CA cumulé déc. unique | Écart déc. unique | Évolution (%) déc. 23
+  Rang ent. unique | Payées (%) déc. 21
+ImpayésParVendeur · feuille Impayés · 8 ligne(s) · sans clé (clé possible : Vendeur)
+  Vendeur txt unique | Commandes impayées ent. 7 | Montant HT impayé déc. unique
+Clients · feuille Clients · 1000 ligne(s) · sans clé (clé possible : N° client)
+  N° client ent. unique | Nom txt 36 | Prénom txt 36 | Email txt 912 | Téléphone txt unique | Ville txt 24
+  Code postal txt 24 | Date d'inscription date 888 | Carte fidélité bool 2 | Points fidélité ent. 389
+Employés · feuille Employés · 1200 ligne(s) · sans clé (clé possible : Matricule)
+  Matricule ent. unique | Nom txt 36 | Prénom txt 36 | Service txt 8 | Poste txt 24 | Date d'embauche date 1064
+  Salaire brut déc. 386 | Temps partiel bool 2 | Ville txt 24
+  Ancienneté =ENT((DATE(2026; 1; 1)-[Date d'embauche])/365) → nombre
+Tableau croisé VentesParRégion · feuille Synthèse ← Commandes · lignes Région, Catégorie · valeurs somme Montant HT, nombre N° commande · colonnes lues Région, Catégorie, CA HT, Commandes
+Tableau croisé ParRégion · feuille Synthèse ← Commandes · lignes Région · valeurs somme Montant HT, nombre N° commande · colonnes lues Région, CA HT, Commandes
+Tableau croisé SalairesParService · feuille Analyse ← Employés · lignes Service · valeurs moyenne Salaire brut, nombre Matricule · colonnes lues Service, Moyenne de Salaire brut, Nombre de Matricule
+Graphique « Chiffre d'affaires par ville » · feuille Villes ← Villes · map · x Ville · séries Latitude, Longitude, CA HT
+Graphique « Répartition du CA par région » · feuille Synthèse ← ParRégion · treemap · x Région · séries CA HT
+… (8 autres graphiques)
+Feuilles sans tableau : À découvrir (document)
+Repères : type puis nombre de valeurs distinctes (unique : clé possible ; peu de valeurs : bon champ de tableau croisé) ; « = » formule → type du résultat ; → T[C] : valeurs tirées de la clé de T.
+]
+```
+
+Bilans et erreurs rendus au modèle (essais Go) :
+
+| Appel | Rendu |
+|---|---|
+| `cells_set =FOOBAR(1)` (colonne calculée) | `ok` + `Vérification : colonne calculée « Test » =FOOBAR(1) : 30 #NOM? sur 30 ligne(s), la première en C2 ; fonction inconnue FOOBAR, à chercher avec formulas_functions ; corrigez la formule` |
+| `cells_set =[Montnat]*2` | `… 30 #REF! … ; colonne inconnue [Montnat] dans Ventes (proche : Montant)` |
+| `cells_set =SOMME([Montant], 2)` (fr) | `formule : position 16 : caractère inattendu ',' — écriture des formules de cette session : arguments séparés par « ; », décimale avec une virgule (1,2), …` |
+| `cells_set =ROUND([Montant]*1.2, 2)` (en) | `ok` + `… =ROUND([Montant]*1.2, 2) : aucune erreur (résultat : nombre)` |
+| `query_show FROM "Vents"` | `Tableau inconnu : « Vents » — « Vents » : vouliez-vous Ventes ?` |
+
+Reste à faire (P2 et P3) : descriptions d'outils propres à l'assistant (environ −40 %), définition des TCD et graphiques en *schema-only* dans `sheets_get`, cellule active dans le contexte, statistiques en *sample* et *full*, modèle local.
