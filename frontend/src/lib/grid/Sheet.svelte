@@ -43,7 +43,7 @@
 	import CommentThread from './CommentThread.svelte';
 	import { threadAt, threadPlace, type CommentHost } from './comments';
 	import SparklineDialog from './SparklineDialog.svelte';
-	import { a1 as sparkA1, defaultLocation, sparkGeometry, sparkSvg, type SparkKind, type SparklineConfig, type SparklineGroup } from './sparkline';
+	import { type SparklineConfig, type SparklineGroup } from './sparkline';
 	import { autoLink, isLinkClick, linkKind, onLinkText, openLink } from './hyperlink';
 	import { type CustomOrder } from './customsort';
 	import { type KeyChoice, type KeyQuestion } from './keychoice';
@@ -129,6 +129,7 @@
 	import FollowMenu, { type FollowMenuView } from './sheet/FollowMenu.svelte';
 	import { createDraw } from './sheet/draw.svelte.js';
 	import { createPivotFold } from './sheet/pivotfold.svelte.js';
+	import { createSparklines } from './sheet/sparklines.svelte.js';
 
 	interface Props {
 		data: SheetData;
@@ -1450,54 +1451,24 @@
 	// Défilement vertical du volet en cours de dessin (drawText).
 	let paneTop = 0;
 
-	/** Cellule imprimée avec son graphique sparkline (SVG). */
-	function printSpark(cell: PrintCell | undefined, r: number, c: number): PrintCell | undefined {
-		if (!sparkGroups.length) return cell;
-		const s = sparkAt(r, c);
-		if (!s || s.g.error) return cell;
-		const w = cax().size(c);
-		const h = rh(r);
-		const svg = sparkSvg(sparkGeometry(s.values, s.g.config, w, h, s.g.config.same ? { lo: s.g.lo, hi: s.g.hi } : undefined), w, h);
-		return { ...(cell ?? { text: '' }), spark: svg };
-	}
-
+	// --- Sparklines : sheet/sparklines.svelte.ts ---
+	const sparklinesCtl = createSparklines({
+		get sparkGroups() { return sparkGroups; },
+		get sparkAt() { return sparkAt; },
+		get cax() { return cax; },
+		get rh() { return rh; },
+		get source() { return source; },
+		get active() { return active; },
+		get entries() { return entries; },
+		get sparkDlg() { return sparkDlg; }, set sparkDlg(v) { sparkDlg = v; },
+		get selection() { return selection; },
+		get tableAt() { return tableAt; },
+		get wrap() { return wrap; }
+	});
+	const { printSpark, saveSparkline, removeSparkline } = sparklinesCtl;
+	export const insertSparkline = sparklinesCtl.insertSparkline;
 	// Insertion › Sparklines : dialogue (groupe neuf ou celui de la cellule active).
 	let sparkDlg = $state<{ config: SparklineConfig; columns: string[]; id?: number } | null>(null);
-	export function insertSparkline(kind: SparkKind) {
-		if (!source.createSparkline) return;
-		const here = sparkAt(active.row, active.col);
-		if (here) {
-			const e = here.g.config.table ? entries.find((x) => x.t.name === here.g.config.table) : undefined;
-			sparkDlg = { config: { ...here.g.config }, columns: e?.t.columns.map((k) => k.name) ?? [], id: here.g.id };
-			return;
-		}
-		const { r0, r1, c0, c1 } = selection();
-		const e = tableAt(r0, c0);
-		if (e && r0 > e.t.row && c1 <= e.lastCol) {
-			// Dans un tableau : une colonne de graphiques, les colonnes choisies de chaque ligne.
-			const cols = e.t.columns.slice(c0 - e.t.col, c1 - e.t.col + 1).map((k) => k.name);
-			const all = e.t.columns.map((k) => k.name);
-			const numeric = e.t.columns.filter((k) => k.type === 'integer' || k.type === 'decimal').map((k) => k.name);
-			const nums = cols.length > 1 ? cols : numeric.length ? numeric : all.slice(1);
-			sparkDlg = { config: { kind, table: e.t.name, cols: nums }, columns: all };
-			return;
-		}
-		sparkDlg = { config: { kind, source: sparkA1(r0, c0, r1, c1), location: defaultLocation(r0, c0, r1, c1) }, columns: [] };
-	}
-	async function saveSparkline(cfg: SparklineConfig) {
-		const d = sparkDlg;
-		if (!d) return;
-		if (d.id !== undefined) await source.setSparkline?.(d.id, cfg);
-		else await source.createSparkline?.(cfg);
-		sparkDlg = null;
-		wrap.focus();
-	}
-	async function removeSparkline() {
-		const d = sparkDlg;
-		if (d?.id !== undefined) await source.deleteSparkline?.(d.id);
-		sparkDlg = null;
-		wrap.focus();
-	}
 
 	/** Largeur des boutons de l'en-tête des colonnes sur un niveau (posée par drawCells, lue par singleCell). */
 	const singleIcons = new Map<string, number>();
