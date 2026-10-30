@@ -66,7 +66,7 @@ func hasTable(c *client, name string) bool {
 
 func waitFor(t *testing.T, what string, cond func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(patience)
 	for !cond() {
 		if time.Now().After(deadline) {
 			t.Fatalf("%s : jamais atteint", what)
@@ -103,12 +103,12 @@ func TestStructureFollowedByColleague(t *testing.T) {
 	f, alice, bob, id := setup(t)
 	var notices []string
 	got := make(chan []string, 64)
-	go bob.e.Follow(ctx, f.As("bob"), time.Hour, func(ev collab.Event) {
+	bob.follow(ctx, f.As("bob"), time.Hour, func(ev collab.Event) {
 		if len(ev.Notices) > 0 {
 			got <- ev.Notices
 		}
 	})
-	go alice.e.Follow(ctx, f.As("alice"), time.Hour, nil)
+	alice.follow(ctx, f.As("alice"), time.Hour, nil)
 	waitOnline(t, bob, alice)
 	drain := func() {
 		for {

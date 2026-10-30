@@ -41,6 +41,8 @@ type client struct {
 	name string
 	d    *doc.Document
 	e    *collab.Engine
+	// synced : fermé à la fin du premier tour du suivi (follow).
+	synced chan struct{}
 }
 
 func newClient(t *testing.T, name string, d *doc.Document, srv workbook.Server) *client {
@@ -482,7 +484,7 @@ func TestFollowNotifications(t *testing.T) {
 	var mu sync.Mutex
 	var got []collab.Event
 	data := make(chan struct{}, 8)
-	go bob.e.Follow(ctx, f.As("bob"), time.Hour, func(ev collab.Event) {
+	bob.follow(ctx, f.As("bob"), time.Hour, func(ev collab.Event) {
 		mu.Lock()
 		got = append(got, ev)
 		mu.Unlock()
@@ -490,7 +492,7 @@ func TestFollowNotifications(t *testing.T) {
 			data <- struct{}{}
 		}
 	})
-	go alice.e.Follow(ctx, f.As("alice"), time.Hour, nil)
+	alice.follow(ctx, f.As("alice"), time.Hour, nil)
 	waitOnline(t, bob, alice)
 	alice.mustSet(2, 1, "42")
 	alice.e.Kick()
@@ -516,18 +518,62 @@ func TestFollowNotifications(t *testing.T) {
 	}
 }
 
+// patience : délai des attentes des essais. Une attente réussie n'attend
+// pas : large, il ne coûte rien et tient sous -race sur une machine lente.
+const patience = 20 * time.Second
+
+// follow lance le suivi de c (Engine.Follow) et rend un canal fermé à son
+// arrêt. La fin du premier tour (connexion : file envoyée, tout relu) est
+// notée pour waitOnline : c'est le premier évènement d'état reçu en ligne
+// (le passage en ligne est toujours dit).
+func (c *client) follow(ctx context.Context, srv workbook.Server, retry time.Duration, changed func(collab.Event)) <-chan struct{} {
+	synced := make(chan struct{})
+	c.synced = synced
+	// Hors ligne d'abord : le premier tour le remet en ligne, et le dit
+	// (Event.State) à sa fin.
+	c.d.Share.SetOnline(false, "")
+	var once sync.Once
+	done := make(chan struct{})
+	// Le suivi s'arrête avant la fin de l'essai (ctx annulé par son defer) :
+	// sinon il lirait encore les réglages (collab.Debounce…) que l'essai
+	// remet en place, et le classeur fermé.
+	c.t.Cleanup(func() {
+		select {
+		case <-done:
+		case <-time.After(patience):
+			c.t.Errorf("%s : suivi pas arrêté", c.name)
+		}
+	})
+	go func() {
+		defer close(done)
+		c.e.Follow(ctx, srv, retry, func(ev collab.Event) {
+			if changed != nil {
+				changed(ev)
+			}
+			if ev.State && c.d.Share.Online() {
+				once.Do(func() { close(synced) })
+			}
+		})
+	}()
+	return done
+}
+
+// waitOnline attend que chaque poste suivi (follow) ait fini son premier
+// tour : avant, une saisie ou une suppression faite par l'essai croise la
+// synchronisation de la connexion.
 func waitOnline(t *testing.T, cs ...*client) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.After(patience)
 	for _, c := range cs {
-		for !c.d.Share.Online() && time.Now().Before(deadline) {
-			time.Sleep(5 * time.Millisecond)
+		if c.synced == nil {
+			t.Fatalf("%s : suivi lancé sans follow", c.name)
 		}
-		if !c.d.Share.Online() {
-			t.Fatalf("%s pas en ligne", c.name)
+		select {
+		case <-c.synced:
+		case <-deadline:
+			t.Fatalf("%s pas en ligne : %+v", c.name, c.d.Share.State())
 		}
 	}
-	time.Sleep(50 * time.Millisecond) // première synchronisation
 }
 
 func tableID(t *testing.T, d *doc.Document) int64 {

@@ -112,8 +112,8 @@ func TestStructureKeyByStructureNotice(t *testing.T) {
 		seen = append(seen, payload)
 		return payload == workbook.NoticeMeta
 	})
-	go bob.e.Follow(ctx, f.As("bob"), time.Hour, nil)
-	go alice.e.Follow(ctx, f.As("alice"), time.Hour, nil)
+	bob.follow(ctx, f.As("bob"), time.Hour, nil)
+	alice.follow(ctx, f.As("alice"), time.Hour, nil)
 	waitOnline(t, bob, alice)
 
 	must(t, alice.d.SetKey(ctx, "Ventes", 0))

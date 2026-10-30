@@ -317,7 +317,7 @@ func TestRightsNotified(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	notices := make(chan []string, 8)
-	go bob.e.Follow(ctx, f.As("bob"), time.Hour, func(ev collab.Event) {
+	bob.follow(ctx, f.As("bob"), time.Hour, func(ev collab.Event) {
 		if len(ev.Notices) > 0 {
 			notices <- ev.Notices
 		}

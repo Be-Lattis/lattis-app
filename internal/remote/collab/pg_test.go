@@ -246,7 +246,7 @@ func TestPostgresFollow(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	data := make(chan struct{}, 8)
-	go p.bob.e.Follow(ctx, p.bobServer, time.Hour, func(ev collab.Event) {
+	p.bob.follow(ctx, p.bobServer, time.Hour, func(ev collab.Event) {
 		if ev.Data {
 			select {
 			case data <- struct{}{}:

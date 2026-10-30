@@ -136,7 +136,12 @@ func TestScriptStop(t *testing.T) {
 			res, _ := api.RunScript(h, "Boucle", src, "")
 			done <- res
 		}()
-		time.Sleep(200 * time.Millisecond)
+		// Premier script lancé (api.Busy) : attendu, pas un délai fixe.
+		for deadline := time.Now().Add(10 * time.Second); !api.Busy(); time.Sleep(time.Millisecond) {
+			if time.Now().After(deadline) {
+				t.Fatalf("%s : jamais lancé", src)
+			}
+		}
 		if _, err := api.RunScript(h, "Autre", `print(1)`, ""); err != api.ErrBusy {
 			t.Errorf("deuxième script pendant le premier : %v", err)
 		}

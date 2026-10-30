@@ -43,8 +43,8 @@ func TestAutoShareFollowed(t *testing.T) {
 	defer cancel()
 	f, alice, bob, id := setup(t)
 	var notices = make(chan string, 64)
-	go bob.e.Follow(ctx, f.As("bob"), time.Hour, nil)
-	go alice.e.Follow(ctx, f.As("alice"), time.Hour, func(ev collab.Event) {
+	bob.follow(ctx, f.As("bob"), time.Hour, nil)
+	alice.follow(ctx, f.As("alice"), time.Hour, func(ev collab.Event) {
 		for _, n := range ev.Notices {
 			notices <- n
 		}
@@ -351,8 +351,8 @@ func TestAutoShareRelayAndListen(t *testing.T) {
 			}()
 			es := workbook.WithEvents(f.As("bob"), hs.URL+"/api/events", info.WorkbookID,
 				func(context.Context) (string, error) { return "jeton", nil }, nil)
-			go bob.e.Follow(ctx, es, time.Hour, nil)
-			go alice.e.Follow(ctx, f.As("alice"), time.Hour, nil)
+			bob.follow(ctx, es, time.Hour, nil)
+			alice.follow(ctx, f.As("alice"), time.Hour, nil)
 			waitOnline(t, bob, alice)
 			if hits.Load() == 0 {
 				t.Fatal("relais jamais demandé")

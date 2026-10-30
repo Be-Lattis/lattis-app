@@ -52,7 +52,12 @@ func TestStepsAndEnd(t *testing.T) {
 	setTimes(t, 0, 0)
 	var s sink
 	ctx, tr := Start(context.Background(), s.emit, true)
-	time.Sleep(20 * time.Millisecond) // première émission (minuterie)
+	// Première émission (minuterie de Delay) attendue, pas un délai fixe.
+	for deadline := time.Now().Add(10 * time.Second); len(s.all()) == 0; time.Sleep(time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("première émission jamais partie")
+		}
+	}
 	Op(ctx, "deleteColumn", "Prix")
 	inner, none := Start(ctx, s.emit, true)
 	if none != nil || From(inner) != tr {

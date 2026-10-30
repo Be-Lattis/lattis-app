@@ -61,6 +61,10 @@ func testServer(t *testing.T) *httptest.Server {
 	})
 	mux.HandleFunc("/slow", func(w http.ResponseWriter, r *http.Request) {
 		select {
+		case slowStarted <- struct{}{}:
+		default:
+		}
+		select {
 		case <-time.After(5 * time.Second):
 		case <-r.Context().Done():
 		}
@@ -217,14 +221,22 @@ func TestHTTPLimits(t *testing.T) {
 	}
 }
 
+// slowStarted : une requête est arrivée sur /slow.
+var slowStarted = make(chan struct{}, 1)
+
 // Le bouton Arrêter interrompt une requête en cours.
 func TestHTTPStop(t *testing.T) {
 	realNet(t)
 	srv := testServer(t)
 	h := newHost(t)
 	h.answer = map[string]any{}
+	// Arrêt quand la requête est arrivée au serveur (le script tourne),
+	// pas après un délai fixe.
+	for len(slowStarted) > 0 {
+		<-slowStarted
+	}
 	go func() {
-		time.Sleep(300 * time.Millisecond)
+		<-slowStarted
 		StopScript()
 	}()
 	start := time.Now()

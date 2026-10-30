@@ -23,11 +23,11 @@ func TestBackoff(t *testing.T) {
 		t.Fatalf("après Reset : %v", d)
 	}
 
-	// Wake fait partir l'essai en attente tout de suite.
+	// Wake fait partir l'essai en attente tout de suite, même donné juste
+	// avant que Wait n'attende (réveil gardé).
 	b = NewBackoff(time.Hour, time.Hour)
 	done := make(chan bool)
 	go func() { done <- b.Wait(context.Background()) }()
-	time.Sleep(10 * time.Millisecond)
 	b.Wake()
 	select {
 	case ok := <-done:

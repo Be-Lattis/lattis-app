@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -15,6 +16,35 @@ import (
 	"github.com/lalamefine/lattis/internal/remote/workbook/workbooktest"
 	"github.com/lalamefine/lattis/protocol"
 )
+
+// refusingServer : le faux serveur, qui refuse (42501) l'ajout d'un tableau
+// au classeur partagé tant que refuse est vrai.
+type refusingServer struct {
+	workbook.Server
+	refuse *atomic.Bool
+}
+
+func (s refusingServer) Write(ctx context.Context, fn func(workbook.Writer) error) error {
+	return s.Server.Write(ctx, func(w workbook.Writer) error {
+		return fn(refusingWriter{w, s.refuse})
+	})
+}
+
+func (s refusingServer) UploadFormImage(ctx context.Context, formID, kind, contentType string, data []byte) (string, error) {
+	return s.Server.(workbook.FormImages).UploadFormImage(ctx, formID, kind, contentType, data)
+}
+
+type refusingWriter struct {
+	workbook.Writer
+	refuse *atomic.Bool
+}
+
+func (w refusingWriter) CreateTable(ctx context.Context, workbookID, schema, name string, localID int64, sheet string, cols []workbook.ColumnSpec) (string, []workbook.RemoteColumn, error) {
+	if w.refuse.Load() {
+		return "", nil, workbooktest.ErrPrivilege{Msg: "ajout refusé"}
+	}
+	return w.Writer.CreateTable(ctx, workbookID, schema, name, localID, sheet, cols)
+}
 
 // TestFormInfo : conditions du §2.2 de partager-comme-formulaire.md
 // (classeur local, tableau d'une requête, tableau privé, lecteur, hors
@@ -33,9 +63,16 @@ func TestFormInfo(t *testing.T) {
 	t.Cleanup(func() {
 		shareServer, shareCacheDir, shareRetry, collab.Debounce, serverDiscovery = oldServer, oldDir, oldRetry, oldDebounce, oldDisc
 	})
-	user := "alice"
+	// L'adresse dit l'utilisateur (Bob ouvre depuis lecteur.example.test) :
+	// une variable « utilisateur courant » serait lue aussi par le suivi
+	// d'Alice, qui continue en arrière-plan.
+	var refuse atomic.Bool
 	shareServer = func(ctx context.Context, server string) (workbook.Server, auth.User, string, error) {
-		return fake.As(user), auth.User{PGRole: user}, "Serveur de test", nil
+		user := "alice"
+		if strings.Contains(server, "lecteur.example.test") {
+			user = "bob"
+		}
+		return refusingServer{fake.As(user), &refuse}, auth.User{PGRole: user}, "Serveur de test", nil
 	}
 
 	// Classeur d'Alice : Espèces (liste), Nids (clé numérotée, listes),
@@ -90,7 +127,10 @@ func TestFormInfo(t *testing.T) {
 	mustShare(t, err)
 	waitShare(t, ha, "Alice en ligne", func(s workbook.State) bool { return s.Online && s.CanManage })
 
-	// Tableau créé sur le poste après la publication : privé.
+	// Tableau créé sur le poste après la publication, que le serveur refuse
+	// d'ajouter (partage automatique) : privé. Sans le refus, le suivi
+	// l'ajouterait au classeur partagé pendant l'essai (essai instable).
+	refuse.Store(true)
 	_, err = a.Paste(ctx, 1, 20, 0, [][]string{{"Note", "N"}, {"a", "1"}})
 	mustShare(t, err)
 	rv, err := a.ShareRights(ctx, false)
@@ -186,11 +226,10 @@ func TestFormInfo(t *testing.T) {
 	waitShare(t, ha, "Alice de retour", func(s workbook.State) bool { return s.Online })
 
 	// Bob, lecteur : réservé, mais il voit le formulaire ouvert à lui.
-	user = "bob"
 	bobCache := t.TempDir()
 	shareCacheDir = func() (string, error) { return bobCache, nil }
 	b, hb := shareService(t)
-	_, err = b.ShareOpen(ctx, "https://lattis.example.test", info.WorkbookID, "")
+	_, err = b.ShareOpen(ctx, "https://lecteur.example.test", info.WorkbookID, "")
 	mustShare(t, err)
 	waitShare(t, hb, "Bob en ligne", func(s workbook.State) bool { return s.Online })
 	fi, err = b.FormInfo(ctx, "Nids")

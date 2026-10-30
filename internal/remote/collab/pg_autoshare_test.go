@@ -21,8 +21,8 @@ func TestPostgresAutoShareFollowed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	alice, bob := p.alice, p.bob
-	go bob.e.Follow(ctx, p.bobServer, time.Hour, nil)
-	go alice.e.Follow(ctx, p.env.As(p.aliceRole), time.Hour, nil)
+	bob.follow(ctx, p.bobServer, time.Hour, nil)
+	alice.follow(ctx, p.env.As(p.aliceRole), time.Hour, nil)
 	waitOnline(t, bob, alice)
 
 	newLocalTable(t, alice, "Stock", 10)

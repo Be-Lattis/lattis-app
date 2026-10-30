@@ -12,7 +12,7 @@ import (
 // waitGone attend que le classeur de c soit noté disparu (gone).
 func waitGone(t *testing.T, c *client, gone string) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(patience)
 	for c.d.Share.Gone() != gone {
 		if time.Now().After(deadline) {
 			t.Fatalf("%s : %+v, attendu %q", c.name, c.d.Share.State(), gone)
@@ -32,18 +32,14 @@ func TestFollowStopsWhenDeleted(t *testing.T) {
 	f, _, bob, id := setup(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	done := make(chan struct{})
-	go func() {
-		bob.e.Follow(ctx, f.As("bob"), 10*time.Millisecond, nil)
-		close(done)
-	}()
+	done := bob.follow(ctx, f.As("bob"), 10*time.Millisecond, nil)
 	waitOnline(t, bob)
 	f.DropWorkbook(id)
 	bob.mustSet(0, 1, "7")
 	bob.e.Kick()
 	select {
 	case <-done:
-	case <-time.After(5 * time.Second):
+	case <-time.After(patience):
 		t.Fatal("suivi pas arrêté")
 	}
 	waitGone(t, bob, workbook.GoneDeleted)
@@ -85,7 +81,7 @@ func TestFollowRevokedKeepsQueue(t *testing.T) {
 	f, _, bob, id := setup(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go bob.e.Follow(ctx, f.As("bob"), 10*time.Millisecond, nil)
+	bob.follow(ctx, f.As("bob"), 10*time.Millisecond, nil)
 	waitOnline(t, bob)
 	as := f.As("alice")
 	editor := roleID(t, as, id, "editor")

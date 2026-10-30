@@ -309,7 +309,7 @@ func TestPostgresLoadFollowers(t *testing.T) {
 		p.env.AddMember(t, p.workbookID, "editor", id)
 		srv := p.env.As(role)
 		c := newClient(t, "poste", pgOpen(t, srv, p.workbookID, role), srv)
-		go c.e.Follow(ctx, srv, time.Hour, nil)
+		c.follow(ctx, srv, time.Hour, nil)
 		fs = append(fs, c)
 	}
 	waitOnline(t, fs...)

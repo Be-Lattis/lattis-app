@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -72,17 +71,22 @@ func TestShareFrozenWorkbook(t *testing.T) {
 	recent := filepath.Join(t.TempDir(), "recent.json")
 	recentFile = func() (string, error) { return recent, nil }
 	t.Cleanup(func() { shareServer, shareCacheDir, shareRetry, recentFile = oldServer, oldDir, oldRetry, oldRecent })
-	// Le service « courant » de l'appel dit l'utilisateur.
-	var current atomic.Value
+	// L'adresse du serveur dit l'utilisateur : l'auteur publie sur
+	// auteur.example.test, le lecteur ouvre depuis lattis.example.test (même
+	// faux serveur). Une identité « courante » globale serait lue aussi par
+	// le suivi en arrière-plan de l'autre poste, qui relirait alors les
+	// droits du mauvais utilisateur (essai instable).
 	shareServer = func(ctx context.Context, server string) (workbook.Server, auth.User, string, error) {
-		u := users[current.Load().(string)]
+		u := users["b"]
+		if strings.Contains(server, "auteur.example.test") {
+			u = users["a"]
+		}
 		return fake.As(u), auth.User{PGRole: u}, "Serveur de test", nil
 	}
 
 	// L'auteur publie.
-	a, ha := shareService(t)
+	a, _ := shareService(t)
 	users["a"], users["b"] = "alice", "bob"
-	current.Store("a")
 	_, err := a.New(ctx)
 	mustShare(t, err)
 	_, err = a.Paste(ctx, 1, 0, 0, [][]string{{"Produit", "Prix"}, {"Café", "4,5"}, {"Thé", "2"}})
@@ -92,7 +96,7 @@ func TestShareFrozenWorkbook(t *testing.T) {
 	if len(check.Tables) != 1 || len(check.Tables[0].Problems) != 0 {
 		t.Fatalf("vérifications : %+v", check)
 	}
-	st, err := a.SharePublish(ctx, ShareRequest{Server: "https://lattis.example.test", Title: "Prix", Mode: workbook.Frozen, Tables: []int64{check.Tables[0].ID}})
+	st, err := a.SharePublish(ctx, ShareRequest{Server: "https://auteur.example.test", Title: "Prix", Mode: workbook.Frozen, Tables: []int64{check.Tables[0].ID}})
 	mustShare(t, err)
 	if !st.Shared || !st.CanDesign || st.Version != 1 || st.ServerName != "Serveur de test" {
 		t.Fatalf("état de l'auteur : %+v", st)
@@ -111,7 +115,6 @@ func TestShareFrozenWorkbook(t *testing.T) {
 	mustShare(t, err)
 	mustShare(t, fake.Grant(list[0].ID, "bob", "reader"))
 	b, hb := shareService(t)
-	current.Store("b")
 	got, err := b.ShareWorkbooks(ctx, "https://lattis.example.test")
 	mustShare(t, err)
 	if len(got) != 1 || got[0].Title != "Prix" {
@@ -152,18 +155,14 @@ func TestShareFrozenWorkbook(t *testing.T) {
 	waitShare(t, hb, "lecteur en ligne", func(s workbook.State) bool { return s.Online })
 
 	// L'auteur republie : le lecteur est prévenu, puis recharge.
-	current.Store("a")
-	// Le suivi d'Alice a pu relire ses droits pendant que le faux serveur
-	// répondait pour Bob (lecteur) : on attend qu'il les relise pour elle.
-	if a.ShareState().ReadOnly != "" {
-		waitShare(t, ha, "auteur de nouveau en écriture", func(s workbook.State) bool { return s.ReadOnly == "" })
+	if st := a.ShareState(); st.ReadOnly != "" {
+		t.Fatalf("auteur en lecture seule : %+v", st)
 	}
 	_, err = a.SetCell(ctx, 1, 1, 1, "5")
 	mustShare(t, err)
 	_, err = a.ShareRepublish(ctx, nil)
 	mustShare(t, err)
 	waitShare(t, hb, "nouvelle version", func(s workbook.State) bool { return s.NewVersion == 2 })
-	current.Store("b")
 	_, err = b.ShareReload(ctx)
 	mustShare(t, err)
 	if st := b.ShareState(); st.Version != 2 || st.NewVersion != 0 {

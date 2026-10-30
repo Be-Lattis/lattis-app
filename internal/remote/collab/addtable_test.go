@@ -176,8 +176,8 @@ func TestAddTableFollowed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	f, alice, bob, _ := setup(t)
-	go bob.e.Follow(ctx, f.As("bob"), time.Hour, nil)
-	go alice.e.Follow(ctx, f.As("alice"), time.Hour, nil)
+	bob.follow(ctx, f.As("bob"), time.Hour, nil)
+	alice.follow(ctx, f.As("alice"), time.Hour, nil)
 	waitOnline(t, bob, alice)
 	// Une ligne occupe la place chez Bob : le tableau reçu va dessous
 	// (cellule d'avant la décision 0018 : un éditeur n'en saisit plus).

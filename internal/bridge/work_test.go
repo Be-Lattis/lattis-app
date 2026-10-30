@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/lalamefine/lattis/internal/work"
 )
@@ -98,7 +97,6 @@ func TestCancelWorkFromStatusBar(t *testing.T) {
 	if _, err := s.DeleteColumn(ctx, table, 1); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(5 * time.Millisecond)
 	l, _ = s.Layout(ctx, 1)
 	if len(l.Tables[0].Columns) != 2 {
 		t.Fatalf("colonnes : %+v", l.Tables[0].Columns)
