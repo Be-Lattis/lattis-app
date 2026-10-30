@@ -70,11 +70,6 @@
 	import type { DocFormat } from '#lib/doc/format.js';
 	import QueryHost from '#lib/query/QueryHost.svelte';
 	import LattisHost from '#lib/remote/LattisHost.svelte';
-	import ShareDialog from '#lib/remote/ShareDialog.svelte';
-	import OpenRemoteDialog from '#lib/remote/OpenRemoteDialog.svelte';
-	import DataCatalogDialog from '#lib/remote/DataCatalogDialog.svelte';
-	import DataShareDialog from '#lib/remote/DataShareDialog.svelte';
-	import FormDialog from '#lib/remote/FormDialog.svelte';
 	import AboutDialog from '#lib/shell/AboutDialog.svelte';
 	import ExportReportDialog from '#lib/shell/ExportReportDialog.svelte';
 	import SqlExportDialog, {  } from '#lib/shell/SqlExportDialog.svelte';
@@ -87,7 +82,6 @@
 	import type { CommentHost, Thread } from '#lib/grid/comments.js';
 	import CoEditPresence from '#lib/remote/CoEditPresence.svelte';
 	import type { State as CoEditState } from '#bindings/internal/coedit/models.js';
-	import RightsDialog from '#lib/remote/RightsDialog.svelte';
 	import { rightsObjects, type RightsObject } from '#lib/remote/rights.js';
 	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
 	import { canRepublish, roleChip, rolesLabel } from '#lib/remote/share.js';
@@ -127,6 +121,7 @@
 	import { createTabMerge } from './../lib/app/tabmerge.svelte.js';
 	import { createProtect } from './../lib/app/protect.svelte.js';
 	import AskDialogs, { type AskDialogsView } from './../lib/app/AskDialogs.svelte';
+	import ShareDialogs, { type ShareDialogsView } from './../lib/app/ShareDialogs.svelte';
 
 	let mode = $state<Mode>('starting');
 	let bench = $state(false);
@@ -1511,6 +1506,28 @@
 		get unsentClose() { return unsentClose; },
 		get xlsxAsk() { return xlsxAsk; }
 	};
+	// Partage et données : ../lib/app/ShareDialogs.svelte.
+	const shareView: ShareDialogsView = {
+		get addToShared() { return addToShared; },
+		get askRemove() { return askRemove; },
+		get canRights() { return canRights; },
+		get dataInsert() { return dataInsert; }, set dataInsert(v) { dataInsert = v; },
+		get dataShare() { return dataShare; }, set dataShare(v) { dataShare = v; },
+		get dataShareAfter() { return dataShareAfter; }, set dataShareAfter(v) { dataShareAfter = v; },
+		get docState() { return docState; },
+		get err() { return err; },
+		get formAfter() { return formAfter; }, set formAfter(v) { formAfter = v; },
+		get formShare() { return formShare; }, set formShare(v) { formShare = v; },
+		get loadSources() { return loadSources; },
+		get mode() { return mode; },
+		get notice() { return notice; }, set notice(v) { notice = v; },
+		get openRemote() { return openRemote; }, set openRemote(v) { openRemote = v; },
+		get openedRemote() { return openedRemote; },
+		get reload() { return reload; },
+		get rightsOpen() { return rightsOpen; }, set rightsOpen(v) { rightsOpen = v; },
+		get share() { return share; }, set share(v) { share = v; },
+		get shareDlg() { return shareDlg; }, set shareDlg(v) { shareDlg = v; }
+	};
 </script>
 
 <svelte:window oncontextmenu={blockNativeMenu} />
@@ -2168,88 +2185,7 @@
 			}}
 		/>
 	{/if}
-	{#if rightsOpen && canRights && share}
-		<RightsDialog title={share.title} server={share.server} link={share.link} onclose={() => (rightsOpen = false)} onremove={() => { rightsOpen = false; askRemove(); }} onaddshared={share.mode === 'collaborative' ? async (t) => void (await addToShared(t)) : undefined} />
-	{/if}
-	{#if shareDlg && mode === 'doc'}
-		<ShareDialog
-			republish={shareDlg.republish}
-			{share}
-			title={docState.title}
-			ondone={(st, lake) => {
-				const again = shareDlg?.republish;
-				shareDlg = null;
-				// Ouvert depuis Partager au Data Lake : la boîte revient, le tableau publié.
-				const back = dataShareAfter;
-				dataShareAfter = null;
-				const fback = formAfter;
-				formAfter = null;
-				if (!st) return;
-				if (back) dataShare = back;
-				if (fback) formShare = fback;
-				// Tableaux de requête choisis en source du Data Lake : la boîte de la source suit.
-				if (!back && lake?.length) dataShare = lake[0];
-				share = st;
-				notice = again ? t('shell.share.versionPublished', { version: st.version }) : t(st.mode === 'frozen' ? 'shell.share.publishedFrozen' : 'shell.share.publishedLive', { server: st.serverName || st.server });
-				reload().catch((e) => (notice = err(e)));
-			}}
-		/>
-	{/if}
-	{#if dataInsert}
-		{@const at = dataInsert}
-		<DataCatalogDialog
-			sheet={at.sheet}
-			row={at.row}
-			col={at.col}
-			ondone={(ok) => {
-				dataInsert = null;
-				if (ok) reload().catch((e) => (notice = err(e)));
-			}}
-		/>
-	{/if}
-	{#if dataShare}
-		{@const t = dataShare}
-		<DataShareDialog
-			table={t}
-			ondone={() => {
-				dataShare = null;
-				loadSources();
-			}}
-			onpublish={(republish) => {
-				dataShareAfter = t;
-				shareDlg = { republish };
-			}}
-			onaddshared={() => void addToShared(t)}
-			onnotice={(msg) => {
-				notice = msg;
-				reload().catch((e) => (notice = err(e)));
-			}}
-		/>
-	{/if}
-	{#if formShare}
-		{@const t = formShare}
-		<FormDialog
-			table={t}
-			ondone={() => (formShare = null)}
-			onpublish={() => {
-				formAfter = t;
-				shareDlg = { republish: false };
-			}}
-			onaddshared={() => void addToShared(t).then((ok) => ok && (formShare = t))}
-			onnotice={(msg) => {
-				notice = msg;
-				reload().catch((e) => (notice = err(e)));
-			}}
-		/>
-	{/if}
-	{#if openRemote}
-		<OpenRemoteDialog
-			ondone={(r) => {
-				openRemote = false;
-				if (r) openedRemote(r).catch((e) => (notice = err(e)));
-			}}
-		/>
-	{/if}
+	<ShareDialogs v={shareView} />
 	<LattisHost />
 	<AskDialogs ui={askView} />
 	<footer class="statusbar" data-region="status" aria-label={t('shell.status.aria')}>
