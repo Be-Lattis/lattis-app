@@ -37,11 +37,11 @@ PostgreSQL au pire des essais à 300 : 11 cœurs et 3,7 Go pendant l'ouverture s
 
 ## Constats
 
-### C1 [corrigé] Hors ligne toutes les 15 minutes
+### C1 [corrigé, c7ecd7bc] Hors ligne toutes les 15 minutes
 
 lattisd ferme le flux à l'expiration du jeton (`expired`, correction F2 du serveur). L'application traitait `expired` (et `reset`) comme une coupure : bandeau « hors ligne » quelques instants à chaque renouvellement du jeton (15 min), nouvel essai après le délai de reprise. Mesuré : 2 passages hors ligne en 7 s avec un jeton de 3 s. Corrigé : `EventsServer.Listen` se réabonne aussitôt avec un jeton neuf ; « ready » fait tout relire, rien n'est perdu ; plus de 3 flux de suite qui se referment en moins de 5 s : coupure comme avant. Essais : `TestEventsExpiredResubscribes`, `TestLattisdTokenExpiresWhileFollowing`.
 
-### C2 [corrigé] Droits réduits pendant une coupure, pas relus à la reprise
+### C2 [corrigé, bf943ae2] Droits réduits pendant une coupure, pas relus à la reprise
 
 À la reprise, la première connexion prise dans le pool est souvent morte (« conn closed ») : la relecture des droits échouait, l'erreur était ignorée et la file partait avec les droits d'avant la coupure. Le serveur refusait la saisie sans message, et le poste restait « éditeur » jusqu'à la reprise suivante (la notification `*acl` est partie pendant la coupure). Corrigé (`follow.go`) : relecture en échec, rien ne part, le tour est refait comme après une coupure. Essais : `TestOfflineRightsUnreadAtReconnect` (faux serveur), `TestLattisdRightsReducedMeanwhile`.
 
