@@ -76,6 +76,11 @@ func TestOpenOldFormats(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	for v := 1; v < meta.Version; v++ {
+		// -short (CI sous Windows ; Linux passe tous les formats) : un format
+		// sur huit et le dernier.
+		if testing.Short() && v%8 != 1 && v != meta.Version-1 {
+			continue
+		}
 		path := filepath.Join(dir, fmt.Sprintf("ancien%d.lattis", v))
 		fixture(t, v, path)
 		before := digest(t, path)

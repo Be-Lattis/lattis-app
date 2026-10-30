@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/lalamefine/lattis/internal/command"
@@ -20,8 +21,26 @@ type fixture struct {
 	bus *command.Bus
 }
 
+// parallels : essais déjà passés en parallèle (open appelé deux fois).
+var parallels sync.Map
+
+// parallel fait tourner l'essai en parallèle des autres : chacun a son
+// classeur, et le paquet (plus de 400 essais) passe de près de 3 min à
+// moins d'une, et tient sous -race. Pas les sous-essais (leur essai parent
+// peut les enchaîner sur un état commun). Un essai qui touche une variable
+// du paquet la protège lui-même (instant).
+func parallel(t *testing.T) {
+	if strings.Contains(t.Name(), "/") {
+		return
+	}
+	if _, again := parallels.LoadOrStore(t, true); !again {
+		t.Parallel()
+	}
+}
+
 func open(t *testing.T) *fixture {
 	t.Helper()
+	parallel(t)
 	db, err := store.Open(filepath.Join(t.TempDir(), "doc.sqlite"), Register)
 	if err != nil {
 		t.Fatal(err)

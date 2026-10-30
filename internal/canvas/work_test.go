@@ -25,7 +25,16 @@ type phases struct {
 	tr    *work.Tracker
 }
 
+// workVars protège work.Delay et work.Every, changés par les essais qui
+// tournent en parallèle (open) : un seul à la fois.
+var workVars sync.Mutex
+
 func instant(t *testing.T) {
+	// En parallèle avant de prendre le verrou : un essai suspendu par
+	// t.Parallel en le tenant bloquerait les essais en série.
+	parallel(t)
+	workVars.Lock()
+	t.Cleanup(workVars.Unlock)
 	d, e := work.Delay, work.Every
 	work.Delay, work.Every = 0, 0
 	t.Cleanup(func() { work.Delay, work.Every = d, e })
