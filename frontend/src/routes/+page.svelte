@@ -8,19 +8,18 @@
 	import { describe, installErrorReporting, reportError } from '#lib/shell/errors.js';
 	import { onMount, tick, untrack } from 'svelte';
 	import { isProblem, noticeTtl } from '#lib/shell/notice.js';
-	import { reportIssue } from '#lib/shell/report.js';
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
-	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, OpenResult, RecentFile } from '#bindings/internal/bridge/models.js';
-	import { docFile, docFileName, recentDemo, recentDetail, recentKey, recentLabel, recentRemote, remoteBadge, savedNotice, shareBadge } from '#lib/shell/doctitle.js';
-	import { rememberedMode, xlsxDialogView, XLSX_SAVE_SETTING, type XLSXQuestion } from '#lib/shell/xlsxsave.js';
+	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, RecentFile } from '#bindings/internal/bridge/models.js';
+	import { docFile, docFileName, recentDetail, recentKey, recentLabel, remoteBadge, shareBadge } from '#lib/shell/doctitle.js';
+	import { xlsxDialogView, type XLSXQuestion } from '#lib/shell/xlsxsave.js';
 	import type { Layout } from '#bindings/internal/canvas/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
 	import Sheet from '#lib/grid/Sheet.svelte';
 	import { type SheetData, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig } from '#lib/grid/sheet/model.js';
 	import Ribbon, { type DocCommand, type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
-	import { layoutLocked, layoutShared as layoutSharedReason } from '#lib/shell/ribbon.js';
+	import { layoutLocked } from '#lib/shell/ribbon.js';
 	import MergeSheetsPanel from '#lib/shell/MergeSheetsPanel.svelte';
 	import { GROUP_COLORS, chipLabel, groupSheets, initialPlan, offerText, pickOffer, planForSheets, shownGroups, type OfferMoment } from '#lib/shell/mergesheets.js';
 	import type { MergePlan, SheetGroup } from '#bindings/internal/canvas/models.js';
@@ -29,9 +28,8 @@
 	import { previewOf } from '#lib/ui/rowformula.js';
 	import { headerOfferText } from '#lib/grid/titlehead.js';
 	import { type RefSpot } from '#lib/grid/reflink.js';
-	import { printSheetPages } from '#lib/print/printsheet.js';
 	import { withSaveProgress } from '#lib/shell/saveprogress.js';
-	import { demoProgressText, firstSteps, guidePage, hideSteps, stepsShown } from '#lib/shell/welcome.js';
+	import { firstSteps, guidePage, hideSteps, stepsShown } from '#lib/shell/welcome.js';
 	import WelcomeLanguage from '#lib/shell/WelcomeLanguage.svelte';
 	import PageSetupDialog from '#lib/shell/PageSetupDialog.svelte';
 	import WhatIf from '#lib/shell/WhatIf.svelte';
@@ -80,8 +78,8 @@
 	import FormDialog from '#lib/remote/FormDialog.svelte';
 	import AboutDialog from '#lib/shell/AboutDialog.svelte';
 	import ExportReportDialog from '#lib/shell/ExportReportDialog.svelte';
-	import SqlExportDialog, { type SqlDialect, type SqlScope } from '#lib/shell/SqlExportDialog.svelte';
-	import { exportNotice, type ExportReport } from '#lib/shell/exportReport.js';
+	import SqlExportDialog, {  } from '#lib/shell/SqlExportDialog.svelte';
+	import { type ExportReport } from '#lib/shell/exportReport.js';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
 	import DemoEnd from '#lib/shell/DemoEnd.svelte';
 	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
@@ -93,8 +91,8 @@
 	import RightsDialog from '#lib/remote/RightsDialog.svelte';
 	import { rightsObjects, type RightsObject } from '#lib/remote/rights.js';
 	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
-	import { canRepublish, goneError, roleChip, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
-	import { lattis, loadLattis, requestLogin, requestLoginOrLocal, shareRights } from '#lib/remote/lattis.svelte.js';
+	import { canRepublish, roleChip, rolesLabel, serverLabel } from '#lib/remote/share.js';
+	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
 	import type { State as ShareState } from '#bindings/internal/remote/workbook/models.js';
@@ -126,6 +124,7 @@
 	import type { Mode } from '#lib/app/model.js';
 	import { createSheetSource } from './../lib/app/sheetsource.svelte.js';
 	import { createSharing } from './../lib/app/sharing.svelte.js';
+	import { createFiles } from './../lib/app/files.svelte.js';
 
 	let mode = $state<Mode>('starting');
 	let bench = $state(false);
@@ -730,362 +729,69 @@
 	// serveur jamais utilisé, confirmation d'abord ; connexion si besoin ; puis
 	// le même chemin que « Ouvrir depuis un serveur ».
 	let linkAsk = $state<{ name: string; host: string; ok: (yes: boolean) => void } | null>(null);
-	async function openLink(raw: string) {
-		const t = await DocumentService.ParseLink(raw);
-		await loadLattis();
-		if (!t.known) {
-			const d = await DocumentService.LattisDiscover(t.server); // un vrai Serveur Lattis ?
-			const yes = await new Promise<boolean>((ok) => (linkAsk = { name: d.name || hostOf(t.server), host: hostOf(t.server), ok }));
-			linkAsk = null;
-			if (!yes) return;
-			await loadLattis();
-		}
-		if (!(lattis.state.servers ?? []).find((s) => s.url === t.server)?.user && !(await requestLogin(t.server))) return;
-		await openedRemote(await DocumentService.ShareOpen(t.server, t.workbook, ''));
-	}
+	// --- Fichiers : ../lib/app/files.svelte.ts ---
+	const filesCtl = createFiles({
+		get linkAsk() { return linkAsk; }, set linkAsk(v) { linkAsk = v; },
+		get openedRemote() { return openedRemote; },
+		get notice() { return notice; }, set notice(v) { notice = v; },
+		get err() { return err; },
+		get loadRecent() { return loadRecent; },
+		get locked() { return locked; }, set locked(v) { locked = v; },
+		get joining() { return joining; }, set joining(v) { joining = v; },
+		get mode() { return mode; }, set mode(v) { mode = v; },
+		get lockedCoEdit() { return lockedCoEdit; }, set lockedCoEdit(v) { lockedCoEdit = v; },
+		get orphans() { return orphans; }, set orphans(v) { orphans = v; },
+		get recoverError() { return recoverError; }, set recoverError(v) { recoverError = v; },
+		get damaged() { return damaged; }, set damaged(v) { damaged = v; },
+		get view() { return view; }, set view(v) { view = v; },
+		get sheetId() { return sheetId; }, set sheetId(v) { sheetId = v; },
+		get workbook() { return workbook; }, set workbook(v) { workbook = v; },
+		get queryHost() { return queryHost; },
+		get mergePlan() { return mergePlan; }, set mergePlan(v) { mergePlan = v; },
+		get mergeOffer() { return mergeOffer; }, set mergeOffer(v) { mergeOffer = v; },
+		get reload() { return reload; },
+		get offerMerge() { return offerMerge; },
+		get conflict() { return conflict; }, set conflict(v) { conflict = v; },
+		get quitting() { return quitting; }, set quitting(v) { quitting = v; },
+		get docState() { return docState; }, set docState(v) { docState = v; },
+		get saving() { return saving; },
+		get xlsxAsk() { return xlsxAsk; }, set xlsxAsk(v) { xlsxAsk = v; },
+		get closing() { return closing; }, set closing(v) { closing = v; },
+		get share() { return share; }, set share(v) { share = v; },
+		get unsentClose() { return unsentClose; }, set unsentClose(v) { unsentClose = v; },
+		get sheet() { return sheet; },
+		get layout() { return layout; }, set layout(v) { layout = v; },
+		get coedit() { return coedit; }, set coedit(v) { coedit = v; },
+		get sheetStatus() { return sheetStatus; }, set sheetStatus(v) { sheetStatus = v; },
+		get demoProgress() { return demoProgress; }, set demoProgress(v) { demoProgress = v; },
+		get demo() { return demo; }, set demo(v) { demo = v; },
+		get failure() { return failure; }, set failure(v) { failure = v; },
+		get aboutOpen() { return aboutOpen; }, set aboutOpen(v) { aboutOpen = v; },
+		get openRemote() { return openRemote; }, set openRemote(v) { openRemote = v; },
+		get canRights() { return canRights; },
+		get rightsOpen() { return rightsOpen; }, set rightsOpen(v) { rightsOpen = v; },
+		get shareDlg() { return shareDlg; }, set shareDlg(v) { shareDlg = v; },
+		get retryShare() { return retryShare; },
+		get askDetach() { return askDetach; },
+		get askRemove() { return askRemove; },
+		get versionsOpen() { return versionsOpen; }, set versionsOpen(v) { versionsOpen = v; },
+		get layoutShared() { return layoutShared; },
+		get exported() { return exported; }, set exported(v) { exported = v; },
+		get sqlExport() { return sqlExport; }, set sqlExport(v) { sqlExport = v; },
+		get activeDoc() { return activeDoc; },
+		get docPage() { return docPage; },
+		get exportDocPdf() { return exportDocPdf; },
+		get showBreaks() { return showBreaks; }, set showBreaks(v) { showBreaks = v; },
+		get settingsOpen() { return settingsOpen; }, set settingsOpen(v) { settingsOpen = v; }
+	});
+	const { openLink, openPath, openRecent, openLocked, openTogether, opened, resolveSave, answerXlsx, workbookReady, salvage, closeDoc, requestQuit, cancelClose, startDoc, startPresetDemo, openDemoPreset, openSample, startDemo, file, exportSql, recover } = filesCtl;
+
 
 	const loadRecent = async () => (recent = (await DocumentService.Recent().catch(() => null)) ?? []);
-
-	async function openPath(path: string) {
-		await opened(await DocumentService.Open(path));
-	}
-
-	/**
-	 * Ouvre un récent : un classeur du serveur se rouvre depuis le serveur
-	 * (connexion d'abord si besoin) ; serveur injoignable, sa copie locale
-	 * s'ouvre (hors ligne, lecture seule).
-	 */
-	async function openRecent(r: RecentFile) {
-		if (recentDemo(r)) return openDemoPreset(r);
-		if (!recentRemote(r)) return openPath(r.path);
-		const server = r.server ?? '';
-		const where = serverLabel({ server, serverName: r.serverName ?? '' });
-		// Copie locale, sans le serveur (injoignable, connexion refusée ou
-		// abandonnée) : modifiable hors ligne, bandeau Réessayer / Détacher.
-		const local = async (reason: string) => {
-			await opened(await DocumentService.OpenLocalCopy(r.path));
-			notice = t('shell.share.localCopyOpened', { reason });
-		};
-		await loadLattis();
-		if (!(lattis.state.servers ?? []).find((s) => s.url === server)?.user) {
-			const ok = r.path ? await requestLoginOrLocal(server) : await requestLogin(server);
-			if (ok === 'local') return local(t('shell.share.notSignedIn', { server: where }));
-			if (!ok) return;
-		}
-		let res;
-		try {
-			res = await DocumentService.ShareOpen(server, r.workbookId ?? '', r.title ?? '');
-		} catch (e) {
-			// Supprimé du serveur, ou plus d'accès (sans cache à ouvrir) : pas une coupure.
-			if (goneError(err(e))) {
-				notice = err(e);
-				if (confirm(t('shell.share.removeRecent', { error: err(e) }))) {
-					await DocumentService.RemoveRecent(r);
-					await loadRecent();
-				}
-				return;
-			}
-			if (!r.path) throw e;
-			// Détail technique dans la console.
-			console.warn('serveur injoignable', err(e));
-			return local(serverDown(where));
-		}
-		await openedRemote(res);
-	}
-
-	/** Classeur ouvert sur un autre poste : en lecture seule, ou quand même (readOnly faux). */
-	async function openLocked(path: string | null, readOnly: boolean) {
-		locked = null;
-		if (path) await opened(await DocumentService.OpenLocked(path, readOnly));
-	}
-
-	/** Classeur ouvert sur d'autres postes : demande à travailler à plusieurs (les autres l'accueillent). */
-	async function openTogether(path: string) {
-		locked = null;
-		joining = true;
-		notice = t('shell.coedit.requestSent');
-		try {
-			const r = await DocumentService.OpenTogether(path);
-			if (r.state?.open) notice = '';
-			await opened(r);
-		} finally {
-			joining = false;
-		}
-	}
-
-	async function opened(r: OpenResult) {
-		// Fichier de l'auteur d'un classeur partagé en direct : ouvert depuis le
-		// serveur (en ligne, synchronisé), pas le fichier qui ne l'est pas.
-		if (r.shared) {
-			await openRecent(r.shared);
-			if (mode === 'doc' && !notice) notice = t('shell.share.openedOnline', { title: r.shared.title ?? '', server: serverLabel({ server: r.shared.server ?? '', serverName: r.shared.serverName ?? '' }) });
-			return;
-		}
-		if (r.locked) {
-			locked = r.locked;
-			lockedCoEdit = !!r.coEdit;
-		} else if (r.recoverable) {
-			orphans = [r.recoverable];
-			recoverError = '';
-			mode = 'recover';
-		} else if (r.damaged) {
-			damaged = r.damaged;
-		} else if (!r.cancelled) {
-			view = 'grid';
-			sheetId = 1;
-			mode = 'doc';
-			workbook++;
-			queryHost?.closePanel(); // volet du classeur quitté
-			mergePlan = mergeOffer = null;
-			await reload();
-			// Déclencheurs inconnus supprimés (sécurité), lecture seule, verrou impossible.
-			if (r.state.notice) notice = r.state.notice;
-			workbookReady();
-			offerMerge('open');
-		}
-		await loadRecent();
-	}
 
 	/** Enregistre en montrant, pour un gros classeur, l'avancement dans la barre d'état. */
 	function saving(run: () => Promise<DocState>): Promise<DocState> {
 		return withSaveProgress(run, () => DocumentService.SaveProgress(), (t) => (notice = t));
-	}
-
-	/** Réponse à « modifié par un autre poste » : écraser, enregistrer une copie (overwrite faux) ou rien (null). */
-	async function resolveSave(overwrite: boolean | null) {
-		const c = conflict;
-		conflict = null;
-		if (!c || overwrite === null) {
-			quitting = false;
-			return;
-		}
-		docState = await saving(() => DocumentService.ResolveSave(overwrite));
-		if (docState.conflict) {
-			conflict = { ...docState.conflict, close: c.close };
-			return;
-		}
-		if (docState.dirty) {
-			quitting = false; // copie annulée
-			return;
-		}
-		notice = savedNotice(docState);
-		await loadRecent();
-		if (c.close) await closeDoc(false);
-	}
-
-	/** Fichier .xlsx ouvert : garder le format .xlsx (keep), convertir en .lattis, ou rien (null). */
-	async function answerXlsx(keep: boolean | null) {
-		const a = xlsxAsk;
-		xlsxAsk = null;
-		if (!a || keep === null) {
-			quitting = false;
-			return;
-		}
-		const mode = rememberedMode(keep, a.remember);
-		if (mode) await DocumentService.SetSetting(XLSX_SAVE_SETTING, mode).catch((e) => (notice = err(e)));
-		docState = await saving(() => DocumentService.SaveXLSX(keep));
-		if (docState.conflict) {
-			conflict = { ...docState.conflict, close: a.close };
-			return;
-		}
-		if (docState.dirty) {
-			quitting = false; // conversion annulée
-			if (docState.notice) notice = docState.notice;
-			return;
-		}
-		notice = savedNotice(docState, isWeb);
-		await loadRecent();
-		if (a.close) await closeDoc(false);
-	}
-
-	/** Classeur ouvert et affiché : ses écouteurs « open » (scripts Lua) s'exécutent, sans être attendus. */
-	function workbookReady() {
-		DocumentService.WorkbookReady().catch((e) => (notice = err(e)));
-	}
-
-	/** Récupère les données lisibles d'un classeur endommagé, dans un nouveau classeur. */
-	async function salvage(path: string | null) {
-		damaged = null;
-		// Écran de récupération vidé (session abandonnée, puis fichier endommagé) : un classeur neuf.
-		const fallback = () => (mode === 'recover' && orphans.length === 0 ? startDoc() : undefined);
-		if (!path) return fallback();
-		let r;
-		try {
-			r = await DocumentService.Salvage(path);
-		} catch (e) {
-			notice = err(e);
-			return fallback();
-		}
-		view = 'grid';
-		sheetId = 1;
-		mode = 'doc';
-		workbook++;
-		await reload();
-		notice = r.report;
-	}
-
-	/** Ferme le classeur ; modifié, il demande d'abord s'il faut l'enregistrer. */
-	async function closeDoc(save?: boolean) {
-		closing = false;
-		// Écouteurs « before_close » des scripts : ils peuvent garder le classeur ouvert.
-		if (mode === 'doc' && save === undefined && !(await DocumentService.BeforeClose())) {
-			quitting = false;
-			return;
-		}
-		if (mode === 'doc' && docState.dirty && save === undefined) {
-			closing = true;
-			return;
-		}
-		// Classeur collaboratif du serveur : rien à enregistrer (ses
-		// modifications partent d'elles-mêmes, la file part à la fermeture) ;
-		// hors ligne, prévenir de celles qui attendront la reconnexion.
-		if (mode === 'doc' && save === undefined && docState.remote?.mode === 'collaborative' && !share?.online && (share?.pending ?? 0) > 0) {
-			unsentClose = share?.pending ?? 0;
-			return;
-		}
-		unsentClose = 0;
-		if (save) {
-			docState = await saving(() => DocumentService.Save(false));
-			if (docState.conflict) {
-				// Fichier modifié par un autre poste : la question d'abord, puis la fermeture.
-				conflict = { ...docState.conflict, close: true };
-				return;
-			}
-			if (docState.xlsx) {
-				// Fichier .xlsx : garder le format ou convertir, puis la fermeture.
-				xlsxAsk = { q: docState.xlsx, close: true, remember: false };
-				return;
-			}
-			if (docState.dirty) {
-				// Enregistrement abandonné (ou refusé par un script : before_save).
-				if (docState.notice) notice = docState.notice;
-				quitting = false;
-				return;
-			}
-		}
-		sheet?.closeOverlays();
-		// Fermé dans tous les cas ; une erreur dit que la file d'envoi d'un
-		// classeur partagé n'a pas pu être gardée (récupération au lancement).
-		const kept = await DocumentService.CloseDocument().then(
-			() => '',
-			(e) => err(e)
-		);
-		docState = { open: false, path: '', title: '', dirty: false, undo: '', redo: '' };
-		layout = null;
-		share = null;
-		coedit = null;
-		sheetStatus = null;
-		view = 'grid';
-		mode = 'closed';
-		workbook++;
-		if (kept) notice = kept;
-		if (quitting) {
-			quitting = false;
-			await DocumentService.QuitApp();
-			return;
-		}
-		await loadRecent();
-	}
-
-	/** Croix de la fenêtre avec un classeur modifié : la question de Fichier › Fermer, puis Lattis se ferme. */
-	async function requestQuit() {
-		DocumentService.CloseRequestSeen().catch(() => {});
-		if (quitting) return; // question déjà posée
-		quitting = true;
-		try {
-			await closeDoc();
-		} catch (e) {
-			quitting = false;
-			throw e;
-		}
-	}
-
-	/** Réponse « Annuler » à la question d'enregistrement. */
-	function cancelClose() {
-		closing = false;
-		unsentClose = 0;
-		quitting = false;
-	}
-
-	async function startDoc() {
-		mode = 'doc';
-		view = 'grid';
-		sheetId = 1;
-		workbook++;
-		queryHost?.closePanel();
-		await DocumentService.New();
-		await reload();
-	}
-
-	/** Fabrique une démonstration (open) en affichant son avancement, puis l'affiche. */
-	async function buildDemo(label: string, open: () => Promise<{ sheet: number }>) {
-		let waiting = true;
-		const poll = async () => {
-			if (!waiting) return;
-			const p = await DocumentService.DemoProgress().catch(() => null);
-			if (p && waiting) demoProgress = demoProgressText(label, p);
-			setTimeout(poll, 250);
-		};
-		poll();
-		try {
-			const r = await open();
-			view = 'grid';
-			sheetId = r.sheet;
-			mode = 'doc';
-			workbook++;
-			await reload();
-		} finally {
-			waiting = false;
-			demoProgress = '';
-		}
-	}
-
-	/** Ouvre le classeur de démonstration demandé au lancement (--demo preset). */
-	async function startPresetDemo(preset: string) {
-		await buildDemo(t('shell.demo.preset', { name: preset }), () => DocumentService.OpenDemo());
-	}
-
-	/** Démo publique : classeur de démonstration des récents (Démo small, Démo medium), à la place du classeur ouvert. */
-	async function openDemoPreset(r: RecentFile) {
-		queryHost?.closePanel();
-		await buildDemo(recentLabel(r), () => DocumentService.OpenPreset(recentDemo(r)));
-		workbookReady();
-	}
-
-	/** Classeur d'exemple de l'accueil : la vitrine, jamais enregistrée d'elle-même. */
-	async function openSample() {
-		mode = 'starting';
-		queryHost?.closePanel();
-		try {
-			await buildDemo(t('shell.demo.sample'), () => DocumentService.OpenSample());
-			workbookReady();
-		} catch (e) {
-			mode = 'closed';
-			throw e;
-		}
-	}
-
-	async function startDemo() {
-		mode = 'demo';
-		workbook++;
-		const poll = async () => {
-			const s = await GridService.Status();
-			if (s.state === 'ready') {
-				demo = {
-					name: s.info.name,
-					rows: s.info.rows,
-					columns: (s.info.columns ?? []).map((c) => ({ name: c.name, type: c.type as ColumnType })),
-					sqlName: s.info.sqlName,
-					sqlColumns: s.info.sqlColumns ?? []
-				};
-			} else if (s.state === 'error') {
-				failure = s.error ?? t('shell.demo.error');
-			} else {
-				demoProgress = s.state === 'generating' ? t('shell.demo.generating', { done: s.done, total: s.total }) : t('shell.demo.opening');
-				setTimeout(poll, 250);
-			}
-		};
-		poll();
 	}
 
 	// Pas de menu natif du navigateur (Retour, Actualiser, Inspecter…) : les
@@ -1435,200 +1141,6 @@
 			window.removeEventListener('drop', noDrop);
 		};
 	});
-
-	async function file(a: FileAction) {
-		if (a === 'help') return openHelp();
-		if (a === 'report') return reportIssue();
-		if (a === 'about') {
-			aboutOpen = true;
-			return;
-		}
-		notice = '';
-		try {
-			switch (a) {
-				case 'new':
-					await startDoc();
-					break;
-				case 'open':
-					await openPath('');
-					break;
-				case 'openRemote':
-					openRemote = true;
-					break;
-				case 'rights':
-					if (canRights) rightsOpen = true;
-					break;
-				case 'share':
-				case 'republish':
-					if (mode !== 'doc') return;
-					shareDlg = { republish: a === 'republish' };
-					break;
-				case 'reconnect':
-					if (mode === 'doc') await retryShare();
-					break;
-				case 'detach':
-					if (mode === 'doc') askDetach();
-					break;
-				case 'remove':
-					if (mode === 'doc') askRemove();
-					break;
-				case 'close':
-					await closeDoc();
-					break;
-				case 'versions':
-					if (mode === 'doc') versionsOpen = true;
-					break;
-				case 'save':
-				case 'saveAs':
-					if (mode !== 'doc') return;
-					docState = await saving(() => DocumentService.Save(a === 'saveAs'));
-					if (docState.xlsx) xlsxAsk = { q: docState.xlsx, close: false, remember: false };
-					else if (docState.conflict) conflict = { ...docState.conflict, close: false };
-					else if (docState.notice || !docState.dirty) notice = savedNotice(docState, isWeb);
-					await loadRecent();
-					break;
-				case 'download':
-					if (mode !== 'doc') return;
-					docState = await saving(() => DocumentService.Download());
-					if (docState.notice) notice = docState.notice;
-					break;
-				case 'import': {
-					// L'import crée une feuille : refusé d'emblée là où le moteur le refuserait.
-					if (layoutShared) {
-						notice = t('shell.notice.importCreatesSheet', { reason: layoutSharedReason() });
-						break;
-					}
-					// Depuis l'accueil : un classeur neuf, refermé si l'import est annulé.
-					const started = mode !== 'doc';
-					if (started) await startDoc();
-					const r = await DocumentService.Import('');
-					if (r.cancelled) {
-						if (started) await closeDoc();
-						break;
-					}
-					if (r.sheet) sheetId = r.sheet;
-					await reload();
-					const tables = r.tables ?? [];
-					const what = tables.length === 1 ? t('shell.notice.importedOne', { table: tables[0] }) : t('shell.notice.importedMany', { n: tables.length });
-					const warnings = r.warnings ?? [];
-					notice = warnings.length ? t('shell.notice.importWarnings', { what, n: warnings.length, list: warnings.join(' · ') }) : what;
-					// L'import garde les onglets tels quels ; la détection tourne ensuite.
-					offerMerge('import');
-					break;
-				}
-				case 'export': {
-					if (mode !== 'doc') return;
-					const table = sheet?.activeTable() ?? layout?.tables?.[0]?.name;
-					if (!table) {
-						notice = t('shell.notice.noTableToExport');
-						break;
-					}
-					const p = await DocumentService.ExportCSV(table);
-					if (p) notice = t('shell.notice.tableExported', { table, path: p });
-					break;
-				}
-				case 'exportSheet': {
-					// Toute la feuille active, de A1 à la dernière cellule utilisée.
-					if (mode !== 'doc') return;
-					const name = layout?.sheets?.find((s) => s.id === sheetId)?.name ?? t('shell.tabs.menu.sheet');
-					const p = await DocumentService.ExportSheetCSV(sheetId, name);
-					if (p) notice = t('shell.notice.sheetExported', { name, path: p });
-					break;
-				}
-				case 'exportXlsx':
-				case 'exportOds': {
-					// Formules traduites quand le format a un équivalent, sinon leur valeur.
-					if (mode !== 'doc') return;
-					const r = a === 'exportOds' ? await DocumentService.ExportODS() : await DocumentService.ExportXLSX();
-					if (r.path) {
-						notice = exportNotice(r.path, r.report);
-						exported = { notice, report: r.report, format: a === 'exportOds' ? 'OpenDocument' : 'Excel' };
-					}
-					break;
-				}
-				case 'exportSql':
-					if (mode !== 'doc') return;
-					sqlExport = { table: sheet?.activeTable() ?? undefined };
-					return;
-				case 'print': {
-					// Feuille active selon sa mise en page ; le PDF passe par la
-					// fenêtre d'impression (imprimante PDF du système).
-					if (mode !== 'doc') return;
-					if (activeDoc && docPage) {
-						exportDocPdf();
-						break;
-					}
-					const name = layout?.sheets?.find((s) => s.id === sheetId)?.name ?? '';
-					if (!sheet) return;
-					// Pages écrites par lots, avancement dans la barre d'état.
-					await printSheetPages(sheetId, sheet, `${docState.title} – ${name}`);
-					// Comme Excel : après une impression, la grille montre les sauts de page.
-					showBreaks = true;
-					break;
-				}
-				case 'demo':
-					await startDemo();
-					break;
-				case 'settings':
-					settingsOpen = true;
-					break;
-			}
-		} catch (e) {
-			notice = err(e);
-		}
-		sheet?.focus();
-	}
-
-	/** Écrit le script SQL choisi dans la boîte (avancement dans la barre d'état). */
-	async function exportSql(dialect: SqlDialect, scope: SqlScope) {
-		const table = sqlExport?.table;
-		sqlExport = null;
-		try {
-			const r = await DocumentService.ExportSQL({ dialect, sheet: scope === 'sheet' ? sheetId : 0, table: scope === 'table' ? (table ?? '') : '', source: '' });
-			if (r.path) notice = t('shell.notice.sqlExported', { n: r.report.tables, path: r.path });
-		} catch (e) {
-			notice = err(e);
-		}
-		sheet?.focus();
-	}
-
-	/** Récupère (keep) ou abandonne une session ; also : versions plus anciennes du même classeur, abandonnées avec elle. */
-	async function recover(o: Orphan, keep: boolean, also: Orphan[] = []) {
-		recoverError = '';
-		const gone = new Set<string>();
-		let st: DocState | null = null;
-		try {
-			if (keep) st = await DocumentService.Recover(o.dir);
-			else
-				for (const x of [o, ...also]) {
-					await DocumentService.Discard(x.dir);
-					gone.add(x.dir);
-				}
-		} catch (e) {
-			// La session reste proposée : rien n'est perdu, l'utilisateur choisit.
-			recoverError = err(e);
-			if (gone.size) orphans = orphans.filter((x) => !gone.has(x.dir));
-			return;
-		}
-		try {
-			if (keep) {
-				mode = 'doc';
-				workbook++;
-				await reload();
-				// Fichier verrouillé ou modifié par un autre poste depuis la session : dit aussi.
-				notice = [t('shell.recovery.recovered'), st?.notice].filter(Boolean).join(' ');
-				workbookReady();
-			} else {
-				orphans = orphans.filter((x) => !gone.has(x.dir));
-				if (orphans.length > 0) return;
-				// Session d'un fichier abandonnée : le fichier tel qu'enregistré.
-				if (o.source) await openPath(o.source).catch(() => startDoc());
-				else await startDoc();
-			}
-		} catch (e) {
-			failure = err(e);
-		}
-	}
 
 	// --- Source de la feuille : ../lib/app/sheetsource.svelte.ts ---
 	const docData = $derived<SheetData | null>(
