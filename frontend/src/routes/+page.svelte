@@ -12,7 +12,7 @@
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, RecentFile } from '#bindings/internal/bridge/models.js';
 	import { docFile, docFileName, recentDetail, recentKey, recentLabel, remoteBadge, shareBadge } from '#lib/shell/doctitle.js';
-	import { xlsxDialogView, type XLSXQuestion } from '#lib/shell/xlsxsave.js';
+	import { type XLSXQuestion } from '#lib/shell/xlsxsave.js';
 	import type { Layout } from '#bindings/internal/canvas/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
 	import Sheet from '#lib/grid/Sheet.svelte';
@@ -90,7 +90,7 @@
 	import RightsDialog from '#lib/remote/RightsDialog.svelte';
 	import { rightsObjects, type RightsObject } from '#lib/remote/rights.js';
 	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
-	import { canRepublish, roleChip, rolesLabel, serverLabel } from '#lib/remote/share.js';
+	import { canRepublish, roleChip, rolesLabel } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
@@ -101,7 +101,7 @@
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
 	import { type ColumnType } from '#lib/grid/format.js';
 	import { isReloadKey, shortcutOf } from '#lib/grid/shortcuts.js';
-	import { cycleRegions, modal, modalOpen } from '#lib/ui/focus.js';
+	import { cycleRegions, modalOpen } from '#lib/ui/focus.js';
 	import { clampZoom } from '#lib/grid/zoom.js';
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 	import BusyBar from '#lib/shell/BusyBar.svelte';
@@ -126,6 +126,7 @@
 	import { createFiles } from './../lib/app/files.svelte.js';
 	import { createTabMerge } from './../lib/app/tabmerge.svelte.js';
 	import { createProtect } from './../lib/app/protect.svelte.js';
+	import AskDialogs, { type AskDialogsView } from './../lib/app/AskDialogs.svelte';
 
 	let mode = $state<Mode>('starting');
 	let bench = $state(false);
@@ -737,7 +738,6 @@
 		get settingsOpen() { return settingsOpen; }, set settingsOpen(v) { settingsOpen = v; }
 	});
 	const { openLink, openPath, openRecent, openLocked, openTogether, opened, resolveSave, answerXlsx, workbookReady, salvage, closeDoc, requestQuit, cancelClose, startDoc, startPresetDemo, openDemoPreset, openSample, startDemo, file, exportSql, recover } = filesCtl;
-
 
 	const loadRecent = async () => (recent = (await DocumentService.Recent().catch(() => null)) ?? []);
 
@@ -1472,6 +1472,45 @@
 				: ''
 	);
 
+	// Questions posées par la fenêtre : ../lib/app/AskDialogs.svelte.
+	const askView: AskDialogsView = {
+		get answerXlsx() { return answerXlsx; },
+		get bookLock() { return bookLock; }, set bookLock(v) { bookLock = v; },
+		get cancelClose() { return cancelClose; },
+		get closeDoc() { return closeDoc; },
+		get closing() { return closing; },
+		get confirmProtect() { return confirmProtect; },
+		get conflict() { return conflict; },
+		get damaged() { return damaged; },
+		get deleting() { return deleting; }, set deleting(v) { deleting = v; },
+		get deletingMany() { return deletingMany; }, set deletingMany(v) { deletingMany = v; },
+		get detachAsk() { return detachAsk; }, set detachAsk(v) { detachAsk = v; },
+		get docState() { return docState; },
+		get err() { return err; },
+		get failure() { return failure; }, set failure(v) { failure = v; },
+		get joining() { return joining; },
+		get layout() { return layout; },
+		get linkAsk() { return linkAsk; },
+		get locked() { return locked; }, set locked(v) { locked = v; },
+		get lockedCoEdit() { return lockedCoEdit; },
+		get notice() { return notice; }, set notice(v) { notice = v; },
+		get openLocked() { return openLocked; },
+		get openTogether() { return openTogether; },
+		get protecting() { return protecting; }, set protecting(v) { protecting = v; },
+		get pw1() { return pw1; }, set pw1(v) { pw1 = v; },
+		get pw2() { return pw2; }, set pw2(v) { pw2 = v; },
+		get pwError() { return pwError; },
+		get quitting() { return quitting; }, set quitting(v) { quitting = v; },
+		get removeAsk() { return removeAsk; }, set removeAsk(v) { removeAsk = v; },
+		get removing() { return removing; },
+		get resolveSave() { return resolveSave; },
+		get salvage() { return salvage; },
+		get shareDetach() { return shareDetach; },
+		get shareRemove() { return shareRemove; },
+		get sheetAction() { return sheetAction; },
+		get unsentClose() { return unsentClose; },
+		get xlsxAsk() { return xlsxAsk; }
+	};
 </script>
 
 <svelte:window oncontextmenu={blockNativeMenu} />
@@ -2212,255 +2251,7 @@
 		/>
 	{/if}
 	<LattisHost />
-	{#if detachAsk}
-		{@const q = detachAsk}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.share.detach.title')} use:modal={() => (detachAsk = null)}>
-				<p>{t('shell.share.detach.question')}</p>
-				{#each q as line, i (i)}
-					<p class="muted">{line}</p>
-				{/each}
-				<div class="actions">
-					<button class="primary" onclick={shareDetach}>{t('shell.share.detach.ok')}</button>
-					<button onclick={() => (detachAsk = null)}>Annuler</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-	{#if removeAsk}
-		{@const q = removeAsk}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.share.remove.title')} use:modal={() => !removing && (removeAsk = null)}>
-				<p>{q.question}</p>
-				{#each q.lines as line, i (i)}
-					<p class="muted">{line}</p>
-				{/each}
-				<div class="actions">
-					<button class="primary danger" disabled={removing} onclick={shareRemove}>{t('shell.share.remove.ok')}</button>
-					<button data-autofocus disabled={removing} onclick={() => (removeAsk = null)}>{t('common.cancel')}</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-	{#if linkAsk}
-		{@const a = linkAsk}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.share.link.title')} use:modal={() => a.ok(false)}>
-				<p>{t('shell.share.link.question', { name: a.name })}</p>
-				<p class="muted">{t('shell.share.link.warning', { host: a.host })}</p>
-				<div class="actions">
-					<button class="primary" onclick={() => a.ok(true)}>{t('shell.share.link.ok')}</button>
-					<button onclick={() => a.ok(false)}>Annuler</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-	{#if protecting}
-		{@const p = protecting}
-		<div class="modal-back">
-			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-			<form
-				class="modal protect"
-				use:modal
-				aria-label={t('shell.protect.aria')}
-				onkeydown={(e) => {
-					e.stopPropagation();
-					if (e.key === 'Escape') protecting = null;
-				}}
-				onsubmit={(e) => {
-					e.preventDefault();
-					confirmProtect();
-				}}
-			>
-				<p>
-					{#if p.what === 'sheet'}
-						{p.off ? t('shell.protect.title.sheetOff', { name: p.name }) : t('shell.protect.title.sheetOn', { name: p.name })}
-					{:else if p.what === 'structure'}
-						{p.off ? t('shell.protect.title.structureOff', { name: p.name }) : t('shell.protect.title.structureOn', { name: p.name })}
-					{:else}
-						{p.off ? t('shell.protect.title.bookOff') : t('shell.protect.title.bookOn')}
-					{/if}
-				</p>
-				{#if !p.off}
-					<p class="muted">
-						{p.what === 'sheet'
-							? t('shell.protect.explain.sheet')
-							: p.what === 'structure'
-								? t('shell.protect.explain.structure')
-								: bookLock === 'sheets'
-									? t('shell.protect.explain.bookSheets')
-									: bookLock === 'structure'
-										? t('shell.protect.explain.bookStructure')
-										: t('shell.protect.explain.bookTabs')}
-					</p>
-					<p class="muted">
-						{t('shell.protect.notSecurity')}
-					</p>
-					{#if p.what === 'workbook'}
-						<fieldset class="lock">
-							<legend>{t('shell.protect.lock')}</legend>
-							<label class="check"><input type="radio" bind:group={bookLock} value="tabs" /> {t('shell.protect.lockTabs')}</label>
-							<label class="check"><input type="radio" bind:group={bookLock} value="structure" /> {t('shell.protect.lockStructure')}</label>
-							<label class="check"><input type="radio" bind:group={bookLock} value="sheets" /> {t('shell.protect.lockSheets')}</label>
-						</fieldset>
-					{/if}
-				{/if}
-				<label>
-					{p.off ? t('shell.protect.password') : t('shell.protect.passwordOptional')}
-					<!-- svelte-ignore a11y_autofocus -->
-					<input type="password" bind:value={pw1} autofocus autocomplete="off" />
-				</label>
-				{#if !p.off}
-					<label>
-						{t('shell.protect.confirm')}
-						<input type="password" bind:value={pw2} autocomplete="off" />
-					</label>
-					<p class="muted">{t('shell.protect.noteIt')}</p>
-				{/if}
-				{#if pwError}<p class="error">{pwError}</p>{/if}
-				<div class="actions">
-					<button type="submit" class="primary">{t('common.ok')}</button>
-					<button type="button" onclick={() => (protecting = null)}>{t('common.cancel')}</button>
-				</div>
-			</form>
-		</div>
-	{/if}
-	{#if deletingMany}
-		{@const ids = deletingMany}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.deleteSheet.manyTitle')} use:modal={() => (deletingMany = null)}>
-				<p>{t('shell.deleteSheet.manyQuestion', { n: ids.length })}</p>
-				<ul class="delete-list">
-					{#each ids as id (id)}<li>{layout?.sheets?.find((s) => s.id === id)?.name ?? id}</li>{/each}
-				</ul>
-				<p class="hint">{t('shell.deleteSheet.manyHint')}</p>
-				<div class="actions">
-					<button
-						class="primary danger"
-						onclick={() => {
-							deletingMany = null;
-							sheetAction(() => DocumentService.DeleteSheets(ids));
-						}}>{t('shell.deleteSheet.ok')}</button
-					>
-					<button onclick={() => (deletingMany = null)}>{t('common.cancel')}</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-	{#if deleting}
-		{@const d = deleting}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.deleteSheet.title')} use:modal={() => (deleting = null)}>
-				<p>{t('shell.deleteSheet.question', { name: d.name })}</p>
-				<ul class="delete-list">
-					{#each d.items as it (it)}<li>{it}</li>{/each}
-				</ul>
-				<p class="hint">{t('shell.deleteSheet.hint')}</p>
-				<div class="actions">
-					<button
-						class="primary danger"
-						onclick={() => {
-							const id = d.id;
-							deleting = null;
-							sheetAction(() => DocumentService.DeleteSheet(id));
-						}}>{t('shell.deleteSheet.ok')}</button
-					>
-					<button onclick={() => (deleting = null)}>{t('common.cancel')}</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-	{#if unsentClose}
-		{@const n = unsentClose}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.unsent.title')} use:modal={cancelClose}>
-				<p>{t('shell.unsent.question', { n, title: docState.title, server: docState.remote ? serverLabel(docState.remote) : t('shell.unsent.theServer') })}</p>
-				<p class="hint">{t('shell.unsent.hint', { n })}</p>
-				<div class="actions">
-					<button class="primary" onclick={() => closeDoc(false).catch((e) => ((quitting = false), (notice = err(e))))}>{quitting ? t('shell.close.quit') : t('common.close')}</button>
-					<button onclick={cancelClose}>{t('common.cancel')}</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-	{#if closing}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.close.title')} use:modal={cancelClose}>
-				<p>{quitting ? t('shell.close.questionQuit', { title: docState.title }) : t('shell.close.question', { title: docState.title })}</p>
-				<div class="actions">
-					<button class="primary" onclick={() => closeDoc(true).catch((e) => ((quitting = false), (notice = err(e))))}>{t('shell.close.save')}</button>
-					<button onclick={() => closeDoc(false).catch((e) => ((quitting = false), (notice = err(e))))}>{t('shell.close.dontSave')}</button>
-					<button onclick={cancelClose}>{t('common.cancel')}</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-	{#if damaged}
-		{@const file = damaged}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.damaged.title')} use:modal={() => salvage(null).catch((e) => (failure = err(e)))}>
-				<p>{file.message}.</p>
-				<p>{t('shell.damaged.explain')}</p>
-				<div class="actions">
-					<button class="primary" onclick={() => salvage(file.path).catch((e) => (notice = err(e)))}>{t('shell.damaged.recover')}</button>
-					<button onclick={() => salvage(null).catch((e) => (failure = err(e)))}>{t('common.cancel')}</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-	{#if locked}
-		{@const file = locked}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.locked.title')} use:modal={() => (locked = null)}>
-				<p>{file.message}.</p>
-				{#if lockedCoEdit}
-					<p class="hint">{t('shell.locked.coEditHint')}</p>
-					<div class="actions">
-						<button class="primary" disabled={joining} onclick={() => openTogether(file.path).catch((e) => (notice = err(e)))}>{t('shell.locked.together')}</button>
-						<button onclick={() => openLocked(file.path, true).catch((e) => (notice = err(e)))}>{t('shell.locked.readOnly')}</button>
-						<button onclick={() => (locked = null)}>{t('common.cancel')}</button>
-					</div>
-				{:else}
-					<p class="hint">{t('shell.locked.hint')}</p>
-					<div class="actions">
-						<button class="primary" onclick={() => openLocked(file.path, true).catch((e) => (notice = err(e)))}>{t('shell.locked.readOnly')}</button>
-						<button onclick={() => openLocked(file.path, false).catch((e) => (notice = err(e)))}>{t('shell.locked.anyway')}</button>
-						<button onclick={() => (locked = null)}>{t('common.cancel')}</button>
-					</div>
-				{/if}
-			</div>
-		</div>
-	{/if}
-	{#if conflict}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.conflictFile.title')} use:modal={() => resolveSave(null)}>
-				<p>{conflict.message}.</p>
-				<p class="hint">{t('shell.conflictFile.hint')}</p>
-				<div class="actions">
-					<button class="primary" onclick={() => resolveSave(false).catch((e) => ((quitting = false), (notice = err(e))))}>{t('shell.conflictFile.copy')}</button>
-					<button onclick={() => resolveSave(true).catch((e) => ((quitting = false), (notice = err(e))))}>{t('shell.conflictFile.overwrite')}</button>
-					<button onclick={() => resolveSave(null)}>{t('common.cancel')}</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-	{#if xlsxAsk}
-		{@const v = xlsxDialogView(xlsxAsk.q)}
-		<div class="modal-back">
-			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.xlsxSave.aria')} use:modal={() => answerXlsx(null)}>
-				<p><strong>{v.title}</strong><br />{v.text}</p>
-				{#if v.lost}<p class="hint">{v.lost}</p>{/if}
-				{#if v.remember}
-					<label class="remember"><input type="checkbox" bind:checked={xlsxAsk.remember} /> {t('shell.xlsxSave.remember')}</label>
-				{/if}
-				<div class="actions">
-					<button class="primary" onclick={() => answerXlsx(true).catch((e) => ((quitting = false), (notice = err(e))))}>{v.keepLabel}</button>
-					<button onclick={() => answerXlsx(false).catch((e) => ((quitting = false), (notice = err(e))))}>{v.convertLabel}</button>
-					<button onclick={() => answerXlsx(null)}>{t('common.cancel')}</button>
-				</div>
-			</div>
-		</div>
-	{/if}
+	<AskDialogs ui={askView} />
 	<footer class="statusbar" data-region="status" aria-label={t('shell.status.aria')}>
 		{#if placing}
 			<!-- Pose d'un tableau croisé : le clic sur une cellule le pose ; « Nouvelle feuille » garde l'ancienne façon. -->
@@ -2533,21 +2324,6 @@
 />
 
 <style>
-	.delete-list {
-		margin: 6px 0 4px;
-		padding-left: 20px;
-		font-size: 12px;
-		line-height: 1.5;
-	}
-	.hint {
-		margin: 4px 0 0;
-		font-size: 12px;
-		color: #5f6368;
-	}
-	.modal .primary.danger {
-		background: #c0392b;
-		border-color: #c0392b;
-	}
 	/* Coins des surfaces flottantes (menus, boîtes de dialogue, panneaux de filtre…) : légèrement arrondis. */
 	:global(:root) {
 		--float-radius: 6px;
@@ -2924,71 +2700,6 @@
 	}
 	button.link:hover {
 		text-decoration: underline;
-	}
-	.modal-back {
-		position: fixed;
-		inset: 0;
-		z-index: var(--z-dialog);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--backdrop);
-	}
-	.modal {
-		background: #fff;
-		border: 1px solid #d4d7db;
-		border-radius: var(--float-radius);
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-		padding: 16px 20px;
-		max-width: 440px;
-	}
-	.modal p {
-		margin: 0 0 14px;
-	}
-	.modal .actions {
-		justify-content: flex-end;
-	}
-	.modal .remember {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		margin: 0 0 14px;
-	}
-	.modal.protect {
-		min-width: 340px;
-	}
-	.modal.protect label {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		margin-bottom: 10px;
-	}
-	.modal.protect input {
-		font: inherit;
-		padding: 4px 6px;
-		border: 1px solid #c9cdd2;
-		border-radius: 3px;
-	}
-	.modal.protect input:focus {
-		outline: none;
-		border-color: #217346;
-	}
-	.modal.protect .muted {
-		margin-top: -6px;
-	}
-	.modal.protect fieldset.lock {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		margin: 0;
-		padding: 6px 10px;
-		border: 1px solid #d4d7db;
-		border-radius: 4px;
-	}
-	.modal.protect label.check {
-		flex-direction: row;
-		align-items: center;
-		gap: 6px;
 	}
 	.error {
 		color: #b42318;
