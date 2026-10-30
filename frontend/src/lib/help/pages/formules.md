@@ -25,6 +25,8 @@ En mode formule, un clic sur une cellule insère sa référence ; un glissé ins
 
 Une adresse tapée par habitude (`=C14*2`, `=SOMME(C14:C16)`, `$C$14`, `Feuille2!B3`) est convertie à la validation : en `Cell[C14]` pour une cellule libre, en `Tableau[Colonne][k]` dans un tableau, en plage pour `C14:C16`.
 
+[RECHERCHEV](fonction:RECHERCHEV), [RECHERCHEH](fonction:RECHERCHEH) et [RECHERCHEX](fonction:RECHERCHEX) marchent aussi sur des cellules libres (`=RECHERCHEV(A2; D2:F20; 2; FAUX)`), en correspondance exacte ou approchée : elles deviennent [INDEX](fonction:INDEX) et [EQUIV](fonction:EQUIV) ou [EQUIVX](fonction:EQUIVX).
+
 ## Colonnes calculées
 
 Une formule tapée dans une colonne de tableau s'applique à toutes ses lignes : la colonne devient **calculée**. `[Colonne]` y désigne la valeur de la même ligne. Les agrégats acceptent une expression sur les colonnes d'un tableau, calculée ligne à ligne : `=SOMME(Ventes[Prix]*Ventes[Qté])`.
@@ -35,7 +37,7 @@ Clic droit sur une colonne calculée › **Convertir en valeurs** (ou Formules �
 
 ## Résultats qui se déversent
 
-Certaines fonctions renvoient plusieurs valeurs ([FILTRE](fonction:FILTRE), [TRIER](fonction:TRIER), [UNIQUE](fonction:UNIQUE), [SEQUENCE](fonction:SEQUENCE), [FRACTIONNER.TEXTE](fonction:FRACTIONNER.TEXTE), [REQUETE](fonction:REQUETE)…) : le résultat se déverse sur les cellules voisines, comme les tableaux dynamiques d'Excel. Une colonne entière seule dans une cellule libre (`=Ventes[Prix]`) se déverse de même, dans l'ordre des lignes du tableau. Si la place est prise, la formule affiche `#DEVERSEMENT!`. Dans un agrégat, elles fournissent leurs valeurs : `=NBVAL(FRACTIONNER.TEXTE(Cell[A1]; ","))` compte les morceaux d'un texte ; les fonctions qui parcourent une colonne (NB.SI, GRANDE.VALEUR, EQUIV…) ne les lisent pas (`#VALEUR!`). UNIQUE, TRIER, PRENDRE et EXCLURE lisent une colonne (`=UNIQUE(Suividesnids[NID suivi])`), un tableau entier, une plage de cellules (`Cell[A1:A20]`) ou un autre tableau dynamique ; FILTRE et TRIERPAR, un tableau ou une colonne.
+Certaines fonctions renvoient plusieurs valeurs ([FILTRE](fonction:FILTRE), [TRIER](fonction:TRIER), [UNIQUE](fonction:UNIQUE), [SEQUENCE](fonction:SEQUENCE), [FRACTIONNER.TEXTE](fonction:FRACTIONNER.TEXTE), [REQUETE](fonction:REQUETE)…) : le résultat se déverse sur les cellules voisines, comme les tableaux dynamiques d'Excel. Une colonne entière seule dans une cellule libre (`=Ventes[Prix]`) se déverse de même, dans l'ordre des lignes du tableau. Si la place est prise, la formule affiche `#DEVERSEMENT!`. Dans un agrégat, elles fournissent leurs valeurs : `=NBVAL(FRACTIONNER.TEXTE(Cell[A1]; ","))` compte les morceaux d'un texte ; les fonctions qui parcourent une colonne (NB.SI, GRANDE.VALEUR, EQUIV…) ne les lisent pas (`#VALEUR!`). Pour assembler ou découper : [ASSEMB.V](fonction:ASSEMB.V), [ASSEMB.H](fonction:ASSEMB.H), [CHOISIRCOLS](fonction:CHOISIRCOLS), [CHOISIRLIGNES](fonction:CHOISIRLIGNES), [VERS.COL](fonction:VERS.COL). UNIQUE, TRIER, PRENDRE et EXCLURE lisent une colonne (`=UNIQUE(Suividesnids[NID suivi])`), un tableau entier, une plage de cellules (`Cell[A1:A20]`) ou un autre tableau dynamique ; FILTRE et TRIERPAR, un tableau ou une colonne.
 
 `=FRACTIONNER.TEXTE("Nom=Dupont;Ville=Paris"; "="; ";")` découpe un texte en lignes (au `;`) puis en colonnes (au `=`) ; les lignes plus courtes sont complétées par `#N/A`, ou par le dernier argument. Pour se déverser, le texte ne doit pas dépendre de la ligne d'un tableau : une cellule, ou une valeur comme `Ventes[Notes][2]`.
 

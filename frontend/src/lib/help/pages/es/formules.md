@@ -25,6 +25,8 @@ En modo fórmula, un clic en una celda inserta su referencia; arrastrar inserta 
 
 Una dirección escrita por costumbre (`=C14*2`, `=SUMA(C14:C16)`, `$C$14`, `Hoja2!B3`) se convierte al confirmar: en `Cell[C14]` para una celda libre, en `Tabla[Columna][k]` en una tabla, en un rango para `C14:C16`.
 
+[BUSCARV](fonction:BUSCARV), [BUSCARH](fonction:BUSCARH) y [BUSCARX](fonction:BUSCARX) también funcionan con celdas libres (`=BUSCARV(A2; D2:F20; 2; FALSO)`), con coincidencia exacta o aproximada: se convierten en [INDICE](fonction:INDICE) y [COINCIDIR](fonction:COINCIDIR) o [COINCIDIRX](fonction:COINCIDIRX).
+
 ## Columnas calculadas {#colonnes-calculees}
 
 Una fórmula escrita en una columna de tabla se aplica a todas sus filas: la columna se vuelve **calculada**. `[Columna]` designa ahí el valor de la misma fila. Los agregados aceptan una expresión sobre las columnas de una tabla, calculada fila a fila: `=SUMA(Ventas[Precio]*Ventas[Cant])`.

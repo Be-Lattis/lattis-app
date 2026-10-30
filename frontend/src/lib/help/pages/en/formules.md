@@ -25,6 +25,8 @@ In formula mode, clicking a cell inserts its reference; dragging inserts a range
 
 An address typed out of habit (`=C14*2`, `=SUM(C14:C16)`, `$C$14`, `Sheet2!B3`) is converted when you confirm: to `Cell[C14]` for a free cell, to `Table[Column][k]` in a table, to a range for `C14:C16`.
 
+[VLOOKUP](fonction:VLOOKUP), [HLOOKUP](fonction:HLOOKUP) and [XLOOKUP](fonction:XLOOKUP) also work on free cells (`=VLOOKUP(A2, D2:F20, 2, FALSE)`), with an exact or approximate match: they become [INDEX](fonction:INDEX) and [MATCH](fonction:MATCH) or [XMATCH](fonction:XMATCH).
+
 ## Calculated columns {#colonnes-calculees}
 
 A formula typed in a table column applies to all its rows: the column becomes **calculated**. `[Column]` there refers to the value on the same row. Aggregates accept an expression on a table's columns, calculated row by row: `=SUM(Sales[Price]*Sales[Qty])`.

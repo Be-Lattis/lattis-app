@@ -25,6 +25,8 @@ Im Formelmodus fügt ein Klick auf eine Zelle ihren Bezug ein; Ziehen fügt eine
 
 Eine aus Gewohnheit eingegebene Adresse (`=C14*2`, `=SUMME(C14:C16)`, `$C$14`, `Tabelle2!B3`) wird beim Bestätigen umgewandelt: in `Cell[C14]` für eine freie Zelle, in `Tabelle[Spalte][k]` in einer Tabelle, in einen Bereich für `C14:C16`.
 
+[SVERWEIS](fonction:SVERWEIS), [WVERWEIS](fonction:WVERWEIS) und [XVERWEIS](fonction:XVERWEIS) funktionieren auch mit freien Zellen (`=SVERWEIS(A2; D2:F20; 2; FALSCH)`), mit genauer oder ungefährer Übereinstimmung: Sie werden zu [INDEX](fonction:INDEX) und [VERGLEICH](fonction:VERGLEICH) oder [XVERGLEICH](fonction:XVERGLEICH).
+
 ## Berechnete Spalten {#colonnes-calculees}
 
 Eine in eine Tabellenspalte eingegebene Formel gilt für alle ihre Zeilen: Die Spalte wird **berechnet**. `[Spalte]` verweist dort auf den Wert in derselben Zeile. Aggregatfunktionen akzeptieren einen Ausdruck über die Spalten einer Tabelle, Zeile für Zeile berechnet: `=SUMME(Umsatz[Preis]*Umsatz[Menge])`.

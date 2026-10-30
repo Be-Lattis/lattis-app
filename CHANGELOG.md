@@ -6,6 +6,16 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Formules : PLAFOND.MATH, PLANCHER.MATH, PAIR, IMPAIR, FACT, COMBIN, PERMUTATION, ATAN2, ESTERR et JOURS360.
+- Formules : EQUIVX, expressions régulières (REGEXTEST, REGEXEXTRACT, REGEXREPLACE), ASSEMB.V, ASSEMB.H, CHOISIRCOLS, CHOISIRLIGNES, VERS.COL et VERS.LIGNE ; PRENDRE et EXCLURE acceptent un nombre de colonnes.
+- Formules : RECHERCHEV en correspondance approchée, RECHERCHEX avec ses modes de correspondance et de recherche, et RECHERCHEV, RECHERCHEH, RECHERCHEX sur des cellules libres (`=RECHERCHEV(A2; D2:F20; 2; FAUX)`).
+
+### Corrections
+
+- Une plage tapée à la façon d'un tableur en source d'un tableau dynamique (`=UNIQUE(A1:A20)`) se déverse au lieu d'afficher #VALEUR!.
+
 ### Changements
 
 - Assistant IA décoché dans Fichier › Paramètres › Fonctionnalités : son bouton du ruban, Alt+I, son volet et « Rédiger avec l’assistant » disparaissent ; le recocher les rend aussitôt.

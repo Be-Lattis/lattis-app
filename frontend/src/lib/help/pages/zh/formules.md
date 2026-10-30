@@ -25,6 +25,8 @@
 
 出于习惯键入的地址（`=C14*2`、`=SUM(C14:C16)`、`$C$14`、`Sheet2!B3`）会在确认时自动转换：自由单元格转换为 `Cell[C14]`，表格中的单元格转换为 `Table[Column][k]`，`C14:C16` 转换为区域。
 
+[VLOOKUP](fonction:VLOOKUP)、[HLOOKUP](fonction:HLOOKUP) 和 [XLOOKUP](fonction:XLOOKUP) 也可用于自由单元格（`=VLOOKUP(A2, D2:F20, 2, FALSE)`），支持精确或近似匹配：它们会转换为 [INDEX](fonction:INDEX) 与 [MATCH](fonction:MATCH) 或 [XMATCH](fonction:XMATCH)。
+
 ## 计算列 {#colonnes-calculees}
 
 在表格列中键入的公式会应用于该列的所有行：该列成为**计算列**。其中的 `[Column]` 表示同一行的值。聚合函数接受基于表格各列的表达式，并逐行计算：`=SUM(Sales[Price]*Sales[Qty])`。
