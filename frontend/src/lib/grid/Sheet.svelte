@@ -11,7 +11,7 @@
 	import { onMount, tick, untrack } from 'svelte';
 	import { noticeTtl } from '#lib/shell/notice.js';
 	import { RowCache, syncAt, type SyncKind } from './cache';
-	import { VScroll, clamp } from './scroll';
+	import { VScroll } from './scroll';
 	import { Axis } from './axis';
 	import { allGenerated, defaultNameHint, isDefaultTableName, isGeneratedColumnName } from './defaultname';
 	import { ease, reducedMotion, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
@@ -24,7 +24,7 @@
 	import { bumpDecimals, formatCell, shownCell } from './numfmt';
 	import { FILL, plain } from './numcode';
 	import { BorderSet, borderParts, type BorderCmd, type Edge, type StylePart } from './borders';
-	import { autoHeight, BASE_PX, cellFont, fontPx, headerHeight, headerTextWidth, lineHeight, wrapLines } from './textwrap';
+	import { BASE_PX, cellFont, fontPx, lineHeight, wrapLines } from './textwrap';
 	import { AutoRows } from './rowfit';
 	import { arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
 	import { Velocity } from './touch';
@@ -102,21 +102,7 @@
 	import OutlineBar from './OutlineBar.svelte';
 	import { bandSize, outlineDepth, type SheetOutline } from './outline';
 	import { nameAlertOpen } from '#lib/ui/nameAlert.js';
-	import {
-		isErrorValue,
-		valueAlignment,
-		alignment,
-		defaultWidth,
-		editValue,
-		formatColumnValue,
-		NULL_MARK,
-		showsNull,
-		typeIcon,
-		typeIconName,
-		typeLabel,
-		sortLabels,
-		type ColumnType
-	} from './format';
+	import { isErrorValue, valueAlignment, alignment, editValue, formatColumnValue, NULL_MARK, showsNull, typeIcon, typeIconName, typeLabel, sortLabels, type ColumnType } from './format';
 	import { errorText, t as tr } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
 	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer, type WholeSel, type DvPick, type InputTip } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, GUTTER_PAD, GUTTER_MAX, GUTTER_KEY_MAX, FONT, FONT_BOLD, FONT_SMALL, FONT_TINY } from './sheet/consts';
@@ -139,6 +125,7 @@
 	import { createBench } from './sheet/bench.svelte.js';
 	import { createAnim } from './sheet/anim.svelte.js';
 	import { createFormula } from './sheet/formula.svelte.js';
+	import { createMeasure } from './sheet/measure.svelte.js';
 
 
 	interface Props {
@@ -722,60 +709,40 @@
 	let userWidths = new Map<number, number>();
 	const MAX_FIT = 400;
 	let measurer: CanvasRenderingContext2D | null = null;
-	/** Largeur du texte dans la police de la grille (normale ou grasse). */
-	function textWidth(s: string, bold = false): number {
-		if (!s) return 0;
-		measurer ??= document.createElement('canvas').getContext('2d');
-		if (!measurer) return 0;
-		measurer.font = bold ? FONT_BOLD : FONT;
-		return measurer.measureText(s).width;
-	}
-	/** Largeur du texte affiché d'une cellule : son format, sa police et sa taille. */
-	function cellWidth(text: string, value: unknown, st: CellStyle | undefined): number {
-		if (!st) return textWidth(text);
-		const s = plain(formatCell(text, value, st));
-		measurer ??= document.createElement('canvas').getContext('2d');
-		if (!s || !measurer) return 0;
-		measurer.font = cellFont(st);
-		return measurer.measureText(s).width;
-	}
-	/**
-	 * Largeur du contenu de l'en-tête de la colonne i d'un tableau (nom en
-	 * gras, badge du type, ▾, entonnoir, clé posée ou proposée), sans les marges : le nom n'est
-	 * pas coupé au-delà (headIcons et le dessin de l'en-tête).
-	 */
-	function headerWidth(e: Entry, i: number): number {
-		const col = e.t.columns[i];
-		const icon = (col.filter ? '⧩ ' : '') + (typeIconName(col.type) ? ' ▾' : typeIcon(col.type) + ' ▾') + (e.t.key === i || (i === 0 && (!!e.t.keyHint || !!e.t.keyPending) && e.t.key === undefined && !!source.setKey) ? '🔑 ' : '');
-		measurer ??= document.createElement('canvas').getContext('2d');
-		if (measurer) measurer.font = FONT_SMALL;
-		const iconW = (measurer?.measureText(icon).width ?? 0) + (typeIconName(col.type) ? 13 : 0);
-		return textWidth(col.name, true) + iconW + 4;
-	}
-	function rebuildAxis(override?: { col: number; width: number }) {
-		const widths = new Map<number, number>();
-		for (const e of entries) {
-			e.t.columns.forEach((c, i) => {
-				// Largeur selon le type, élargie pour que l'en-tête (nom, badge
-				// du type et ▾) ne soit pas coupé.
-				if (!widths.has(e.t.col + i)) widths.set(e.t.col + i, Math.max(defaultWidth(c.type), Math.min(MAX_FIT, Math.ceil(headerWidth(e, i)) + 14)));
-			});
-		}
-		// Tableaux croisés : largeur d'après le texte affiché (« Somme de Commande »).
-		for (const p of pivots) {
-			if (p.error) continue;
-			p.cells[0]?.forEach((_, j) => {
-				const c = p.col + j;
-				if (widths.has(c)) return;
-				const w = Math.max(...p.cells.map((r, i) => textWidth(r[j] ?? '', pivotBold(p, p.row + i)) + (j === 0 ? pivotLabelOffset(pivotRowOf(p, p.row + i)) : 0)));
-				widths.set(c, clamp(Math.ceil(w) + 14, DEF_W, MAX_FIT));
-			});
-		}
-		for (const [c, w] of userWidths) widths.set(c, w);
-		if (override) widths.set(override.col, override.width);
-		for (const c of hiddenCols) widths.set(c, 0); // masquée : largeur nulle
-		colAxis = new Axis(SHEET_COLS, DEF_W, widths);
-	}
+	// --- Mesure du texte : sheet/measure.svelte.ts ---
+	const measureCtl = createMeasure({
+		get measurer() { return measurer; }, set measurer(v) { measurer = v; },
+		get source() { return source; },
+		get entries() { return entries; },
+		get MAX_FIT() { return MAX_FIT; },
+		get pivots() { return pivots; },
+		get userWidths() { return userWidths; },
+		get hiddenCols() { return hiddenCols; },
+		get colAxis() { return colAxis; }, set colAxis(v) { colAxis = v; },
+		get MAX_AUTO_H() { return MAX_AUTO_H; },
+		get cax() { return cax; },
+		get merges() { return merges; },
+		get cells() { return cells; },
+		get shown() { return shown; },
+		get styleAt() { return styleAt; },
+		get sheetRowStyles() { return sheetRowStyles; },
+		get colStyles() { return colStyles; },
+		get sheetColStyles() { return sheetColStyles; },
+		get singleCol() { return singleCol; },
+		get rh() { return rh; },
+		get bandStyle() { return bandStyle; },
+		get headIconW() { return headIconW; },
+		get HEAD_ICON_W() { return HEAD_ICON_W; },
+		get visibleRows() { return visibleRows; },
+		get autoRows() { return autoRows; },
+		get fRows() { return fRows; },
+		get userHeights() { return userHeights; },
+		get hiddenRows() { return hiddenRows; },
+		get rowAxis() { return rowAxis; }, set rowAxis(v) { rowAxis = v; },
+		get updateExtent() { return updateExtent; }
+	});
+	const { textWidth, cellWidth, headerWidth, rebuildAxis, measureHeights, measureHeader, measureBand, fitVisibleRows } = measureCtl;
+
 
 	// Format de cellule : fusions, lignes et colonnes masquées (voir sheetfmt.ts)
 	// et hauteurs automatiques (renvoyer à la ligne, grande police).
@@ -798,108 +765,6 @@
 	const autoRows = new AutoRows();
 	const MAX_AUTO_H = 400;
 
-	/** Hauteur nécessaire au texte d'une cellule (0 : la hauteur par défaut suffit). */
-	function fitHeight(text: string, c: number, st: CellStyle | undefined): number {
-		if ((!st || (!st.wr && !st.fs)) && !text.includes('\n')) return 0;
-		measurer ??= document.createElement('canvas').getContext('2d');
-		if (!measurer) return 0;
-		measurer.font = cellFont(st);
-		const m = measurer;
-		return Math.min(MAX_AUTO_H, autoHeight(text, cax().size(c), st ?? {}, (s) => m.measureText(s).width, ROW_H));
-	}
-
-	/** Hauteurs automatiques des lignes, comme Excel : cellules libres qui renvoient à la ligne, sur plusieurs lignes ou en grande police. */
-	function measureHeights(): Map<number, number> {
-		const out = new Map<number, number>();
-		const consider = (r: number, c: number, text: string, st: CellStyle | undefined) => {
-			if (mergeAt(merges, r, c)) return;
-			const h = fitHeight(text, c, st);
-			if (h > (out.get(r) ?? 0)) out.set(r, h);
-		};
-		for (const [k, raw] of cells) {
-			const [r, c] = k.split(',').map(Number);
-			consider(r, c, shown.get(k)?.text ?? freeDisplay(raw).text, styleAt(r, c, undefined));
-		}
-		// Grande police posée sur des lignes entières ou des cellules vides.
-		for (const [r, st] of sheetRowStyles) if (st.fs) consider(r, -1, '', resolveStyle(st));
-		return out;
-	}
-
-	/**
-	 * Hauteur nécessaire aux cellules de tableau d'une ligne de la feuille
-	 * (0 : la hauteur par défaut suffit), undefined si la ligne n'est pas
-	 * encore chargée. Seules les cellules qui peuvent passer à la ligne ou
-	 * grossir sont mesurées.
-	 */
-	function measureTableRow(r: number): number | undefined {
-		let h = 0;
-		const rowSt = sheetRowStyles.get(r);
-		const rowFit = !!rowSt && ('wr' in rowSt || 'fs' in rowSt);
-		for (const e of entries) {
-			if (r === e.t.row) {
-				h = Math.max(h, measureHeader(e));
-				continue;
-			}
-			if (e.t.twoLevel && r === e.t.row - 1) {
-				h = Math.max(h, measureBand(e));
-				continue;
-			}
-			if (r < e.t.row || r > e.t.row + e.t.rows) continue;
-			const row = e.cache.row(r - e.t.row - 1);
-			if (!row) return undefined;
-			const cs = colStyles.get(e.t.id);
-			for (let i = 0; i < e.t.columns.length; i++) {
-				const c = e.t.col + i;
-				const text = row.text[i] ?? '';
-				if (!cax().size(c) || (!rowFit && !cs?.[i] && !sheetColStyles.has(c) && !row.sty?.has(i) && !text.includes('\n'))) continue;
-				h = Math.max(h, fitHeight(text, c, styleAt(r, c, e)));
-			}
-		}
-		return h;
-	}
-
-	/**
-	 * Hauteur nécessaire à l'en-tête d'un tableau dont des noms renvoient à la
-	 * ligne (0 : la hauteur par défaut suffit). Une colonne sur un niveau
-	 * (bande et en-tête réunis) profite déjà de la hauteur de la bande.
-	 */
-	function measureHeader(e: Entry): number {
-		let h = 0;
-		for (let i = 0; i < e.t.columns.length; i++) {
-			const c = e.t.col + i;
-			const cw = cax().size(c);
-			const single = singleCol(e, i) && !!rh(e.t.row - 1);
-			const hs = single ? bandStyle(e, i, i) : styleAt(e.t.row, c, e);
-			if (!cw || !hs?.wr) continue;
-			const label = single ? e.t.columns[i].name : headerLabel(e.t.columns[i].name, e.t.twoLevel);
-			let need = headNeed(label, headerTextWidth(cw, headIconW.get(`${e.t.id}:${i}`) ?? HEAD_ICON_W), hs);
-			if (single) need -= rh(e.t.row - 1);
-			h = Math.max(h, need);
-		}
-		return Math.min(MAX_AUTO_H, h > ROW_H ? h : 0);
-	}
-
-	/** Hauteur nécessaire à la bande des groupes d'un tableau dont des groupes renvoient à la ligne (0 : la hauteur par défaut suffit). */
-	function measureBand(e: Entry): number {
-		let h = 0;
-		for (const s of groupSpans(e.t.columns.map((k) => k.name))) {
-			if (!s.group) continue;
-			const st = bandStyle(e, s.i0, s.i1);
-			const sw = cax().offset(e.t.col + s.i1 + 1) - cax().offset(e.t.col + s.i0);
-			if (sw > 0 && st?.wr) h = Math.max(h, headNeed(s.group, sw - 12, st));
-		}
-		return Math.min(MAX_AUTO_H, h > ROW_H ? h : 0);
-	}
-
-	/** Hauteur d'un nom d'en-tête renvoyé à la ligne dans width (police de l'en-tête). */
-	function headNeed(label: string, width: number, st: CellStyle): number {
-		measurer ??= document.createElement('canvas').getContext('2d');
-		if (!measurer) return 0;
-		const m = measurer;
-		m.font = (st.i ? 'italic ' : '') + FONT_BOLD;
-		return headerHeight(label, width, st, (t) => m.measureText(t).width);
-	}
-
 	/**
 	 * Style d'une cellule de la bande des groupes (colonnes i0 à i1 du
 	 * tableau), ou d'une colonne sur un niveau (i0 = i1, bande et en-tête
@@ -919,21 +784,6 @@
 	// le premier dessin, une largeur habituelle.
 	const headIconW = new Map<string, number>();
 	const HEAD_ICON_W = 34;
-
-	/** Mesure les lignes de tableau affichées pas encore mesurées et ajuste l'axe des lignes (seulement les lignes changées). */
-	function fitVisibleRows() {
-		if (!entries.length) return;
-		for (let pass = 0; pass < 3; pass++) {
-			const { first, last } = visibleRows();
-			const changed = autoRows.measure(first, last, measureTableRow);
-			if (fRows()) for (const [r, h] of autoRows.measure(0, fRows() - 1, measureTableRow)) changed.set(r, h);
-			const sizes = new Map<number, number | undefined>();
-			for (const [r, h] of changed) if (!userHeights.has(r) && !hiddenRows.has(r)) sizes.set(r, h);
-			if (!sizes.size) return;
-			rowAxis = rowAxis.with(sizes);
-			updateExtent();
-		}
-	}
 
 	/** Fusion qui couvre une cellule (cellules libres seulement). */
 	const mergeOf = (r: number, c: number) => (merges.length ? mergeAt(merges, r, c) : undefined);
