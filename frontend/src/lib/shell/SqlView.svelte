@@ -22,7 +22,9 @@
 	import { errorText, fmtNumber, t } from '#lib/i18n/index.js';
 	import { formatValue, typeLabel } from '#lib/grid/format.js';
 	import { alterRename } from '#lib/sql/rename.js';
-	import SqlEditor from '#lib/sql/SqlEditor.svelte';
+	import type SqlEditor from '#lib/sql/SqlEditor.svelte';
+	// CodeMirror : chargé à la première ouverture de l'onglet SQL.
+	const loadEditor = () => import('#lib/sql/SqlEditor.svelte');
 	import SqlReference from '#lib/sql/SqlReference.svelte';
 	import { entryFor } from '#lib/sql/reference.svelte.js';
 	import { Catalog, displayHeaders, quote, translate, type SqlObject } from '#lib/sql/names.js';
@@ -689,7 +691,7 @@
 			<span class="muted hint" title={t('shell.sqlView.hintTooltip')}>{t('shell.sqlView.hint')}</span>
 		</div>
 		<div class="code" style:height="{codeH}px">
-			<SqlEditor bind:this={editor} bind:value={sql} {catalog} onrun={execute} onhistory={step} onhelp={refHelp} />
+			{#await loadEditor() then m}<m.default bind:this={editor} bind:value={sql} {catalog} onrun={execute} onhistory={step} onhelp={refHelp} />{/await}
 		</div>
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<div

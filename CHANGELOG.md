@@ -21,6 +21,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Fichier `.xlsx` relu : formules en adresses (B2, Feuille2!B2:C5), références structurées (Ventes[Prix], [@Prix]), noms définis, SIERREUR et TEXTE sont gardés au lieu d'être remplacés par leur valeur ; une plage ordinaire reste une plage, un tableau garde son style, une date courte reste une date courte.
 
+- Démarrage plus léger : les éditeurs de texte (documents, SQL, scripts, pages web) ne se chargent qu'à leur première ouverture.
 - Un tableau croisé ou un graphique sur un grand tableau ne se recalcule plus après une saisie dans une colonne qu'il ne lit pas (un million de lignes : 6 s d'attente en moins).
 - Importer un grand fichier est plusieurs fois plus rapide (un million de lignes : 5 s au lieu de 40 s sur le poste de mesure).
 - Colonnes calculées qui comparent chaque ligne aux autres (SOMME.SI(T[Qté];">"&[@Qté];…), NB.SI.ENS avec « < » ou « >= » sur une date, cumul par client) : calculées en une fraction de seconde même sur un grand tableau, au lieu de plusieurs minutes.

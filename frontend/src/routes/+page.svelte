@@ -49,7 +49,7 @@
 	import { chat as aiChat, openAssistant } from '#lib/ai/state.svelte.js';
 	import McpConfirm from '#lib/shell/McpConfirm.svelte';
 	import TitleBar from '#lib/shell/TitleBar.svelte';
-	import ScriptView, { type Script } from '#lib/script/ScriptView.svelte';
+	import type { Script } from '#lib/script/ScriptView.svelte';
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
 	import PickBanner from '#lib/script/PickBanner.svelte';
 	import type { ControlInfo } from '#lib/script/controls.js';
@@ -64,9 +64,13 @@
 	import { isWeb } from '#lib/web/platform.js';
 	import { withoutWorkbookParam, workbookParam } from '#lib/web/workbooklink.js';
 	import { followViewport, installLongPress } from '#lib/ui/mobile.js';
-	import HtmlPage from '#lib/page/HtmlPage.svelte';
 	import PageOff from '#lib/page/PageOff.svelte';
-	import DocPage from '#lib/doc/DocPage.svelte';
+	import type DocPage from '#lib/doc/DocPage.svelte';
+	// Éditeurs lourds (Quill, CodeMirror) : chargés à la première ouverture,
+	// le démarrage n'attend pas leur code.
+	const loadDocPage = () => import('#lib/doc/DocPage.svelte');
+	const loadHtmlPage = () => import('#lib/page/HtmlPage.svelte');
+	const loadScriptView = () => import('#lib/script/ScriptView.svelte');
 	import type { DocFormat } from '#lib/doc/format.js';
 	import QueryHost from '#lib/query/QueryHost.svelte';
 	import LattisHost from '#lib/remote/LattisHost.svelte';
@@ -2946,7 +2950,8 @@
 					{@const pageId = activePage.sheet}
 					<div class="pane" data-region="grid">
 						{#if activeDoc}
-						<DocPage
+						{#await loadDocPage() then m}
+						<m.default
 							bind:this={docPage}
 							name={activeInfo?.name ?? ''}
 							source={activePage.source}
@@ -2999,8 +3004,10 @@
 							onnotice={(m) => (notice = m)}
 							onrowlink={gotoRow}
 						/>
+						{/await}
 						{:else if htmlPagesEnabled()}
-						<HtmlPage
+						{#await loadHtmlPage() then m}
+						<m.default
 							name={activeInfo?.name ?? ''}
 							source={activePage.source}
 							save={async (src) => {
@@ -3014,6 +3021,7 @@
 							stamp={layout}
 							onnotice={(m) => (notice = m)}
 						/>
+						{/await}
 						{:else}
 						<!-- Pages web coupées (par défaut, toujours en web) : ni cadre ni exécution. -->
 						<PageOff name={activeInfo?.name ?? ''} />
@@ -3067,7 +3075,8 @@
 			{#if view === 'script'}
 				<div class="pane" data-region="grid">
 					{#if mode === 'doc'}
-						<ScriptView
+						{#await loadScriptView() then m}
+						<m.default
 							{scripts}
 							locked={layoutShared ? t('shell.share.scriptsLocked') : ''}
 							save={async (id, name, source) => {
@@ -3099,6 +3108,7 @@
 								}
 							}}
 						/>
+						{/await}
 					{:else}
 						<p class="placeholder">{t('shell.notice.scriptsNeedWorkbook')}</p>
 					{/if}
