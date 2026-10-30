@@ -136,6 +136,7 @@
 	import PivotFilter, { type PivotFilterView } from './sheet/PivotFilter.svelte';
 	import KeyDialog, { type KeyDialogView } from './sheet/KeyDialog.svelte';
 	import HandDialog, { type HandDialogView } from './sheet/HandDialog.svelte';
+	import KeyHintMenu, { type KeyHintMenuView } from './sheet/KeyHintMenu.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6214,6 +6215,13 @@
 		get focusFirst() { return focusFirst; },
 		get handDlg() { return handDlg; }
 	};
+	// Clé proposée : sheet/KeyHintMenu.svelte.
+	const hintMenuView: KeyHintMenuView = {
+		get acceptKeyHint() { return acceptKeyHint; },
+		get hintMenu() { return hintMenu; }, set hintMenu(v) { hintMenu = v; },
+		get menuAction() { return menuAction; },
+		get source() { return source; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6584,28 +6592,7 @@
 				<button role="menuitemcheckbox" aria-checked="true" disabled={!source.setFollow} onclick={() => toggleFollow(m.e.t, false)}><span class="check">✓</span>{tr('grid.menu.follow', { what })}</button>
 			</div>
 		{/if}
-		{#if hintMenu}
-			{@const m = hintMenu}
-			{@const name = m.e.t.columns[0]?.name}
-			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (hintMenu = null)}>
-				<div class="menu-title" title={clipped(name) ? name : undefined}>{tr('grid.menu.column', { name: clip(name) })}</div>
-				<button
-					onclick={() => {
-						hintMenu = null;
-						acceptKeyHint(m.e);
-					}}>{tr('grid.key.accept')}</button
-				>
-				{#if source.dismissKeyHint}
-					{@const dismissHint = source.dismissKeyHint}
-					<button
-						onclick={() => {
-							hintMenu = null;
-							menuAction(() => dismissHint(m.e.t));
-						}}>{tr('grid.key.dismiss')}</button
-					>
-				{/if}
-			</div>
-		{/if}
+		<KeyHintMenu v={hintMenuView} />
 		<LinesDialog v={linesView} />
 		<KeyDialog v={keyDialogView} />
 		<HandDialog v={handDialogView} />
