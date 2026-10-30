@@ -135,15 +135,67 @@ func (t *tx) autoNumber(tb Table) (autoNum, bool, error) {
 		return autoNum{}, false, nil
 	}
 	if total > 2 {
-		var off int
-		if err := t.row(`SELECT count(*) FROM (SELECT `+col+` - lag(`+col+`) OVER (ORDER BY _pos) AS d, row_number() OVER (ORDER BY _pos) AS n FROM `+tb.sql()+`) WHERE n > 1 AND (d IS NULL OR d <> ?)`, step).Scan(&off); err != nil {
+		ok, err := t.steadySteps(tb, col, step)
+		if err != nil || !ok {
 			return autoNum{}, false, err
-		}
-		if off > 0 {
-			return autoNum{}, false, nil
 		}
 	}
 	return autoNum{col: c, next: last + step, step: step}, true, nil
+}
+
+// steadySteps dit si chaque valeur de col, dans l'ordre des lignes, vaut la
+// précédente plus step (écart vide : non). La colonne est lue dans l'ordre
+// de l'index de _pos et l'écart calculé ici, jusqu'au premier écart qui ne
+// convient pas : une fonction de fenêtre (lag … OVER (ORDER BY _pos))
+// coûtait 3,5 s sur 1 M de lignes, la lecture 0,5 s. « + 0 » : la valeur
+// numérique que prend SQLite dans une soustraction (texte converti).
+func (t *tx) steadySteps(tb Table, col string, step int64) (bool, error) {
+	rs, err := t.query(`SELECT ` + col + ` + 0 FROM ` + tb.sql() + ` ORDER BY _pos`)
+	if err != nil {
+		return false, err
+	}
+	defer rs.Close()
+	var prev any
+	first := true
+	for rs.Next() {
+		var v any
+		if err := rs.Scan(&v); err != nil {
+			return false, err
+		}
+		if !first && !stepIs(prev, v, step) {
+			return false, nil
+		}
+		prev, first = v, false
+	}
+	return true, rs.Err()
+}
+
+// stepIs dit si v - prev = step, comme SQLite : entiers soustraits sans
+// perte (en réels au-delà de la capacité), réels sinon ; vide : non.
+func stepIs(prev, v any, step int64) bool {
+	num := func(x any) (int64, float64, bool, bool) {
+		switch n := x.(type) {
+		case int64:
+			return n, float64(n), true, true
+		case float64:
+			return 0, n, false, true
+		}
+		return 0, 0, false, false
+	}
+	pi, pf, pint, ok1 := num(prev)
+	vi, vf, vint, ok2 := num(v)
+	if !ok1 || !ok2 {
+		return false
+	}
+	if pint && vint {
+		d := vi - pi
+		if (vi >= 0) == (pi >= 0) || (d >= 0) == (vi >= 0) {
+			return d == step
+		}
+		// Dépassement : SQLite passe aux réels.
+		vf, pf = float64(vi), float64(pi)
+	}
+	return floatIntCompare(vf-pf, step) == 0 // réel et entier comparés sans perte
 }
 
 // autoNumbered dit, pour l'affichage, quelle colonne se numérote d'elle-même

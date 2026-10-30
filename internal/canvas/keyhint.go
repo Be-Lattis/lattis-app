@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/store"
 	"github.com/lalamefine/lattis/internal/work"
 )
@@ -51,6 +52,15 @@ func (t *tx) keyHintIn(tb Table, later bool) (hint, pending bool, err error) {
 		return v, !ok, nil
 	}
 	hint, err = cachedOn(t, key, deps, func() (bool, error) {
+		// Entiers en suite régulière (1, 2, 3…) : remplis et sans doublon,
+		// sans le comptage des valeurs distinctes (un tri de la colonne :
+		// 0,9 s sur 1 M de lignes). La suite est lue de toute façon pour la
+		// numérotation automatique (même cache).
+		if c.Type == grid.Integer {
+			if i, err := t.autoNumbered(tb); err != nil || i == 0 {
+				return i == 0, err
+			}
+		}
 		work.Phase(t.Ctx, "keyCheck")
 		why, err := t.keyCheck(tb, 0)
 		return why == "", err
