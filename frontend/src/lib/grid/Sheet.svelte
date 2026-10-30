@@ -130,6 +130,7 @@
 	import DedupDialog, { type DedupDialogView } from './sheet/DedupDialog.svelte';
 	import ChartMenu, { type ChartMenuView } from './sheet/ChartMenu.svelte';
 	import NoteEditor, { type NoteEditorView } from './sheet/NoteEditor.svelte';
+	import LinesDialog, { type LinesDialogView } from './sheet/LinesDialog.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6155,6 +6156,11 @@
 		get source() { return source; },
 		get togglePin() { return togglePin; }
 	};
+	// Insérer ou supprimer des lignes : sheet/LinesDialog.svelte.
+	const linesView: LinesDialogView = {
+		get applyLinesDialog() { return applyLinesDialog; },
+		get linesDlg() { return linesDlg; }, set linesDlg(v) { linesDlg = v; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6547,20 +6553,7 @@
 				{/if}
 			</div>
 		{/if}
-		{#if linesDlg}
-			{@const d = linesDlg}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="rules lines-dlg" use:dismissPanel={() => (linesDlg = null)} onkeydown={(e) => e.key === 'Enter' && applyLinesDialog()}>
-				<div class="menu-title">{d.insert ? tr('grid.menu.insert') : tr('common.delete')}</div>
-				<label><input type="radio" bind:group={d.choice} value="rows" /> {d.insert ? tr('grid.lines.dialog.rowAbove') : tr('grid.lines.dialog.row')}</label>
-				<label><input type="radio" bind:group={d.choice} value="cols" /> {d.insert ? tr('grid.lines.dialog.colLeft') : tr('grid.lines.dialog.col')}</label>
-				<div class="foot">
-					<span class="sp"></span>
-					<button class="primary" onclick={applyLinesDialog}>{tr('common.ok')}</button>
-					<button onclick={() => (linesDlg = null)}>{tr('common.cancel')}</button>
-				</div>
-			</div>
-		{/if}
+		<LinesDialog v={linesView} />
 		{#if keyDlg}
 			{@const d = keyDlg}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
