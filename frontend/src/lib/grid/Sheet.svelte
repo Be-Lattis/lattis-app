@@ -135,6 +135,7 @@
 	import ListMenu, { type ListMenuView } from './sheet/ListMenu.svelte';
 	import PivotFilter, { type PivotFilterView } from './sheet/PivotFilter.svelte';
 	import KeyDialog, { type KeyDialogView } from './sheet/KeyDialog.svelte';
+	import HandDialog, { type HandDialogView } from './sheet/HandDialog.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6206,6 +6207,13 @@
 		get focusFirst() { return focusFirst; },
 		get keyDlg() { return keyDlg; }
 	};
+	// Colonne saisie à la main : sheet/HandDialog.svelte.
+	const handDialogView: HandDialogView = {
+		get applyHandDialog() { return applyHandDialog; },
+		get cancelHandDialog() { return cancelHandDialog; },
+		get focusFirst() { return focusFirst; },
+		get handDlg() { return handDlg; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6600,44 +6608,7 @@
 		{/if}
 		<LinesDialog v={linesView} />
 		<KeyDialog v={keyDialogView} />
-		{#if handDlg}
-			{@const d = handDlg}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="rules lines-dlg key-dlg"
-				role="dialog"
-				tabindex="-1"
-				aria-label={tr('grid.handDialog.title')}
-				use:focusFirst
-				use:dismissPanel={cancelHandDialog}
-				onkeydown={(ev) => {
-					ev.stopPropagation();
-					if (ev.key === 'Enter') applyHandDialog();
-					if (ev.key === 'Escape') cancelHandDialog();
-				}}
-			>
-				<div class="menu-title">{tr('grid.handDialog.heading', { table: d.table })}</div>
-				{#each d.columns as c (c)}
-					<label><input type="radio" bind:group={d.choice} value={c} /> {c.includes(' + ') ? tr('grid.handDialog.columns', { name: c }) : tr('grid.handDialog.column', { name: c })}</label>
-				{/each}
-				<label><input type="radio" bind:group={d.choice} value="#" /> {tr('grid.handDialog.rank')}</label>
-				{#if d.choice === '#'}
-					<p class="menu-note">{tr('grid.handDialog.rank.note')}</p>
-				{:else if d.t}
-					<p class="menu-note">{tr('grid.handDialog.change.note')}</p>
-				{:else}
-					<p class="menu-note">{tr('grid.handDialog.key.note', { key: d.choice })}</p>
-				{/if}
-				{#if !d.columns.length && !d.t}
-					<p class="menu-note">{tr('grid.handDialog.none.note')}</p>
-				{/if}
-				<div class="foot">
-					<span class="sp"></span>
-					<button class="primary" onclick={applyHandDialog}>{tr('grid.formula.validate')}</button>
-					<button onclick={cancelHandDialog}>{tr('common.cancel')}</button>
-				</div>
-			</div>
-		{/if}
+		<HandDialog v={handDialogView} />
 		<ChartMenu v={chartMenuView} />
 		{#if customDlg}
 			{@const d = customDlg}
@@ -6842,16 +6813,6 @@
 
 <style>
 	/* Bouton de validation des boîtes de dialogue : vert, comme Excel. */
-	button.primary {
-		background: #217346;
-		border-color: #217346;
-		color: #fff;
-		padding-left: 15px;
-		padding-right: 15px;
-	}
-	button.primary:disabled {
-		opacity: 0.5;
-	}
 	.sheet-root {
 		display: flex;
 		flex-direction: column;
@@ -7159,12 +7120,6 @@
 		padding: 6px 0 8px;
 		min-width: 460px;
 	}
-	.rules .foot {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 3px 14px;
-	}
 	.filter {
 		min-width: 300px;
 	}
@@ -7272,34 +7227,6 @@
 			transform: rotate(360deg);
 		}
 	}
-	.rules input {
-		font: inherit;
-		width: 90px;
-		padding: 2px 6px;
-		border: 1px solid #c9cdd2;
-		border-radius: 3px;
-	}
-	.rules button {
-		font: inherit;
-		padding: 2px 6px;
-		border: 1px solid #c9cdd2;
-		background: #fff;
-		border-radius: 3px;
-		cursor: pointer;
-	}
-	.rules button.primary {
-		background: #217346;
-		border-color: #217346;
-		color: #fff;
-		padding-left: 15px;
-		padding-right: 15px;
-	}
-	.lines-dlg input[type='radio'] {
-		width: auto;
-	}
-	.rules .sp {
-		flex: 1;
-	}
 	.menu-title {
 		padding: 4px 14px;
 		font-size: 11px;
@@ -7329,43 +7256,12 @@
 	.menu button:hover {
 		background: #e3efe7;
 	}
-	.menu-note {
-		margin: 4px 14px;
-		max-width: 260px;
-		font-size: 12px;
-		color: #4b5563;
-	}
-	.menu-note.error {
-		color: #c0392b;
-	}
 	.check {
 		display: inline-block;
 		width: 16px;
 		color: #217346;
 	}
-	.lines-dlg {
-		left: 50%;
-		top: 30%;
-		transform: translateX(-50%);
-		width: auto;
-		min-width: 240px;
-	}
-	.lines-dlg label {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 3px 2px;
-	}
 	/* Fond des boîtes modales de la grille (validation des données). */
-	.key-dlg {
-		max-width: 440px;
-	}
-	.key-dlg label {
-		align-items: flex-start;
-	}
-	.key-dlg .menu-note {
-		max-width: none;
-	}
 	/* Validation des données : onglets, lignes libellé + champ, alerte. */
 	.input-tip {
 		position: absolute;
