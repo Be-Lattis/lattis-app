@@ -50,7 +50,6 @@
 	import { type CustomOrder } from './customsort';
 	import { type KeyChoice, type KeyQuestion } from './keychoice';
 	import { dismiss, dismissPanel } from './dismiss';
-	import { spillAt, spillTip } from './spillmenu';
 	import { freeDisplay } from './freecell';
 	import { bandLabel, bandOpen, hiddenBand } from './hidden';
 	import { choiceHiddenCols } from '#lib/shell/choice.js';
@@ -91,7 +90,7 @@
 	import { type SheetButton } from './buttons';
 	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type Stats, type StatsReq } from './rules';
 	import { chartMenu as chartMenuGroups, chartSubmenu, freeCellMenu, headerMenu, linesSubmenu, pivotSubmenu, tableCellMenu, tableColumnSubmenu, tableRowSubmenu } from './ctxmenu';
-	import { colLetters, formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
+	import { formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
 	import { ICON_SETS, drawCfIcon } from './cficons';
 	import CondFormat, { type CondHost, type CondView } from './CondFormat.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -119,7 +118,7 @@
 		sortLabels,
 		type ColumnType
 	} from './format';
-	import { errorText, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
+	import { errorText, t as tr } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
 	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer, type WholeSel, type DvPick, type InputTip } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, GUTTER_PAD, GUTTER_MAX, GUTTER_KEY_MAX, FONT, FONT_BOLD, FONT_SMALL, FONT_TINY } from './sheet/consts';
 	import { createFind } from './sheet/find.svelte.js';
@@ -133,6 +132,7 @@
 	import { createEdit } from './sheet/edit.svelte.js';
 	import { createKeyboard } from './sheet/keyboard.svelte.js';
 	import { createMouse } from './sheet/mouse.svelte.js';
+	import { createMenus } from './sheet/menus.svelte.js';
 
 
 	interface Props {
@@ -7007,259 +7007,23 @@
 		return true;
 	}
 
-	// --- Type de données (section du menu ▾ de la colonne) ----------------------
+	// --- Type de données et menu contextuel : sheet/menus.svelte.ts ---
 
 	const TYPES: ColumnType[] = ['text', 'integer', 'decimal', 'date', 'boolean'];
-
 	// Une valeur hors type fait passer une colonne inférée en texte : l'infobulle
 	// de l'en-tête et le menu ▾ disent combien de valeurs sortent du type
 	// majoritaire, et le menu propose d'y revenir (ces valeurs marquées en erreur).
 	const mixes = new Map<string, Promise<TypeMix | null>>();
-	function mixOf(e: Entry, i: number): Promise<TypeMix | null> {
-		const k = e.t.columns[i];
-		if (!source.typeMix || k.type !== 'text' || k.fixed || k.formula) return Promise.resolve(null);
-		const id = `${e.t.id}:${i}`;
-		let p = mixes.get(id);
-		if (!p) {
-			p = source.typeMix(e.t, i).then(
-				(m) => (m.type ? m : null),
-				() => null
-			);
-			mixes.set(id, p);
-		}
-		return p;
-	}
-
-	function mixText(m: TypeMix): string {
-		// Saisies hors type d'une colonne : « 3 valeurs non numériques sur 120 ».
-		const kind = m.type === 'date' ? 'date' : m.type === 'boolean' ? 'boolean' : 'number';
-		return tAny(`grid.typeMix.${kind}`, { n: m.off, total: m.total });
-	}
-
-	/** Résultat déversé qui couvre la cellule (menu « Convertir en tableau »). */
-	function spillUnder(row: number, col: number) {
-		return spillAt(spills, row, col);
-	}
-
 	/** Infobulle d'un en-tête de colonne : nom complet et type. */
 	let tipCell = '';
-	function updateHeaderTip(ev: MouseEvent) {
-		const nb = nameBadgeAt(ev);
-		if (nb) {
-			if (tipCell !== 'name:' + nb.t.name)
-				scroller.title = isDefaultTableName(nb.t.name)
-					? tr('grid.nameBadge.default.tooltip', { name: nb.t.name })
-					: tr('grid.nameBadge.tooltip', { name: nb.t.name });
-			tipCell = 'name:' + nb.t.name;
-			return;
-		}
-		const pb = pivotBadgeAt(ev);
-		if (pb) {
-			if (tipCell !== 'pivot:' + pb.id) scroller.title = tr('grid.pivot.nameBadge.tooltip', { name: pb.config.name ?? '' });
-			tipCell = 'pivot:' + pb.id;
-			return;
-		}
-		if (localBadgeAt(ev)) {
-			if (tipCell !== 'local') scroller.title = tr('grid.local.tooltip');
-			tipCell = 'local';
-			return;
-		}
-		if (followBadgeAt(ev)) {
-			const name = data?.choice?.name ?? '';
-			if (tipCell !== 'follow')
-				scroller.title = tr('grid.follow.tooltip', { name, value: data?.choice?.value || tr('grid.follow.empty'), follow: followLabel(name) });
-			tipCell = 'follow';
-			return;
-		}
-		if (keyHintAt(ev)) {
-			if (tipCell !== 'keyhint') scroller.title = KEY_HINT_TIP;
-			tipCell = 'keyhint';
-			return;
-		}
-		// Lien : son adresse, et le clic.
-		const lk = linkUnder(ev);
-		if (lk) {
-			const id = `link:${lk.row},${lk.col}`;
-			if (tipCell !== id) scroller.title = tr('grid.link.tooltip', { address: lk.url.replace(/^mailto:/i, '') });
-			tipCell = id;
-			return;
-		}
-		const cell = cellAt(ev);
-		const e = cell && tableAt(cell.row, cell.col);
-		// Zone déversée d'une formule : d'où elle vient, et le clic droit.
-		const sp = cell && !e && source.convertSpill ? spillUnder(cell.row, cell.col) : undefined;
-		if (sp) {
-			const id = `spill:${sp.row},${sp.col}`;
-			if (tipCell !== id) scroller.title = spillTip(sp);
-			tipCell = id;
-			return;
-		}
-		if (!cell || !e || cell.row !== e.t.row) {
-			if (tipCell) scroller.title = tipCell = '';
-			return;
-		}
-		const i = cell.col - e.t.col;
-		const id = `${e.t.id}:${i}`;
-		if (id === tipCell) return;
-		tipCell = id;
-		const k = e.t.columns[i];
-		const auto = e.t.autoNumber === i ? ' · ' + (e.t.key === i ? tr('grid.key.autoNumberKey', { tip: AUTO_NUMBER_TIP }) : AUTO_NUMBER_TIP) : e.t.key === i ? ' · ' + tr('grid.key.isKey') : '';
-		scroller.title = `${k.name} — ${typeLabel(k.type)}${auto}`;
-		mixOf(e, i).then((m) => {
-			if (m && tipCell === id) scroller.title = `${k.name} — ${typeLabel(k.type)}${auto} · ${mixText(m)}`;
-		});
-	}
-
-	/** Un clic sur les boutons d'un en-tête (▾ ou icône de type) : le menu de la colonne. */
-	function openTypeMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
-		const e = tableAt(cell.row, cell.col);
-		if (!e || cell.row !== e.t.row) return false;
-		return headerButton(ev, e, cell.col, false);
-	}
-
-	/**
-	 * Boutons d'en-tête de la colonne c du tableau e (frozen : en-tête figé
-	 * dans le bandeau du haut) : le ▾ et l'icône de type (indicative) ouvrent
-	 * le même menu de la colonne, comme le ▾ d'Excel ; un second clic le ferme.
-	 */
-	function headerButton(ev: MouseEvent, e: Entry, c: number, frozen: boolean): boolean {
-		const i = c - e.t.col;
-		const right = screenX(c) + cax().size(c);
-		if (right - toLocal(ev).x > 34) return false;
-		if (!source.sortTable && !(source.filterValues && source.setFilter) && !source.setType) return false;
-		if (!frozen) moveTo(e.t.row, c);
-		if (filterClosed.key === `${e.t.id}:${i}` && performance.now() - filterClosed.at < 400) {
-			filterClosed = { key: '', at: 0 };
-			return true;
-		}
-		openFilter(e, i);
-		return true;
-	}
-
-	/** Colonne d'un en-tête figé (bandeau du haut) sous la souris. */
-	function frozenHeaderAt(ev: MouseEvent): { e: Entry; col: number } | null {
-		if (a1) return null;
-		const { x, y } = toLocal(ev);
-		if (y >= TOP_H || x < MARGIN) return null;
-		const col = colAtX(x);
-		// Première ligne de la partie qui défile (sous les volets figés).
-		const r0 = rowAtY(TOP_H + rowTop(fRows()));
-		const e = entries.find((e) => e.t.row < r0 && e.t.row >= fRows() && e.last >= r0 && col >= e.t.col && col <= e.lastCol);
-		return e ? { e, col } : null;
-	}
-
-	/** Type de données choisi dans le menu de la colonne (confirmé : malgré les valeurs qui ne s'y convertissent pas). */
-	async function chooseType(to: ColumnType, confirmed = false) {
-		const m = filterDlg;
-		if (!m || !source.setType) return;
-		if (!confirmed && source.convertPreview && to !== m.e.t.columns[m.i].type) {
-			const n = await source.convertPreview(m.e.t, m.i, to);
-			if (n > 0) {
-				m.pending = { to, n };
-				return;
-			}
-		}
-		closeFilter();
-		const setType = source.setType;
-		await menuAction(() => setType(m.e.t, m.i, to));
-	}
-
-	/** Clé du tableau (pied du menu de la colonne) : la poser sur la colonne ou la retirer. */
-	function chooseKey(set: boolean) {
-		const m = filterDlg;
-		if (!m) return;
-		closeFilter();
-		menuAction(() => (set ? source.setKey!(m.e.t, m.i) : source.clearKey!(m.e.t)));
-	}
-
-	// --- Menu contextuel ----------------------------------------------------
 
 	// rowOnly : clic droit sur un numéro de ligne (pas d'actions de colonne).
 	// confirmDelete : suppression d'un grand tableau en attente de confirmation.
 	let menu = $state<{ x: number; y: number; e: Entry; n: number; i: number; header: boolean; rowOnly?: boolean; confirmDelete?: boolean } | null>(null);
-
 	/** Colonnes que « Choisir par… » propose (null : pas encore connues), relues à l'ouverture d'un menu. */
 	let choiceCands = $state.raw<ChoiceCandidate[] | null>(null);
-	const wantsCands = $derived(!!source.setTabChoice && (!!menu || !!filterDlg || !!pivotDlg || panel?.kind === 'pivot'));
-	$effect(() => {
-		if (!wantsCands) return;
-		untrack(() => {
-			choiceCands = null;
-			source.choiceCandidates?.().then(
-				(c) => (choiceCands = c ?? []),
-				() => undefined
-			);
-		});
-	});
-
 	/** Au-delà de ce nombre de lignes, « Supprimer le tableau » demande confirmation. */
 	const CONFIRM_DELETE_ROWS = 500;
-
-	function deleteTable(t: SheetTable) {
-		// Pas menuAction : il effacerait le message une fois l'action finie.
-		const del = source.deleteTables!;
-		menu = null;
-		wrap.focus();
-		writing = writing.catch(() => undefined).then(() =>
-			del([t]).then(
-				() => say(tr('grid.table.deleted', { name: t.name })),
-				(err) => say(errorText(err))
-			)
-		);
-	}
-
-	const pointAt = (clientX: number, clientY: number) => ({ clientX, clientY, preventDefault() {}, stopPropagation() {} }) as unknown as MouseEvent;
-
-	/** Menu contextuel ouvert au clavier : posé sur la cellule active, ou sur le graphique sélectionné. */
-	function keyContextMenu() {
-		const el = selChart !== null ? wrap.querySelector<HTMLElement>('.chart.selected') : null;
-		const ch = el ? charts.find((c) => c.id === selChart) : undefined;
-		if (el && ch) {
-			const r = el.getBoundingClientRect();
-			onChartMenu(pointAt(r.left + Math.min(r.width / 2, 40), r.top + Math.min(r.height / 2, 20)), ch);
-			return;
-		}
-		ensureVisible(active.row, active.col);
-		const k = zoomK();
-		const r = scroller.getBoundingClientRect();
-		const x = screenX(active.col) + Math.min(cax().size(active.col), 60) / 2;
-		const y = screenY(active.row) + rh(active.row) / 2;
-		onContextMenu(pointAt(r.left + x * k, r.top + y * k));
-	}
-
-	function onContextMenu(ev: MouseEvent) {
-		if (locked && !hold) {
-			ev.preventDefault(); // feuille protégée : aucune cellule à cibler
-			return;
-		}
-		if (!formulaMode && openHintMenu(ev)) return;
-		const cell = cellAt(ev);
-		ev.preventDefault();
-		closeMenus();
-		if (!cell) {
-			// Clic droit sur un numéro de ligne : menu de la ligne du tableau ;
-			// hors tableau (ou sur une lettre de colonne) : presse-papiers.
-			const hd = headerAt(ev);
-			const r = wrap.getBoundingClientRect();
-			const te = hd?.kind === 'rows' ? entries.find((x) => hd.row > x.t.row && hd.row <= x.last) : undefined;
-			freeMenu = null;
-			refItems = null;
-			if (te && hd?.kind === 'rows') menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e: te, n: hd.row - te.t.row - 1, i: 0, header: false, rowOnly: true };
-			else if (hd) freeMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top, kind: hd.kind };
-			return;
-		}
-		// La bande des groupes donne le menu de l'en-tête.
-		const e = tableAt(cell.row, cell.col) ?? groupBandAt(cell.row, cell.col);
-		if (!inSelection(cell.row, cell.col)) moveTo(cell.row, cell.col);
-		const r = wrap.getBoundingClientRect();
-		loadRefItems(cell.row, cell.col);
-		if (!e) {
-			freeMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top };
-			return;
-		}
-		menu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e, n: cell.row - e.t.row - 1, i: cell.col - e.t.col, header: cell.row <= e.t.row };
-	}
-
 	/** La cellule est dans une zone « plage » (tableau converti). */
 	// Cellule libre gardée hors du tableau voisin (note, total : style « out »).
 	const keptOut = (row: number, col: number) => !!(freeStyles.get(key(row, col)) as { out?: boolean } | undefined)?.out;
@@ -7273,57 +7037,74 @@
 	};
 	const titleAbove = (t: SheetTable) => !!source.titleToHeader && !t.query && titleAboveFilled(t, (r, c) => cells.get(key(r, c)));
 	const inRangeZone = (row: number, col: number) => (data.ranges ?? []).some((z) => row >= z.r0 && row <= z.r1 && col >= z.c0 && col <= z.c1);
-
-	/** Sous-menu Ligne « … » ou Colonne « … » d'un numéro ou d'une lettre : ce que la feuille permet (ctxmenu.ts). */
-	function linesOpts(kind: 'rows' | 'cols') {
-		const rows = kind === 'rows';
-		const on = !!source.sheetLines;
-		const hide = on && !!source.setLinesHidden;
-		return { insert: on, size: on && !!(rows ? source.setRowHeight : source.setColumnWidth), hide, unhide: hide && hiddenIn(rows) };
-	}
-
-	/**
-	 * Titre du sous-menu de la ligne ou de la colonne (Ligne « 3 », Colonnes
-	 * « B » à « D ») : dans un tableau, l'identifiant que montre la gouttière
-	 * (sa clé, sinon son numéro, rowLabel) ; sur la feuille, le numéro ou les
-	 * lettres de l'en-tête.
-	 */
-	function linesTitle(kind: 'rows' | 'cols', e?: Entry): string {
-		const { r0, r1, c0, c1 } = selection();
-		const name = (i: number) => clip(kind === 'cols' ? colLetters(i) : e ? rowLabel(e, i) : String(i + 1));
-		const [a, b] = kind === 'rows' ? [r0, r1] : [c0, c1];
-		if (b > a) return tr(kind === 'rows' ? 'grid.menu.rows' : 'grid.menu.columns', { first: name(a), last: name(b) });
-		return tr(kind === 'rows' ? 'grid.menu.row' : 'grid.menu.column', { name: name(a) });
-	}
-
 	// Menu du clic droit hors tableau : presse-papiers et effacement.
 	let freeMenu = $state<{ x: number; y: number; kind?: 'rows' | 'cols' } | null>(null);
-
-	/**
-	 * Écriture d'un menu ou d'un volet, à la suite des précédentes ; rend
-	 * faux si elle est refusée. keepFocus : réglage d'un volet (graphique,
-	 * TCD), le focus y reste au lieu de revenir à la grille.
-	 */
-	async function menuAction(fn: (() => Promise<unknown>) | undefined, keepFocus = false): Promise<boolean> {
-		menu = null;
-		freeMenu = null;
-		if (!keepFocus) wrap.focus();
-		if (!fn) return false;
-		let ok = true;
-		writing = writing.catch(() => undefined).then(async () => {
-			try {
-				await fn();
-				message = '';
-			} catch (err) {
-				ok = false;
-				linesHint = null; // refusée : rien ne glisse
-				message = errorText(err);
-			}
-			refreshStatus();
-		});
-		await writing;
-		return ok;
-	}
+	const menusCtl = createMenus({
+		get source() { return source; },
+		get mixes() { return mixes; },
+		get spills() { return spills; },
+		get nameBadgeAt() { return nameBadgeAt; },
+		get tipCell() { return tipCell; }, set tipCell(v) { tipCell = v; },
+		get scroller() { return scroller; },
+		get pivotBadgeAt() { return pivotBadgeAt; },
+		get localBadgeAt() { return localBadgeAt; },
+		get followBadgeAt() { return followBadgeAt; },
+		get data() { return data; },
+		get keyHintAt() { return keyHintAt; },
+		get KEY_HINT_TIP() { return KEY_HINT_TIP; },
+		get linkUnder() { return linkUnder; },
+		get cellAt() { return cellAt; },
+		get tableAt() { return tableAt; },
+		get AUTO_NUMBER_TIP() { return AUTO_NUMBER_TIP; },
+		get screenX() { return screenX; },
+		get cax() { return cax; },
+		get toLocal() { return toLocal; },
+		get moveTo() { return moveTo; },
+		get filterClosed() { return filterClosed; }, set filterClosed(v) { filterClosed = v; },
+		get openFilter() { return openFilter; },
+		get a1() { return a1; },
+		get MARGIN() { return MARGIN; },
+		get colAtX() { return colAtX; },
+		get rowAtY() { return rowAtY; },
+		get rowTop() { return rowTop; },
+		get fRows() { return fRows; },
+		get entries() { return entries; },
+		get filterDlg() { return filterDlg; },
+		get closeFilter() { return closeFilter; },
+		get menu() { return menu; }, set menu(v) { menu = v; },
+		get pivotDlg() { return pivotDlg; },
+		get panel() { return panel; },
+		get choiceCands() { return choiceCands; }, set choiceCands(v) { choiceCands = v; },
+		get wrap() { return wrap; },
+		get writing() { return writing; }, set writing(v) { writing = v; },
+		get say() { return say; },
+		get selChart() { return selChart; },
+		get charts() { return charts; },
+		get onChartMenu() { return onChartMenu; },
+		get ensureVisible() { return ensureVisible; },
+		get active() { return active; },
+		get zoomK() { return zoomK; },
+		get screenY() { return screenY; },
+		get rh() { return rh; },
+		get locked() { return locked; },
+		get hold() { return hold; },
+		get formulaMode() { return formulaMode; },
+		get openHintMenu() { return openHintMenu; },
+		get closeMenus() { return closeMenus; },
+		get headerAt() { return headerAt; },
+		get freeMenu() { return freeMenu; }, set freeMenu(v) { freeMenu = v; },
+		get refItems() { return refItems; }, set refItems(v) { refItems = v; },
+		get groupBandAt() { return groupBandAt; },
+		get inSelection() { return inSelection; },
+		get loadRefItems() { return loadRefItems; },
+		get hiddenIn() { return hiddenIn; },
+		get selection() { return selection; },
+		get rowLabel() { return rowLabel; },
+		get message() { return message; }, set message(v) { message = v; },
+		get linesHint() { return linesHint; }, set linesHint(v) { linesHint = v; },
+		get refreshStatus() { return refreshStatus; }
+	});
+	const { mixOf, mixText, spillUnder, updateHeaderTip, openTypeMenu, headerButton, frozenHeaderAt, chooseType, chooseKey, deleteTable, keyContextMenu, onContextMenu, linesOpts, menuAction } = menusCtl;
 
 	// --- Mesures ------------------------------------------------------------
 
