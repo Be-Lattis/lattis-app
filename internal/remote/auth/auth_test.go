@@ -190,7 +190,7 @@ func TestLoginRefused(t *testing.T) {
 	f := newFakeLattisd(t)
 	m := newManager(t, f, memStore{}, "", nil)
 	for reason, want := range map[string]string{
-		"not_invited":         "invitées",
+		"not_invited":         "invités",
 		"denied_tenant":       "organisation autorisée",
 		"tenant_not_allowed":  "organisation autorisée",
 		"account_disabled":    "désactivé",
