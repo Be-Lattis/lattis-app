@@ -14,7 +14,7 @@
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
 	import { allGenerated, defaultNameHint, isDefaultTableName, isGeneratedColumnName } from './defaultname';
-	import { ease, flashAlpha, lerpBar, motionAt, progress, reducedMotion, sameBar, shiftAxis, tableMotions, zeroBar, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
+	import { ease, reducedMotion, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
 	import { sweepAt, watchSource, WORK_DELAY, workAlpha, type WorkLookup, type WorkZone } from './working';
 	import { followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
 	import { clipValues, hasClipStyles, parseClipHtml, toClipHtml, type ClipStyle } from './clipboardHtml';
@@ -33,7 +33,7 @@
 	import { afterWidthChange, sideRoom } from './keepinview';
 	import { dvPreview, hiddenLines, mergeAt, mergeList, validate, type DvList, type MergeRange } from './sheetfmt';
 	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
-	import { expandRange, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
+	import { expandRange, intersect, isSingleCell, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { findZone, inZone, zoneLabel, type Zone } from './findzone';
 	import { type FindOpts, type FoundCell } from './findopts';
 	import FindMore from './FindMore.svelte';
@@ -59,7 +59,6 @@
 	import { followLabel } from '#lib/shell/mergesheets.js';
 	import { bandMerges, groupSpans, headerLabel, isSingle, tableTop } from './twolevel';
 	import { tableUnderTitle, titleAboveFilled } from './titlehead';
-	import { grown as growFrame, type Grown } from './grown';
 	import { pivotColLayer, pivotLayer, pivotValueText } from './pivotformat';
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setColFolded, setFolded } from './pivottree';
 	import { newSlicer, withSlicer } from './pivotslicer';
@@ -138,6 +137,7 @@
 	import { createOutline } from './sheet/outline.svelte.js';
 	import { createStatus } from './sheet/status.svelte.js';
 	import { createBench } from './sheet/bench.svelte.js';
+	import { createAnim } from './sheet/anim.svelte.js';
 
 
 	interface Props {
@@ -1028,141 +1028,72 @@
 	// les données qui arrivent s'affichent telles quelles.
 	let chartTween = $state(false);
 
-	/** Début d'une image : axes animés, valeurs de l'image précédente. */
-	function beginAnimFrame(now: number) {
-		animNow = now;
-		animBusy = false;
-		rowDraw = rowAxis;
-		colDraw = colAxis;
-		if (lines) {
-			const k = progress(now, lines.t0);
-			if (k >= 1 || !motion()) lines = null;
-			else {
-				animBusy = true;
-				if (lines.rows) rowDraw = shiftAxis(rowAxis, lines, ease(k));
-				else colDraw = shiftAxis(colAxis, lines, ease(k));
-			}
-		}
-		drawing = true;
-		const drawn = geoDrawn;
-		geoDrawn = new Map();
-		if (!motion()) {
-			grownSeen.clear();
-			if (valsNow.size || barsNow.size || flashes.size || barAnims.size || motions.size || inner.size) {
-				valsNow = new Map();
-				barsNow = new Map();
-				flashes.clear();
-				barAnims.clear();
-				motions.clear();
-				inner.clear();
-			}
-			return;
-		}
-		valsPrev = valsNow;
-		valsNow = new Map();
-		barsPrev = barsNow;
-		barsNow = new Map();
-		viewPrev = viewNow;
-		growMotions(drawn, now);
-	}
-
+	// --- Animations : sheet/anim.svelte.ts ---
+	const animCtl = createAnim({
+		get animNow() { return animNow; }, set animNow(v) { animNow = v; },
+		get animBusy() { return animBusy; }, set animBusy(v) { animBusy = v; },
+		get rowDraw() { return rowDraw; }, set rowDraw(v) { rowDraw = v; },
+		get rowAxis() { return rowAxis; },
+		get colDraw() { return colDraw; }, set colDraw(v) { colDraw = v; },
+		get colAxis() { return colAxis; },
+		get lines() { return lines; }, set lines(v) { lines = v; },
+		get motion() { return motion; },
+		get drawing() { return drawing; }, set drawing(v) { drawing = v; },
+		get geoDrawn() { return geoDrawn; }, set geoDrawn(v) { geoDrawn = v; },
+		get grownSeen() { return grownSeen; }, set grownSeen(v) { grownSeen = v; },
+		get valsNow() { return valsNow; }, set valsNow(v) { valsNow = v; },
+		get barsNow() { return barsNow; }, set barsNow(v) { barsNow = v; },
+		get flashes() { return flashes; },
+		get barAnims() { return barAnims; },
+		get motions() { return motions; },
+		get inner() { return inner; },
+		get valsPrev() { return valsPrev; }, set valsPrev(v) { valsPrev = v; },
+		get barsPrev() { return barsPrev; }, set barsPrev(v) { barsPrev = v; },
+		get viewPrev() { return viewPrev; }, set viewPrev(v) { viewPrev = v; },
+		get viewNow() { return viewNow; }, set viewNow(v) { viewNow = v; },
+		get entries() { return entries; },
+		get GROW_MS() { return GROW_MS; },
+		get schedule() { return schedule; },
+		get navAt() { return navAt; }, set navAt(v) { navAt = v; },
+		get NAV_SETTLE() { return NAV_SETTLE; },
+		get linesHint() { return linesHint; }, set linesHint(v) { linesHint = v; },
+		get editAt() { return editAt; }, set editAt(v) { editAt = v; },
+		get chartTween() { return chartTween; }, set chartTween(v) { chartTween = v; },
+		get grownCharts() { return grownCharts; }, set grownCharts(v) { grownCharts = v; },
+		get charts() { return charts; },
+		get viewH() { return viewH; },
+		get viewW() { return viewW; },
+		get rh() { return rh; },
+		get cax() { return cax; },
+		get rspan() { return rspan; },
+		get topRow() { return topRow; },
+		get rowTop() { return rowTop; },
+		get tableAnimsAt() { return tableAnimsAt; }, set tableAnimsAt(v) { tableAnimsAt = v; },
+		get tableAnims() { return tableAnims; }, set tableAnims(v) { tableAnims = v; },
+		get noOff() { return noOff; },
+		get ctx() { return ctx; },
+		get EDIT_WINDOW() { return EDIT_WINDOW; },
+		get columnFlash() { return columnFlash; }, set columnFlash(v) { columnFlash = v; },
+		get typed() { return typed; },
+		get boxOf() { return boxOf; },
+		get active() { return active; },
+		get locked() { return locked; },
+		get structure() { return structure; },
+		get keptOut() { return keptOut; },
+		get inRangeZone() { return inRangeZone; }
+	});
+	const { beginAnimFrame, endAnimFrame, startAnims, hintLines, tableGeo, tableAnim, enterTable, barShown, columnFlashes, flashOf, paintFlash, activeRect, grown } = animCtl;
 	// Cadre prolongé par la cellule active (juste dessous ou à droite), ou
 	// rendu quand elle s'en va, sans que le tableau change : il s'étire ou se
 	// rétracte en douceur, depuis le cadre dessiné à l'image précédente.
 	const GROW_MS = 160;
 	let grownSeen = new Map<number, string>();
-	function growMotions(drawn: Map<number, Geo>, now: number) {
-		const seen = new Map<number, string>();
-		for (const e of entries) {
-			const g = grown(e);
-			const base = `${e.t.row},${e.t.col},${e.last},${e.lastCol}`;
-			const k = `${base}|${g.last},${g.lastCol},${g.firstCol}`;
-			seen.set(e.t.id, k);
-			const was = grownSeen.get(e.t.id);
-			// Tableau lui-même modifié (saisie, insertion) : startAnims s'en charge.
-			if (!was || was === k || !was.startsWith(base + '|')) continue;
-			const from = drawn.get(e.t.id);
-			if (from && !motions.get(e.t.id)?.born) motions.set(e.t.id, { t0: now, from, ms: GROW_MS, grow: true });
-		}
-		grownSeen = seen;
-	}
-
-	/** Fin d'une image : vrais axes, image suivante s'il reste une animation. */
-	function endAnimFrame() {
-		drawing = false;
-		if (animBusy) schedule();
-	}
 
 	// Ouverture d'une feuille : les mises en page qui suivent de près (données
 	// relues, tableaux, graphiques) appartiennent encore à la navigation, et
 	// la feuille s'affiche d'un coup, sans tableaux qui se déplient.
 	const NAV_SETTLE = 1000;
 	let navAt = -Infinity;
-	/**
-	 * Animations d'une nouvelle mise en page (après rebuildAxis et rebuildRows) :
-	 * insertion ou suppression demandée, tableaux déplacés, agrandis ou nés.
-	 */
-	function startAnims(nav: boolean, known: Set<number>, oldCharts: Set<number>, now: number) {
-		if (nav) navAt = now;
-		else if (now - navAt < NAV_SETTLE) nav = true;
-		const hint = linesHint && now - linesHint.t < 3000 ? linesHint : null;
-		linesHint = null;
-		if (nav || !motion()) {
-			editAt = -Infinity;
-			chartTween = false;
-			lines = null;
-			motions.clear();
-			inner.clear();
-			flashes.clear();
-			barAnims.clear();
-			valsNow = new Map();
-			barsNow = new Map();
-			viewNow = null;
-			if (grownCharts.size) grownCharts = new Set();
-			return;
-		}
-		editAt = now;
-		chartTween = true;
-		const born = charts.filter((c) => !oldCharts.has(c.id)).map((c) => c.id);
-		if (born.length || grownCharts.size) grownCharts = new Set(born);
-		if (hint && hint.table === undefined) {
-			// Lignes ou colonnes de la feuille : tout glisse avec l'axe ; les
-			// cellules libres ont changé de place, leurs valeurs ne s'éclairent pas.
-			const view = hint.rows ? viewH : viewW;
-			lines = { t0: now, rows: hint.rows, at: hint.at, n: hint.n, px: Math.min(hint.px, view) };
-			motions.clear();
-			inner.clear();
-			valsNow = new Map();
-			barsNow = new Map();
-			schedule();
-			return;
-		}
-		// Une même modification peut arriver en deux mises en page (relecture,
-		// puis événement du classeur) : les animations en cours continuent.
-		if (lines) return;
-		const geo = new Map(entries.map((e) => [e.t.id, tableGeo(e)]));
-		for (const [id, m] of tableMotions(geoDrawn, known, geo, now)) if (!motions.get(id)?.born) motions.set(id, m);
-		for (const id of inner.keys()) if (!geo.has(id)) inner.delete(id);
-		if (hint && hint.table !== undefined && entries.some((e) => e.t.id === hint.table)) inner.set(hint.table, { t0: now, rows: hint.rows, at: hint.at, n: hint.n, px: hint.px });
-		schedule();
-	}
-
-	/** Insertion ou suppression demandée (lignes ou colonnes de la feuille, ou d'un tableau). */
-	function hintLines(rows: boolean, at: number, n: number, table?: number) {
-		if (!motion()) return;
-		const px = n > 0 ? (rows ? rh(at) : cax().size(at)) : rows ? rspan(at, at - n - 1) : cax().offset(at - n) - cax().offset(at);
-		linesHint = { t: performance.now(), rows, at, n, px, table };
-	}
-
-	/** Cadre affiché d'un tableau (prolongé quand la cellule active est juste dessous, à droite ou à gauche), en pixels de la feuille. */
-	function tableGeo(e: Entry): Geo {
-		const g = grown(e);
-		const x = cax().offset(g.firstCol);
-		// La bande des groupes fait partie du cadre.
-		const top = topRow(e.t);
-		const y = rowTop(top);
-		return { x, y, w: cax().offset(g.lastCol + 1) - x, h: rspan(top, g.last) };
-	}
 
 	// ox : bord gauche du cadre animé par rapport à sa place finale (cadre qui
 	// s'étire vers la gauche, contenu immobile).
@@ -1170,135 +1101,10 @@
 	let tableAnims = new Map<number, TableAnim | null>();
 	let tableAnimsAt = -1;
 
-	/** Mouvement d'un tableau à cette image (null : immobile). */
-	function tableAnim(e: Entry): TableAnim | null {
-		if (!motions.size && !inner.size) return null;
-		if (tableAnimsAt !== animNow) {
-			tableAnims = new Map();
-			tableAnimsAt = animNow;
-		}
-		const id = e.t.id;
-		if (tableAnims.has(id)) return tableAnims.get(id)!;
-		let out: TableAnim | null = null;
-		const to = tableGeo(e);
-		const m = motions.get(id);
-		if (m) {
-			const k = progress(animNow, m.t0, m.ms);
-			if (k >= 1) motions.delete(id);
-			else {
-				animBusy = true;
-				const g = motionAt(m, to, ease(k), rh(e.t.row));
-				// Cadre seul étiré : il s'ouvre vers la gauche, le contenu ne glisse pas.
-				out = m.grow ? { dx: 0, dy: 0, ox: g.x - to.x, w: g.w, h: g.h, alpha: g.alpha, rowOff: noOff, colOff: noOff } : { dx: g.x - to.x, dy: g.y - to.y, ox: 0, w: g.w, h: g.h, alpha: g.alpha, rowOff: noOff, colOff: noOff };
-			}
-		}
-		const s = inner.get(id);
-		if (s) {
-			const k = progress(animNow, s.t0);
-			if (k >= 1) inner.delete(id);
-			else {
-				animBusy = true;
-				const left = (1 - ease(k)) * s.px;
-				// Insertion : ce qui suit la nouvelle ligne part de son ancienne place ;
-				// suppression : ce qui suivait la ligne supprimée remonte.
-				const off = (i: number) => (s.n > 0 ? (i > s.at ? -left : 0) : i >= s.at ? left : 0);
-				out ??= { dx: 0, dy: 0, ox: 0, w: to.w, h: to.h, alpha: 1, rowOff: noOff, colOff: noOff };
-				if (s.rows) out.rowOff = off;
-				else out.colOff = off;
-			}
-		}
-		tableAnims.set(id, out);
-		return out;
-	}
-
-	/**
-	 * Entre dans le repère d'un tableau en mouvement : décalage, opacité, et
-	 * découpe à son cadre animé (agrandi de ce que la saisie prolonge) ;
-	 * faux s'il est immobile (rien à restaurer).
-	 */
-	function enterTable(e: Entry, cx: (c: number) => number, ry: (r: number) => number): boolean {
-		const a = tableAnim(e);
-		if (!a) return false;
-		ctx.save();
-		ctx.translate(a.dx, a.dy);
-		ctx.globalAlpha *= a.alpha;
-		ctx.beginPath();
-		ctx.rect(cx(grown(e).firstCol) + a.ox - 1, ry(topRow(e.t)) - 1, a.w + 2, a.h + 2);
-		ctx.clip();
-		return true;
-	}
-
-	/** Barre de données affichée pour la cellule k (sheet r, c) : de l'ancienne valeur, ou de zéro, à la nouvelle. */
-	function barShown(k: string, b: BarSpan & { axis?: number; rev?: boolean }, r: number, c: number): BarSpan {
-		if (!motion()) return b;
-		const target = { a: b.a, b: b.b };
-		const prev = barsPrev.get(k);
-		let a = barAnims.get(k);
-		if (animNow - editAt < EDIT_WINDOW) {
-			const v = viewPrev;
-			if (prev && !sameBar(prev.t, target)) barAnims.set(k, (a = { from: prev.s, to: target, t0: animNow }));
-			else if (!prev && !a && v && r >= v.r0 && r <= v.r1 && c >= v.c0 && c <= v.c1) barAnims.set(k, (a = { from: zeroBar(b), to: target, t0: animNow }));
-		}
-		let s: BarSpan = target;
-		if (a) {
-			const p = progress(animNow, a.t0);
-			if (p >= 1 || !sameBar(a.to, target)) barAnims.delete(k);
-			else {
-				s = lerpBar(a.from, target, ease(p));
-				animBusy = true;
-			}
-		}
-		barsNow.set(k, { t: target, s });
-		return s;
-	}
-
 	// Formule de colonne validée : toutes ses cellules flashent, même si leur
 	// valeur ne change pas (on voit que toute la colonne a été modifiée). Les
 	// lignes chargées ensuite flashent à leur premier affichage.
 	let columnFlash: { table: number; name: string; t: number; done: Set<string> } | null = null;
-	function columnFlashes(table: number, name: string, k: string) {
-		const f = columnFlash;
-		if (!f || f.table !== table || f.name !== name || f.done.has(k)) return;
-		if (animNow - f.t > 1500) {
-			columnFlash = null;
-			return;
-		}
-		f.done.add(k);
-		flashes.set(k, animNow);
-	}
-
-	/** Éclat d'une valeur calculée (clé k, cellule r, c) qui vient de changer : opacité (0 : aucun). */
-	function flashOf(k: string, v: string, r: number, c: number): number {
-		if (!motion()) return 0;
-		const prev = valsPrev.get(k);
-		valsNow.set(k, v);
-		if (prev !== undefined && prev !== v && animNow - editAt < EDIT_WINDOW && (r !== typed.row || c !== typed.col || animNow - typed.t > EDIT_WINDOW)) flashes.set(k, animNow);
-		const t0 = flashes.get(k);
-		if (t0 === undefined) return 0;
-		const a = flashAlpha(animNow, t0);
-		if (a <= 0) flashes.delete(k);
-		else animBusy = true;
-		return a;
-	}
-
-	/** Pose l'éclat d'une cellule ou d'une zone (sous son texte). */
-	function paintFlash(a: number, x: number, y: number, w: number, h: number) {
-		if (a <= 0) return;
-		ctx.fillStyle = `rgba(33, 115, 70, ${(0.2 * a).toFixed(3)})`;
-		ctx.fillRect(x, y, w, h);
-	}
-
-	function activeRect() {
-		const g = boxOf(active.row, active.col);
-		return g ? mergeRect(g) : { r0: active.row, r1: active.row, c0: active.col, c1: active.col };
-	}
-
-	/** Étendue affichée d'un tableau : une ligne ou une colonne de plus quand la
-	 * cellule active est juste dessous ou juste à droite (la saisie l'étendra),
-	 * jusqu'au tableau voisin qu'elle rejoindrait (fusion). */
-	function grown(e: Entry): Grown {
-		return growFrame(e, { row: active.row, col: active.col, entries, locked: !!locked, structure, keptOut, inRange: inRangeZone });
-	}
 
 	const inTable = (e: Entry, r: number, c: number) => r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol;
 	const tableAt = (r: number, c: number) => entries.find((e) => inTable(e, r, c));
