@@ -40,7 +40,7 @@
 	let { title, server, link = '', onclose, onaddshared, onremove }: Props = $props();
 
 	/** Page d'aide des droits. */
-	const HELP = 'fichiers#gerer-l-acces-a-un-classeur-partage';
+	const HELP = 'partage#gerer-l-acces-a-un-classeur-partage';
 
 	type Tab = 'members' | 'roles' | 'rules' | 'preview' | 'drift';
 	let view = $state<RightsView | null>(null);

@@ -56,7 +56,7 @@
 	}
 	let { table, ondone, onpublish, onaddshared, onnotice }: Props = $props();
 
-	const HELP = 'fichiers#partager-un-tableau-comme-formulaire';
+	const HELP = 'partage#partager-un-tableau-comme-formulaire';
 	const err = errorText;
 
 	let info = $state<FormInfo | null>(null);

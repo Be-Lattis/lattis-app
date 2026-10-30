@@ -16,6 +16,7 @@ import tableaux from './pages/tableaux.md?raw';
 import regroupement from './pages/regroupement.md?raw';
 import cellules from './pages/cellules.md?raw';
 import fichiers from './pages/fichiers.md?raw';
+import partage from './pages/partage.md?raw';
 import formules from './pages/formules.md?raw';
 import tcd from './pages/tcd.md?raw';
 import graphiques from './pages/graphiques.md?raw';
@@ -49,6 +50,7 @@ const sources: [string, string][] = [
 	['regroupement', regroupement],
 	['cellules', cellules],
 	['fichiers', fichiers],
+	['partage', partage],
 	['formules', formules],
 	['tcd', tcd],
 	['graphiques', graphiques],

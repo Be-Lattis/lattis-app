@@ -49,7 +49,7 @@
 	};
 
 	/** Page d'aide du partage au Data Lake. */
-	const HELP = 'fichiers#partager-un-tableau-au-data-lake-lattis';
+	const HELP = 'partage#partager-un-tableau-au-data-lake-lattis';
 
 	let info = $state<Info | null>(null);
 	let server = $state('');

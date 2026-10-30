@@ -57,7 +57,7 @@
 		source: SourceLink | null;
 	};
 	/** Page d'aide du partage au Data Lake. */
-	const HELP = 'fichiers#partager-un-tableau-au-data-lake-lattis';
+	const HELP = 'partage#partager-un-tableau-au-data-lake-lattis';
 	/** Étape : choix de la voie, partage d'un tableau publié, source sans le classeur. */
 	let step = $state<'choose' | 'dataset' | 'source'>('dataset');
 	let way = $state<ShareWay>('workbook');

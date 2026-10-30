@@ -24,7 +24,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Changements
 
-- Aide : la page Prise en main tient en un écran ; le détail des tableaux et des onglets semblables passe dans deux pages, Tableaux et Onglets semblables et onglet à choix.
+- Aide : la page Prise en main tient en un écran ; le détail des tableaux et des onglets semblables passe dans deux pages, Tableaux et Onglets semblables et onglet à choix ; le partage en direct, le Data Lake et les formulaires ont leur page, hors de Fichiers.
 - Fichier `.xlsx` relu : formules en adresses (B2, Feuille2!B2:C5), références structurées (Ventes[Prix], [@Prix]), noms définis, SIERREUR et TEXTE sont gardés au lieu d'être remplacés par leur valeur ; une plage ordinaire reste une plage, un tableau garde son style, une date courte reste une date courte.
 
 - Démarrage plus léger : les éditeurs de texte (documents, SQL, scripts, pages web) ne se chargent qu'à leur première ouverture.
