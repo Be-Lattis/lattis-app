@@ -10,7 +10,7 @@
 	// éditeur DOM superposé à la cellule active, barre de formule.
 	import { flushSync, onMount, tick, untrack } from 'svelte';
 	import { noticeTtl } from '#lib/shell/notice.js';
-	import { RowCache, percentile, syncAt, type SyncKind } from './cache';
+	import { RowCache, syncAt, type SyncKind } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
 	import { allGenerated, defaultNameHint, isDefaultTableName, isGeneratedColumnName } from './defaultname';
@@ -137,6 +137,7 @@
 	import { createValidation } from './sheet/validation.svelte.js';
 	import { createOutline } from './sheet/outline.svelte.js';
 	import { createStatus } from './sheet/status.svelte.js';
+	import { createBench } from './sheet/bench.svelte.js';
 
 
 	interface Props {
@@ -6243,105 +6244,24 @@
 
 	// --- Mesures ------------------------------------------------------------
 
-	/** Défilement continu, sauts aléatoires et saisies, sur le premier tableau. */
-	export async function runBench() {
-		const e = entries[0];
-		if (!e) return;
-		bench = tr('grid.bench.running');
-		const frames = (n: number) =>
-			new Promise<void>((res) => {
-				let k = 0;
-				const step = () => (++k >= n ? res() : requestAnimationFrame(step));
-				requestAnimationFrame(step);
-			});
-		const tableTop = rowTop(e.t.row + 1);
-		const tableSpan = Math.max(0, rspan(e.t.row + 1, e.t.row + e.t.rows) - vs.view);
-
-		vs.to(tableTop + Math.random() * tableSpan * 0.5);
-		syncNative();
-		await frames(30);
-		const intervals: number[] = [];
-		missingFrames = 0;
-		let drawn = 0;
-		let prev = performance.now();
-		const end = prev + 5000;
-		await new Promise<void>((res) => {
-			const step = () => {
-				const now = performance.now();
-				intervals.push(now - prev);
-				prev = now;
-				drawn++;
-				vs.by(10 * ROW_H);
-				scroller.scrollTop = vs.toNative();
-				draw();
-				if (now < end) requestAnimationFrame(step);
-				else res();
-			};
-			requestAnimationFrame(step);
-		});
-		const scrollMissing = missingFrames;
-		const janky = intervals.filter((d) => d > 1000 / 30).length;
-
-		const jumps: number[] = [];
-		for (let i = 0; i < 20; i++) {
-			vs.to(tableTop + Math.random() * tableSpan);
-			syncNative();
-			const t0 = performance.now();
-			const { first, last } = visibleRows();
-			const d = visibleData(e, first, last)!;
-			await new Promise<void>((res) => {
-				const check = () => (e.cache.has(d.first, d.last) ? res() : requestAnimationFrame(check));
-				check();
-			});
-			jumps.push(performance.now() - t0);
-			await frames(2);
-		}
-
-		const edits: number[] = [];
-		const { first: f0, last: f1 } = visibleRows();
-		const d0 = visibleData(e, f0, f1)!;
-		for (let i = 0; i < 20; i++) {
-			const n = d0.first + i;
-			const row = e.cache.row(n);
-			if (!row) continue;
-			const t0 = performance.now();
-			await source.setCell(e.t.row + 1 + n, e.t.col + 1, editValue(e.t.columns[1].type, row.cells[1]), {
-				table: e.t,
-				column: 1,
-				index: n,
-				rowId: row.id
-			});
-			edits.push(performance.now() - t0);
-		}
-
-		const result = {
-			date: new Date().toISOString(),
-			userAgent: navigator.userAgent,
-			rows: e.t.rows,
-			scroll: {
-				frames: drawn,
-				fps: Math.round(drawn / 5),
-				frameP50: +percentile(intervals, 0.5).toFixed(1),
-				frameP95: +percentile(intervals, 0.95).toFixed(1),
-				framesOver33ms: janky,
-				framesWithPlaceholders: scrollMissing
-			},
-			jumpToDataP50: +percentile(jumps, 0.5).toFixed(1),
-			jumpToDataP95: +percentile(jumps, 0.95).toFixed(1),
-			editP50: +percentile(edits, 0.5).toFixed(2),
-			editP95: +percentile(edits, 0.95).toFixed(2),
-			drawP50: +percentile(drawTimes, 0.5).toFixed(2),
-			drawP95: +percentile(drawTimes, 0.95).toFixed(2),
-			blockRoundTripP50: +percentile(e.cache.stats.roundTrip, 0.5).toFixed(2),
-			blockRoundTripP95: +percentile(e.cache.stats.roundTrip, 0.95).toFixed(2),
-			blockGoP50: +percentile(e.cache.stats.server, 0.5).toFixed(2)
-		};
-		console.log('lattis-bench', JSON.stringify(result));
-		(window as unknown as { lattisBench: unknown }).lattisBench = result;
-		bench = tr('grid.bench.result', { fps: String(result.scroll.fps), frame: String(result.scroll.frameP95), janky: String(janky), missing: String(scrollMissing), drawn: String(drawn), jump: String(result.jumpToDataP50), edit: String(result.editP50) });
-		refreshStatus();
-		return result;
-	}
+	// --- Mesure de la grille : sheet/bench.svelte.ts ---
+	const benchCtl = createBench({
+		get entries() { return entries; },
+		get bench() { return bench; }, set bench(v) { bench = v; },
+		get rowTop() { return rowTop; },
+		get rspan() { return rspan; },
+		get vs() { return vs; },
+		get syncNative() { return syncNative; },
+		get missingFrames() { return missingFrames; }, set missingFrames(v) { missingFrames = v; },
+		get scroller() { return scroller; },
+		get draw() { return draw; },
+		get visibleRows() { return visibleRows; },
+		get visibleData() { return visibleData; },
+		get source() { return source; },
+		get drawTimes() { return drawTimes; },
+		get refreshStatus() { return refreshStatus; }
+	});
+	export const runBench = benchCtl.runBench;
 
 	onMount(() => {
 		ctx = canvas.getContext('2d', { alpha: false })!;
