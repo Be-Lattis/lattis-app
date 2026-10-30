@@ -21,7 +21,7 @@
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import { layoutLocked } from '#lib/shell/ribbon.js';
 	import MergeSheetsPanel from '#lib/shell/MergeSheetsPanel.svelte';
-	import { GROUP_COLORS, chipLabel, groupSheets, initialPlan, offerText, pickOffer, planForSheets, shownGroups, type OfferMoment } from '#lib/shell/mergesheets.js';
+	import { GROUP_COLORS, chipLabel, groupSheets, initialPlan, offerText, shownGroups } from '#lib/shell/mergesheets.js';
 	import type { MergePlan, SheetGroup } from '#bindings/internal/canvas/models.js';
 	import { visibleSheet } from '#lib/shell/sheets.js';
 	import { choiceStatus, choiceStep, type ChoiceActions } from '#lib/shell/choice.js';
@@ -125,6 +125,7 @@
 	import { createSheetSource } from './../lib/app/sheetsource.svelte.js';
 	import { createSharing } from './../lib/app/sharing.svelte.js';
 	import { createFiles } from './../lib/app/files.svelte.js';
+	import { createTabMerge } from './../lib/app/tabmerge.svelte.js';
 
 	let mode = $state<Mode>('starting');
 	let bench = $state(false);
@@ -531,71 +532,22 @@
 	// Groupes déjà proposés dans la bulle pendant la session.
 	const offered = new Set<string>();
 
-	function offerMerge(moment: OfferMoment, sheet?: number) {
-		const g = pickOffer(similar, offered, moment, sheet);
-		if (!g) return;
-		offered.add(g.id);
-		mergeOffer = g;
-	}
-
-	/** Tableaux du classeur (tables.list), avec leur feuille. */
-	async function workbookTables(): Promise<{ table: string; sheet: string }[]> {
-		const list = ((await DocumentService.Call('tables.list', {}).catch(() => [])) ?? []) as { name: string; kind: string; sheet: string }[];
-		return list.filter((t) => t.kind === 'table').map((t) => ({ table: t.name, sheet: t.sheet }));
-	}
-
-	async function openMerge(plan: MergePlan | null, group: SheetGroup | null = null) {
-		mergeOffer = null;
-		mergeGroup = group;
-		if (!plan) {
-			notice = t('shell.merge.notice.none');
-			return;
-		}
-		mergeOthers = await workbookTables();
-		mergePlan = plan;
-	}
-
-	/** Données › Regrouper des onglets… : le plus grand groupe trouvé, même peu sûr. */
-	function openMergeMenu() {
-		openMerge(similar[0] ? initialPlan(similar[0], docFile(docState)) : null, similar[0] ?? null).catch((e) => (notice = err(e)));
-	}
-
-	/** Clic droit sur des onglets › Regrouper des onglets… */
-	async function openMergeFor(ids: number[]) {
-		const all = await workbookTables();
-		const names = new Map((layout?.sheets ?? []).map((s) => [s.id, s.name]));
-		const plan = planForSheets(similar, ids, (id) => all.filter((t) => t.sheet === names.get(id)).map((t) => t.table), docFile(docState));
-		if (!plan) {
-			notice = t('shell.merge.notice.noTables');
-			return;
-		}
-		await openMerge(plan, similar.find((g) => g.tables?.some((t) => plan.tables?.includes(t.table))) ?? null);
-	}
-
-	async function dismissGroup(g: SheetGroup | null | undefined) {
-		if (!g) return;
-		if (mergeOffer?.id === g.id) mergeOffer = null;
-		try {
-			docState = await DocumentService.DismissSimilar(g.id);
-			await reload();
-			notice = t('shell.merge.notice.dismissed');
-		} catch (e) {
-			notice = err(e);
-		}
-	}
-
-	async function doMerge(plan: MergePlan): Promise<boolean> {
-		try {
-			const r = await DocumentService.MergeSheets(plan);
-			await selectSheet(r.sheet);
-			await reload();
-			notice = r.notice;
-			return true;
-		} catch (e) {
-			notice = err(e);
-			return false;
-		}
-	}
+	// --- Onglets aux mêmes colonnes : ../lib/app/tabmerge.svelte.ts ---
+	const tabMergeCtl = createTabMerge({
+		get similar() { return similar; },
+		get offered() { return offered; },
+		get mergeOffer() { return mergeOffer; }, set mergeOffer(v) { mergeOffer = v; },
+		get mergeGroup() { return mergeGroup; }, set mergeGroup(v) { mergeGroup = v; },
+		get notice() { return notice; }, set notice(v) { notice = v; },
+		get mergeOthers() { return mergeOthers; }, set mergeOthers(v) { mergeOthers = v; },
+		get mergePlan() { return mergePlan; }, set mergePlan(v) { mergePlan = v; },
+		get docState() { return docState; }, set docState(v) { docState = v; },
+		get err() { return err; },
+		get layout() { return layout; },
+		get reload() { return reload; },
+		get selectSheet() { return selectSheet; }
+	});
+	const { offerMerge, openMerge, openMergeMenu, openMergeFor, dismissGroup, doMerge } = tabMergeCtl;
 
 	async function reload() {
 		// Appels indépendants lancés ensemble : en version web, chacun est un
