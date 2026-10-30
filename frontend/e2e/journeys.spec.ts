@@ -23,6 +23,11 @@ test('2. saisir un tableau', async ({ app }) => {
 	await expect(app.getByRole('textbox', { name: 'Barre de formule' })).toHaveValue('3');
 	// Le tableau est né : la zone de nom montre le tableau et la colonne.
 	await expect(app.locator('input.table-name')).toHaveValue('Feuille1');
+	// Barre d'état : somme de la sélection B2:B4.
+	await goTo(app, 'B2');
+	await app.keyboard.press('Shift+ArrowDown');
+	await app.keyboard.press('Shift+ArrowDown');
+	await expect(app.getByRole('contentinfo', { name: "Barre d'état" })).toContainText('10');
 });
 
 test('3. colonne calculée', async ({ app }) => {
