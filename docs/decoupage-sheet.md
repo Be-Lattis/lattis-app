@@ -1,78 +1,70 @@
 # Découper `Sheet.svelte` et tester l'interface
 
-*Plan, 19/10/2026 (audit 6, I12). Rien n'est encore découpé : ce document fixe l'ordre et la méthode pour le faire par petites étapes, chacune livrable seule, sans changer le comportement.*
+*Plan du 19/10/2026 (audit 6, I12), repris et exécuté le 30/10
+(`docs/audits/audit-architecture-2026-10-30.md`).*
 
-## 1. Point de départ
+## 1. État au 30/10
 
-`frontend/src/lib/grid/Sheet.svelte` fait environ 10 400 lignes : 320 fonctions, 65 `$state`, 11 `$effect`, un gabarit d'environ 1 300 lignes (lignes 8 260 à 9 550) et 850 lignes de styles. Les calculs purs en sont déjà sortis dans une quarantaine de modules `.ts` testés (`axis.ts`, `clipboard.ts`, `fill.ts`, `formulaEdit.ts`, `scroll.ts`…). Ce qui reste mêle trois choses : l'état de la grille (sélection, édition, cache des tableaux), le dessin sur le canvas, et une douzaine de menus, panneaux et boîtes de dialogue posés par-dessus.
+`frontend/src/lib/grid/Sheet.svelte` : 15 511 → 4 448 lignes ;
+`routes/+page.svelte` : 4 184 → 2 493. Le reste est dans :
 
-Le fichier est découpé par des bandeaux `// --- Titre ---`. Les zones les plus grosses :
+- `grid/sheet/*.svelte.ts` : 27 modules de logique (données reçues, dessin,
+  souris, clavier, saisie, menus, filtres, validation, TCD, graphiques…) ;
+- `grid/sheet/*.svelte` : 17 composants posés sur la grille (menus
+  contextuels, panneau ▾, validation, rechercher, notes, boîtes) ;
+- `grid/sheet/model.ts` (types), `grid/sheet/consts.ts` (mesures, polices) ;
+- `lib/app/` : modules et boîtes de la fenêtre (source de la feuille,
+  Fichier, partage, protection).
 
-| Zone (bandeau) | Lignes environ | Nature |
-|---|---|---|
-| Tableaux posés sur la feuille, chargement, cache | 620 à 1 160 | état central |
-| Dessin (cellules, en-têtes, sélection, objets) | 1 160 à 3 100 | canvas |
-| Format de cellule, validation, notes | 3 490 à 4 090 | menus et boîtes |
-| Filtres (tableau et TCD), mise en forme conditionnelle | 4 090 à 4 480 | panneaux |
-| Graphiques, tableau croisé, ruban Formules, audit | 4 480 à 5 340 | objets et commandes |
-| Sélection, clavier, souris, recopie, raccourcis | 5 340 à 6 645 | interaction |
-| Édition, zone de nom, rechercher, presse-papiers | 6 645 à 7 790 | interaction |
-| Type de données, menu contextuel, mesures | 7 790 à 8 260 | menus |
-| Gabarit : menus contextuels, panneaux de filtre, notes, validation | 8 260 à 9 550 | balisage |
+Restent dans `Sheet.svelte` : l'état central (tableaux chargés, sélection,
+édition, défilement), `onMount`, le gabarit de la grille (canvas, éditeur,
+barre de formule), et quatre zones laissées le temps que les chantiers en
+cours y finissent : impression, presse-papiers et collage spécial, liens
+hypertexte, format de cellule.
 
 ## 2. Méthode
 
-1. **D'abord des modules `.ts` purs**, comme jusqu'ici : une fonction qui ne lit que ses arguments sort sans risque et se teste en Node. C'est le gros du gain restant dans les zones « interaction ».
-2. **Puis des composants enfants pour les surfaces posées sur la grille**, sur le modèle déjà en place de `CondFormat.svelte` (interface `CondHost`) et `SheetButtons.svelte` : le composant reçoit un petit objet « hôte » (lecture de l'état utile, commandes) et ne voit jamais les variables internes de la feuille. Un composant par menu ou panneau.
-3. **L'état central reste dans `Sheet.svelte`** tant que le dessin y est : déplacer la sélection ou le cache des tableaux dans un module `.svelte.ts` ne se fera qu'en dernier, quand le reste sera sorti.
-4. **Une étape = un commit**, qui ne change aucun comportement, avec `npm run check`, `vitest` et un passage manuel (saisie, menus, Ctrl+Z) ; jamais en même temps qu'une correction.
-5. **Pas de refonte en parallèle d'un autre chantier sur la grille** : annoncer l'étape, la faire courte (une demi-journée au plus) pour limiter les conflits de fusion.
+1. **Un module = une factory** `createX(h: XHost)` dans un `.svelte.ts` :
+   le code est déplacé tel quel ; ce qu'il lit ou modifie de la feuille passe
+   par `h.nom` (accesseurs). `XHost` liste ces noms avec leur type :
+   `svelte-check` vérifie que la feuille les fournit.
+2. **Un seul objet d'accès** par composant parent : `sheetCtx` dans
+   `Sheet.svelte`, `appCtx` dans `+page.svelte`, passé à chaque factory et à
+   chaque composant (`v={…}`). Les accesseurs sont lus au moment de l'appel :
+   l'ordre des déclarations ne compte pas.
+3. **L'état lu par le gabarit reste dans le composant** ; une fonction sortie
+   revient par déstructuration (`const { a, b } = xCtl`) à l'endroit où elle
+   était, les fonctions exportées (API de la feuille) par `export const`.
+4. **Les surfaces posées sur la grille** deviennent des composants avec leur
+   gabarit et leurs règles CSS ; on relève les styles calculés avant et
+   après (identiques).
+5. **Une étape = un commit**, sans changement de comportement, vérifiée par
+   `npm run check`, la construction web et `npm run e2e:run`.
+6. **Dessin** : le contexte du canvas, la palette et les fonctions d'axe sont
+   lus une fois en tête de chaque fonction de `draw.svelte.ts` (coût mesuré :
+   +0,16 ms par image au défilement).
 
-## 3. Ordre proposé
+Pour ajouter du code : dans le module du domaine ; s'il lit un nouvel état
+de la feuille, ajouter le nom à l'interface `XHost` du module et l'accesseur
+à `sheetCtx`.
 
-| Étape | Sortie | Contenu | Interface avec la feuille |
-|---|---|---|---|
-| 1 | `NoteDialog.svelte`, `NoteTip.svelte` | Notes : boîte d'édition, post-it au survol, épinglage | `{ note(r, c), setNote, close }` |
-| 2 | `ValidationDialog.svelte` | Validation des données (liste déroulante et règles) | `{ rule(sel), apply, close }` |
-| 3 | `FilterPanel.svelte` | Panneau ▾ d'une colonne : tri, valeurs, conditions, type de données | `{ column, values(), setFilter, sort, setType }` |
-| 4 | `PivotFilter.svelte` | Filtres d'un TCD dans la grille | `{ pivot, field, setFilter }` |
-| 5 | `CellMenu.svelte`, `TableMenu.svelte`, `HeaderMenu.svelte` | Menus contextuels (cellule, tableau, en-têtes de feuille) ; les entrées restent décrites par des données, le rendu par le composant | `{ items, run(id), close }` |
-| 6 | `FindBar.svelte` | Rechercher et remplacer | `{ find, replace, zone }` |
-| 7 | `FormulaBar.svelte` | Zone de nom, barre de formule, aide de signature et complétion | `{ nameBox, fxText, commit, cancel }` |
-| 8 | `editing.ts`, `keyboard.ts`, `mouse.ts` | Logique de saisie, de raccourcis et de glisser, en fonctions pures (état en entrée, actions en sortie) | appelées par `onKeyDown`, `onMouseDown`… |
-| 9 | `draw/*.ts` | Dessin du canvas par couche (cellules, en-têtes, sélection, objets), sur un contexte et une vue | appelées par `paint()` |
-| 10 | `sheetState.svelte.ts` | Sélection, édition, tableaux chargés : l'état central, s'il reste utile de le sortir | importé par la feuille et les composants |
+## 3. Suite
 
-Les étapes 1 à 7 retirent environ 3 000 lignes de gabarit et de logique de menus ; 8 et 9 en retirent autant de logique. Objectif : `Sheet.svelte` sous 4 000 lignes, chaque composant sous 600.
-
-Couche d'accessibilité : la cellule active et la région `aria-live` sont déjà dans `GridA11y.svelte` (audit 6, I11), alimentées par `refreshSpeech` ; ce composant suit la même méthode.
+| Étape | Contenu | Estimation |
+|---|---|---|
+| 1 | Impression, presse-papiers et collage spécial, liens, format de cellule vers `sheet/` (après les chantiers en cours) | ½ jour |
+| 2 | `FormulaBar.svelte` et éditeur de cellule (avec les snippets `coloured` et `suggestions`) | ½ jour |
+| 3 | `Ribbon.svelte` (2 504 lignes) | ½ jour |
+| 4 | Essais d'interaction des composants sortis (`@testing-library/svelte`) | 1 h par composant |
 
 ## 4. Tests
 
-### Ce qui existe
-
-- Les modules `.ts` extraits : plus de 85 fichiers vitest.
-- **Tests de composant par rendu serveur** (`render` de `svelte/server`, sans navigateur ni dépendance de plus) : `grid/a11y.test.ts` (`GridA11y.svelte`), `help/Markdown.test.ts` (toutes les pages de l'aide, et le glossaire), `ui/PanelHeader.test.ts`. Ils vérifient le balisage produit (rôles ARIA, libellés, échappement), pas les interactions.
-
-### Ce qui manque, et ce qu'il faudrait ajouter
-
-| Besoin | Outil | Dépendances nouvelles |
-|---|---|---|
-| Interactions d'un composant (clic, clavier, focus) | `@testing-library/svelte` sur `jsdom` ou `happy-dom` | 2 paquets de développement |
-| Parcours de bout en bout dans l'application réelle | Playwright contre la version web | `@playwright/test` et un navigateur téléchargé en CI |
-
-Aucune de ces dépendances n'est dans `package.json` aujourd'hui ; les ajouter est une décision à prendre. Chaque composant sorti à la section 3 devrait arriver avec son test d'interaction, ce qui plaide pour `@testing-library/svelte` d'abord.
-
-### Lot Playwright de départ (fumée)
-
-Contre la version web, sans Wails : `go run ./cmd/lattis-engine --addr 127.0.0.1:8102` puis `npm run dev:web` (Vite relaie `/ws`, `/upload` et `/download` vers le moteur). En CI, un job Linux qui lance les deux, attend le port 9245, puis :
-
-1. Nouveau classeur : la grille a le focus, la zone de nom affiche A1, la région `aria-live` existe.
-2. Saisir `Produit`, `Prix` puis deux lignes : un tableau naît, la cellule cachée annonce « B2, Prix, … ».
-3. Écrire `=[Prix]*2` dans la colonne suivante : colonne calculée, valeurs attendues.
-4. Ctrl+Z : la colonne calculée disparaît ; Ctrl+Y : elle revient.
-5. Enregistrer (téléchargement), rouvrir le fichier (envoi) : mêmes valeurs.
-6. Onglet SQL : `SELECT SUM(Prix) FROM Tableau1` donne le total.
-7. Clic droit sur une cellule : le menu s'ouvre, Échap le ferme et rend le focus à la grille.
-
-La grille étant un canvas, les assertions passent par la zone de nom, la barre de formule, la cellule cachée de `GridA11y.svelte` (son texte décrit la cellule active) et, pour les valeurs, par l'onglet SQL : pas de comparaison d'images.
+- Modules `.ts` purs : plus de 160 fichiers vitest.
+- Rendu serveur de composants (`svelte/server`) : `grid/a11y.test.ts`,
+  `help/Markdown.test.ts`, `ui/PanelHeader.test.ts`.
+- **Bout en bout** (`frontend/e2e`, Playwright, version web) : 15 parcours,
+  un moteur neuf et un profil isolé par parcours. `npm run e2e` (construit
+  `dist-web` et le moteur), `npm run e2e:run` (parcours seuls) ; job CI
+  « Bout en bout », facultatif. La grille est un canvas : les vérifications
+  passent par la zone de nom, la barre de formule, la cellule cachée de
+  `GridA11y.svelte` (« B2, Prix, 3 »), la barre d'état et l'onglet SQL.
