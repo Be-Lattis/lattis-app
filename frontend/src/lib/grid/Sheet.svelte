@@ -131,6 +131,7 @@
 	import ChartMenu, { type ChartMenuView } from './sheet/ChartMenu.svelte';
 	import NoteEditor, { type NoteEditorView } from './sheet/NoteEditor.svelte';
 	import LinesDialog, { type LinesDialogView } from './sheet/LinesDialog.svelte';
+	import SizeDialog, { type SizeDialogView } from './sheet/SizeDialog.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6161,6 +6162,13 @@
 		get applyLinesDialog() { return applyLinesDialog; },
 		get linesDlg() { return linesDlg; }, set linesDlg(v) { linesDlg = v; }
 	};
+	// Hauteur ou largeur : sheet/SizeDialog.svelte.
+	const sizeView: SizeDialogView = {
+		get applySize() { return applySize; },
+		get focusFirst() { return focusFirst; },
+		get sizeDlg() { return sizeDlg; }, set sizeDlg(v) { sizeDlg = v; },
+		get wrap() { return wrap; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6887,36 +6895,7 @@
 				{#if m.error}<p class="menu-note error">{tr('grid.validation.listMenu.notFound', { error: m.error })}</p>{:else if m.loading && !m.values.length}<p class="menu-note">{tr('grid.validation.listMenu.reading')}</p>{:else if !m.values.length}<p class="menu-note">{tr('grid.validation.listMenu.empty')}</p>{/if}
 			</div>
 		{/if}
-		{#if sizeDlg}
-			{@const d = sizeDlg}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="rules lines-dlg"
-				use:focusFirst
-				use:dismissPanel={() => (sizeDlg = null)}
-				onkeydown={(ev) => {
-					ev.stopPropagation();
-					if (ev.key === 'Enter') applySize();
-					if (ev.key === 'Escape') {
-						sizeDlg = null;
-						wrap.focus();
-					}
-				}}
-			>
-				<div class="menu-title">{d.rows ? tr('grid.size.rowHeight') : tr('grid.size.colWidth')}</div>
-				<div class="add"><input type="number" min="4" max="1000" bind:value={d.value} /></div>
-				<div class="foot">
-					<span class="sp"></span>
-					<button class="primary" onclick={applySize}>{tr('common.ok')}</button>
-					<button
-						onclick={() => {
-							sizeDlg = null;
-							wrap.focus();
-						}}>{tr('common.cancel')}</button
-					>
-				</div>
-			</div>
-		{/if}
+		<SizeDialog v={sizeView} />
 		{#if editing && !editRO && (completion?.where === 'cell' || sig?.where === 'cell' || isFormula(editValueText))}
 			<div
 				class="suggest"
