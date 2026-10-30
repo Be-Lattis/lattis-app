@@ -54,8 +54,7 @@
 	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
 	import { aiEnabled, demoEnd, htmlPagesEnabled, loadSettings, mcpAvailable, platform, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
 	import ThemeDialog from '#lib/shell/ThemeDialog.svelte';
-	import { resolveTheme, themeCatalog, themeExtras, themeId, themeLabel, workbookTheme, type WorkbookTheme } from '#lib/grid/theme.js';
-	import { isThemeRef } from '#lib/grid/colors.js';
+	import { resolveTheme, themeCatalog, themeLabel, type WorkbookTheme } from '#lib/grid/theme.js';
 	import { applyTheme } from '#lib/grid/theme.svelte.js';
 	import { listenExternal } from '#lib/ai/external.svelte.js';
 	import { isWeb } from '#lib/web/platform.js';
@@ -126,6 +125,7 @@
 	import { createSharing } from './../lib/app/sharing.svelte.js';
 	import { createFiles } from './../lib/app/files.svelte.js';
 	import { createTabMerge } from './../lib/app/tabmerge.svelte.js';
+	import { createProtect } from './../lib/app/protect.svelte.js';
 
 	let mode = $state<Mode>('starting');
 	let bench = $state(false);
@@ -1389,54 +1389,34 @@
 		applyTheme(themePreview ?? (mode === 'doc' ? docState.theme : null), userSettings.list);
 	});
 
-	async function setBookTheme(th: WorkbookTheme) {
-		try {
-			docState = await DocumentService.SetTheme(th);
-			await reload();
-			notice = t('shell.notice.theme', { name: themeLabel(th) });
-		} catch (e) {
-			notice = err(e);
-		}
-	}
-
-	// Une couleur du thème posée dans un classeur sans thème propre : le thème
-	// appliqué (défaut du poste) y est gardé, pour que la couleur reste la même
-	// ailleurs et à l'export (décision 0017).
-	function keepThemeFor(patch: Record<string, unknown>) {
-		if (mode !== 'doc' || docState.theme || docState.readOnly || layoutShared || activeDoc) return;
-		// Bords « style couleur » et stylo des bordures : la couleur après le style.
-		const edgeTheme = ['bt', 'bb', 'bl', 'br'].some((k) => typeof patch[k] === 'string' && isThemeRef((patch[k] as string).split(' ')[1])) || isThemeRef((patch.pen as { color?: string } | undefined)?.color);
-		if (!['fg', 'bg', 'bc'].some((k) => isThemeRef(patch[k])) && !edgeTheme) return;
-		const c = bookTheme.colors;
-		DocumentService.SetTheme({ id: bookTheme.id ?? undefined, name: bookTheme.name, table: c.accent1, source: c.accent2, accents: [c.accent3, c.accent4, c.accent5, c.accent6], dark: c.dk2, light: c.lt2 })
-			.then((d) => (docState = d))
-			.catch(() => {});
-	}
-
-	function chooseTheme(id: string) {
-		if (id === 'custom') {
-			themeOpen = true;
-			return;
-		}
-		const t = themeCat.find((x) => x.id === id);
-		if (t) setBookTheme(workbookTheme(t));
-	}
-
-	async function applyCustomTheme(t: WorkbookTheme, save: boolean) {
-		themeOpen = false;
-		themePreview = null;
-		if (save) {
-			const id = themeId(t.name, themeCat.map((x) => x.id));
-			try {
-				await setSetting(`ui.themes.${id}`, { name: t.name, table: t.table, source: t.source, ...themeExtras(t) });
-				t = { ...t, id };
-			} catch (e) {
-				notice = err(e);
-			}
-		}
-		await setBookTheme(t);
-	}
-
+	// --- Protection, thème et zoom : ../lib/app/protect.svelte.ts ---
+	const protectCtl = createProtect({
+		get docState() { return docState; }, set docState(v) { docState = v; },
+		get reload() { return reload; },
+		get notice() { return notice; }, set notice(v) { notice = v; },
+		get err() { return err; },
+		get mode() { return mode; },
+		get layoutShared() { return layoutShared; },
+		get activeDoc() { return activeDoc; },
+		get bookTheme() { return bookTheme; },
+		get themeOpen() { return themeOpen; }, set themeOpen(v) { themeOpen = v; },
+		get themeCat() { return themeCat; },
+		get themePreview() { return themePreview; }, set themePreview(v) { themePreview = v; },
+		get zoomSet() { return zoomSet; }, set zoomSet(v) { zoomSet = v; },
+		get zoomKey() { return zoomKey; },
+		get sheetId() { return sheetId; }, set sheetId(v) { sheetId = v; },
+		get zoomTimer() { return zoomTimer; }, set zoomTimer(v) { zoomTimer = v; },
+		get selectSheet() { return selectSheet; },
+		get sheet() { return sheet; },
+		get layout() { return layout; },
+		get pw1() { return pw1; }, set pw1(v) { pw1 = v; },
+		get pw2() { return pw2; }, set pw2(v) { pw2 = v; },
+		get pwError() { return pwError; }, set pwError(v) { pwError = v; },
+		get bookLock() { return bookLock; }, set bookLock(v) { bookLock = v; },
+		get protecting() { return protecting; }, set protecting(v) { protecting = v; },
+		get deleting() { return deleting; }, set deleting(v) { deleting = v; }
+	});
+	const { keepThemeFor, chooseTheme, applyCustomTheme, setZoom, gotoThread, toggleProtect, confirmProtect, askDeleteSheet, sheetAction } = protectCtl;
 	let zoomSet = $state<Record<string, number>>({});
 	const docKey = $derived(`${mode}|${docState.open}|${docState.path}|${docState.title}`);
 	const zoomKey = $derived(`${docKey}|${sheetId}`);
@@ -1446,18 +1426,6 @@
 		zoomSet = {};
 	});
 	let zoomTimer = 0;
-	function setZoom(z: number) {
-		const v = clampZoom(z);
-		zoomSet = { ...zoomSet, [zoomKey]: v };
-		if (mode !== 'doc') return;
-		const id = sheetId;
-		clearTimeout(zoomTimer);
-		zoomTimer = window.setTimeout(() => {
-			DocumentService.SetZoom(id, Math.round(v * 100))
-				.then((st) => (docState = st))
-				.catch((e) => (notice = err(e)));
-		}, 400);
-	}
 	// Le contenu des feuilles n'est verrouillé par le classeur que si on l'a choisi en le protégeant.
 	const bookLocked = $derived(mode === 'doc' && !!layout?.workbookProtected && !!layout?.workbookSheets);
 	// Structure de toutes les feuilles verrouillée avec le classeur (saisie dans les tableaux seulement).
@@ -1494,11 +1462,6 @@
 			: undefined
 	);
 
-	/** Volet Commentaires : la feuille du fil, sa cellule, le fil ouvert. */
-	async function gotoThread(th: Thread) {
-		if (th.sheet !== sheetId) await selectSheet(th.sheet);
-		sheet?.showComment(th.row, th.col);
-	}
 	const structureLocked = $derived(mode === 'doc' && (!!activeInfo?.structureProtected || bookStructure || layoutShared));
 	const sheetLocked = $derived(mode === 'doc' && (!!activeInfo?.protected || bookLocked));
 	const lockedMsg = $derived(
@@ -1509,98 +1472,6 @@
 				: ''
 	);
 
-	/** Protège, ou ôte la protection (mot de passe demandé s'il y en a un). */
-	function toggleProtect(what: 'sheet' | 'structure' | 'workbook', id = sheetId) {
-		if (mode !== 'doc' || !layout) return;
-		const s = layout.sheets?.find((x) => x.id === id);
-		const on = what === 'sheet' ? !!s?.protected : what === 'structure' ? !!s?.structureProtected : !!layout.workbookProtected;
-		const hasPw = what === 'sheet' ? !!s?.password : what === 'structure' ? !!s?.structurePassword : !!layout.workbookPassword;
-		const name = what === 'workbook' ? docState.title : (s?.name ?? '');
-		if (on && !hasPw) {
-			applyProtect(what, id, name, true, '');
-			return;
-		}
-		pw1 = pw2 = pwError = '';
-		bookLock = 'tabs';
-		protecting = { what, id, name, off: on };
-	}
-
-	async function applyProtect(what: 'sheet' | 'structure' | 'workbook', id: number, name: string, off: boolean, pw: string, lock: typeof bookLock = 'tabs') {
-		try {
-			if (what === 'sheet') await (off ? DocumentService.UnprotectSheet(id, pw) : DocumentService.ProtectSheet(id, pw));
-			else if (what === 'structure') await (off ? DocumentService.UnprotectStructure(id, pw) : DocumentService.ProtectStructure(id, pw));
-			else await (off ? DocumentService.UnprotectWorkbook(pw) : DocumentService.ProtectWorkbook(pw, lock === 'sheets', lock === 'structure'));
-			protecting = null;
-			await reload();
-			notice =
-				what === 'sheet'
-					? off
-						? t('shell.protect.notice.sheetOff', { name })
-						: t('shell.protect.notice.sheetOn', { name })
-					: what === 'structure'
-						? off
-							? t('shell.protect.notice.structureOff', { name })
-							: t('shell.protect.notice.structureOn', { name })
-						: off
-							? t('shell.protect.notice.bookOff')
-							: lock === 'sheets'
-								? t('shell.protect.notice.bookSheets')
-								: lock === 'structure'
-									? t('shell.protect.notice.bookStructure')
-									: t('shell.protect.notice.bookTabs');
-		} catch (e) {
-			if (protecting) pwError = err(e);
-			else notice = err(e);
-		}
-	}
-
-	function confirmProtect() {
-		const p = protecting;
-		if (!p) return;
-		if (!p.off && pw1 !== pw2) {
-			pwError = t('shell.protect.mismatch');
-			return;
-		}
-		applyProtect(p.what, p.id, p.name, p.off, pw1, p.what === 'workbook' ? bookLock : 'tabs');
-	}
-
-	/** Supprimer une feuille : tout son contenu part avec elle (un Ctrl+Z rend tout) ; demandé d'abord si elle n'est pas vide. */
-	async function askDeleteSheet(id: number) {
-		try {
-			// Le contenu à nommer seulement : rien à calculer (LayoutFirst).
-			const l = await DocumentService.LayoutFirst(id);
-			const name = l.sheets?.find((x) => x.id === id)?.name ?? '';
-			const items: string[] = [];
-			const add = (n: number, key: 'tables' | 'pivots' | 'charts' | 'buttons' | 'cells', names?: string[]) => {
-				if (!n) return;
-				const what = t(`shell.deleteSheet.items.${key}`, { n });
-				items.push(names?.length ? t('shell.deleteSheet.withNames', { what, names: names.slice(0, 5).join(', ') + (names.length > 5 ? '…' : '') }) : what);
-			};
-			const tables = l.tables ?? [];
-			add(tables.length, 'tables', tables.map((tb) => t('shell.deleteSheet.tableRows', { name: tb.name, n: tb.total })));
-			add(l.pivots?.length ?? 0, 'pivots', l.pivots?.map((x) => x.config.name ?? ''));
-			add(l.charts?.length ?? 0, 'charts');
-			add(l.buttons?.length ?? 0, 'buttons');
-			add(l.cells?.length ?? 0, 'cells');
-			if (!items.length) return sheetAction(() => DocumentService.DeleteSheet(id));
-			deleting = { id, name, items };
-		} catch (e) {
-			notice = err(e);
-		}
-	}
-
-	async function sheetAction(fn: () => Promise<unknown>) {
-		try {
-			await fn();
-			await reload();
-			if (visibleSheet(layout?.sheets ?? [], sheetId) !== sheetId) {
-				sheetId = visibleSheet(layout?.sheets ?? [], sheetId);
-				await reload();
-			}
-		} catch (e) {
-			notice = err(e);
-		}
-	}
 </script>
 
 <svelte:window oncontextmenu={blockNativeMenu} />
