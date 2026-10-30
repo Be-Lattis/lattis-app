@@ -14,6 +14,7 @@ import (
 
 	"github.com/lalamefine/lattis/internal/bridge"
 	"github.com/lalamefine/lattis/internal/keychain"
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/transport"
 )
@@ -94,7 +95,7 @@ func (h *WebHost) OpenFile(o bridge.FileDialog) (string, error) {
 	}()
 	req := OpenFileRequest{ID: id, Title: o.Title, Accept: accept(o.Filters), URL: h.base + "/upload/" + id}
 	if !h.hub.Emit(OpenFileEvent, req) {
-		return "", errors.New("aucun navigateur connecté pour choisir un fichier")
+		return "", msg.New("web.noBrowser", nil)
 	}
 	select {
 	case r := <-ch:

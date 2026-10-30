@@ -3,9 +3,10 @@ package ai
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Session compactée : quand la conversation devient longue, ses échanges
@@ -73,7 +74,7 @@ func (s *Session) Compact(ctx context.Context, t Turn, emit func(Event)) error {
 		}
 	}
 	if len(text) == 0 || reply.Stop == StopRefusal {
-		return errors.New("résumé vide")
+		return msg.New("ai.emptySummary", nil)
 	}
 	u := reply.Usage
 	if u.Cost == 0 && !t.NoPrice {
@@ -91,7 +92,9 @@ func (s *Session) Compact(ctx context.Context, t Turn, emit func(Event)) error {
 	if u != (Usage{}) {
 		emit(Event{Kind: EventUsage, Usage: &u})
 	}
-	emit(Event{Kind: EventNotice, Text: CompactedNotice, Compact: true})
+	e := Notice(msg.M("ai.compacted", nil))
+	e.Compact = true
+	emit(e)
 	return nil
 }
 

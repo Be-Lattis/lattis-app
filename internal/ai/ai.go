@@ -19,9 +19,10 @@ package ai
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"sort"
 	"sync"
+
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Rôles d'un message.
@@ -128,7 +129,7 @@ type ModelLister interface {
 }
 
 // ErrUnreachable : le fournisseur n'a pas pu être joint (réseau, proxy).
-var ErrUnreachable = errors.New("fournisseur injoignable")
+var ErrUnreachable = msg.New("ai.unreachable", nil)
 
 // Info décrit un fournisseur pour l'interface.
 type Info struct {
@@ -188,4 +189,4 @@ func Catalog() []Info {
 }
 
 // ErrNoKey : aucune clé d'API pour ce fournisseur.
-var ErrNoKey = errors.New("aucune clé d'API enregistrée pour ce fournisseur : ouvrez « Connexion »")
+var ErrNoKey = msg.New("ai.noKey", nil)

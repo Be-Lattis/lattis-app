@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
 	"github.com/lalamefine/lattis/internal/trace"
 	"github.com/lalamefine/lattis/internal/work"
@@ -50,7 +51,7 @@ const DefaultDepth = 200
 var DepthSetting func() int
 
 // ErrNothing signale qu'il n'y a rien à annuler ou à rétablir.
-var ErrNothing = errors.New("rien à annuler ou à rétablir")
+var ErrNothing = msg.New("undo.nothing", nil)
 
 // Stmt est une instruction SQL avec ses paramètres.
 type Stmt struct {
@@ -203,8 +204,9 @@ type Bus struct {
 	Undone func(name string)
 }
 
-// guarded rejoue fn entre les deux temps de Guard.
-func (b *Bus) guarded(ctx context.Context, tx *sql.Tx, seq int64, verb, name string, fn func() error) error {
+// guarded rejoue fn entre les deux temps de Guard ; id : le message d'un
+// refus de Guard (« impossible d'annuler … »).
+func (b *Bus) guarded(ctx context.Context, tx *sql.Tx, seq int64, id msg.ID, name string, fn func() error) error {
 	if b.Guard == nil {
 		return fn()
 	}
@@ -216,7 +218,7 @@ func (b *Bus) guarded(ctx context.Context, tx *sql.Tx, seq int64, verb, name str
 		return err
 	}
 	if err := check(); err != nil {
-		return fmt.Errorf("impossible %s « %s » : %w", verb, name, err)
+		return msg.Wrap(err, id, msg.Args{"name": name, "err": err})
 	}
 	return nil
 }
@@ -587,7 +589,7 @@ func (b *Bus) undo(ctx context.Context) (string, error) {
 				t.ops = append(t.ops, steps[i].Ops[j].Inverse())
 			}
 		}
-		err = b.guarded(ctx, tx, seq, "d'annuler", name, func() error {
+		err = b.guarded(ctx, tx, seq, "undo.blocked", name, func() error {
 			for i := len(steps) - 1; i >= 0; i-- {
 				if err := run(ctx, tx, steps[i].Undo, t.cap); err != nil {
 					return err
@@ -635,7 +637,7 @@ func (b *Bus) redo(ctx context.Context) (string, error) {
 		for _, s := range steps {
 			t.ops = append(t.ops, s.Ops...)
 		}
-		err = b.guarded(ctx, tx, seq, "de rétablir", name, func() error {
+		err = b.guarded(ctx, tx, seq, "redo.blocked", name, func() error {
 			for _, s := range steps {
 				if err := run(ctx, tx, s.Do, t.cap); err != nil {
 					return err

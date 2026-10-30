@@ -438,7 +438,7 @@ func (s *DocumentService) aiAnswer(ctx context.Context, run int, text *string, v
 	if err != nil && !errors.Is(err, context.Canceled) {
 		// Pour le réaffichage seulement : l'interface reçoit l'erreur en
 		// retour de l'appel.
-		s.aiLog(gen, run, ai.Event{Kind: ai.EventNotice, Text: err.Error(), Error: true})
+		s.aiLog(gen, run, ai.Event{Kind: ai.EventNotice, Text: msg.Text(s.sessionLang(), err), Error: true})
 	}
 	s.aiEmit(gen, run, ai.Event{Kind: ai.EventDone, Changes: changes, Undo: s.aiCanUndo(ctx, run)})
 	if errors.Is(err, context.Canceled) {
@@ -470,6 +470,9 @@ func (s *DocumentService) aiForgetRun(run int) {
 // aiEmit envoie un évènement à l'interface et le garde dans le journal
 // d'affichage, sauf si la conversation a été remplacée entre-temps.
 func (s *DocumentService) aiEmit(gen, run int, e ai.Event) {
+	if e.Msg != nil {
+		e.Text, e.Msg = e.Msg.Text(s.sessionLang()), nil
+	}
 	if !s.aiLog(gen, run, e) {
 		return
 	}

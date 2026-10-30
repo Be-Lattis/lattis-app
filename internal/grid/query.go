@@ -3,10 +3,10 @@ package grid
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"strings"
 	"time"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/sqltext"
 	"github.com/lalamefine/lattis/internal/store"
 )
@@ -20,7 +20,7 @@ type QueryResult struct {
 }
 
 // ErrEmptyQuery signale une requête vide.
-var ErrEmptyQuery = errors.New("requête vide")
+var ErrEmptyQuery = msg.New("query.empty", nil)
 
 // ReadTimeout borne une requête de lecture (onglet SQL, db.query des
 // scripts) ; ReadTimeoutSetting, s'il est fixé, donne la durée réglée par

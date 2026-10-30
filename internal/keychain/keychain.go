@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/zalando/go-keyring"
+
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // ErrNotFound : aucun secret pour ce compte.
@@ -30,7 +32,7 @@ var ErrNotFound = errors.New("keychain: secret introuvable")
 var ErrTooBig = keyring.ErrSetDataTooBig
 
 // errTimeout : le trousseau n'a pas répondu à temps.
-var errTimeout = errors.New("keychain: le trousseau du système ne répond pas")
+var errTimeout = msg.New("keychain.timeout", nil)
 
 // Backend est un trousseau : celui du système (bureau), ou le coffre de la
 // session fourni par le moteur web (bridge.SecretStore). Get rend

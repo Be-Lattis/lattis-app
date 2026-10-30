@@ -249,7 +249,7 @@ func tableSource(m *canvas.Model, sheet string, tb canvas.TableInfo) *sqlSource 
 					s.cols[i] = col
 				}
 			} else if len(s.cols) != len(cs) {
-				return fmt.Errorf("tableau %s modifié pendant l'export", tb.Name)
+				return msg.New("export.tableChanged", msg.Args{"table": tb.Name})
 			}
 			return nil
 		}, func(row []any) error {

@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sync"
+
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // MaxSteps borne le nombre de tours d'une réponse (appels d'outils compris) ;
@@ -51,6 +52,14 @@ type Event struct {
 	// Compact : la conversation a été résumée à cet endroit (notice
 	// « Session compactée »).
 	Compact bool `json:"compact,omitempty"`
+	// Msg : le message d'une remarque (Text en est le texte français),
+	// traduit dans la langue de la session par le pont.
+	Msg *msg.Message `json:"-"`
+}
+
+// Notice : remarque montrée dans la conversation.
+func Notice(m msg.Message) Event {
+	return Event{Kind: EventNotice, Text: m.String(), Msg: &m}
 }
 
 // Executor exécute un appel d'outil et rend son résultat (texte, souvent du
@@ -91,7 +100,7 @@ type Session struct {
 }
 
 // ErrBusy : une réponse est déjà en cours.
-var ErrBusy = errors.New("une réponse est déjà en cours")
+var ErrBusy = msg.New("ai.busy", nil)
 
 // Reset vide la conversation.
 func (s *Session) Reset() error {
@@ -168,7 +177,7 @@ func (s *Session) Send(ctx context.Context, t Turn, text string, emit func(Event
 
 // ErrNothingToResume : la dernière réponse est complète, il n'y a rien à
 // reprendre.
-var ErrNothingToResume = errors.New("rien à reprendre : la réponse précédente est complète")
+var ErrNothingToResume = msg.New("ai.nothingToResume", nil)
 
 // Resume reprend la réponse interrompue (erreur en cours de réponse, arrêt,
 // nombre maximal d'étapes atteint) là où elle s'est arrêtée, sans nouveau
@@ -216,7 +225,9 @@ func (s *Session) loop(ctx context.Context, t Turn, gen, start, merged int, emit
 
 	for step := 0; ; step++ {
 		if step >= MaxSteps {
-			emit(Event{Kind: EventNotice, Text: fmt.Sprintf("Réponse arrêtée après %d étapes.", MaxSteps), Limit: true})
+			e := Notice(msg.M("ai.stepLimit", msg.Args{"n": MaxSteps}))
+			e.Limit = true
+			emit(e)
 			return nil
 		}
 		var msgs []Message
@@ -228,7 +239,7 @@ func (s *Session) loop(ctx context.Context, t Turn, gen, start, merged int, emit
 		}
 		reply, err := t.Provider.Turn(ctx, t.Cred, Request{Model: t.Model, System: t.System, Messages: msgs, Tools: t.Tools}, emit)
 		if err == nil && reply.Stop == StopRefusal {
-			err = errors.New("le modèle a refusé de répondre à cette demande")
+			err = msg.New("ai.refused", nil)
 		}
 		if err != nil {
 			if step == 0 && start >= 0 {
@@ -260,7 +271,7 @@ func (s *Session) loop(ctx context.Context, t Turn, gen, start, merged int, emit
 			emit(Event{Kind: EventUsage, Usage: &u})
 		}
 		if reply.Stop == StopMaxTokens {
-			emit(Event{Kind: EventNotice, Text: "Réponse tronquée (longueur maximale atteinte)."})
+			emit(Notice(msg.M("ai.truncated", nil)))
 		}
 		var calls []Block
 		for _, b := range reply.Message.Content {

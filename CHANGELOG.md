@@ -14,6 +14,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ### Corrections
 
+- Les erreurs de l'assistant IA (clé refusée, crédits épuisés, fournisseur surchargé, modèle local injoignable…) et ses remarques (réponse tronquée, arrêtée après N étapes) s'affichent dans la langue de l'interface au lieu du français ; de même « rien à annuler ou à rétablir », « requête vide » et l'erreur d'écriture du classeur.
 - Classeur collaboratif : il ne passe plus « hors ligne » quelques secondes toutes les 15 minutes (renouvellement de la connexion au suivi des changements).
 - Classeur collaboratif : des droits réduits pendant une coupure sont relus avant l'envoi des modifications faites hors ligne, avec le message « Vos droits sur ce classeur ont changé ».
 - Une plage tapée à la façon d'un tableur en source d'un tableau dynamique (`=UNIQUE(A1:A20)`) se déverse au lieu d'afficher #VALEUR!.

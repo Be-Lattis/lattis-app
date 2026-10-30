@@ -10,6 +10,8 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
+
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Claude (Anthropic), par le SDK officiel. Réflexion adaptative (par
@@ -217,29 +219,29 @@ func anthropicError(err error) error {
 		if errors.Is(err, context.Canceled) {
 			return err
 		}
-		return fmt.Errorf("Claude injoignable : %w", err)
+		return msg.Wrap(err, "ai.providerUnreachable", msg.Args{"provider": "Claude", "err": err.Error()})
 	}
-	msg := strings.ToLower(apierr.Error())
+	low := strings.ToLower(apierr.Error())
 	switch apierr.StatusCode {
 	case 400:
 		switch {
-		case strings.Contains(msg, "credit balance"):
-			return errors.New("Crédits épuisés sur votre compte Anthropic : ajoutez-en (platform.claude.com › Facturation) ; abonnés Max ou Team : liez votre organisation pour recevoir vos crédits mensuels")
-		case strings.Contains(msg, "prompt is too long") || strings.Contains(msg, "too many tokens") || strings.Contains(msg, "context window") || strings.Contains(msg, "context length"):
-			return errors.New("conversation trop longue pour le modèle : commencez une « Nouvelle conversation »")
+		case strings.Contains(low, "credit balance"):
+			return msg.New("ai.anthropic.credits", nil)
+		case strings.Contains(low, "prompt is too long") || strings.Contains(low, "too many tokens") || strings.Contains(low, "context window") || strings.Contains(low, "context length"):
+			return msg.New("ai.tooLong", nil)
 		}
 	case 401:
-		return errors.New("clé d'API refusée par Anthropic : vérifiez-la ou remplacez-la (bouton « Connexion »)")
+		return msg.New("ai.keyRefused", msg.Args{"provider": "Anthropic"})
 	case 403:
-		return errors.New("accès refusé par Anthropic (droits de la clé ou de l'organisation)")
+		return msg.New("ai.accessDenied", msg.Args{"provider": "Anthropic", "detail": ""})
 	case 404:
-		return errors.New("modèle inconnu d'Anthropic : choisissez-en un autre")
+		return msg.New("ai.anthropic.unknownModel", nil)
 	case 413:
-		return errors.New("conversation trop longue pour le modèle : commencez une « Nouvelle conversation »")
+		return msg.New("ai.tooLong", nil)
 	case 429:
-		return errors.New("limite d'utilisation atteinte chez Anthropic : réessayez dans un moment")
+		return msg.New("ai.rateLimit", msg.Args{"provider": "Anthropic"})
 	case 529, 503:
-		return errors.New("Claude est surchargé : réessayez dans un moment")
+		return msg.New("ai.overloaded", msg.Args{"provider": "Claude"})
 	}
 	// Autres erreurs : une phrase courte, puis le message du fournisseur
 	// (sans l'enveloppe JSON ni la requête).
@@ -253,7 +255,7 @@ func anthropicError(err error) error {
 		detail = body.Error.Message
 	}
 	if apierr.StatusCode == 400 {
-		return fmt.Errorf("requête refusée par Claude (détail : %s)", detail)
+		return msg.New("ai.badRequest", msg.Args{"provider": "Claude", "detail": detail})
 	}
-	return fmt.Errorf("erreur de Claude (%d) (détail : %s)", apierr.StatusCode, detail)
+	return msg.New("ai.providerError", msg.Args{"provider": "Claude", "status": apierr.StatusCode, "detail": " (" + detail + ")"})
 }

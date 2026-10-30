@@ -21,6 +21,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 
+	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/work"
 )
 
@@ -559,7 +560,7 @@ func (s *Store) run(j job) (err error) {
 
 // ErrEngine signale une erreur interne de SQLite pendant une écriture (par
 // exemple la mémoire épuisée) ; l'écriture est annulée.
-var ErrEngine = errors.New("opération impossible, le classeur n'a pas été modifié")
+var ErrEngine = msg.New("store.engine", nil)
 
 // Close arrête la file d'écriture et ferme les connexions.
 func (s *Store) Close() error {

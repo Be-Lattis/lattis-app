@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"math/rand/v2"
 	"net/http"
@@ -19,6 +18,7 @@ import (
 	"time"
 
 	"github.com/lalamefine/lattis/internal/config"
+	"github.com/lalamefine/lattis/internal/msg"
 )
 
 // Fournisseurs « compatibles OpenAI » : l'API Chat Completions
@@ -118,6 +118,14 @@ func (p *openaiProvider) post(ctx context.Context, cred Credentials, path string
 		case <-time.After(wait):
 		}
 	}
+}
+
+// who : le fournisseur nommé dans un message (le modèle local se traduit).
+func (p *openaiProvider) who() any {
+	if p.local {
+		return msg.M("ai.local.label", nil)
+	}
+	return p.label
 }
 
 type openaiProvider struct {
@@ -442,7 +450,7 @@ func (p *openaiProvider) Turn(ctx context.Context, cred Credentials, req Request
 	)
 	handle := func(c oaChunk) error {
 		if len(c.Error) > 0 && string(c.Error) != "null" {
-			return fmt.Errorf("erreur de %s : %s", p.label, errorText(c.Error))
+			return msg.New("ai.streamError", msg.Args{"provider": p.who(), "detail": errorText(c.Error)})
 		}
 		if c.Usage != nil {
 			usage = [2]int{c.Usage.PromptTokens, c.Usage.CompletionTokens}
@@ -502,7 +510,7 @@ func (p *openaiProvider) Turn(ctx context.Context, cred Credentials, req Request
 		// Serveur qui ignore stream : la réponse entière d'un coup.
 		var c oaChunk
 		if err := json.NewDecoder(resp.Body).Decode(&c); err != nil {
-			return Reply{}, fmt.Errorf("réponse illisible de %s : %w", p.label, err)
+			return Reply{}, msg.Wrap(err, "ai.unreadable", msg.Args{"provider": p.who(), "err": err.Error()})
 		}
 		if err := handle(c); err != nil {
 			return Reply{}, err
@@ -510,7 +518,7 @@ func (p *openaiProvider) Turn(ctx context.Context, cred Credentials, req Request
 	} else if err := readSSE(resp.Body, func(data []byte) error {
 		var c oaChunk
 		if err := json.Unmarshal(data, &c); err != nil {
-			return fmt.Errorf("réponse illisible de %s : %w", p.label, err)
+			return msg.Wrap(err, "ai.unreadable", msg.Args{"provider": p.who(), "err": err.Error()})
 		}
 		return handle(c)
 	}); err != nil {
@@ -523,7 +531,7 @@ func (p *openaiProvider) Turn(ctx context.Context, cred Credentials, req Request
 	stop := StopEnd
 	switch {
 	case finish == "error":
-		return Reply{}, fmt.Errorf("%s a interrompu sa réponse (erreur du fournisseur) : réessayez", p.label)
+		return Reply{}, msg.New("ai.interrupted", msg.Args{"provider": p.who()})
 	case finish == "length":
 		// Appels tronqués : arguments incomplets, rien à exécuter.
 		stop, calls = StopMaxTokens, nil
@@ -733,7 +741,7 @@ func readSSE(r io.Reader, fn func(data []byte) error) error {
 			return nil
 		}
 		if err != nil {
-			return fmt.Errorf("réponse interrompue : %w", err)
+			return msg.Wrap(err, "ai.cut", msg.Args{"err": err.Error()})
 		}
 	}
 }
@@ -798,7 +806,7 @@ func (p *openaiProvider) fetchModels(ctx context.Context, cred Credentials) ([]M
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 8<<20)).Decode(&list); err != nil {
-		return nil, fmt.Errorf("liste des modèles illisible chez %s : %w", p.label, err)
+		return nil, msg.Wrap(err, "ai.modelsUnreadable", msg.Args{"provider": p.who(), "err": err.Error()})
 	}
 	seen := map[string]bool{}
 	var out []Model
@@ -863,11 +871,12 @@ func chatModel(id string) bool {
 // unreachableError : message lisible, reconnu par errors.Is(err,
 // ErrUnreachable).
 type unreachableError struct {
-	msg string
+	m   msg.Message
 	err error
 }
 
-func (e *unreachableError) Error() string        { return e.msg }
+func (e *unreachableError) Error() string        { return e.m.String() }
+func (e *unreachableError) Msg() msg.Message     { return e.m }
 func (e *unreachableError) Unwrap() error        { return e.err }
 func (e *unreachableError) Is(target error) bool { return target == ErrUnreachable }
 
@@ -875,14 +884,14 @@ func (e *unreachableError) Is(target error) bool { return target == ErrUnreachab
 func (p *openaiProvider) netError(ctx context.Context, cred Credentials, err error) error {
 	if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
 		if errors.Is(err, context.DeadlineExceeded) {
-			return &unreachableError{msg: fmt.Sprintf("%s ne répond pas (délai dépassé)", p.label), err: err}
+			return &unreachableError{m: msg.M("ai.timeout", msg.Args{"provider": p.who()}), err: err}
 		}
 		return ctx.Err()
 	}
 	if p.local && cred.Endpoint == "" {
-		return &unreachableError{msg: fmt.Sprintf("Le modèle local ne répond pas à %s : lancez Ollama ou LM Studio", p.baseURL(cred)), err: err}
+		return &unreachableError{m: msg.M("ai.local.unreachable", msg.Args{"url": p.baseURL(cred)}), err: err}
 	}
-	return &unreachableError{msg: fmt.Sprintf("%s injoignable : %v", p.label, err), err: err}
+	return &unreachableError{m: msg.M("ai.providerUnreachable", msg.Args{"provider": p.label, "err": err.Error()}), err: err}
 }
 
 // httpError rend une réponse d'erreur de l'API lisible par l'utilisateur
@@ -890,38 +899,41 @@ func (p *openaiProvider) netError(ctx context.Context, cred Credentials, err err
 // modèles).
 func (p *openaiProvider) httpError(resp *http.Response, model string) error {
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
-	msg := errorText(b)
-	low := strings.ToLower(msg)
+	text := errorText(b)
+	low := strings.ToLower(text)
 	detail := ""
-	if msg != "" {
-		detail = " (" + msg + ")"
+	if text != "" {
+		detail = " (" + text + ")"
 	}
 	switch code := resp.StatusCode; {
 	case code == 401,
 		code == 400 && (strings.Contains(low, "api key") || strings.Contains(low, "api_key")): // Gemini : 400 pour une clé invalide
 		if p.local {
-			return fmt.Errorf("le modèle local demande une clé d'API%s", detail)
+			return msg.New("ai.local.needsKey", msg.Args{"detail": detail})
 		}
-		return fmt.Errorf("clé d'API refusée par %s : vérifiez-la (bouton « Compte »)", p.label)
+		return msg.New("ai.keyRefused", msg.Args{"provider": p.label})
 	case code == 403:
-		return fmt.Errorf("accès refusé par %s (droits de la clé ou du compte)%s", p.label, detail)
+		return msg.New("ai.accessDenied", msg.Args{"provider": p.who(), "detail": detail})
 	case code == 402,
 		code == 429 && (strings.Contains(low, "quota") || strings.Contains(low, "credit") || strings.Contains(low, "billing") || strings.Contains(low, "balance")):
-		return fmt.Errorf("crédits épuisés chez %s : rechargez votre compte ou vérifiez votre forfait%s", p.label, detail)
+		return msg.New("ai.credits", msg.Args{"provider": p.who(), "detail": detail})
 	case code == 429:
-		return fmt.Errorf("limite d'utilisation atteinte chez %s : réessayez dans un moment", p.label)
+		return msg.New("ai.rateLimit", msg.Args{"provider": p.who()})
 	case code == 404:
 		switch {
 		case model == "":
-			return fmt.Errorf("adresse de l'API introuvable chez %s : vérifiez l'adresse%s", p.label, detail)
+			return msg.New("ai.badAddress", msg.Args{"provider": p.who(), "detail": detail})
 		case p.local:
-			return fmt.Errorf("modèle « %s » absent du modèle local : installez-le (ollama pull %s) ou choisissez-en un autre", model, model)
+			return msg.New("ai.local.noModel", msg.Args{"model": model})
 		}
-		return fmt.Errorf("modèle « %s » inconnu de %s : choisissez-en un autre", model, p.label)
+		return msg.New("ai.unknownModel", msg.Args{"model": model, "provider": p.label})
 	case code >= 500:
-		return fmt.Errorf("%s est surchargé ou indisponible : réessayez dans un moment", capitalize(p.label))
+		if p.local {
+			return msg.New("ai.local.overloaded", nil)
+		}
+		return msg.New("ai.overloaded", msg.Args{"provider": p.label})
 	}
-	return fmt.Errorf("erreur de %s (%d)%s", p.label, resp.StatusCode, detail)
+	return msg.New("ai.providerError", msg.Args{"provider": p.who(), "status": resp.StatusCode, "detail": detail})
 }
 
 // errorText extrait le message d'une erreur de l'API : {"error":{"message"}},
@@ -970,14 +982,6 @@ func truncate(s string) string {
 	r := []rune(strings.TrimSpace(s))
 	if len(r) > 300 {
 		return string(r[:300]) + "…"
-	}
-	return string(r)
-}
-
-func capitalize(s string) string {
-	r := []rune(s)
-	if len(r) > 0 {
-		r[0] = []rune(strings.ToUpper(string(r[0])))[0]
 	}
 	return string(r)
 }
