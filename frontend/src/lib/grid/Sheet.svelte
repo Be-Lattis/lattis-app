@@ -132,6 +132,7 @@
 	import LinesDialog, { type LinesDialogView } from './sheet/LinesDialog.svelte';
 	import SizeDialog, { type SizeDialogView } from './sheet/SizeDialog.svelte';
 	import DvAlertBox, { type DvAlertBoxView } from './sheet/DvAlertBox.svelte';
+	import ListMenu, { type ListMenuView } from './sheet/ListMenu.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6175,6 +6176,12 @@
 		get dvAlert() { return dvAlert; },
 		get focusFirst() { return focusFirst; }
 	};
+	// Liste déroulante : sheet/ListMenu.svelte.
+	const listMenuView: ListMenuView = {
+		get cellInfo() { return cellInfo; },
+		get listMenu() { return listMenu; }, set listMenu(v) { listMenu = v; },
+		get pickFromList() { return pickFromList; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6857,16 +6864,7 @@
 			{/if}
 		{/if}
 		<NoteEditor v={noteView} />
-		{#if listMenu}
-			{@const m = listMenu}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="menu list-menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (listMenu = null)}>
-				{#each m.values as v (v)}
-					<button class:on={cellInfo(m.row, m.col).value === v} onclick={() => pickFromList(v)}>{v}</button>
-				{/each}
-				{#if m.error}<p class="menu-note error">{tr('grid.validation.listMenu.notFound', { error: m.error })}</p>{:else if m.loading && !m.values.length}<p class="menu-note">{tr('grid.validation.listMenu.reading')}</p>{:else if !m.values.length}<p class="menu-note">{tr('grid.validation.listMenu.empty')}</p>{/if}
-			</div>
-		{/if}
+		<ListMenu ui={listMenuView} />
 		<SizeDialog v={sizeView} />
 		{#if editing && !editRO && (completion?.where === 'cell' || sig?.where === 'cell' || isFormula(editValueText))}
 			<div
@@ -7527,14 +7525,6 @@
 		align-items: center;
 		gap: 6px;
 		padding: 3px 2px;
-	}
-	.list-menu {
-		min-width: 140px;
-		max-height: 260px;
-		overflow: auto;
-	}
-	.list-menu button.on {
-		background: #d3e7dc;
 	}
 	/* Fond des boîtes modales de la grille (validation des données). */
 	.key-dlg {
