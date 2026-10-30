@@ -13,12 +13,15 @@ import (
 // champ) et d'un niveau des champs en colonnes. Chaque niveau est une passe
 // SQL groupée (GROUP BY) sur la source : les sous-totaux et les totaux sont
 // de vrais agrégats (la moyenne d'un groupe, pas la moyenne des moyennes ;
-// un nombre distinct), jamais refaits en Go. Les lignes et les colonnes de
-// détail sont lues dans leur ordre (tri des étiquettes, première
-// apparition) par les passes du dernier niveau de chaque axe, bornées
-// (MaxPivotRows, MaxPivotCols) avant les autres. Le reste (en-têtes
-// imbriqués, arborescence, « Afficher les valeurs ») se calcule sur ce
-// résultat, au plus quelques milliers de lignes, sans relire la source.
+// un nombre distinct). Sans nombre distinct, une seule passe au niveau le
+// plus fin suffit, les niveaux au-dessus en sont déduits en Go
+// (pivotone.go) ; ce calcul en plusieurs passes reste celui des cas
+// rares. Les lignes et les colonnes de détail sont lues dans leur ordre
+// (tri des étiquettes, première apparition) par les passes du dernier
+// niveau de chaque axe, bornées (MaxPivotRows, MaxPivotCols) avant les
+// autres. Le reste (en-têtes imbriqués, arborescence, « Afficher les
+// valeurs ») se calcule sur ce résultat, au plus quelques milliers de
+// lignes, sans relire la source.
 
 // pivotCube : les agrégats d'un TCD (voir plus haut).
 type pivotCube struct {
@@ -162,6 +165,16 @@ func (t *tx) pivotCubeRaw(raw PivotConfig) (*pivotCube, error) {
 		}
 		return rs.Err()
 	}
+	// Une seule passe quand c'est possible (pivotone.go).
+	one := pivotOneFits(p, cb)
+	if one && !p.sorted() {
+		if ok, err := t.pivotOne(p, cb, where, rowNames, colNames, true); err != nil {
+			return nil, err
+		} else if ok {
+			cb.index()
+			return cb, nil
+		}
+	}
 	// Colonnes de détail d'abord, puis lignes de détail : bornées avant les
 	// autres passes.
 	if cb.nc > 0 {
@@ -184,6 +197,14 @@ func (t *tx) pivotCubeRaw(raw PivotConfig) (*pivotCube, error) {
 			return nil, msg.Wrap(ErrPivot, "pivot.tooManyRows", msg.Args{"max": MaxPivotRows})
 		}
 	}
+	if one && p.sorted() {
+		if ok, err := t.pivotOne(p, cb, where, rowNames, colNames, false); err != nil {
+			return nil, err
+		} else if ok {
+			cb.index()
+			return cb, nil
+		}
+	}
 	for dr := 0; dr <= cb.nr; dr++ {
 		for dc := 0; dc <= cb.nc; dc++ {
 			if (dr == cb.nr && dc == 0 && cb.nr > 0) || (dr == 0 && dc == cb.nc && cb.nc > 0) {
@@ -197,6 +218,13 @@ func (t *tx) pivotCubeRaw(raw PivotConfig) (*pivotCube, error) {
 			}
 		}
 	}
+	cb.index()
+	return cb, nil
+}
+
+// index range les enfants de chaque groupe (kids), d'après les lignes et
+// les colonnes de détail.
+func (cb *pivotCube) index() {
 	for axis, list := range [2][][]string{cb.rows, cb.cols} {
 		kids := map[string][]string{}
 		seen := map[string]bool{}
@@ -213,7 +241,6 @@ func (t *tx) pivotCubeRaw(raw PivotConfig) (*pivotCube, error) {
 		}
 		cb.kids[axis] = kids
 	}
-	return cb, nil
 }
 
 // pivotColEntry : une colonne affichée du TCD (avant ses valeurs) : un

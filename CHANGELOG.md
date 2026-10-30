@@ -25,6 +25,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Démarrage plus léger : les éditeurs de texte (documents, SQL, scripts, pages web) ne se chargent qu'à leur première ouverture.
 - Un tableau croisé ou un graphique sur un grand tableau ne se recalcule plus après une saisie dans une colonne qu'il ne lit pas (un million de lignes : 6 s d'attente en moins).
+- Un tableau croisé sur un grand tableau se recalcule environ deux fois plus vite après une saisie dans une colonne qu'il lit.
 - Importer un grand fichier est plusieurs fois plus rapide (un million de lignes : 5 s au lieu de 40 s sur le poste de mesure).
 - Colonnes calculées qui comparent chaque ligne aux autres (SOMME.SI(T[Qté];">"&[@Qté];…), NB.SI.ENS avec « < » ou « >= » sur une date, cumul par client) : calculées en une fraction de seconde même sur un grand tableau, au lieu de plusieurs minutes.
 - Assistant IA décoché dans Fichier › Paramètres › Fonctionnalités : son bouton du ruban, Alt+I, son volet et « Rédiger avec l’assistant » disparaissent ; le recocher les rend aussitôt.
