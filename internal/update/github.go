@@ -2,6 +2,7 @@ package update
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -83,6 +84,9 @@ type Client struct {
 	API     string // GitHubAPI par défaut
 	Repo    string // Repo par défaut
 	Version string // version de l'application (User-Agent)
+	// Keys : clés publiques dont latest.json doit porter la signature
+	// (latest.json.sig) ; vide : aucune exigée (voir sign.go).
+	Keys []ed25519.PublicKey
 }
 
 func (c *Client) api() string {

@@ -16,3 +16,6 @@ frontend/.svelte-kit
 .claude/worktrees/
 cmd/lattis-engine/dist-web
 *.bak
+
+# Clé privée de signature des mises à jour (cmd/lattis-updsign keygen)
+lattis-update.key

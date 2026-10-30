@@ -1536,6 +1536,8 @@ var zh = map[ID]string{
 	"update.notHttps":         "地址被拒绝（应为 https://）：{url}",
 	"update.notNewer":         "版本 {version} 并不比当前版本新",
 	"update.notSigned":        "“{name}”的签名与本应用程序不一致，已删除",
+	"update.unsigned":         "版本 {version} 未签名，不会安装",
+	"update.badSignature":     "版本 {version} 的签名无效，不会安装",
 	"update.proxyAuth":        "代理服务器要求身份验证",
 	"update.rateLimited":      "对 GitHub 的请求过多，请一小时后重试",
 	"update.timeout":          "版本服务器没有响应",

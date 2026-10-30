@@ -104,8 +104,13 @@ func validSHA(s string) bool {
 
 // Expected cherche l'empreinte attendue d'un fichier de la version r :
 // d'abord dans latest.json, sinon dans SHA256SUMS.txt. Sans l'un ni
-// l'autre, ou si le fichier n'y figure pas, rien ne sera installé.
+// l'autre, ou si le fichier n'y figure pas, rien ne sera installé. Avec
+// des clés (c.Keys), seul un latest.json dont la signature est valide
+// compte : ni manifeste non signé, ni SHA256SUMS.txt.
 func (c *Client) Expected(ctx context.Context, r *Release, name string) (Expected, error) {
+	if len(c.Keys) > 0 {
+		return c.signedExpected(ctx, r, name)
+	}
 	if a, ok := r.Asset(ManifestName); ok {
 		b, err := c.getSmall(ctx, a.URL, "", maxManifest)
 		if err != nil {
@@ -127,6 +132,34 @@ func (c *Client) Expected(ctx context.Context, r *Release, name string) (Expecte
 		if e, ok := ParseSums(b, name); ok {
 			return e, nil
 		}
+	}
+	return Expected{}, msg.New("update.noChecksum", msg.Args{"name": name})
+}
+
+// signedExpected : l'empreinte de name dans le latest.json signé de r.
+func (c *Client) signedExpected(ctx context.Context, r *Release, name string) (Expected, error) {
+	a, ok := r.Asset(ManifestName)
+	sa, ok2 := r.Asset(SignatureName)
+	if !ok || !ok2 {
+		return Expected{}, msg.New("update.unsigned", msg.Args{"version": r.Tag})
+	}
+	b, err := c.getSmall(ctx, a.URL, "", maxManifest)
+	if err != nil {
+		return Expected{}, err
+	}
+	sig, err := c.getSmall(ctx, sa.URL, "", maxSignature)
+	if err != nil {
+		return Expected{}, err
+	}
+	if !VerifyManifest(b, sig, c.Keys) {
+		return Expected{}, msg.New("update.badSignature", msg.Args{"version": r.Tag})
+	}
+	m, err := ParseManifest(b, r.Tag)
+	if err != nil {
+		return Expected{}, err
+	}
+	if e, ok := m.File(name); ok {
+		return e, nil
 	}
 	return Expected{}, msg.New("update.noChecksum", msg.Args{"name": name})
 }

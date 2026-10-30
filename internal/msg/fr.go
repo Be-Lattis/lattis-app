@@ -1536,6 +1536,8 @@ var fr = map[ID]string{
 	"update.notHttps":         "adresse refusée (https:// attendu) : {url}",
 	"update.notNewer":         "la version {version} n'est pas plus récente que celle-ci",
 	"update.notSigned":        "« {name} » n'est pas signé comme cette application : il a été supprimé",
+	"update.unsigned":         "la version {version} n'est pas signée : elle ne sera pas installée",
+	"update.badSignature":     "la signature de la version {version} n'est pas valide : elle ne sera pas installée",
 	"update.proxyAuth":        "le proxy demande une authentification",
 	"update.rateLimited":      "trop de recherches auprès de GitHub, réessayez dans une heure",
 	"update.timeout":          "le serveur des versions ne répond pas",

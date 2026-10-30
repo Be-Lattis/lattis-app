@@ -324,6 +324,8 @@ jobs:
     env:
       LINUX_GPG_PRIVATE_KEY: ${{ secrets.LINUX_GPG_PRIVATE_KEY }}
       LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
+      # Clé Ed25519 de latest.json (docs/release/signature.md § 4).
+      UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
       GH_TOKEN: ${{ github.token }}
       # Lancement manuel : tout est préparé (sommes, latest.json, notes) et
       # déposé en artefact « release-essai » du run, sans créer de release.
@@ -333,6 +335,10 @@ jobs:
         with:
           fetch-depth: 0 # tags et historique : notes depuis le tag précédent
           path: src
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: src/go.sum
       - uses: actions/download-artifact@v4
         with:
           pattern: release-*
@@ -365,6 +371,16 @@ jobs:
           done
           gpg --batch --armor --export > lattis-release-key.asc
           rm -rf "$GNUPGHOME"
+      # latest.json.sig : signature Ed25519 de latest.json, vérifiée par la
+      # mise à jour automatique avant tout téléchargement. Sans le secret
+      # UPDATE_SIGNING_KEY : avertissement et rien de signé tant que
+      # l'application n'exige pas de signature (publishedKeys vide dans
+      # internal/update/sign.go) ; échec du job dès qu'elle en exige une, ou si
+      # la clé n'est pas celle de l'application (les installations refuseraient
+      # la version). D'où une étape sans « if: », la commande décide.
+      - name: Signature de latest.json (Ed25519)
+        working-directory: src
+        run: go run ./cmd/lattis-updsign sign ../dist/latest.json
       - name: Notes de version
         run: |
           if [ "$PUBLISH" = true ]; then ref="$GITHUB_REF_NAME"; else ref=HEAD; fi

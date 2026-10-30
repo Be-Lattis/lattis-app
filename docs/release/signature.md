@@ -20,7 +20,7 @@ Depuis juin 2023, les autorités de certification ne délivrent plus de certific
   - Créer une inscription d'application (Entra ID) avec un secret client, et lui donner le rôle **Trusted Signing Certificate Profile Signer** sur le compte de signature.
   - Noter le **sujet** du certificat du profil (portail Azure, profil de certificat → « Subject name », de la forme `CN=Nom, O=Nom, L=Ville, S=Région, C=FR`) : il devient l'éditeur (Publisher) du MSIX, qui doit lui être identique au caractère près.
   - Limite : avec Trusted Signing, le désinstalleur NSIS (embarqué dans l'installeur) n'est pas signé ; l'installeur, `lattis.exe` et le MSIX le sont.
-- **Certificat OV ou EV d'une autorité** (Sectigo, DigiCert, Certum, SSL.com…). Sur jeton matériel, il sert à signer **en local** (voir § 5, `WINDOWS_CERT_THUMBPRINT`) ; la CI ne peut pas l'utiliser. Si l'autorité fournit malgré tout un `.pfx` (ancien certificat encore valide, offre particulière), la CI le prend en charge directement. Les HSM en ligne des autorités (SSL.com eSigner, DigiCert KeyLocker…) demanderaient leur propre étape dans le workflow, non écrite ici.
+- **Certificat OV ou EV d'une autorité** (Sectigo, DigiCert, Certum, SSL.com…). Sur jeton matériel, il sert à signer **en local** (voir § 6, `WINDOWS_CERT_THUMBPRINT`) ; la CI ne peut pas l'utiliser. Si l'autorité fournit malgré tout un `.pfx` (ancien certificat encore valide, offre particulière), la CI le prend en charge directement. Les HSM en ligne des autorités (SSL.com eSigner, DigiCert KeyLocker…) demanderaient leur propre étape dans le workflow, non écrite ici.
 
 Le MSIX signé avec un certificat public s'installe d'un double-clic (Windows 10 1903 ou plus récent). SmartScreen peut afficher un avertissement tant que l'éditeur n'a pas acquis de réputation, y compris avec un certificat EV.
 
@@ -105,18 +105,40 @@ gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt && sha256sum -c --ignore-missing 
 
 L'AppImage n'a pas de signature intégrée : sa signature détachée `.asc` en tient lieu.
 
-## 4. Publier une release
+## 4. Mises à jour : signature de latest.json (Ed25519)
+
+La mise à jour automatique installe un fichier seulement si son empreinte SHA-256 est celle de `latest.json`. Sans signature, quiconque peut modifier la release GitHub (compte ou jeton volé) peut changer le fichier **et** l'empreinte. Avec une clé, la CI signe `latest.json` (`latest.json.sig`) et l'application refuse toute version dont la signature manque ou ne vérifie pas avec la clé publique qu'elle embarque. Gratuit, indépendant des certificats ci-dessus, valable pour les trois systèmes.
+
+**Mise en place (une fois) :**
 
 ```sh
-git tag v0.2.0
-git push origin v0.2.0
+go run ./cmd/lattis-updsign keygen          # écrit lattis-update.key, affiche la clé publique
+gh secret set UPDATE_SIGNING_KEY < lattis-update.key
 ```
 
-Le workflow reporte la version du tag dans les fichiers de build (`build/release/set-version.sh`, sans commit), construit les trois plateformes en parallèle, puis crée la release `v0.2.0` en brouillon (marquée « pré-version » si le tag contient un tiret, par ex. `v0.2.0-rc.1`). La relire dans GitHub → Releases, puis publier.
+1. Coller la clé publique affichée dans `publishedKeys` (`internal/update/sign.go`), committer.
+2. Ranger `lattis-update.key` hors du dépôt (gestionnaire de mots de passe), puis le supprimer du disque. Perdue, la clé ne se remplace qu'avec une version signée par l'ancienne (ou une réinstallation à la main).
+3. Publier une version : elle est signée, et c'est la première qui exige des signatures.
+
+**Transition.** Les versions déjà installées (jusqu'à celle qui précède la clé) ont une liste de clés vide : elles acceptent un `latest.json` non signé, comme avant, et installent donc la première version signée sans difficulté. Seules les versions qui embarquent la clé exigent ensuite la signature. Rien ne casse si la clé n'est jamais créée.
+
+**Garde-fous de la CI** (`release.yml`, étape « Signature de latest.json ») : sans secret et sans clé dans le code, avertissement et rien n'est signé ; clé dans le code mais secret absent, ou secret qui ne correspond à aucune clé du code : le job échoue avant la release (sinon les installations refuseraient la version).
+
+**Changer de clé :** ajouter la nouvelle clé publique à `publishedKeys` à côté de l'ancienne, publier une version signée par l'ancienne ; puis remplacer le secret et retirer l'ancienne clé quelques versions plus tard.
+
+Vérifier une release : `go run ./cmd/lattis-updsign verify latest.json` (avec `latest.json.sig` à côté).
+
+## 5. Publier une release
+
+```sh
+scripts/release.sh v0.2.0
+```
+
+Le workflow reporte la version du tag dans les fichiers de build (`build/release/set-version.sh`, sans commit), construit les trois plateformes en parallèle, puis publie la release `v0.2.0` (marquée « pré-version » si le tag contient un tiret, par ex. `v0.2.0-rc.1` ; brouillon seulement avec la variable `RELEASE_DRAFT`, voir [publier.md](publier.md)).
 
 Pour essayer sans publier : Actions → **Release** → Run workflow, avec une version de test. Les paquets restent dans les artefacts du run.
 
-## 5. Construire et signer en local
+## 6. Construire et signer en local
 
 Commande commune, sur chaque système : `wails3 task release` (ajouter `VERSION=v0.2.0` pour reporter d'abord une version ; ne pas committer les fichiers ainsi modifiés). Résultats dans `bin/`.
 
@@ -173,6 +195,7 @@ wails3 task release
 
 - `.github/workflows/release.yml` : le workflow (le workflow `ci.yml` n'est pas modifié).
 - `build/release/set-version.sh` : report de la version du tag.
+- Mises à jour : `internal/update/sign.go` (clés publiques, vérification), `cmd/lattis-updsign` (clé, signature).
 - Windows : `build/windows/sign.ps1`, `build/windows/sdk-tools.ps1`, `build/windows/new-test-cert.ps1`, `build/windows/msix/build-msix.ps1` et `AppxManifest.xml` (identité `fr.triboulin.lattis`, association `.lattis`, alias `lattis` en ligne de commande pour `lattis mcp` et `lattis config`, écriture des fichiers dans le vrai `%AppData%`), `build/windows/nsis/` (association `.lattis`, signature de l'installeur et du désinstalleur), `build/windows/Taskfile.yml`.
 - macOS : `build/darwin/sign-notarize.sh`, `build/darwin/entitlements.plist`, `build/darwin/Info.plist` (type de document `fr.triboulin.lattis.workbook`), `build/darwin/Taskfile.yml`.
 - Linux : `build/linux/nfpm/nfpm.yaml` (binaire dans `/usr/bin`, type MIME, signature), `build/linux/mime/lattis.xml`, `build/linux/lattis.desktop` et `build/linux/Taskfile.yml`.

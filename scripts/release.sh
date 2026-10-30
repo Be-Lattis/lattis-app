@@ -37,6 +37,17 @@ if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
 	echo "release : le tag $tag existe déjà" >&2
 	exit 1
 fi
+# Clé de signature des mises à jour dans le code (internal/update/sign.go) :
+# le secret UPDATE_SIGNING_KEY doit exister, sinon le job Release échouerait
+# après la construction (docs/release/signature.md § 4). Vérifié si gh est là.
+if ! grep -q '^var publishedKeys = \[\]string{}' internal/update/sign.go && command -v gh >/dev/null; then
+	if ! secrets="$(gh secret list 2>/dev/null)"; then
+		echo "release : avertissement : gh secret list impossible, présence de UPDATE_SIGNING_KEY non vérifiée" >&2
+	elif ! grep -q '^UPDATE_SIGNING_KEY' <<< "$secrets"; then
+		echo "release : l'application exige un latest.json signé, mais le secret UPDATE_SIGNING_KEY est absent du dépôt (gh secret list)" >&2
+		exit 1
+	fi
+fi
 if [ $tests = 1 ]; then
 	# Mêmes paquets que la CI : le paquet principal embarque frontend/dist,
 	# absent d'une copie propre (go test ./... y échouerait sans build).

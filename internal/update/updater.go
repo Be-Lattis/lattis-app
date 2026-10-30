@@ -151,7 +151,7 @@ func New(current string) *Updater {
 	}
 	u := &Updater{
 		Current:  current,
-		Client:   &Client{HTTP: &http.Client{Timeout: 10 * time.Minute}, Version: current},
+		Client:   &Client{HTTP: &http.Client{Timeout: 10 * time.Minute}, Version: current, Keys: ManifestKeys()},
 		Exe:      exe,
 		Kind:     DetectKind(exe),
 		Installs: systemInstalls,

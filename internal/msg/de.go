@@ -1535,6 +1535,8 @@ var de = map[ID]string{
 	"update.notHttps":         "Adresse abgelehnt (https:// erwartet): {url}",
 	"update.notNewer":         "Die Version {version} ist nicht neuer als diese",
 	"update.notSigned":        "„{name}“ ist nicht wie diese Anwendung signiert; die Datei wurde gelöscht",
+	"update.unsigned":         "Version {version} ist nicht signiert; sie wird nicht installiert",
+	"update.badSignature":     "Die Signatur von Version {version} ist ungültig; sie wird nicht installiert",
 	"update.proxyAuth":        "Der Proxy verlangt eine Anmeldung",
 	"update.rateLimited":      "Zu viele Anfragen an GitHub, in einer Stunde erneut versuchen",
 	"update.timeout":          "Der Versionsserver antwortet nicht",
