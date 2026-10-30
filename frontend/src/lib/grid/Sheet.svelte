@@ -137,6 +137,7 @@
 	import { createCharts } from './sheet/charts.svelte.js';
 	import { createFilters } from './sheet/filters.svelte.js';
 	import { createPivot } from './sheet/pivot.svelte.js';
+	import { createDataTools } from './sheet/datatools.svelte.js';
 
 
 	interface Props {
@@ -5896,133 +5897,34 @@
 	/** Taille du tableau croisé déplacé (lignes × colonnes) ; une cellule pour une création. */
 	let placeSize = { h: 1, w: 1 };
 
-	/**
-	 * Tableau visé par une commande de tableau (TCD, graphique, tri, filtre,
-	 * doublons, SQL) : celui de la cellule active ; ou, quand la sélection est
-	 * faite de lignes ou de colonnes entières qui ne contiennent qu'un tableau,
-	 * ce tableau-là, comme s'il était sélectionné.
-	 */
-	function targetTable(): Entry | undefined {
-		const here = ownerAt(active.row, active.col);
-		if (here) return here;
-		const sel = selectionLines();
-		if (!sel.rows && !sel.cols) return undefined;
-		const hit = entries.filter((e) => (sel.cols ? e.t.col <= sel.c1 && e.lastCol >= sel.c0 : e.t.row <= sel.r1 && e.last >= sel.r0));
-		return hit.length === 1 ? hit[0] : undefined;
-	}
-
-	/** Colonne visée dans ce tableau : l'active si elle en fait partie, sinon la première colonne sélectionnée du tableau. */
-	function targetCol(e: Entry): number {
-		if (active.col >= e.t.col && active.col <= e.lastCol) return active.col - e.t.col;
-		const { c0 } = selection();
-		return Math.min(e.lastCol, Math.max(c0, e.t.col)) - e.t.col;
-	}
+	// --- Outils de données ---
+	// Outils de données : sheet/datatools.svelte.ts (accès de createDataTools à la feuille).
+	const dataToolsCtl = createDataTools({
+		get ownerAt() { return ownerAt; },
+		get active() { return active; },
+		get selectionLines() { return selectionLines; },
+		get entries() { return entries; },
+		get selection() { return selection; },
+		get source() { return source; },
+		get locked() { return locked; },
+		get say() { return say; },
+		get closeMenus() { return closeMenus; },
+		get ttcDlg() { return ttcDlg; }, set ttcDlg(v) { ttcDlg = v; },
+		get menuAction() { return menuAction; },
+		get cells() { return cells; },
+		get dedupDlg() { return dedupDlg; }, set dedupDlg(v) { dedupDlg = v; },
+		get wrap() { return wrap; }
+	});
+	const { targetTable, targetCol, valueColumns, formulasInSelection, previewDedup, applyDedup } = dataToolsCtl;
+	export const textToColumnsActive = dataToolsCtl.textToColumnsActive;
+	export const toValuesActive = dataToolsCtl.toValuesActive;
+	export const dedupActive = dataToolsCtl.dedupActive;
 
 	/** Données › Convertir : assistant « Convertir le texte en colonnes » sur une sélection d'une seule colonne. */
 	let ttcDlg = $state<{ r0: number; r1: number; col: number } | null>(null);
 
-	export function textToColumnsActive() {
-		if (!source.textToColumns || !source.textColumnsPreview) return;
-		if (locked) {
-			say(locked);
-			return;
-		}
-		const { r0, r1, c0, c1 } = selection();
-		if (c0 !== c1) {
-			say(tr('grid.textCols.oneColumn'));
-			return;
-		}
-		closeMenus();
-		ttcDlg = { r0, r1, col: c0 };
-	}
-
-	/** Formules › Convertir en valeurs : les formules de la sélection (colonnes calculées touchées, cellules libres). */
-	export function toValuesActive() {
-		if (!source.rangeToValues) return;
-		if (locked) {
-			say(locked);
-			return;
-		}
-		const { r0, r1, c0, c1 } = selection();
-		const run = source.rangeToValues;
-		closeMenus();
-		void menuAction(() => run(r0, c0, r1, c1));
-	}
-
-	/**
-	 * Colonnes calculées du tableau que « Convertir en valeurs » prend au clic
-	 * droit sur la colonne i : celles de la sélection quand elle la contient,
-	 * sinon la seule colonne i.
-	 */
-	function valueColumns(e: Entry, i: number): number[] {
-		const s = selection();
-		const c = e.t.col + i;
-		const inSel = c >= s.c0 && c <= s.c1 && s.r0 <= e.last && s.r1 >= e.t.row;
-		const lo = inSel ? Math.max(s.c0, e.t.col) - e.t.col : i;
-		const hi = inSel ? Math.min(s.c1, e.lastCol) - e.t.col : i;
-		const out: number[] = [];
-		for (let k = lo; k <= hi; k++) if (e.t.columns[k]?.formula) out.push(k);
-		return out;
-	}
-
-	/** La sélection contient-elle une formule à convertir en valeurs (cellule libre, colonne calculée) ? */
-	function formulasInSelection(): boolean {
-		const s = selection();
-		for (const [k, raw] of cells) {
-			if (!raw.startsWith('=')) continue;
-			const [r, c] = k.split(',').map(Number);
-			if (r >= s.r0 && r <= s.r1 && c >= s.c0 && c <= s.c1) return true;
-		}
-		return entries.some((e) => s.r0 <= e.last && s.r1 >= e.t.row && e.t.columns.some((col, i) => !!col.formula && e.t.col + i >= s.c0 && e.t.col + i <= s.c1));
-	}
-
 	/** Supprime les doublons du tableau de la cellule active (ruban Données). */
 	let dedupDlg = $state<{ e: Entry; on: boolean[]; count: number | null; error: string } | null>(null);
-
-	export function dedupActive() {
-		const e = targetTable();
-		if (!e || !source.removeDuplicates) {
-			say(tr('grid.table.placeActive'));
-			return;
-		}
-		// Comme Excel : toutes les colonnes cochées au départ.
-		closeMenus();
-		dedupDlg = { e, on: e.t.columns.map((c) => !c.formula), count: null, error: '' };
-		previewDedup();
-	}
-
-	let dedupSeq = 0;
-	async function previewDedup() {
-		const d = dedupDlg;
-		if (!d || !source.duplicatesPreview) return;
-		const cols = d.on.flatMap((on, i) => (on ? [i] : []));
-		const seq = ++dedupSeq;
-		d.count = null;
-		if (!cols.length) {
-			d.count = 0;
-			return;
-		}
-		try {
-			const n = await source.duplicatesPreview(d.e.t, cols);
-			if (seq === dedupSeq && dedupDlg === d) d.count = n;
-		} catch (err) {
-			d.error = errorText(err);
-		}
-	}
-
-	async function applyDedup() {
-		const d = dedupDlg;
-		if (!d || !source.removeDuplicates) return;
-		const cols = d.on.flatMap((on, i) => (on ? [i] : []));
-		try {
-			const n = await source.removeDuplicates(d.e.t, cols);
-			dedupDlg = null;
-			wrap.focus();
-			say(n ? tr('grid.dedup.removed', { n }) : tr('grid.dedup.none'));
-		} catch (err) {
-			d.error = errorText(err);
-		}
-	}
 
 	// --- Ruban Formules ---------------------------------------------------------
 
