@@ -37,6 +37,15 @@ test('3. colonne calculée', async ({ app }) => {
 	await goTo(app, 'C4');
 	await expect(activeCell(app)).toContainText('10');
 	await expect(app.getByRole('textbox', { name: 'Barre de formule' })).toHaveValue(/^=\[@?Prix\]\*2$/);
+	// Complétion d'une fonction pendant la saisie, Tab la reprend.
+	await goTo(app, 'F1');
+	await app.keyboard.type('=SOMM');
+	await expect(app.getByText('SOMME', { exact: true }).first()).toBeVisible();
+	await app.keyboard.press('Tab');
+	await app.keyboard.type('Feuille1[Prix])');
+	await app.keyboard.press('Enter');
+	await goTo(app, 'F1');
+	await expect(activeCell(app)).toContainText('10');
 });
 
 test('4. trier puis filtrer', async ({ app }) => {

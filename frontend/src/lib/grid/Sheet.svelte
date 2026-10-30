@@ -8,7 +8,7 @@
 	// décide (cellule libre, nouveau tableau, extension, élargissement).
 	// Rendu <canvas> de la zone visible, cache de blocs de lignes par tableau,
 	// éditeur DOM superposé à la cellule active, barre de formule.
-	import { flushSync, onMount, tick, untrack } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { noticeTtl } from '#lib/shell/notice.js';
 	import { RowCache, syncAt, type SyncKind } from './cache';
 	import { VScroll, clamp } from './scroll';
@@ -96,9 +96,9 @@
 	import GridA11y from './GridA11y.svelte';
 	import { type CellSpeech } from './a11y';
 	import { drawIcon } from '#lib/icons/canvas.js';
-	import { apply as applySuggestion, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
+	import { signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { formulaRefs, highlightParts, isFormula, previewShift, refRect, type FormulaError, type Rect } from './formulaEdit';
-	import { editorLeave, holdFormula, updateHold, type FormulaHold } from './crossref';
+	import { editorLeave, type FormulaHold } from './crossref';
 	import OutlineBar from './OutlineBar.svelte';
 	import { bandSize, outlineDepth, type SheetOutline } from './outline';
 	import { nameAlertOpen } from '#lib/ui/nameAlert.js';
@@ -138,6 +138,7 @@
 	import { createStatus } from './sheet/status.svelte.js';
 	import { createBench } from './sheet/bench.svelte.js';
 	import { createAnim } from './sheet/anim.svelte.js';
+	import { createFormula } from './sheet/formula.svelte.js';
 
 
 	interface Props {
@@ -1317,65 +1318,45 @@
 	let sig = $state<{ fn: FunctionDoc; index: number; where: 'cell' | 'fx' } | null>(null);
 	let suggestPos = $state({ x: 0, y: 0 });
 
-	function onFormulaInput(el: TextField, where: 'cell' | 'fx') {
-		editErr = null;
-		if (where === 'cell') {
-			fxText = el.value;
-			placeEditor();
-			// Une formule se lit de gauche à droite, quelle que soit la colonne.
-			if (el.value.startsWith('=')) el.style.textAlign = 'left';
-		}
-		if (!catalog) return;
-		suggestPos = { x: toView(screenX(active.col)), y: toView(screenY(active.row) + Math.max(editorH, rh(active.row))) + 2 };
-		const caret = el.selectionStart ?? el.value.length;
-		const e = tableAt(active.row, active.col);
-		const c = suggest(el.value, caret, catalog, e?.t.name);
-		completion = c ? { ...c, sel: 0, where } : null;
-		const s = signature(el.value, caret, catalog);
-		sig = s ? { ...s, where } : null;
-	}
+	// --- Saisie de formule : sheet/formula.svelte.ts ---
+	const formulaCtl = createFormula({
+		get editErr() { return editErr; }, set editErr(v) { editErr = v; },
+		get fxText() { return fxText; }, set fxText(v) { fxText = v; },
+		get placeEditor() { return placeEditor; },
+		get catalog() { return catalog; },
+		get suggestPos() { return suggestPos; }, set suggestPos(v) { suggestPos = v; },
+		get toView() { return toView; },
+		get screenX() { return screenX; },
+		get active() { return active; }, set active(v) { active = v; },
+		get screenY() { return screenY; },
+		get editorH() { return editorH; },
+		get rh() { return rh; },
+		get tableAt() { return tableAt; },
+		get completion() { return completion; }, set completion(v) { completion = v; },
+		get sig() { return sig; }, set sig(v) { sig = v; },
+		get hold() { return hold; }, set hold(v) { hold = v; },
+		get fxEditing() { return fxEditing; }, set fxEditing(v) { fxEditing = v; },
+		get fxInput() { return fxInput; },
+		get editing() { return editing; }, set editing(v) { editing = v; },
+		get editRO() { return editRO; },
+		get input() { return input; },
+		get editValueText() { return editValueText; },
+		get lastRef() { return lastRef; }, set lastRef(v) { lastRef = v; },
+		get placedSheet() { return placedSheet; },
+		get say() { return say; },
+		get anchor() { return anchor; }, set anchor(v) { anchor = v; },
+		get refreshFx() { return refreshFx; },
+		get wrap() { return wrap; },
+		get schedule() { return schedule; },
+		get startEdit() { return startEdit; },
+		get keepEditorUntil() { return keepEditorUntil; }, set keepEditorUntil(v) { keepEditorUntil = v; },
+		get commit() { return commit; },
+		get moveTo() { return moveTo; },
+		get onsheet() { return onsheet; }
+	});
+	const { onFormulaInput, moveSig, completionKey, keepFormula, placeHold, finishHold } = formulaCtl;
+	export const resumeFormula = formulaCtl.resumeFormula;
 
-	/** Le curseur bouge sans saisie (flèches, clic) : l'argument en gras suit. */
-	function moveSig(e: Event, where: 'cell' | 'fx') {
-		if (!catalog || (e instanceof KeyboardEvent && !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key))) return;
-		const el = e.currentTarget as TextField;
-		const s = signature(el.value, el.selectionStart ?? el.value.length, catalog);
-		sig = s ? { ...s, where } : null;
-	}
-
-	/** Gère les touches de la liste de suggestions ; vrai si la touche est consommée. */
-	function completionKey(e: KeyboardEvent, el: TextField, set: (v: string) => void): boolean {
-		if (!completion) return false;
-		const c = completion;
-		switch (e.key) {
-			case 'ArrowDown':
-				completion = { ...c, sel: (c.sel + 1) % c.items.length };
-				break;
-			case 'ArrowUp':
-				completion = { ...c, sel: (c.sel + c.items.length - 1) % c.items.length };
-				break;
-			case 'Tab':
-			case 'Enter': {
-				const caret = el.selectionStart ?? el.value.length;
-				const r = applySuggestion(el.value, caret, c.from, c.items[c.sel]);
-				set(r.text);
-				completion = null;
-				requestAnimationFrame(() => {
-					el.setSelectionRange(r.caret, r.caret);
-					onFormulaInput(el, c.where);
-				});
-				break;
-			}
-			case 'Escape':
-				completion = null;
-				break;
-			default:
-				return false;
-		}
-		e.preventDefault();
-		e.stopPropagation();
-		return true;
-	}
 	let nameBox = $state('');
 	// Cellule d'un tableau : nom du tableau (modifiable) et colonne[ligne].
 	let tableBox = $state<{ name: string; col: string } | null>(null);
@@ -1408,98 +1389,8 @@
 		};
 	});
 
-	/** La feuille from est quittée : une formule en cours de saisie est gardée. */
-	function keepFormula(from: number) {
-		if (hold) {
-			// Déjà sur une autre feuille : on en change encore, la saisie suit.
-			if (fxEditing && fxInput) hold = updateHold(hold, fxText, fxInput.selectionStart, fxInput.selectionEnd);
-			return;
-		}
-		if (!editing && !fxEditing) return;
-		// Éditeur en lecture seule : rien à garder, il se referme.
-		if (editing && editRO) {
-			editing = false;
-			return;
-		}
-		const el = editing ? input : fxInput;
-		const text = editing ? editValueText : fxText;
-		const h = holdFormula({ sheet: from, row: active.row, col: active.col, where: editing ? 'cell' : 'fx' }, text, el?.selectionStart ?? null, el?.selectionEnd ?? null);
-		if (!h) return;
-		hold = h;
-		editing = false;
-		editErr = null;
-		completion = sig = null;
-		lastRef = null;
-	}
-
-	/** Après un changement de feuille, la saisie gardée : dans la barre de formule, ou de retour dans sa cellule. */
-	function placeHold(sheet: number) {
-		const h = hold;
-		if (!h || sheet !== placedSheet) return;
-		if (sheet !== h.sheet) {
-			// Autre feuille : la formule dans la barre de formule, curseur gardé.
-			flushSync(() => {
-				fxText = h.text;
-				fxEditing = true;
-			});
-			fxInput?.focus();
-			fxInput?.setSelectionRange(h.start, h.end);
-			if (fxInput) onFormulaInput(fxInput, 'fx');
-			say(tr('grid.formula.pickHint'));
-			return;
-		}
-		// Retour à la feuille de la formule.
-		hold = null;
-		lastRef = null;
-		fxEditing = false;
-		completion = sig = null;
-		active = { row: h.row, col: h.col };
-		anchor = { ...active };
-		if (h.finish === 'cancel') {
-			refreshFx();
-			wrap.focus();
-			schedule();
-			return;
-		}
-		if (h.where === 'fx' && !h.finish) {
-			// Saisie commencée dans la barre de formule : elle y reprend.
-			flushSync(() => {
-				fxText = h.text;
-				fxEditing = true;
-			});
-			fxInput?.focus();
-			fxInput?.setSelectionRange(h.start, h.end);
-			schedule();
-			return;
-		}
-		startEdit(true, h.text);
-		if (!editing || !input) return;
-		input.setSelectionRange(h.start, h.end);
-		onFormulaInput(input, 'cell');
-		// Retour pour l'argument suivant : le focus que le changement de feuille
-		// remet à la grille ne doit pas valider la formule.
-		if (!h.finish) keepEditorUntil = performance.now() + 400;
-		// Entrée sur l'autre feuille : validée dans sa cellule (une faute laisse l'éditeur ouvert).
-		if (h.finish === 'commit' && commit()) moveTo(h.row + 1, h.col);
-		schedule();
-	}
-
 	// Jusqu'à cet instant, l'éditeur de cellule qui perd le focus le reprend (retour de pointage).
 	let keepEditorUntil = 0;
-
-	/** Entrée ou Échap sur l'autre feuille : retour à la feuille de la formule, qui est validée ou abandonnée. */
-	function finishHold(finish: 'commit' | 'cancel') {
-		if (!hold) return;
-		hold = { ...(fxInput ? updateHold(hold, fxText, fxInput.selectionStart, fxInput.selectionEnd) : hold), finish };
-		completion = sig = null;
-		onsheet?.(hold.sheet);
-	}
-
-	/** Reprend la saisie d'une formule restée ouverte (clic sur l'onglet affiché). */
-	export function resumeFormula() {
-		if (editing) input?.focus();
-		else if (fxEditing) fxInput?.focus();
-	}
 
 	let message = '';
 	// Le message s'efface seul (noticeTtl) ; un nouveau message relance le délai.
