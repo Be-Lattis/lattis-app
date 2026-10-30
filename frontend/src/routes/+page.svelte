@@ -28,7 +28,7 @@
 	import { choiceStatus, choiceStep, type ChoiceActions } from '#lib/shell/choice.js';
 	import { previewOf } from '#lib/ui/rowformula.js';
 	import { headerOfferText } from '#lib/grid/titlehead.js';
-	import { popBack, pushBack, type RefSpot } from '#lib/grid/reflink.js';
+	import { type RefSpot } from '#lib/grid/reflink.js';
 	import { printSheetPages } from '#lib/print/printsheet.js';
 	import { withSaveProgress } from '#lib/shell/saveprogress.js';
 	import { demoProgressText, firstSteps, guidePage, hideSteps, stepsShown } from '#lib/shell/welcome.js';
@@ -92,9 +92,8 @@
 	import type { State as CoEditState } from '#bindings/internal/coedit/models.js';
 	import RightsDialog from '#lib/remote/RightsDialog.svelte';
 	import { rightsObjects, type RightsObject } from '#lib/remote/rights.js';
-	import { pushSummary, type SourceLink } from '#lib/remote/source.js';
 	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
-	import { canRepublish, detachQuestion, goneError, removeQuestion, retryNotice, roleChip, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
+	import { canRepublish, goneError, roleChip, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
 	import { lattis, loadLattis, requestLogin, requestLoginOrLocal, shareRights } from '#lib/remote/lattis.svelte.js';
 	import { connected, hostOf } from '#lib/remote/lattis.js';
 	import { dataGroup, type DataCatalog, type DataGroup } from '#lib/remote/data.js';
@@ -112,7 +111,6 @@
 	import SyncStatusBar from '#lib/shell/SyncStatus.svelte';
 	import UpdateStatus from '#lib/shell/UpdateStatus.svelte';
 	import { syncOf, type SyncStatus } from '#lib/shell/sync.js';
-	import { syncCall } from '#lib/shell/busy.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import { groupSessions, olderLabel, sessionName } from '#lib/shell/recovery.js';
 	import { setTileAllower, setTileFetcher } from '#lib/chart/tiles.js';
@@ -127,6 +125,7 @@
 	import { reducedMotion } from '#lib/grid/anim.js';
 	import type { Mode } from '#lib/app/model.js';
 	import { createSheetSource } from './../lib/app/sheetsource.svelte.js';
+	import { createSharing } from './../lib/app/sharing.svelte.js';
 
 	let mode = $state<Mode>('starting');
 	let bench = $state(false);
@@ -279,131 +278,39 @@
 		if (conflictsOpen || n) loadConflicts();
 	});
 
-	async function loadConflicts() {
-		try {
-			conflicts = (await DocumentService.ShareConflicts()) ?? [];
-			held = share?.held ? ((await DocumentService.ShareHeld()) ?? []) : [];
-		} catch (e) {
-			notice = err(e);
-		}
-	}
-
-	/** Classeur partagé en direct : ajoute un tableau qui n'est que sur ce poste au classeur du serveur (après confirmation). */
-	async function addToShared(table: string): Promise<boolean> {
-		try {
-			const why = await DocumentService.ShareCanAddTable(table);
-			if (why) {
-				notice = why;
-				return false;
-			}
-			const ok = confirm(
-				t('shell.share.addTableConfirm', { table, workbook: share?.title ?? '' })
-			);
-			if (!ok) return false;
-			notice = t('shell.share.addingTable', { table });
-			docState = await syncCall(DocumentService.ShareAddTable(table));
-			notice = docState.notice || t('shell.share.tableAdded', { table });
-			share = await DocumentService.ShareState().catch(() => share);
-			await reload();
-			return true;
-		} catch (e) {
-			notice = err(e);
-			return false;
-		}
-	}
-
-	async function resolveConflict(c: Conflict, mine: boolean) {
-		conflictBusy = true;
-		try {
-			docState = await DocumentService.ShareResolve(c.id, mine);
-			await reload();
-			await loadConflicts();
-			notice = mine ? (coedit?.active ? t('shell.conflicts.mineAll') : t('shell.conflicts.mineServer')) : t('shell.conflicts.theirs');
-			if (!conflicts.length) conflictsOpen = false;
-		} catch (e) {
-			notice = err(e);
-		} finally {
-			conflictBusy = false;
-		}
-	}
-
-	/** Volet Conflits : renvoie (retry) ou abandonne les modifications mises de côté d'un tableau. */
-	async function resolveHeld(h: Held, retry: boolean) {
-		conflictBusy = true;
-		try {
-			docState = await syncCall(DocumentService.ShareHeldResolve(h.table, retry));
-			share = await DocumentService.ShareState().catch(() => share);
-			await reload();
-			await loadConflicts();
-			notice = docState.notice || (retry ? t('shell.conflicts.heldRetried', { table: h.name }) : t('shell.conflicts.heldDropped', { table: h.name }));
-			if (!conflicts.length && !held.length) conflictsOpen = false;
-		} catch (e) {
-			notice = err(e);
-		} finally {
-			conflictBusy = false;
-		}
-	}
-
-	/** Volet Conflits : garde toutes mes valeurs (mine) ou toutes celles des collègues. */
-	async function resolveAllConflicts(mine: boolean) {
-		conflictBusy = true;
-		let n = 0;
-		try {
-			for (const c of conflicts) {
-				docState = await DocumentService.ShareResolve(c.id, mine);
-				n++;
-			}
-			notice = mine ? (coedit?.active ? t('shell.conflicts.mineAllCount', { n }) : t('shell.conflicts.mineServerCount', { n })) : t('shell.conflicts.theirsCount', { n });
-		} catch (e) {
-			notice = err(e);
-		} finally {
-			await reload().catch(() => {});
-			await loadConflicts();
-			if (!conflicts.length) conflictsOpen = false;
-			conflictBusy = false;
-		}
-	}
-
-	/** Volet Conflits : va sur la cellule en conflit. */
-	async function gotoConflict(c: Conflict) {
-		if (!c.found) return;
-		view = 'grid';
-		if (c.sheet !== sheetId) {
-			sheet?.closeOverlays();
-			sheetId = c.sheet;
-			await reload();
-		}
-		await tick();
-		await new Promise((r) => requestAnimationFrame(r));
-		sheet?.selectRange(c.row, c.col, c.row, c.col);
-		sheet?.focus();
-	}
-	/**
-	 * Point de carte cliqué (feuille ou document) : va sur la feuille du
-	 * tableau et sélectionne la ligne du point, retrouvée par son identifiant
-	 * (le tri ou le filtre du moment sont suivis).
-	 */
-	async function gotoRow(table: string, id: number) {
-		if (mode !== 'doc') return;
-		try {
-			const spot = await DocumentService.LocateRow(table, id);
-			view = 'grid';
-			if (spot.sheet !== sheetId) {
-				sheet?.closeOverlays();
-				sheetId = spot.sheet;
-				await reload();
-			}
-			await tick();
-			await new Promise((r) => requestAnimationFrame(r));
-			const last = spot.col + Math.max(1, spot.cols) - 1;
-			// Ligne masquée par le filtre : l'en-tête du tableau est sélectionné.
-			sheet?.selectRange(spot.row, spot.col, spot.row, last);
-			if (spot.hidden) notice = t('shell.ref.hiddenRow', { table: spot.table });
-			sheet?.focus();
-		} catch (e) {
-			notice = err(e);
-		}
-	}
+	// --- Classeur partagé : ../lib/app/sharing.svelte.ts ---
+	const sharingCtl = createSharing({
+		get conflicts() { return conflicts; }, set conflicts(v) { conflicts = v; },
+		get held() { return held; }, set held(v) { held = v; },
+		get share() { return share; }, set share(v) { share = v; },
+		get notice() { return notice; }, set notice(v) { notice = v; },
+		get err() { return err; },
+		get docState() { return docState; }, set docState(v) { docState = v; },
+		get reload() { return reload; },
+		get conflictBusy() { return conflictBusy; }, set conflictBusy(v) { conflictBusy = v; },
+		get coedit() { return coedit; },
+		get conflictsOpen() { return conflictsOpen; }, set conflictsOpen(v) { conflictsOpen = v; },
+		get view() { return view; }, set view(v) { view = v; },
+		get sheetId() { return sheetId; }, set sheetId(v) { sheetId = v; },
+		get sheet() { return sheet; },
+		get mode() { return mode; }, set mode(v) { mode = v; },
+		get help() { return help; },
+		get refBack() { return refBack; }, set refBack(v) { refBack = v; },
+		get sourceTables() { return sourceTables; }, set sourceTables(v) { sourceTables = v; },
+		get shareRetrying() { return shareRetrying; }, set shareRetrying(v) { shareRetrying = v; },
+		get opened() { return opened; },
+		get closeDoc() { return closeDoc; },
+		get detachAsk() { return detachAsk; }, set detachAsk(v) { detachAsk = v; },
+		get removeAsk() { return removeAsk; }, set removeAsk(v) { removeAsk = v; },
+		get removing() { return removing; }, set removing(v) { removing = v; },
+		get shareReloading() { return shareReloading; }, set shareReloading(v) { shareReloading = v; },
+		get keepSheet() { return keepSheet; },
+		get workbook() { return workbook; }, set workbook(v) { workbook = v; },
+		get queryHost() { return queryHost; },
+		get workbookReady() { return workbookReady; },
+		get loadRecent() { return loadRecent; }
+	});
+	const { loadConflicts, addToShared, resolveConflict, resolveHeld, resolveAllConflicts, gotoConflict, gotoRow, followReference, refGoBack, loadSources, pushSource, retryShare, shareLocalCopy, shareForget, askDetach, shareDetach, askRemove, shareRemove, reloadShare, openedRemote } = sharingCtl;
 
 	// Colonnes de référence (décision 0016) : « Basculer sur » va à la ligne
 	// citée en notant l'endroit d'où l'on part ; Alt+← ou « Revenir à… » de
@@ -414,56 +321,6 @@
 		refBack = [];
 	});
 
-	/** Basculer sur la ligne id de table (filter : sa colonne d'abord filtrée sur la valeur, « Lignes qui citent »). */
-	async function followReference(to: { table: string; id: number; key?: string; filter?: { column: string; value: string } }, from: { row: number; col: number; label: string }) {
-		if (mode !== 'doc') return;
-		try {
-			const tb = help?.tables?.find((x) => x.name === to.table);
-			if (to.filter && tb) {
-				const i = (tb.columns ?? []).indexOf(to.filter.column);
-				if (i >= 0) await DocumentService.SetFilter(to.table, i, { values: [to.filter.value] });
-			}
-			const spot = await DocumentService.LocateRow(to.table, to.id);
-			refBack = pushBack(refBack, { sheet: sheetId, ...from });
-			view = 'grid';
-			if (spot.sheet !== sheetId || to.filter) {
-				sheet?.closeOverlays();
-				sheetId = spot.sheet;
-				await reload();
-			}
-			await tick();
-			await new Promise((r) => requestAnimationFrame(r));
-			const k = to.key && tb ? Math.max(0, (tb.columns ?? []).indexOf(to.key)) : 0;
-			sheet?.selectRange(spot.row, spot.col + k, spot.row, spot.col + k);
-			sheet?.flashRow(spot.row, spot.col, spot.col + Math.max(1, spot.cols) - 1);
-			sheet?.focus();
-			notice = spot.hidden ? t('shell.ref.hiddenRow', { table: spot.table }) : to.filter ? t('shell.ref.filtered', { table: to.table, column: to.filter.column, value: to.filter.value }) : t('shell.ref.back', { label: from.label });
-		} catch (e) {
-			notice = err(e);
-		}
-	}
-
-	/** Alt+← : revenir à l'endroit d'avant le dernier « Basculer sur ». */
-	async function refGoBack() {
-		const { spot, rest } = popBack(refBack);
-		if (!spot) return;
-		refBack = rest;
-		try {
-			if (spot.sheet !== sheetId) {
-				sheet?.closeOverlays();
-				sheetId = spot.sheet;
-				await reload();
-			}
-			await tick();
-			await new Promise((r) => requestAnimationFrame(r));
-			sheet?.selectRange(spot.row, spot.col, spot.row, spot.col);
-			sheet?.flashRow(spot.row, spot.col, spot.col);
-			sheet?.focus();
-			notice = '';
-		} catch (e) {
-			notice = err(e);
-		}
-	}
 	let shareDlg = $state<{ republish: boolean } | null>(null);
 	// Fichier › Gérer l’accès… : droits du classeur publié (propriétaire ou
 	// concepteur), aussi depuis le menu Compte ; onglet SQL : règles et
@@ -532,23 +389,6 @@
 	// Tableaux publiés seuls comme source du Data Lake (sans le classeur) :
 	// clic droit › « Mettre à jour la source du Data Lake ».
 	let sourceTables = $state<string[]>([]);
-	async function loadSources() {
-		if (mode !== 'doc' || !sharedWorkbooksEnabled()) {
-			sourceTables = [];
-			return;
-		}
-		const links = ((await DocumentService.TableSources().catch(() => null)) ?? []) as unknown as SourceLink[];
-		sourceTables = links.map((l) => l.tableName).filter((n) => !!n);
-	}
-	async function pushSource(table: string) {
-		notice = t('shell.share.sourceUpdating', { table });
-		try {
-			const l = (await DocumentService.PushTableSource(table)) as unknown as SourceLink;
-			notice = pushSummary(table, l.lastResult, l.blanked ?? 0);
-		} catch (e) {
-			notice = t('shell.share.sourceFailed', { table, error: err(e) });
-		}
-	}
 	let shareReloading = $state(false);
 	// Serveur injoignable : « Réessayer » en cours ; question avant « Détacher du serveur ».
 	let shareRetrying = $state(false);
@@ -885,108 +725,6 @@
 			live = false;
 		};
 	});
-
-	/** Serveur injoignable : nouvel essai tout de suite (bandeau, Fichier › Réessayer la connexion). */
-	async function retryShare() {
-		if (shareRetrying || !share?.shared) return;
-		shareRetrying = true;
-		notice = retryNotice();
-		try {
-			await DocumentService.ShareRetry();
-			// La réponse arrive par share:changed ; sans elle, le serveur ne répond toujours pas.
-			for (let i = 0; i < 20 && share && !share.online; i++) await new Promise((r) => setTimeout(r, 200));
-			if (share?.online) notice = t('shell.share.connected', { server: serverLabel(share) });
-			else if (share) notice = t('shell.share.stillDown', { server: serverLabel(share) });
-		} catch (e) {
-			notice = err(e);
-		} finally {
-			shareRetrying = false;
-		}
-	}
-
-	/** « Travailler sur une copie locale » : copie sans lien avec le serveur, enregistrée puis ouverte. */
-	async function shareLocalCopy() {
-		try {
-			await opened(await DocumentService.ShareLocalCopy());
-		} catch (e) {
-			notice = err(e);
-		}
-	}
-
-	/** Classeur disparu du serveur : « Retirer des récents » le ferme et efface son cache (après confirmation s'il reste des modifications non envoyées). */
-	async function shareForget() {
-		const n = share?.pending ?? 0;
-		if (n && !confirm(t('shell.share.forgetConfirm', { n }))) return;
-		try {
-			await DocumentService.ShareForget();
-			await closeDoc(false);
-		} catch (e) {
-			notice = err(e);
-		}
-	}
-
-	/** « Détacher du serveur » (propriétaire) : d'abord expliquer, puis faire. */
-	function askDetach() {
-		if (share?.shared && share.canManage) detachAsk = detachQuestion(share, !!docState.remote);
-	}
-
-	async function shareDetach() {
-		detachAsk = null;
-		try {
-			await opened(await DocumentService.ShareDetach());
-		} catch (e) {
-			notice = err(e);
-		}
-	}
-
-	/** « Retirer du serveur… » (propriétaire) : supprime le classeur du serveur pour tous, après confirmation ; le sien reste ouvert en classeur local. */
-	function askRemove() {
-		if (share?.shared && share.canManage && !share.gone) removeAsk = removeQuestion(share, !!docState.remote, isWeb);
-	}
-
-	async function shareRemove() {
-		removing = true;
-		try {
-			const r = await DocumentService.ShareRemove();
-			removeAsk = null;
-			await opened(r);
-		} catch (e) {
-			removeAsk = null;
-			notice = err(e);
-		} finally {
-			removing = false;
-		}
-	}
-
-	/** Bandeau « Nouvelle version disponible » : recharge la version publiée (ajouts locaux gardés). */
-	async function reloadShare() {
-		shareReloading = true;
-		try {
-			docState = await DocumentService.ShareReload();
-			await reload();
-			await keepSheet();
-			notice = t('shell.share.versionLoaded', { version: share?.version ?? '' });
-		} catch (e) {
-			notice = err(e);
-		} finally {
-			shareReloading = false;
-		}
-	}
-
-	/** Classeur ouvert depuis un serveur (cache local). */
-	async function openedRemote(r: { state: DocState }) {
-		docState = r.state;
-		view = 'grid';
-		sheetId = 1;
-		mode = 'doc';
-		workbook++;
-		queryHost?.closePanel();
-		await reload();
-		await keepSheet();
-		if (r.state.notice) notice = r.state.notice;
-		workbookReady();
-		await loadRecent();
-	}
 
 	// Lien lattis://open?server=…&workbook=… (navigateur, lien partagé) :
 	// serveur jamais utilisé, confirmation d'abord ; connexion si besoin ; puis
