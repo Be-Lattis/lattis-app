@@ -10,7 +10,7 @@
 	import { mount, onMount, unmount, untrack } from 'svelte';
 	import type Quill from 'quill';
 	import type { ChartInfo, PivotInfo } from '#bindings/internal/canvas/models.js';
-	import type { ChartConfig, PivotConfig } from '#lib/grid/Sheet.svelte';
+	import type { ChartConfig, PivotConfig } from '#lib/grid/sheet/model.js';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import { MORE_KINDS, chartFields, defaultChartTitle } from '#lib/chart/kinds.js';
 	import { encodeObj, objFromText, type ObjClip } from '#lib/clip/objects.js';

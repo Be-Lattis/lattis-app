@@ -3,7 +3,7 @@
 // feuille comme un graphique. Ce module en tire la place, la taille et les
 // changements de sélection ; SheetSlicers.svelte les dessine.
 
-import type { PivotConfig } from './Sheet.svelte';
+import type { PivotConfig } from './sheet/model.js';
 
 export interface PivotSlicer {
 	field: string;

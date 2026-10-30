@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PivotConfig } from './Sheet.svelte';
+import type { PivotConfig } from './sheet/model.js';
 import {
 	ROW_COUNT,
 	addField,

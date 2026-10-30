@@ -4,7 +4,7 @@
 // placés devant lui dans sa zone) ; un nombre par intervalles. Fonctions
 // pures : chacune rend une nouvelle configuration.
 
-import type { PivotConfig } from './Sheet.svelte';
+import type { PivotConfig } from './sheet/model.js';
 import { tAny } from '#lib/i18n/index.js';
 
 export interface PivotGroup {

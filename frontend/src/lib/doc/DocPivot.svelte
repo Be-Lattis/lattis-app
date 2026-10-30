@@ -16,7 +16,7 @@
 	// lignes, en arborescence avec ses −/+ (pivottree.ts).
 	import { untrack } from 'svelte';
 	import type { PivotInfo } from '#bindings/internal/canvas/models.js';
-	import type { PivotConfig } from '#lib/grid/Sheet.svelte';
+	import type { PivotConfig } from '#lib/grid/sheet/model.js';
 	import type { CellStyle } from '#lib/grid/style.js';
 	import { formatCell } from '#lib/grid/numfmt.js';
 	import { pivotLabelOffset, setFolded, type PivotRowInfo } from '#lib/grid/pivottree.js';

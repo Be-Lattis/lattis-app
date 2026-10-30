@@ -4,7 +4,7 @@
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	// Volet « Mise en forme du graphique » : chaque réglage s'applique tout de
 	// suite (aperçu direct, Ctrl+Z pour revenir en arrière).
-	import type { ChartConfig } from '#lib/grid/Sheet.svelte';
+	import type { ChartConfig } from '#lib/grid/sheet/model.js';
 	import { PALETTE } from './scale';
 	import Select from '#lib/ui/Select.svelte';
 	import Icon from '#lib/icons/Icon.svelte';

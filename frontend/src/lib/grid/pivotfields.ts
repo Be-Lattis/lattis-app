@@ -3,7 +3,7 @@
 // son type, les déplacements entre zones et dans une zone, comme Excel.
 // Fonctions pures : chacune rend une nouvelle configuration.
 
-import type { PivotConfig, PivotValue } from './Sheet.svelte';
+import type { PivotConfig, PivotValue } from './sheet/model.js';
 import { lower, t, tAny } from '#lib/i18n/index.js';
 
 export type Zone = 'filters' | 'cols' | 'rows' | 'values';

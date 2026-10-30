@@ -11,7 +11,7 @@
 	// modification du classeur (live.stamp), sa largeur suit celle du texte.
 	import { untrack } from 'svelte';
 	import Chart from '#lib/chart/Chart.svelte';
-	import type { ChartConfig } from '#lib/grid/Sheet.svelte';
+	import type { ChartConfig } from '#lib/grid/sheet/model.js';
 
 	interface Props {
 		config: ChartConfig;

@@ -9,7 +9,7 @@
 // Leur configuration est la valeur de l'objet dans le Delta enregistré.
 
 import Quill from 'quill';
-import type { ChartConfig } from '#lib/grid/Sheet.svelte';
+import type { ChartConfig } from '#lib/grid/sheet/model.js';
 import { t } from '#lib/i18n/index.js';
 
 /** Bouton d'un onglet Document. */

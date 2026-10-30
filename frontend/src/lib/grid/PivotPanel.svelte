@@ -13,7 +13,7 @@
 	// entre les éléments, Entrée ouvre le menu d'une puce, Suppr la retire,
 	// Alt+↑/↓ la déplace, ↑/↓ passe d'une puce à l'autre.
 	import { onDestroy, tick, untrack } from 'svelte';
-	import type { PivotConfig } from './Sheet.svelte';
+	import type { PivotConfig } from './sheet/model.js';
 	import Icon from '#lib/icons/Icon.svelte';
 	import type { IconName } from '#lib/icons/icons.js';
 	import Select from '#lib/ui/Select.svelte';

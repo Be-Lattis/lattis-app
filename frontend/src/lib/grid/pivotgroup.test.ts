@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PivotConfig } from './Sheet.svelte';
+import type { PivotConfig } from './sheet/model.js';
 import { derivedFields, derivedGroup, groupOf, setGroup, suggestStep } from './pivotgroup';
 import { newSlicer, slicerOn, slicerPick, slicerSize, timelinePick, withSlicer } from './pivotslicer';
 import { needsBaseField, needsBaseItem, shows } from './pivotfields';

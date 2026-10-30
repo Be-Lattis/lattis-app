@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { brokenPivotAt, pivotsCleared, pivotZone } from './pivotzone';
 import { changeSource } from './pivotfields';
-import type { PivotConfig } from './Sheet.svelte';
+import type { PivotConfig } from './sheet/model.js';
 
 // TCD sain : filtres de rapport en lignes 1-2 (anchor 1), tableau en 3-5, colonnes 1-2.
 const ok = { id: 1, row: 3, anchor: 1, col: 1, cells: [['Pays', 'Somme'], ['FR', '17'], ['Total', '17']], error: '' };

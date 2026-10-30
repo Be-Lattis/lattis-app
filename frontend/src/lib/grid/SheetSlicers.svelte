@@ -7,7 +7,7 @@
 	// est une modification du TCD (une étape d'annulation).
 	import { errorText, locale, t } from '#lib/i18n/index.js';
 	import { dismiss } from './dismiss.js';
-	import type { PivotConfig, SheetPivot } from './Sheet.svelte';
+	import type { PivotConfig, SheetPivot } from './sheet/model.js';
 	import { periodLabel, slicerOn, slicerPick, slicerSize, timelinePick, withSlicer, type PivotSlicer } from './pivotslicer';
 	import { DATE_LEVELS, levelName } from './pivotgroup';
 
