@@ -76,5 +76,6 @@ L'audit collaboratif du 20/10 mesure 314 ms au pire pour 40 postes, regroupement
 | A | **Fait** : le Store suit les écritures par colonne (`store.ColumnOf`, `internal/store/colver.go`) ; la suggestion de clé ne se recalcule que si la première colonne ou les lignes changent. Mise en page après une saisie, 1 M de lignes : 1 s → 2 ms (inchangé, 1 s, après une saisie dans la première colonne) |
 | B | **Fait** : `reload()` lance ses appels ensemble ; l'aide des fonctions est encore relue à chaque fois |
 | C | **Fait** : `TestMesureOperations` mesure la mise en page après une saisie, et le TCD après une saisie dans sa source (6,5 s : piste D) |
-| D | **En partie (30/10)** : TCD et graphiques ne dépendent que des colonnes qu'ils lisent ; une saisie ailleurs ne les recalcule plus (6,3 s → 2 ms). Saisie dans une colonne lue : voir `audit-performance-2026-10-30.md` |
+| D | **En partie (30/10)** : TCD et graphiques ne dépendent que des colonnes qu'ils lisent ; une saisie ailleurs ne les recalcule plus (6,3 s → 2 ms). Saisie dans une colonne lue : une seule lecture de la source, 1 M de lignes 4,8 s → 2,0 s (`audit-performance-2026-10-30.md` § 8) |
 | E | **Fait (30/10)** : critères `<`, `<=`, `>`, `>=` par ligne précalculés (tri et cumuls) ; 30 000 lignes : plus de 8 min → 89 ms |
+| F | **En partie (30/10)** : rangs du tri par deux tris simples ; 1 M de lignes 11,0 s → 8,5 s, 10 M 220 s → 142 s (`audit-performance-2026-10-30.md` § 10). Reste la table étroite des positions |
