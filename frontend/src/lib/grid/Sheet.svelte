@@ -26,7 +26,7 @@
 	import { BorderSet, borderParts, type BorderCmd, type Edge, type StylePart } from './borders';
 	import { autoHeight, BASE_PX, cellFont, fontPx, headerHeight, headerTextWidth, lineHeight, wrapLines } from './textwrap';
 	import { AutoRows } from './rowfit';
-	import { arrowNotes, arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
+	import { arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
 	import { Velocity } from './touch';
 	import { PanGesture, SpaceHold } from './pan';
 	import { panes, toGrid, type Pane } from './panes';
@@ -52,7 +52,6 @@
 	import { type CustomOrder } from './customsort';
 	import { handQuestion, keyQuestion, type KeyChoice, type KeyQuestion } from './keychoice';
 	import { dismiss, dismissPanel } from './dismiss';
-	import { explainError } from './errors';
 	import { spillAt, spillTip } from './spillmenu';
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
@@ -86,7 +85,6 @@
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import type { PrintCell, PrintChart, PrintSource } from '#lib/print/sheetprint.js';
 	import PivotPanel from './PivotPanel.svelte';
-	import { panelAtCell } from './pivotfields';
 	import { brokenPivotAt, pivotsCleared } from './pivotzone';
 	import { midEllipsis } from './midellipsis';
 	import { fitColumns, fitRows } from './autofit';
@@ -104,7 +102,7 @@
 	import CondFormat, { type CondHost, type CondView } from './CondFormat.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
 	import GridA11y from './GridA11y.svelte';
-	import { selectionLabel, type CellSpeech } from './a11y';
+	import { type CellSpeech } from './a11y';
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, pointedRef, previewShift, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
@@ -139,6 +137,7 @@
 	import { createPivot } from './sheet/pivot.svelte.js';
 	import { createDataTools } from './sheet/datatools.svelte.js';
 	import { createCommands } from './sheet/commands.svelte.js';
+	import { createAudit } from './sheet/audit.svelte.js';
 
 
 	interface Props {
@@ -6032,155 +6031,54 @@
 	// Liens affichés : pour chaque cellule de la sélection, ses antécédents
 	// (flèches bleues vers elle) et ses dépendants (flèches rouges depuis elle).
 	let links = $state<Link[]>([]);
-	/** Cellules analysées au plus par « Afficher les liens » (la sélection peut être une colonne entière). */
-	const MAX_LINK_CELLS = 400;
-	// Sélection dont les liens sont affichés : ils partent dès qu'elle change.
-	let linksOf = '';
-	const selKey = () => `${sheetIdOf()}:${active.row},${active.col}:${anchor.row},${anchor.col}`;
-	$effect(() => {
-		const k = selKey();
-		if (k !== linksOf && untrack(() => links.length)) {
-			links = [];
-			schedule();
-		}
+	// Audit de formules : sheet/audit.svelte.ts (accès de createAudit à la feuille).
+	const auditCtl = createAudit({
+		get active() { return active; },
+		get anchor() { return anchor; },
+		get links() { return links; }, set links(v) { links = v; },
+		get schedule() { return schedule; },
+		get source() { return source; },
+		get selection() { return selection; },
+		get visibleRows() { return visibleRows; },
+		get data() { return data; },
+		get closeMenus() { return closeMenus; },
+		get selChart() { return selChart; }, set selChart(v) { selChart = v; },
+		get panel() { return panel; }, set panel(v) { panel = v; },
+		get buttonsLayer() { return buttonsLayer; },
+		get objectsLayer() { return objectsLayer; },
+		get tableAt() { return tableAt; },
+		get shown() { return shown; },
+		get key() { return key; },
+		get cells() { return cells; },
+		get nameBox() { return nameBox; }, set nameBox(v) { nameBox = v; },
+		get cellName() { return cellName; },
+		get message() { return message; }, set message(v) { message = v; },
+		get pivotAt() { return pivotAt; },
+		get pivots() { return pivots; },
+		get pivotPanelAt() { return pivotPanelAt; }, set pivotPanelAt(v) { pivotPanelAt = v; },
+		get openPivotOnLoad() { return openPivotOnLoad; },
+		get ownerAt() { return ownerAt; },
+		get singleCol() { return singleCol; },
+		get singleSelection() { return singleSelection; },
+		get inTable() { return inTable; },
+		get tableBox() { return tableBox; }, set tableBox(v) { tableBox = v; },
+		get dragging() { return dragging; },
+		get headerDrag() { return headerDrag; },
+		get fxEditing() { return fxEditing; },
+		get fxRO() { return fxRO; }, set fxRO(v) { fxRO = v; },
+		get readOnlyReason() { return readOnlyReason; },
+		get fxText() { return fxText; }, set fxText(v) { fxText = v; },
+		get editText() { return editText; },
+		get addrA1() { return addrA1; },
+		get shownText() { return shownText; },
+		get names() { return names; },
+		get speech() { return speech; }, set speech(v) { speech = v; },
+		get speechSel() { return speechSel; }, set speechSel(v) { speechSel = v; },
+		get refreshStatus() { return refreshStatus; }
 	});
-
-	/** Formules › Afficher les liens (toute la sélection) ; clear : les retire (Échap). */
-	export async function auditActive(kind: 'show' | 'clear') {
-		if (kind === 'clear' || !source.dependencies) {
-			links = [];
-			schedule();
-			return;
-		}
-		const deps = source.dependencies;
-		const { r0, r1, c0, c1 } = selection();
-		// Lignes visibles d'abord : sur une colonne entière, ce sont celles qu'on voit.
-		const { first, last } = visibleRows();
-		const rows: number[] = [];
-		for (let r = Math.max(r0, first); r <= Math.min(r1, last); r++) rows.push(r);
-		for (let r = r0; r <= r1 && rows.length * (c1 - c0 + 1) < MAX_LINK_CELLS; r++) if (r < first || r > last) rows.push(r);
-		const cellsToSee: { row: number; col: number }[] = [];
-		for (const r of rows) for (let c = c0; c <= c1 && cellsToSee.length < MAX_LINK_CELLS; c++) cellsToSee.push({ row: r, col: c });
-		const cut = (r1 - r0 + 1) * (c1 - c0 + 1) > cellsToSee.length;
-		try {
-			const found: Link[] = [];
-			let pre = 0;
-			let dep = 0;
-			let away = 0;
-			// Par petits groupes : le moteur n'est pas inondé de requêtes.
-			for (let i = 0; i < cellsToSee.length; i += 16) {
-				const part = await Promise.all(cellsToSee.slice(i, i + 16).map((p) => deps(p.row, p.col).then((d) => ({ ...p, d }))));
-				for (const { row, col, d } of part) {
-					if (!d.precedents.length && !d.dependents.length) continue;
-					found.push({ row, col, pre: d.precedents, dep: d.dependents });
-					pre += d.precedents.length;
-					dep += d.dependents.length;
-					away += [...d.precedents, ...d.dependents].filter((x) => x.sheet !== sheetIdOf()).length;
-				}
-			}
-			links = found;
-			linksOf = selKey();
-			// Ligne précise sans place (masquée, clé introuvable…) : la flèche vise la colonne, la note dit pourquoi.
-			const notes = arrowNotes(found.flatMap((l) => [...l.pre, ...l.dep]));
-			say(
-				found.length === 0
-					? tr('grid.audit.none')
-					: tr('grid.audit.links', { n: found.length, pre, dep }) +
-							(away ? ' ' + tr('grid.audit.away', { n: away }) : '') +
-							(cut ? ' · ' + tr('grid.audit.cut', { n: MAX_LINK_CELLS }) : '') +
-							(notes.length ? ` · ${notes.slice(0, 2).join(' ; ')}${notes.length > 2 ? ` (+${notes.length - 2})` : ''}` : '') +
-							' · ' + tr('grid.audit.clear')
-			);
-			schedule();
-		} catch (err) {
-			say(errorText(err));
-		}
-	}
-
-	/** Feuille affichée (les cibles des autres feuilles n'ont pas de flèche). */
-	function sheetIdOf(): number {
-		return data?.sheet ?? 1;
-	}
-
-	/** Ferme les menus, dialogues et volets (changement de feuille ou de vue). */
-	export function closeOverlays() {
-		closeMenus();
-		links = [];
-		selChart = null;
-		panel = null;
-		// Volet d'un contrôle : fermé aussi (ses réglages restent appliqués).
-		buttonsLayer?.closeEditor();
-		objectsLayer?.deselect();
-	}
-
-	/** Erreur de formule de la cellule (code et formule), ou null. */
-	function errorAt(r: number, c: number): { code: string; formula: string } | null {
-		const e = tableAt(r, c);
-		if (e) {
-			const i = c - e.t.col;
-			const col = e.t.columns[i];
-			if (r === e.t.row || !col.formula) return null;
-			const v = e.cache.row(r - e.t.row - 1)?.cells[i];
-			return isErrorValue(v) ? { code: v as string, formula: col.formula } : null;
-		}
-		const f = shown.get(key(r, c));
-		return f?.error ? { code: f.text, formula: cells.get(key(r, c)) ?? '' } : null;
-	}
-
-	function refreshFx() {
-		nameBox = cellName(active.row, active.col);
-		const err = errorAt(active.row, active.col);
-		if (err) message = explainError(err.code, err.formula, (r, c) => shown.get(key(r, c))?.text ?? cells.get(key(r, c))) || message;
-		// Un TCD en erreur (source introuvable) ouvre aussi son volet sur la
-		// cellule de son message : le supprimer ou changer sa source.
-		const pv = pivotAt(active.row, active.col) ?? brokenPivotAt(pivots, active.row, active.col);
-		// Le volet du TCD reste ouvert quand le TCD rétrécit sous la cellule
-		// active (filtre, champ retiré) : il se ferme quand on la déplace.
-		// Graphique sélectionné (même posé sur le TCD, ou relu après son
-		// déplacement) : son volet reste ouvert, la cellule active n'y change rien.
-		const at = `${active.row}:${active.col}`;
-		const next = panelAtCell(panel, pv?.id, selChart !== null, at !== pivotPanelAt, openPivotOnLoad);
-		if (next !== panel) panel = next;
-		pivotPanelAt = at;
-		const e = ownerAt(active.row, active.col);
-		const label = (r: number, c: number) => {
-			const k = e!.t.columns[c - e!.t.col];
-			// Bande des groupes : le groupe, qu'on renomme ici comme une colonne.
-			if (r < e!.t.row && !singleCol(e!, c - e!.t.col)) return splitGroup(k.name).group;
-			return r === e!.t.row ? k.name : `${k.name}[${r - e!.t.row}]`;
-		};
-		const sel = selection();
-		const multi = !singleSelection();
-		if (e) {
-			const inside = multi && inTable(e, sel.r0, sel.c0) && inTable(e, sel.r1, sel.c1);
-			tableBox = { name: e.t.name, col: inside ? `${label(sel.r0, sel.c0)}:${label(sel.r1, sel.c1)}` : label(active.row, active.col) };
-		} else tableBox = null;
-		// Taille de la plage pendant le glissé seulement, comme Excel ; ensuite
-		// l'adresse de la cellule active revient.
-		if (multi && (dragging || headerDrag)) nameBox = tr('grid.nameBox.size', { rows: String(sel.r1 - sel.r0 + 1), cols: String(sel.c1 - sel.c0 + 1) });
-		refreshSpeech(e, sel, multi);
-		if (fxEditing) return;
-		fxRO = readOnlyReason(active.row, active.col);
-		fxText = editText(active.row, active.col);
-	}
-
-	/** Ce que le lecteur d'écran dit de la cellule active (a11y.ts). */
-	function refreshSpeech(e: ReturnType<typeof tableAt>, sel: ReturnType<typeof selection>, multi: boolean) {
-		const { row: r, col: c } = active;
-		const s: CellSpeech = { addr: addrA1(r, c), value: shownText(r, c), name: names.get(key(r, c)) };
-		if (e) {
-			const k = e.t.columns[c - e.t.col];
-			Object.assign(s, { table: e.t.name, column: k.name, header: r === e.t.row, computed: !!k.formula });
-		}
-		s.error = !!errorAt(r, c);
-		speech = s;
-		speechSel = multi ? selectionLabel(`${addrA1(sel.r0, sel.c0)}:${addrA1(sel.r1, sel.c1)}`, sel.r1 - sel.r0 + 1, sel.c1 - sel.c0 + 1) : '';
-	}
-
-	function say(m: string) {
-		message = m;
-		refreshStatus();
-	}
+	const { sheetIdOf, refreshFx, say } = auditCtl;
+	export const auditActive = auditCtl.auditActive;
+	export const closeOverlays = auditCtl.closeOverlays;
 
 	// --- Doigt (touch.ts) ----------------------------------------------------------
 	// Glisser fait défiler dans les deux sens, avec élan ; un appui choisit la
