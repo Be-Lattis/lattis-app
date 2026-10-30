@@ -48,14 +48,13 @@
 	import { autoLink, isLinkClick, linkKind, onLinkText, openLink } from './hyperlink';
 	import { type CustomOrder } from './customsort';
 	import { type KeyChoice, type KeyQuestion } from './keychoice';
-	import { dismiss, dismissPanel } from './dismiss';
+	import { dismissPanel } from './dismiss';
 	import { freeDisplay } from './freecell';
 	import { bandLabel, bandOpen, hiddenBand } from './hidden';
 	import { choiceHiddenCols } from '#lib/shell/choice.js';
 	import { type ChoiceCandidate } from './tabchoice';
 	import { placeFollowBadge, showNameBadge } from './followbadge';
 	import { ReadRecovery, readFailNotice } from './readfail';
-	import { followLabel } from '#lib/shell/mergesheets.js';
 	import { bandMerges, groupSpans, headerLabel, isSingle, tableTop } from './twolevel';
 	import { tableUnderTitle, titleAboveFilled } from './titlehead';
 	import { pivotColLayer, pivotLayer, pivotValueText } from './pivotformat';
@@ -70,7 +69,7 @@
 	import { cellLines } from './shortcuts';
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
-	import { clip, clipped } from '#lib/ui/menu.js';
+	import { clip } from '#lib/ui/menu.js';
 	import Chart from '#lib/chart/Chart.svelte';
 	import { encodeObj, objFromText, rememberObj } from '#lib/clip/objects.js';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
@@ -137,6 +136,7 @@
 	import KeyDialog, { type KeyDialogView } from './sheet/KeyDialog.svelte';
 	import HandDialog, { type HandDialogView } from './sheet/HandDialog.svelte';
 	import KeyHintMenu, { type KeyHintMenuView } from './sheet/KeyHintMenu.svelte';
+	import FollowMenu, { type FollowMenuView } from './sheet/FollowMenu.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6222,6 +6222,13 @@
 		get menuAction() { return menuAction; },
 		get source() { return source; }
 	};
+	// Pastille « suit l'onglet » : sheet/FollowMenu.svelte.
+	const followMenuView: FollowMenuView = {
+		get data() { return data; },
+		get followMenu() { return followMenu; }, set followMenu(v) { followMenu = v; },
+		get source() { return source; },
+		get toggleFollow() { return toggleFollow; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6584,14 +6591,7 @@
 		</div>
 		<FindBar v={findView} />
 		<CellMenus v={cellMenusView} />
-		{#if followMenu}
-			{@const m = followMenu}
-			{@const what = followLabel(data?.choice?.name ?? '')}
-			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (followMenu = null)}>
-				<div class="menu-title" title={clipped(m.e.t.name) ? m.e.t.name : undefined}>{tr('grid.menu.table', { name: clip(m.e.t.name) })}</div>
-				<button role="menuitemcheckbox" aria-checked="true" disabled={!source.setFollow} onclick={() => toggleFollow(m.e.t, false)}><span class="check">✓</span>{tr('grid.menu.follow', { what })}</button>
-			</div>
-		{/if}
+		<FollowMenu v={followMenuView} />
 		<KeyHintMenu v={hintMenuView} />
 		<LinesDialog v={linesView} />
 		<KeyDialog v={keyDialogView} />
@@ -7089,11 +7089,6 @@
 		min-width: 240px;
 		max-width: 320px; /* MENU_MAX_WIDTH : au-delà, les libellés s'abrègent (…) */
 	}
-	.menu > .menu-title {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
 	.rules {
 		position: absolute;
 		z-index: 6;
@@ -7214,40 +7209,7 @@
 			transform: rotate(360deg);
 		}
 	}
-	.menu-title {
-		padding: 4px 14px;
-		font-size: 11px;
-		color: #6b7280;
-	}
-	.menu-title.default-name {
-		color: #c42b1c; /* DEFAULT_NAME_COLOR */
-	}
 	/* Menu ▾ d'un TCD en arborescence : choix du champ des lignes (Excel). */
-	.menu button {
-		display: block;
-		width: 100%;
-		text-align: left;
-		padding: 6px 14px;
-		background: none;
-		border: none;
-		font: inherit;
-		cursor: pointer;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.menu button:disabled {
-		color: #9aa0a6;
-		cursor: default;
-	}
-	.menu button:hover {
-		background: #e3efe7;
-	}
-	.check {
-		display: inline-block;
-		width: 16px;
-		color: #217346;
-	}
 	/* Fond des boîtes modales de la grille (validation des données). */
 	/* Validation des données : onglets, lignes libellé + champ, alerte. */
 	.input-tip {
