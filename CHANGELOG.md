@@ -15,6 +15,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Corrections
 
 - Classeur collaboratif : il ne passe plus « hors ligne » quelques secondes toutes les 15 minutes (renouvellement de la connexion au suivi des changements).
+- Classeur collaboratif : des droits réduits pendant une coupure sont relus avant l'envoi des modifications faites hors ligne, avec le message « Vos droits sur ce classeur ont changé ».
 - Une plage tapée à la façon d'un tableur en source d'un tableau dynamique (`=UNIQUE(A1:A20)`) se déverse au lieu d'afficher #VALEUR!.
 - Fichier › Ouvrir ouvre un fichier `.xlsx` (aussi par « Ouvrir avec » et glisser-déposer) : au premier Ctrl+S, garder le format `.xlsx` ou convertir en `.lattis`, avec la liste de ce que le `.xlsx` ne garde pas ; « Ne plus demander » se règle dans Fichier › Paramètres › Fichiers.
 

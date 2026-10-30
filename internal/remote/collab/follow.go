@@ -175,12 +175,18 @@ func (w *worker) cycle(ctx context.Context) {
 		ev.State = true
 	}
 	w.mu.Unlock()
+	var err error
 	if full || acl {
 		// Droits relus avant l'envoi : une écriture devenue interdite est
 		// refusée en local (grille grisée, message) plutôt qu'au serveur.
-		// Le titre du classeur aussi (renommé sur le serveur).
+		// Le titre du classeur aussi (renommé sur le serveur). Relecture en
+		// échec (coupure, connexion morte du pool à la reprise) : rien ne
+		// part avec des droits d'avant la coupure, le tour est refait comme
+		// après une coupure (sinon les droits changés pendant la coupure ne
+		// sont relus qu'à la reprise suivante).
 		title := w.e.link.State().Title
-		changed, err := w.e.RefreshRights(ctx)
+		var changed bool
+		changed, err = w.e.RefreshRights(ctx)
 		now := w.e.link.Gone()
 		if err == nil && changed && now == "" {
 			ev.State = true
@@ -199,24 +205,27 @@ func (w *worker) cycle(ctx context.Context) {
 			w.changed(ev)
 			return
 		}
-		if gone != "" {
+		if gone != "" && err == nil {
 			full = true // accès rendu : tout est relu
 		}
 	}
-	// File à envoyer : la barre d'état dit « Synchronisation… » pendant
-	// l'envoi (les modifications sont déjà faites et affichées en local).
-	if p, _, st, sy, cerr := w.e.Counts(ctx); cerr == nil {
-		ev.State = ev.State || st
-		if p > 0 && w.e.link.SetSending(true) {
-			sy = true
+	var rep Report
+	if err == nil {
+		// File à envoyer : la barre d'état dit « Synchronisation… » pendant
+		// l'envoi (les modifications sont déjà faites et affichées en local).
+		if p, _, st, sy, cerr := w.e.Counts(ctx); cerr == nil {
+			ev.State = ev.State || st
+			if p > 0 && w.e.link.SetSending(true) {
+				sy = true
+			}
+			if sy {
+				w.changed(Event{Sync: true})
+			}
 		}
-		if sy {
-			w.changed(Event{Sync: true})
+		rep, err = w.e.Send(ctx)
+		if w.e.link.SetSending(false) {
+			ev.Sync = true
 		}
-	}
-	rep, err := w.e.Send(ctx)
-	if w.e.link.SetSending(false) {
-		ev.Sync = true
 	}
 	if err == nil {
 		// Tableaux nés sur ce poste (saisis, collés, insérés…, ici ou hors

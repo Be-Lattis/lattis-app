@@ -3,8 +3,12 @@ package collab_test
 import (
 	"context"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
+	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 )
 
@@ -131,4 +135,63 @@ func TestOfflineLongOutage(t *testing.T) {
 	alice.receive()
 	eq(t, "Alice", alice.col("Produit"), []string{"Café", "Thé", "Sucre"})
 	eq(t, "Alice Quantité", alice.col("Quantité"), []string{"3", "40", "7"})
+}
+
+// capsDown : relecture des droits en échec (connexion morte) tant que down.
+type capsDown struct {
+	workbook.Server
+	down  atomic.Bool
+	tries atomic.Int32
+}
+
+func (c *capsDown) Capabilities(ctx context.Context, id string) (workbook.Capabilities, error) {
+	if c.down.Load() {
+		c.tries.Add(1)
+		return workbook.Capabilities{}, errNet
+	}
+	return c.Server.Capabilities(ctx, id)
+}
+
+// TestOfflineRightsUnreadAtReconnect : à la reprise, la relecture des
+// droits échoue (connexion morte du pool, coupure) : rien ne part avec les
+// droits d'avant la coupure ; au tour suivant, les droits réduits pendant
+// la coupure sont lus et la saisie est refusée en local, avec un message.
+func TestOfflineRightsUnreadAtReconnect(t *testing.T) {
+	old := collab.Debounce
+	collab.Debounce = 10 * time.Millisecond
+	t.Cleanup(func() { collab.Debounce = old })
+	f, _, bob, id := setup(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var mu sync.Mutex
+	var notices []string
+	srv := &capsDown{Server: f.As("bob")}
+	bob.follow(ctx, srv, 20*time.Millisecond, func(ev collab.Event) {
+		mu.Lock()
+		notices = append(notices, ev.Notices...)
+		mu.Unlock()
+	})
+	waitOnline(t, bob)
+	f.SetDown(true)
+	waitFor(t, "Bob hors ligne", func() bool { return !bob.d.Share.Online() })
+	bob.mustSet(0, 1, "33")
+	f.Revoke(id, "bob", "editor")
+	must(t, f.Grant(id, "bob", "reader"))
+	srv.down.Store(true)
+	writes := f.Count("write")
+	f.SetDown(false)
+	waitFor(t, "relecture des droits essayée", func() bool { return srv.tries.Load() > 0 })
+	time.Sleep(100 * time.Millisecond)
+	if n := f.Count("write"); n != writes || bob.states()["pending"] != 1 {
+		t.Fatalf("envoyé sans droits relus : %d écritures, file %v", n-writes, bob.states())
+	}
+	srv.down.Store(false)
+	waitFor(t, "file de Bob vidée", func() bool { return bob.states()["pending"] == 0 })
+	eq(t, "Bob", bob.col("Quantité"), []string{"3", "10", "1"})
+	// Le message part à la fin du tour, après la file vidée.
+	waitFor(t, "message des droits changés", func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return strings.Contains(strings.Join(notices, " ; "), "droits")
+	})
 }
