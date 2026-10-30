@@ -294,7 +294,7 @@
 		"held": {
 			"table": "Tabelle",
 			"title": "„{table}“: {n, plural, one {eine Änderung kommt nicht durch} other {# Änderungen kommen nicht durch}}",
-			"text": "Der Server empfängt sie, scheitert aber bei jedem Versuch: {error}. Ihre Werte bleiben auf diesem Computer angezeigt; andere Änderungen werden normal übertragen.",
+			"text": "Der Server scheitert bei jedem Versuch: {error}. Ihre Werte bleiben hier angezeigt; andere Änderungen werden normal übertragen.",
 			"abandon": {
 				"label": "Verwerfen",
 				"tooltip": "Die Tabelle kehrt zur Version des Servers zurück"

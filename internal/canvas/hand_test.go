@@ -248,7 +248,7 @@ func TestHandKeyQuestion(t *testing.T) {
 	before := handState(t, d)
 	_, err := d.SetCell(ctx, 1, 1, 2, "bon")
 	var q ErrHandKey
-	if !errors.As(err, &q) || fmt.Sprint(q.Columns) != "[Produit]" || !strings.HasPrefix(err.Error(), "jointure à choisir : « Q »") || !strings.Contains(err.Error(), "Colonnes possibles : « Produit ».") {
+	if !errors.As(err, &q) || fmt.Sprint(q.Columns) != "[Produit]" || !strings.HasPrefix(err.Error(), "jointure à choisir : les valeurs saisies à côté de « Q »") || !strings.Contains(err.Error(), "(au choix : « Produit »).") {
 		t.Fatalf("question : %v", err)
 	}
 	if got := handState(t, d); got != before {

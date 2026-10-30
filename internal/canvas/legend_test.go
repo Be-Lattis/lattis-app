@@ -377,7 +377,7 @@ func TestQueryRowToNote(t *testing.T) {
 	if got, want := layoutOf(t, d), "Q@A1:Produit|Montant×1 A3*=Total B3*=120"; got != want {
 		t.Fatalf("ligne sortie :\n got %s\nwant %s", got, want)
 	}
-	if n := d.TakeNotice(); !strings.Contains(n, "actualisation de la requête « Q »") {
+	if n := d.TakeNotice(); !strings.Contains(n, "actualisation de « Q »") {
 		t.Fatalf("message : %q", n)
 	}
 	undoOnce(t, d, before, "ligne sortie")

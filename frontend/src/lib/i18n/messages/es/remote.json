@@ -294,7 +294,7 @@
 		"held": {
 			"table": "Tabla",
 			"title": "«{table}»: {n, plural, one {un cambio no se aplica} other {# cambios no se aplican}}",
-			"text": "El servidor lo recibe pero falla en cada intento: {error}. Sus valores siguen mostrándose en este equipo; los demás cambios se aplican con normalidad.",
+			"text": "El servidor falla en cada intento: {error}. Sus valores siguen mostrándose aquí; los demás cambios se envían con normalidad.",
 			"abandon": {
 				"label": "Descartar",
 				"tooltip": "La tabla vuelve a la versión del servidor"

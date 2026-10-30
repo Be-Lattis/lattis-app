@@ -296,7 +296,7 @@ func TestTableSourceRefusals(t *testing.T) {
 	if link.LastError != "" || link.LastResult.Inserted != 2 || fake.Calls["push_status"] == 0 {
 		t.Fatalf("202 sans 0028 : %+v %v", link, fake.Calls)
 	}
-	if _, err := s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Ajouts", Columns: []string{"Produit", "Prix"}, Mode: workbook.PushReplace}); err == nil || !strings.Contains(err.Error(), "ne permet pas encore") {
+	if _, err := s.UpdateTableSource(ctx, TableSourceRequest{Table: table, Name: "Ajouts", Columns: []string{"Produit", "Prix"}, Mode: workbook.PushReplace}); err == nil || !strings.Contains(err.Error(), "ne sait pas encore") {
 		t.Fatalf("mode sans 0028 : %v", err)
 	}
 	fake.Before28, fake.PushSlow = false, false

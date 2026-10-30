@@ -547,17 +547,17 @@
 	},
 	"formulaError": {
 		"name": {
-			"ref": "#¿NOMBRE?: {ref} no existe. Escriba Cell[{cell}] para una celda libre, [Columna] para el valor de la fila en una tabla, Tabla[Columna] para una columna entera, o Tabla[Columna][fila] para un único valor.",
+			"ref": "#¿NOMBRE?: {ref} no existe. Celda libre: Cell[{cell}]; en una tabla: [Columna], Tabla[Columna] o Tabla[Columna][fila].",
 			"unknown": "#¿NOMBRE?: nombre desconocido. Compruebe el nombre de la función, la tabla, la columna o la celda con nombre."
 		},
 		"value": {
 			"text": "#¡VALOR!: Cell[{cell}] contiene texto, no un número ni una fecha.",
-			"column": "#¡VALOR!: se usa una columna entera Tabla[Columna] donde se espera un único valor. Escriba Tabla[Columna][fila], o [Columna] en una fila de la tabla.",
+			"column": "#¡VALOR!: Tabla[Columna] es una columna entera y aquí se espera un único valor: escriba Tabla[Columna][fila] o [Columna].",
 			"type": "#¡VALOR!: tipo de valor inesperado (texto donde se espera un número, o argumento no válido)."
 		},
 		"div0": "#¡DIV/0!: división por cero (o por una celda en blanco).",
 		"ref": "#¡REF!: referencia no válida, la tabla o la columna se eliminó o se le cambió el nombre.",
-		"circ": "#CIRC!: referencia circular, la fórmula depende de su propio valor (por ejemplo SUMA(Tabla[X]) en la columna X). Haga que lea otras celdas u otras columnas; para un total acumulado, lea la fila anterior: [Total][-1].",
+		"circ": "#CIRC!: referencia circular, la fórmula depende de su propio valor. Para un total acumulado, lea la fila anterior: [Total][-1].",
 		"na": "#N/D: valor no encontrado (REFERENCIA, COINCIDIR…); compruebe la clave que busca.",
 		"num": "#¡NUM!: número no válido o fuera del intervalo.",
 		"spill": "#¡DESBORDAMIENTO!: la matriz dinámica no puede desbordarse, hay celdas de su camino que ya están ocupadas.",
@@ -1111,7 +1111,7 @@
 		"byField": "Filtrar la pestaña por este campo",
 		"byColumn": "Filtrar la pestaña por esta columna",
 		"computed": "Una columna calculada no se puede usar como selección de la pestaña: tome una columna de entrada (Año, Mes, Ciudad…)",
-		"tooMany": "«{column}» está vacía o tiene más de {max} valores distintos: demasiados para la lista de la pestaña; tome una columna como Año, Mes o Ciudad",
+		"tooMany": "«{column}» está vacía o tiene más de {max} valores: demasiados para la lista de la pestaña; tome una columna como Año, Mes o Ciudad",
 		"byField.tooltip": "La pestaña obtiene un ▾ para mostrar solo las filas con un valor de «{column}», salvo en la tabla de origen (Ctrl+Z para deshacer)",
 		"byColumn.tooltip": "La pestaña obtiene un ▾ para mostrar solo las filas con un valor de «{column}» (Ctrl+Z para deshacer)",
 		"replaces": "{text} Reemplaza la selección por «{name}».",
@@ -1348,7 +1348,7 @@
 	},
 	"merge": {
 		"selectSeveral": "Seleccione varias celdas libres para combinarlas",
-		"inTable": "Combinar y centrar no se aplica en una tabla: una tabla conserva una celda por valor. Combine celdas libres, fuera de las tablas.",
+		"inTable": "Combinar y centrar no se aplica en una tabla (una celda por valor): combine celdas libres.",
 		"done": "Celdas combinadas y centradas",
 		"done.cleared": "Celdas combinadas: solo se conserva el valor superior izquierdo ({n, plural, one {# borrado} other {# borrados}}, Ctrl+Z para deshacer)"
 	},
@@ -1685,7 +1685,7 @@
 	},
 	"local": {
 		"badge": "en este equipo",
-		"tooltip": "Esta tabla solo está en este equipo: los demás miembros no la ven. Una tabla creada por el propietario o un diseñador se agrega sola al libro compartido (sin conexión: al reconectarse). Haga clic para agregarla al libro compartido"
+		"tooltip": "Tabla solo en este equipo: los demás miembros no la ven. Haga clic para agregarla al libro compartido"
 	},
 	"pasteSpecial": {
 		"title": "Pegado especial",

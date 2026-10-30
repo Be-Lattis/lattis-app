@@ -562,7 +562,7 @@
 		"keyed": "已为 REFERENCE 将键设置在“{column}”上",
 		"undoBirth": "（Ctrl+Z：撤消，单元格保持为自由单元格）",
 		"undoHint": "（按 Ctrl+Z 撤消）",
-		"createdUnnamed": "已创建表格“{table}”，无标题（第 1 行包含数字或日期，视为数据）：右键单击 › 将第一行用作标题{more}",
+		"createdUnnamed": "已创建表格“{table}”，无标题（第 1 行为数据）：右键单击 › 将第一行用作标题{more}",
 		"createdHeadless": "已创建表格“{table}”，无标题（“列 n”）：请在其标题行中键入名称{more}",
 		"created": "已创建表格“{table}”{more}",
 		"widened": "列 {column} 已从 {from} 更改为 {to}（按 Ctrl+Z 撤消）",
@@ -616,7 +616,7 @@
 		"online": "在线，位于 {server}",
 		"offline": "离线 — {server}",
 		"savedRemote": "已保存到 {server}：{title}",
-		"savedWeb": "已保存到你的在线会话：{path}。使用“文件 › 下载副本”将其保存在你的设备上，或使用“发布到服务器”来共享它并在以后找到它",
+		"savedWeb": "已保存到你的在线会话：{path}。要保留它：文件 › 下载副本，或发布到服务器",
 		"saved": "已保存：{path}",
 		"sharedUntitled": "共享工作簿",
 		"recentOnline": "在线，位于 {server}",
@@ -661,17 +661,17 @@
 		},
 		"table": {
 			"invalid": "表格名称无效",
-			"rule": "表格名称以字母（或 _）开头，只能包含字母、数字和 _，不能有空格：它在公式中按原样书写（例如：Sales_2024）。",
+			"rule": "表格名称只能使用字母、数字和 _，不能有空格，并以字母或 _ 开头（例如：Sales_2024）。",
 			"empty": "表格名称不能为空。\n\n{rule}",
-			"address": "“{name}”是一个单元格地址：名称框和公式将无法区分你指的是哪一个。\n\n例如可以试试“{name}_”或“T_{name}”。",
+			"address": "“{name}”是一个单元格地址：该名称在公式中会产生歧义。\n\n例如可以试试“{name}_”或“T_{name}”。",
 			"taken": "表格名称已被使用",
-			"takenMessage": "已有另一个表格名为“{name}”（不区分大小写）。\n\n请选择工作簿中尚未使用的名称。"
+			"takenMessage": "已有另一个表格名为“{name}”（不区分大小写）。\n\n请选择其他名称。"
 		},
 		"sheet": {
 			"invalid": "工作表名称无效",
 			"empty": "工作表名称不能为空。\n\n请键入名称，或按 Esc 保留原名称。",
 			"taken": "工作表名称已被使用",
-			"takenMessage": "已有另一个工作表名为“{name}”（不区分大小写）。\n\n请选择工作簿中尚未使用的名称。"
+			"takenMessage": "已有另一个工作表名为“{name}”（不区分大小写）。\n\n请选择其他名称。"
 		},
 		"cell": {
 			"invalid": "单元格名称无效",
@@ -681,8 +681,8 @@
 		},
 		"column": {
 			"taken": "列名已被使用",
-			"takenMessage": "表格 {table} 已有名为“{name}”的列（不区分大小写）：{ref} 在公式中会产生歧义。\n\n请选择其他名称。",
-			"takenMessageNoTable": "该表格已有名为“{name}”的列（不区分大小写）：{ref} 在公式中会产生歧义。\n\n请选择其他名称。",
+			"takenMessage": "表格 {table} 已有名为“{name}”的列（不区分大小写）：{ref} 会产生歧义。\n\n请选择其他名称。",
+			"takenMessageNoTable": "该表格已有名为“{name}”的列（不区分大小写）：{ref} 会产生歧义。\n\n请选择其他名称。",
 			"tableWord": "表格"
 		},
 		"script": {
@@ -847,7 +847,7 @@
 		}
 	},
 	"tabs": {
-		"locked": "工作簿结构受保护：请撤消保护（审阅 › 撤消工作簿保护）后再添加、删除、重命名或移动工作表",
+		"locked": "工作簿结构受保护：请撤消保护（审阅 › 撤消工作簿保护）后再更改工作表",
 		"renameRefused": "工作表名称被拒绝",
 		"one": "一次只能处理一个工作表：请只选择一个标签",
 		"previous": "上一个工作表",
@@ -944,7 +944,7 @@
 		}
 	},
 	"share": {
-		"addTableConfirm": "将表格“{table}”添加到共享工作簿“{workbook}”？\n\n它将连同其中的行一起在服务器上创建；所有成员都会收到它，并按各自的权限编辑。\n\n此添加无法用 Ctrl+Z 撤消：要移除该表格，请使用“删除表格”，它会为所有人删除该表格。",
+		"addTableConfirm": "将表格“{table}”添加到共享工作簿“{workbook}”？\n\n所有成员都会收到它。此操作无法用 Ctrl+Z 撤消：“删除表格”会为所有人移除它。",
 		"addingTable": "正在将“{table}”添加到共享工作簿…",
 		"tableAdded": "表格“{table}”已添加到共享工作簿",
 		"sourceUpdating": "正在更新源“{table}”…",
@@ -1203,7 +1203,7 @@
 	"update": {
 		"available": "有新版本可用，点击此处自动更新",
 		"availableTooltip": "Lattis {version}：下载并校验，然后在下次重启时安装",
-		"availableElevatedTooltip": "Lattis {version}：下载并校验；为此计算机的所有用户安装需要管理员权限",
+		"availableElevatedTooltip": "Lattis {version}：下载并校验；为所有用户安装需要管理员权限",
 		"manual": "有新版本可用，点击此处下载",
 		"manualTooltip": "Lattis {version}：打开该版本的页面",
 		"downloading": "正在下载更新…",
@@ -1215,7 +1215,7 @@
 		"installFailed": "更新 {version} 无法安装 — 手动安装",
 		"installFailedPage": "更新 {version} 无法安装 — 下载",
 		"installFailedTooltip": "原因：{reason}。点击以带界面运行安装程序；Lattis 将关闭。",
-		"installFailedStopped": "原因：{reason}。失败 {count} 次后，退出时不再自动安装。点击以带界面运行安装程序；Lattis 将关闭。",
+		"installFailedStopped": "原因：{reason}。失败 {count} 次后，退出时不再安装。点击运行安装程序（Lattis 将关闭）。",
 		"installFailedPageTooltip": "原因：{reason}。点击打开该版本的页面。",
 		"releasePage": "版本页面",
 		"updated": "更新完成，请查看版本说明",
@@ -1223,7 +1223,7 @@
 		"duplicate": {
 			"text": "此计算机上有两个 Lattis 安装 — 移除旧的",
 			"userTooltip": "另一个安装 Lattis {version} 仅为您的帐户安装（{dir}）。点击将其卸载；当前这个保留。",
-			"machineTooltip": "另一个安装 Lattis {version} 为此计算机的所有用户安装（{dir}）。点击将其卸载（Windows 会请求管理员权限）；当前这个保留。",
+			"machineTooltip": "另有一个为所有用户安装的 Lattis {version}（{dir}）。点击将其卸载（需要管理员权限）",
 			"removing": "正在移除 Lattis 的另一个安装…",
 			"failed": "Lattis 的另一个安装未移除 — 重试"
 		},

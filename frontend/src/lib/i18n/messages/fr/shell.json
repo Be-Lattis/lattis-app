@@ -562,7 +562,7 @@
 		"keyed": "Clé posée sur « {column} » pour REFERENCE",
 		"undoBirth": " (Ctrl+Z : le défaire, les cellules restent libres)",
 		"undoHint": " (Ctrl+Z pour annuler)",
-		"createdUnnamed": "Tableau « {table} » créé sans en-têtes (la 1re ligne contient un nombre ou une date : des données) : clic droit › Utiliser la première ligne comme en-têtes{more}",
+		"createdUnnamed": "Tableau « {table} » créé sans en-têtes (1re ligne de données) : clic droit › Utiliser la première ligne comme en-têtes{more}",
 		"createdHeadless": "Tableau « {table} » créé sans en-têtes (« Colonne n ») : tapez les noms dans sa ligne d'en-tête{more}",
 		"created": "Tableau « {table} » créé{more}",
 		"widened": "Colonne {column} passée de {from} à {to} (Ctrl+Z pour annuler)",
@@ -616,7 +616,7 @@
 		"online": "en ligne sur {server}",
 		"offline": "hors ligne — {server}",
 		"savedRemote": "Enregistré sur {server} : {title}",
-		"savedWeb": "Enregistré dans votre session en ligne : {path}. Fichier › Télécharger une copie pour le garder sur votre appareil, ou Publier sur un serveur pour le partager et le retrouver",
+		"savedWeb": "Enregistré dans votre session en ligne : {path}. Pour le garder : Fichier › Télécharger une copie, ou Publier sur un serveur",
 		"saved": "Enregistré : {path}",
 		"sharedUntitled": "Classeur partagé",
 		"recentOnline": "En ligne sur {server}",
@@ -661,17 +661,17 @@
 		},
 		"table": {
 			"invalid": "Nom de tableau invalide",
-			"rule": "Un nom de tableau commence par une lettre (ou _) et ne contient que des lettres, des chiffres et _, sans espace : il s'écrit tel quel dans les formules (exemple : Ventes_2024).",
+			"rule": "Un nom de tableau ne contient que des lettres, des chiffres et _, sans espace, et commence par une lettre ou _ (ex. : Ventes_2024).",
 			"empty": "Le nom du tableau ne peut pas être vide.\n\n{rule}",
-			"address": "« {name} » est une adresse de cellule : la zone de nom et les formules ne sauraient pas lequel des deux on veut dire.\n\nEssayez par exemple « {name}_ » ou « T_{name} ».",
+			"address": "« {name} » est une adresse de cellule : le nom serait ambigu dans les formules.\n\nEssayez par exemple « {name}_ » ou « T_{name} ».",
 			"taken": "Nom de tableau déjà pris",
-			"takenMessage": "Un autre tableau s'appelle déjà « {name} » (les majuscules ne comptent pas).\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur."
+			"takenMessage": "Un autre tableau s'appelle déjà « {name} » (sans distinction de casse).\n\nChoisissez un autre nom."
 		},
 		"sheet": {
 			"invalid": "Nom de feuille invalide",
 			"empty": "Le nom de la feuille ne peut pas être vide.\n\nTapez un nom, ou Échap pour garder l'ancien.",
 			"taken": "Nom de feuille déjà pris",
-			"takenMessage": "Une autre feuille s'appelle déjà « {name} » (les majuscules ne comptent pas).\n\nChoisissez un nom qui n'est pas encore utilisé dans le classeur."
+			"takenMessage": "Une autre feuille s'appelle déjà « {name} » (sans distinction de casse).\n\nChoisissez un autre nom."
 		},
 		"cell": {
 			"invalid": "Nom de cellule invalide",
@@ -681,8 +681,8 @@
 		},
 		"column": {
 			"taken": "Nom de colonne déjà pris",
-			"takenMessage": "Le tableau {table} a déjà une colonne « {name} » (les majuscules ne comptent pas) : {ref} serait ambigu dans les formules.\n\nChoisissez un autre nom.",
-			"takenMessageNoTable": "Le tableau a déjà une colonne « {name} » (les majuscules ne comptent pas) : {ref} serait ambigu dans les formules.\n\nChoisissez un autre nom.",
+			"takenMessage": "Le tableau {table} a déjà une colonne « {name} » (sans distinction de casse) : {ref} serait ambigu.\n\nChoisissez un autre nom.",
+			"takenMessageNoTable": "Le tableau a déjà une colonne « {name} » (sans distinction de casse) : {ref} serait ambigu.\n\nChoisissez un autre nom.",
 			"tableWord": "Tableau"
 		},
 		"script": {
@@ -847,7 +847,7 @@
 		}
 	},
 	"tabs": {
-		"locked": "La structure du classeur est protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour ajouter, supprimer, renommer ou déplacer des feuilles",
+		"locked": "Structure du classeur protégée : ôtez la protection (Révision › Ôter la protection du classeur) pour changer les feuilles",
 		"renameRefused": "Nom de feuille refusé",
 		"one": "Une feuille à la fois : sélectionnez un seul onglet",
 		"previous": "Feuille précédente",
@@ -944,7 +944,7 @@
 		}
 	},
 	"share": {
-		"addTableConfirm": "Ajouter le tableau « {table} » au classeur partagé « {workbook} » ?\n\nIl est créé sur le serveur avec ses lignes ; tous les membres le reçoivent et le modifient selon leurs droits.\n\nCet ajout ne s’annule pas par Ctrl+Z : pour retirer le tableau, « Supprimer le tableau » le supprime pour tous.",
+		"addTableConfirm": "Ajouter le tableau « {table} » au classeur partagé « {workbook} » ?\n\nTous les membres le recevront. Ctrl+Z ne l’annule pas : « Supprimer le tableau » le retire pour tous.",
 		"addingTable": "Ajout de « {table} » au classeur partagé…",
 		"tableAdded": "Tableau « {table} » ajouté au classeur partagé",
 		"sourceUpdating": "Mise à jour de la source « {table} »…",
@@ -1203,7 +1203,7 @@
 	"update": {
 		"available": "Une nouvelle version est disponible, cliquez ici pour mettre à jour automatiquement",
 		"availableTooltip": "Lattis {version} : téléchargement et vérification, puis installation au prochain redémarrage",
-		"availableElevatedTooltip": "Lattis {version} : téléchargement et vérification ; l'installation, pour tous les utilisateurs de ce poste, demandera les droits d'administrateur",
+		"availableElevatedTooltip": "Lattis {version} : téléchargement et vérification ; l'installation pour tous les utilisateurs demandera les droits d'administrateur",
 		"manual": "Une nouvelle version est disponible, cliquez ici pour la télécharger",
 		"manualTooltip": "Lattis {version} : ouvre la page de la version",
 		"downloading": "Téléchargement de la mise à jour…",
@@ -1215,7 +1215,7 @@
 		"installFailed": "La mise à jour {version} n'a pas pu s'installer — Installer manuellement",
 		"installFailedPage": "La mise à jour {version} n'a pas pu s'installer — Télécharger",
 		"installFailedTooltip": "Raison : {reason}. Cliquez pour lancer l'installeur, avec son interface ; Lattis se ferme.",
-		"installFailedStopped": "Raison : {reason}. Après {count} échecs, elle n'est plus installée à la fermeture. Cliquez pour lancer l'installeur, avec son interface ; Lattis se ferme.",
+		"installFailedStopped": "Raison : {reason}. Après {count} échecs, plus d'installation à la fermeture. Cliquer pour lancer l'installeur (Lattis se ferme).",
 		"installFailedPageTooltip": "Raison : {reason}. Cliquez pour ouvrir la page de la version.",
 		"releasePage": "Page de la version",
 		"updated": "Mise à jour effectuée, consultez les notes de version",
@@ -1223,7 +1223,7 @@
 		"duplicate": {
 			"text": "Deux installations de Lattis sur ce poste — Retirer l'ancienne",
 			"userTooltip": "L'autre, Lattis {version}, est installée pour votre compte seulement ({dir}). Cliquez pour la désinstaller ; celle-ci reste.",
-			"machineTooltip": "L'autre, Lattis {version}, est installée pour tous les utilisateurs de ce poste ({dir}). Cliquez pour la désinstaller (Windows demandera les droits d'administrateur) ; celle-ci reste.",
+			"machineTooltip": "Une autre installation, Lattis {version}, existe pour tous les utilisateurs ({dir}). Cliquer pour la désinstaller (droits d'administrateur)",
 			"removing": "Retrait de l'autre installation de Lattis…",
 			"failed": "L'autre installation de Lattis n'a pas été retirée — Réessayer"
 		},

@@ -294,7 +294,7 @@
 		"held": {
 			"table": "Table",
 			"title": "“{table}”: {n, plural, one {one change is not going through} other {# changes are not going through}}",
-			"text": "The server receives it but fails on every attempt: {error}. Your values stay displayed on this computer; other changes go through normally.",
+			"text": "The server fails on every attempt: {error}. Your values stay displayed here; other changes go through normally.",
 			"abandon": {
 				"label": "Discard",
 				"tooltip": "The table goes back to the server version"

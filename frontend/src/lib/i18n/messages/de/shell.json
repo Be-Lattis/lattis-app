@@ -562,7 +562,7 @@
 		"keyed": "Schlüssel auf „{column}“ für REFERENZ gesetzt",
 		"undoBirth": " (Strg+Z: rückgängig machen, die Zellen bleiben frei)",
 		"undoHint": " (Strg+Z zum Rückgängigmachen)",
-		"createdUnnamed": "Tabelle „{table}“ ohne Überschriften erstellt (die 1. Zeile enthält eine Zahl oder ein Datum: Daten): Rechtsklick › Erste Zeile als Überschriften verwenden{more}",
+		"createdUnnamed": "Tabelle „{table}“ ohne Überschriften erstellt (1. Zeile sind Daten): Rechtsklick › Erste Zeile als Überschriften verwenden{more}",
 		"createdHeadless": "Tabelle „{table}“ ohne Überschriften erstellt („Spalte n“): Geben Sie die Namen in ihrer Überschriftenzeile ein{more}",
 		"created": "Tabelle „{table}“ erstellt{more}",
 		"widened": "Spalte {column} von {from} zu {to} geändert (Strg+Z zum Rückgängigmachen)",
@@ -616,7 +616,7 @@
 		"online": "online auf {server}",
 		"offline": "offline — {server}",
 		"savedRemote": "Gespeichert auf {server}: {title}",
-		"savedWeb": "In Ihrer Online-Sitzung gespeichert: {path}. Datei › Kopie herunterladen, um sie auf Ihrem Gerät zu behalten, oder Auf einem Server veröffentlichen, um sie freizugeben und wiederzufinden",
+		"savedWeb": "In Ihrer Online-Sitzung gespeichert: {path}. Zum Behalten: Datei › Kopie herunterladen oder Auf einem Server veröffentlichen",
 		"saved": "Gespeichert: {path}",
 		"sharedUntitled": "Freigegebene Arbeitsmappe",
 		"recentOnline": "Online auf {server}",
@@ -661,17 +661,17 @@
 		},
 		"table": {
 			"invalid": "Ungültiger Tabellenname",
-			"rule": "Ein Tabellenname beginnt mit einem Buchstaben (oder _) und enthält nur Buchstaben, Ziffern und _, ohne Leerzeichen: Er wird in Formeln unverändert geschrieben (Beispiel: Umsatz_2024).",
+			"rule": "Ein Tabellenname besteht nur aus Buchstaben, Ziffern und _, ohne Leerzeichen, und beginnt mit einem Buchstaben oder _ (z. B. Umsatz_2024).",
 			"empty": "Der Tabellenname darf nicht leer sein.\n\n{rule}",
-			"address": "„{name}“ ist eine Zelladresse: Das Namenfeld und die Formeln wüssten nicht, welches von beiden gemeint ist.\n\nVersuchen Sie zum Beispiel „{name}_“ oder „T_{name}“.",
+			"address": "„{name}“ ist eine Zelladresse: Der Name wäre in Formeln mehrdeutig.\n\nVersuchen Sie zum Beispiel „{name}_“ oder „T_{name}“.",
 			"taken": "Tabellenname bereits vergeben",
-			"takenMessage": "Eine andere Tabelle heißt bereits „{name}“ (Groß-/Kleinschreibung spielt keine Rolle).\n\nWählen Sie einen Namen, der in der Arbeitsmappe noch nicht verwendet wird."
+			"takenMessage": "Eine andere Tabelle heißt bereits „{name}“ (ohne Groß-/Kleinschreibung).\n\nWählen Sie einen anderen Namen."
 		},
 		"sheet": {
 			"invalid": "Ungültiger Blattname",
 			"empty": "Der Blattname darf nicht leer sein.\n\nGeben Sie einen Namen ein, oder Esc, um den alten zu behalten.",
 			"taken": "Blattname bereits vergeben",
-			"takenMessage": "Ein anderes Blatt heißt bereits „{name}“ (Groß-/Kleinschreibung spielt keine Rolle).\n\nWählen Sie einen Namen, der in der Arbeitsmappe noch nicht verwendet wird."
+			"takenMessage": "Ein anderes Blatt heißt bereits „{name}“ (ohne Groß-/Kleinschreibung).\n\nWählen Sie einen anderen Namen."
 		},
 		"cell": {
 			"invalid": "Ungültiger Zellname",
@@ -681,8 +681,8 @@
 		},
 		"column": {
 			"taken": "Spaltenname bereits vergeben",
-			"takenMessage": "Die Tabelle {table} hat bereits eine Spalte „{name}“ (Groß-/Kleinschreibung spielt keine Rolle): {ref} wäre in Formeln mehrdeutig.\n\nWählen Sie einen anderen Namen.",
-			"takenMessageNoTable": "Die Tabelle hat bereits eine Spalte „{name}“ (Groß-/Kleinschreibung spielt keine Rolle): {ref} wäre in Formeln mehrdeutig.\n\nWählen Sie einen anderen Namen.",
+			"takenMessage": "Die Tabelle {table} hat bereits eine Spalte „{name}“ (ohne Groß-/Kleinschreibung): {ref} wäre mehrdeutig.\n\nWählen Sie einen anderen Namen.",
+			"takenMessageNoTable": "Die Tabelle hat bereits eine Spalte „{name}“ (ohne Groß-/Kleinschreibung): {ref} wäre mehrdeutig.\n\nWählen Sie einen anderen Namen.",
 			"tableWord": "Tabelle"
 		},
 		"script": {
@@ -847,7 +847,7 @@
 		}
 	},
 	"tabs": {
-		"locked": "Die Struktur der Arbeitsmappe ist geschützt: Heben Sie den Schutz auf (Überprüfen › Arbeitsmappenschutz aufheben), um Blätter hinzuzufügen, zu löschen, umzubenennen oder zu verschieben",
+		"locked": "Arbeitsmappenstruktur geschützt: Heben Sie den Schutz auf (Überprüfen › Arbeitsmappenschutz aufheben), um Blätter zu ändern",
 		"renameRefused": "Blattname abgelehnt",
 		"one": "Ein Blatt nach dem anderen: Wählen Sie ein einzelnes Register aus",
 		"previous": "Vorheriges Blatt",
@@ -944,7 +944,7 @@
 		}
 	},
 	"share": {
-		"addTableConfirm": "Tabelle „{table}“ zur freigegebenen Arbeitsmappe „{workbook}“ hinzufügen?\n\nSie wird mit ihren Zeilen auf dem Server erstellt; alle Mitglieder erhalten sie und bearbeiten sie gemäß ihren Rechten.\n\nDieses Hinzufügen lässt sich nicht mit Strg+Z rückgängig machen: Um die Tabelle zu entfernen, löscht „Tabelle löschen“ sie für alle.",
+		"addTableConfirm": "Tabelle „{table}“ zur freigegebenen Arbeitsmappe „{workbook}“ hinzufügen?\n\nAlle Mitglieder erhalten sie. Strg+Z macht das nicht rückgängig: „Tabelle löschen“ entfernt sie für alle.",
 		"addingTable": "„{table}“ wird zur freigegebenen Arbeitsmappe hinzugefügt…",
 		"tableAdded": "Tabelle „{table}“ zur freigegebenen Arbeitsmappe hinzugefügt",
 		"sourceUpdating": "Quelle „{table}“ wird aktualisiert…",
@@ -1203,7 +1203,7 @@
 	"update": {
 		"available": "Eine neue Version ist verfügbar, klicken Sie hier, um automatisch zu aktualisieren",
 		"availableTooltip": "Lattis {version}: Download und Prüfung, dann Installation beim nächsten Neustart",
-		"availableElevatedTooltip": "Lattis {version}: Download und Prüfung; die Installation für alle Benutzer dieses Computers erfordert Administratorrechte",
+		"availableElevatedTooltip": "Lattis {version}: Download und Prüfung; die Installation für alle Benutzer erfordert Administratorrechte",
 		"manual": "Eine neue Version ist verfügbar, klicken Sie hier, um sie herunterzuladen",
 		"manualTooltip": "Lattis {version}: öffnet die Seite der Version",
 		"downloading": "Update wird heruntergeladen…",
@@ -1215,7 +1215,7 @@
 		"installFailed": "Update {version} konnte nicht installiert werden — Manuell installieren",
 		"installFailedPage": "Update {version} konnte nicht installiert werden — Herunterladen",
 		"installFailedTooltip": "Grund: {reason}. Klicken, um das Installationsprogramm mit Fenster zu starten; Lattis wird geschlossen.",
-		"installFailedStopped": "Grund: {reason}. Nach {count} Fehlschlägen wird es beim Beenden nicht mehr installiert. Klicken, um das Installationsprogramm mit Fenster zu starten; Lattis wird geschlossen.",
+		"installFailedStopped": "Grund: {reason}. Nach {count} Fehlschlägen keine Installation mehr beim Beenden. Klicken, um das Installationsprogramm zu starten (Lattis wird geschlossen).",
 		"installFailedPageTooltip": "Grund: {reason}. Klicken, um die Seite der Version zu öffnen.",
 		"releasePage": "Seite der Version",
 		"updated": "Update abgeschlossen, lesen Sie die Versionshinweise",
@@ -1223,7 +1223,7 @@
 		"duplicate": {
 			"text": "Zwei Installationen von Lattis auf diesem Computer — Die alte entfernen",
 			"userTooltip": "Die andere, Lattis {version}, ist nur für Ihr Konto installiert ({dir}). Klicken Sie, um sie zu deinstallieren; diese bleibt.",
-			"machineTooltip": "Die andere, Lattis {version}, ist für alle Benutzer dieses Computers installiert ({dir}). Klicken Sie, um sie zu deinstallieren (Windows fragt nach Administratorrechten); diese bleibt.",
+			"machineTooltip": "Eine weitere Installation, Lattis {version}, ist für alle Benutzer vorhanden ({dir}). Klicken, um sie zu deinstallieren (Administratorrechte)",
 			"removing": "Die andere Installation von Lattis wird entfernt…",
 			"failed": "Die andere Installation von Lattis wurde nicht entfernt — Erneut versuchen"
 		},

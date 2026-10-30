@@ -226,8 +226,8 @@ func TestSQLStructureAndFrenchErrors(t *testing.T) {
 	h := newHost(t)
 	commandes(h)
 	for _, q := range []string{`DROP TABLE Commandes`, `ALTER TABLE Commandes ADD COLUMN x`, `CREATE TABLE x (a)`} {
-		h.fails("se font depuis la grille", "db.query", "sql", q)
-		h.fails("se font depuis la grille", "db.execute", "sql", q)
+		h.fails("se font dans la grille", "db.query", "sql", q)
+		h.fails("se font dans la grille", "db.execute", "sql", q)
 	}
 	if got := h.value(`SELECT count(*) FROM Commandes`); got != "3" {
 		t.Fatalf("Commandes touché : %s lignes", got)

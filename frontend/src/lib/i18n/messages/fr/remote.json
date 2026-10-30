@@ -294,7 +294,7 @@
 		"held": {
 			"table": "Tableau",
 			"title": "« {table} » : {n, plural, one {une modification ne part pas} other {# modifications ne partent pas}}",
-			"text": "Le serveur la reçoit mais échoue à chaque essai : {error}. Vos valeurs restent affichées sur ce poste ; les autres modifications partent normalement.",
+			"text": "Le serveur échoue à chaque essai : {error}. Vos valeurs restent affichées ici ; les autres modifications partent normalement.",
 			"abandon": {
 				"label": "Abandonner",
 				"tooltip": "Le tableau reprend la version du serveur"

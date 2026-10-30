@@ -562,7 +562,7 @@
 		"keyed": "Key set on “{column}” for REFERENCE",
 		"undoBirth": " (Ctrl+Z: undo it, the cells stay free)",
 		"undoHint": " (Ctrl+Z to undo)",
-		"createdUnnamed": "Table “{table}” created without headers (the 1st row holds a number or a date: data): right-click › Use first row as headers{more}",
+		"createdUnnamed": "Table “{table}” created without headers (1st row is data): right-click › Use first row as headers{more}",
 		"createdHeadless": "Table “{table}” created without headers (“Column n”): type the names in its header row{more}",
 		"created": "Table “{table}” created{more}",
 		"widened": "Column {column} changed from {from} to {to} (Ctrl+Z to undo)",
@@ -616,7 +616,7 @@
 		"online": "online on {server}",
 		"offline": "offline — {server}",
 		"savedRemote": "Saved on {server}: {title}",
-		"savedWeb": "Saved in your online session: {path}. File › Download a copy to keep it on your device, or Publish to a server to share it and find it again",
+		"savedWeb": "Saved in your online session: {path}. To keep it: File › Download a copy, or Publish to a server",
 		"saved": "Saved: {path}",
 		"sharedUntitled": "Shared workbook",
 		"recentOnline": "Online on {server}",
@@ -661,17 +661,17 @@
 		},
 		"table": {
 			"invalid": "Invalid table name",
-			"rule": "A table name starts with a letter (or _) and contains only letters, digits and _, with no spaces: it is written as is in formulas (example: Sales_2024).",
+			"rule": "A table name uses only letters, digits and _, no spaces, and starts with a letter or _ (e.g. Sales_2024).",
 			"empty": "The table name cannot be empty.\n\n{rule}",
-			"address": "“{name}” is a cell address: the Name Box and formulas would not know which of the two you mean.\n\nTry for example “{name}_” or “T_{name}”.",
+			"address": "“{name}” is a cell address: the name would be ambiguous in formulas.\n\nTry for example “{name}_” or “T_{name}”.",
 			"taken": "Table name already in use",
-			"takenMessage": "Another table is already named “{name}” (case does not matter).\n\nChoose a name that is not yet used in the workbook."
+			"takenMessage": "Another table is already named “{name}” (case ignored).\n\nChoose another name."
 		},
 		"sheet": {
 			"invalid": "Invalid sheet name",
 			"empty": "The sheet name cannot be empty.\n\nType a name, or Esc to keep the old one.",
 			"taken": "Sheet name already in use",
-			"takenMessage": "Another sheet is already named “{name}” (case does not matter).\n\nChoose a name that is not yet used in the workbook."
+			"takenMessage": "Another sheet is already named “{name}” (case ignored).\n\nChoose another name."
 		},
 		"cell": {
 			"invalid": "Invalid cell name",
@@ -681,8 +681,8 @@
 		},
 		"column": {
 			"taken": "Column name already in use",
-			"takenMessage": "Table {table} already has a column “{name}” (case does not matter): {ref} would be ambiguous in formulas.\n\nChoose another name.",
-			"takenMessageNoTable": "The table already has a column “{name}” (case does not matter): {ref} would be ambiguous in formulas.\n\nChoose another name.",
+			"takenMessage": "Table {table} already has a column “{name}” (case ignored): {ref} would be ambiguous.\n\nChoose another name.",
+			"takenMessageNoTable": "The table already has a column “{name}” (case ignored): {ref} would be ambiguous.\n\nChoose another name.",
 			"tableWord": "Table"
 		},
 		"script": {
@@ -847,7 +847,7 @@
 		}
 	},
 	"tabs": {
-		"locked": "The workbook structure is protected: unprotect it (Review › Unprotect workbook) to add, delete, rename or move sheets",
+		"locked": "Workbook structure protected: unprotect it (Review › Unprotect workbook) to change sheets",
 		"renameRefused": "Sheet name rejected",
 		"one": "One sheet at a time: select a single tab",
 		"previous": "Previous sheet",
@@ -944,7 +944,7 @@
 		}
 	},
 	"share": {
-		"addTableConfirm": "Add table “{table}” to shared workbook “{workbook}”?\n\nIt is created on the server with its rows; all members receive it and edit it according to their rights.\n\nThis addition cannot be undone with Ctrl+Z: to remove the table, “Delete table” deletes it for everyone.",
+		"addTableConfirm": "Add table “{table}” to shared workbook “{workbook}”?\n\nAll members will receive it. Ctrl+Z does not undo this: “Delete table” removes it for everyone.",
 		"addingTable": "Adding “{table}” to the shared workbook…",
 		"tableAdded": "Table “{table}” added to the shared workbook",
 		"sourceUpdating": "Updating source “{table}”…",
@@ -1203,7 +1203,7 @@
 	"update": {
 		"available": "A new version is available, click here to update automatically",
 		"availableTooltip": "Lattis {version}: download and verification, then installation at the next restart",
-		"availableElevatedTooltip": "Lattis {version}: download and verification; installing it for all users of this computer will require administrator rights",
+		"availableElevatedTooltip": "Lattis {version}: download and verification; installing for all users will require administrator rights",
 		"manual": "A new version is available, click here to download it",
 		"manualTooltip": "Lattis {version}: opens the release page",
 		"downloading": "Downloading the update…",
@@ -1215,7 +1215,7 @@
 		"installFailed": "Update {version} could not be installed — Install manually",
 		"installFailedPage": "Update {version} could not be installed — Download",
 		"installFailedTooltip": "Reason: {reason}. Click to run the installer with its window; Lattis closes.",
-		"installFailedStopped": "Reason: {reason}. After {count} failures, it is no longer installed on exit. Click to run the installer with its window; Lattis closes.",
+		"installFailedStopped": "Reason: {reason}. After {count} failures, no more install on exit. Click to run the installer (Lattis closes).",
 		"installFailedPageTooltip": "Reason: {reason}. Click to open the release page.",
 		"releasePage": "Release page",
 		"updated": "Update complete, see the release notes",
@@ -1223,7 +1223,7 @@
 		"duplicate": {
 			"text": "Two installations of Lattis on this computer — Remove the old one",
 			"userTooltip": "The other one, Lattis {version}, is installed for your account only ({dir}). Click to uninstall it; this one stays.",
-			"machineTooltip": "The other one, Lattis {version}, is installed for all users of this computer ({dir}). Click to uninstall it (Windows will ask for administrator rights); this one stays.",
+			"machineTooltip": "Another installation, Lattis {version}, exists for all users ({dir}). Click to uninstall it (administrator rights)",
 			"removing": "Removing the other installation of Lattis…",
 			"failed": "The other installation of Lattis was not removed — Try again"
 		},

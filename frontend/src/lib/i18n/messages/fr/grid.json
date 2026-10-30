@@ -547,17 +547,17 @@
 	},
 	"formulaError": {
 		"name": {
-			"ref": "#NOM? : {ref} n'existe pas. Écrivez Cell[{cell}] pour une cellule libre, [Colonne] pour la valeur de la ligne dans un tableau, Tableau[Colonne] pour une colonne entière, ou Tableau[Colonne][ligne] pour une valeur.",
+			"ref": "#NOM? : {ref} n'existe pas. Cellule libre : Cell[{cell}] ; dans un tableau : [Colonne], Tableau[Colonne] ou Tableau[Colonne][ligne].",
 			"unknown": "#NOM? : nom inconnu. Vérifiez le nom de la fonction, du tableau, de la colonne ou de la cellule nommée."
 		},
 		"value": {
 			"text": "#VALEUR! : Cell[{cell}] contient du texte, pas un nombre ni une date.",
-			"column": "#VALEUR! : une colonne entière Tableau[Colonne] est utilisée là où une seule valeur est attendue. Écrivez Tableau[Colonne][ligne], ou [Colonne] dans une ligne du tableau.",
+			"column": "#VALEUR! : Tableau[Colonne] donne une colonne entière, ici une seule valeur est attendue : écrivez Tableau[Colonne][ligne] ou [Colonne].",
 			"type": "#VALEUR! : type de valeur inattendu (texte là où un nombre est attendu, ou argument invalide)."
 		},
 		"div0": "#DIV/0! : division par zéro (ou par une cellule vide).",
 		"ref": "#REF! : référence invalide, le tableau ou la colonne a été supprimé ou renommé.",
-		"circ": "#CIRC! : référence circulaire, la formule dépend de sa propre valeur (par exemple SOMME(Tableau[X]) dans la colonne X). Faites-la lire d'autres cellules ou colonnes ; pour un total cumulé, lisez la ligne précédente : [Cumul][-1].",
+		"circ": "#CIRC! : référence circulaire, la formule dépend de sa propre valeur. Pour un total cumulé, lisez la ligne précédente : [Cumul][-1].",
 		"na": "#N/A : valeur introuvable (REFERENCE, EQUIV…) ; vérifiez la clé cherchée.",
 		"num": "#NOMBRE! : nombre invalide ou hors limites.",
 		"spill": "#DEVERSEMENT! : le tableau dynamique ne peut pas se déverser, des cellules sont déjà remplies sur son chemin.",
@@ -1111,7 +1111,7 @@
 		"byField": "Filtrer l'onglet par ce champ",
 		"byColumn": "Filtrer l'onglet par cette colonne",
 		"computed": "Une colonne calculée ne peut pas servir de choix d'onglet : prenez une colonne saisie (Année, Mois, Ville…)",
-		"tooMany": "« {column} » est vide, ou a plus de {max} valeurs différentes : trop pour la liste de l'onglet ; prenez une colonne comme Année, Mois ou Ville",
+		"tooMany": "« {column} » est vide ou a plus de {max} valeurs : trop pour la liste de l'onglet ; prenez une colonne comme Année, Mois ou Ville",
 		"byField.tooltip": "L'onglet reçoit un ▾ pour n'afficher que les lignes d'une valeur de « {column} », hors tableau source (Ctrl+Z pour annuler)",
 		"byColumn.tooltip": "L'onglet reçoit un ▾ pour n'afficher que les lignes d'une valeur de « {column} » (Ctrl+Z pour annuler)",
 		"replaces": "{text} Remplace le choix par « {name} ».",
@@ -1348,7 +1348,7 @@
 	},
 	"merge": {
 		"selectSeveral": "Sélectionnez plusieurs cellules libres pour les fusionner",
-		"inTable": "Fusionner et centrer ne s’applique pas dans un tableau : un tableau garde une cellule par valeur. Fusionnez des cellules libres, hors des tableaux.",
+		"inTable": "Fusionner et centrer ne s’applique pas dans un tableau (une cellule par valeur) : fusionnez des cellules libres.",
 		"done": "Cellules fusionnées et centrées",
 		"done.cleared": "Cellules fusionnées : seule la valeur en haut à gauche est gardée ({n, plural, one {# effacée} other {# effacées}}, Ctrl+Z pour annuler)"
 	},
@@ -1685,7 +1685,7 @@
 	},
 	"local": {
 		"badge": "sur ce poste",
-		"tooltip": "Ce tableau n'est que sur ce poste : les autres membres ne le voient pas. Un tableau créé par le propriétaire ou un concepteur s'ajoute de lui-même au classeur partagé (hors ligne : à la reconnexion). Cliquer pour l'ajouter au classeur partagé"
+		"tooltip": "Tableau sur ce poste seulement : les autres membres ne le voient pas. Cliquer pour l'ajouter au classeur partagé"
 	},
 	"pasteSpecial": {
 		"title": "Collage spécial",

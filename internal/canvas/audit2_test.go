@@ -132,7 +132,7 @@ func TestLongListMovedBesideTable(t *testing.T) {
 	if got, want := layoutOf(t, d), "T@A1:H1|H2×1 D1=Liste D2=x D3=y D4=z"; got != want {
 		t.Fatalf("\n got %s\nwant %s", got, want)
 	}
-	if n := d.TakeNotice(); !strings.Contains(n, "reste entière") {
+	if n := d.TakeNotice(); !strings.Contains(n, "reste en cellules libres") {
 		t.Fatalf("message : %q", n)
 	}
 }

@@ -562,7 +562,7 @@
 		"keyed": "Clave definida en «{column}» para REFERENCIA",
 		"undoBirth": " (Ctrl+Z: la deshace, las celdas quedan libres)",
 		"undoHint": " (Ctrl+Z para deshacer)",
-		"createdUnnamed": "Tabla «{table}» creada sin encabezados (la 1.ª fila contiene un número o una fecha: datos): clic derecho › Usar la primera fila como encabezados{more}",
+		"createdUnnamed": "Tabla «{table}» creada sin encabezados (1.ª fila de datos): clic derecho › Usar la primera fila como encabezados{more}",
 		"createdHeadless": "Tabla «{table}» creada sin encabezados («Columna n»): escriba los nombres en su fila de encabezado{more}",
 		"created": "Tabla «{table}» creada{more}",
 		"widened": "Columna {column} cambiada de {from} a {to} (Ctrl+Z para deshacer)",
@@ -616,7 +616,7 @@
 		"online": "en línea en {server}",
 		"offline": "sin conexión — {server}",
 		"savedRemote": "Guardado en {server}: {title}",
-		"savedWeb": "Guardado en su sesión en línea: {path}. Archivo › Descargar una copia para conservarlo en su dispositivo, o Publicar en un servidor para compartirlo y encontrarlo de nuevo",
+		"savedWeb": "Guardado en su sesión en línea: {path}. Para conservarlo: Archivo › Descargar una copia, o Publicar en un servidor",
 		"saved": "Guardado: {path}",
 		"sharedUntitled": "Libro compartido",
 		"recentOnline": "En línea en {server}",
@@ -661,17 +661,17 @@
 		},
 		"table": {
 			"invalid": "Nombre de tabla no válido",
-			"rule": "Un nombre de tabla empieza por una letra (o _) y solo contiene letras, dígitos y _, sin espacios: se escribe tal cual en las fórmulas (ejemplo: Ventas_2024).",
+			"rule": "Un nombre de tabla solo usa letras, dígitos y _, sin espacios, y empieza por una letra o _ (ej.: Ventas_2024).",
 			"empty": "El nombre de la tabla no puede estar vacío.\n\n{rule}",
-			"address": "«{name}» es una dirección de celda: el Cuadro de nombres y las fórmulas no sabrían a cuál de los dos se refiere.\n\nPruebe por ejemplo «{name}_» o «T_{name}».",
+			"address": "«{name}» es una dirección de celda: el nombre sería ambiguo en las fórmulas.\n\nPruebe por ejemplo «{name}_» o «T_{name}».",
 			"taken": "Nombre de tabla ya en uso",
-			"takenMessage": "Otra tabla ya se llama «{name}» (sin distinguir mayúsculas y minúsculas).\n\nElija un nombre que aún no se use en el libro."
+			"takenMessage": "Otra tabla ya se llama «{name}» (sin distinguir mayúsculas).\n\nElija otro nombre."
 		},
 		"sheet": {
 			"invalid": "Nombre de hoja no válido",
 			"empty": "El nombre de la hoja no puede estar vacío.\n\nEscriba un nombre, o Esc para conservar el anterior.",
 			"taken": "Nombre de hoja ya en uso",
-			"takenMessage": "Otra hoja ya se llama «{name}» (sin distinguir mayúsculas y minúsculas).\n\nElija un nombre que aún no se use en el libro."
+			"takenMessage": "Otra hoja ya se llama «{name}» (sin distinguir mayúsculas).\n\nElija otro nombre."
 		},
 		"cell": {
 			"invalid": "Nombre de celda no válido",
@@ -681,8 +681,8 @@
 		},
 		"column": {
 			"taken": "Nombre de columna ya en uso",
-			"takenMessage": "La tabla {table} ya tiene una columna «{name}» (sin distinguir mayúsculas y minúsculas): {ref} sería ambiguo en las fórmulas.\n\nElija otro nombre.",
-			"takenMessageNoTable": "La tabla ya tiene una columna «{name}» (sin distinguir mayúsculas y minúsculas): {ref} sería ambiguo en las fórmulas.\n\nElija otro nombre.",
+			"takenMessage": "La tabla {table} ya tiene una columna «{name}» (sin distinguir mayúsculas): {ref} sería ambiguo.\n\nElija otro nombre.",
+			"takenMessageNoTable": "La tabla ya tiene una columna «{name}» (sin distinguir mayúsculas): {ref} sería ambiguo.\n\nElija otro nombre.",
 			"tableWord": "Tabla"
 		},
 		"script": {
@@ -847,7 +847,7 @@
 		}
 	},
 	"tabs": {
-		"locked": "La estructura del libro está protegida: desprotéjala (Revisar › Desproteger libro) para añadir, eliminar, renombrar o mover hojas",
+		"locked": "Estructura del libro protegida: desprotéjala (Revisar › Desproteger libro) para cambiar las hojas",
 		"renameRefused": "Nombre de hoja rechazado",
 		"one": "Una hoja cada vez: seleccione una sola pestaña",
 		"previous": "Hoja anterior",
@@ -944,7 +944,7 @@
 		}
 	},
 	"share": {
-		"addTableConfirm": "¿Añadir la tabla «{table}» al libro compartido «{workbook}»?\n\nSe crea en el servidor con sus filas; todos los miembros la reciben y la modifican según sus derechos.\n\nEsta adición no se puede deshacer con Ctrl+Z: para quitar la tabla, «Eliminar la tabla» la elimina para todos.",
+		"addTableConfirm": "¿Añadir la tabla «{table}» al libro compartido «{workbook}»?\n\nTodos los miembros la recibirán. Ctrl+Z no lo deshace: «Eliminar la tabla» la quita para todos.",
 		"addingTable": "Añadiendo «{table}» al libro compartido…",
 		"tableAdded": "Tabla «{table}» añadida al libro compartido",
 		"sourceUpdating": "Actualizando el origen «{table}»…",
@@ -1203,7 +1203,7 @@
 	"update": {
 		"available": "Hay una nueva versión disponible, haga clic aquí para actualizar automáticamente",
 		"availableTooltip": "Lattis {version}: descarga y comprobación, luego instalación en el próximo reinicio",
-		"availableElevatedTooltip": "Lattis {version}: descarga y comprobación; la instalación, para todos los usuarios de este equipo, pedirá permisos de administrador",
+		"availableElevatedTooltip": "Lattis {version}: descarga y comprobación; instalar para todos los usuarios pedirá permisos de administrador",
 		"manual": "Hay una nueva versión disponible, haga clic aquí para descargarla",
 		"manualTooltip": "Lattis {version}: abre la página de la versión",
 		"downloading": "Descargando la actualización…",
@@ -1215,7 +1215,7 @@
 		"installFailed": "No se pudo instalar la actualización {version} — Instalar manualmente",
 		"installFailedPage": "No se pudo instalar la actualización {version} — Descargar",
 		"installFailedTooltip": "Motivo: {reason}. Haga clic para abrir el instalador con su ventana; Lattis se cierra.",
-		"installFailedStopped": "Motivo: {reason}. Tras {count} fallos, ya no se instala al cerrar. Haga clic para abrir el instalador con su ventana; Lattis se cierra.",
+		"installFailedStopped": "Motivo: {reason}. Tras {count} fallos, ya no se instala al cerrar. Haga clic para abrir el instalador (Lattis se cierra).",
 		"installFailedPageTooltip": "Motivo: {reason}. Haga clic para abrir la página de la versión.",
 		"releasePage": "Página de la versión",
 		"updated": "Actualización completada, consulte las notas de la versión",
@@ -1223,7 +1223,7 @@
 		"duplicate": {
 			"text": "Dos instalaciones de Lattis en este equipo — Quitar la antigua",
 			"userTooltip": "La otra, Lattis {version}, está instalada solo para su cuenta ({dir}). Haga clic para desinstalarla; esta se queda.",
-			"machineTooltip": "La otra, Lattis {version}, está instalada para todos los usuarios de este equipo ({dir}). Haga clic para desinstalarla (Windows pedirá derechos de administrador); esta se queda.",
+			"machineTooltip": "Hay otra instalación, Lattis {version}, para todos los usuarios ({dir}). Haga clic para desinstalarla (derechos de administrador)",
 			"removing": "Quitando la otra instalación de Lattis…",
 			"failed": "No se ha quitado la otra instalación de Lattis — Reintentar"
 		},

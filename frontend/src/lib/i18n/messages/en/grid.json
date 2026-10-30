@@ -547,17 +547,17 @@
 	},
 	"formulaError": {
 		"name": {
-			"ref": "#NAME?: {ref} doesn't exist. Write Cell[{cell}] for a free cell, [Column] for the row's value in a table, Table[Column] for a whole column, or Table[Column][row] for a single value.",
+			"ref": "#NAME?: {ref} doesn't exist. Free cell: Cell[{cell}]; in a table: [Column], Table[Column] or Table[Column][row].",
 			"unknown": "#NAME?: unknown name. Check the name of the function, table, column or named cell."
 		},
 		"value": {
 			"text": "#VALUE!: Cell[{cell}] contains text, not a number or a date.",
-			"column": "#VALUE!: a whole column Table[Column] is used where a single value is expected. Write Table[Column][row], or [Column] in a row of the table.",
+			"column": "#VALUE!: Table[Column] is a whole column, a single value is expected here: write Table[Column][row] or [Column].",
 			"type": "#VALUE!: unexpected value type (text where a number is expected, or invalid argument)."
 		},
 		"div0": "#DIV/0!: division by zero (or by a blank cell).",
 		"ref": "#REF!: invalid reference, the table or column was deleted or renamed.",
-		"circ": "#CIRC!: circular reference, the formula depends on its own value (for example SUM(Table[X]) in column X). Make it read other cells or columns; for a running total, read the previous row: [Total][-1].",
+		"circ": "#CIRC!: circular reference, the formula depends on its own value. For a running total, read the previous row: [Total][-1].",
 		"na": "#N/A: value not found (REFERENCE, MATCH…); check the key you are looking up.",
 		"num": "#NUM!: invalid or out-of-range number.",
 		"spill": "#SPILL!: the dynamic array can't spill, cells in its path are already filled.",
@@ -1111,7 +1111,7 @@
 		"byField": "Filter the tab by this field",
 		"byColumn": "Filter the tab by this column",
 		"computed": "A calculated column can't be used as a tab choice: take an entered column (Year, Month, City…)",
-		"tooMany": "“{column}” is empty, or has more than {max} distinct values: too many for the tab's list; take a column such as Year, Month or City",
+		"tooMany": "“{column}” is empty or has more than {max} values: too many for the tab's list; take a column such as Year, Month or City",
 		"byField.tooltip": "The tab gets a ▾ to show only the rows with one value of “{column}”, except in the source table (Ctrl+Z to undo)",
 		"byColumn.tooltip": "The tab gets a ▾ to show only the rows with one value of “{column}” (Ctrl+Z to undo)",
 		"replaces": "{text} Replaces the choice by “{name}”.",
@@ -1348,7 +1348,7 @@
 	},
 	"merge": {
 		"selectSeveral": "Select several free cells to merge them",
-		"inTable": "Merge & center doesn't apply in a table: a table keeps one cell per value. Merge free cells, outside tables.",
+		"inTable": "Merge & center doesn't apply in a table (one cell per value): merge free cells.",
 		"done": "Cells merged and centered",
 		"done.cleared": "Cells merged: only the top-left value is kept ({n, plural, one {# cleared} other {# cleared}}, Ctrl+Z to undo)"
 	},
@@ -1685,7 +1685,7 @@
 	},
 	"local": {
 		"badge": "on this computer",
-		"tooltip": "This table is only on this computer: the other members don't see it. A table created by the owner or a designer is added to the shared workbook automatically (offline: on reconnection). Click to add it to the shared workbook"
+		"tooltip": "Table on this computer only: other members don't see it. Click to add it to the shared workbook"
 	},
 	"pasteSpecial": {
 		"title": "Paste Special",

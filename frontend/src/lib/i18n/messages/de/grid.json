@@ -547,17 +547,17 @@
 	},
 	"formulaError": {
 		"name": {
-			"ref": "#NAME?: {ref} existiert nicht. Schreiben Sie Cell[{cell}] für eine freie Zelle, [Spalte] für den Wert der Zeile in einer Tabelle, Tabelle[Spalte] für eine ganze Spalte oder Tabelle[Spalte][Zeile] für einen einzelnen Wert.",
+			"ref": "#NAME?: {ref} existiert nicht. Freie Zelle: Cell[{cell}]; in einer Tabelle: [Spalte], Tabelle[Spalte] oder Tabelle[Spalte][Zeile].",
 			"unknown": "#NAME?: unbekannter Name. Prüfen Sie den Namen der Funktion, der Tabelle, der Spalte oder der benannten Zelle."
 		},
 		"value": {
 			"text": "#WERT!: Cell[{cell}] enthält Text, keine Zahl und kein Datum.",
-			"column": "#WERT!: Eine ganze Spalte Tabelle[Spalte] wird verwendet, wo ein einzelner Wert erwartet wird. Schreiben Sie Tabelle[Spalte][Zeile] oder [Spalte] in einer Zeile der Tabelle.",
+			"column": "#WERT!: Tabelle[Spalte] ist eine ganze Spalte, hier wird ein einzelner Wert erwartet: Schreiben Sie Tabelle[Spalte][Zeile] oder [Spalte].",
 			"type": "#WERT!: unerwarteter Werttyp (Text, wo eine Zahl erwartet wird, oder ungültiges Argument)."
 		},
 		"div0": "#DIV/0!: Division durch null (oder durch eine leere Zelle).",
 		"ref": "#BEZUG!: ungültiger Bezug, die Tabelle oder Spalte wurde gelöscht oder umbenannt.",
-		"circ": "#CIRC!: Zirkelbezug, die Formel hängt von ihrem eigenen Wert ab (z. B. SUMME(Tabelle[X]) in der Spalte X). Lassen Sie sie andere Zellen oder Spalten lesen; für eine laufende Summe lesen Sie die vorherige Zeile: [Kumuliert][-1].",
+		"circ": "#CIRC!: Zirkelbezug, die Formel hängt von ihrem eigenen Wert ab. Für eine laufende Summe lesen Sie die vorherige Zeile: [Kumuliert][-1].",
 		"na": "#NV: Wert nicht gefunden (REFERENZ, VERGLEICH…); prüfen Sie den gesuchten Schlüssel.",
 		"num": "#ZAHL!: ungültige Zahl oder Zahl außerhalb des zulässigen Bereichs.",
 		"spill": "#ÜBERLAUF!: Die dynamische Matrix kann nicht überlaufen, Zellen in ihrem Weg sind bereits gefüllt.",
@@ -1111,7 +1111,7 @@
 		"byField": "Register nach diesem Feld filtern",
 		"byColumn": "Register nach dieser Spalte filtern",
 		"computed": "Eine berechnete Spalte kann nicht als Registerauswahl dienen: Nehmen Sie eine Eingabespalte (Jahr, Monat, Ort…)",
-		"tooMany": "„{column}“ ist leer oder hat mehr als {max} verschiedene Werte: zu viele für die Liste des Registers; nehmen Sie eine Spalte wie Jahr, Monat oder Ort",
+		"tooMany": "„{column}“ ist leer oder hat mehr als {max} Werte: zu viele für die Liste des Registers; nehmen Sie eine Spalte wie Jahr, Monat oder Ort",
 		"byField.tooltip": "Das Register erhält ein ▾, um nur die Zeilen mit einem Wert von „{column}“ anzuzeigen, außer in der Quelltabelle (Strg+Z zum Rückgängigmachen)",
 		"byColumn.tooltip": "Das Register erhält ein ▾, um nur die Zeilen mit einem Wert von „{column}“ anzuzeigen (Strg+Z zum Rückgängigmachen)",
 		"replaces": "{text} Ersetzt die Auswahl nach „{name}“.",
@@ -1348,7 +1348,7 @@
 	},
 	"merge": {
 		"selectSeveral": "Wählen Sie mehrere freie Zellen aus, um sie zu verbinden",
-		"inTable": "Verbinden und zentrieren gilt nicht in einer Tabelle: Eine Tabelle behält eine Zelle pro Wert. Verbinden Sie freie Zellen außerhalb von Tabellen.",
+		"inTable": "Verbinden und zentrieren gilt nicht in einer Tabelle (eine Zelle pro Wert): Verbinden Sie freie Zellen.",
 		"done": "Zellen verbunden und zentriert",
 		"done.cleared": "Zellen verbunden: Nur der Wert oben links bleibt erhalten ({n, plural, one {# gelöscht} other {# gelöscht}}, Strg+Z zum Rückgängigmachen)"
 	},
@@ -1685,7 +1685,7 @@
 	},
 	"local": {
 		"badge": "auf diesem Rechner",
-		"tooltip": "Diese Tabelle ist nur auf diesem Rechner: Die anderen Mitglieder sehen sie nicht. Eine vom Besitzer oder einem Designer erstellte Tabelle wird der geteilten Arbeitsmappe automatisch hinzugefügt (offline: bei der Wiederverbindung). Klicken, um sie der geteilten Arbeitsmappe hinzuzufügen"
+		"tooltip": "Tabelle nur auf diesem Rechner: Die anderen Mitglieder sehen sie nicht. Klicken, um sie der geteilten Arbeitsmappe hinzuzufügen"
 	},
 	"pasteSpecial": {
 		"title": "Inhalte einfügen",
