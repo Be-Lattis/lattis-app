@@ -66,7 +66,7 @@
 	import { gridPalette } from './theme';
 	import { paint as themed } from './colors';
 	import { tableTheme } from './theme.svelte.js';
-	import { condArgs, condLabel, condOps, describeConds, filterKind, kindTitle, searchValues, type CondOp, type PanelValue } from './filtercond';
+	import { searchValues, type CondOp, type PanelValue } from './filtercond';
 	import { cellLines } from './shortcuts';
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
@@ -100,7 +100,7 @@
 	import OutlineBar from './OutlineBar.svelte';
 	import { bandSize, outlineDepth, type SheetOutline } from './outline';
 	import { nameAlertOpen } from '#lib/ui/nameAlert.js';
-	import { isErrorValue, valueAlignment, alignment, editValue, formatColumnValue, NULL_MARK, showsNull, typeIcon, typeIconName, typeLabel, sortLabels, type ColumnType } from './format';
+	import { isErrorValue, valueAlignment, alignment, editValue, formatColumnValue, NULL_MARK, showsNull, typeIcon, typeIconName, typeLabel, type ColumnType } from './format';
 	import { errorText, t as tr } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
 	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer, type WholeSel, type DvPick, type InputTip } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, GUTTER_PAD, GUTTER_MAX, GUTTER_KEY_MAX, FONT, FONT_BOLD, FONT_SMALL, FONT_TINY } from './sheet/consts';
@@ -127,6 +127,7 @@
 	import { createCondFormat } from './sheet/condformat.svelte.js';
 	import FindBar, { type FindBarView } from './sheet/FindBar.svelte';
 	import CellMenus, { type CellMenusView } from './sheet/CellMenus.svelte';
+	import FilterPanel, { type FilterPanelView } from './sheet/FilterPanel.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6079,6 +6080,27 @@
 		get unhide() { return unhide; },
 		get valueColumns() { return valueColumns; }
 	};
+	// Panneau ▾ d'une colonne : sheet/FilterPanel.svelte.
+	const filterView: FilterPanelView = {
+		get TYPES() { return TYPES; },
+		get applyFilter() { return applyFilter; },
+		get chooseKey() { return chooseKey; },
+		get chooseType() { return chooseType; },
+		get closeFilter() { return closeFilter; },
+		get dismissFilter() { return dismissFilter; },
+		get filterDlg() { return filterDlg; }, set filterDlg(v) { filterDlg = v; },
+		get filterShown() { return filterShown; },
+		get focusFirst() { return focusFirst; },
+		get menuAction() { return menuAction; },
+		get mixText() { return mixText; },
+		get openCustomSort() { return openCustomSort; },
+		get runTabChoice() { return runTabChoice; },
+		get source() { return source; },
+		get startCustom() { return startCustom; },
+		get tabChoiceFor() { return tabChoiceFor; },
+		get toView() { return toView; },
+		get viewH() { return viewH; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6861,219 +6883,7 @@
 				</div>
 			</div>
 		{/if}
-		{#if filterDlg}
-			{@const d = filterDlg}
-			{@const shown = filterShown()}
-			{@const fcol = d.e.t.columns[d.i]}
-			{@const kind = filterKind(((fcol?.formula ? fcol?.result : fcol?.type) || 'text') as ColumnType)}
-			{@const filterable = !!source.setFilter}
-			{@const typed = !!source.setType && !fcol?.formula}
-			<!-- Menu ▾ de la colonne (comme Excel) : tri, filtres, type de données, clé. -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="rules filter colfilter anchored"
-				style:left="{d.x}px"
-				style:top="{d.y}px"
-				style:max-height="{Math.max(200, toView(viewH) - d.y - 8)}px"
-				use:focusFirst
-				use:dismissPanel={dismissFilter}
-				onkeydown={(ev) => {
-					ev.stopPropagation();
-					if (ev.key === 'Escape') closeFilter();
-					if (ev.key === 'Enter' && !(ev.target instanceof HTMLButtonElement)) applyFilter();
-				}}
-			>
-				<div class="menu-title" title={clipped(fcol?.name) ? fcol?.name : undefined}>{tr('grid.quoted', { text: clip(fcol?.name) })}</div>
-				{#if source.sortTable}
-					<!-- Tri en haut du panneau, comme Excel. -->
-					<button
-						class="sort"
-						onclick={() => {
-							filterDlg = null;
-							menuAction(() => source.sortTable!(d.e.t, d.i, false));
-						}}>{sortLabels(fcol?.type ?? 'text', fcol?.result)[0]}</button
-					>
-					<button
-						class="sort"
-						onclick={() => {
-							filterDlg = null;
-							menuAction(() => source.sortTable!(d.e.t, d.i, true));
-						}}>{sortLabels(fcol?.type ?? 'text', fcol?.result)[1]}</button
-					>
-					{#if source.sortTableCustom}
-						<button class="sort" onclick={() => openCustomSort(d.e, d.i)}>{tr('grid.pivot.menu.customSort')}</button>
-					{/if}
-					<hr />
-				{/if}
-				{#if fcol?.filter}
-					<button class="sort" onclick={() => applyFilter(true)}>{tr('grid.filter.clearOf', { field: fcol.name })}</button>
-				{/if}
-				{#if source.setTabChoice && fcol}
-					{@const tc = tabChoiceFor(d.e.t.name, fcol.name, { formula: !!fcol.formula })}
-					<button class="sort" title={tc.title} disabled={tc.disabled} onclick={() => runTabChoice(d.e.t.name, fcol.name, tc)}>{tc.label}</button>
-					<hr />
-				{/if}
-				{#if filterable}
-					<!-- Filtres par condition, comme le sous-menu d'Excel. -->
-					<button class="sort cond-menu" class:on={d.sub} aria-expanded={d.sub} onclick={() => (d.sub = !d.sub)}>
-						{kindTitle(kind)}<span class="sp"></span>{d.sub ? '▾' : '▸'}
-					</button>
-					{#if d.sub}
-						<div class="cond-list">
-							{#each condOps(kind) as op (op)}
-								<button class="sort" onclick={() => startCustom(op)}>{condLabel(op, kind)}{condArgs(op) ? '…' : ''}</button>
-							{/each}
-							<button class="sort" onclick={() => startCustom('eq')}>{tr('grid.filter.custom')}</button>
-						</div>
-					{/if}
-					{#if fcol?.filter?.conds?.length && !d.custom}
-						<p class="menu-note">
-							{tr('grid.filter.active', { conds: describeConds(fcol.filter, kind) })}
-							<button class="link" onclick={() => startCustom()}>{tr('grid.controls.menu.edit')}</button>
-						</p>
-					{/if}
-					<hr />
-					{#if d.custom}
-						{@const cu = d.custom}
-						<div class="custom">
-							<p class="menu-note">{tr('grid.filter.custom.heading', { column: fcol?.name ?? '' })}</p>
-							{#each cu.conds as c, k (k)}
-								{#if k === 1}
-									<div class="andor">
-										<label><input type="radio" bind:group={cu.or} value={false} /> {tr('grid.filter.custom.and')}</label>
-										<label><input type="radio" bind:group={cu.or} value={true} /> {tr('grid.filter.custom.or')}</label>
-									</div>
-								{/if}
-								<div class="add">
-									<select bind:value={c.op} aria-label={tr('grid.filter.custom.cond', { n: k + 1 })}>
-										{#if k > 0}<option value="">{tr('grid.filter.custom.none')}</option>{/if}
-										{#each condOps(kind) as op (op)}<option value={op}>{condLabel(op, kind)}</option>{/each}
-									</select>
-								</div>
-								{#if c.op && condArgs(c.op) > 0}
-									<div class="add">
-										<input bind:value={c.value} placeholder={c.op === 'top' || c.op === 'bottom' ? tr('grid.filter.custom.number') : kind === 'date' ? tr('grid.filter.custom.date') : tr('grid.cf.placeholder.value')} />
-										{#if condArgs(c.op) === 2}<span>{tr('grid.cf.and')}</span><input bind:value={c.to} placeholder={kind === 'date' ? tr('grid.filter.custom.date') : tr('grid.cf.placeholder.value')} />{/if}
-									</div>
-								{/if}
-							{/each}
-							{#if kind === 'text'}<p class="menu-note">{tr('grid.filter.custom.wildcards')}</p>{/if}
-						</div>
-					{:else}
-						<div class="add">
-							<input class="search" bind:value={d.search} oninput={() => (d.touched = true)} placeholder={tr('grid.filter.search.placeholder')} />
-						</div>
-						<div class="values">
-							{#if d.loading}
-								<p class="loading"><span class="spinner" aria-hidden="true"></span> {tr('grid.filter.loading')}</p>
-							{:else}
-							<label class="all">
-								<input
-									type="checkbox"
-									checked={shown.every((v) => v.on)}
-									onchange={(ev) => {
-										const on = (ev.currentTarget as HTMLInputElement).checked;
-										for (const v of shown) v.on = on;
-										d.touched = true;
-									}}
-								/>
-								{d.search.trim() ? tr('grid.filter.selectAllResults') : tr('grid.filter.selectAll')}
-							</label>
-							{#each shown as v (v.text)}
-								<label>
-									<input type="checkbox" bind:checked={v.on} onchange={() => (d.touched = true)} />
-									<span class="what">{v.text === '' ? tr('grid.filter.blanks') : v.text}</span>
-									<span class="count">{v.count}</span>
-								</label>
-							{/each}
-							{#if d.values.length >= 1000}<p class="menu-note">{tr('grid.filter.firstValues')}</p>{/if}
-							{/if}
-						</div>
-					{/if}
-				{/if}
-				{#if d.e.t.columns[d.i]?.errors}
-					<div class="add">
-						<label><input type="checkbox" bind:checked={d.errors} /> {tr('grid.filter.errorsOnly', { n: d.e.t.columns[d.i]?.errors ?? 0 })}</label>
-					</div>
-				{/if}
-				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
-				{#if filterable}
-					<div class="foot">
-						{#if d.custom}<button onclick={() => (d.custom = null)}>{tr('grid.filter.custom.back')}</button>{/if}
-						<span class="sp"></span>
-						<button class="primary" disabled={d.loading && !d.custom} onclick={() => applyFilter()}>{tr('common.ok')}</button>
-						<button onclick={closeFilter}>{tr('common.cancel')}</button>
-					</div>
-				{/if}
-				{#if typed}
-					<!-- Type de données de la colonne (inféré ou fixé), puis la clé du tableau. -->
-					<hr />
-					<div class="menu-title">{fcol.fixed ? tr('grid.type.title.fixed') : tr('grid.type.title.inferred')}</div>
-					{#if d.pending}
-						{@const p = d.pending}
-						<p class="menu-note">
-							{tr('grid.type.pending', { n: p.n, type: typeLabel(p.to) })}
-						</p>
-						<div class="foot">
-							<span class="sp"></span>
-							<button class="primary" onclick={() => chooseType(p.to, true)}>{tr('grid.type.convertAnyway')}</button>
-							<button onclick={() => (d.pending = undefined)}>{tr('common.cancel')}</button>
-						</div>
-					{:else}
-						<div class="types" role="radiogroup" aria-label={tr('grid.type.aria')}>
-							{#each TYPES as t (t)}
-								<button
-									class="sort type"
-									class:on={t === fcol.type}
-									role="radio"
-									aria-checked={t === fcol.type}
-									title={t === fcol.type ? (fcol.fixed ? tr('grid.type.fixed.tooltip') : tr('grid.type.inferred.tooltip')) : tr('grid.type.convert.tooltip', { type: typeLabel(t) })}
-									onclick={() => chooseType(t)}
-								>
-									<span class="check">{t === fcol.type ? '✓' : ''}</span>{#if typeIconName(t)}<span class="type-icon"><Icon name={typeIconName(t)!} size={14} /></span>{:else}<span class="type-icon">{typeIcon(t)}</span>{/if}{typeLabel(t)}
-								</button>
-							{/each}
-						</div>
-						{#if d.mix && d.mix.type}
-							{@const to = d.mix.type}
-							<p class="menu-note">{mixText(d.mix)}</p>
-							<button class="sort" onclick={() => chooseType(to, true)}
-								>{tr('grid.type.revert', { type: typeLabel(to), n: d.mix.off })}</button
-							>
-						{/if}
-						{#if fcol.errors}<p class="menu-note error">{tr('grid.type.errors', { n: fcol.errors })}</p>{/if}
-					{/if}
-				{:else if fcol?.formula && source.columnsToValues}
-					<!-- Colonne calculée : pas de type à choisir ; elle peut devenir une colonne de valeurs. -->
-					<hr />
-					<div class="menu-title">{tr('grid.type.computed')}</div>
-					<button
-						class="sort"
-						title={tr('grid.type.toValues.tooltip')}
-						onclick={() => {
-							filterDlg = null;
-							menuAction(() => source.columnsToValues!(d.e.t, [d.i]));
-						}}>{tr('grid.menu.toValues')}</button
-					>
-				{/if}
-				{#if source.setKey && !fcol?.formula}
-					<hr />
-					{#if d.e.t.key === d.i}
-						<p class="menu-note">🔑 {d.e.t.autoNumber === d.i ? tr('grid.key.note.auto') : tr('grid.key.note')}</p>
-						<button class="sort" onclick={() => chooseKey(false)}>{tr('grid.key.remove')}</button>
-					{:else if d.keyWhy === undefined}
-						<p class="menu-note loading"><span class="spinner" aria-hidden="true"></span> {tr('grid.key.checking')}</p>
-					{:else if d.keyWhy === ''}
-						<button class="sort" onclick={() => chooseKey(true)}>🔑 {d.e.t.key !== undefined ? tr('grid.key.use.replace') : tr('grid.key.use')}</button>
-					{:else if d.keyWhy}
-						<p class="menu-note">{tr('grid.key.impossible', { why: d.keyWhy })}</p>
-					{/if}
-					{#if d.e.t.autoNumber === d.i && d.e.t.key !== d.i}
-						<p class="menu-note">{tr('grid.key.sequence')}</p>
-					{/if}
-				{/if}
-			</div>
-		{/if}
+		<FilterPanel v={filterView} />
 		{#if cfView}
 			{#key cfView}
 				<CondFormat host={cfHost} view={cfView} onclose={closeRules} />
@@ -7774,7 +7584,6 @@
 		padding: 6px 0 8px;
 		min-width: 460px;
 	}
-	.rules .rule,
 	.rules .add,
 	.rules .foot {
 		display: flex;
@@ -7808,17 +7617,6 @@
 		background: #e3efe7;
 	}
 	/* Section « Type de données » du menu ▾ de la colonne. */
-	.filter .sort.type {
-		padding: 3px 14px;
-	}
-	.filter .sort.type .type-icon {
-		width: 18px;
-		margin-right: 6px;
-		justify-content: center;
-	}
-	.filter .sort.type.on {
-		font-weight: 600;
-	}
 	.charts {
 		position: absolute;
 		overflow: hidden;
@@ -8010,45 +7808,6 @@
 		color: #6b7280;
 		font-size: 11px;
 	}
-	.filter .cond-menu {
-		display: flex;
-	}
-	.filter .cond-menu.on {
-		background: #e3efe7;
-	}
-	.filter .cond-list .sort {
-		padding-left: 28px;
-	}
-	.filter .custom select {
-		flex: 1;
-		font: inherit;
-		padding: 2px 4px;
-		border: 1px solid #c9cdd2;
-		border-radius: 3px;
-	}
-	.filter .custom input {
-		flex: 1;
-		min-width: 0;
-	}
-	.filter .andor {
-		display: flex;
-		gap: 12px;
-		padding: 0 14px;
-	}
-	.filter .andor input {
-		width: auto;
-	}
-	.filter .menu-note .link {
-		border: none;
-		background: none;
-		color: #217346;
-		padding: 0 4px;
-		text-decoration: underline;
-	}
-	.rules .sample {
-		padding: 1px 8px;
-		border: 1px solid #d4d7db;
-	}
 	.rules input {
 		font: inherit;
 		width: 90px;
@@ -8132,12 +7891,6 @@
 	}
 	.menu-note.error {
 		color: #c0392b;
-	}
-	.type-icon {
-		display: inline-flex;
-		vertical-align: -3px;
-		color: #6b8f78;
-		--icon-accent: #217346;
 	}
 	.check {
 		display: inline-block;
