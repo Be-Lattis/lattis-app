@@ -175,6 +175,12 @@ test('11. menu contextuel, rechercher, format de cellule', async ({ app }) => {
 	await app.getByRole('button', { name: 'Remplacer', exact: true }).click();
 	await expect(app.getByRole('textbox', { name: /Remplacer/ }).first()).toBeVisible();
 	await app.keyboard.press('Escape');
+	// Mise en forme conditionnelle : le menu des règles s'ouvre et se ferme.
+	await goTo(app, 'B2');
+	await app.getByRole('button', { name: /Mise en forme conditionnelle/ }).first().click();
+	await expect(app.getByRole('menu').first()).toBeVisible();
+	await app.keyboard.press('Escape');
+	await expect(app.getByRole('menu')).toHaveCount(0);
 	await goTo(app, 'B2');
 	await app.keyboard.press('Control+1');
 	const fmt = app.getByRole('dialog').first();
@@ -250,6 +256,8 @@ test('15. masquer des lignes', async ({ app }) => {
 	await app.keyboard.press('ArrowDown');
 	await expect(activeCell(app)).toContainText('Kiwi');
 	await app.keyboard.press('Control+Z');
+	// L'annulation est faite par le moteur : Rétablir devient possible.
+	await expect(app.getByRole('button', { name: /^Rétablir/ }).first()).toBeEnabled();
 	await goTo(app, 'A2');
 	await app.keyboard.press('ArrowDown');
 	await expect(activeCell(app)).toContainText('Poire');

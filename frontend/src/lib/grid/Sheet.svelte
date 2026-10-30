@@ -87,9 +87,9 @@
 	import SheetObjects from './SheetObjects.svelte';
 	import { objectBox, type ObjectConfig, type SheetObject } from './objects';
 	import { type SheetButton } from './buttons';
-	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type Stats, type StatsReq } from './rules';
+	import { parseRules, todaySerial, type CfOut, type Rule, type Stats } from './rules';
 	import { chartMenu as chartMenuGroups, chartSubmenu, freeCellMenu, headerMenu, linesSubmenu, pivotSubmenu, tableCellMenu, tableColumnSubmenu, tableRowSubmenu } from './ctxmenu';
-	import { formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
+	import { type RuleChanges } from './cfmodel';
 	import { ICON_SETS, drawCfIcon } from './cficons';
 	import CondFormat, { type CondHost, type CondView } from './CondFormat.svelte';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -126,6 +126,7 @@
 	import { createAnim } from './sheet/anim.svelte.js';
 	import { createFormula } from './sheet/formula.svelte.js';
 	import { createMeasure } from './sheet/measure.svelte.js';
+	import { createCondFormat } from './sheet/condformat.svelte.js';
 
 
 	interface Props {
@@ -312,127 +313,47 @@
 	/** Statistiques en cache, ou calculées (une promesse : demandées au classeur, redessin à l'arrivée). */
 	// Statistiques demandées au classeur (impression : attendues avant d'écrire les pages).
 	let cfWaits: Promise<unknown>[] | null = null;
-	function cfStat(k: string, compute: () => Stats | undefined | Promise<Stats | undefined>): Stats | undefined {
-		if (cfStats.has(k)) return cfStats.get(k) ?? cfStale.get(k) ?? undefined;
-		const got = compute();
-		if (!(got instanceof Promise)) {
-			cfStats.set(k, got ?? null);
-			return got;
-		}
-		const gen = cfGen;
-		cfStats.set(k, null);
-		cfWaits?.push(got);
-		got.then((s) => {
-			if (gen !== cfGen) return;
-			cfStats.set(k, s ?? null);
-			schedule();
-		}).catch(() => {});
-		return cfStale.get(k) ?? undefined;
-	}
+	// --- Mise en forme conditionnelle : sheet/condformat.svelte.ts ---
+	const cfCtl = createCondFormat({
+		get cfStats() { return cfStats; },
+		get cfStale() { return cfStale; },
+		get cfGen() { return cfGen; },
+		get cfWaits() { return cfWaits; },
+		get schedule() { return schedule; },
+		get key() { return key; },
+		get shown() { return shown; },
+		get cells() { return cells; },
+		get pivots() { return pivots; },
+		get pivotAt() { return pivotAt; },
+		get sheetRowRules() { return sheetRowRules; },
+		get sheetColRules() { return sheetColRules; },
+		get tableAt() { return tableAt; },
+		get cellRules() { return cellRules; },
+		get entries() { return entries; },
+		get colRules() { return colRules; },
+		get source() { return source; },
+		get cfToday() { return cfToday; },
+		get freeMark() { return freeMark; },
+		get noMark() { return noMark; },
+		get isNumeric() { return isNumeric; },
+		get selection() { return selection; },
+		get selectionLines() { return selectionLines; },
+		get locked() { return locked; },
+		get say() { return say; },
+		get closeMenus() { return closeMenus; },
+		get cfView() { return cfView; }, set cfView(v) { cfView = v; },
+		get selectRange() { return selectRange; },
+		get wrap() { return wrap; }
+	});
+	const { cfAt, freeCf, sheetRules, selectionLocs, openRules, closeRules } = cfCtl;
+	export const rulesMenu = cfCtl.rulesMenu;
+	export const rulesActive = cfCtl.rulesActive;
+	export const rulesTarget = cfCtl.rulesTarget;
 
-	/** Valeur d'une cellule libre pour les règles (undefined : vide). */
-	function freeValue(r: number, c: number): { v: unknown; text: string; error: boolean } | undefined {
-		const k = key(r, c);
-		const f = shown.get(k);
-		const raw = cells.get(k);
-		if (f === undefined && raw === undefined) {
-			// Cellule d'un tableau croisé : sa valeur calculée (mise en forme
-			// conditionnelle posée sur le TCD).
-			const p = pivots.length ? pivotAt(r, c) : undefined;
-			const text = p && r >= p.row ? (p.cells[r - p.row]?.[c - p.col] ?? '') : '';
-			return text ? { v: ruleValue(text), text, error: false } : undefined;
-		}
-		const text = f ? f.text : freeDisplay(raw!, undefined).text;
-		return { v: ruleValue(text), text, error: !!f?.error };
-	}
-
-	/**
-	 * Statistiques de la plage d'une règle (clé gk, voir groupKey) : ses
-	 * cellules libres, celles de ses lignes et colonnes entières, et ses
-	 * colonnes de tableau (ou celles sous ses colonnes entières), en SQL.
-	 */
-	function rangeStats(gk: string, q: StatsReq): Stats | undefined {
-		return cfStat(gk + '|' + reqKey(q), () => {
-			const rows = new Set<number>();
-			const cols = new Set<number>();
-			for (const [i, rs] of sheetRowRules) if (rs.some((x) => groupKey(x, { k: 'row', i }) === gk)) rows.add(i);
-			for (const [i, rs] of sheetColRules) if (rs.some((x) => groupKey(x, { k: 'col', i }) === gk)) cols.add(i);
-			const values: unknown[] = [];
-			const seen = new Set<string>();
-			const add = (r: number, c: number) => {
-				const k = key(r, c);
-				if (seen.has(k) || tableAt(r, c)) return;
-				seen.add(k);
-				const fv = freeValue(r, c);
-				if (fv && !fv.error) values.push(fv.v);
-			};
-			for (const [k, rs] of cellRules)
-				if (rs.some((x) => groupKey(x, { k: 'cell', r: 0, c: 0 }) === gk)) {
-					const [r, c] = k.split(',').map(Number);
-					add(r, c);
-				}
-			if (rows.size || cols.size)
-				for (const k of cells.keys()) {
-					const [r, c] = k.split(',').map(Number);
-					if (rows.has(r) || cols.has(c)) add(r, c);
-				}
-			const free = values.length ? computeStats(values, q) : undefined;
-			const parts: Promise<Stats>[] = [];
-			for (const e of entries) {
-				const tr = colRules.get(e.t.id);
-				const ci = e.t.columns.flatMap((_, i) => (tr?.[i]?.some((x) => groupKey(x, { k: 'tbl', t: e.t.id, c: i }) === gk) || cols.has(e.t.col + i) ? [i] : []));
-				if (ci.length && source.ruleStats && e.t.rows > 0) parts.push(source.ruleStats(e.t, ci, q).then((s) => prepareStats(s, q)));
-			}
-			if (!parts.length) return free;
-			return Promise.all(parts).then((list) => list.reduce<Stats | undefined>((a, b) => mergeStats(a, b), free));
-		});
-	}
-
-	/** Contexte d'évaluation des règles d'un emplacement. */
-	function cfEnv(loc: Loc, mark: (r: Rule, k: number) => boolean): RuleEnv {
-		return {
-			stats: (r) => {
-				const q = statsReq(r);
-				return q ? rangeStats(groupKey(r, loc), q) : undefined;
-			},
-			mark,
-			today: cfToday
-		};
-	}
 
 	const noMark = () => false;
 	/** Règle « formule » d'une cellule libre vérifiée (calculée par le classeur). */
 	const freeMark = (row: number, col: number) => (r: Rule) => freeMarks.has(`${row},${col},${r.id ?? r.value}`);
-
-	/**
-	 * Mise en forme conditionnelle d'une cellule : ses propres règles (colonne
-	 * de tableau ou cellule libre), puis celles de sa ligne et de sa colonne
-	 * entières (la ligne l'emporte, comme pour la mise en forme).
-	 */
-	function cfAt(
-		r: number,
-		c: number,
-		val: { v: unknown; text: string; error: boolean },
-		own?: { rules: Rule[] | undefined; loc: Loc; mark: (r: Rule, k: number) => boolean }
-	): CfOut | undefined {
-		const rr = sheetRowRules.get(r);
-		const cr = sheetColRules.get(c);
-		if (!own?.rules && !rr && !cr) return undefined;
-		const out: CfOut = {};
-		if (own?.rules) applyRules(own.rules, val, cfEnv(own.loc, own.mark), out);
-		const fm = rr || cr ? freeMark(r, c) : noMark;
-		if (rr) applyRules(rr, val, cfEnv({ k: 'row', i: r }, fm), out);
-		if (cr) applyRules(cr, val, cfEnv({ k: 'col', i: c }, fm), out);
-		return out;
-	}
-
-	/** Mise en forme conditionnelle d'une cellule libre (vide comprise). */
-	function freeCf(r: number, c: number): CfOut | undefined {
-		const k = key(r, c);
-		const own = cellRules.get(k);
-		if (!own && !sheetRowRules.size && !sheetColRules.size) return undefined;
-		return cfAt(r, c, freeValue(r, c) ?? { v: null, text: '', error: false }, own ? { rules: own, loc: { k: 'cell', r, c }, mark: freeMark(r, c) } : undefined);
-	}
 
 	/** Barre de données dans la cellule (x, y, w, h). */
 	function drawBar(b: NonNullable<CfOut['bar']>, x: number, y: number, w: number, h: number, k: string, r: number, c: number) {
@@ -479,12 +400,6 @@
 		return s + 4;
 	}
 
-	/** Valeur d'un texte affiché pour les règles : nombre si c'en est un. */
-	function ruleValue(text: string): unknown {
-		if (!isNumeric(text)) return text;
-		const n = Number(text.replace(/[\s\u00a0\u202f%]/g, '').replace(',', '.'));
-		return Number.isFinite(n) ? n : text;
-	}
 	// Styles de colonne et d'en-tête, par tableau puis colonne.
 	let colStyles = new Map<number, (StyleLayer | undefined)[]>();
 	let headStyles = new Map<number, (StyleLayer | undefined)[]>();
@@ -4344,25 +4259,6 @@
 
 	let cfView = $state<CondView | null>(null);
 
-	/** Règles de la feuille, par emplacement (gestionnaire). */
-	function sheetRules(): SheetRules {
-		return {
-			tables: entries.map((e) => ({ id: e.t.id, name: e.t.name, row: e.t.row, col: e.t.col, rows: e.t.rows, columns: e.t.columns.map((c) => c.name), rules: colRules.get(e.t.id) ?? [] })),
-			rows: sheetRowRules,
-			cols: sheetColRules,
-			cells: cellRules
-		};
-	}
-
-	/** Emplacements des règles de la sélection : lignes ou colonnes entières, colonnes de tableau, cellules libres. */
-	function selectionLocs(): Loc[] | string {
-		const { r0, r1, c0, c1 } = selection();
-		const lines = selectionLines();
-		if (lines.rows) return Array.from({ length: r1 - r0 + 1 }, (_, k) => ({ k: 'row' as const, i: r0 + k }));
-		if (lines.cols) return Array.from({ length: c1 - c0 + 1 }, (_, k) => ({ k: 'col' as const, i: c0 + k }));
-		return rectLocs(r0, c0, r1, c1, sheetRules().tables);
-	}
-
 	const cfHost: CondHost = {
 		sheetRules,
 		selectionLocs,
@@ -4376,39 +4272,6 @@
 			await source.setSheetRules(ch);
 		}
 	};
-
-	/** Menu « Mise en forme conditionnelle » du ruban, sous son bouton (coordonnées de la fenêtre). */
-	export function rulesMenu(x: number, y: number) {
-		if (!source.setSheetRules) return;
-		if (locked) return say(locked);
-		closeMenus();
-		cfView = { kind: 'menu', x, y };
-	}
-
-	/** Gestionnaire des règles de la sélection. */
-	export function rulesActive() {
-		if (!source.setSheetRules) return;
-		if (locked) return say(locked);
-		closeMenus();
-		cfView = { kind: 'manager' };
-	}
-
-	/** Gestionnaire des règles d'une colonne de tableau (menu ▾ de la colonne). */
-	function openRules(e: Entry, i: number) {
-		selectRange(e.t.row + 1, e.t.col + i, Math.max(e.t.row + 1, e.last), e.t.col + i);
-		rulesActive();
-	}
-
-	/** « S'applique à » de la sélection (titre des boîtes). */
-	export function rulesTarget(): string {
-		const l = selectionLocs();
-		return typeof l === 'string' ? '' : formatLocs(l, sheetRules().tables);
-	}
-
-	function closeRules() {
-		cfView = null;
-		wrap.focus();
-	}
 
 	// --- Graphiques -------------------------------------------------------------
 
