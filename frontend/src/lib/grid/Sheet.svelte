@@ -133,6 +133,7 @@
 	import { createKeyboard } from './sheet/keyboard.svelte.js';
 	import { createMouse } from './sheet/mouse.svelte.js';
 	import { createMenus } from './sheet/menus.svelte.js';
+	import { createNotes } from './sheet/notes.svelte.js';
 
 
 	interface Props {
@@ -4975,7 +4976,7 @@
 		if (JSON.stringify(tip) !== JSON.stringify(inputTip)) inputTip = tip;
 	}
 
-	// --- Notes (Révision) ---------------------------------------------------------
+	// --- Notes et commentaires : sheet/notes.svelte.ts ---
 
 	let noteTip = $state<{ x: number; y: number; text: string; key: string } | null>(null);
 	let noteDlg = $state<{ row: number; col: number; text: string; had: boolean; pinned: boolean; x: number; y: number } | null>(null);
@@ -4983,221 +4984,48 @@
 	let pinnedFrame: { x: number; y: number; text: string }[] = [];
 	let pinnedShown = $state<{ x: number; y: number; text: string }[]>([]);
 
-	/** Note de la cellule, s'il y en a une. */
-	function noteOf(r: number, c: number): string | undefined {
-		const g = mergeOf(r, c);
-		if (g) return styleAt(g.row, g.col, undefined)?.nt;
-		return styleAt(r, c)?.nt;
-	}
-
-	/** Infobulle de la note sous la souris (comme Excel). */
-	function updateNoteTip(cell: { row: number; col: number } | null) {
-		const text = cell && !noteDlg ? noteOf(cell.row, cell.col) : undefined;
-		if (!cell || !text) {
-			if (noteTip) noteTip = null;
-			return;
-		}
-		const g = mergeOf(cell.row, cell.col);
-		const r = g?.row ?? cell.row;
-		const c = g?.col ?? cell.col;
-		const k = key(r, c);
-		if (noteTip?.key === k) return;
-		const right = screenX(c) + cax().offset(c + (g?.cols ?? 1)) - cax().offset(c);
-		noteTip = { x: Math.min(right + 8, viewW - 240), y: screenY(r), text, key: k };
-	}
-
-	/** Révision › Nouvelle note (ou Modifier la note) sur la cellule active. */
-	export function editNote() {
-		if (!source.setNote) return;
-		if (locked) {
-			say(locked);
-			return;
-		}
-		closeMenus();
-		noteTip = null;
-		const text = noteOf(active.row, active.col) ?? '';
-		const g = mergeOf(active.row, active.col);
-		const pinned = !!(g ? styleAt(g.row, g.col, undefined) : styleAt(active.row, active.col))?.np;
-		const right = screenX(active.col) + cax().size(active.col);
-		noteDlg = { row: active.row, col: active.col, text, had: !!text, pinned, x: Math.min(toView(right) + 8, Math.max(8, toView(viewW) - 270)), y: Math.max(4, toView(screenY(active.row))) };
-	}
-
-	// Enregistrement automatique (comme un post-it) : à la fermeture, par
-	// clic ailleurs ou Échap ; la corbeille supprime la note.
-	function saveNote(remove = false) {
-		const d = noteDlg;
-		noteDlg = null;
-		wrap.focus();
-		const set = source.setNote;
-		if (!d || !set) return;
-		const text = remove ? '' : d.text;
-		const before = noteOf(d.row, d.col) ?? '';
-		if (text.trim() === before.trim()) return;
-		if (text.trim() === '' && !d.had) return;
-		menuAction(() => set(d.row, d.col, text));
-	}
-
-	/** Épingle ou désépingle la note en cours (enregistrée d'abord si elle est neuve). */
-	function togglePin() {
-		const d = noteDlg;
-		const pin = source.pinNote;
-		const set = source.setNote;
-		if (!d || !pin || !set) return;
-		if (!d.text.trim()) {
-			say(tr('grid.note.pinEmpty'));
-			return;
-		}
-		d.pinned = !d.pinned;
-		const { row, col, text, pinned } = d;
-		const changed = text.trim() !== (noteOf(row, col) ?? '').trim();
-		d.had = true;
-		menuAction(async () => {
-			if (changed) await set(row, col, text);
-			await pin(row, col, pinned);
-		});
-	}
-
-	/**
-	 * Accueil › Édition (Remplissage, Effacer, Trier et filtrer) et Mettre
-	 * sous forme de tableau (Ctrl+L) : sur la sélection ou la cellule active.
-	 */
-	export function editActive(what: 'fillDown' | 'fillRight' | 'clearContents' | 'clearFilters' | 'formatAsTable') {
-		if (locked) {
-			say(locked);
-			return;
-		}
-		const { row, col } = active;
-		switch (what) {
-			case 'fillDown':
-			case 'fillRight':
-				copyFill(what === 'fillDown');
-				return;
-			case 'clearContents':
-				clearSelection();
-				lastRepeat = () => clearSelection();
-				return;
-			case 'clearFilters': {
-				const e = tableAt(row, col);
-				const clear = source.clearFilters;
-				if (!e || !clear || !e.t.columns.some((c) => c.filter)) say(tr('grid.filter.notFiltered'));
-				else menuAction(() => clear(e.t));
-				return;
-			}
-			case 'formatAsTable': {
-				const fmt = source.formatAsTable;
-				if (!fmt) return;
-				if (tableAt(row, col)) {
-					say(tr('grid.table.alreadyIn'));
-					return;
-				}
-				// Rien de visé (cellule vide hors d'une plage) : le moteur pose un
-				// tableau vide d'une colonne « Colonne 1 », en-tête sur la cellule ;
-				// la 1re cellule de données, dessous, devient active.
-				const blank = !cells.has(key(row, col)) && !inRangeZone(row, col);
-				void menuAction(() => fmt(row, col)).then((ok) => {
-					if (ok && blank) moveTo(row + 1, col);
-				});
-				return;
-			}
-		}
-	}
-
-	/** Révision › Supprimer la note de la cellule active. */
-	export function deleteNote() {
-		const set = source.setNote;
-		if (!set || !noteOf(active.row, active.col)) {
-			say(tr('grid.note.none'));
-			return;
-		}
-		const { row, col } = active;
-		menuAction(() => set(row, col, ''));
-	}
-
-	// --- Commentaires en fil (comments.ts) -----------------------------------------
-
 	// Fil ouvert (preview : aperçu au survol, en lecture seule).
 	let commentDlg = $state<{ row: number; col: number; x: number; y: number; preview: boolean } | null>(null);
-
-	// Fils relus (ajout, réponse, collègue) : coins redessinés, ruban à jour.
-	$effect(() => {
-		void comments?.threads;
-		untrack(() => {
-			if (!mounted) return;
-			schedule();
-			refreshStatus();
-		});
+	const notesCtl = createNotes({
+		get mergeOf() { return mergeOf; },
+		get styleAt() { return styleAt; },
+		get noteDlg() { return noteDlg; }, set noteDlg(v) { noteDlg = v; },
+		get noteTip() { return noteTip; }, set noteTip(v) { noteTip = v; },
+		get key() { return key; },
+		get screenX() { return screenX; },
+		get cax() { return cax; },
+		get viewW() { return viewW; },
+		get screenY() { return screenY; },
+		get source() { return source; },
+		get locked() { return locked; },
+		get say() { return say; },
+		get closeMenus() { return closeMenus; },
+		get active() { return active; },
+		get toView() { return toView; },
+		get wrap() { return wrap; },
+		get menuAction() { return menuAction; },
+		get copyFill() { return copyFill; },
+		get clearSelection() { return clearSelection; },
+		get lastRepeat() { return lastRepeat; }, set lastRepeat(v) { lastRepeat = v; },
+		get tableAt() { return tableAt; },
+		get cells() { return cells; },
+		get inRangeZone() { return inRangeZone; },
+		get moveTo() { return moveTo; },
+		get comments() { return comments; },
+		get mounted() { return mounted; },
+		get schedule() { return schedule; },
+		get refreshStatus() { return refreshStatus; },
+		get ctx() { return ctx; },
+		get commentDlg() { return commentDlg; }, set commentDlg(v) { commentDlg = v; }
 	});
-
-	/** Coin violet des cellules qui ont un fil (pâle : résolu), comme le coin rouge des notes. */
-	function drawCommentMarks(L: Layer) {
-		for (const th of comments?.threads ?? []) {
-			if (th.row < L.r0 || th.row > L.r1 || th.col < L.c0 || th.col > L.c1) continue;
-			const g = mergeOf(th.row, th.col);
-			const xr = L.cx(th.col + (g?.cols ?? 1));
-			const y = L.ry(th.row);
-			ctx.fillStyle = th.resolved ? '#c4b3e3' : '#7b4fc9';
-			ctx.beginPath();
-			ctx.moveTo(xr - 9, y + 1);
-			ctx.lineTo(xr - 1, y + 1);
-			ctx.lineTo(xr - 1, y + 9);
-			ctx.closePath();
-			ctx.fill();
-		}
-	}
-
-	/** Place du fil de la cellule (à droite de la cellule ou de sa fusion). */
-	function commentBox(row: number, col: number) {
-		const g = mergeOf(row, col);
-		const r = g?.row ?? row;
-		const c = g?.col ?? col;
-		const right = screenX(c) + cax().offset(c + (g?.cols ?? 1)) - cax().offset(c);
-		return { row: r, col: c, x: Math.min(toView(right) + 8, Math.max(8, toView(viewW) - 300)), y: Math.max(4, toView(screenY(r))) };
-	}
-
-	/** Aperçu du fil sous la souris. */
-	function updateCommentTip(cell: { row: number; col: number } | null) {
-		if (commentDlg && !commentDlg.preview) return;
-		const g = cell ? mergeOf(cell.row, cell.col) : undefined;
-		const th = cell && comments ? threadAt(comments.threads, g?.row ?? cell.row, g?.col ?? cell.col) : undefined;
-		if (!th || !cell) {
-			if (commentDlg) commentDlg = null;
-			return;
-		}
-		if (commentDlg?.row === th.row && commentDlg.col === th.col) return;
-		commentDlg = { ...commentBox(th.row, th.col), preview: true };
-	}
-
-	/** Révision › Nouveau commentaire (ou Répondre), Ctrl+Alt+M : le fil de la cellule active. */
-	export function newComment() {
-		if (!comments) return;
-		closeMenus();
-		commentDlg = { ...commentBox(active.row, active.col), preview: false };
-	}
-
-	/** Révision › Supprimer le commentaire : le fil de la cellule active. */
-	export function deleteComment() {
-		const g = mergeOf(active.row, active.col);
-		const row = g?.row ?? active.row;
-		const col = g?.col ?? active.col;
-		if (!comments || !threadAt(comments.threads, row, col)) {
-			say(tr('grid.comment.none'));
-			return;
-		}
-		const host = comments;
-		menuAction(() => host.removeThread(row, col));
-	}
-
-	/** La cellule active a-t-elle un fil (ruban : Répondre, Supprimer) ? */
-	export function activeThread(): boolean {
-		const g = mergeOf(active.row, active.col);
-		return !!comments && !!threadAt(comments.threads, g?.row ?? active.row, g?.col ?? active.col);
-	}
-
-	/** Volet Commentaires : aller à la cellule d'un fil et l'ouvrir. */
-	export function showComment(row: number, col: number) {
-		moveTo(row, col);
-		queueMicrotask(() => newComment());
-	}
+	const { noteOf, updateNoteTip, saveNote, togglePin, drawCommentMarks, updateCommentTip } = notesCtl;
+	export const editNote = notesCtl.editNote;
+	export const editActive = notesCtl.editActive;
+	export const deleteNote = notesCtl.deleteNote;
+	export const newComment = notesCtl.newComment;
+	export const deleteComment = notesCtl.deleteComment;
+	export const activeThread = notesCtl.activeThread;
+	export const showComment = notesCtl.showComment;
 
 	// --- Liens hypertexte (hyperlink.ts) --------------------------------------------
 

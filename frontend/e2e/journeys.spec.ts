@@ -49,6 +49,12 @@ test('4. trier puis filtrer', async ({ app }) => {
 	await goTo(app, 'A2');
 	await app.keyboard.press('ArrowDown');
 	await expect(activeCell(app)).toContainText('Pomme');
+	// Effacer les filtres : Poire revient.
+	await app.getByRole('button', { name: 'Effacer', exact: true }).click();
+	await expect(app.getByRole('button', { name: 'Effacer', exact: true })).toBeDisabled();
+	await goTo(app, 'A2');
+	await app.keyboard.press('ArrowDown');
+	await expect(activeCell(app)).toContainText('Poire');
 });
 
 test('5. tableau croisé dynamique', async ({ app }) => {
@@ -183,4 +189,20 @@ test('12. défilement, clavier et recopie', async ({ app }) => {
 	await app.keyboard.press('Control+d');
 	await goTo(app, 'A3');
 	await expect(activeCell(app)).toContainText(', 2');
+});
+
+// Notes (Révision) : Maj+F2 ouvre la note, le ruban la modifie et la supprime.
+test('13. note sur une cellule', async ({ app }) => {
+	await typeTable(app);
+	await goTo(app, 'B2');
+	await app.keyboard.press('Shift+F2');
+	const note = app.getByRole('textbox', { name: 'Note de la cellule' });
+	await expect(note).toBeVisible();
+	await note.fill('À vérifier');
+	await note.press('Control+Enter');
+	await expect(note).toBeHidden();
+	await ribbonTab(app, 'Révision');
+	await expect(app.getByRole('button', { name: 'Modifier la note' })).toBeVisible();
+	await app.getByRole('button', { name: 'Supprimer la note' }).click();
+	await expect(app.getByRole('button', { name: 'Nouvelle note' })).toBeVisible();
 });
