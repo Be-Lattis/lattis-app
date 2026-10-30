@@ -32,7 +32,7 @@
 	import { panes, toGrid, type Pane } from './panes';
 	import { afterWidthChange, sideRoom } from './keepinview';
 	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
-	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvAlertOf, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
+	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
 	import { findZone, inZone, zoneLabel, type Zone } from './findzone';
@@ -50,18 +50,17 @@
 	import { a1 as sparkA1, defaultLocation, drawSparkline, freeSparkAt, sparkGeometry, sparkSvg, sparkValue, type SparkKind, type SparklineConfig, type SparklineGroup } from './sparkline';
 	import { autoLink, isLinkClick, linkKind, onLinkText, openLink } from './hyperlink';
 	import { type CustomOrder } from './customsort';
-	import { handQuestion, keyQuestion, type KeyChoice, type KeyQuestion } from './keychoice';
+	import { type KeyChoice, type KeyQuestion } from './keychoice';
 	import { dismiss, dismissPanel } from './dismiss';
 	import { spillAt, spillTip } from './spillmenu';
 	import { freeDisplay } from './freecell';
-	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
+	import { bandLabel, bandOpen, hiddenBand } from './hidden';
 	import { choiceHiddenCols } from '#lib/shell/choice.js';
 	import { type ChoiceCandidate } from './tabchoice';
 	import { placeFollowBadge, showNameBadge } from './followbadge';
 	import { ReadRecovery, readFailNotice } from './readfail';
 	import { followLabel } from '#lib/shell/mergesheets.js';
-	import { editMode, viewKey } from './readonlyedit';
-	import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, splitGroup, tableTop } from './twolevel';
+	import { bandMerges, groupSpans, headerLabel, isSingle, spanAt, tableTop } from './twolevel';
 	import { tableUnderTitle, titleAboveFilled } from './titlehead';
 	import { grown as growFrame, type Grown } from './grown';
 	import { pivotColLayer, pivotLayer, pivotValueText } from './pivotformat';
@@ -74,7 +73,7 @@
 	import { paint as themed } from './colors';
 	import { tableTheme } from './theme.svelte.js';
 	import { condArgs, condLabel, condOps, describeConds, filterKind, kindTitle, searchValues, type CondOp, type PanelValue } from './filtercond';
-	import { cellLines, copyFillBlock, copyFillPlan, fillBlock, insertAt, readKey, shortcutOf, timeText, todayText } from './shortcuts';
+	import { cellLines, copyFillBlock, copyFillPlan, readKey, shortcutOf, timeText, todayText } from './shortcuts';
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
 	import Submenu from '#lib/ui/Submenu.svelte';
@@ -85,10 +84,10 @@
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import type { PrintCell, PrintChart, PrintSource } from '#lib/print/sheetprint.js';
 	import PivotPanel from './PivotPanel.svelte';
-	import { brokenPivotAt, pivotsCleared } from './pivotzone';
+	import { brokenPivotAt } from './pivotzone';
 	import { midEllipsis } from './midellipsis';
 	import { fitColumns, fitRows } from './autofit';
-	import { handAlign, handEditText, handKeptNote, handStart, pivotHandAt } from './pivothand';
+	import { handAlign, handKeptNote, handStart, pivotHandAt } from './pivothand';
 	import { pivotRangeRef, pivotRefText } from './pivotref';
 	import { placesOnClick, type Placement } from './pivotplace';
 	import SheetButtons from './SheetButtons.svelte';
@@ -105,13 +104,11 @@
 	import { type CellSpeech } from './a11y';
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
-	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, pointedRef, previewShift, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
-	import { editorLeave, fxLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
-	import { parseGoto, type GotoTable } from './goto';
+	import { formulaRefs, highlightParts, isFormula, movedRef, pointedRef, previewShift, rangeRef, refRect, type FormulaError, type Rect, type RefTable } from './formulaEdit';
+	import { editorLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import OutlineBar from './OutlineBar.svelte';
 	import { bandSize, detailTarget, outlineDepth, type OutlineAction, type OutlineGeom, type SheetOutline } from './outline';
-	import { cellNameProblem, columnNameProblem, refusedName, tableNameProblem, type NameProblem } from '#lib/ui/names.js';
-	import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
+	import { nameAlertOpen } from '#lib/ui/nameAlert.js';
 	import {
 		isErrorValue,
 		valueAlignment,
@@ -138,6 +135,7 @@
 	import { createDataTools } from './sheet/datatools.svelte.js';
 	import { createCommands } from './sheet/commands.svelte.js';
 	import { createAudit } from './sheet/audit.svelte.js';
+	import { createEdit } from './sheet/edit.svelte.js';
 
 
 	interface Props {
@@ -7605,933 +7603,99 @@
 		e.preventDefault();
 	}
 
-	// --- Édition ------------------------------------------------------------
-
-	/**
-	 * Pourquoi la cellule ne se modifie pas ('' si elle se modifie) : feuille
-	 * protégée, tableau publié figé, ligne d'un autre membre, tableau croisé,
-	 * tableau chargé par une requête (hors colonnes saisies). Elle s'ouvre
-	 * alors en lecture seule (double clic, F2, barre de formule), pour copier.
-	 */
-	function readOnlyReason(r: number, c: number): string {
-		if (locked) return locked;
-		// Tableau publié en lecture seule (classeur partagé figé, hors ligne).
-		const ro = ownerAt(r, c)?.t.readOnly;
-		if (ro) return ro;
-		// Cellule libre d'un classeur collaboratif sans droit de conception
-		// (la ligne juste sous un tableau l'agrandit : c'est une saisie).
-		if (layoutLocked && !ownerAt(r, c) && !ownerAt(r - 1, c)) return layoutLocked;
-		// Participant (classeur collaboratif) : les lignes des autres membres.
-		if (lockedRowAt(r, c)) return NOT_YOURS;
-		// Tableau croisé : seules ses colonnes saisies à droite se modifient.
-		const pv = pivotAt(r, c);
-		if (pv && pivotHandAt(pv, r, c) < 0) return PIVOT_READONLY;
-		if (queryAt(r, c)) return QUERY_READONLY;
-		return '';
-	}
-
-	/**
-	 * Pourquoi la structure du tableau t ne se change pas ('' si elle se
-	 * change) : feuille protégée, structure protégée ou classeur partagé sans
-	 * droit de conception (layoutLocked), tableau publié en lecture seule. Le
-	 * moteur refuserait ; les menus grisent ou retirent ces actions.
-	 */
-	function designWhy(t: { readOnly?: string }): string {
-		if (locked) return locked;
-		if (structure) return layoutLocked || tr('grid.protect.structure');
-		return t.readOnly ?? '';
-	}
-
-	/** Texte de la cellule dans l'éditeur et la barre de formule (un tableau croisé : sa valeur affichée). */
-	function editText(r: number, c: number): string {
-		const v = cellInfo(r, c).value;
-		const p = v === '' ? pivotAt(r, c) : undefined;
-		// Colonne saisie à formule : sa formule (pivothand.ts).
-		return p ? handEditText(p, r, c, shownValue(r, c)) : v;
-	}
-
-	function startEdit(byTyping: boolean, initial?: string) {
-		const reason = readOnlyReason(active.row, active.col);
-		const mode = editMode(reason, byTyping);
-		if (mode === 'refuse') {
-			say(reason);
-			return;
-		}
-		if (mode === 'view') {
-			openReadOnly(reason);
-			return;
-		}
-		const band = bandAt(
-			entries.map((x) => x.t),
-			active.row,
-			active.col
-		);
-		// Onglet à choix : les lignes des autres valeurs se remplissent comme
-		// un onglet neuf (la ligne saisie reçoit la valeur choisie).
-		if (band && !bandOpen(band)) {
-			say(bandRefusal(band.name));
-			return;
-		}
-		const info = cellInfo(active.row, active.col);
-		// Ligne pas encore chargée (juste après une saisie qui l'a créée) : la
-		// frappe ne doit pas être perdue ; seule l'édition de la valeur (F2)
-		// attend les données.
-		if (info.kind === 'data' && !info.row && initial === undefined) return;
-		// Sélection d'avant la saisie : Ctrl+Entrée valide dans toute la plage.
-		editRange = { sel: selection(), anchor: { ...anchor } };
-		anchor = { ...active };
-		editByTyping = byTyping;
-		editValueText = initial ?? info.value;
-		// Saisir dans une cellule annule le copier-coller en cours (Excel).
-		if (clipRange) {
-			clipRange = null;
-			schedule();
-		}
-		// L'éditeur doit avoir le focus avant la frappe suivante : sinon une
-		// saisie rapide perdrait des caractères.
-		flushSync(() => {
-			editRO = '';
-			editing = true;
-		});
-		ensureVisible(active.row, active.col);
-		if (!input) return;
-		placeEditor();
-		input.focus();
-		const n = input.value.length;
-		input.setSelectionRange(n, n);
-	}
-
-	/**
-	 * Double clic ou F2 sur une cellule en lecture seule (readonlyedit.ts) :
-	 * l'éditeur s'ouvre sur son texte, à sélectionner et copier ; rien ne s'y
-	 * saisit, la barre d'état dit pourquoi.
-	 */
-	function openReadOnly(reason: string) {
-		const info = cellInfo(active.row, active.col);
-		if (info.kind === 'data' && !info.row) return; // ligne pas encore chargée
-		editRange = null;
-		anchor = { ...active };
-		editByTyping = false;
-		editValueText = editText(active.row, active.col);
-		flushSync(() => {
-			editRO = reason;
-			editing = true;
-		});
-		say(reason);
-		ensureVisible(active.row, active.col);
-		if (!input) return;
-		placeEditor();
-		input.focus();
-		const n = input.value.length;
-		input.setSelectionRange(n, n);
-	}
-
-	/** Referme l'éditeur en lecture seule, sans rien écrire ni message de refus. */
-	function closeReadOnly(focusGrid = true) {
-		if (message === editRO) say('');
-		editing = false;
-		editRO = '';
-		editErr = null;
-		completion = sig = null;
-		refreshFx();
-		if (focusGrid) wrap.focus();
-		schedule();
-	}
-
-	/** Une valeur déversée (formule qui déverse) est-elle montrée en (r, c) ? */
-	function spilledAt(r: number, c: number): boolean {
-		for (const sp of spills) {
-			const v = sp.rows[r - sp.row]?.[c - sp.col];
-			if (v) return true;
-		}
-		return false;
-	}
-
-	function placeEditor() {
-		if (!input) return;
-		const x = screenX(active.col);
-		const y = screenY(active.row);
-		const box = input.parentElement!;
-		box.style.transform = `translate(${x}px, ${y}px)`;
-		// Comme Excel : l'éditeur s'élargit vers la droite tant que les cellules
-		// voisines sont vides, puis passe à la ligne ; une fusion le fait au moins
-		// aussi grand qu'elle.
-		const row = active.row;
-		const g = boxOf(active.row, active.col);
-		const longest = Math.max(...input.value.split('\n').map((l) => textWidth(l)));
-		// Vide : ni valeur, ni tableau, ni tableau croisé, ni fusion, ni valeur
-		// déversée (l'éditeur passait sur le résultat d'une formule qui déverse).
-		const empty = (c: number) => !tableAt(row, c) && !cells.has(key(row, c)) && !pivotAt(row, c) && !mergeOf(row, c) && !spilledAt(row, c);
-		const last = g ? g.col + g.cols - 1 : active.col;
-		const width = editorWidth(longest + 16, active.col, (c) => cax().size(c), (c) => c > last && empty(c), Math.max(80, viewW - x - 4));
-		const mergedW = g ? cax().offset(g.col + g.cols) - cax().offset(g.col) : 0;
-		// Largeur de confort seulement si la cellule voisine est vide : l'éditeur
-		// ne passe jamais par-dessus une cellule qui a un contenu (il passe à la
-		// ligne dans sa colonne).
-		const floor = empty(last + 1) ? 80 : 0;
-		box.style.width = `${Math.max(width, mergedW, floor)}px`;
-		input.style.height = '0px';
-		editorH = Math.max(g ? rspan(g.row, g.row + g.rows - 1) : rh(row), input.scrollHeight + 4);
-		input.style.height = '';
-		box.style.height = `${editorH}px`;
-		const e = tableAt(active.row, active.col);
-		const st = styleAt(active.row, active.col, e);
-		input.style.textAlign = isFormula(input.value) ? 'left' : (st?.al ?? (e && active.row > e.t.row ? alignment(e.t.columns[active.col - e.t.col].type) : 'left'));
-		input.style.font = st?.ff || st?.fs || st?.b || st?.i ? cellFont(st) : '';
-	}
-
 	// Les saisies partent l'une après l'autre : la suivante peut dépendre de
 	// la précédente (une saisie fait naître un tableau, la suivante le remplit).
 	// Une écriture qui échoue ne bloque jamais les suivantes (catch).
 	let writing: Promise<void> = Promise.resolve();
-
-	// Classeur collaboratif : la cellule en cours de saisie est signalée à la
-	// source, et libérée une fois la saisie écrite (ou abandonnée).
-	let editingAt: { row: number; col: number } | null = null;
-	$effect(() => {
-		// Éditeur en lecture seule : rien ne se saisit, rien à signaler.
-		const on = editing && !editRO;
-		if (!source.editing) return;
-		if (on && !editingAt) {
-			editingAt = { row: active.row, col: active.col };
-			source.editing(editingAt.row, editingAt.col, true).catch(() => undefined);
-		} else if (!on && editingAt) {
-			const at = editingAt;
-			editingAt = null;
-			const done = source.editing;
-			writing = writing.catch(() => undefined).then(() => done(at.row, at.col, false).then(() => undefined, () => undefined));
-		}
+	// Édition et zone de nom : sheet/edit.svelte.ts (accès de createEdit à la feuille).
+	const editCtl = createEdit({
+		get locked() { return locked; },
+		get ownerAt() { return ownerAt; },
+		get layoutLocked() { return layoutLocked; },
+		get lockedRowAt() { return lockedRowAt; },
+		get NOT_YOURS() { return NOT_YOURS; },
+		get pivotAt() { return pivotAt; },
+		get PIVOT_READONLY() { return PIVOT_READONLY; },
+		get queryAt() { return queryAt; },
+		get QUERY_READONLY() { return QUERY_READONLY; },
+		get structure() { return structure; },
+		get cellInfo() { return cellInfo; },
+		get shownValue() { return shownValue; },
+		get active() { return active; }, set active(v) { active = v; },
+		get say() { return say; },
+		get entries() { return entries; },
+		get selection() { return selection; },
+		get anchor() { return anchor; }, set anchor(v) { anchor = v; },
+		get editByTyping() { return editByTyping; }, set editByTyping(v) { editByTyping = v; },
+		get editValueText() { return editValueText; }, set editValueText(v) { editValueText = v; },
+		get clipRange() { return clipRange; }, set clipRange(v) { clipRange = v; },
+		get schedule() { return schedule; },
+		get editRO() { return editRO; }, set editRO(v) { editRO = v; },
+		get editing() { return editing; }, set editing(v) { editing = v; },
+		get ensureVisible() { return ensureVisible; },
+		get input() { return input; },
+		get message() { return message; }, set message(v) { message = v; },
+		get editErr() { return editErr; }, set editErr(v) { editErr = v; },
+		get completion() { return completion; }, set completion(v) { completion = v; },
+		get sig() { return sig; }, set sig(v) { sig = v; },
+		get refreshFx() { return refreshFx; },
+		get wrap() { return wrap; },
+		get spills() { return spills; },
+		get screenX() { return screenX; },
+		get screenY() { return screenY; },
+		get boxOf() { return boxOf; },
+		get textWidth() { return textWidth; },
+		get tableAt() { return tableAt; },
+		get cells() { return cells; },
+		get key() { return key; },
+		get mergeOf() { return mergeOf; },
+		get cax() { return cax; },
+		get viewW() { return viewW; },
+		get editorH() { return editorH; }, set editorH(v) { editorH = v; },
+		get rspan() { return rspan; },
+		get rh() { return rh; },
+		get styleAt() { return styleAt; },
+		get source() { return source; },
+		get writing() { return writing; }, set writing(v) { writing = v; },
+		get isNumeric() { return isNumeric; },
+		get typed() { return typed; }, set typed(v) { typed = v; },
+		get lastEditMs() { return lastEditMs; }, set lastEditMs(v) { lastEditMs = v; },
+		get columnFlash() { return columnFlash; }, set columnFlash(v) { columnFlash = v; },
+		get autoLinkAfter() { return autoLinkAfter; },
+		get dvAlert() { return dvAlert; }, set dvAlert(v) { dvAlert = v; },
+		get keyDlg() { return keyDlg; }, set keyDlg(v) { keyDlg = v; },
+		get handDlg() { return handDlg; }, set handDlg(v) { handDlg = v; },
+		get refreshStatus() { return refreshStatus; },
+		get refusal() { return refusal; },
+		get lastRepeat() { return lastRepeat; }, set lastRepeat(v) { lastRepeat = v; },
+		get fxText() { return fxText; }, set fxText(v) { fxText = v; },
+		get lastRef() { return lastRef; }, set lastRef(v) { lastRef = v; },
+		get fxEditing() { return fxEditing; }, set fxEditing(v) { fxEditing = v; },
+		get boxes() { return boxes; },
+		get onFormulaInput() { return onFormulaInput; },
+		get moveTo() { return moveTo; },
+		get catalog() { return catalog; },
+		get queryIn() { return queryIn; },
+		get pivots() { return pivots; },
+		get PIVOT_PARTIAL() { return PIVOT_PARTIAL; },
+		get panel() { return panel; }, set panel(v) { panel = v; },
+		get inTable() { return inTable; },
+		get enterMove() { return enterMove; },
+		get tabMove() { return tabMove; },
+		get completionKey() { return completionKey; },
+		get fxInput() { return fxInput; },
+		get hold() { return hold; },
+		get finishHold() { return finishHold; },
+		get fxLock() { return fxLock; },
+		get tabPress() { return tabPress; },
+		get selectRange() { return selectRange; },
+		get tableBox() { return tableBox; },
+		get singleCol() { return singleCol; },
+		get nameBox() { return nameBox; },
+		get names() { return names; },
+		get nameInput() { return nameInput; }
 	});
-	// keep : saisie au clavier ; refusée, son texte revient dans l'éditeur
-	// (sur sa cellule) au lieu d'être perdu.
-	// onrefused : reçoit le refus du moteur (renommage depuis la zone de nom).
-	// key : réponse à la question de la clé (keyDlg).
-	function write(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void, key?: KeyChoice): Promise<void> {
-		writing = writing.catch(() => undefined).then(() => writeNow(row, col, raw, keep, onrefused, key));
-		return writing;
-	}
-
-	async function writeNow(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void, key?: KeyChoice) {
-		const pv = pivotAt(row, col);
-		if (pv && pivotHandAt(pv, row, col) < 0) {
-			message = PIVOT_READONLY;
-			return;
-		}
-		if (queryAt(row, col)) {
-			message = QUERY_READONLY;
-			return;
-		}
-		const info = cellInfo(row, col);
-		const target =
-			info.kind === 'free'
-				? {}
-				: { table: info.e!.t, column: info.i, index: info.kind === 'data' ? info.n : undefined, rowId: info.kind === 'data' ? info.row?.id : undefined };
-		const t0 = performance.now();
-		// Affichage immédiat (optimiste) d'une valeur saisie dans un tableau :
-		// le moteur confirme ensuite (valeur typée), ou la saisie est annulée.
-		const optimistic = info.kind === 'data' && info.n !== undefined && info.row && !isFormula(raw) && !info.e!.t.columns[info.i!]?.formula;
-		const before = optimistic ? info.row!.cells[info.i!] : undefined;
-		if (optimistic) {
-			const v = isNumeric(raw) ? Number(raw.replace(/[\s  ]/g, '').replace(',', '.')) : raw;
-			info.e!.cache.set(info.n!, info.i!, raw.trim() === '' ? null : v);
-			schedule();
-		}
-		typed = { row, col, t: performance.now() };
-		try {
-			// Colonne sur un niveau saisie depuis la bande : c'est son en-tête.
-			const m = await source.setCell(info.kind === 'header' ? info.e!.t.row : row, col, raw, target, key);
-			lastEditMs = performance.now() - t0;
-			if (info.kind === 'data' && isFormula(raw) && info.e) {
-				const name = info.e.t.columns[info.i!]?.name;
-				if (name) columnFlash = { table: info.e.t.id, name, t: performance.now(), done: new Set() };
-				schedule();
-			}
-			if (m && typeof m === 'object') {
-				if (info.kind === 'data' && info.n !== undefined) info.e!.cache.set(info.n, info.i!, m.value);
-				message = '';
-			} else message = m ?? '';
-			// Adresse web ou e-mail tapée : un lien, à part (Ctrl+Z le retire, le texte reste).
-			if (keep && info.kind !== 'header') autoLinkAfter(row, col, raw);
-		} catch (e) {
-			if (optimistic) info.e!.cache.set(info.n!, info.i!, before); // saisie refusée : valeur d'avant
-			message = errorText(e);
-			// Formule refusée : la saisie n'est pas perdue, l'éditeur se rouvre.
-			const k = message.indexOf('formule : ');
-			const q = key ? null : keyQuestion(message, e);
-			const hq = key ? null : handQuestion(message, e);
-			const dva = key === 'dv' ? null : dvAlertOf(e);
-			if (dva) {
-				// Validation des données : l'alerte demande quoi faire (Réessayer, Oui, OK…).
-				message = '';
-				dvAlert = { ...dva, row, col, raw, keep };
-			} else if (q) {
-				// Recherche dans un tableau sans clé : la boîte demande quoi utiliser.
-				message = '';
-				keyDlg = { ...q, row, col, raw, keep, choice: 'index' };
-			} else if (hq) {
-				// Première valeur d'une colonne saisie : la boîte demande la jointure.
-				message = '';
-				handDlg = { ...hq, choice: hq.columns[0] ?? '#', write: { row, col, raw, keep } };
-			} else if (onrefused) onrefused(e);
-			else if (k >= 0) {
-				const msg = message.slice(k);
-				queueMicrotask(() => reopenFormula(row, col, raw, msg));
-			} else if (keep && !editing) {
-				// Saisie refusée : le texte tapé reste dans l'éditeur.
-				const why = message;
-				active = { row, col };
-				anchor = { ...active };
-				startEdit(true, raw);
-				message = why;
-				// En-tête refusé (nom de colonne pris…) : la boîte l'explique.
-				if (info.kind === 'header') void refuseName(() => input, refusedName(tr('grid.names.refused.column'), e));
-			}
-		}
-		refreshFx();
-		refreshStatus();
-		schedule();
-	}
-
-	/**
-	 * Valide la saisie ; faux si une formule a une faute de syntaxe (l'éditeur
-	 * reste alors ouvert sur le texte tapé, la faute soulignée et expliquée ;
-	 * les parenthèses oubliées en fin de formule sont fermées d'office), ou si
-	 * la validation de la cellule (liste déroulante) refuse la valeur.
-	 */
-	/** Nom de colonne tapé dans un en-tête : pourquoi il est refusé (déjà pris dans le tableau), null s'il passe. */
-	function headerProblem(row: number, col: number, text: string): NameProblem | null {
-		const info = cellInfo(row, col);
-		if (info.kind !== 'header' || text === info.value || isFormula(text)) return null;
-		const t = info.e!.t;
-		// Deux lignes : l'en-tête se saisit sans son groupe, qui reste.
-		const group = t.twoLevel ? splitGroup(t.columns[info.i].name).group : '';
-		const full = group && text.trim() ? `${group}.${text}` : text;
-		return columnNameProblem(full, t.columns.filter((_, i) => i !== info.i).map((c) => c.name), t.name);
-	}
-
-	function commit(): boolean {
-		if (!editing) return true;
-		// Lecture seule : rien à valider, l'éditeur se referme.
-		if (editRO) {
-			closeReadOnly();
-			return true;
-		}
-		if (nameAlertOpen()) return false;
-		if (isFormula(editValueText)) {
-			const text = closeParens(editValueText);
-			const err = checkFormula(text);
-			if (err) {
-				showFormulaError(err);
-				return false;
-			}
-			editValueText = text;
-		}
-		const { row, col } = active;
-		let text = editValueText;
-		const named = headerProblem(row, col, text);
-		if (named) {
-			void refuseName(() => input, named);
-			return false;
-		}
-		if (text !== cellInfo(row, col).value) {
-			const r = refusal(row, col, text);
-			if ('message' in r) {
-				say(r.message);
-				return false;
-			}
-			text = r.value;
-		}
-		editing = false;
-		editErr = null;
-		if (text !== cellInfo(row, col).value) {
-			write(row, col, text, true);
-			lastRepeat = () => write(active.row, active.col, text);
-		}
-		wrap.focus();
-		return true;
-	}
-
-	/**
-	 * La saisie de la cellule passe dans la barre de formule (clic dans la
-	 * barre, comme Excel) : même texte, rien de validé ; le curseur est celui
-	 * que le clic place dans la barre.
-	 */
-	function handToFx() {
-		fxText = editValueText;
-		editing = false;
-		editErr = null;
-		lastRef = null;
-		fxEditing = true;
-		schedule();
-	}
-
-	// Sélection au début de la saisie (startEdit ne garde que la cellule active).
-	let editRange: { sel: Range; anchor: { row: number; col: number } } | null = null;
-
-	/** Ctrl+Entrée : la saisie va dans toute la sélection (une seule étape d'annulation), qui reste sélectionnée. */
-	function commitAll() {
-		const r = editRange;
-		const sel = r?.sel;
-		if (!r || !sel || isSingleCell(sel, active, boxes) || !source.paste) {
-			commit();
-			return;
-		}
-		if ((sel.r1 - sel.r0 + 1) * (sel.c1 - sel.c0 + 1) > 10000) {
-			say(tr('grid.edit.multiLimit'));
-			return;
-		}
-		editing = false;
-		const text = editValueText;
-		const paste = source.paste;
-		const fill = (s: Range) =>
-			(writing = writing.catch(() => undefined).then(async () => {
-				try {
-					message = (await paste(s.r0, s.c0, fillBlock(s, text))) ?? '';
-				} catch (err) {
-					message = errorText(err);
-				}
-				refreshFx();
-				refreshStatus();
-				schedule();
-			}));
-		fill(sel);
-		lastRepeat = () => fill(selection());
-		anchor = r.anchor;
-		wrap.focus();
-		refreshFx();
-		schedule();
-	}
-
-	/** Remplace le texte de l'éditeur de cellule et place le curseur. */
-	function setEditorText(value: string, caret: number) {
-		flushSync(() => (editValueText = value));
-		input?.setSelectionRange(caret, caret);
-		if (input) onFormulaInput(input, 'cell');
-	}
-
-	/** Hauteur de l'éditeur : une ligne de plus par saut de ligne (Alt+Entrée). */
-	function editorHeight(s: string): number {
-		return 18 * s.split('\n').length + 4;
-	}
-
-	/**
-	 * Formule validable (bouton « Valider ») : sans faute, ou presque, quand il
-	 * ne manque que des parenthèses fermantes, que la validation ajoute.
-	 */
-	function formulaReady(text: string): boolean {
-		return !checkFormula(closeParens(text));
-	}
-
-	/** Montre une faute de formule dans l'éditeur ouvert : message, caractère sélectionné. */
-	function showFormulaError(err: FormulaError) {
-		editErr = err;
-		say(tr('grid.formula.error', { error: err.msg }));
-		const el = input;
-		if (!el) return;
-		requestAnimationFrame(() => {
-			el.focus();
-			el.setSelectionRange(err.pos, Math.max(err.end, err.pos));
-		});
-	}
-
-	/**
-	 * Une formule refusée par le serveur (fonction mal employée, plage
-	 * impossible…) : l'éditeur se rouvre sur le texte tapé, si l'utilisateur
-	 * n'a pas commencé autre chose.
-	 */
-	function reopenFormula(row: number, col: number, raw: string, msg: string) {
-		if (editing || fxEditing || !isFormula(raw)) return;
-		moveTo(row, col);
-		startEdit(true, raw);
-		const pos = serverErrorPos(raw, msg);
-		const text = msg.replace(/^formule : (position \d+ : )?/, '');
-		if (pos !== null) showFormulaError({ pos, end: pos + 1, msg: text });
-		else say(tr('grid.formula.error', { error: text }));
-	}
-
-	function cancel() {
-		if (editRO) {
-			closeReadOnly();
-			return;
-		}
-		editing = false;
-		editErr = null;
-		refreshFx(); // la barre de formule reprend le contenu de la cellule
-		wrap.focus();
-		schedule();
-	}
-
-	/** ↑ / ↓ dans une formule : curseur au début ou à la fin du texte (Maj : sélection jusque-là). */
-	function caretToEdge(end: boolean, extend: boolean) {
-		const el = input;
-		if (!el) return;
-		const n = el.value.length;
-		if (!extend) el.setSelectionRange(end ? n : 0, end ? n : 0);
-		else if (end) el.setSelectionRange(el.selectionStart ?? 0, n, 'forward');
-		else el.setSelectionRange(0, el.selectionEnd ?? n, 'backward');
-		const s = catalog ? signature(el.value, el.selectionStart ?? n, catalog) : null;
-		sig = s ? { ...s, where: 'cell' } : null;
-	}
-
-	/**
-	 * Efface la sélection : tableaux entièrement compris supprimés, contenu des
-	 * autres cellules de tableau effacé. Cellules libres : contenu seul, ou
-	 * tout (all : Supprimer, avec mise en forme, fusions, notes, validations).
-	 */
-	async function clearSelection(range = selection(), all = false) {
-		const { r0, r1, c0, c1 } = range;
-		if (queryIn(r0, c0, r1, c1, true)) {
-			say(QUERY_READONLY);
-			return;
-		}
-		// Tableaux croisés : pris en entier (ou en erreur), supprimés avec le
-		// reste ; touchés en partie seulement, rien ne s'efface (Excel).
-		const pv = pivotsCleared(pivots, range);
-		if (pv.partial) {
-			say(PIVOT_PARTIAL);
-			return;
-		}
-		const pivotGone = pv.gone.length === 1 ? tr('grid.pivot.deleted', { name: pv.gone[0].config.name ?? '' }) : pv.gone.length ? tr('grid.pivot.deletedMany', { n: pv.gone.length }) : '';
-		if (panel?.kind === 'pivot' && pv.gone.some((p) => p.id === panel!.id)) panel = null;
-		const wipe = all ? source.clearCells : undefined;
-		// Les tableaux entièrement compris dans la zone sont supprimés.
-		const whole = entries.filter((e) => e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1);
-		if (source.clearRange) {
-			// Tout en une seule étape d'annulation.
-			const clear = source.clearRange;
-			const tables = whole.map((e) => e.t);
-			writing = writing.catch(() => undefined).then(() =>
-				clear(r0, c0, r1, c1, all).then(
-					() => {
-						if (tables.length > 1) say(tr('grid.table.deletedMany', { n: tables.length }));
-						else if (tables.length) say(tr('grid.table.deleted', { name: tables[0].name }));
-						else if (pivotGone) say(pivotGone);
-						else if (all) say(tr('grid.cells.deleted'));
-						refreshFx();
-						schedule();
-					},
-					(err) => say(errorText(err))
-				)
-			);
-			await writing;
-			return;
-		}
-		const rest = (r: number, c: number) => !whole.some((e) => inTable(e, r, c));
-		let n = 0;
-		for (const e of entries) {
-			if (whole.includes(e)) continue;
-			const rr = Math.max(0, Math.min(r1, e.last) - Math.max(r0, e.t.row) + 1);
-			const cc = Math.max(0, Math.min(c1, e.lastCol) - Math.max(c0, e.t.col) + 1);
-			n += rr * cc;
-		}
-		if (!wipe)
-			for (const k of cells.keys()) {
-				const [r, c] = k.split(',').map(Number);
-				if (r >= r0 && r <= r1 && c >= c0 && c <= c1) n++;
-			}
-		if (n > 1000) {
-			say(tr('grid.clear.limit'));
-			return;
-		}
-		if (pv.gone.length && source.deletePivot) {
-			const del = source.deletePivot;
-			const ids = pv.gone.map((p) => p.id);
-			writing = writing.catch(() => undefined).then(async () => {
-				try {
-					for (const id of ids) await del(id);
-					say(pivotGone);
-				} catch (err) {
-					say(errorText(err));
-				}
-			});
-			await writing;
-		}
-		if (whole.length && source.deleteTables) {
-			const del = source.deleteTables;
-			const tables = whole.map((e) => e.t);
-			writing = writing.catch(() => undefined).then(() =>
-				del(tables).then(
-					() => say(tables.length > 1 ? tr('grid.table.deletedMany', { n: tables.length }) : tr('grid.table.deleted', { name: tables[0].name })),
-					(err) => say(errorText(err))
-				)
-			);
-			await writing;
-		}
-		for (const e of entries) {
-			if (whole.includes(e)) continue;
-			for (let r = Math.max(r0, e.t.row); r <= Math.min(r1, e.last); r++)
-				for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) {
-					const info = cellInfo(r, c);
-					if (info.kind !== 'header' && info.value !== '') await write(r, c, '');
-				}
-		}
-		if (wipe) {
-			writing = writing.catch(() => undefined).then(() =>
-				wipe(r0, c0, r1, c1).then(
-					() => say(tr('grid.cells.deleted')),
-					(err) => say(errorText(err))
-				)
-			);
-			await writing;
-			return;
-		}
-		for (const k of [...cells.keys()]) {
-			const [r, c] = k.split(',').map(Number);
-			if (r >= r0 && r <= r1 && c >= c0 && c <= c1 && rest(r, c)) await write(r, c, '');
-		}
-	}
-
-	function onEditorKey(e: KeyboardEvent) {
-		if (editRO) {
-			// Lecture seule : copier, sélectionner, déplacer le curseur ; rien d'autre.
-			e.stopPropagation();
-			const k = viewKey(e);
-			if (k === 'native') return;
-			e.preventDefault();
-			if (k === 'close') closeReadOnly();
-			else if (k === 'enter') {
-				closeReadOnly();
-				enterMove(e.shiftKey);
-			} else if (k === 'tab') {
-				closeReadOnly();
-				tabMove(e.shiftKey);
-			}
-			return;
-		}
-		if (input && completionKey(e, input, (v) => (editValueText = v))) return;
-		e.stopPropagation();
-		const { row, col } = active;
-		const sc = shortcutOf(e);
-		if ((sc === 'today' || sc === 'now') && input) {
-			// Date ou heure du jour au curseur, comme Excel pendant la saisie.
-			const r = insertAt(input.value, input.selectionStart, input.selectionEnd, sc === 'today' ? todayText() : timeText());
-			setEditorText(r.value, r.caret);
-			e.preventDefault();
-			return;
-		}
-		switch (e.key) {
-			case 'Enter':
-				if (e.altKey && input) {
-					// Alt+Entrée : saut de ligne dans la cellule ; les flèches
-					// déplacent alors le curseur dans le texte.
-					const r = insertAt(input.value, input.selectionStart, input.selectionEnd, '\n');
-					setEditorText(r.value, r.caret);
-					editByTyping = false;
-					break;
-				}
-				if (e.ctrlKey || e.metaKey) {
-					commitAll();
-					break;
-				}
-				if (commit()) enterMove(e.shiftKey);
-				break;
-			case 'Tab':
-				if (commit()) tabMove(e.shiftKey);
-				break;
-			case 'Escape':
-				cancel();
-				break;
-			case 'ArrowDown':
-			case 'ArrowUp':
-			case 'ArrowLeft':
-			case 'ArrowRight':
-				// Formule : les flèches déplacent le curseur dans le texte (← → d'un
-				// caractère, Ctrl d'un mot, ↑ ↓ au début et à la fin, Maj pour
-				// sélectionner) ; seuls Entrée, Tab et le clic ailleurs valident.
-				if (isFormula(editValueText) || editValueText.trimStart() === '=') {
-					if (e.key === 'ArrowUp' || e.key === 'ArrowDown') caretToEdge(e.key === 'ArrowDown', e.shiftKey);
-					else return;
-					break;
-				}
-				if (!editByTyping) return;
-				if (!commit()) break;
-				moveTo(
-					row + (e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0),
-					col + (e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0)
-				);
-				break;
-			default:
-				return;
-		}
-		e.preventDefault();
-	}
-
-	// Barre de formule : même chemin d'écriture que l'éditeur de cellule.
-	function onFxKey(e: KeyboardEvent) {
-		if (fxInput && completionKey(e, fxInput, (v) => (fxText = v))) return;
-		e.stopPropagation();
-		if (hold && (e.key === 'Enter' || e.key === 'Escape')) {
-			// Formule pointée sur une autre feuille : validée (Entrée) ou
-			// abandonnée (Échap) en revenant à sa feuille, comme Excel.
-			e.preventDefault();
-			finishHold(e.key === 'Enter' ? 'commit' : 'cancel');
-			return;
-		}
-		if (fxLock && !fxEditing) {
-			// Lecture seule : Entrée ou Échap rendent la main à la grille, sans rien changer.
-			if (e.key === 'Enter' || e.key === 'Escape') {
-				e.preventDefault();
-				wrap.focus();
-			}
-			return;
-		}
-		if (e.key === 'Escape') {
-			fxEditing = false;
-			editErr = null;
-			refreshFx();
-			wrap.focus();
-		} else if (e.key === 'Enter') {
-			const { row, col } = active;
-			e.preventDefault();
-			if (commitFx(true) === true) moveTo(row + 1, col);
-			return;
-		} else return;
-		e.preventDefault();
-	}
-
-	/**
-	 * Valide la saisie de la barre de formule dans la cellule active (Entrée,
-	 * clic dans la grille, focus parti ailleurs), comme l'éditeur de cellule.
-	 * 'formula' (formule fautive) ou 'refused' (valeur ou nom refusé) quand la
-	 * saisie reste ouverte ; true si validée (ou rien à valider).
-	 */
-	function commitFx(focusGrid: boolean): true | 'formula' | 'refused' {
-		if (!fxEditing) return true;
-		if (nameAlertOpen()) return 'refused';
-		const { row, col } = active;
-		// Rien de changé (focus pris puis rendu) : la barre se referme, sans vérifier la formule.
-		if (fxText !== cellInfo(row, col).value) {
-			if (isFormula(fxText)) {
-				const text = closeParens(fxText);
-				const err = checkFormula(text);
-				if (err) {
-					editErr = err;
-					say(tr('grid.formula.error', { error: err.msg }));
-					const el = fxInput;
-					if (el && document.activeElement === el) el.setSelectionRange(err.pos, Math.max(err.end, err.pos));
-					else
-						requestAnimationFrame(() => {
-							el?.focus();
-							el?.setSelectionRange(err.pos, Math.max(err.end, err.pos));
-						});
-					return 'formula';
-				}
-				fxText = text;
-			}
-		}
-		editErr = null;
-		let text = fxText;
-		const named = headerProblem(row, col, text);
-		if (named) {
-			void refuseName(fxInput, named);
-			return 'refused';
-		}
-		if (text !== cellInfo(row, col).value) {
-			const r = refusal(row, col, text);
-			if ('message' in r) {
-				say(r.message);
-				return 'refused';
-			}
-			text = r.value;
-		}
-		fxEditing = false;
-		completion = sig = null;
-		if (text !== cellInfo(row, col).value) {
-			write(row, col, text);
-			lastRepeat = () => write(active.row, active.col, text);
-		}
-		if (focusGrid) wrap.focus();
-		refreshFx();
-		return true;
-	}
-
-	/** Saisie en cours (cellule ou barre de formule) validée avant un clic dans la grille ; faux si elle reste ouverte. */
-	function commitEditor(): boolean {
-		if (editing) return commit();
-		return commitFx(true) === true;
-	}
-
-	/** Barre de formule quittée (blur) : validée, gardée ou refermée (crossref.ts, fxLeave). */
-	function leaveFx() {
-		completion = sig = null;
-		const action = fxLeave({
-			editing: fxEditing,
-			stillFocused: !!fxInput && document.activeElement === fxInput,
-			alertOpen: nameAlertOpen(),
-			pointing: !!hold || tabPress,
-			text: fxText
-		});
-		if (action === 'keep') return;
-		if (action === 'commit') {
-			const r = commitFx(false);
-			// Formule fautive : la saisie reste ouverte, le focus y revient (commitFx).
-			if (r === 'formula') return;
-			// Valeur refusée quand le focus part ailleurs : abandonnée, le message reste (comme l'éditeur de cellule).
-			if (r === 'refused' && nameAlertOpen()) return;
-		}
-		fxEditing = false;
-		editErr = null;
-		refreshFx();
-	}
-
-	// --- Zone de nom ------------------------------------------------------------
-
-	const gotoTable = (e: Entry): GotoTable => ({ name: e.t.name, row: e.t.row, col: e.t.col, last: e.last, lastCol: e.lastCol, columns: e.t.columns.map((c) => c.name) });
-
-	/**
-	 * Zone de nom, comme Excel : une adresse (F10, Cell[F10], A1:C3), un
-	 * tableau ou une de ses cellules (Ventes[Prix][3]) y va ; faux sinon.
-	 */
-	function goToName(text: string): boolean {
-		const cur = ownerAt(active.row, active.col);
-		const g = parseGoto(text, entries.map(gotoTable), cur ? gotoTable(cur) : undefined);
-		if (!g) return false;
-		wrap.focus();
-		if (g.r0 === g.r1 && g.c0 === g.c1) moveTo(g.r0, g.c0);
-		else selectRange(g.r0, g.c0, g.r1, g.c1);
-		return true;
-	}
-
-	/** Nom du tableau : une adresse y va (comme Excel), un autre nom renomme le tableau. */
-	function onTableNameKey(e: KeyboardEvent) {
-		e.stopPropagation();
-		const el = e.currentTarget as HTMLInputElement;
-		const t = ownerAt(active.row, active.col)?.t;
-		if (e.key === 'Escape' || !t) {
-			el.value = t?.name ?? '';
-			wrap.focus();
-			return;
-		}
-		if (e.key !== 'Enter') return;
-		e.preventDefault();
-		const typed = el.value;
-		const name = typed.trim();
-		// Le champ revient au nom du tableau (aller ailleurs ne le change pas
-		// toujours : même tableau, la valeur liée ne bouge pas).
-		el.value = t.name;
-		if (name !== t.name && goToName(name)) return;
-		if (!source.renameTable || name === t.name) {
-			wrap.focus();
-			return;
-		}
-		// Nom refusé : la boîte l'explique, le champ garde le texte tapé.
-		const problem = tableNameProblem(name, entries.filter((x) => x.t !== t).map((x) => x.t.name));
-		if (problem) {
-			void refuseName(el, problem, typed);
-			return;
-		}
-		el.value = typed;
-		const rename = source.renameTable;
-		writing = writing.catch(() => undefined).then(async () => {
-			try {
-				await rename(t, name);
-				message = tr('grid.table.renamed', { name });
-				if (document.activeElement === el) wrap.focus();
-			} catch (err) {
-				void refuseName(el, refusedName(tr('grid.names.refused.table'), err), typed);
-			}
-			refreshFx();
-			refreshStatus();
-		});
-	}
-
-	/** Colonne[ligne] : Entrée renomme la colonne. */
-	function onColumnNameKey(e: KeyboardEvent) {
-		e.stopPropagation();
-		const el = e.currentTarget as HTMLInputElement;
-		const en = ownerAt(active.row, active.col);
-		if (e.key === 'Escape' || !en) {
-			el.value = tableBox?.col ?? '';
-			wrap.focus();
-			return;
-		}
-		if (e.key !== 'Enter') return;
-		e.preventDefault();
-		const c = active.col;
-		const text = el.value.trim();
-		// Bande des groupes : renomme le groupe (toutes ses colonnes).
-		if (active.row < en.t.row && !singleCol(en, c - en.t.col)) {
-			wrap.focus();
-			if (text !== tableBox?.col) write(active.row, c, text, false, (err) => void refuseName(el, refusedName(tr('grid.names.refused.group'), err), text));
-			return;
-		}
-		// Une autre cellule (Prix[3], Ventes[Prix][2], Cell[F10], A1:C3) : y
-		// aller ; un nom seul (même « Q1 ») renomme la colonne.
-		if (text !== tableBox?.col && /[[:]/.test(text)) {
-			el.value = tableBox?.col ?? '';
-			if (goToName(text)) return;
-			el.value = text;
-		}
-		const name = text.replace(/\[.*$/, '').trim();
-		const old = en.t.columns[c - en.t.col].name;
-		if (name === old) {
-			el.value = tableBox?.col ?? '';
-			wrap.focus();
-			return;
-		}
-		// Nom vide ou pris : la boîte l'explique, le champ garde le texte tapé.
-		const problem = name
-			? columnNameProblem(name, en.t.columns.filter((_, i) => i !== c - en.t.col).map((x) => x.name), en.t.name)
-			: { title: tr('grid.names.column.invalid'), message: tr('grid.names.column.empty') };
-		if (problem) {
-			void refuseName(el, problem, text);
-			return;
-		}
-		wrap.focus();
-		write(en.t.row, c, name, false, (err) => void refuseName(el, refusedName(tr('grid.names.refused.column'), err), text));
-	}
-
-	function onNameKey(e: KeyboardEvent) {
-		e.stopPropagation();
-		const el = e.currentTarget as HTMLInputElement;
-		if (e.key === 'Escape') {
-			el.value = nameBox;
-			wrap.focus();
-			return;
-		}
-		if (e.key !== 'Enter') return;
-		e.preventDefault();
-		const text = el.value.trim();
-		// Le nom d'une cellule existante : y aller (comme Excel).
-		for (const [k, n] of names) {
-			if (n.toLowerCase() === text.toLowerCase()) {
-				const [r, c] = k.split(',').map(Number);
-				wrap.focus();
-				moveTo(r, c);
-				return;
-			}
-		}
-		// Une adresse (B3, Cell[B3], A1:C3) ou un tableau : y aller.
-		if (goToName(text)) return;
-		const { row, col } = active;
-		if (tableAt(row, col)) {
-			say(tr('grid.names.cell.inTable', { table: tableAt(row, col)!.t.name }));
-			wrap.focus();
-			return;
-		}
-		if (!source.setName || text === (names.get(key(row, col)) ?? '')) {
-			wrap.focus();
-			return;
-		}
-		// Nom refusé : la boîte l'explique, le champ garde le texte tapé.
-		const problem = cellNameProblem(text);
-		if (problem) {
-			void refuseName(el, problem, text);
-			return;
-		}
-		const setName = source.setName;
-		writing = writing.catch(() => undefined).then(async () => {
-			try {
-				await setName(row, col, text);
-				message = text ? tr('grid.names.cell.set', { name: text }) : tr('grid.names.cell.removed');
-			} catch (err) {
-				void refuseName(() => nameInput, refusedName(tr('grid.names.refused.cell'), err), text);
-			}
-			refreshFx();
-			refreshStatus();
-		});
-		wrap.focus();
-	}
+	const { readOnlyReason, designWhy, editText, startEdit, closeReadOnly, spilledAt, placeEditor, write, commit, handToFx, formulaReady, reopenFormula, cancel, clearSelection, onEditorKey, onFxKey, commitEditor, leaveFx, onTableNameKey, onColumnNameKey, onNameKey } = editCtl;
 
 	// --- Rechercher / remplacer -------------------------------------------------
 
