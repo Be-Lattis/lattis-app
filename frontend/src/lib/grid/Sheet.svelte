@@ -134,6 +134,7 @@
 	import DvAlertBox, { type DvAlertBoxView } from './sheet/DvAlertBox.svelte';
 	import ListMenu, { type ListMenuView } from './sheet/ListMenu.svelte';
 	import PivotFilter, { type PivotFilterView } from './sheet/PivotFilter.svelte';
+	import KeyDialog, { type KeyDialogView } from './sheet/KeyDialog.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6198,6 +6199,13 @@
 		get toView() { return toView; },
 		get viewH() { return viewH; }
 	};
+	// Clé du tableau : sheet/KeyDialog.svelte.
+	const keyDialogView: KeyDialogView = {
+		get applyKeyDialog() { return applyKeyDialog; },
+		get cancelKeyDialog() { return cancelKeyDialog; },
+		get focusFirst() { return focusFirst; },
+		get keyDlg() { return keyDlg; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6591,39 +6599,7 @@
 			</div>
 		{/if}
 		<LinesDialog v={linesView} />
-		{#if keyDlg}
-			{@const d = keyDlg}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="rules lines-dlg key-dlg"
-				role="dialog"
-				tabindex="-1"
-				aria-label={tr('grid.keyDialog.title')}
-				use:focusFirst
-				use:dismissPanel={cancelKeyDialog}
-				onkeydown={(ev) => {
-					ev.stopPropagation();
-					if (ev.key === 'Enter') applyKeyDialog();
-					if (ev.key === 'Escape') cancelKeyDialog();
-				}}
-			>
-				<div class="menu-title">{tr('grid.keyDialog.heading', { table: d.table })}</div>
-				<label><input type="radio" bind:group={d.choice} value="index" /> {tr('grid.keyDialog.index')}</label>
-				<label title={d.why ? tr('grid.keyDialog.notKey', { column: d.column, why: d.why }) : undefined}>
-					<input type="radio" bind:group={d.choice} value="column" disabled={!!d.why} /> {tr('grid.keyDialog.column', { column: d.column })}
-				</label>
-				{#if d.why}
-					<p class="menu-note">{tr('grid.keyDialog.notKey.note', { column: d.column, why: d.why })}</p>
-				{:else if d.choice === 'index'}
-					<p class="menu-note">{tr('grid.keyDialog.index.note')}</p>
-				{/if}
-				<div class="foot">
-					<span class="sp"></span>
-					<button class="primary" onclick={applyKeyDialog}>{tr('grid.formula.validate')}</button>
-					<button onclick={cancelKeyDialog}>{tr('common.cancel')}</button>
-				</div>
-			</div>
-		{/if}
+		<KeyDialog v={keyDialogView} />
 		{#if handDlg}
 			{@const d = handDlg}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
