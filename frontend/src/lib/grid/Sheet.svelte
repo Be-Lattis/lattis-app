@@ -31,10 +31,9 @@
 	import { PanGesture, SpaceHold } from './pan';
 	import { panes, toGrid, type Pane } from './panes';
 	import { afterWidthChange, sideRoom } from './keepinview';
-	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
+	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
 	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
-	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type Cell, type CellRange } from './mergesel';
-	import { jumpLine, lineSpans, type Area, type Span } from './jump';
+	import { expandRange, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type Cell, type CellRange } from './mergesel';
 	import { findZone, inZone, zoneLabel, type Zone } from './findzone';
 	import { type FindOpts, type FoundCell } from './findopts';
 	import FindMore from './FindMore.svelte';
@@ -73,7 +72,7 @@
 	import { paint as themed } from './colors';
 	import { tableTheme } from './theme.svelte.js';
 	import { condArgs, condLabel, condOps, describeConds, filterKind, kindTitle, searchValues, type CondOp, type PanelValue } from './filtercond';
-	import { cellLines, copyFillBlock, copyFillPlan, readKey, shortcutOf, timeText, todayText } from './shortcuts';
+	import { cellLines } from './shortcuts';
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
 	import Submenu from '#lib/ui/Submenu.svelte';
@@ -136,6 +135,7 @@
 	import { createCommands } from './sheet/commands.svelte.js';
 	import { createAudit } from './sheet/audit.svelte.js';
 	import { createEdit } from './sheet/edit.svelte.js';
+	import { createKeyboard } from './sheet/keyboard.svelte.js';
 
 
 	interface Props {
@@ -6139,82 +6139,88 @@
 	const { stopFling, panDown, panMove, panUp, objectPanDown, panMenu, panReset, spaceKey, onSpaceUp, onPointerDown, onPointerMove, onPointerUp, onScroll, onWheel, syncNative, stopGlide, keepFocusAfterShrink, ensureVisible } = scrollCtl;
 	export const scrollLeftTo = scrollCtl.scrollLeftTo;
 
-	// --- Sélection et clavier ---------------------------------------------
-
-	/** Bord de la cellule active dans le sens du déplacement (au-delà de sa fusion). */
-	function mergeEdge(dr: number, dc: number) {
-		const g = boxOf(active.row, active.col);
-		if (!g) return { row: active.row, col: active.col };
-		return { row: dr > 0 ? g.row + g.rows - 1 : active.row, col: dc > 0 ? g.col + g.cols - 1 : active.col };
-	}
-
-	// Saisie d'une ligne avec Tab : Entrée revient sous la cellule de départ, comme Excel.
-	let tabStart: number | null = null;
+	// --- Clavier : sheet/keyboard.svelte.ts ---
 	/** Cellule voisine de la cellule active (une fusion compte pour une cellule). */
 	const step = (dr: number, dc: number) => stepCell(active.row, active.col, dr, dc, boxes, SHEET_ROWS - 1, SHEET_COLS - 1);
-	function tabMove(back: boolean) {
-		const start = tabStart ?? active.col;
-		const n = step(0, back ? -1 : 1);
-		moveTo(n.row, n.col);
-		tabStart = start;
-	}
-	function enterMove(back: boolean) {
-		const n = step(back ? -1 : 1, 0);
-		moveTo(n.row, tabStart ?? n.col);
-	}
-
-	/**
-	 * Va à la cellule (row, col) ; extend (Maj) : y porte le coin mobile de la
-	 * sélection, la cellule active ne bouge pas (comme Excel).
-	 */
-	function moveTo(row: number, col: number, extend = false) {
-		tabStart = null;
-		row = clamp(row, 0, SHEET_ROWS - 1);
-		col = clamp(col, 0, SHEET_COLS - 1);
-		// Lignes et colonnes masquées : on passe au-delà, dans le sens du déplacement.
-		const from = extend ? anchor : active;
-		row = skipHidden(row, Math.sign(row - from.row), hiddenRows, SHEET_ROWS);
-		col = skipHidden(col, Math.sign(col - from.col), hiddenCols, SHEET_COLS);
-		if (extend) anchor = { row, col };
-		else {
-			// Cellules fusionnées : la cellule en haut à gauche, comme Excel.
-			const g = boxOf(row, col);
-			if (g) {
-				row = g.row;
-				col = g.col;
-			}
-			active = { row, col };
-			anchor = { ...active };
-		}
-		message = '';
-		ensureVisible(row, col);
-		refreshFx();
-		refreshStatus();
-	}
-
-	// Ctrl + flèche, comme Excel : au bord du bloc de données, ou au prochain
-	// bloc (tableaux, cellules libres, déversements, tableaux croisés).
-	function jump(row: number, col: number, dr: number, dc: number): [number, number] {
-		const areas: Area[] = [];
-		const add = (r0: number, c0: number, r1: number, c1: number) => areas.push({ r0, c0, r1, c1 });
-		// Un tableau : de sa bande des groupes à sa dernière ligne (voir jump.ts).
-		for (const e of entries) add(topRow(e.t), e.t.col, e.last, e.lastCol);
-		for (const k of cells.keys()) {
-			const [r, c] = k.split(',').map(Number);
-			add(r, c, r, c);
-		}
-		for (const sp of spills) add(sp.row, sp.col, sp.row + sp.rows.length - 1, sp.col + (sp.rows[0]?.length ?? 1) - 1);
-		for (const p of pivots) if (!p.error) add(p.anchor ?? p.row, p.col, p.row + p.cells.length - 1, p.col + (p.cells[0]?.length ?? 1) - 1);
-		const spans: Span[] = lineSpans(areas, row, col, dr !== 0);
-		return dr !== 0 ? [jumpLine(spans, row, dr), col] : [row, jumpLine(spans, col, dc)];
-	}
-
-	function cellAt(e: MouseEvent): { row: number; col: number } | null {
-		const { x, y } = toLocal(e);
-		if (x < MARGIN || y < TOP_H || x >= scroller.clientWidth || y >= scroller.clientHeight) return null;
-		return { row: rowAtY(y), col: colAtX(x) };
-	}
-
+	// Dernière action répétable (F4) : saisie, mise en forme, insertion…
+	let lastRepeat: (() => void) | null = null;
+	// Les saisies partent l'une après l'autre : la suivante peut dépendre de
+	// la précédente (une saisie fait naître un tableau, la suivante le remplit).
+	// Une écriture qui échoue ne bloque jamais les suivantes (catch).
+	let writing: Promise<void> = Promise.resolve();
+	const keyboardCtl = createKeyboard({
+		get boxOf() { return boxOf; },
+		get active() { return active; }, set active(v) { active = v; },
+		get step() { return step; },
+		get anchor() { return anchor; }, set anchor(v) { anchor = v; },
+		get hiddenRows() { return hiddenRows; },
+		get hiddenCols() { return hiddenCols; },
+		get message() { return message; }, set message(v) { message = v; },
+		get ensureVisible() { return ensureVisible; },
+		get refreshFx() { return refreshFx; },
+		get refreshStatus() { return refreshStatus; },
+		get entries() { return entries; },
+		get topRow() { return topRow; },
+		get cells() { return cells; },
+		get spills() { return spills; },
+		get pivots() { return pivots; },
+		get toLocal() { return toLocal; },
+		get MARGIN() { return MARGIN; },
+		get scroller() { return scroller; },
+		get rowAtY() { return rowAtY; },
+		get colAtX() { return colAtX; },
+		get startEdit() { return startEdit; },
+		get autoSum() { return autoSum; },
+		get openFormat() { return openFormat; },
+		get tableAt() { return tableAt; },
+		get schedule() { return schedule; },
+		get activeRect() { return activeRect; },
+		get selectRows() { return selectRows; },
+		get toggleFilters() { return toggleFilters; },
+		get editActive() { return editActive; },
+		get source() { return source; },
+		get applyStyle() { return applyStyle; },
+		get hideLines() { return hideLines; },
+		get editNote() { return editNote; },
+		get newComment() { return newComment; },
+		get openFunctions() { return openFunctions; },
+		get chartActive() { return chartActive; },
+		get pasteSpecial() { return pasteSpecial; },
+		get outlineAction() { return outlineAction; },
+		get lastRepeat() { return lastRepeat; }, set lastRepeat(v) { lastRepeat = v; },
+		get say() { return say; },
+		get selection() { return selection; },
+		get cellInfo() { return cellInfo; },
+		get writing() { return writing; }, set writing(v) { writing = v; },
+		get noAnimUntil() { return noAnimUntil; }, set noAnimUntil(v) { noAnimUntil = v; },
+		get editing() { return editing; },
+		get spaceKey() { return spaceKey; },
+		get dvPick() { return dvPick; },
+		get endPick() { return endPick; },
+		get locked() { return locked; },
+		get hold() { return hold; },
+		get keyContextMenu() { return keyContextMenu; },
+		get painter() { return painter; }, set painter(v) { painter = v; },
+		get links() { return links; }, set links(v) { links = v; },
+		get clipRange() { return clipRange; }, set clipRange(v) { clipRange = v; },
+		get selChart() { return selChart; }, set selChart(v) { selChart = v; },
+		get charts() { return charts; },
+		get removeChart() { return removeChart; },
+		get panel() { return panel; }, set panel(v) { panel = v; },
+		get nudgeChart() { return nudgeChart; },
+		get selectChart() { return selectChart; },
+		get vs() { return vs; },
+		get boxes() { return boxes; },
+		get listOf() { return listOf; },
+		get openList() { return openList; },
+		get onrefback() { return onrefback; },
+		get openFinder() { return openFinder; },
+		get editLink() { return editLink; },
+		get openLinesDialog() { return openLinesDialog; },
+		get deleteWholeColumns() { return deleteWholeColumns; },
+		get clearSelection() { return clearSelection; }
+	});
+	const { tabMove, enterMove, moveTo, jump, cellAt, copyFill, onKeyDown } = keyboardCtl;
 	// --- Largeur des colonnes : glisser une séparation du bandeau du haut ----
 
 	let resizing: { col: number; startX: number; startW: number; width: number } | null = null;
@@ -7267,338 +7273,6 @@
 		if (cell) startEdit(false);
 	}
 
-	// --- Raccourcis d'Excel -------------------------------------------------------
-
-	// Fin pressée : la flèche suivante va au bout de la zone.
-	let endArmed = false;
-	// Dernière action répétable (F4) : saisie, mise en forme, insertion…
-	let lastRepeat: (() => void) | null = null;
-
-	/** Exécute un raccourci de la grille ; faux s'il ne s'applique pas. */
-	function runShortcut(sc: string): boolean {
-		switch (sc) {
-			case 'fillDown':
-			case 'fillRight':
-				copyFill(sc === 'fillDown');
-				return true;
-			case 'today':
-			case 'now':
-				startEdit(true, sc === 'today' ? todayText() : timeText());
-				return true;
-			case 'autoSum':
-				autoSum();
-				return true;
-			case 'formatCells':
-				// Ctrl+1 (shortcuts.ts, claviers AZERTY compris).
-				openFormat();
-				return true;
-			case 'selectRow': {
-				const t = tableAt(active.row, active.col);
-				if (t && active.row > t.t.row) {
-					// Dans un tableau : sa ligne, comme Excel.
-					active = { row: active.row, col: t.t.col };
-					anchor = { row: active.row, col: t.lastCol };
-					refreshFx();
-					refreshStatus();
-					schedule();
-				} else {
-					// Cellule fusionnée : toutes ses lignes (Excel).
-					const ar = activeRect();
-					selectRows(ar.r0, ar.r1);
-				}
-				return true;
-			}
-			case 'toggleFilter':
-				toggleFilters();
-				return true;
-			case 'formatTable':
-				editActive('formatAsTable');
-				return true;
-			case 'strike':
-				if (source.applyStyle) applyStyle({ x: 'toggle' });
-				return true;
-			case 'hideRows':
-			case 'hideCols':
-				hideLines(sc === 'hideRows', true);
-				return true;
-			case 'note':
-				editNote();
-				return true;
-			case 'comment':
-				newComment();
-				return true;
-			case 'insertFunction':
-				openFunctions();
-				return true;
-			case 'chart':
-				chartActive('bar');
-				return true;
-			case 'pasteSpecial':
-				void pasteSpecial();
-				return true;
-			case 'group':
-			case 'ungroup':
-				outlineAction(sc);
-				return true;
-			case 'repeat':
-				if (lastRepeat) lastRepeat();
-				else say(tr('grid.repeat.nothing'));
-				return true;
-		}
-		return false;
-	}
-
-	/** Ctrl+D / Ctrl+R : recopie la première ligne (colonne) de la sélection, ou celle du dessus (de gauche). */
-	function copyFill(down: boolean) {
-		if (!source.paste) return;
-		const plan = copyFillPlan(selection(), down);
-		if (!plan) return;
-		const { dst } = plan;
-		if ((dst.r1 - dst.r0 + 1) * (dst.c1 - dst.c0 + 1) > 10000) {
-			say(tr('grid.fill.limit'));
-			return;
-		}
-		const block = copyFillBlock(plan, down, (r, c) => cellInfo(r, c).value);
-		const paste = source.paste;
-		lastRepeat = () => copyFill(down);
-		writing = writing.catch(() => undefined).then(async () => {
-			try {
-				await paste(dst.r0, dst.c0, block);
-				message = down ? tr('grid.fill.down') : tr('grid.fill.right');
-			} catch (err) {
-				message = errorText(err);
-			}
-			refreshFx();
-			refreshStatus();
-			schedule();
-		});
-	}
-
-	function onKeyDown(e: KeyboardEvent) {
-		// Touche maintenue : le cadre suit sans animation.
-		if (e.repeat) noAnimUntil = performance.now() + 150;
-		if (editing) return;
-		if (spaceKey(e)) return;
-		// Plage source d'une validation pointée : Entrée la reprend, Échap
-		// annule ; on ne saisit rien dans la grille, on s'y déplace seulement.
-		if (dvPick) {
-			if (e.key === 'Enter' || e.key === 'Escape') {
-				e.preventDefault();
-				endPick(e.key === 'Enter');
-				return;
-			}
-			const mod = e.ctrlKey || e.metaKey;
-			if ((e.key.length === 1 && (!mod || /^[vxzyd]$/i.test(e.key))) || e.key === 'F2' || e.key === 'Delete' || e.key === 'Backspace') {
-				e.preventDefault();
-				return;
-			}
-		}
-		// Feuille protégée : déplacement et lecture seulement (Rechercher,
-		// copier, annuler, recalculer, comme le ruban), pas de saisie, sans
-		// message ; les raccourcis de la page (Ctrl+S, onglets…) passent.
-		if (locked && !hold && !readKey(e)) return;
-		// Maj+F10 ou touche Menu : menu contextuel de la cellule active (ou du graphique sélectionné).
-		if ((e.shiftKey && e.key === 'F10' && !e.ctrlKey && !e.altKey) || e.key === 'ContextMenu') {
-			e.preventDefault();
-			keyContextMenu();
-			return;
-		}
-		if (e.key === 'Escape' && painter) painter = null;
-		if (e.key === 'Escape' && links.length) {
-			links = [];
-			schedule();
-		}
-		if (e.key === 'Escape' && clipRange) {
-			clipRange = null;
-			schedule();
-		}
-		if (selChart !== null) {
-			const ch = charts.find((c) => c.id === selChart);
-			if (ch && (e.key === 'Delete' || e.key === 'Backspace')) {
-				e.preventDefault();
-				removeChart(ch.id);
-				return;
-			}
-			if (e.key === 'Escape') {
-				selChart = null;
-				if (panel?.kind === 'chart') panel = null;
-				return;
-			}
-			// Clavier : flèches pour déplacer, Maj+flèches pour redimensionner
-			// (10 pixels), Tab et Maj+Tab pour passer au graphique suivant.
-			const step = ({ ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] } as Record<string, number[]>)[e.key];
-			if (ch && step && !e.ctrlKey && !e.altKey && !e.metaKey && !locked) {
-				e.preventDefault();
-				nudgeChart(ch, step[0] * 10, step[1] * 10, e.shiftKey);
-				return;
-			}
-			if (ch && e.key === 'Tab' && charts.length > 1) {
-				e.preventDefault();
-				const i = charts.indexOf(ch);
-				selectChart(charts[(i + (e.shiftKey ? charts.length - 1 : 1)) % charts.length]);
-				say(tr('grid.chart.nth', { n: charts.indexOf(charts.find((c) => c.id === selChart)!) + 1, total: charts.length }));
-				return;
-			}
-		}
-		// Raccourcis d'Excel (shortcuts.ts) ; Fin puis flèche saute comme Ctrl+flèche.
-		const ended = endArmed;
-		if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) endArmed = false;
-		const sc = shortcutOf(e);
-		if (sc === 'nextSheet' || sc === 'prevSheet' || sc === 'insertSheet' || sc === 'nextChoice' || sc === 'prevChoice') return; // onglets : la page s'en charge
-		if (sc === 'refresh' || sc === 'refreshAll') return; // F5 : la page s'en charge (tableHere)
-		if (sc === 'endMode') {
-			endArmed = !ended;
-			say(endArmed ? tr('grid.endMode') : '');
-			e.preventDefault();
-			return;
-		}
-		if (sc && runShortcut(sc)) {
-			e.preventDefault();
-			return;
-		}
-		const page = Math.max(1, Math.floor(vs.view / ROW_H) - 1);
-		const { row, col } = active;
-		const ext = e.shiftKey;
-		const ctrl = e.ctrlKey || e.metaKey;
-		// Maj : le coin mobile de la sélection bouge, la cellule active reste.
-		const cur = ext ? anchor : active;
-		const arrow = (dr: number, dc: number) => {
-			if (ctrl || ended) {
-				const from = ext ? anchor : mergeEdge(dr, dc);
-				const [r, c] = jump(from.row, from.col, dr, dc);
-				moveTo(r, c, ext);
-			} else if (ext) {
-				// Le bord de la plage (agrandie aux fusions) avance d'une cellule.
-				const k = extendCorner(active, anchor, dr, dc, boxes, SHEET_ROWS - 1, SHEET_COLS - 1);
-				moveTo(k.row, k.col, true);
-			} else {
-				const n = step(dr, dc);
-				moveTo(n.row, n.col);
-			}
-		};
-		// Alt+↓ : liste déroulante de la cellule (validation).
-		if (e.altKey && e.key === 'ArrowDown' && listOf(row, col)) {
-			e.preventDefault();
-			openList();
-			return;
-		}
-		// Alt+← : revenir d'où l'on a basculé (colonne de référence), comme un navigateur.
-		if (e.altKey && !ctrl && !e.shiftKey && e.key === 'ArrowLeft' && onrefback) {
-			e.preventDefault();
-			onrefback();
-			return;
-		}
-		if (ctrl && (e.key === 'z' || e.key === 'Z') && source.undo) {
-			e.preventDefault();
-			source.undo().catch((err) => say(errorText(err)));
-			return;
-		}
-		if (ctrl && (e.key === 'a' || e.key === 'A' || e.key === ' ')) {
-			const t = tableAt(row, col);
-			if (t) {
-				e.preventDefault();
-				active = { row: t.t.row, col: e.key === ' ' ? col : t.t.col };
-				anchor = { row: t.last, col: e.key === ' ' ? col : t.lastCol };
-				refreshFx();
-				refreshStatus();
-				schedule();
-				return;
-			}
-		}
-		if (ctrl && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'h') && (source.find || source.search)) {
-			e.preventDefault();
-			openFinder(e.key.toLowerCase() === 'h');
-			return;
-		}
-		if (ctrl && ['b', 'i', 'u'].includes(e.key.toLowerCase()) && source.applyStyle) {
-			e.preventDefault();
-			applyStyle({ [e.key.toLowerCase()]: 'toggle' });
-			return;
-		}
-		// Ctrl+K : lien hypertexte de la cellule active.
-		if (ctrl && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k' && source.setLink) {
-			e.preventDefault();
-			editLink();
-			return;
-		}
-		// Ctrl + et Ctrl - : insérer ou supprimer des lignes ou colonnes (comme Excel).
-		if (ctrl && (e.key === '+' || (e.key === '=' && e.shiftKey) || e.key === '-') && source.sheetLines) {
-			e.preventDefault();
-			openLinesDialog(e.key !== '-');
-			return;
-		}
-		if (ctrl && (e.key === 'y' || e.key === 'Y') && source.redo) {
-			e.preventDefault();
-			source.redo().catch((err) => say(errorText(err)));
-			return;
-		}
-		switch (e.key) {
-			case 'ArrowDown':
-				arrow(1, 0);
-				break;
-			case 'ArrowUp':
-				arrow(-1, 0);
-				break;
-			case 'ArrowRight':
-				arrow(0, 1);
-				break;
-			case 'ArrowLeft':
-				arrow(0, -1);
-				break;
-			case 'PageDown':
-				moveTo(cur.row + page, cur.col, ext);
-				break;
-			case 'PageUp':
-				moveTo(cur.row - page, cur.col, ext);
-				break;
-			case 'Home':
-				moveTo(ctrl ? 0 : cur.row, 0, ext);
-				break;
-			case 'End':
-				if (ctrl) {
-					// Dernière ligne et dernière colonne utilisées (tableaux et cellules libres), comme Excel.
-					let last = entries.reduce((m, e) => Math.max(m, e.last), 0);
-					let lastCol = entries.reduce((m, e) => Math.max(m, e.lastCol), 0);
-					for (const k of cells.keys()) {
-						const [r, c] = k.split(',').map(Number);
-						last = Math.max(last, r);
-						lastCol = Math.max(lastCol, c);
-					}
-					moveTo(last, lastCol, ext);
-				}
-				break;
-			case 'Tab':
-				tabMove(e.shiftKey);
-				break;
-			case 'Enter':
-				enterMove(e.shiftKey);
-				break;
-			case 'F2':
-				startEdit(false);
-				break;
-			case 'F9':
-				if (source.recalc) source.recalc().then(() => say(tr('grid.recalculated')), (err) => say(errorText(err)));
-				break;
-			case 'Delete':
-				// Colonnes entières d'un tableau (en-tête compris), pas tout le tableau : supprimées.
-				if (deleteWholeColumns()) break;
-				clearSelection();
-				lastRepeat = () => clearSelection();
-				break;
-			case 'Backspace':
-				startEdit(true, '');
-				break;
-			default:
-				if (e.key.length === 1 && !ctrl && !e.altKey) startEdit(true, e.key);
-				else return;
-		}
-		e.preventDefault();
-	}
-
-	// Les saisies partent l'une après l'autre : la suivante peut dépendre de
-	// la précédente (une saisie fait naître un tableau, la suivante le remplit).
-	// Une écriture qui échoue ne bloque jamais les suivantes (catch).
-	let writing: Promise<void> = Promise.resolve();
 	// --- Édition et zone de nom : sheet/edit.svelte.ts ---
 	const editCtl = createEdit({
 		get locked() { return locked; },
