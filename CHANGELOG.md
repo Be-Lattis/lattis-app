@@ -26,6 +26,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Changements
 
 - Aide : la page Prise en main tient en un écran ; le détail des tableaux et des onglets semblables passe dans deux pages, Tableaux et Onglets semblables et onglet à choix ; le partage en direct, le Data Lake et les formulaires ont leur page, hors de Fichiers.
+- Libellés : « Classeur .xlsx » (Données, sources de requête, export) et « à coller dans un tableur » (SQL) ; le menu contextuel dit « Nouvelle note » comme le ruban.
 - Messages plus courts : une soixantaine de messages, infobulles et questions trop longs (erreurs de formule, tableau partagé, protection, renommage, mise à jour…) disent la même chose en moins de mots.
 - Accessibilité : les panneaux du filtre, du ▾ d'un tableau croisé, des fonctions, des doublons, de la note, de l'insertion ou suppression de lignes et de la taille sont annoncés comme des boîtes nommées au lecteur d'écran ; la liste des règles de mise en forme conditionnelle se parcourt au clavier (flèches, Entrée pour modifier, Suppr pour supprimer) ; dans le menu Mise en forme conditionnelle, Entrée ou → ouvre un sous-menu et y place le focus, ← y revient ; les entrées des menus sont annoncées comme des éléments de menu dès l'ouverture.
 - Raccourcis affichés dans la langue de l'interface : « Ctrl+Shift+L », « Entf », « PgDn »… au lieu de « Maj », « Suppr », « Pg.Suiv » en anglais, allemand, espagnol et chinois (ruban, menus, aide) ; le menu contextuel écrit ses raccourcis comme le ruban (Cmd sur macOS) et montre Maj+F2 sur la note.
