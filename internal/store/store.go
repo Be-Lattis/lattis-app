@@ -89,6 +89,8 @@ type Store struct {
 	// Watch : mise en page d'un classeur collaboratif).
 	watched  atomic.Pointer[map[string]bool]
 	watchGen atomic.Int64
+	// scans : relevés des requêtes de l'écrivain, par texte (qscan.go).
+	scans scanCache
 }
 
 var (
@@ -142,20 +144,19 @@ func (s *Store) watchedWrite(q string) {
 // noteWrite relève les tableaux qu'une requête de l'écrivain peut modifier.
 func (s *Store) noteWrite(q string) {
 	defer func() { s.cur = colWrite{} }()
-	head := strings.ToUpper(strings.TrimSpace(q))
-	if strings.HasPrefix(head, "SELECT") || strings.HasPrefix(head, "PRAGMA") {
+	p := s.scanOf(q)
+	if p.read {
 		return
 	}
 	s.trackRebuild(q)
 	s.watchedWrite(q)
-	names := tableName.FindAllString(q, -1)
-	meta := tableMeta.MatchString(q)
+	names, meta := p.names, p.meta
 	if len(names) == 0 && !meta {
 		return
 	}
 	// Une mise à jour qui ne touche pas l'ordre (_pos) ne change que des
 	// valeurs : les lignes, leur nombre et leur ordre restent.
-	valuesOnly := strings.HasPrefix(head, "UPDATE") && !strings.Contains(head, "_POS")
+	valuesOnly := p.valuesOnly
 	s.tmu.Lock()
 	defer s.tmu.Unlock()
 	if len(names) > 0 {
@@ -166,7 +167,7 @@ func (s *Store) noteWrite(q string) {
 		s.touchedAll = true
 		s.gridGen++
 		s.pendingGrid = true
-		if schemaMeta.MatchString(q) {
+		if p.schema {
 			s.metaGen++
 			s.pendingMeta = true
 		}

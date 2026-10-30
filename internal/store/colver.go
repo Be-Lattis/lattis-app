@@ -179,37 +179,20 @@ func (s *Store) preWrite(q string) { s.cur = s.classify(q) }
 
 // classify range la requête q (voir plus haut).
 func (s *Store) classify(q string) colWrite {
-	if t, cols, ok := setColumns(q); ok {
-		return colWrite{kind: colSome, table: t, cols: cols}
-	}
-	if !oneStatement(q) {
-		return colWrite{}
-	}
-	if m := alterColumn.FindStringSubmatch(q); m != nil {
-		return colWrite{kind: colSome, table: m[1], cols: []string{m[2]}}
-	}
-	if m := rebuildRename.FindStringSubmatch(q); m != nil {
+	p := s.scanOf(q)
+	if m := p.rename; m != nil {
 		if r := s.rebuilds[m[2]]; m[1] == m[2] && r != nil && r.filled {
 			return colWrite{kind: colSome, table: m[2], cols: r.changed}
 		}
 		return colWrite{}
 	}
-	if m := rebuildDrop.FindStringSubmatch(q); m != nil {
+	if m := p.drop; m != nil {
 		if r := s.rebuilds[m[1]]; r != nil && r.filled {
 			return colWrite{kind: colNone}
 		}
 		return colWrite{}
 	}
-	if m := rebuildFill.FindStringSubmatch(q); m != nil {
-		return colWrite{kind: colNone, fill: m[1]}
-	}
-	if indexStmt.MatchString(q) {
-		return colWrite{kind: colNone}
-	}
-	if m := writeTarget.FindStringSubmatch(q); m != nil && !isDataTable(strings.ToLower(m[1])) {
-		return colWrite{kind: colNone}
-	}
-	return colWrite{}
+	return p.write
 }
 
 // trackRebuild suit, requête après requête, les reconstructions de la
@@ -217,16 +200,20 @@ func (s *Store) classify(q string) colWrite {
 // écriture qui nomme t_N_rebuild l'écarte : son renommage en t_N comptera
 // alors pour toutes les colonnes.
 func (s *Store) trackRebuild(q string) {
-	if m := rebuildCreate.FindStringSubmatch(q); m != nil && oneStatement(q) {
+	p := s.scanOf(q)
+	if p.create != "" {
 		if s.rebuilds == nil {
 			s.rebuilds = map[string]*rebuild{}
 		}
-		s.rebuilds[m[1]] = &rebuild{}
+		s.rebuilds[p.create] = &rebuild{}
 		return
 	}
 	if t := s.cur.fill; t != "" {
 		r := s.rebuilds[t]
-		changed, ok := rebuildCarry(q, t)
+		changed, ok := p.carryChanged, p.carryOK
+		if t != p.write.fill {
+			changed, ok = rebuildCarry(q, t)
+		}
 		if r == nil || r.filled || !ok {
 			delete(s.rebuilds, t)
 			return
@@ -234,8 +221,8 @@ func (s *Store) trackRebuild(q string) {
 		r.filled, r.changed = true, changed
 		return
 	}
-	for _, m := range rebuildName.FindAllStringSubmatch(q, -1) {
-		delete(s.rebuilds, m[1])
+	for _, n := range p.rebuildNames {
+		delete(s.rebuilds, n)
 	}
 }
 
