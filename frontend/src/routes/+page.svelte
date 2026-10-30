@@ -11,7 +11,7 @@
 	import { Events } from '@wailsio/runtime';
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, RecentFile } from '#bindings/internal/bridge/models.js';
-	import { docFile, docFileName, recentDetail, recentKey, recentLabel, remoteBadge, shareBadge } from '#lib/shell/doctitle.js';
+	import { docFile, recentDetail, recentKey, recentLabel, remoteBadge, shareBadge } from '#lib/shell/doctitle.js';
 	import { type XLSXQuestion } from '#lib/shell/xlsxsave.js';
 	import type { Layout } from '#bindings/internal/canvas/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
@@ -31,10 +31,7 @@
 	import { withSaveProgress } from '#lib/shell/saveprogress.js';
 	import { firstSteps, guidePage, hideSteps, stepsShown } from '#lib/shell/welcome.js';
 	import WelcomeLanguage from '#lib/shell/WelcomeLanguage.svelte';
-	import PageSetupDialog from '#lib/shell/PageSetupDialog.svelte';
-	import WhatIf from '#lib/shell/WhatIf.svelte';
 	import type { WhatIfKind } from '#lib/shell/whatif.js';
-	import SubtotalDialog from '#lib/grid/SubtotalDialog.svelte';
 	import type { SubtotalOptions, SubtotalTable } from '#lib/grid/subtotal.js';
 	import type { OutlineAction, SheetOutline } from '#lib/grid/outline.js';
 	import { pageAction, type PageAction, type PageSetup, type PageSetupTab } from '#lib/shell/pagesetup.js';
@@ -50,10 +47,7 @@
 	import ScriptDialog, { type DialogSpec } from '#lib/script/ScriptDialog.svelte';
 	import PickBanner from '#lib/script/PickBanner.svelte';
 	import type { ControlInfo } from '#lib/script/controls.js';
-	import McpPanel from '#lib/shell/McpPanel.svelte';
-	import SettingsDialog from '#lib/shell/SettingsDialog.svelte';
-	import { aiEnabled, demoEnd, htmlPagesEnabled, loadSettings, mcpAvailable, platform, setSetting, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
-	import ThemeDialog from '#lib/shell/ThemeDialog.svelte';
+	import { aiEnabled, demoEnd, htmlPagesEnabled, loadSettings, mcpAvailable, platform, sharedWorkbooksEnabled, userSettings } from '#lib/shell/settings.svelte.js';
 	import { resolveTheme, themeCatalog, themeLabel, type WorkbookTheme } from '#lib/grid/theme.js';
 	import { applyTheme } from '#lib/grid/theme.svelte.js';
 	import { listenExternal } from '#lib/ai/external.svelte.js';
@@ -70,15 +64,11 @@
 	import type { DocFormat } from '#lib/doc/format.js';
 	import QueryHost from '#lib/query/QueryHost.svelte';
 	import LattisHost from '#lib/remote/LattisHost.svelte';
-	import AboutDialog from '#lib/shell/AboutDialog.svelte';
-	import ExportReportDialog from '#lib/shell/ExportReportDialog.svelte';
-	import SqlExportDialog, {  } from '#lib/shell/SqlExportDialog.svelte';
 	import { type ExportReport } from '#lib/shell/exportReport.js';
 	import ShareBanner from '#lib/remote/ShareBanner.svelte';
 	import DemoEnd from '#lib/shell/DemoEnd.svelte';
 	import ConflictPanel from '#lib/remote/ConflictPanel.svelte';
 	import CommentsPane from '#lib/grid/CommentsPane.svelte';
-	import VersionHistory from '#lib/shell/VersionHistory.svelte';
 	import type { CommentHost, Thread } from '#lib/grid/comments.js';
 	import CoEditPresence from '#lib/remote/CoEditPresence.svelte';
 	import type { State as CoEditState } from '#bindings/internal/coedit/models.js';
@@ -122,6 +112,7 @@
 	import { createProtect } from './../lib/app/protect.svelte.js';
 	import AskDialogs, { type AskDialogsView } from './../lib/app/AskDialogs.svelte';
 	import ShareDialogs, { type ShareDialogsView } from './../lib/app/ShareDialogs.svelte';
+	import ToolDialogs, { type ToolDialogsView } from './../lib/app/ToolDialogs.svelte';
 
 	let mode = $state<Mode>('starting');
 	let bench = $state(false);
@@ -1528,6 +1519,39 @@
 		get share() { return share; }, set share(v) { share = v; },
 		get shareDlg() { return shareDlg; }, set shareDlg(v) { shareDlg = v; }
 	};
+	// Boîtes des menus : ../lib/app/ToolDialogs.svelte.
+	const toolsView: ToolDialogsView = {
+		get aboutOpen() { return aboutOpen; }, set aboutOpen(v) { aboutOpen = v; },
+		get activeInfo() { return activeInfo; },
+		get applyCustomTheme() { return applyCustomTheme; },
+		get bookTheme() { return bookTheme; },
+		get docState() { return docState; }, set docState(v) { docState = v; },
+		get err() { return err; },
+		get exportOpen() { return exportOpen; }, set exportOpen(v) { exportOpen = v; },
+		get exportSql() { return exportSql; },
+		get exported() { return exported; },
+		get file() { return file; },
+		get layout() { return layout; },
+		get mcpOpen() { return mcpOpen; }, set mcpOpen(v) { mcpOpen = v; },
+		get mode() { return mode; },
+		get notice() { return notice; }, set notice(v) { notice = v; },
+		get opened() { return opened; },
+		get pageDlg() { return pageDlg; }, set pageDlg(v) { pageDlg = v; },
+		get reload() { return reload; },
+		get runSubtotal() { return runSubtotal; },
+		get savePage() { return savePage; },
+		get selectSheet() { return selectSheet; },
+		get settingsOpen() { return settingsOpen; }, set settingsOpen(v) { settingsOpen = v; },
+		get sheet() { return sheet; },
+		get sheetId() { return sheetId; },
+		get sqlExport() { return sqlExport; }, set sqlExport(v) { sqlExport = v; },
+		get subtotalDlg() { return subtotalDlg; }, set subtotalDlg(v) { subtotalDlg = v; },
+		get themeCat() { return themeCat; },
+		get themeOpen() { return themeOpen; }, set themeOpen(v) { themeOpen = v; },
+		get themePreview() { return themePreview; }, set themePreview(v) { themePreview = v; },
+		get versionsOpen() { return versionsOpen; }, set versionsOpen(v) { versionsOpen = v; },
+		get whatIf() { return whatIf; }, set whatIf(v) { whatIf = v; }
+	};
 </script>
 
 <svelte:window oncontextmenu={blockNativeMenu} />
@@ -2104,87 +2128,9 @@
 	{#each dialogs.slice(0, 1) as d (d.id)}
 		<ScriptDialog spec={d} onanswer={(v) => answerDialog(d, v)} />
 	{/each}
-	{#if mcpOpen && mcpAvailable()}
-		<McpPanel onclose={() => (mcpOpen = false)} />
-	{/if}
+	<ToolDialogs v={toolsView} />
 	<!-- Accord demandé avant une écriture de Claude Desktop / Code (mcp.confirmWrites). -->
 	<McpConfirm />
-	{#if versionsOpen && mode === 'doc'}
-		<VersionHistory
-			onopened={async (r) => {
-				versionsOpen = false;
-				await opened(r);
-			}}
-			onsaved={(st) => {
-				docState = st;
-				if (st.notice) notice = st.notice;
-			}}
-			onclose={() => (versionsOpen = false)}
-		/>
-	{/if}
-	{#if aboutOpen}
-		<AboutDialog onclose={() => (aboutOpen = false)} />
-	{/if}
-	{#if sqlExport}
-		<SqlExportDialog table={sqlExport.table} onexport={exportSql} onclose={() => (sqlExport = null)} />
-	{/if}
-	{#if exportOpen && exported}
-		<ExportReportDialog report={exported.report} format={exported.format} onclose={() => (exportOpen = false)} />
-	{/if}
-	{#if whatIf && mode === 'doc'}
-		<WhatIf
-			kind={whatIf}
-			sheet={sheetId}
-			active={sheet?.activeCell() ?? { row: 0, col: 0 }}
-			selection={sheet?.selectedRange() ?? { r0: 0, c0: 0, r1: 0, c1: 0 }}
-			onchanged={async (st) => {
-				await reload();
-				if (st?.notice) notice = st.notice;
-			}}
-			onsheet={async (id) => {
-				await reload();
-				await selectSheet(id);
-			}}
-			onclose={() => (whatIf = null)}
-		/>
-	{/if}
-	{#if subtotalDlg && mode === 'doc'}
-		<SubtotalDialog tables={subtotalDlg.tables} table={subtotalDlg.table} column={subtotalDlg.column} onok={runSubtotal} oncancel={() => ((subtotalDlg = null), sheet?.focus())} />
-	{/if}
-	{#if pageDlg && mode === 'doc' && layout}
-		<PageSetupDialog
-			setup={layout.pageSetup}
-			sheet={activeInfo?.name ?? ''}
-			file={docFileName(docState)}
-			selection={sheet?.selectedRange()}
-			tab={pageDlg}
-			onapply={(p) => {
-				pageDlg = null;
-				void savePage(p, t('shell.pageSetup.dialog.title'));
-			}}
-			onprint={(p) => {
-				pageDlg = null;
-				void savePage(p, t('shell.pageSetup.dialog.title')).then(() => file('print'));
-			}}
-			onclose={() => (pageDlg = null)}
-		/>
-	{/if}
-	{#if settingsOpen}
-		<SettingsDialog onclose={() => (settingsOpen = false)} onmcp={() => { settingsOpen = false; mcpOpen = true; }} />
-	{/if}
-	{#if themeOpen}
-		<ThemeDialog
-			initial={{ id: bookTheme.id ?? undefined, name: themeLabel(bookTheme), table: bookTheme.table.base, source: bookTheme.source.base, accents: [bookTheme.colors.accent3, bookTheme.colors.accent4, bookTheme.colors.accent5, bookTheme.colors.accent6], dark: bookTheme.colors.dk2, light: bookTheme.colors.lt2 }}
-			mine={themeCat.filter((t) => t.origin === 'user')}
-			onpreview={(t) => (themePreview = t)}
-			onapply={applyCustomTheme}
-			ondelete={(id) => setSetting(`ui.themes.${id}`, null).catch((e) => (notice = err(e)))}
-			onclose={() => {
-				themeOpen = false;
-				themePreview = null;
-			}}
-		/>
-	{/if}
 	<ShareDialogs v={shareView} />
 	<LattisHost />
 	<AskDialogs ui={askView} />
