@@ -224,3 +224,19 @@ test('14. validation des données', async ({ app }) => {
 	await app.keyboard.press('Enter');
 	await expect(app.getByText(/n'est pas permis/).first()).toBeVisible();
 });
+
+// Lignes masquées (Accueil › Format) : la flèche les saute ; Annuler les rend.
+test('15. masquer des lignes', async ({ app }) => {
+	await typeTable(app);
+	await goTo(app, 'A3');
+	await ribbonTab(app, 'Accueil');
+	await app.getByRole('button', { name: 'Format ▾', exact: true }).click();
+	await app.getByText('Masquer les lignes', { exact: true }).click();
+	await goTo(app, 'A2');
+	await app.keyboard.press('ArrowDown');
+	await expect(activeCell(app)).toContainText('Kiwi');
+	await app.keyboard.press('Control+Z');
+	await goTo(app, 'A2');
+	await app.keyboard.press('ArrowDown');
+	await expect(activeCell(app)).toContainText('Poire');
+});

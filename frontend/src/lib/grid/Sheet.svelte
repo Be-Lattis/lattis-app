@@ -101,7 +101,7 @@
 	import { formulaRefs, highlightParts, isFormula, previewShift, refRect, type FormulaError, type Rect } from './formulaEdit';
 	import { editorLeave, holdFormula, updateHold, type FormulaHold } from './crossref';
 	import OutlineBar from './OutlineBar.svelte';
-	import { bandSize, detailTarget, outlineDepth, type OutlineAction, type OutlineGeom, type SheetOutline } from './outline';
+	import { bandSize, outlineDepth, type SheetOutline } from './outline';
 	import { nameAlertOpen } from '#lib/ui/nameAlert.js';
 	import {
 		isErrorValue,
@@ -135,6 +135,7 @@
 	import { createMenus } from './sheet/menus.svelte.js';
 	import { createNotes } from './sheet/notes.svelte.js';
 	import { createValidation } from './sheet/validation.svelte.js';
+	import { createOutline } from './sheet/outline.svelte.js';
 
 
 	interface Props {
@@ -4214,191 +4215,52 @@
 		return hiddenMarks.find((m) => x >= m.x - 2 && x <= m.x + m.w + 2 && y >= m.y - 2 && y <= m.y + m.h + 2);
 	}
 
-	// --- Plan (Données › Grouper, outline.ts) ------------------------------------
+	// --- Plan : sheet/outline.svelte.ts ---
 
 	const olW = $derived(bandSize(outlineDepth(outline?.rows)));
 	const olH = $derived(bandSize(outlineDepth(outline?.cols)));
-	$effect(() => {
-		void olW;
-		void olH;
-		// La grille rétrécit de la barre : ses dimensions sont à reprendre.
-		untrack(() => resizeCanvas());
-	});
-	/** Place des lignes et colonnes à l'écran, pour la barre du plan. */
-	function outlineGeom(): OutlineGeom | null {
-		if (!mounted) return null;
-		return {
-			zoom,
-			top: TOP_H,
-			margin: MARGIN,
-			row: (r) => (rh(r) ? [screenY(r), rh(r)] : null),
-			col: (c) => (cax().size(c) ? [screenX(c), cax().size(c)] : null)
-		};
-	}
-	function foldOutline(rows: boolean, level: number, line: number, fold: boolean) {
-		const f = source.foldGroup;
-		if (f) void menuAction(() => f(rows, level, line, fold));
-	}
-	function outlineLevel(rows: boolean, level: number) {
-		const f = source.showOutlineLevel;
-		if (f) void menuAction(() => f(rows, level));
-	}
-	/**
-	 * Données › Plan (et Alt+Maj+→ / ←) : Grouper ou Dissocier les lignes de
-	 * la sélection (ses colonnes si des colonnes entières sont choisies),
-	 * Effacer le plan, Afficher ou Masquer le détail du groupe de la cellule
-	 * active.
-	 */
-	export function outlineAction(what: OutlineAction) {
-		const { r0, r1, c0, c1 } = selection();
-		const cols = what === 'groupCols' || what === 'ungroupCols' || ((what === 'group' || what === 'ungroup') && wholeKind() === 'cols');
-		if (what === 'clear') {
-			const f = source.clearOutline;
-			if (f) void menuAction(() => f());
-			return;
-		}
-		if (what === 'show' || what === 'hide') {
-			// Colonnes : quand la sélection n'est que des colonnes, ou que les lignes n'ont pas de groupe.
-			const onCols = wholeKind() === 'cols' || (!outline?.rows?.length && !!outline?.cols?.length);
-			const lines = onCols ? outline?.cols : outline?.rows;
-			const before = onCols ? !!outline?.colsLeft : !!outline?.rowsAbove;
-			const at = detailTarget(lines, before, onCols ? active.col : active.row, what === 'hide');
-			if (!at) {
-				say(tr('grid.outline.nothing'));
-				return;
-			}
-			foldOutline(!onCols, at.level, at.line, what === 'hide');
-			return;
-		}
-		const f = source.groupLines;
-		if (!f) return;
-		const group = what === 'group' || what === 'groupRows' || what === 'groupCols';
-		void menuAction(() => (cols ? f(false, c0, c1, group) : f(true, r0, r1, group)));
-	}
-
-	/** Lignes ou colonnes masquées dans la sélection (pour proposer Afficher). */
-	function hiddenIn(rows: boolean): boolean {
-		const { r0, r1, c0, c1 } = selection();
-		const [i0, i1] = rows ? [r0, r1] : [c0, c1];
-		for (const i of rows ? styleHiddenRows : styleHiddenCols) if (i >= i0 - 1 && i <= i1 + 1) return true;
-		return false;
-	}
-
-	/** Ruban (Accueil › Cellules › Format) : masquer ou afficher les lignes ou les colonnes de la sélection. */
-	export function hideLines(rows: boolean, hide: boolean) {
-		if (hide) setHidden(rows, true);
-		else unhide(rows);
-	}
-
-	/** Afficher : les lignes (ou colonnes) masquées de la sélection et celles qui la bordent. */
-	function unhide(rows: boolean) {
-		const set = source.setLinesHidden;
-		if (!set) return;
-		const { r0, r1, c0, c1 } = selection();
-		let [i0, i1] = rows ? [r0, r1] : [c0, c1];
-		const hidden = rows ? styleHiddenRows : styleHiddenCols;
-		while (i0 > 0 && hidden.has(i0 - 1)) i0--;
-		while (hidden.has(i1 + 1)) i1++;
-		menuAction(() => set(rows, i0, i1, false));
-	}
-
 	// Hauteur de ligne / largeur de colonne (clic droit), comme Excel.
 	let sizeDlg = $state<{ rows: boolean; value: number; x: number; y: number } | null>(null);
-
-	function openSize(rows: boolean, x: number, y: number) {
-		closeMenus();
-		sizeDlg = { rows, value: rows ? rh(active.row) || ROW_H : cax().size(active.col) || DEF_W, x, y };
-	}
-
-	function applySize() {
-		const d = sizeDlg;
-		sizeDlg = null;
-		wrap.focus();
-		if (!d) return;
-		const v = Math.round(Number(d.value));
-		if (!Number.isFinite(v) || v < 4 || v > 1000) {
-			say(tr('grid.size.range'));
-			return;
-		}
-		const { r0, r1, c0, c1 } = selection();
-		const set = d.rows ? source.setRowHeight : source.setColumnWidth;
-		if (!set) return;
-		menuAction(async () => {
-			for (let i = d.rows ? r0 : c0; i <= (d.rows ? r1 : c1) && i - (d.rows ? r0 : c0) < 500; i++) await set(i, v);
-		});
-	}
-
-	/**
-	 * Ajuster la hauteur (lignes sélectionnées) : retour à la hauteur
-	 * automatique, d'après le contenu (comme le double-clic sur le bord
-	 * d'un numéro de ligne).
-	 */
-	function autoFitRows() {
-		closeMenus();
-		const { r0, r1 } = selection();
-		// Seules les lignes à hauteur choisie changent (la feuille entière peut
-		// compter des millions de lignes).
-		const write = resetRowHeights([...userHeights.keys()].filter((r) => r >= r0 && r <= r1));
-		if (write) menuAction(write);
-	}
-
-	/**
-	 * Remet les lignes rows en hauteur automatique, à l'écran tout de suite ;
-	 * rend l'écriture (une seule étape d'annulation), ou undefined s'il n'y a
-	 * rien à faire.
-	 */
-	function resetRowHeights(rows: number[]): (() => Promise<unknown>) | undefined {
-		const one = source.setRowHeight;
-		const many = source.setRowHeights;
-		if (!rows.length || (!one && !many)) return undefined;
-		for (const r of rows) userHeights.delete(r);
-		rebuildRows();
-		updateExtent();
-		schedule();
-		if (many && (rows.length > 1 || !one)) return () => many(rows.map((row) => ({ row, height: 0 })));
-		return async () => {
-			for (const r of rows) await one!(r, 0);
-		};
-	}
-
-	/** Ajuster la largeur de colonne (colonnes sélectionnées), d'après le contenu affiché. */
-	function autoFitCols() {
-		closeMenus();
-		const { c0, c1 } = selection();
-		const cols: number[] = [];
-		for (let c = c0; c <= c1; c++) if (!hiddenCols.has(c)) cols.push(c);
-		autoFitColumns(cols);
-	}
-
-	// Volets figés.
-	/** Affichage › Figer les volets : à la cellule active, la ligne du haut, la première colonne, ou les libérer. */
-	export function freezeActive(what: 'cell' | 'row' | 'col' | 'none') {
-		const set = source.setFreeze;
-		if (!set) return;
-		let rows = 0;
-		let cols = 0;
-		if (what === 'row') rows = 1;
-		else if (what === 'col') cols = 1;
-		else if (what === 'cell') {
-			rows = active.row;
-			cols = active.col;
-			if (!rows && !cols) {
-				say(tr('grid.freeze.place'));
-				return;
-			}
-		}
-		// La partie figée part du haut de la feuille : elle doit tenir à l'écran.
-		if (rowTop(rows) > vs.view * 0.75 || cax().offset(cols) > (viewW - MARGIN) * 0.75) {
-			say(tr('grid.freeze.tooBig'));
-			return;
-		}
-		if (rows || cols) {
-			vs.to(0);
-			scroller.scrollLeft = 0;
-			syncNative();
-		}
-		menuAction(() => set(rows, cols));
-	}
+	const outlineCtl = createOutline({
+		get olW() { return olW; },
+		get olH() { return olH; },
+		get resizeCanvas() { return resizeCanvas; },
+		get mounted() { return mounted; },
+		get zoom() { return zoom; },
+		get MARGIN() { return MARGIN; },
+		get rh() { return rh; },
+		get screenY() { return screenY; },
+		get cax() { return cax; },
+		get screenX() { return screenX; },
+		get source() { return source; },
+		get menuAction() { return menuAction; },
+		get selection() { return selection; },
+		get wholeKind() { return wholeKind; },
+		get outline() { return outline; },
+		get active() { return active; },
+		get say() { return say; },
+		get styleHiddenRows() { return styleHiddenRows; },
+		get styleHiddenCols() { return styleHiddenCols; },
+		get setHidden() { return setHidden; },
+		get closeMenus() { return closeMenus; },
+		get sizeDlg() { return sizeDlg; }, set sizeDlg(v) { sizeDlg = v; },
+		get wrap() { return wrap; },
+		get userHeights() { return userHeights; },
+		get rebuildRows() { return rebuildRows; },
+		get updateExtent() { return updateExtent; },
+		get schedule() { return schedule; },
+		get hiddenCols() { return hiddenCols; },
+		get autoFitColumns() { return autoFitColumns; },
+		get rowTop() { return rowTop; },
+		get vs() { return vs; },
+		get viewW() { return viewW; },
+		get scroller() { return scroller; },
+		get syncNative() { return syncNative; }
+	});
+	const { outlineGeom, foldOutline, outlineLevel, hiddenIn, unhide, openSize, applySize, autoFitRows, resetRowHeights, autoFitCols } = outlineCtl;
+	export const outlineAction = outlineCtl.outlineAction;
+	export const hideLines = outlineCtl.hideLines;
+	export const freezeActive = outlineCtl.freezeActive;
 
 	// --- Validation des données : liste déroulante ------------------------------
 
