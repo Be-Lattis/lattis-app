@@ -129,7 +129,7 @@ func padHeaders(cols []string, k int) []string {
 }
 
 func isBlankValue(v Value) bool { return fnIsBlank([]Value{v}).Bool }
-func fnIsBlank(a []Value) Value  { f, _ := lookupFunc("ISBLANK"); return f.impl(a) }
+func fnIsBlank(a []Value) Value { f, _ := lookupFunc("ISBLANK"); return f.impl(a) }
 
 // --- Évaluateur Go ------------------------------------------------------------
 

@@ -2,7 +2,7 @@
 
 *Bibliothèque livrée le 16/10/2026 (phase 4), d'après un catalogue du 15/10/2026 tenu hors du dépôt, que ce document remplace, complétée le 19/10/2026 (audit 6, I7 : statistiques, finances, mathématiques, texte, dates, position) et le 26/10/2026 (audit 16 : lois de probabilité et tests, régression, amortissements et titres, base de données, DECALER, INDIRECT, CELLULE, AGREGAT, TRANSPOSE). Code : `internal/formula`.*
 
-284 fonctions, chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement) : par `testdata/conformite.txt`, et pour les ajouts de l'audit 16 par `funcs_stats_test.go` et `funcs_refs_test.go` (valeurs des exemples des définitions du tableur, à la tolérance de leurs chiffres affichés). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
+294 fonctions, chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement) : par `testdata/conformite.txt`, et pour les ajouts de l'audit 16 par `funcs_stats_test.go` et `funcs_refs_test.go` (valeurs des exemples des définitions du tableur, à la tolérance de leurs chiffres affichés). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
 
 L'aide détaillée de chaque fonction (description, arguments nommés et décrits, exemple) est dans `internal/formula/docs.go` : elle alimente l'infobulle de saisie (argument en cours en gras, comme Excel), l'autocomplétion et le dialogue « Insérer une fonction ». `TestFunctionDocs` vérifie que chaque fonction y figure, que ses arguments correspondent à son nombre d'arguments et que son exemple s'analyse.
 
@@ -36,7 +36,7 @@ Les plages se lisent comme une colonne dans les agrégats (`SOMME`, `MOYENNE`, `
 | SI, SI.CONDITIONS, SI.MULTIPLE | IF, IFS, SWITCH | ✅ #N/A quand aucune condition ne s'applique |
 | ET, OU, OUX, NON | AND, OR, XOR, NOT | ✅ |
 | SIERREUR, SI.NON.DISP | IFERROR, IFNA | ✅ |
-| ESTVIDE, ESTNUM, ESTTEXTE, ESTLOGIQUE, ESTERREUR, ESTNA | ISBLANK, ISNUMBER, ISTEXT, ISLOGICAL, ISERROR, ISNA | ✅ une date est un nombre |
+| ESTVIDE, ESTNUM, ESTTEXTE, ESTLOGIQUE, ESTERREUR, ESTERR, ESTNA | ISBLANK, ISNUMBER, ISTEXT, ISLOGICAL, ISERROR, ISERR, ISNA | ✅ une date est un nombre ; ESTERR : toute erreur sauf #N/A |
 | CHOISIR | CHOOSE | ✅ #VALEUR! hors des rangs |
 | LET | LET | ✅ `LET(ht; [Prix]*[Qté]; ht*1,2)` : une valeur peut utiliser les noms précédents, un LET imbriqué peut masquer un nom. Chaque nom est remplacé par son expression avant le calcul (identique pour les deux backends) ; le résultat est celui d'une valeur calculée une fois : les ALEA d'une valeur reçoivent leur rang de tirage à la définition du nom, `LET(x; ALEA(); x-x)` vaut 0. Un nom ne peut être ni une adresse de cellule (`A1`, `Cell[A1]`) ni un nom de fonction ; une forme fautive (nombre pair d'arguments, nom invalide) est refusée à la saisie, comme dans Excel |
 
@@ -48,9 +48,12 @@ Les plages se lisent comme une colonne dans les agrégats (`SOMME`, `MOYENNE`, `
 | ENT, TRONQUE, ABS, SIGNE | INT, TRUNC, ABS, SIGN | ✅ |
 | MOD | MOD | ✅ signe du diviseur |
 | PLAFOND, PLANCHER | CEILING, FLOOR | ✅ précision facultative (1 si omise) ; nombre positif et précision négative : #NOMBRE! |
+| PLAFOND.MATH, PLANCHER.MATH | CEILING.MATH, FLOOR.MATH | ✅ précision en valeur absolue (1 si omise, 0 donne 0) ; un `mode` non nul inverse le sens pour un nombre négatif |
+| PAIR, IMPAIR | EVEN, ODD | ✅ en s'éloignant de zéro |
+| FACT, COMBIN, PERMUTATION | FACT, COMBIN, PERMUT | ✅ parties entières ; négatif ou k > n : #NOMBRE! |
 | PUISSANCE, RACINE, EXP, LN, LOG10, PI | POWER, SQRT, EXP, LN, LOG10, PI | ✅ #NOMBRE! hors domaine |
 | LOG | LOG | ✅ base 10 si omise ; base 1 : #DIV/0! |
-| SIN, COS, TAN, ASIN, ACOS, ATAN, RADIANS, DEGRES | SIN, COS, TAN, ASIN, ACOS, ATAN, RADIANS, DEGREES | ✅ angles en radians |
+| SIN, COS, TAN, ASIN, ACOS, ATAN, ATAN2, RADIANS, DEGRES | SIN, COS, TAN, ASIN, ACOS, ATAN, ATAN2, RADIANS, DEGREES | ✅ angles en radians ; ATAN2(x; y), (0; 0) : #DIV/0! |
 | ARRONDI.AU.MULTIPLE | MROUND | ✅ au plus loin de zéro pour la moitié (sur 15 chiffres, comme ARRONDI) ; signes contraires : #NOMBRE! ; multiple 0 : 0 |
 | QUOTIENT | QUOTIENT | ✅ partie entière de la division |
 | EST.PAIR, EST.IMPAIR | ISEVEN, ISODD | ✅ sur la partie entière ; un booléen donne #VALEUR! |
@@ -129,6 +132,7 @@ Une date est un **numéro de série** comme dans Excel (le 1er janvier 2026 vaut
 | JOURSEM, NO.SEMAINE.ISO | WEEKDAY, ISOWEEKNUM | ✅ types 1, 2, 3, 11 à 17 |
 | NO.SEMAINE | WEEKNUM | ✅ types 1, 2, 11 à 17 et 21 (ISO) |
 | JOURS | DAYS | ✅ parties entières des dates |
+| JOURS360 | DAYS360 | ✅ méthode américaine (FAUX ou omise) ou européenne (VRAI) |
 | TEMPS | TIME | ⚠️ fraction de journée affichée comme un nombre (0,5) : formatez-la avec `TEXTE(…; "hh:mm")` |
 | FIN.MOIS, MOIS.DECALER | EOMONTH, EDATE | ✅ |
 | DATEDIF | DATEDIF | ✅ unités `j`/`d`, `m`, `a`/`y`, `mj`, `am`, `aj` |
