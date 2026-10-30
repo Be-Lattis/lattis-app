@@ -70,7 +70,6 @@
 	import { cellLines } from './shortcuts';
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
-	import { modal } from '#lib/ui/focus.js';
 	import { clip, clipped } from '#lib/ui/menu.js';
 	import Chart from '#lib/chart/Chart.svelte';
 	import { encodeObj, objFromText, rememberObj } from '#lib/clip/objects.js';
@@ -132,6 +131,7 @@
 	import NoteEditor, { type NoteEditorView } from './sheet/NoteEditor.svelte';
 	import LinesDialog, { type LinesDialogView } from './sheet/LinesDialog.svelte';
 	import SizeDialog, { type SizeDialogView } from './sheet/SizeDialog.svelte';
+	import DvAlertBox, { type DvAlertBoxView } from './sheet/DvAlertBox.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6169,6 +6169,12 @@
 		get sizeDlg() { return sizeDlg; }, set sizeDlg(v) { sizeDlg = v; },
 		get wrap() { return wrap; }
 	};
+	// Alerte de validation : sheet/DvAlertBox.svelte.
+	const dvAlertView: DvAlertBoxView = {
+		get answerDvAlert() { return answerDvAlert; },
+		get dvAlert() { return dvAlert; },
+		get focusFirst() { return focusFirst; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6828,41 +6834,7 @@
 			/>
 		{/if}
 		<ValidationDialog v={validationView} />
-		{#if dvAlert}
-			{@const d = dvAlert}
-			<div class="dlg-back" role="presentation">
-				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-				<div
-					class="rules dv-alert"
-					role="alertdialog"
-					aria-modal="true"
-					aria-label={d.title || tr('grid.validation.alert.title')}
-					tabindex="-1"
-					use:focusFirst
-					use:modal
-					onkeydown={(ev) => {
-						ev.stopPropagation();
-						if (ev.key === 'Escape') answerDvAlert('cancel');
-					}}
-				>
-					<div class="menu-title">{d.title || tr('grid.validation.alert.title')}</div>
-					<p class="dv-alert-text" class:stop={d.style === 'stop'} class:warning={d.style === 'warning'}>{d.text}</p>
-					{#if d.style === 'warning'}<p class="menu-note">{tr('grid.validation.alert.continue')}</p>{/if}
-					<div class="foot">
-						<span class="sp"></span>
-						{#if d.style === 'stop'}
-							<button class="primary" onclick={() => answerDvAlert('retry')}>{tr('grid.validation.alert.retry')}</button>
-						{:else if d.style === 'warning'}
-							<button class="primary" onclick={() => answerDvAlert('yes')}>{tr('grid.validation.alert.yes')}</button>
-							<button onclick={() => answerDvAlert('retry')}>{tr('grid.validation.alert.no')}</button>
-						{:else}
-							<button class="primary" onclick={() => answerDvAlert('yes')}>{tr('common.ok')}</button>
-						{/if}
-						<button onclick={() => answerDvAlert('cancel')}>{tr('common.cancel')}</button>
-					</div>
-				</div>
-			</div>
-		{/if}
+		<DvAlertBox v={dvAlertView} />
 		{#if commentDlg && comments}
 			{@const d = commentDlg}
 			{@const host = comments}
@@ -7565,12 +7537,6 @@
 		background: #d3e7dc;
 	}
 	/* Fond des boîtes modales de la grille (validation des données). */
-	.dlg-back {
-		position: fixed;
-		inset: 0;
-		z-index: var(--z-dialog);
-		background: var(--backdrop);
-	}
 	.key-dlg {
 		max-width: 440px;
 	}
@@ -7581,22 +7547,6 @@
 		max-width: none;
 	}
 	/* Validation des données : onglets, lignes libellé + champ, alerte. */
-	.dv-alert {
-		width: 360px;
-		min-width: 0;
-	}
-	.dv-alert-text {
-		margin: 6px 14px;
-		padding-left: 10px;
-		border-left: 3px solid #2f80ed;
-		white-space: pre-wrap;
-	}
-	.dv-alert-text.stop {
-		border-left-color: #d93025;
-	}
-	.dv-alert-text.warning {
-		border-left-color: #e8a400;
-	}
 	.input-tip {
 		position: absolute;
 		z-index: 6;
