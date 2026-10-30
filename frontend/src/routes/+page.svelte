@@ -14,11 +14,10 @@
 	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, OpenResult, RecentFile } from '#bindings/internal/bridge/models.js';
 	import { docFile, docFileName, recentDemo, recentDetail, recentKey, recentLabel, recentRemote, remoteBadge, savedNotice, shareBadge } from '#lib/shell/doctitle.js';
 	import { rememberedMode, xlsxDialogView, XLSX_SAVE_SETTING, type XLSXQuestion } from '#lib/shell/xlsxsave.js';
-	import type { Layout, RuleChanges } from '#bindings/internal/canvas/models.js';
-	import type { Type } from '#bindings/internal/grid/models.js';
+	import type { Layout } from '#bindings/internal/canvas/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
 	import Sheet from '#lib/grid/Sheet.svelte';
-	import { type SheetData, type SheetSource, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig, type TypeMix } from '#lib/grid/sheet/model.js';
+	import { type SheetData, type SheetStatus, type ColumnFilter, type PivotConfig, type ChartConfig } from '#lib/grid/sheet/model.js';
 	import Ribbon, { type DocCommand, type FileAction, type View } from '#lib/shell/Ribbon.svelte';
 	import SheetTabs from '#lib/shell/SheetTabs.svelte';
 	import { layoutLocked, layoutShared as layoutSharedReason } from '#lib/shell/ribbon.js';
@@ -28,7 +27,6 @@
 	import { visibleSheet } from '#lib/shell/sheets.js';
 	import { choiceStatus, choiceStep, type ChoiceActions } from '#lib/shell/choice.js';
 	import { previewOf } from '#lib/ui/rowformula.js';
-	import { tabChoiceNotice } from '#lib/grid/tabchoice.js';
 	import { headerOfferText } from '#lib/grid/titlehead.js';
 	import { popBack, pushBack, type RefSpot } from '#lib/grid/reflink.js';
 	import { printSheetPages } from '#lib/print/printsheet.js';
@@ -94,7 +92,6 @@
 	import type { State as CoEditState } from '#bindings/internal/coedit/models.js';
 	import RightsDialog from '#lib/remote/RightsDialog.svelte';
 	import { rightsObjects, type RightsObject } from '#lib/remote/rights.js';
-	import { refusedNotice } from '#lib/remote/share.js';
 	import { pushSummary, type SourceLink } from '#lib/remote/source.js';
 	import type { Conflict, Held } from '#bindings/internal/remote/collab/models.js';
 	import { canRepublish, detachQuestion, goneError, removeQuestion, retryNotice, roleChip, rolesLabel, serverDown, serverLabel } from '#lib/remote/share.js';
@@ -106,9 +103,7 @@
 	import type { ObjectConfig } from '#lib/grid/objects.js';
 	import type { SparklineGroup } from '#lib/grid/sparkline.js';
 	import type { UICommand } from '#bindings/internal/bridge/models.js';
-	import { typeLabel, type ColumnType } from '#lib/grid/format.js';
-	import type { Fetched } from '#lib/grid/cache.js';
-	import type { SearchResult } from '#lib/grid/findopts.js';
+	import { type ColumnType } from '#lib/grid/format.js';
 	import { isReloadKey, shortcutOf } from '#lib/grid/shortcuts.js';
 	import { cycleRegions, modal, modalOpen } from '#lib/ui/focus.js';
 	import { clampZoom } from '#lib/grid/zoom.js';
@@ -130,8 +125,8 @@
 	import { storageMemory, type TourMemory, type TourOutcome } from '#lib/onboarding/tour.js';
 	import { tourRequest } from '#lib/onboarding/request.svelte.js';
 	import { reducedMotion } from '#lib/grid/anim.js';
-
-	type Mode = 'starting' | 'recover' | 'doc' | 'demo' | 'closed';
+	import type { Mode } from '#lib/app/model.js';
+	import { createSheetSource } from './../lib/app/sheetsource.svelte.js';
 
 	let mode = $state<Mode>('starting');
 	let bench = $state(false);
@@ -1897,270 +1892,7 @@
 		}
 	}
 
-	// --- Sources de la feuille ----------------------------------------------
-
-	/** Clé posée d'office à la création (première colonne ID, ou 1, 2, 3…). */
-	const autoKeyNote = (ev: { autoKey?: string }) => (ev.autoKey ? t('shell.notice.autoKey', { column: ev.autoKey }) : '');
-
-	/** « Utiliser comme en-têtes » : la ligne juste au-dessus du tableau devient son en-tête. */
-	async function titleToHeader(table: string) {
-		headerOffer = null;
-		const st = await DocumentService.TitleToHeader(table);
-		await reload();
-		if (st.notice) notice = st.notice;
-	}
-
-	const docSource: SheetSource = {
-		window: (t, first, count) => DocumentService.Window(sheetId, t.id, first, count) as Promise<Fetched>,
-		reload: () => reload(),
-		async setCell(row, col, raw, _target, key) {
-			headerOffer = null;
-			const ev = await (key ? DocumentService.SetCellKeyed(sheetId, row, col, raw, key) : DocumentService.SetCell(sheetId, row, col, raw));
-			// Relire tout de suite (l'événement doc:changed sert aux changements venus
-			// d'ailleurs, et n'existe pas en mode serveur).
-			await reload();
-			if (ev.headerOffer) headerOffer = { sheet: sheetId, table: ev.headerOffer };
-			if (ev.keyed) return t('shell.notice.keyed', { column: ev.keyed.slice(ev.keyed.indexOf('.') + 1) });
-			const undoBirth = ev.split ? t('shell.notice.undoBirth') : '';
-			if (ev.created && ev.unnamed) return t('shell.notice.createdUnnamed', { table: ev.created, more: autoKeyNote(ev) + undoBirth });
-			if (ev.created && ev.headless) return t('shell.notice.createdHeadless', { table: ev.created, more: autoKeyNote(ev) + undoBirth });
-			if (ev.created) return t('shell.notice.created', { table: ev.created, more: autoKeyNote(ev) + (undoBirth || (ev.autoKey ? t('shell.notice.undoHint') : '')) });
-			if (ev.widened) return t('shell.notice.widened', { column: ev.widened, from: typeLabel(ev.from as ColumnType), to: typeLabel(ev.to as ColumnType) });
-			if (ev.invalid) return t('shell.notice.invalidValue');
-		},
-		editing: (row, col, on) => DocumentService.ShareEditing(sheetId, row, col, on),
-		undo: () => ((headerOffer = null), DocumentService.Undo().then(reload)),
-		redo: () => DocumentService.Redo().then(reload),
-		async paste(row, col, block) {
-			const ev = await DocumentService.Paste(sheetId, row, col, block);
-			await reload();
-			if (ev.refusedCount) return refusedNotice(ev);
-			// Même règle d'en-tête qu'à la saisie (décision 0005), mêmes messages.
-			if (ev.created && ev.unnamed) return t('shell.notice.createdUnnamed', { table: ev.created, more: autoKeyNote(ev) });
-			if (ev.created && ev.headless) return t('shell.notice.createdHeadless', { table: ev.created, more: autoKeyNote(ev) });
-			if (ev.created) return t(ev.split ? 'shell.notice.pastedSplit' : 'shell.notice.pasted', { table: ev.created, more: autoKeyNote(ev), n: block.length - 1 });
-		},
-		rangeStats: (t, first, count, cols) => DocumentService.RangeStats(sheetId, t.id, first, count, cols),
-		moveCells: (r0, c0, r1, c1, dr, dc) => DocumentService.MoveCells(sheetId, r0, c0, r1, c1, dr, dc).then(reload),
-		clearCells: (r0, c0, r1, c1) => DocumentService.ClearCells(sheetId, r0, c0, r1, c1).then(reload),
-		clearRange: (r0, c0, r1, c1, all) => DocumentService.ClearRange(sheetId, r0, c0, r1, c1, all).then(reload),
-		async transfer(from, src, dst, move, values) {
-			const ev = await DocumentService.Transfer(from, src, sheetId, dst, move, values);
-			await reload();
-			if (ev.refusedCount) return refusedNotice(ev);
-			if (ev.created) return t('shell.notice.created', { table: ev.created, more: '' });
-			if (ev.widened) return t('shell.notice.widened', { column: ev.widened, from: typeLabel(ev.from as ColumnType), to: typeLabel(ev.to as ColumnType) });
-		},
-		async pasteSpecial(from, src, dst, opt, values) {
-			const ev = await DocumentService.PasteSpecial(from, src, sheetId, dst, opt, values);
-			await reload();
-			if (ev.refusedCount) return refusedNotice(ev);
-			if (ev.created) return t('shell.notice.created', { table: ev.created, more: '' });
-		},
-		async pasteBlock(dst, block, styles, opt) {
-			const ev = await DocumentService.PasteBlock(sheetId, dst, block, styles, opt);
-			await reload();
-			if (ev.refusedCount) return refusedNotice(ev);
-			if (ev.created) return t('shell.notice.created', { table: ev.created, more: autoKeyNote(ev) });
-		},
-		sheetLines: (op, a, b) =>
-			(op === 'insertRows'
-				? DocumentService.InsertSheetRows(sheetId, a, b)
-				: op === 'deleteRows'
-					? DocumentService.DeleteSheetRows(sheetId, a, b)
-					: op === 'insertCols'
-						? DocumentService.InsertSheetColumns(sheetId, a, b)
-						: DocumentService.DeleteSheetColumns(sheetId, a, b)
-			).then(reload),
-		insertRow: (t, n) => DocumentService.InsertRow(t.name, n).then(reload),
-		deleteRow: (t, n) => DocumentService.DeleteRow(t.name, n).then(reload),
-		insertColumn: (tb, i) => DocumentService.InsertColumn(tb.name, i, t('shell.notice.defaultColumn', { n: tb.columns.length + 1 })).then(reload),
-		deleteColumn: (t, i) => DocumentService.DeleteColumn(t.name, i).then(reload),
-		suppressColumns: (t, i, j) => DocumentService.SuppressColumns(t.name, i, j).then(reload),
-		deleteColumnSpans: (spans) => DocumentService.DeleteColumnSpans(spans).then(reload),
-		convertPreview: (t, i, to) => DocumentService.ConvertPreview(t.name, i, to as Type),
-		typeMix: (t, i) => DocumentService.TypeMix(t.name, i) as Promise<TypeMix>,
-		setType: (t, i, to) => DocumentService.SetType(t.name, i, to as Type).then(reload),
-		setColumnWidth: (col, width) => DocumentService.SetColumnWidth(sheetId, col, width).then(reload),
-		setColumnWidths: (widths) => DocumentService.SetColumnWidths(sheetId, widths).then(reload),
-		setRowHeight: (row, height) => DocumentService.SetRowHeight(sheetId, row, height).then(reload),
-		setRowHeights: (heights) => DocumentService.SetRowHeights(sheetId, heights).then(reload),
-		setName: (row, col, name) => DocumentService.SetName(sheetId, row, col, name).then(reload),
-		sortTable: (t, i, desc) => DocumentService.SortTable(t.name, i, desc).then(reload),
-		sortTableCustom: (t, i, order) => DocumentService.SortTableCustom(t.name, i, order).then(reload),
-		columnOrder: async (t, i) => {
-			const o = (await DocumentService.ColumnOrder(t.name, i)).order;
-			return o ? { ...o, values: o.values ?? [] } : null;
-		},
-		customLists: async () => ((await DocumentService.CustomLists()) ?? []).map((l) => ({ ...l, values: l.values ?? [] })),
-		setCustomLists: (lists) => DocumentService.SetCustomLists(lists).then(reload),
-		refreshTable: (t) => queryHost?.refreshOne(t.query!.id) ?? Promise.resolve(),
-		setRules: (t, i, rules) => DocumentService.SetRules(t.name, i, rules).then(reload),
-		setLineRules: (rows, i0, i1, rules) => DocumentService.SetLineRules(sheetId, rows, i0, i1, rules).then(reload),
-		setSheetRules: (ch) => DocumentService.SetSheetRules(sheetId, ch as RuleChanges).then(reload),
-		ruleStats: (t, cols, req) => DocumentService.RuleStats(sheetId, t.id, cols, req),
-		filterValues: async (t, i) => (await DocumentService.FilterValues(t.name, i)) ?? [],
-		setFilter: (t, i, f) => DocumentService.SetFilter(t.name, i, f).then(reload),
-		clearFilters: (t) => DocumentService.ClearFilters(t.name).then(reload),
-		renameTable: (t, name) => DocumentService.RenameTable(t.name, name).then(reload),
-		promoteHeader: (t) => DocumentService.PromoteHeader(t.name).then(reload),
-		headerToTitle: (t) => DocumentService.HeaderToTitle(t.name).then(reload),
-		titleToHeader: (t) => titleToHeader(t.name),
-		setTwoLevel: (t, on) => DocumentService.SetTwoLevel(t.name, on).then(reload),
-		rowToNote: (t, n) => DocumentService.RowToNote(t.name, n).then(reload),
-		joinTable: (row, col) => DocumentService.JoinTable(sheetId, row, col).then(reload),
-		keyCheck: (t, i) => DocumentService.KeyCheck(t.name, i),
-		setKey: (t, i) => DocumentService.SetKey(t.name, i).then(reload),
-		clearKey: (t) => DocumentService.ClearKey(t.name).then(reload),
-		setHandKey: (t, column) => DocumentService.SetHandKey(t.name, column).then(reload),
-		forgetHandKept: (t) => DocumentService.ForgetHandKept(t.name).then(reload),
-		dismissKeyHint: (t) => DocumentService.DismissKeyHint(t.name).then(reload),
-		recalc: () => DocumentService.Recalc().then(reload),
-		dependencies: async (row, col) => {
-			const d = await DocumentService.Dependencies(sheetId, row, col);
-			return { subject: d.subject, precedents: d.precedents ?? [], dependents: d.dependents ?? [] };
-		},
-		createPivot: async (cfg) => {
-			const id = await DocumentService.CreatePivot(cfg);
-			await reload();
-			await selectSheet(id);
-		},
-		setPivot: (id, cfg) => DocumentService.SetPivot(id, cfg).then(reload),
-		// Champ calculé : une erreur (formule refusée) reste dans la boîte.
-		setPivotCalc: (id, old, name, formula) =>
-			DocumentService.SetPivotCalcField(id, old, name, formula).then(reload, (e) => {
-				throw new Error(err(e));
-			}),
-		previewPivotFormula: async (table, formula) => previewOf(await DocumentService.PreviewPivotFormula(table, formula)),
-		placePivot: (row, col, cfg) => DocumentService.PlacePivot(sheetId, row, col, cfg).then(reload),
-		createPivotAt: (row, col, cfg) => DocumentService.CreatePivotAt(sheetId, row, col, cfg).then(reload),
-		pivotFieldValues: async (table, field) => (await DocumentService.FieldValues(table, field)) ?? [],
-		pivotValues: async (cfg, field) => (await DocumentService.PivotFieldValues(cfg as never, field)) ?? [],
-		validationList: async (src) => {
-			const l = await DocumentService.ValidationList(sheetId, src);
-			return { values: l.values ?? [], error: l.error || undefined };
-		},
-		validationAt: (row, col) => DocumentService.ValidationAt(sheetId, row, col),
-		invalidCells: async () => (await DocumentService.InvalidCells(sheetId)) ?? [],
-		referenceRow: (src, value) => DocumentService.ReferenceRow(src, value),
-		citations: async (table, value) => (await DocumentService.Citations(table, value)) ?? [],
-		createChart: (row, col, cfg) => DocumentService.CreateChart(sheetId, row, col, cfg).then(reload),
-		setChart: (id, cfg) => DocumentService.SetChart(id, cfg).then(reload),
-		moveChart: (id, row, col) => DocumentService.MoveChart(id, row, col).then(reload),
-		placeChart: (id, row, col, offX, offY, w, h) => DocumentService.PlaceChart(id, row, col, offX, offY, w, h).then(reload),
-		deleteChart: (id) => DocumentService.DeleteChart(id).then(reload),
-		scripts: async () => (await DocumentService.Scripts()) ?? [],
-		runButton: async (id) => {
-			const r = await DocumentService.RunButton(id);
-			if (r.error) return t('shell.notice.scriptError', { error: r.error });
-			const out = r.output ?? [];
-			return out.length ? out[out.length - 1] : '';
-		},
-		fireControl: async (id, event, value, old) => {
-			const r = await DocumentService.FireControl(id, event, value, old);
-			if (r.error) return t('shell.notice.scriptError', { error: r.error });
-			const out = r.output ?? [];
-			return out.length ? out[out.length - 1] : '';
-		},
-		pickFile: (title) => DocumentService.PickControlFile(title),
-		createButton: (row, col, cfg: ButtonConfig) => DocumentService.CreateButton(sheetId, row, col, cfg).then(async (id) => (await reload(), id)),
-		setButton: (id, cfg: ButtonConfig) => DocumentService.SetButton(id, cfg).then(reload),
-		placeButton: (id, row, col, offX, offY, w, h) => DocumentService.PlaceButton(id, row, col, offX, offY, w, h).then(reload),
-		deleteButton: (id) => DocumentService.DeleteButton(id).then(reload),
-		createObject: (row, col, cfg: ObjectConfig) => DocumentService.CreateObject(sheetId, row, col, cfg as never).then(async (id) => (await reload(), id)),
-		createImage: (row, col, data, cfg: ObjectConfig) => DocumentService.CreateImage(sheetId, row, col, data, cfg as never).then(async (id) => (await reload(), id)),
-		setObject: (id, cfg: ObjectConfig) => DocumentService.SetObject(id, cfg as never).then(reload),
-		placeObject: (id, row, col, offX, offY, w, h) => DocumentService.PlaceObject(id, row, col, offX, offY, w, h).then(reload),
-		placeLine: (id, row, col, offX, offY, w, h, flipH, flipV) => DocumentService.PlaceLine(id, row, col, offX, offY, w, h, flipH, flipV).then(reload),
-		orderObject: (id, front) => DocumentService.OrderObject(id, front).then(reload),
-		deleteObject: (id) => DocumentService.DeleteObject(id).then(reload),
-		createSparkline: (cfg) => DocumentService.CreateSparkline(sheetId, cfg as never).then(reload),
-		setSparkline: (id, cfg) => DocumentService.SetSparkline(id, cfg as never).then(reload),
-		deleteSparkline: (id) => DocumentService.DeleteSparkline(id).then(reload),
-		imageData: (hash) => DocumentService.ImageData(hash),
-		deletePivot: (id) => DocumentService.DeletePivot(id).then(reload),
-		movePivot: (id, row, col) => DocumentService.MovePivot(id, sheetId, row, col).then(reload),
-		copyPivot: (id, row, col) => DocumentService.CopyPivot(id, sheetId, row, col).then(reload),
-		duplicatesPreview: (t, cols) => DocumentService.DuplicatesPreview(t.name, cols),
-		removeDuplicates: async (t, cols) => {
-			const n = await DocumentService.RemoveDuplicates(t.name, cols);
-			await reload();
-			return n;
-		},
-		textColumnsPreview: (r0, r1, col, o) => DocumentService.TextToColumnsPreview(sheetId, r0, r1, col, o),
-		textToColumns: (r0, r1, col, o) => DocumentService.TextToColumns(sheetId, r0, r1, col, o).then((n) => {
-			// L'assistant se ferme tout de suite ; la feuille se recharge ensuite.
-			reload().catch((e) => (notice = err(e)));
-			return n;
-		}),
-		deleteTables: (ts) => DocumentService.DeleteTables(ts.map((t) => t.name)).then(reload),
-		convertToRange: (t) => DocumentService.ConvertToRange(t.name).then(reload),
-		columnsToValues: (t, cols) => DocumentService.ColumnsToValues(t.name, cols).then(reload),
-		rangeToValues: (r0, c0, r1, c1) => DocumentService.RangeToValues(sheetId, r0, c0, r1, c1).then(reload),
-		// « Suivre l'année » (lot 4) : le message dit ce qui a été fait (colonne ajoutée, retirée ou gardée).
-		setFollow: async (t, on) => {
-			const st = await DocumentService.SetTableFollow(t.name, on);
-			await reload();
-			if (st.notice) notice = st.notice;
-		},
-		// « Filtrer l'onglet par cette colonne / ce champ » : comme « Choisir par… » de l'onglet, sur (Toutes).
-		setTabChoice: async (table, column) => {
-			await DocumentService.ChooseSheetBy(sheetId, table, column, '');
-			await reload();
-			notice = tabChoiceNotice(column, false);
-		},
-		clearTabChoice: async (column) => {
-			await DocumentService.ClearSheetChoice(sheetId);
-			await reload();
-			notice = tabChoiceNotice(column, true);
-		},
-		choiceCandidates: async () => (await DocumentService.SheetChoiceCandidates(sheetId)) ?? [],
-		formatAsTable: (row, col) => DocumentService.FormatAsTable(sheetId, row, col).then(reload),
-		convertSpill: (row, col, linked) => DocumentService.ConvertSpill(sheetId, row, col, linked).then(reload),
-		moveTable: (t, row, col) => DocumentService.MoveTable(t.name, row, col).then(reload),
-		extractColumns: (t, i0, i1, row, col) => DocumentService.ExtractColumns(t.name, i0, i1, row, col).then(reload),
-		applyStyle: (r0, c0, r1, c1, patch) => DocumentService.ApplyStyle(sheetId, r0, c0, r1, c1, patch).then(reload),
-		applyStyleParts: (parts) => DocumentService.ApplyStyleParts(sheetId, parts).then(reload),
-		applyLineStyle: (rows, i0, i1, patch) => DocumentService.ApplyLineStyle(sheetId, rows, i0, i1, patch).then(reload),
-		setNote: (row, col, text) => DocumentService.SetNote(sheetId, row, col, text).then(reload),
-		pinNote: (row, col, pinned) => DocumentService.PinNote(sheetId, row, col, pinned).then(reload),
-		setLink: (row, col, target, text) => DocumentService.SetLink(sheetId, row, col, target, text).then(reload),
-		linkPlace: (target) => DocumentService.LinkPlace(sheetId, target),
-		mergeCells: async (r0, c0, r1, c1) => {
-			const n = await DocumentService.MergeCells(sheetId, r0, c0, r1, c1);
-			await reload();
-			return n;
-		},
-		unmergeCells: (r0, c0, r1, c1) => DocumentService.UnmergeCells(sheetId, r0, c0, r1, c1).then(reload),
-		setLinesHidden: (rows, i0, i1, hide) => DocumentService.SetLinesHidden(sheetId, rows, i0, i1, hide).then(reload),
-		groupLines: (rows, i0, i1, group) => (group ? DocumentService.GroupLines(sheetId, rows, i0, i1) : DocumentService.UngroupLines(sheetId, rows, i0, i1)).then(reload),
-		clearOutline: () => DocumentService.ClearOutline(sheetId).then(reload),
-		foldGroup: (rows, level, line, fold) => DocumentService.FoldGroup(sheetId, rows, level, line, fold).then(reload),
-		showOutlineLevel: (rows, level) => DocumentService.ShowOutlineLevel(sheetId, rows, level).then(reload),
-		setFreeze: (rows, cols) => DocumentService.SetFreeze(sheetId, rows, cols).then(reload),
-		find: async (text, zone) => (await DocumentService.Find(sheetId, text, zone)) ?? [],
-		replace: async (text, by, zone) => {
-			const n = await DocumentService.Replace(sheetId, text, by, zone);
-			await reload();
-			return n;
-		},
-		search: async (q) => (await DocumentService.Search(q)) as SearchResult,
-		replaceAll: async (q, by) => {
-			const r = await DocumentService.ReplaceAll(q, by);
-			if (r.replaced) await reload();
-			return r;
-		}
-	};
-
-	const demoSource: SheetSource = {
-		window: (_t, first, count) => GridService.Window(first, count) as Promise<Fetched>,
-		async setCell(_row, _col, raw, target) {
-			if (target.rowId === undefined || target.column === undefined) return t('shell.demo.readOnly');
-			// La démo ne relit pas sa mise en page : la feuille met la cellule à jour.
-			return { value: await GridService.SetCell(target.rowId, target.column, raw) };
-		}
-	};
-
+	// --- Source de la feuille : ../lib/app/sheetsource.svelte.ts ---
 	const docData = $derived<SheetData | null>(
 		layout
 			? {
@@ -2230,9 +1962,7 @@
 				}
 			: null
 	);
-
 	const demoData = $derived<SheetData | null>(demo ? { tables: [{ id: 1, name: demo.name, row: 0, col: 0, rows: demo.rows, columns: demo.columns }], cells: [] } : null);
-
 	const objects = $derived(
 		mode === 'demo' && demo
 			? [{ name: demo.name, sqlName: demo.sqlName, rows: demo.rows, columns: demo.columns.map((c, i) => ({ ...c, sql: demo!.sqlColumns[i] ?? '' })) }]
@@ -2246,11 +1976,20 @@
 					columns: (t.columns ?? []).map((c, i) => ({ name: c, type: (t.types?.[i] ?? 'text') as ColumnType, sql: t.columnSql?.[i] ?? c }))
 				}))
 	);
-
-	const query = (sql: string) => (mode === 'demo' ? GridService.Query(sql) : DocumentService.Query(sql));
 	const data = $derived(mode === 'demo' ? demoData : docData);
 	const title = $derived(mode === 'demo' ? t('ribbon.file.demo') : mode === 'recover' ? t('shell.recovery.title') : docState.title);
 	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected, color: s.color, hidden: s.hidden, kind: s.kind, choice: s.choice ?? null })));
+	const sourceCtl = createSheetSource({
+		get headerOffer() { return headerOffer; }, set headerOffer(v) { headerOffer = v; },
+		get reload() { return reload; },
+		get notice() { return notice; }, set notice(v) { notice = v; },
+		get sheetId() { return sheetId; },
+		get queryHost() { return queryHost; },
+		get selectSheet() { return selectSheet; },
+		get err() { return err; },
+		get mode() { return mode; }
+	});
+	const { titleToHeader, docSource, demoSource, query } = sourceCtl;
 
 	// --- Onglet à choix (« Ventes · 2025 ▾ », lib/shell/choice.ts) ----------
 	/** Lignes d'autres valeurs masquées sur la feuille affichée (barre d'état). */
