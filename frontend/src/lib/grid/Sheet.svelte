@@ -13,7 +13,7 @@
 	import { RowCache, syncAt, type SyncKind } from './cache';
 	import { VScroll } from './scroll';
 	import { Axis } from './axis';
-	import { allGenerated, defaultNameHint, isDefaultTableName, isGeneratedColumnName } from './defaultname';
+	import { isDefaultTableName, isGeneratedColumnName } from './defaultname';
 	import { ease, reducedMotion, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
 	import { sweepAt, watchSource, WORK_DELAY, workAlpha, type WorkLookup, type WorkZone } from './working';
 	import { followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
@@ -59,10 +59,10 @@
 	import { bandMerges, groupSpans, headerLabel, isSingle, tableTop } from './twolevel';
 	import { tableUnderTitle, titleAboveFilled } from './titlehead';
 	import { pivotColLayer, pivotLayer, pivotValueText } from './pivotformat';
-	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setColFolded, setFolded } from './pivottree';
+	import { foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setColFolded, setFolded } from './pivottree';
 	import { newSlicer, withSlicer } from './pivotslicer';
 	import SheetSlicers from './SheetSlicers.svelte';
-	import { citeLabel, type Citation } from './reflink';
+	import { type Citation } from './reflink';
 	import { gridPalette } from './theme';
 	import { paint as themed } from './colors';
 	import { tableTheme } from './theme.svelte.js';
@@ -78,7 +78,6 @@
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import type { PrintCell, PrintChart, PrintSource } from '#lib/print/sheetprint.js';
 	import PivotPanel from './PivotPanel.svelte';
-	import { brokenPivotAt } from './pivotzone';
 	import { midEllipsis } from './midellipsis';
 	import { handAlign, handKeptNote, handStart } from './pivothand';
 	import { type Placement } from './pivotplace';
@@ -87,7 +86,7 @@
 	import { objectBox, type ObjectConfig, type SheetObject } from './objects';
 	import { type SheetButton } from './buttons';
 	import { parseRules, todaySerial, type CfOut, type Rule, type Stats } from './rules';
-	import { chartMenu as chartMenuGroups, chartSubmenu, freeCellMenu, headerMenu, linesSubmenu, pivotSubmenu, tableCellMenu, tableColumnSubmenu, tableRowSubmenu } from './ctxmenu';
+	import { chartMenu as chartMenuGroups, chartSubmenu } from './ctxmenu';
 	import { type RuleChanges } from './cfmodel';
 	import { ICON_SETS, drawCfIcon } from './cficons';
 	import CondFormat, { type CondHost, type CondView } from './CondFormat.svelte';
@@ -127,6 +126,7 @@
 	import { createMeasure } from './sheet/measure.svelte.js';
 	import { createCondFormat } from './sheet/condformat.svelte.js';
 	import FindBar, { type FindBarView } from './sheet/FindBar.svelte';
+	import CellMenus, { type CellMenusView } from './sheet/CellMenus.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -5998,164 +5998,89 @@
 		get source() { return source; },
 		get toggleReplace() { return toggleReplace; }
 	};
+	// Menus contextuels de la grille : sheet/CellMenus.svelte.
+	const cellMenusView: CellMenusView = {
+		get CONFIRM_DELETE_ROWS() { return CONFIRM_DELETE_ROWS; },
+		get active() { return active; },
+		get activeThread() { return activeThread; },
+		get autoFitCols() { return autoFitCols; },
+		get autoFitRows() { return autoFitRows; },
+		get buttonsLayer() { return buttonsLayer; },
+		get cells() { return cells; },
+		get chartClip() { return chartClip; },
+		get clearSelection() { return clearSelection; },
+		get comments() { return comments; },
+		get copySelection() { return copySelection; },
+		get data() { return data; },
+		get deleteNote() { return deleteNote; },
+		get deleteTable() { return deleteTable; },
+		get deleteWholeColumns() { return deleteWholeColumns; },
+		get designWhy() { return designWhy; },
+		get editLink() { return editLink; },
+		get editNote() { return editNote; },
+		get foldPivot() { return foldPivot; },
+		get followLink() { return followLink; },
+		get followRef() { return followRef; },
+		get formulasInSelection() { return formulasInSelection; },
+		get freeMenu() { return freeMenu; }, set freeMenu(v) { freeMenu = v; },
+		get groupCandidate() { return groupCandidate; },
+		get inRangeZone() { return inRangeZone; },
+		get keptOut() { return keptOut; },
+		get key() { return key; },
+		get linesOpts() { return linesOpts; },
+		get linkOf() { return linkOf; },
+		get locked() { return locked; },
+		get menu() { return menu; }, set menu(v) { menu = v; },
+		get menuAction() { return menuAction; },
+		get moveTo() { return moveTo; },
+		get newComment() { return newComment; },
+		get noteOf() { return noteOf; },
+		get onaddshared() { return onaddshared; },
+		get onpushsource() { return onpushsource; },
+		get onsharedata() { return onsharedata; },
+		get openCitation() { return openCitation; },
+		get openCustomSort() { return openCustomSort; },
+		get openFilter() { return openFilter; },
+		get openFormat() { return openFormat; },
+		get openHandKey() { return openHandKey; },
+		get openLinesDialog() { return openLinesDialog; },
+		get openRules() { return openRules; },
+		get openSize() { return openSize; },
+		get openValidation() { return openValidation; },
+		get pasteChart() { return pasteChart; },
+		get pasteClipboard() { return pasteClipboard; },
+		get pasteSpecial() { return pasteSpecial; },
+		get pickPivotSource() { return pickPivotSource; },
+		get pivotAt() { return pivotAt; },
+		get pivotSources() { return pivotSources; },
+		get pivots() { return pivots; },
+		get refItems() { return refItems; }, set refItems(v) { refItems = v; },
+		get removeLink() { return removeLink; },
+		get removePivot() { return removePivot; },
+		get rowLabel() { return rowLabel; },
+		get rulesActive() { return rulesActive; },
+		get runTabChoice() { return runTabChoice; },
+		get selectRange() { return selectRange; },
+		get selection() { return selection; },
+		get setHidden() { return setHidden; },
+		get sheetLines() { return sheetLines; },
+		get source() { return source; },
+		get sourceTables() { return sourceTables; },
+		get spillUnder() { return spillUnder; },
+		get startEdit() { return startEdit; },
+		get startPivotMove() { return startPivotMove; },
+		get structure() { return structure; },
+		get tabChoiceFor() { return tabChoiceFor; },
+		get tableLines() { return tableLines; },
+		get titleAbove() { return titleAbove; },
+		get titleTableAt() { return titleTableAt; },
+		get toValuesActive() { return toValuesActive; },
+		get toggleFollow() { return toggleFollow; },
+		get unhide() { return unhide; },
+		get valueColumns() { return valueColumns; }
+	};
 </script>
 
-{#snippet linesSub(kind: 'rows' | 'cols', x: number, y: number)}
-	<!-- Sous-menu Ligne « … » ou Colonne « … » d'un numéro ou d'une lettre : insertion et suppression, taille, affichage (ctxmenu.ts). -->
-	{@const rows = kind === 'rows'}
-	{@const { r0, r1, c0, c1 } = selection()}
-	{#each linesSubmenu(linesOpts(kind)) as g, gi (gi)}
-		{#if gi}<hr />{/if}
-		{#each g as id (id)}
-			{#if id === 'insert'}
-				<button onclick={() => sheetLines(rows ? 'insertRows' : 'insertCols')}>{rows ? tr('grid.lines.insertRows', { n: r1 - r0 + 1 }) : tr('grid.lines.insertCols', { n: c1 - c0 + 1 })}</button>
-			{:else if id === 'delete'}
-				<button onclick={() => sheetLines(rows ? 'deleteRows' : 'deleteCols')}
-					>{rows ? (r1 > r0 ? tr('grid.lines.deleteRows') : tr('grid.lines.deleteRow')) : c1 > c0 ? tr('grid.lines.deleteCols') : tr('grid.lines.deleteCol')}</button
-				>
-			{:else if id === 'size'}
-				<button onclick={() => openSize(rows, x, y)}>{rows ? tr('grid.menu.rowHeight') : tr('grid.menu.colWidth')}</button>
-			{:else if id === 'autoFit'}
-				{#if rows}
-					<button onclick={autoFitRows} title={tr('grid.menu.autoFitRows.tooltip')}>{tr('grid.menu.autoFitRows')}</button>
-				{:else}
-					<button onclick={autoFitCols} title={tr('grid.menu.autoFitCols.tooltip')}>{tr('grid.menu.autoFitCols')}</button>
-				{/if}
-			{:else if id === 'hide'}
-				<button onclick={() => setHidden(rows, true)}>{tr('grid.menu.hide')}</button>
-			{:else if id === 'unhide'}
-				<button onclick={() => unhide(rows)}>{tr('grid.menu.unhide')}</button>
-			{/if}
-		{/each}
-	{/each}
-{/snippet}
-
-{#snippet basicItem(id: string, clear: () => void, rules: () => void)}
-	<!-- Entrées communes des menus de cellules (ctxmenu.ts) : presse-papiers, effacement, mise en forme, note. -->
-	{#if id === 'cut'}
-		<button data-shed="3"
-			onclick={() => {
-				menu = freeMenu = null;
-				copySelection(true);
-			}}>{tr('common.cut')} <span class="keys">Ctrl+X</span></button
-		>
-	{:else if id === 'copy'}
-		<button data-shed="3"
-			onclick={() => {
-				menu = freeMenu = null;
-				copySelection();
-			}}>{tr('common.copy')} <span class="keys">Ctrl+C</span></button
-		>
-	{:else if id === 'paste'}
-		<button data-shed="3"
-			onclick={() => {
-				menu = freeMenu = null;
-				pasteClipboard();
-			}}>{tr('common.paste')} <span class="keys">Ctrl+V</span></button
-		>
-	{:else if id === 'pasteSpecial'}
-		<button data-shed="3"
-			onclick={() => {
-				menu = freeMenu = null;
-				void pasteSpecial();
-			}}>{tr('grid.pasteSpecial.menu')} <span class="keys">Ctrl+Alt+V</span></button
-		>
-	{:else if id === 'pasteChart'}
-		<button
-			onclick={() => {
-				menu = freeMenu = null;
-				if (chartClip) pasteChart(chartClip);
-			}}>{tr('grid.chart.paste')}</button
-		>
-	{:else if id === 'pasteButton'}
-		<button
-			onclick={() => {
-				menu = freeMenu = null;
-				buttonsLayer?.pasteAt(active.row, active.col);
-			}}>{tr('grid.controls.paste')}</button
-		>
-	{:else if id === 'clear'}
-		<button onclick={clear}>{tr('grid.menu.clearContents')}</button>
-	{:else if id === 'format'}
-		<button data-shed="1" onclick={() => openFormat()}>{tr('grid.menu.formatCells')} <span class="keys">Ctrl+1</span></button>
-	{:else if id === 'rules'}
-		<button data-shed="1" onclick={rules}>{tr('grid.menu.conditionalFormat')}</button>
-	{:else if id === 'note'}
-		{@render linkItems()}
-		{@render noteItems()}
-	{:else if id === 'comment'}
-		<button data-shed="1" onclick={newComment}>{activeThread() ? tr('grid.comment.menuReply') : tr('grid.comment.menuNew')} <span class="keys">Ctrl+Alt+M</span></button>
-	{/if}
-{/snippet}
-
-{#snippet linkItems()}
-	{#if source.setLink}
-		{@const url = linkOf(active.row, active.col)}
-		{#if url}
-			<button
-				data-shed="1"
-				onclick={() => {
-					menu = freeMenu = null;
-					void followLink(url);
-				}}>{tr('grid.link.open')}</button
-			>
-			<button data-shed="1" onclick={editLink}>{tr('grid.link.menuEdit')} <span class="keys">Ctrl+K</span></button>
-			<button data-shed="1" onclick={removeLink}>{tr('grid.link.remove')}</button>
-		{:else}
-			<button data-shed="1" onclick={editLink}>{tr('grid.link.menu')} <span class="keys">Ctrl+K</span></button>
-		{/if}
-	{/if}
-{/snippet}
-
-{#snippet noteItems()}
-	{#if noteOf(active.row, active.col)}
-		<button data-shed="1" onclick={editNote}>{tr('grid.note.edit')}</button>
-		<button data-shed="1"
-			onclick={() => {
-				menu = freeMenu = null;
-				deleteNote();
-			}}>{tr('grid.note.delete')}</button
-		>
-	{:else}
-		<button data-shed="1" onclick={editNote}>{tr('grid.note.insert')}</button>
-	{/if}
-{/snippet}
-
-{#snippet refMenuItems()}
-	<!-- Colonne de référence : basculer sur la ligne citée ; clé d'un tableau : les lignes qui la citent. -->
-	{#if refItems?.go}
-		{@const g = refItems.go}
-		{@const at = { row: refItems.row, col: refItems.col }}
-		<button
-			disabled={g.found === false}
-			title={g.found === false ? tr('grid.refLink.missing', { value: g.value, table: g.table }) : tr('grid.refLink.go.tooltip', { value: g.value, table: g.table })}
-			onclick={() => {
-				menu = freeMenu = null;
-				refItems = null;
-				void followRef(at.row, at.col);
-			}}>{tr('grid.refLink.go', { table: clip(g.table), value: clip(g.value) })} <span class="keys">Ctrl+clic</span></button
-		>
-	{:else if refItems?.cite?.list?.length}
-		{@const ci = refItems.cite}
-		{@const list = ci.list ?? []}
-		{@const at = { row: refItems.row, col: refItems.col }}
-		{#if list.length === 1}
-			<button
-				disabled={!list[0].count}
-				title={list[0].count ? tr('grid.refLink.cite.tooltip', { table: list[0].table, column: list[0].column, value: ci.value }) : undefined}
-				onclick={() => openCitation(at.row, at.col, list[0], ci.value)}>{citeLabel(clip(ci.value), list)}</button
-			>
-		{:else}
-			<Submenu label={citeLabel(clip(ci.value), list)}>
-				{#each list as c (c.table + '[' + c.column + ']')}
-					<button disabled={!c.count} title={tr('grid.refLink.cite.tooltip', { table: c.table, column: c.column, value: ci.value })} onclick={() => openCitation(at.row, at.col, c, ci.value)}
-						>{clip(c.table)} ({c.count})</button
-					>
-				{/each}
-			</Submenu>
-		{/if}
-	{/if}
-{/snippet}
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
 {#snippet coloured(text: string)}{#each highlightParts(text, formulaRefs(text), editErr) as p, i (i)}{#if p.err}<span class="hl-err">{p.text}</span>{:else if p.color}<span style:color={p.color}>{p.text}</span>{:else}{p.text}{/if}{/each}{'​'}{/snippet}
 
@@ -6515,266 +6440,7 @@
 			{/if}
 		</div>
 		<FindBar v={findView} />
-		{#if menu}
-			{@const m = menu}
-			{@const col = m.e.t.columns[m.i]}
-			{@const cols = !m.rowOnly}
-			{@const rowItems = !m.header && !m.rowOnly}
-			<!-- Structure du tableau (colonnes, en-têtes, conversion, suppression) : grisée ou retirée avec son motif, comme au ruban (feuille protégée, classeur partagé sans droit de conception, tableau en lecture seule). -->
-			{@const why = designWhy(m.e.t)}
-			{@const filtered = cols && !!source.clearFilters && m.e.t.columns.some((c) => c.filter)}
-			{@const sortCount = (cols && source.sortTable ? 2 : 0) + (cols && source.sortTableCustom ? 1 : 0) + (cols && source.setFilter ? 1 : 0) + (filtered ? 1 : 0)}
-			{@const toTitle = !why && cols && !!source.headerToTitle && m.e.t.rows > 0}
-			{@const toHeader = !why && cols && titleAbove(m.e.t)}
-			{@const promote = !why && cols && !!source.promoteHeader && m.e.t.rows > 0 && !m.e.t.query && !m.e.t.twoLevel}
-			{@const toValues = !why && cols && source.columnsToValues ? valueColumns(m.e, m.i) : []}
-			{@const refresh = !!m.e.t.query && !!source.refreshTable}
-			{@const share = cols && !!onsharedata && !m.e.t.query}
-			{@const addShared = cols && !!onaddshared && m.e.t.shared === 'private' && !m.e.t.query}
-			{@const pushSource = cols && !!onpushsource && sourceTables.includes(m.e.t.name)}
-			{@const twoLevel = !why && cols && !!source.setTwoLevel && !m.e.t.query}
-			{@const follow = cols && !!source.setFollow && !!data?.choice && !m.e.t.query}
-			{@const tableItems = toTitle || toHeader || promote || twoLevel || refresh || share || pushSource || follow || !!source.convertToRange || !!source.deleteTables}
-			<!-- Situation (ctxmenu.ts) : sur l'en-tête, du texte ou des groupes au-dessus de ses colonnes ; sur une ligne, la 1re (tableau sans en-têtes) ou la dernière. -->
-			{@const ref = !m.rowOnly && !m.header && (!!refItems?.go || !!refItems?.cite?.list?.length)}
-			{@const promoteRow = !why && !m.header && !!source.promoteHeader && m.e.t.rows > 0 && !m.e.t.query && !m.e.t.twoLevel && m.n === 0 && allGenerated(m.e.t.columns.map((c) => c.name))}
-			{@const toNote = !why && !m.header && !!source.rowToNote && m.n === m.e.t.rows - 1}
-			{@const headAbove = m.header && !m.e.t.query && titleAboveFilled(m.e.t, (r, c) => cells.get(key(r, c)))}
-			{@const columnGroups = tableColumnSubmenu({ sort: sortCount > 0, typeKey: !!source.setType && !col?.formula && !why, validation: !!source.applyStyle && !col?.formula, tabChoice: !!source.setTabChoice && !!col, toValues: toValues.length > 0 })}
-			{@const menuGroups = m.rowOnly
-				? headerMenu({
-						promote: promoteRow,
-						toNote: toNote,
-						format: !!source.sheetLines && !!source.applyStyle,
-						rules: !!source.sheetLines && !!source.setSheetRules,
-						lines: linesSubmenu(linesOpts('rows')).length > 0,
-						table: tableItems
-					})
-				: tableCellMenu({
-						ref,
-						promote: promoteRow,
-						toNote: toNote,
-						toHeader: toHeader && headAbove,
-						groupsOn: twoLevel && headAbove && !m.e.t.twoLevel,
-						groupsOff: twoLevel && m.header && !!m.e.t.twoLevel,
-						format: !!source.applyStyle,
-						rules: !!source.setSheetRules,
-						note: !!source.setNote,
-						comment: !!comments,
-						sort: sortCount > 0,
-						row: rowItems,
-						column: cols,
-						table: tableItems
-					})}
-			{#snippet sortItems()}
-				{#if cols && source.sortTable}
-					{@const lab = sortLabels(col?.type ?? 'text', col?.result)}
-					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, false))}>{lab[0]}</button>
-					<button onclick={() => menuAction(() => source.sortTable!(m.e.t, m.i, true))}>{lab[1]}</button>
-				{/if}
-				{#if cols && source.sortTableCustom}
-					<button onclick={() => openCustomSort(m.e, m.i)}>{tr('grid.pivot.menu.customSort')}</button>
-				{/if}
-				{#if cols && source.setFilter}
-					<button onclick={() => openFilter(m.e, m.i)}>{tr('grid.menu.filterColumn')}</button>
-				{/if}
-				{#if filtered}
-					<button onclick={() => menuAction(() => source.clearFilters!(m.e.t))}>{tr('grid.menu.clearTableFilter')}</button>
-				{/if}
-			{/snippet}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (menu = null)}>
-				<!-- Les noms (ligne, colonne, tableau) n'apparaissent qu'en titre de leur sous-menu, abrégés ; jamais dans les libellés. -->
-				{#if m.confirmDelete}
-					<div class="menu-title" class:default-name={isDefaultTableName(m.e.t.name)} title={isDefaultTableName(m.e.t.name) ? defaultNameHint() : clipped(m.e.t.name) ? m.e.t.name : undefined}>{tr('grid.menu.table', { name: clip(m.e.t.name) })}</div>
-					<p class="menu-note">
-						{tr('grid.menu.deleteTable.confirm', { n: m.e.t.rows + (m.e.t.hidden ?? 0) })}
-					</p>
-					<button onclick={() => deleteTable(m.e.t)}>{tr('grid.menu.deleteTable')}</button>
-					<button onclick={() => (menu = { ...m, confirmDelete: false })}>{tr('common.cancel')}</button>
-				{:else}
-					<!-- Ordre (demande de Louis, ctxmenu.ts) : un sous-menu par objet, titré de son nom
-					     (ligne, colonne, tableau) ; les actions propres à la situation ; le presse-papiers ;
-					     effacement et mise en forme ; la note ; tri et filtre. -->
-					{#snippet rowItem(id: string)}
-						{#if id === 'insertAbove'}
-							<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n)))}>{tr('grid.menu.insertAbove')}</button>
-						{:else if id === 'insertBelow'}
-							<button onclick={() => menuAction(source.insertRow && (() => tableLines(m.e, 'insertRow', m.n + 1)))}>{tr('grid.menu.insertBelow')}</button>
-						{:else if id === 'deleteRow'}
-							<button onclick={() => menuAction(source.deleteRow && (() => tableLines(m.e, 'deleteRow', m.n)))}>{tr('grid.lines.deleteRow')}</button>
-						{/if}
-					{/snippet}
-					{#snippet columnItem(id: string)}
-						{#if id === 'sort'}
-							{@render sortItems()}
-						{:else if id === 'rename'}
-							<button
-								onclick={() => {
-									const t = m.e.t;
-									const c = t.col + m.i;
-									menu = null;
-									moveTo(t.row, c);
-									startEdit(false);
-								}}>{tr('grid.menu.renameColumn')}</button
-							>
-						{:else if id === 'typeKey'}
-							<!-- Le menu ▾ de la colonne (tri, filtre, type, clé), sous son en-tête. -->
-							<button onclick={() => openFilter(m.e, m.i)}>{tr('grid.menu.typeAndKey')}</button>
-						{:else if id === 'validation'}
-							<!-- Validation des données de toute la colonne (ses lignes de données). -->
-							<button
-								onclick={() => {
-									const e = m.e;
-									const c = e.t.col + m.i;
-									menu = null;
-									selectRange(e.t.row + 1, c, Math.max(e.last, e.t.row + 1), c);
-									openValidation();
-								}}>{tr('grid.menu.validation')}</button
-							>
-						{:else if id === 'tabChoice' && col}
-							{@const tc = tabChoiceFor(m.e.t.name, col.name, { formula: !!col.formula })}
-							<button title={tc.title} disabled={tc.disabled} onclick={() => runTabChoice(m.e.t.name, col.name, tc)}>{tc.label}</button>
-						{:else if id === 'toValues'}
-							<!-- Colonne calculée (ou colonnes calculées de la sélection) : ses valeurs, sans la formule. -->
-							<button
-								title={toValues.length > 1 ? tr('grid.menu.toValues.many.tooltip', { n: toValues.length }) : tr('grid.menu.toValues.tooltip')}
-								onclick={() => menuAction(() => source.columnsToValues!(m.e.t, toValues))}>{tr('grid.menu.toValues')}</button
-							>
-						{:else if id === 'insertLeft'}
-							<button disabled={!!why} title={why || undefined} onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i)))}>{tr('grid.menu.insertLeft')}</button>
-						{:else if id === 'insertRight'}
-							<button disabled={!!why} title={why || undefined} onclick={() => menuAction(source.insertColumn && (() => tableLines(m.e, 'insertColumn', m.i + 1)))}>{tr('grid.menu.insertRight')}</button>
-						{:else if id === 'deleteColumn'}
-							<button disabled={!!why} title={why || undefined} onclick={() => menuAction(source.deleteColumn && (() => tableLines(m.e, 'deleteColumn', m.i)))}>{tr('grid.lines.deleteCol')}</button>
-						{/if}
-					{/snippet}
-					{#snippet item(id: string)}
-						{#if id === 'ref'}
-							{@render refMenuItems()}
-						{:else if id === 'promote'}
-							<!-- Tableau sans en-têtes (que des « Colonne n ») : sur sa 1re ligne. -->
-							<button title={tr('grid.menu.promote.tooltip')} onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>{tr('grid.menu.promote')}</button>
-						{:else if id === 'toNote'}
-							<!-- Seulement sur la dernière ligne de données (le moteur refuse les autres). -->
-							<button title={tr('grid.menu.rowToNote.tooltip')} onclick={() => menuAction(() => source.rowToNote!(m.e.t, m.n))}>{tr('grid.menu.rowToNote')}</button>
-						{:else if id === 'toHeader'}
-							<!-- En-tête avec du texte tapé au-dessus de ses colonnes. -->
-							<button title={tr('grid.menu.titleToHeader.tooltip')} onclick={() => menuAction(() => source.titleToHeader!(m.e.t))}>{tr('grid.menu.titleToHeader')}</button>
-						{:else if id === 'groupsOn'}
-							<button title={tr('grid.menu.twoLevel.on.tooltip')} onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, true))}>{tr('grid.menu.twoLevel.on')}</button>
-						{:else if id === 'groupsOff'}
-							<!-- En-tête (ou bande) de colonnes groupées. -->
-							<button title={tr('grid.menu.twoLevel.off.tooltip')} onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, false))}>{tr('grid.menu.twoLevel.off')}</button>
-						{:else if id === 'sort'}
-							<Submenu label={tr('grid.menu.sortFilter')}>{@render sortItems()}</Submenu>
-						{:else if id === 'row'}
-							<!-- Titré de l'identifiant de la ligne que montre la gouttière : sa clé, sinon son numéro (rowLabel). -->
-							{@const rid = rowLabel(m.e, m.e.t.row + 1 + m.n)}
-							<Submenu label={tr('grid.menu.row', { name: clip(rid) })} title={clipped(rid) ? rid : undefined}>
-								{#each tableRowSubmenu() as g, gi (gi)}{#if gi}<hr />{/if}{#each g as id (id)}{@render rowItem(id)}{/each}{/each}
-							</Submenu>
-						{:else if id === 'column'}
-							<!-- Ce qui ne touche que la colonne ; sa suppression en dernier. -->
-							<Submenu label={tr('grid.menu.column', { name: clip(col?.name) })} title={clipped(col?.name) ? col?.name : undefined}>
-								{#each columnGroups as g, gi (gi)}{#if gi}<hr />{/if}{#each g as id (id)}{@render columnItem(id)}{/each}{/each}
-							</Submenu>
-						{:else if id === 'linesTop'}
-							<!-- Numéro de ligne : la ligne de la feuille (insertion, suppression, hauteur, affichage), en tête du menu. -->
-							{@render linesSub('rows', m.x, m.y)}
-						{:else if id === 'table'}
-							<!-- Le tableau, titré de son nom : en-têtes, requête, partage, conversion ; sa suppression en dernier. -->
-							<Submenu
-								label={tr('grid.menu.table', { name: clip(m.e.t.name) })}
-								title={isDefaultTableName(m.e.t.name) ? defaultNameHint() : clipped(m.e.t.name) ? m.e.t.name : undefined}
-							>
-								{#if toTitle}
-									<button title={tr('grid.menu.headerToTitle.tooltip')} onclick={() => menuAction(() => source.headerToTitle!(m.e.t))}>{tr('grid.menu.headerToTitle')}</button>
-								{/if}
-								{#if promote}
-									<button title={tr('grid.menu.promote.tooltip')} onclick={() => menuAction(() => source.promoteHeader!(m.e.t))}>{tr('grid.menu.promote')}</button>
-								{/if}
-								{#if toHeader}
-									<button title={tr('grid.menu.titleToHeader.tooltip')} onclick={() => menuAction(() => source.titleToHeader!(m.e.t))}>{tr('grid.menu.titleToHeader')}</button>
-								{/if}
-								{#if twoLevel}
-									{@const on = !!m.e.t.twoLevel}
-										<button
-											title={on
-												? tr('grid.menu.twoLevel.off.tooltip')
-												: tr('grid.menu.twoLevel.on.tooltip')}
-											onclick={() => menuAction(() => source.setTwoLevel!(m.e.t, !on))}>{on ? tr('grid.menu.twoLevel.off') : tr('grid.menu.twoLevel.on')}</button
-									>
-								{/if}
-								{#if follow}
-									{@const on = !!m.e.t.follows}
-									{@const what = followLabel(data?.choice?.name ?? '')}
-									<button
-										role="menuitemcheckbox"
-										aria-checked={on}
-										title={data?.choice?.formula
-											? on
-												? tr('grid.menu.follow.off.tooltip')
-												: tr('grid.menu.follow.on.formula.tooltip', { formula: data.choice.formula })
-											: on
-												? tr('grid.menu.follow.off.column.tooltip', { name: data?.choice?.name ?? '' })
-												: tr('grid.menu.follow.on.tooltip', { name: data?.choice?.name ?? '' })}
-										onclick={() => toggleFollow(m.e.t, !on)}><span class="check">{on ? '✓' : ''}</span>{tr('grid.menu.follow', { what })}</button
-									>
-								{/if}
-								{#if refresh}
-									{@const t = m.e.t}
-									<button title={tr('grid.menu.refresh.tooltip', { name: t.query?.name ?? '' })} onclick={() => menuAction(() => source.refreshTable!(t))}>{tr('grid.menu.refresh')}</button>
-										{#if source.setHandKey && t.columns.some((k) => k.hand && !k.formula)}
-											<button title={tr('grid.menu.handKey.tooltip')} onclick={() => openHandKey(t)}>{tr('grid.menu.handKey')}</button>
-										{/if}
-										{#if source.forgetHandKept && t.handKept}
-											<button title={tr('grid.menu.handForget.tooltip')} onclick={() => menuAction(() => source.forgetHandKept!(t))}>{tr('grid.menu.handForget', { n: t.handKept })}</button>
-										{/if}
-								{/if}
-								{#if addShared}
-									<button title={tr('grid.menu.addShared.tooltip')} onclick={() => { const n = m.e.t.name; menu = null; onaddshared?.(n); }}>{tr('grid.menu.addShared')}</button>
-								{/if}
-								{#if share}
-									<button title={tr('grid.menu.shareData.tooltip')} onclick={() => { const n = m.e.t.name; menu = null; onsharedata?.(n); }}>{tr('grid.menu.shareData')}</button>
-								{/if}
-								{#if pushSource}
-									<button title={tr('grid.menu.pushSource.tooltip')} onclick={() => { const n = m.e.t.name; menu = null; onpushsource?.(n); }}>{tr('grid.menu.pushSource')}</button>
-								{/if}
-								{#if source.convertToRange}
-									<button disabled={!!why} title={why || tr('grid.menu.toRange.tooltip')} onclick={() => menuAction(() => source.convertToRange!(m.e.t))}>{tr('grid.menu.toRange')}</button>
-								{/if}
-								{#if source.deleteTables}
-									<hr />
-									<button
-										disabled={!!why}
-										title={why || undefined}
-										onclick={() => {
-											if (m.e.t.rows + (m.e.t.hidden ?? 0) > CONFIRM_DELETE_ROWS) menu = { ...m, confirmDelete: true };
-											else deleteTable(m.e.t);
-										}}>{tr('grid.menu.deleteTable')}</button
-									>
-								{/if}
-							</Submenu>
-						{:else}
-							{@render basicItem(
-								id,
-								() => {
-									menu = null;
-									if (m.rowOnly && deleteWholeColumns()) return;
-									clearSelection();
-								},
-								() => (m.rowOnly ? rulesActive() : openRules(m.e, m.i))
-							)}
-						{/if}
-					{/snippet}
-					{#each menuGroups as g, gi (gi)}
-						{#if gi}<hr />{/if}
-						{#each g as id (id)}{@render item(id)}{/each}
-					{/each}
-				{/if}
-			</div>
-		{/if}
+		<CellMenus v={cellMenusView} />
 		{#if followMenu}
 			{@const m = followMenu}
 			{@const what = followLabel(data?.choice?.name ?? '')}
@@ -6803,133 +6469,6 @@
 						}}>{tr('grid.key.dismiss')}</button
 					>
 				{/if}
-			</div>
-		{/if}
-		{#if freeMenu}
-			{@const m = freeMenu}
-			{@const below = groupCandidate()}
-			<!-- Cellules libres verrouillées (protection, classeur partagé sans droit de conception) : pas d'actions qui les changent. -->
-			{@const free = !locked && !structure}
-			{@const cell = !m.kind}
-			{@const join = cell && free && !!source.joinTable && keptOut(active.row, active.col)}
-			{@const asTable = cell && free && !!source.formatAsTable && inRangeZone(active.row, active.col)}
-			{@const under = cell && free ? titleTableAt(active.row, active.col) : undefined}
-			{@const spilled = cell && free && source.convertSpill ? spillUnder(active.row, active.col) : null}
-			{@const toValues = cell && free && !!source.rangeToValues && !spilled && formulasInSelection()}
-			{@const fp = cell && source.setPivot ? pivotAt(active.row, active.col) : null}
-			{@const fold = fp?.rows ? fp : null}
-			<!-- Tout tableau croisé, même en erreur (source introuvable) : il se supprime ; en erreur, il se rattache à un autre tableau. -->
-			{@const dp = cell && source.deletePivot ? (pivotAt(active.row, active.col) ?? brokenPivotAt(pivots, active.row, active.col)) : null}
-			{@const pv = dp ?? fold}
-			{@const pasteChart = !!chartClip}
-			{@const pasteButton = !!buttonsLayer?.hasClip()}
-			{@const lines = !!source.sheetLines}
-			{@const menuGroups = m.kind
-				? headerMenu({
-						asGroups: !!below,
-						pasteChart,
-						pasteButton,
-						format: lines && !!source.applyStyle,
-						rules: lines && !!source.setSheetRules,
-						lines: linesSubmenu(linesOpts(m.kind)).length > 0
-					})
-				: freeCellMenu({
-						ref: !!refItems?.go || !!refItems?.cite?.list?.length,
-						asHeader: !!under,
-						join,
-						asTable,
-						spill: !!spilled,
-						toValues,
-						asGroups: !!below,
-						pasteChart,
-						pasteButton,
-						format: !!source.applyStyle,
-						rules: !!source.setSheetRules,
-						note: !!source.setNote,
-						comment: !!comments,
-						lines,
-						pivot: !!pv
-					})}
-			{#snippet pivotItem(id: string)}
-				{#if fold && id === 'expand'}
-					<!-- Comme le sous-menu « Développer/Réduire » d'Excel. -->
-					<button disabled={!foldTarget(pivotRowOf(fold, active.row), true)} onclick={() => foldPivot(fold, 'expand')}>{tr('grid.pivot.fold.expand')}</button>
-				{:else if fold && id === 'collapse'}
-					<button disabled={!foldTarget(pivotRowOf(fold, active.row), false)} onclick={() => foldPivot(fold, 'collapse')}>{tr('grid.pivot.fold.collapse')}</button>
-				{:else if fold?.rows && id === 'expandAll'}
-					<button disabled={!canFoldAll(fold.rows, true)} onclick={() => foldPivot(fold, 'expandAll')}>{tr('grid.pivot.fold.expandAll')}</button>
-				{:else if fold?.rows && id === 'collapseAll'}
-					<button disabled={!canFoldAll(fold.rows, false)} onclick={() => foldPivot(fold, 'collapseAll')}>{tr('grid.pivot.fold.collapseAll')}</button>
-				{:else if dp && id === 'source'}
-					<button title={tr('grid.pivot.menu.source.tooltip')} onclick={() => pickPivotSource(dp)}>{tr('grid.pivot.menu.source')}</button>
-				{:else if dp && id === 'move'}
-					<button title={tr('grid.pivot.menu.move.tooltip')} onclick={() => startPivotMove(dp)}>{tr('grid.pivot.menu.move')}</button>
-				{:else if dp && id === 'delete'}
-					<button onclick={() => removePivot(dp)}>{tr('grid.pivot.delete')}</button>
-				{/if}
-			{/snippet}
-			{#snippet item(id: string)}
-				{@const at = { row: active.row, col: active.col }}
-				{#if id === 'ref'}
-					{@render refMenuItems()}
-				{:else if id === 'asHeader' && under}
-					{@const t = under}
-					<button title={tr('grid.menu.asHeader.tooltip')} onclick={() => menuAction(() => source.titleToHeader!(t))}>{tr('grid.menu.asHeader', { table: t.name })}</button>
-				{:else if id === 'join'}
-					<button title={tr('grid.menu.join.tooltip')} onclick={() => menuAction(() => source.joinTable!(at.row, at.col))}>{tr('grid.menu.join')}</button>
-				{:else if id === 'asTable'}
-					<button title={tr('grid.menu.asTable.tooltip')} onclick={() => menuAction(() => source.formatAsTable!(at.row, at.col))}>{tr('grid.menu.asTable')}</button>
-				{:else if id === 'spillLinked' && spilled}
-					{@const sp = { row: spilled.row, col: spilled.col }}
-					<button title={tr('grid.menu.spillLinked.tooltip')} onclick={() => menuAction(() => source.convertSpill!(sp.row, sp.col, true))}>{tr('grid.menu.spillLinked')}</button>
-				{:else if id === 'spillValues' && spilled}
-					{@const sp = { row: spilled.row, col: spilled.col }}
-					<button title={tr('grid.menu.spillValues.tooltip')} onclick={() => menuAction(() => source.convertSpill!(sp.row, sp.col, false))}>{tr('grid.menu.spillValues')}</button>
-				{:else if id === 'toValues'}
-					<button title={tr('grid.menu.rangeToValues.tooltip')} onclick={() => toValuesActive()}>{tr('grid.menu.toValues')}</button>
-				{:else if id === 'asGroups' && below}
-					<!-- Ligne juste au-dessus de l'en-tête d'un tableau : ses cases peuvent devenir les groupes d'en-têtes. -->
-					<button title={tr('grid.menu.asGroups.tooltip', { table: below.t.name })} onclick={() => menuAction(() => source.setTwoLevel!(below.t, true))}>{tr('grid.menu.asGroups')}</button>
-				{:else if id === 'insertDialog'}
-					<button onclick={() => openLinesDialog(true, m.x, m.y)}>{tr('grid.lines.insert')}</button>
-				{:else if id === 'clearAll'}
-					<button
-						title={tr('grid.menu.clearAll.tooltip')}
-						onclick={() => {
-							menu = freeMenu = null;
-							clearSelection(selection(), true);
-						}}>{tr('common.delete')}</button
-					>
-				{:else if id === 'linesTop' && m.kind}
-					{@render linesSub(m.kind, m.x, m.y)}
-				{:else if id === 'pivot' && pv}
-					<!-- Le tableau croisé, titré de son nom (ou de sa source) ; sa suppression en dernier. -->
-					{@const pname = pv.config.name ? tr('grid.pivot.menu.title', { name: clip(pv.config.name) }) : tr('grid.pivot.menu.titleOf', { source: clip(pv.config.source) })}
-					<Submenu label={pname} title={clipped(pv.config.name || pv.config.source) ? pv.config.name || pv.config.source : undefined}>
-						{#each pivotSubmenu({ fold: !!fold, source: !!dp?.error && !!source.setPivot && pivotSources(dp).length > 0, move: !!dp && !!source.movePivot, remove: !!dp }) as g, gi (gi)}
-							{#if gi}<hr />{/if}
-							{#each g as pid (pid)}{@render pivotItem(pid)}{/each}
-						{/each}
-					</Submenu>
-				{:else}
-					{@render basicItem(
-						id,
-						() => {
-							menu = freeMenu = null;
-							if (!deleteWholeColumns()) clearSelection();
-						},
-						rulesActive
-					)}
-				{/if}
-			{/snippet}
-			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (freeMenu = null)}>
-				<!-- Ordre (demande de Louis, ctxmenu.ts), comme sur un tableau : le sous-menu de
-				     l'objet (tableau croisé) ; la situation ; le presse-papiers ; effacement et mise
-				     en forme ; la note ; insertion et suppression. -->
-				{#each menuGroups as g, gi (gi)}
-					{#if gi}<hr />{/if}
-					{#each g as id (id)}{@render item(id)}{/each}
-				{/each}
 			</div>
 		{/if}
 		{#if linesDlg}
