@@ -66,7 +66,7 @@
 	},
 	"sourceKind": {
 		"csv": "Fichier texte ou CSV",
-		"xlsx": "Classeur Excel",
+		"xlsx": "Classeur .xlsx",
 		"json": "Fichier JSON",
 		"parquet": "Fichier Parquet",
 		"sqlite": "Base SQLite (fichier)",

@@ -1370,7 +1370,7 @@
 		"none": "La cellule active n’a pas de note",
 		"edit": "Modifier la note",
 		"delete": "Supprimer la note",
-		"insert": "Insérer une note",
+		"insert": "Nouvelle note",
 		"unpin": "Ne plus épingler (infobulle au survol)",
 		"pin": "Épingler : toujours afficher la note",
 		"placeholder": "Note de la cellule"

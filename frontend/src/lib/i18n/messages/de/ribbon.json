@@ -67,7 +67,7 @@
 		"export": "Exportieren",
 		"exportTable": "Die Tabelle als CSV…",
 		"exportSheet": "Das ganze Blatt als CSV…",
-		"exportXlsx": "Die Excel-Arbeitsmappe (.xlsx)…",
+		"exportXlsx": "Die .xlsx-Arbeitsmappe…",
 		"exportOds": "Die OpenDocument-Arbeitsmappe (.ods)…",
 		"exportSql": "SQL-Skript (.sql)…",
 		"print": "Drucken / PDF…",
@@ -469,7 +469,7 @@
 			"tooltip": "Neue Abfrage aus einer CSV-Datei"
 		},
 		"xlsx": {
-			"label": "Excel-Arbeitsmappe",
+			"label": ".xlsx-Arbeitsmappe",
 			"tooltip": "Neue Abfrage aus einer Tabelle einer .xlsx-Arbeitsmappe"
 		},
 		"otherFiles": {

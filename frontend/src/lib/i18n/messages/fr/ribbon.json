@@ -67,7 +67,7 @@
 		"export": "Exporter",
 		"exportTable": "Le tableau en CSV…",
 		"exportSheet": "La feuille entière en CSV…",
-		"exportXlsx": "Le classeur Excel (.xlsx)…",
+		"exportXlsx": "Le classeur .xlsx…",
 		"exportOds": "Le classeur OpenDocument (.ods)…",
 		"exportSql": "Script SQL (.sql)…",
 		"print": "Imprimer / PDF…",
@@ -469,7 +469,7 @@
 			"tooltip": "Nouvelle requête à partir d’un fichier CSV"
 		},
 		"xlsx": {
-			"label": "Classeur Excel",
+			"label": "Classeur .xlsx",
 			"tooltip": "Nouvelle requête à partir d’un tableau d’un classeur .xlsx"
 		},
 		"otherFiles": {

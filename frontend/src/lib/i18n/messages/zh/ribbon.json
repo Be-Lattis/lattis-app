@@ -67,7 +67,7 @@
 		"export": "导出",
 		"exportTable": "表格导出为 CSV…",
 		"exportSheet": "整个工作表导出为 CSV…",
-		"exportXlsx": "Excel 工作簿 (.xlsx)…",
+		"exportXlsx": ".xlsx 工作簿…",
 		"exportOds": "OpenDocument 工作簿 (.ods)…",
 		"exportSql": "SQL 脚本 (.sql)…",
 		"print": "打印 / PDF…",
@@ -469,7 +469,7 @@
 			"tooltip": "从 CSV 文件新建查询"
 		},
 		"xlsx": {
-			"label": "Excel 工作簿",
+			"label": ".xlsx 工作簿",
 			"tooltip": "根据 .xlsx 工作簿中的表格新建查询"
 		},
 		"otherFiles": {

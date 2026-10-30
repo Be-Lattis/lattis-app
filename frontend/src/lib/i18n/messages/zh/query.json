@@ -66,7 +66,7 @@
 	},
 	"sourceKind": {
 		"csv": "文本或 CSV 文件",
-		"xlsx": "Excel 工作簿",
+		"xlsx": ".xlsx 工作簿",
 		"json": "JSON 文件",
 		"parquet": "Parquet 文件",
 		"sqlite": "SQLite 数据库（文件）",

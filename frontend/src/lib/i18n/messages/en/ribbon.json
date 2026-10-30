@@ -67,7 +67,7 @@
 		"export": "Export",
 		"exportTable": "The table as CSV…",
 		"exportSheet": "The whole sheet as CSV…",
-		"exportXlsx": "The Excel workbook (.xlsx)…",
+		"exportXlsx": "The .xlsx workbook…",
 		"exportOds": "The OpenDocument workbook (.ods)…",
 		"exportSql": "SQL script (.sql)…",
 		"print": "Print / PDF…",
@@ -469,7 +469,7 @@
 			"tooltip": "New query from a CSV file"
 		},
 		"xlsx": {
-			"label": "Excel workbook",
+			"label": ".xlsx workbook",
 			"tooltip": "New query from a table of an .xlsx workbook"
 		},
 		"otherFiles": {

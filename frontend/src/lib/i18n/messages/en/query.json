@@ -66,7 +66,7 @@
 	},
 	"sourceKind": {
 		"csv": "Text or CSV file",
-		"xlsx": "Excel workbook",
+		"xlsx": ".xlsx workbook",
 		"json": "JSON file",
 		"parquet": "Parquet file",
 		"sqlite": "SQLite database (file)",

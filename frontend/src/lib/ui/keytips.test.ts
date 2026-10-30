@@ -57,7 +57,7 @@ describe('KeyTips du ruban', () => {
 		const insertion = assignKeyTips(['Tableau croisé dynamique', 'Tableau', 'Data Lake Lattis', 'Histogramme', 'Courbes', 'Secteurs', 'Nuage de points', 'Autres graphiques ▾', 'Bouton', 'Champ'], commandTips());
 		expect(insertion.slice(0, 2)).toEqual(['V', 'T']);
 		prefixFree(insertion);
-		const donnees = assignKeyTips(['Texte/CSV', 'Classeur Excel', 'Autres fichiers ▾', 'Base de données ▾', 'Web', 'À partir du tableau', 'Actualiser tout', 'Requêtes et connexions', 'Trier A → Z', 'Trier Z → A', 'Filtrer', 'Effacer', 'Erreurs seulement', 'Convertir', 'Supprimer les doublons', 'Validation des données'], commandTips());
+		const donnees = assignKeyTips(['Texte/CSV', 'Classeur .xlsx', 'Autres fichiers ▾', 'Base de données ▾', 'Web', 'À partir du tableau', 'Actualiser tout', 'Requêtes et connexions', 'Trier A → Z', 'Trier Z → A', 'Filtrer', 'Effacer', 'Erreurs seulement', 'Convertir', 'Supprimer les doublons', 'Validation des données'], commandTips());
 		prefixFree(donnees);
 		const formules = assignKeyTips(['Insérer une fonction', 'Somme automatique', 'REFERENCE', 'Afficher les liens', 'Calculer'], commandTips());
 		prefixFree(formules);
