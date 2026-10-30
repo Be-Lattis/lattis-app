@@ -6,6 +6,22 @@ import (
 	"testing"
 )
 
+// Deux nouveaux classeurs créés dans le même tick de l'horloge ont chacun
+// leur dossier de travail (avant : le second échouait, « déjà ouvert »).
+func TestNewWorkDirsDistinct(t *testing.T) {
+	seen := map[string]bool{}
+	for range 100 {
+		dir, err := workDir("")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if seen[dir] {
+			t.Fatalf("dossier de travail en double : %s", dir)
+		}
+		seen[dir] = true
+	}
+}
+
 // L'exécutable d'un dépôt de sources (bin/lattis.exe, go.mod au-dessus) est
 // reconnu ; une version installée, non.
 func TestCheckout(t *testing.T) {

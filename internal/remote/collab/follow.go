@@ -56,11 +56,16 @@ func (w *worker) connected() {
 
 // disconnected : l'écoute est perdue ; le classeur passe hors ligne.
 func (w *worker) disconnected(reason string) {
+	// Sous w.mu, comme le passage en ligne d'un tour (cycle) : un tour
+	// commencé avant la coupure ne remet pas le classeur en ligne après.
 	w.mu.Lock()
 	w.listening = false
-	w.mu.Unlock()
-	if w.e.link.Online() || w.e.link.State().Offline != reason {
+	tell := w.e.link.Online() || w.e.link.State().Offline != reason
+	if tell {
 		w.e.link.SetOnline(false, reason)
+	}
+	w.mu.Unlock()
+	if tell {
 		w.changed(Event{State: true})
 	}
 }
@@ -159,10 +164,17 @@ func (w *worker) cycle(ctx context.Context) {
 		return
 	}
 	ev := Event{}
+	w.mu.Lock()
+	if !w.listening {
+		// Coupé depuis le début du tour (disconnected) : reste hors ligne.
+		w.mu.Unlock()
+		return
+	}
 	if !w.e.link.Online() {
 		w.e.link.SetOnline(true, "")
 		ev.State = true
 	}
+	w.mu.Unlock()
 	if full || acl {
 		// Droits relus avant l'envoi : une écriture devenue interdite est
 		// refusée en local (grille grisée, message) plutôt qu'au serveur.

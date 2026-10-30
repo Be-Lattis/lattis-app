@@ -857,7 +857,12 @@ func SyncLayoutAs(ctx context.Context, srv Server, db *store.Store, info *Info, 
 	}
 	// Réception, dans une transaction locale : ce qui a changé sur le
 	// serveur (et pas sur le poste) est appliqué hors du journal.
+	start := res.Gen
 	err = db.Write(ctx, func(tx *sql.Tx) error {
+		// Écritures du poste faites depuis la lecture du début (saisie pendant
+		// l'aller-retour au serveur) : gardées ci-dessous, mais pas envoyées ;
+		// Gen reste celui du début pour qu'un nouveau tour les envoie.
+		quiet := db.WatchGen() == start
 		l2, err := readLocal(ctx, tx, ids)
 		if err != nil {
 			return err
@@ -909,7 +914,9 @@ func SyncLayoutAs(ctx context.Context, srv Server, db *store.Store, info *Info, 
 			}
 		}
 		res.Applied, res.Refused, res.Forgot = a.applied, a.nrefused, a.forget
-		res.Gen = db.WatchGen()
+		if quiet {
+			res.Gen = db.WatchGen()
+		}
 		return nil
 	})
 	return res, err

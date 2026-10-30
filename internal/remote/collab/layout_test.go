@@ -266,8 +266,8 @@ func TestLayoutFollowed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	f, alice, bob, _ := setup(t)
-	go bob.e.Follow(ctx, f.As("bob"), time.Hour, nil)
-	go alice.e.Follow(ctx, f.As("alice"), time.Hour, nil)
+	bob.follow(ctx, f.As("bob"), time.Hour, nil)
+	alice.follow(ctx, f.As("alice"), time.Hour, nil)
 	waitOnline(t, bob, alice)
 	_, err := alice.d.SetCell(ctx, 1, 10, 5, "test")
 	must(t, err)
@@ -276,4 +276,49 @@ func TestLayoutFollowed(t *testing.T) {
 		r, _ := free(t, bob, 1, 10, 5)
 		return r == "test"
 	})
+}
+
+// midSync : le serveur d'Alice, qui fait faire une saisie sur son poste
+// pendant l'aller-retour de la synchronisation de la mise en page (lecture
+// du serveur), une fois.
+type midSync struct {
+	workbook.Server
+	during func()
+}
+
+func (s *midSync) Delta(ctx context.Context, fn func(workbook.Reader) error) error {
+	if f := s.during; f != nil {
+		s.during = nil
+		f()
+	}
+	return s.Server.Delta(ctx, fn)
+}
+
+// Saisie faite pendant une synchronisation de la mise en page : gardée, et
+// encore à envoyer (LayoutDirty) ; elle part au tour suivant. Avant, la
+// synchronisation la comptait comme envoyée : elle n'arrivait chez les
+// collègues qu'à la modification suivante (TestLayoutFollowed sous -race).
+func TestLayoutEditDuringSync(t *testing.T) {
+	ctx := context.Background()
+	f, alice, bob, _ := setup(t)
+	srv := &midSync{Server: f.As("alice")}
+	alice.e.SetServer(srv)
+	_, err := alice.d.SetCell(ctx, 1, 10, 0, "avant")
+	must(t, err)
+	srv.during = func() {
+		_, err := alice.d.SetCell(ctx, 1, 11, 0, "pendant")
+		must(t, err)
+	}
+	alice.syncLayout(false)
+	wantFree(t, "Alice", alice, 1, 11, 0, "pendant", "pendant")
+	if !alice.e.LayoutDirty() {
+		t.Fatal("saisie faite pendant la synchronisation comptée comme envoyée")
+	}
+	alice.syncLayout(false)
+	if alice.e.LayoutDirty() {
+		t.Fatal("mise en page toujours à envoyer")
+	}
+	bob.syncLayout(true)
+	wantFree(t, "Bob", bob, 1, 10, 0, "avant", "avant")
+	wantFree(t, "Bob", bob, 1, 11, 0, "pendant", "pendant")
 }

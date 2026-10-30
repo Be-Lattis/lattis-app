@@ -32,6 +32,12 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Assistant IA : réponses plus courtes, qui commencent par le résultat.
 - Installeur Windows et mises à jour automatiques plus légers à télécharger (environ 20 Mo au lieu de 27).
 
+### Corrections
+
+- Classeur collaboratif : une mise en page (cellule libre, largeur, style…) modifiée pendant une synchronisation part aussitôt, au lieu d'attendre la modification suivante.
+- Classeur collaboratif : juste après une coupure du serveur, le classeur ne se dit plus « en ligne » par erreur.
+- Version web : deux classeurs créés au même instant s'ouvrent tous les deux (le second disait « ce classeur est déjà ouvert »).
+
 ## 0.5.1-beta (27/10/2026)
 
 ### Nouveautés

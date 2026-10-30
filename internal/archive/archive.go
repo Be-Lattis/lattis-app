@@ -289,6 +289,9 @@ var testRoot = sync.OnceValues(func() (string, error) {
 	return filepath.Join(dir, "work"), err
 })
 
+// newSeq numérote les nouveaux classeurs du processus (workDir).
+var newSeq atomic.Int64
+
 // workDir donne le répertoire de travail d'une archive : un nom dérivé de
 // son chemin canonique (PathKey), pour qu'une deuxième ouverture, par un
 // autre chemin vers le même fichier, tombe sur le même verrou.
@@ -297,7 +300,10 @@ func workDir(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	key := "new-" + time.Now().Format("20060102-150405.000000000")
+	// Nouveau classeur : l'heure seule ne suffit pas (deux classeurs créés
+	// dans le même tick de l'horloge, version web ou essais en parallèle,
+	// tombaient sur le même dossier : « ce classeur est déjà ouvert »).
+	key := fmt.Sprintf("new-%s-%d-%d", time.Now().Format("20060102-150405.000000000"), os.Getpid(), newSeq.Add(1))
 	if path != "" {
 		key = hashKey(PathKey(path))
 	}
