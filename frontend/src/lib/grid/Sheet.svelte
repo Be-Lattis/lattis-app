@@ -86,13 +86,13 @@
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
 	import type { PrintCell, PrintChart, PrintSource } from '#lib/print/sheetprint.js';
 	import PivotPanel from './PivotPanel.svelte';
-	import { panelAtCell, changeSource, startValues } from './pivotfields';
+	import { panelAtCell } from './pivotfields';
 	import { brokenPivotAt, pivotsCleared } from './pivotzone';
 	import { midEllipsis } from './midellipsis';
 	import { fitColumns, fitRows } from './autofit';
 	import { handAlign, handEditText, handKeptNote, handStart, pivotHandAt } from './pivothand';
 	import { pivotRangeRef, pivotRefText } from './pivotref';
-	import { placeAt, placedMessage, placeHint, placeKey, placesOnClick, type Placement } from './pivotplace';
+	import { placesOnClick, type Placement } from './pivotplace';
 	import SheetButtons from './SheetButtons.svelte';
 	import SheetObjects from './SheetObjects.svelte';
 	import { objectBox, type ObjectConfig, type ObjectKind, type SheetObject } from './objects';
@@ -136,6 +136,7 @@
 	import { createScrolling } from './sheet/scrolling.svelte.js';
 	import { createCharts } from './sheet/charts.svelte.js';
 	import { createFilters } from './sheet/filters.svelte.js';
+	import { createPivot } from './sheet/pivot.svelte.js';
 
 
 	interface Props {
@@ -5799,37 +5800,6 @@
 		pivots.find((p) => !p.error && (p.anchor ?? p.row) <= r1 && p.row + p.cells.length - 1 >= r0 && p.col <= c1 && p.col + p.cells[0].length - 1 >= c0);
 	/** Zone d'un tableau croisé sain sur la feuille, filtres de rapport compris. */
 	const pivotZone = (p: SheetPivot) => ({ r0: p.anchor ?? p.row, c0: p.col, r1: p.row + p.cells.length - 1, c1: p.col + p.cells[0].length - 1 });
-	/**
-	 * Tableau croisé que la sélection désigne pour un déplacement : elle est
-	 * dans un seul TCD, ou le couvre en entier sans rien prendre d'autre
-	 * (ni tableau, ni cellule remplie, ni autre TCD).
-	 */
-	function pivotHeld(sel: { r0: number; c0: number; r1: number; c1: number }): SheetPivot | undefined {
-		const pv = pivotIn(sel.r0, sel.c0, sel.r1, sel.c1);
-		if (!pv) return undefined;
-		const z = pivotZone(pv);
-		if (sel.r0 >= z.r0 && sel.r1 <= z.r1 && sel.c0 >= z.c0 && sel.c1 <= z.c1) return pv;
-		if (sel.r0 > z.r0 || sel.c0 > z.c0 || sel.r1 < z.r1 || sel.c1 < z.c1) return undefined;
-		const outside = (r: number, c: number) => r < z.r0 || r > z.r1 || c < z.c0 || c > z.c1;
-		if (entries.some((e) => topRow(e.t) <= sel.r1 && e.last >= sel.r0 && e.t.col <= sel.c1 && e.lastCol >= sel.c0)) return undefined;
-		const meets = (q: { r0: number; c0: number; r1: number; c1: number }) => q.r0 <= sel.r1 && q.r1 >= sel.r0 && q.c0 <= sel.c1 && q.c1 >= sel.c0;
-		if (pivots.some((o) => o.id !== pv.id && !o.error && meets(pivotZone(o)))) return undefined;
-		for (const k of cells.keys()) {
-			const [r, c] = k.split(',').map(Number);
-			if (r >= sel.r0 && r <= sel.r1 && c >= sel.c0 && c <= sel.c1 && outside(r, c)) return undefined;
-		}
-		return pv;
-	}
-	// Un tableau croisé est calculé : ses cellules ne se saisissent pas (comme Excel).
-	const PIVOT_READONLY = $derived(tr('grid.pivot.readOnly'));
-	// Suppr sur une partie d'un tableau croisé (Excel refuse aussi).
-	const PIVOT_PARTIAL = $derived(tr('grid.pivot.partial'));
-	// Tableau chargé par une requête (Power Query) : ses cellules ne se
-	// saisissent pas, l'actualisation les remplacerait. Ses bords (ligne
-	// dessous, colonnes à côté) : le moteur décide (un total, une note ou une
-	// remarque restent à part ; une nouvelle ligne ou colonne est refusée, avec
-	// le même message, ErrQueryTable).
-	const QUERY_READONLY = $derived(tr('grid.query.readOnly'));
 	// Ses colonnes saisies (tapées à droite de l'en-tête, docs/decisions/0008)
 	// se modifient : leurs valeurs suivent les lignes du résultat.
 	/** Colonnes chargées (pas saisies) du tableau de requête e touchées par les colonnes c0…c1 de la feuille. */
@@ -5837,8 +5807,6 @@
 		for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) if (!e.t.columns[c - e.t.col]?.hand) return true;
 		return false;
 	};
-	/** Tableau de requête qui contient la cellule (hors colonnes saisies). */
-	const queryAt = (r: number, c: number) => entries.find((e) => e.t.query && r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol && loadedIn(e, c, c));
 	/** Un tableau de requête touché par la plage dans ses colonnes chargées (sans la couvrir en entier : le supprimer reste permis). */
 	const queryIn = (r0: number, c0: number, r1: number, c1: number, whole = false) =>
 		entries.find(
@@ -5851,72 +5819,70 @@
 				loadedIn(e, c0, c1) &&
 				!(whole && e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1)
 		);
+	// Tableau croisé dynamique : sheet/pivot.svelte.ts (accès de createPivot à la feuille).
+	const pivotCtl = createPivot({
+		get pivotIn() { return pivotIn; },
+		get pivotZone() { return pivotZone; },
+		get entries() { return entries; },
+		get topRow() { return topRow; },
+		get pivots() { return pivots; },
+		get cells() { return cells; },
+		get panel() { return panel; }, set panel(v) { panel = v; },
+		get source() { return source; },
+		get menuAction() { return menuAction; },
+		get say() { return say; },
+		get pivotSourcePick() { return pivotSourcePick; }, set pivotSourcePick(v) { pivotSourcePick = v; },
+		get sourceColumns() { return sourceColumns; },
+		get freeMenu() { return freeMenu; }, set freeMenu(v) { freeMenu = v; },
+		get active() { return active; }, set active(v) { active = v; },
+		get anchor() { return anchor; }, set anchor(v) { anchor = v; },
+		get pivotAt() { return pivotAt; },
+		get targetTable() { return targetTable; },
+		get targetCol() { return targetCol; },
+		get openPivotOnLoad() { return openPivotOnLoad; }, set openPivotOnLoad(v) { openPivotOnLoad = v; },
+		get writing() { return writing; }, set writing(v) { writing = v; },
+		get placing() { return placing; }, set placing(v) { placing = v; },
+		get closeMenus() { return closeMenus; },
+		get menu() { return menu; }, set menu(v) { menu = v; },
+		get placeHover() { return placeHover; }, set placeHover(v) { placeHover = v; },
+		get placeSize() { return placeSize; }, set placeSize(v) { placeSize = v; },
+		get onplacing() { return onplacing; },
+		get wrap() { return wrap; },
+		get schedule() { return schedule; },
+		get scroller() { return scroller; },
+		get sheetId() { return sheetId; },
+		get message() { return message; }, set message(v) { message = v; },
+		get refreshFx() { return refreshFx; },
+		get refreshStatus() { return refreshStatus; }
+	});
+	const { pivotHeld, removePivot, repointPivot, pickPivotSource, onPlaceKey, startPivotMove, placePivotAt } = pivotCtl;
+	export const pivotActive = pivotCtl.pivotActive;
+	export const cancelPlacement = pivotCtl.cancelPlacement;
+	export const placeOnNewSheet = pivotCtl.placeOnNewSheet;
+
+	// Un tableau croisé est calculé : ses cellules ne se saisissent pas (comme Excel).
+	const PIVOT_READONLY = $derived(tr('grid.pivot.readOnly'));
+	// Suppr sur une partie d'un tableau croisé (Excel refuse aussi).
+	const PIVOT_PARTIAL = $derived(tr('grid.pivot.partial'));
+	// Tableau chargé par une requête (Power Query) : ses cellules ne se
+	// saisissent pas, l'actualisation les remplacerait. Ses bords (ligne
+	// dessous, colonnes à côté) : le moteur décide (un total, une note ou une
+	// remarque restent à part ; une nouvelle ligne ou colonne est refusée, avec
+	// le même message, ErrQueryTable).
+	const QUERY_READONLY = $derived(tr('grid.query.readOnly'));
+	/** Tableau de requête qui contient la cellule (hors colonnes saisies). */
+	const queryAt = (r: number, c: number) => entries.find((e) => e.t.query && r >= e.t.row && r <= e.last && c >= e.t.col && c <= e.lastCol && loadedIn(e, c, c));
 
 	// Volet latéral : champs du TCD ou mise en forme du graphique.
 	let panel = $state<{ kind: 'pivot' | 'chart'; id: number } | null>(null);
 	/** TCD dont le volet s'ouvre sur la liste des sources (« Changer la source… »). */
 	let pivotSourcePick = $state<number | null>(null);
 
-	/** Supprime un tableau croisé, en erreur ou non (volet, clic droit). */
-	function removePivot(p: SheetPivot) {
-		if (panel?.kind === 'pivot' && panel.id === p.id) panel = null;
-		const del = source.deletePivot;
-		void menuAction(del && (() => del(p.id))).then((ok) => ok && say(tr('grid.pivot.deleted', { name: p.config.name ?? '' })));
-	}
-
 	/** Tableaux qui peuvent devenir la source d'un TCD (pas un TCD). */
 	const pivotSources = (p: SheetPivot) => sources.filter((s) => s.kind !== 'pivot' && s.name !== p.config.name).map((s) => s.name);
 
-	/** Rattache un TCD à un autre tableau source : les champs présents y sont gardés. */
-	function repointPivot(p: SheetPivot, name: string) {
-		const set = source.setPivot;
-		pivotSourcePick = null;
-		const cfg = changeSource($state.snapshot(p.config) as PivotConfig, name, sourceColumns(name).map((c) => ({ name: c.name, type: c.type })));
-		void menuAction(set && (() => set(p.id, cfg)), true);
-	}
-
-	/** « Changer la source… » : ouvre le volet du TCD sur la liste des sources. */
-	function pickPivotSource(p: SheetPivot) {
-		freeMenu = null;
-		active = { row: p.anchor ?? p.row, col: p.col };
-		anchor = { ...active };
-		pivotSourcePick = p.id;
-		panel = { kind: 'pivot', id: p.id };
-	}
 	let openPivotOnLoad = false;
 	let pivotPanelAt = '';
-
-	/** Crée un tableau croisé à partir du tableau actif, ou ouvre le volet de celui sous la cellule active. */
-	export function pivotActive() {
-		const p = pivotAt(active.row, active.col) ?? pivots.find((p) => p.row === active.row && p.col === active.col);
-		if (p) {
-			panel = { kind: 'pivot', id: p.id };
-			return;
-		}
-		const e = targetTable();
-		if (!e || !source.createPivot) {
-			say(tr('grid.pivot.placeActive'));
-			return;
-		}
-		const k = e.t.columns[targetCol(e)];
-		// La colonne active en lignes, le nombre de lignes en valeur
-		// (startValues) ; le volet s'ouvre pour la suite.
-		const first = k && !k.formula ? k.name : (e.t.columns.find((c) => !c.formula)?.name ?? '');
-		const cfg: PivotConfig = { source: e.t.name, rowFields: [first], values: startValues() };
-		// Le premier clic sur une cellule (de n'importe quelle feuille) le
-		// pose ; « Nouvelle feuille » dans la barre d'état garde l'ancienne
-		// façon (pivotplace.ts).
-		if (source.createPivotAt) startPlacement({ kind: 'create', config: cfg, source: e.t.name });
-		else pivotOnNewSheet(cfg);
-	}
-
-	/** Crée le tableau croisé sur une nouvelle feuille (comme Excel par défaut). */
-	function pivotOnNewSheet(cfg: PivotConfig) {
-		const create = source.createPivot;
-		if (!create) return;
-		openPivotOnLoad = true;
-		writing = writing.catch(() => undefined).then(() => create(cfg).then(() => undefined, (err) => say(errorText(err))));
-	}
 
 	// --- Pose d'un tableau croisé à la cellule cliquée (pivotplace.ts) -------
 	// Insertion › Tableau croisé, clic droit › Déplacer : le mode ne bloque
@@ -5929,88 +5895,6 @@
 	let placeHover = $state<{ row: number; col: number } | null>(null);
 	/** Taille du tableau croisé déplacé (lignes × colonnes) ; une cellule pour une création. */
 	let placeSize = { h: 1, w: 1 };
-
-	function onPlaceKey(ev: KeyboardEvent) {
-		if (!placing || placeKey(ev.key) !== 'cancel') return;
-		ev.preventDefault();
-		ev.stopPropagation();
-		cancelPlacement();
-		say(tr('grid.pivot.place.cancelled'));
-	}
-
-	function startPlacement(p: Placement<PivotConfig>) {
-		closeMenus();
-		menu = null;
-		if (!placing) window.addEventListener('keydown', onPlaceKey, true);
-		placing = p;
-		placeHover = null;
-		placeSize = { h: 1, w: 1 };
-		onplacing?.({ hint: placeHint(p), create: p.kind === 'create' });
-		wrap?.focus();
-		schedule();
-	}
-
-	/** Quitte la pose sans rien faire (Échap, bouton Annuler de la barre d'état). */
-	export function cancelPlacement() {
-		if (!placing) return;
-		placing = null;
-		placeHover = null;
-		window.removeEventListener('keydown', onPlaceKey, true);
-		onplacing?.(null);
-		if (scroller) scroller.style.cursor = '';
-		schedule();
-	}
-
-	/** « Nouvelle feuille » pendant la pose d'un nouveau tableau croisé : l'ancienne façon. */
-	export function placeOnNewSheet() {
-		const p = placing;
-		if (p?.kind !== 'create') return;
-		cancelPlacement();
-		pivotOnNewSheet(p.config);
-	}
-
-	/** Clic droit › Déplacer : la pose d'un tableau croisé existant. */
-	function startPivotMove(p: SheetPivot) {
-		const top = p.anchor ?? p.row;
-		startPlacement({ kind: 'move', id: p.id, name: p.config.name ?? '', sheet: sheetId(), row: top, col: p.col });
-		if (!p.error) placeSize = { h: p.row + p.cells.length - top, w: p.cells[0]?.length ?? 1 };
-	}
-
-	/** Le clic sur la cellule : pose (création ou déplacement), en une étape d'annulation. */
-	function placePivotAt(cell: { row: number; col: number }) {
-		const p = placing;
-		if (!p) return;
-		const op = placeAt(p, sheetId(), cell.row, cell.col);
-		cancelPlacement();
-		if (op.op === 'none') {
-			say(placedMessage(op));
-			return;
-		}
-		const run =
-			op.op === 'create'
-				? source.createPivotAt && ((create) => () => create(op.row, op.col, op.config))(source.createPivotAt)
-				: source.movePivot && ((move) => () => move(op.id, op.row, op.col))(source.movePivot);
-		if (!run) return;
-		if (op.op === 'create') openPivotOnLoad = true;
-		writing = writing.catch(() => undefined).then(() =>
-			run().then(
-				() => {
-					if (op.op === 'move') {
-						active = { row: op.row, col: op.col };
-						anchor = { ...active };
-					}
-					message = placedMessage(op);
-					refreshFx();
-					refreshStatus();
-					schedule();
-				},
-				(err) => {
-					openPivotOnLoad = false;
-					say(errorText(err));
-				}
-			)
-		);
-	}
 
 	/**
 	 * Tableau visé par une commande de tableau (TCD, graphique, tri, filtre,
