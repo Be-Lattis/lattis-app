@@ -27,11 +27,10 @@
 	import { autoHeight, BASE_PX, cellFont, fontPx, headerHeight, headerTextWidth, lineHeight, wrapLines } from './textwrap';
 	import { AutoRows } from './rowfit';
 	import { arrowNotes, arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
-	import { stepZoom } from './zoom';
-	import { isDrag, inertia, LONG_PRESS_MS, MIN_SPEED, pinchZoom, Velocity } from './touch';
-	import { onObject, PanGesture, pansWith, SpaceHold } from './pan';
-	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
-	import { afterWidthChange, keepInView, seenIn, sideRoom, type Span as XSpan } from './keepinview';
+	import { Velocity } from './touch';
+	import { PanGesture, SpaceHold } from './pan';
+	import { panes, reveal, toGrid, type Pane } from './panes';
+	import { afterWidthChange, sideRoom } from './keepinview';
 	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
 	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvAlertOf, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
@@ -136,6 +135,7 @@
 	import { type Column, type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type ColumnFilter, type PageBreaksView, type SheetTable, type SheetData, type LinesOp, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, GUTTER_PAD, GUTTER_MAX, GUTTER_KEY_MAX, FONT, FONT_BOLD, FONT_SMALL, FONT_TINY } from './sheet/consts';
 	import { createFind } from './sheet/find.svelte.js';
+	import { createScrolling } from './sheet/scrolling.svelte.js';
 
 
 	interface Props {
@@ -7226,28 +7226,6 @@
 		refreshStatus();
 	}
 
-	// --- Défilement -------------------------------------------------------
-
-	/** Défilement horizontal piloté par la barre de la ligne des onglets. */
-	export function scrollLeftTo(x: number, atEnd = false) {
-		if (atEnd && holdCols) growAtEnd(false);
-		scroller.scrollLeft = x;
-		updateExtent();
-		schedule();
-	}
-
-	// Barre verticale (native) tirée : repérée au clic dans sa zone.
-	function onScrollbarDown(e: PointerEvent) {
-		if (toLocal(e).x < scroller.clientWidth) return;
-		holdRows = rax().indexAt(vs.content);
-		const up = () => {
-			holdRows = 0;
-			window.removeEventListener('pointerup', up);
-			updateExtent();
-		};
-		window.addEventListener('pointerup', up);
-	}
-
 	// --- Doigt (touch.ts) ----------------------------------------------------------
 	// Glisser fait défiler dans les deux sens, avec élan ; un appui choisit la
 	// cellule comme un clic (sur la cellule active : la saisie, clavier à
@@ -7255,412 +7233,67 @@
 	// doigts zooment. Pas d'extension de sélection, de poignée de recopie ni
 	// de glissé d'en-tête au doigt : la souris et le stylet les gardent.
 	let touch: { id: number; x0: number; y0: number; x: number; y: number; t0: number; drag: boolean; vel: Velocity } | null = null;
-	let pinch: { z0: number; d0: number } | null = null;
-	const fingers = new Map<number, { x: number; y: number }>();
-	let fling = 0;
-
-	function stopFling() {
-		if (fling) cancelAnimationFrame(fling);
-		fling = 0;
-	}
-
-	/** Élan au lâcher, (vx, vy) en px de la feuille par ms. */
-	function startFling(vx: number, vy: number) {
-		stopFling();
-		if (Math.hypot(vx, vy) < MIN_SPEED) return;
-		let last = performance.now();
-		let rx = 0;
-		let ry = 0;
-		const step = (now: number) => {
-			const dt = Math.min(50, now - last);
-			last = now;
-			const a = inertia(vx, dt);
-			const b = inertia(vy, dt);
-			vx = a.v;
-			vy = b.v;
-			// Pixels entiers : le reste s'ajoute à l'image suivante.
-			rx += a.d;
-			ry += b.d;
-			const dx = Math.trunc(rx);
-			const dy = Math.trunc(ry);
-			rx -= dx;
-			ry -= dy;
-			const moved = scrollByPx(dx, dy);
-			// Bord de la feuille atteint : l'élan s'arrête dans ce sens.
-			if (dx && !moved.dx) vx = 0;
-			if (dy && !moved.dy) vy = 0;
-			fling = Math.hypot(vx, vy) >= MIN_SPEED ? requestAnimationFrame(step) : 0;
-		};
-		fling = requestAnimationFrame(step);
-	}
-
 	// --- Main (pan.ts) --------------------------------------------------------------
 	// Clic droit ou du milieu glissé, ou Espace + clic gauche glissé : la
 	// feuille suit le pointeur. Pas de menu contextuel après un glissé.
 	const pan = new PanGesture<MouseEvent>();
 	const space = new SpaceHold();
 	let panCursor = $state<'' | 'grab' | 'grabbing'>('');
-
-	/** Appui d'un bouton qui fait glisser la feuille : true si le clic s'arrête là. */
-	function panDown(e: MouseEvent): boolean {
-		const sp = e.button === 0 && space.down && !editing && !fxEditing;
-		if (!pansWith(e.button, sp)) return false;
-		pan.begin(e.button, e.clientX, e.clientY);
-		if (e.button === 2) return false; // le clic droit garde son rôle (cellule, menu)
-		e.preventDefault(); // milieu : pas de défilement automatique du navigateur
-		if (sp) space.click();
-		wrap.focus();
-		return true;
-	}
-
-	function panMove(e: MouseEvent) {
-		if (!pan.active) return;
-		const was = pan.panning;
-		const d = pan.move(e.clientX, e.clientY);
-		if (!d) return;
-		if (!was) {
-			stopFling();
-			stopGlide();
-			holdWhileScrolling();
-			noteTip = null;
-			dragging = false;
-			headerDrag = null;
-			panCursor = 'grabbing';
-		}
-		e.preventDefault();
-		const k = zoomK();
-		scrollByPx(d.dx / k, d.dy / k);
-	}
-
-	function panUp(e: MouseEvent) {
-		const r = pan.end(e.button, performance.now());
-		if (!r) return;
-		panCursor = space.down && !editing && !fxEditing ? 'grab' : '';
-		// Clic droit sans glissé dont le menu est arrivé à l'appui (macOS) : il
-		// s'ouvre maintenant ; sur un objet posé sur la feuille, le sien.
-		const m = r.menu;
-		if (!m) return;
-		const at = m.target instanceof Element ? m.target : null;
-		if (at && !scroller?.contains(at) && wrap?.contains(at)) at.dispatchEvent(new MouseEvent('contextmenu', m));
-		else onContextMenu(m);
-	}
-
-	/**
-	 * Appui sur un objet posé sur la feuille (capture sur leur calque) : clic
-	 * du milieu ou Espace + gauche font glisser la feuille sans toucher à
-	 * l'objet ; le clic droit glissé aussi, et sans glissé l'objet ouvre son
-	 * menu. Le clic gauche seul reste à l'objet.
-	 */
-	function objectPanDown(e: MouseEvent) {
-		const sp = e.button === 0 && space.down && !editing && !fxEditing;
-		const r = onObject(e.button, sp);
-		if (r === 'object') return;
-		panDown(e);
-		if (r === 'pan') e.stopPropagation();
-	}
-
-	/** Menu contextuel (capture sur la fenêtre) : retenu ou écarté pendant le geste. */
-	function panMenu(e: MouseEvent) {
-		if (pan.menu(e, performance.now()) === 'open') return;
-		e.preventDefault();
-		e.stopPropagation();
-	}
-
-	function panReset() {
-		pan.cancel();
-		space.reset();
-		panCursor = '';
-	}
-
-	/** Espace en attente saisie dans la cellule active (suivie de extra). */
-	function typeSpace(extra = '') {
-		if ((locked && !hold) || dvPick || editing || fxEditing) return;
-		startEdit(true, ' ' + extra);
-	}
-
-	/** Espace sur la grille (hors saisie) : la main ; l'espace se saisit au relâcher, sans clic entre-temps. */
-	function spaceKey(e: KeyboardEvent): boolean {
-		if (fxEditing) return false;
-		const mod = e.ctrlKey || e.metaKey || e.altKey;
-		if (e.key === ' ' && !mod && !e.shiftKey) {
-			e.preventDefault();
-			if (!e.repeat && !space.down) {
-				space.press();
-				if (!pan.active) panCursor = 'grab';
-			}
-			return true;
-		}
-		// Frappe rapide (« a b ») : l'espace tenue passe avant la touche suivante.
-		if (space.down && !['Shift', 'Control', 'Alt', 'Meta'].includes(e.key) && space.flush() && e.key.length === 1 && !mod) {
-			e.preventDefault();
-			typeSpace(e.key);
-			return true;
-		}
-		return false;
-	}
-
-	function onSpaceUp(e: KeyboardEvent) {
-		if ((e.key !== ' ' && e.code !== 'Space') || !space.down) return;
-		const typed = space.release();
-		if (!pan.active) panCursor = '';
-		if (typed && wrap?.contains(document.activeElement)) typeSpace();
-	}
-
-	function onPointerDown(e: PointerEvent) {
-		if (e.pointerType !== 'touch') return onScrollbarDown(e);
-		// Pas d'événements souris simulés : le geste est traité ici.
-		e.preventDefault();
-		stopFling();
-		stopGlide();
-		fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-		if (fingers.size === 2) {
-			const [a, b] = [...fingers.values()];
-			pinch = onzoom ? { z0: zoom, d0: Math.hypot(a.x - b.x, a.y - b.y) } : null;
-			touch = null;
-			return;
-		}
-		if (fingers.size > 1) return;
-		touch = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t0: e.timeStamp, drag: false, vel: new Velocity() };
-		touch.vel.add(e.timeStamp, e.clientX, e.clientY);
-	}
-
-	function onPointerMove(e: PointerEvent) {
-		if (e.pointerType !== 'touch' || !fingers.has(e.pointerId)) return;
-		fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-		if (pinch) {
-			const [a, b] = [...fingers.values()];
-			if (!a || !b) return;
-			const z = pinchZoom(pinch.z0, pinch.d0, Math.hypot(a.x - b.x, a.y - b.y));
-			if (z !== zoom) onzoom?.(z);
-			return;
-		}
-		const t = touch;
-		if (!t || t.id !== e.pointerId) return;
-		if (!t.drag && !isDrag(e.clientX - t.x0, e.clientY - t.y0)) return;
-		if (!t.drag) {
-			t.drag = true;
-			holdWhileScrolling();
-			noteTip = null;
-		}
-		const k = zoomK();
-		scrollByPx((t.x - e.clientX) / k, (t.y - e.clientY) / k);
-		t.x = e.clientX;
-		t.y = e.clientY;
-		t.vel.add(e.timeStamp, e.clientX, e.clientY);
-	}
-
-	function onPointerUp(e: PointerEvent) {
-		if (e.pointerType !== 'touch' || !fingers.delete(e.pointerId)) return;
-		if (pinch || fingers.size) {
-			// Fin d'un pincement : aucun appui ni élan.
-			if (fingers.size < 2) pinch = null;
-			touch = null;
-			return;
-		}
-		const t = touch;
-		touch = null;
-		if (!t || t.id !== e.pointerId || e.type === 'pointercancel') return;
-		if (t.drag) {
-			const k = zoomK();
-			const { vx, vy } = t.vel.get(e.timeStamp);
-			startFling(-vx / k, -vy / k);
-			return;
-		}
-		if (e.timeStamp - t.t0 >= LONG_PRESS_MS) return; // appui long : menu contextuel
-		tapAt(e.clientX, e.clientY);
-	}
-
-	// Le lever du doigt est traité par onPointerUp : touchend annulé (ontouchend),
-	// sans quoi le navigateur donnerait ensuite le focus à la grille, ôté à l'éditeur.
-
-	/** Appui bref : un clic ; sur la cellule déjà active, la saisie (comme un double clic). */
-	function tapAt(clientX: number, clientY: number) {
-		const init = { bubbles: true, cancelable: true, clientX, clientY, button: 0, buttons: 1, detail: 1, view: window };
-		const probe = new MouseEvent('mousedown', init);
-		const cell = cellAt(probe);
-		const again = !editing && !!cell && cell.row === active.row && cell.col === active.col && selChart === null;
-		scroller.dispatchEvent(probe);
-		window.dispatchEvent(new MouseEvent('mouseup', { ...init, buttons: 0 }));
-		if (again && cell && !editing && !listMenu && active.row === cell.row && active.col === cell.col) onDblClick(new MouseEvent('dblclick', { ...init, detail: 2 }));
-	}
-
-	function onScroll() {
-		holdWhileScrolling();
-		noteTip = null;
-		if (holdRows && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) growAtEnd(true);
-		if (!vs.inSync(scroller.scrollTop)) vs.fromNative(scroller.scrollTop);
-		updateExtent();
-		schedule();
-	}
-
-	function onWheel(e: WheelEvent) {
-		if (e.ctrlKey) {
-			// Ctrl+molette : zoom de la feuille (pas celui de toute la page), par pas de 10 %.
-			// Pavé tactile (pincement : petits pas) : un pas tous les 50 px cumulés.
-			e.preventDefault();
-			zoomWheel += e.deltaMode === 0 ? e.deltaY : e.deltaY * 50;
-			if (onzoom && Math.abs(zoomWheel) >= 50) {
-				onzoom(stepZoom(zoom, -Math.sign(zoomWheel)));
-				zoomWheel = 0;
-			}
-			return;
-		}
-		holdWhileScrolling();
-		stopGlide();
-		stopFling();
-		noteTip = null;
-		const unit = e.deltaMode === 1 ? ROW_H : e.deltaMode === 2 ? vs.view : 1;
-		let dy = e.deltaY * unit;
-		let dx = e.deltaX * unit;
-		if (e.shiftKey && dx === 0) [dx, dy] = [dy, 0];
-		e.preventDefault();
-		// Molette de souris (crans de ±100 px ou défilement par lignes) : trois
-		// lignes par cran, calées sur le haut des lignes, comme Excel. Le pavé
-		// tactile (petits pas) garde un défilement au pixel près.
-		const notch = e.deltaMode === 1 || (e.deltaMode === 0 && Math.abs(e.deltaY) >= 50 && e.deltaY % 1 === 0);
-		if (dy && notch) {
-			const steps = e.deltaMode === 1 ? Math.round(e.deltaY) : Math.sign(dy) * Math.max(1, Math.round(Math.abs(e.deltaY) / 100)) * 3;
-			const first = rax().indexAt(vs.top);
-			const base = rowTop(first) < vs.top && steps < 0 ? first + 1 : first;
-			dy = rowTop(clamp(base + steps, 0, SHEET_ROWS - 1)) - vs.top;
-		}
-		if (dx && notch && e.shiftKey) {
-			const steps = Math.sign(dx) * 3;
-			const first = cax().indexAt(scroller.scrollLeft);
-			dx = cax().offset(clamp(first + steps, 0, SHEET_COLS - 1)) - scroller.scrollLeft;
-		}
-		scrollByPx(dx, dy);
-	}
-
-	/** Défile de (dx, dy) px de la feuille (molette, doigt) ; rend le déplacement effectif. */
-	function scrollByPx(dx: number, dy: number): { dx: number; dy: number } {
-		const t0 = vs.top;
-		const l0 = scroller.scrollLeft;
-		if (dy) {
-			// Défiler vers le bas agrandit la feuille d'autant.
-			if (dy > 0) vs.content = Math.min(rax().total, Math.max(vs.content, vs.top + dy + 2 * vs.view));
-			vs.by(dy);
-			updateExtent();
-			scroller.scrollTop = vs.toNative();
-		}
-		if (dx) {
-			// Vers la droite, la feuille s'agrandit d'autant avant de défiler.
-			if (dx > 0 && spacer) {
-				const want = cax().indexAt(scroller.scrollLeft + dx + viewW) + 2;
-				spacer.style.width = `${MARGIN + cax().offset(Math.min(SHEET_COLS, Math.max(extentCols, want)))}px`;
-			}
-			scroller.scrollLeft += dx;
-			updateExtent();
-		}
-		schedule();
-		return { dx: scroller.scrollLeft - l0, dy: vs.top - t0 };
-	}
-
-	function syncNative() {
-		scroller.scrollTop = vs.toNative();
-		schedule();
-	}
-
-	// --- Volet ouvert à droite : l'objet cliqué reste à l'écran -------------
-	// Un volet (champs du TCD, graphique, assistant, conflits…) prend sa
-	// place à droite : la grille rétrécit (resize) et ce qui était au bord
-	// passerait dessous. Si l'objet (graphique sélectionné, TCD du volet,
-	// sinon la sélection) se voyait avant, on fait défiler vers la droite
-	// (le contenu glisse à gauche) pour le montrer en entier s'il tient,
-	// sinon son début ou la cellule active (keepinview.ts). Glissé court,
-	// abandonné dès que l'utilisateur défile lui-même ; rien à la fermeture.
-	let glide: { from: number; to: number; t0: number; last: number; frame: number } | null = null;
-	const GLIDE_MS = 220;
 	let sizedZoom = 0;
-
-	function stopGlide() {
-		if (glide) cancelAnimationFrame(glide.frame);
-		glide = null;
-	}
-
-	/** Défilement horizontal posé à x, la feuille agrandie d'autant s'il le faut. */
-	function setScrollX(x: number) {
-		if (spacer) {
-			const want = cax().indexAt(x + viewW) + 2;
-			spacer.style.width = `${MARGIN + cax().offset(Math.min(SHEET_COLS, Math.max(extentCols, want)))}px`;
-		}
-		scroller.scrollLeft = x;
-		updateExtent();
-		schedule();
-	}
-
-	function slideX(to: number) {
-		stopGlide();
-		if (!motion()) {
-			setScrollX(to);
-			return;
-		}
-		const g = { from: scroller.scrollLeft, to, t0: performance.now(), last: scroller.scrollLeft, frame: 0 };
-		const step = (now: number) => {
-			if (glide !== g) return;
-			// Défilé entre-temps (molette, barre, clavier) : on le laisse faire.
-			if (Math.abs(scroller.scrollLeft - g.last) > 1.5) {
-				glide = null;
-				return;
-			}
-			const k = ease(progress(now, g.t0, GLIDE_MS));
-			setScrollX(Math.round(g.from + (g.to - g.from) * k));
-			g.last = scroller.scrollLeft;
-			if (k < 1) g.frame = requestAnimationFrame(step);
-			else glide = null;
-		};
-		glide = g;
-		g.frame = requestAnimationFrame(step);
-	}
-
-	/** Objet à garder à l'écran, et la cellule active à montrer s'il est trop large. */
-	function focusSpan(): { o: XSpan; must: XSpan } {
-		const ax = cax();
-		const g = boxOf(active.row, active.col);
-		const c0 = g?.col ?? active.col;
-		const must = { x0: ax.offset(c0), x1: ax.offset(g ? g.col + g.cols : active.col + 1) };
-		if (selChart !== null) {
-			const ch = charts.find((c) => c.id === selChart);
-			if (ch) {
-				const b = chartBox(ch);
-				return { o: { x0: b.x, x1: b.x + b.w }, must: { x0: b.x, x1: b.x + Math.min(b.w, 100) } };
-			}
-		}
-		if (panel?.kind === 'pivot') {
-			const id = panel.id;
-			const p = pivots.find((p) => p.id === id);
-			if (p && !p.error) return { o: { x0: ax.offset(p.col), x1: ax.offset(p.col + Math.max(1, p.cells[0]?.length ?? 1)) }, must };
-		}
-		const s0 = Math.min(anchor.col, c0);
-		const s1 = Math.max(anchor.col + 1, c0 + (g?.cols ?? 1));
-		return { o: { x0: ax.offset(s0), x1: ax.offset(s1) }, must };
-	}
-
-	/** La grille vient de rétrécir (de oldW à viewW) : l'objet qui se voyait y reste. */
-	function keepFocusAfterShrink(oldW: number) {
-		if (!scroller || viewW - MARGIN < 80) return;
-		const f = focusSpan();
-		const fr = cax().offset(fCols());
-		const x = scroller.scrollLeft;
-		if (!seenIn(f.o, x, oldW - MARGIN, fr) && !seenIn(f.must, x, oldW - MARGIN, fr)) return;
-		const to = keepInView(f.o, x, viewW - MARGIN, fr, cax(), f.must);
-		if (Math.abs(to - x) >= 1) slideX(to);
-	}
-
-	function ensureVisible(row: number, col: number) {
-		// Grille démontée (changement de classeur ou de mode en cours) : rien à montrer.
-		if (!scroller) return;
-		stopGlide();
-		updateExtent();
-		// Sous les volets figés : la case ne doit pas rester cachée dessous.
-		// Comme Excel, la case est montrée entière, et la première ligne ou
-		// colonne montrée n'est pas coupée (ni contre les volets figés).
-		const t = revealWhole(row, rax(), vs.top, vs.view, rowTop(fRows()));
-		if (t !== vs.top) vs.to(t);
-		const l = revealWhole(col, cax(), scroller.scrollLeft, viewW - MARGIN, cax().offset(fCols()));
-		if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
-		syncNative();
-	}
+	// Défilement, doigt, main, volet ouvert : sheet/scrolling.svelte.ts (accès de createScrolling à la feuille).
+	const scrollCtl = createScrolling({
+		get holdCols() { return holdCols; },
+		get growAtEnd() { return growAtEnd; },
+		get scroller() { return scroller; },
+		get updateExtent() { return updateExtent; },
+		get schedule() { return schedule; },
+		get toLocal() { return toLocal; },
+		get holdRows() { return holdRows; }, set holdRows(v) { holdRows = v; },
+		get rax() { return rax; },
+		get vs() { return vs; },
+		get space() { return space; },
+		get editing() { return editing; },
+		get fxEditing() { return fxEditing; },
+		get pan() { return pan; },
+		get wrap() { return wrap; },
+		get holdWhileScrolling() { return holdWhileScrolling; },
+		get noteTip() { return noteTip; }, set noteTip(v) { noteTip = v; },
+		get dragging() { return dragging; }, set dragging(v) { dragging = v; },
+		get headerDrag() { return headerDrag; }, set headerDrag(v) { headerDrag = v; },
+		get panCursor() { return panCursor; }, set panCursor(v) { panCursor = v; },
+		get zoomK() { return zoomK; },
+		get onContextMenu() { return onContextMenu; },
+		get locked() { return locked; },
+		get hold() { return hold; },
+		get dvPick() { return dvPick; },
+		get startEdit() { return startEdit; },
+		get onzoom() { return onzoom; },
+		get zoom() { return zoom; },
+		get touch() { return touch; }, set touch(v) { touch = v; },
+		get cellAt() { return cellAt; },
+		get active() { return active; },
+		get selChart() { return selChart; },
+		get listMenu() { return listMenu; },
+		get onDblClick() { return onDblClick; },
+		get zoomWheel() { return zoomWheel; }, set zoomWheel(v) { zoomWheel = v; },
+		get rowTop() { return rowTop; },
+		get cax() { return cax; },
+		get spacer() { return spacer; },
+		get viewW() { return viewW; },
+		get MARGIN() { return MARGIN; },
+		get extentCols() { return extentCols; },
+		get motion() { return motion; },
+		get boxOf() { return boxOf; },
+		get charts() { return charts; },
+		get chartBox() { return chartBox; },
+		get panel() { return panel; },
+		get pivots() { return pivots; },
+		get anchor() { return anchor; },
+		get fCols() { return fCols; },
+		get fRows() { return fRows; }
+	});
+	const { stopFling, panDown, panMove, panUp, objectPanDown, panMenu, panReset, spaceKey, onSpaceUp, onPointerDown, onPointerMove, onPointerUp, onScroll, onWheel, syncNative, stopGlide, keepFocusAfterShrink, ensureVisible } = scrollCtl;
+	export const scrollLeftTo = scrollCtl.scrollLeftTo;
 
 	// --- Sélection et clavier ---------------------------------------------
 

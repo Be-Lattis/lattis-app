@@ -162,3 +162,25 @@ test('11. menu contextuel, rechercher, format de cellule', async ({ app }) => {
 	await app.keyboard.press('Escape');
 	await expect(fmt).toBeHidden();
 });
+
+// Défilement (molette, clavier) et poignée de recopie : la souris et le clavier de la grille.
+test('12. défilement, clavier et recopie', async ({ app }) => {
+	const grid = app.getByRole('grid');
+	await grid.click({ position: { x: 100, y: 40 } });
+	await expect(activeCell(app)).toContainText('A1,');
+	await app.mouse.wheel(0, 3000);
+	await grid.click({ position: { x: 100, y: 40 } });
+	await expect(activeCell(app)).not.toContainText('A1,');
+	await app.keyboard.press('Control+Home');
+	await expect(activeCell(app)).toContainText('A1,');
+	await app.keyboard.press('PageDown');
+	await expect(activeCell(app)).not.toContainText('A1,');
+	// Recopie : 1 et 2 dans A1:A2, Ctrl+D sur A2:A3 recopie 2 vers A3.
+	await goTo(app, 'A1');
+	await typeRows(app, [['1'], ['2']]);
+	await goTo(app, 'A2');
+	await app.keyboard.press('Shift+ArrowDown');
+	await app.keyboard.press('Control+d');
+	await goTo(app, 'A3');
+	await expect(activeCell(app)).toContainText(', 2');
+});
