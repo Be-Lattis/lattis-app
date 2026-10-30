@@ -16,37 +16,43 @@ const ErrSpillText = "#DEVERSEMENT!"
 // (=Ventes[Montant], voir formula.IsFreeSpill). ok est faux si la formule
 // n'en est pas un.
 func (t *tx) spillFreeRaw(sheet int64, raw string) (rows [][]string, ok bool, errV formula.Value) {
+	rows, _, ok, errV = t.spillFreeTyped(sheet, raw)
+	return rows, ok, errV
+}
+
+// spillFreeTyped : spillFreeRaw, avec aussi les valeurs typées (export).
+func (t *tx) spillFreeTyped(sheet int64, raw string) (rows [][]string, typed [][]formula.Value, ok bool, errV formula.Value) {
 	n, err := formula.Parse(raw, formula.FR)
 	if err != nil {
-		return nil, false, formula.Value{}
+		return nil, nil, false, formula.Value{}
 	}
 	_, column := n.(formula.Ref)
 	if !column && !formula.IsSpill(n) {
-		return nil, false, formula.Value{}
+		return nil, nil, false, formula.Value{}
 	}
 	base, err := t.schema()
 	if err != nil {
-		return nil, true, formula.Err(formula.ErrValue)
+		return nil, nil, true, formula.Err(formula.ErrValue)
 	}
 	// Tableaux de la feuille filtrés par son onglet à choix (schemaFor).
 	schema, err := t.schemaFor(sheet)
 	if err != nil {
-		return nil, true, formula.Err(formula.ErrValue)
+		return nil, nil, true, formula.Err(formula.ErrValue)
 	}
 	if column && !formula.IsFreeSpill(n, schema) {
-		return nil, false, formula.Value{} // [Col], colonne inconnue (#REF!)
+		return nil, nil, false, formula.Value{} // [Col], colonne inconnue (#REF!)
 	}
 	if n, _, err = formula.Convert(n, schema, noRanges{}, raw); err != nil {
-		return nil, true, formula.Err(formula.ErrName)
+		return nil, nil, true, formula.Err(formula.ErrName)
 	}
 	n = formula.QualifyCells(n, sheet)
 	names, err := t.nameValues(base)
 	if err != nil {
-		return nil, true, formula.Err(formula.ErrValue)
+		return nil, nil, true, formula.Err(formula.ErrValue)
 	}
 	vals, e := t.spillRows(n, schema, names)
 	if e.IsErr() {
-		return nil, true, e
+		return nil, nil, true, e
 	}
 	for _, r := range vals {
 		row := make([]string, len(r))
@@ -55,7 +61,7 @@ func (t *tx) spillFreeRaw(sheet int64, raw string) (rows [][]string, ok bool, er
 		}
 		rows = append(rows, row)
 	}
-	return rows, true, formula.Value{}
+	return rows, vals, true, formula.Value{}
 }
 
 // spillRows calcule un tableau dynamique (formule déjà rattachée à sa

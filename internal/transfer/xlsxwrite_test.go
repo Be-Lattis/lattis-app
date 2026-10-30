@@ -154,7 +154,7 @@ func TestXLSXExport(t *testing.T) {
 		`<f>SUM(Ventes[Prix])</f><v>3.5</v>`,
 		`<c r="B8" t="e"><f>1/0</f><v>#DIV/0!</v></c>`,
 		`<f>INDEX(Ventes[Prix],MATCH(&quot;Poire &lt;b&gt;&quot;,Ventes[Produit],0))</f><v>2</v>`,
-		`<f>Taux*B7</f><v>0.7</v>`,
+		`<f>Taux*B7</f><v>0.7000000000000001</v>`,
 		`<c r="B11"><f>TEXT(B7,&quot;0,00&quot;)</f>`,
 		`<col min="1" max="1" width="20" customWidth="1"/>`,
 		`<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>`,

@@ -441,6 +441,14 @@
 =JOINDRE.TEXTE(",";VRAI;CHOISIRLIGNES(Etapes[Nom];-1;1))	C,A
 =JOINDRE.TEXTE(",";VRAI;VERS.COL(Cell[A1:B2];0;VRAI))	1,2,10,20
 =SOMME(VERS.LIGNE(Cell[A1:B3]))	63
+=SOMME(VERS.LIGNE(Clients[Id]))	6
+=SOMME(VERS.LIGNE(SEQUENCE(3)))	6
+=NBVAL(VERS.LIGNE(Clients[Nom];1))	3
+=JOINDRE.TEXTE(",";VRAI;VERS.LIGNE(Etapes[Nom]))	A,B,C
+=JOINDRE.TEXTE(",";VRAI;VERS.LIGNE(Clients;0;VRAI))	1,2,3,Dupont,Martin,Durand,Paris,Lyon,Nice
+=JOINDRE.TEXTE(",";VRAI;VERS.LIGNE(SEQUENCE(2;2)))	1,2,3,4
+=SOMME(VERS.COL(SEQUENCE(2;2)))	10
+=MOYENNE(VERS.COL(Clients[Id]))	2
 =JOINDRE.TEXTE(",";VRAI;PRENDRE(Clients;-1;-2))	Durand,Nice
 # Un tableau dynamique n'est pas une colonne parcourue (NB.SI, GRANDE.VALEUR…)
 =NB.SI(UNIQUE(Ventes[Qté]);">1")	#VALEUR!

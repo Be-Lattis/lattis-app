@@ -54,6 +54,7 @@ func TestExportNewFunctionsRoundTrip(t *testing.T) {
 		{`=SOMME(CHOISIRCOLS(Ventes; 1))`, `SUM(_xlfn.CHOOSECOLS(Ventes,1))`},
 		{`=NBVAL(CHOISIRLIGNES(Ventes; 1; 3))`, `COUNTA(_xlfn.CHOOSEROWS(Ventes,1,3))`},
 		{`=SOMME(VERS.COL(Ventes[Qté]))`, `SUM(_xlfn.TOCOL(Ventes[Qté]))`},
+		{`=SOMME(VERS.LIGNE(Ventes[Qté]))`, `SUM(_xlfn.TOROW(Ventes[Qté]))`},
 		{`=SOMME(PRENDRE(Ventes; 2; 1))`, `SUM(_xlfn.TAKE(Ventes,2,1))`},
 		{`=NBVAL(EXCLURE(Ventes; 2; 1))`, `COUNTA(_xlfn.DROP(Ventes,2,1))`},
 		{`=SOMME(TRIER(Ventes[Qté]; 1; -1))`, `SUM(_xlfn._xlws.SORT(Ventes[Qté],1,-1))`},
@@ -97,6 +98,8 @@ func TestExportNewFunctionsRoundTrip(t *testing.T) {
 			t.Errorf("%s %s : écrite %q, attendu %q", ref, f.src, got, f.xlsx)
 		}
 	}
+	// Résultat numérique à pleine précision, point décimal, pas en texte.
+	contains(t, "ATAN2", readZip(t, p)["xl/worksheets/sheet1.xml"], `<f>ATAN2(1,1)</f><v>0.7853981633974483</v>`)
 	d2 := open(t)
 	res, err := ImportXLSX(ctx, d2.Model, p)
 	if err != nil {

@@ -99,6 +99,20 @@ func tocolModes(c Call) (blanks, errs, byCol, ok bool) {
 	return ign&1 != 0, ign&2 != 0, byCol, true
 }
 
+// flatArg : un agrégat lit les valeurs d'un tableau dynamique dans l'ordre de
+// lecture, sans tenir compte de sa forme. VERS.LIGNE y est lue comme VERS.COL
+// (même suite de valeurs), dont la forme ne dépend pas de la source :
+// SOMME(VERS.LIGNE(Ventes[Qté])) ou SOMME(VERS.LIGNE(SEQUENCE(3))) se
+// calculent, alors que VERS.LIGNE déversée n'accepte qu'une plage ou une
+// constante.
+func flatArg(n Node) Node {
+	if c, ok := n.(Call); ok && c.Fn == "TOROW" {
+		c.Fn = "TOCOL"
+		return c
+	}
+	return n
+}
+
 // uniqueHeaders numérote les en-têtes répétés (Valeur, Valeur2…) : ASSEMB.H
 // peut réunir deux colonnes de même nom.
 func uniqueHeaders(cols []string) []string {

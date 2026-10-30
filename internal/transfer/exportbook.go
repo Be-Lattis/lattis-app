@@ -360,7 +360,7 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 			}
 			for i, row := range c.Spill {
 				for j, v := range row {
-					x := textCell(v)
+					x := resultCell(v, c.SpillResult(), i, j)
 					x.fm = fmtAt(c.Row+i, c.Col+j, nil)
 					put(c.Row+i, c.Col+j, x)
 				}
@@ -372,7 +372,7 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 		case c.Error:
 			x = errorCell(c.Value)
 		case strings.HasPrefix(c.Raw, "="):
-			x = textCell(c.Value)
+			x = resultCell(c.Value, [][]formula.Value{{c.Result()}}, 0, 0)
 		default:
 			x = textCell(c.Raw)
 		}
@@ -493,8 +493,21 @@ func (sh *xsheet) marks() []int {
 	return out
 }
 
+// resultCell : résultat de formula (valeur affichée s, valeurs typées vals) ;
+// un nombre est écrit à pleine précision, le reste typé comme la saisie
+// (textCell).
+func resultCell(s string, vals [][]formula.Value, i, j int) xcell {
+	if i < len(vals) && j < len(vals[i]) && vals[i][j].Kind == formula.Number {
+		return xcell{kind: 'n', num: vals[i][j].Num}
+	}
+	return textCell(s)
+}
+
 // textCell type une valeur affichée (cellule libre, TCD, déversement) comme
-// le ferait la saisie : nombre, booléen, date ou texte.
+// le ferait la saisie : nombre, booléen, date ou texte. Un nombre écrit
+// comme Lattis l'affiche (formula.FormatNumber) reste un nombre, même avec
+// plus de 15 chiffres (0,785398163397448) : la règle des codes (keepsText)
+// ne vaut que pour ce qui n'a pas cette forme.
 func textCell(s string) xcell {
 	if s == "" {
 		return xcell{}
@@ -502,6 +515,11 @@ func textCell(s string) xcell {
 	if strings.HasPrefix(s, "#") {
 		if _, ok := excelErrors[s]; ok {
 			return errorCell(s)
+		}
+	}
+	if numeric(s) {
+		if f, err := strconv.ParseFloat(strings.Replace(s, ",", ".", 1), 64); err == nil && formula.FormatNumber(f) == s {
+			return xcell{kind: 'n', num: f}
 		}
 	}
 	v := parseText(s)

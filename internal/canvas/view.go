@@ -152,7 +152,20 @@ type CellInfo struct {
 	Spill [][]string `json:"spill,omitempty"`
 	// Link : adresse d'une formule =LIEN_HYPERTEXTE(…) (links.go).
 	Link string `json:"link,omitempty"`
+	// calc, spillCalc : les mêmes résultats typés, nombres à pleine
+	// précision, pour l'export (Result, SpillResult) ; pas envoyés à
+	// l'interface.
+	calc      formula.Value
+	spillCalc [][]formula.Value
 }
+
+// Result est le résultat typé d'une formule (Kind Empty : pas de formule,
+// ou résultat inconnu, lire Value).
+func (c CellInfo) Result() formula.Value { return c.calc }
+
+// SpillResult donne les valeurs typées d'un tableau dynamique (nil : lire
+// Spill).
+func (c CellInfo) SpillResult() [][]formula.Value { return c.spillCalc }
 
 // NameInfo est une cellule nommée de la feuille.
 type NameInfo struct {
@@ -439,7 +452,7 @@ func (m *Model) layout(ctx context.Context, sheet int64, later bool) (Layout, er
 			ci := CellInfo{Row: c.Row, Col: c.Col, Raw: c.Raw}
 			if isFormula(c.Raw) {
 				work.Phase(ctx, "formulas")
-				if rows, ok, e := t.spillFree(sheet, c.Raw); ok {
+				if rows, vals, ok, e := t.spillFree(sheet, c.Raw); ok {
 					switch {
 					case e.IsErr():
 						ci.Value, ci.Error = e.String(), true
@@ -448,11 +461,11 @@ func (m *Model) layout(ctx context.Context, sheet int64, later bool) (Layout, er
 					case len(rows) == 0:
 						ci.Value, ci.Error = "#CALC!", true
 					default:
-						ci.Value, ci.Spill = rows[0][0], rows
+						ci.Value, ci.Spill, ci.spillCalc = rows[0][0], rows, vals
 					}
 				} else {
 					v := t.evalFree(sheet, c.Raw)
-					ci.Value, ci.Error = v.String(), v.IsErr()
+					ci.Value, ci.Error, ci.calc = v.String(), v.IsErr(), v
 					if f := formula.HyperlinkTarget(c.Raw); f != "" && !v.IsErr() {
 						if a := t.evalFree(sheet, f); !a.IsErr() {
 							ci.Link = SafeLink(a.String())

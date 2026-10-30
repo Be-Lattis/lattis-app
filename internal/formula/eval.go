@@ -426,7 +426,7 @@ func (env *Env) aggregate(fn string, args []Node) Value {
 			continue
 		}
 		if IsSpill(a) {
-			r, err := env.spill(a)
+			r, err := env.spill(flatArg(a))
 			if err.IsErr() {
 				acc.AddValue(err)
 				continue

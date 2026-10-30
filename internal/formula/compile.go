@@ -378,7 +378,7 @@ func (c *compiler) aggregate(fn string, args []Node, sc scope, visible bool) str
 			continue
 		}
 		if IsSpill(a) {
-			parts = append(parts, c.spillAggregate(fn, a, sc))
+			parts = append(parts, c.spillAggregate(fn, flatArg(a), sc))
 			continue
 		}
 		var t *Table

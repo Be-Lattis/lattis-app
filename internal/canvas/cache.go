@@ -23,17 +23,18 @@ func (t *tx) evalFree(sheet int64, raw string) formula.Value {
 }
 
 type spillResult struct {
-	rows [][]string
-	ok   bool
-	err  formula.Value
+	rows  [][]string
+	typed [][]formula.Value
+	ok    bool
+	err   formula.Value
 }
 
-func (t *tx) spillFree(sheet int64, raw string) ([][]string, bool, formula.Value) {
+func (t *tx) spillFree(sheet int64, raw string) ([][]string, [][]formula.Value, bool, formula.Value) {
 	r, _ := cached(t, fmt.Sprintf("spill:%d:%s", sheet, raw), func() (spillResult, error) {
-		rows, ok, e := t.spillFreeRaw(sheet, raw)
-		return spillResult{rows, ok, e}, nil
+		rows, typed, ok, e := t.spillFreeTyped(sheet, raw)
+		return spillResult{rows, typed, ok, e}, nil
 	})
-	return r.rows, r.ok, r.err
+	return r.rows, r.typed, r.ok, r.err
 }
 
 // pivotDeps : les colonnes de la source que lit le calcul d'un TCD
