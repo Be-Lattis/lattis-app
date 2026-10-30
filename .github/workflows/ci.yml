@@ -99,6 +99,43 @@ jobs:
       - run: npm run check
       - run: npm test
 
+  # Parcours de bout en bout sur la version web (frontend/e2e, Playwright) :
+  # moteur web compilé sans cgo, Chrome déjà installé sur le runner. Facultatif
+  # tant que la série n'a pas fait ses preuves en CI.
+  e2e:
+    name: Bout en bout (Playwright, version web)
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: npm run build:web
+      - run: CGO_ENABLED=0 go build -tags web -o "$RUNNER_TEMP/lattis-engine" ../cmd/lattis-engine
+      - run: npx playwright test
+        env:
+          LATTIS_E2E_ENGINE: ${{ runner.temp }}/lattis-engine
+          LATTIS_E2E_CHANNEL: chrome
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+
   build:
     name: Build ${{ matrix.os }}
     if: github.event_name == 'workflow_dispatch'

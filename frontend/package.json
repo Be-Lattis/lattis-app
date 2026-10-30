@@ -13,9 +13,12 @@
     "check": "node scripts/i18n-types.mjs && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "i18n:types": "node scripts/i18n-types.mjs",
     "test": "vitest run",
+		"e2e": "npm run build:web && playwright test",
+		"e2e:run": "playwright test",
     "prepare": "svelte-kit sync || echo \"\""
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@sveltejs/adapter-static": "^4.0.0",
     "@sveltejs/kit": "^3.1.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
