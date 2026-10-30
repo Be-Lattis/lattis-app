@@ -57,7 +57,7 @@
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
 	import { choiceHiddenCols } from '#lib/shell/choice.js';
-	import { tabChoiceItem, type ChoiceCandidate, type TabChoiceItem } from './tabchoice';
+	import { type ChoiceCandidate } from './tabchoice';
 	import { placeFollowBadge, showNameBadge } from './followbadge';
 	import { ReadRecovery, readFailNotice } from './readfail';
 	import { followLabel } from '#lib/shell/mergesheets.js';
@@ -95,8 +95,8 @@
 	import { placesOnClick, type Placement } from './pivotplace';
 	import SheetButtons from './SheetButtons.svelte';
 	import SheetObjects from './SheetObjects.svelte';
-	import { objectBox, type ObjectConfig, type ObjectKind, type SheetObject } from './objects';
-	import { type ControlKind, type SheetButton } from './buttons';
+	import { objectBox, type ObjectConfig, type SheetObject } from './objects';
+	import { type SheetButton } from './buttons';
 	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type Stats, type StatsReq } from './rules';
 	import { chartMenu as chartMenuGroups, chartSubmenu, freeCellMenu, headerMenu, linesSubmenu, pivotSubmenu, tableCellMenu, tableColumnSubmenu, tableRowSubmenu } from './ctxmenu';
 	import { colLetters, formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
@@ -129,8 +129,8 @@
 		sortLabels,
 		type ColumnType
 	} from './format';
-	import { errorText, fnName, lower, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
-	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type LinesOp, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer } from './sheet/model';
+	import { errorText, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
+	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, GUTTER_PAD, GUTTER_MAX, GUTTER_KEY_MAX, FONT, FONT_BOLD, FONT_SMALL, FONT_TINY } from './sheet/consts';
 	import { createFind } from './sheet/find.svelte.js';
 	import { createScrolling } from './sheet/scrolling.svelte.js';
@@ -138,6 +138,7 @@
 	import { createFilters } from './sheet/filters.svelte.js';
 	import { createPivot } from './sheet/pivot.svelte.js';
 	import { createDataTools } from './sheet/datatools.svelte.js';
+	import { createCommands } from './sheet/commands.svelte.js';
 
 
 	interface Props {
@@ -5929,359 +5930,102 @@
 	// --- Ruban Formules ---------------------------------------------------------
 
 	let fnDlg = $state<{ search: string; sel: string | null } | null>(null);
-
-	/** Commence une formule dans la cellule active (Insérer une fonction, REFERENCE). */
-	export function startFormula(text: string) {
-		fnDlg = null;
-		wrap.focus();
-		startEdit(true, text);
-		if (input) onFormulaInput(input, 'cell');
-	}
-
-	/** Somme automatique : SOMME de la colonne du tableau situé juste au-dessus. */
-	export function autoSum() {
-		const { row, col } = active;
-		const inTbl = tableAt(row, col);
-		const above = entries.filter((e) => col >= e.t.col && col <= e.lastCol && e.last < row).sort((a, b) => b.last - a.last)[0];
-		if (!inTbl && above) {
-			startFormula(`=${fnName({ en: 'SUM', fr: 'SOMME', de: 'SUMME', es: 'SUMA' })}(${above.t.name}[${above.t.columns[col - above.t.col].name}])`);
-			return;
-		}
-		startFormula(`=${fnName({ en: 'SUM', fr: 'SOMME', de: 'SUMME', es: 'SUMA' })}(`);
-	}
-
-	export function openFunctions() {
-		closeMenus();
-		fnDlg = { search: '', sel: null };
-	}
-
-	/** Fonctions du dialogue : nom (français ou anglais), catégorie ou description. */
-	function shownFunctions() {
-		const q = fnDlg?.search.trim().toLowerCase() ?? '';
-		const all = catalog?.functions ?? [];
-		const hit = (f: FunctionDoc) => [f.name, f.other, f.category ?? '', f.description ?? ''].some((s) => s.toLowerCase().includes(q));
-		return (q ? all.filter(hit) : all).slice(0, 200);
-	}
-
-	/** Tri du tableau de la cellule active (ruban Données). */
-	export function sortActive(desc: boolean) {
-		const e = targetTable();
-		if (!e || !source.sortTable) {
-			say(tr('grid.sort.placeActive'));
-			return;
-		}
-		const sort = source.sortTable;
-		menuAction(() => sort(e.t, targetCol(e), desc));
-	}
-
-	/** Lignes (ou colonnes) entières couvertes par la sélection, comme Excel les insère ou les supprime. */
-	function selectionLines(): { r0: number; r1: number; c0: number; c1: number; rows: boolean; cols: boolean } {
-		const { r0, r1, c0, c1 } = selection();
-		return { r0, r1, c0, c1, rows: c0 === 0 && c1 >= lastCol(), cols: r0 === 0 && r1 >= lastRow() };
-	}
-
-	/** Insère ou supprime des lignes ou colonnes entières pour la sélection. */
-	export function sheetLines(op: LinesOp) {
-		if (!source.sheetLines) return;
-		lastRepeat = () => sheetLines(op); // F4
-		const { r0, r1, c0, c1 } = selection();
-		const lines = source.sheetLines;
-		const args: Record<LinesOp, [number, number]> = {
-			insertRows: [r0, r1 - r0 + 1],
-			deleteRows: [r0, r1],
-			insertCols: [c0, c1 - c0 + 1],
-			deleteCols: [c0, c1]
-		};
-		// Animation : ce qui suit glisse (posée quand l'opération part, dans la file des écritures).
-		const hint: Record<LinesOp, () => void> = {
-			insertRows: () => hintLines(true, r0, r1 - r0 + 1),
-			deleteRows: () => hintLines(true, r0, -(r1 - r0 + 1)),
-			insertCols: () => hintLines(false, c0, c1 - c0 + 1),
-			deleteCols: () => hintLines(false, c0, -(c1 - c0 + 1))
-		};
-		menuAction(() => (hint[op](), lines(op, ...args[op])));
-	}
-
 	// Recherche tapée dans un tableau sans clé : numéro de ligne, ou colonne
 	// qui devient la clé (jamais posée sans le demander). Valider réécrit la
 	// saisie avec la réponse, en une étape d'annulation ; Annuler rouvre la
 	// formule dans l'éditeur.
 	let keyDlg = $state<(KeyQuestion & { row: number; col: number; raw: string; keep: boolean; choice: KeyChoice }) | null>(null);
-
-	function applyKeyDialog() {
-		const d = keyDlg;
-		keyDlg = null;
-		if (!d) return;
-		wrap.focus();
-		void write(d.row, d.col, d.raw, d.keep, undefined, d.choice);
-	}
-
-	function cancelKeyDialog() {
-		const d = keyDlg;
-		keyDlg = null;
-		if (!d) return;
-		if (d.keep) reopenFormula(d.row, d.col, d.raw, tr('grid.key.lookupCancelled'));
-		else wrap.focus();
-	}
-
 	// Colonnes saisies à côté d'un tableau chargé (docs/decisions/0008) : la
 	// colonne du résultat qui relie leurs valeurs aux lignes d'une
 	// actualisation à l'autre, demandée à la première valeur saisie (refus
 	// « jointure à choisir ») ou changée depuis le menu du tableau. « # » : le
 	// rang des lignes.
 	let handDlg = $state<{ table: string; columns: string[]; choice: string; write?: { row: number; col: number; raw: string; keep: boolean }; t?: SheetTable } | null>(null);
-
-	function applyHandDialog() {
-		const d = handDlg;
-		handDlg = null;
-		if (!d) return;
-		wrap.focus();
-		if (d.write) void write(d.write.row, d.write.col, d.write.raw, d.write.keep, undefined, `hand:${d.choice}`);
-		else if (d.t && source.setHandKey) void menuAction(() => source.setHandKey!(d.t!, d.choice));
-	}
-
-	function cancelHandDialog() {
-		handDlg = null;
-		wrap.focus();
-	}
-
-	function openHandKey(t: SheetTable) {
-		menu = null;
-		const columns = t.columns.filter((k) => !k.hand && !k.formula).map((k) => k.name);
-		// Clé de plusieurs colonnes (« id + Année ») : proposée telle quelle.
-		if (t.handKey && t.handKey !== '#' && !columns.includes(t.handKey)) columns.unshift(t.handKey);
-		handDlg = { table: t.name, columns, choice: t.handKey ?? columns[0] ?? '#', t };
-	}
-
 	// Insérer… / Supprimer… (comme la boîte d'Excel) : lignes ou colonnes entières.
 	let linesDlg =$state<{ x: number; y: number; insert: boolean; choice: 'rows' | 'cols' } | null>(null);
-
-	function openLinesDialog(insert: boolean, x?: number, y?: number) {
-		const sel = selectionLines();
-		if (sel.rows || sel.cols) {
-			sheetLines(insert ? (sel.rows ? 'insertRows' : 'insertCols') : sel.rows ? 'deleteRows' : 'deleteCols');
-			return;
-		}
-		closeMenus();
-		const px = x ?? toView(screenX(active.col) + 20);
-		const py = y ?? toView(screenY(active.row) + rh(active.row) + 4);
-		linesDlg = { x: px, y: py, insert, choice: 'rows' };
-	}
-
-	function applyLinesDialog() {
-		const d = linesDlg;
-		linesDlg = null;
-		if (!d) return;
-		sheetLines(d.insert ? (d.choice === 'rows' ? 'insertRows' : 'insertCols') : d.choice === 'rows' ? 'deleteRows' : 'deleteCols');
-	}
-
-	/** Insérer ou supprimer la ligne ou la colonne de la cellule active (ruban Accueil › Cellules). */
-	export function cellsActive(op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn') {
-		const e = tableAt(active.row, active.col);
-		const sel = selectionLines();
-		// Hors tableau, ou lignes / colonnes entières sélectionnées : celles de la feuille.
-		if (!e || ((op === 'insertRow' || op === 'deleteRow') && sel.rows) || ((op === 'insertColumn' || op === 'deleteColumn') && sel.cols)) {
-			sheetLines(({ insertRow: 'insertRows', deleteRow: 'deleteRows', insertColumn: 'insertCols', deleteColumn: 'deleteCols' } as const)[op]);
-			return;
-		}
-		lastRepeat = () => cellsActive(op); // F4
-		const n = active.row - e.t.row - 1; // -1 : ligne d'en-tête
-		const i = active.col - e.t.col;
-		if (op === 'deleteRow' && n < 0) {
-			say(tr('grid.rows.headerNoDelete'));
-			return;
-		}
-		const fn = {
-			insertRow: source.insertRow && (() => tableLines(e, 'insertRow', Math.max(0, n))),
-			deleteRow: source.deleteRow && (() => tableLines(e, 'deleteRow', n)),
-			insertColumn: source.insertColumn && (() => tableLines(e, 'insertColumn', i)),
-			deleteColumn: source.deleteColumn && (() => tableLines(e, 'deleteColumn', i))
-		}[op];
-		menuAction(fn);
-	}
-
-	/** Insère ou supprime la ligne n (ou la colonne n) d'un tableau ; ce qui suit glisse à sa place. */
-	function tableLines(e: Entry, op: 'insertRow' | 'deleteRow' | 'insertColumn' | 'deleteColumn', n: number): Promise<unknown> {
-		const rows = op === 'insertRow' || op === 'deleteRow';
-		hintLines(rows, rows ? e.t.row + 1 + n : e.t.col + n, op.startsWith('insert') ? 1 : -1, e.t.id);
-		return { insertRow: source.insertRow, deleteRow: source.deleteRow, insertColumn: source.insertColumn, deleteColumn: source.deleteColumn }[op]!(e.t, n);
-	}
-
-	/** Suppr sur des colonnes entières d'un tableau : « Supprimer la colonne » ; faux sinon. */
-	function deleteWholeColumns(): boolean {
-		const { r0, r1, c0, c1 } = selection();
-		// Colonnes entières de la feuille (lettres) : les colonnes des tableaux
-		// qu'elles traversent sont retirées de ces tableaux (rien d'autre ne
-		// bouge) ; un tableau entièrement dedans est laissé à « Effacer ».
-		if (wholeKind() === 'cols' && source.deleteColumn) {
-			const cut = entries.filter((e) => e.t.col <= c1 && e.lastCol >= c0 && !(e.t.col >= c0 && e.lastCol <= c1));
-			if (!cut.length) return false;
-			if (cut.some((e) => queryIn(e.t.row, Math.max(c0, e.t.col), e.last, Math.min(c1, e.lastCol), true))) {
-				say(QUERY_READONLY);
-				return true;
-			}
-			writing = writing.catch(() => undefined).then(async () => {
-				try {
-					// Une seule étape d'annulation pour toutes les colonnes.
-					if (source.deleteColumnSpans) {
-						for (const e of cut) hintLines(false, Math.max(c0, e.t.col), -(Math.min(c1, e.lastCol) - Math.max(c0, e.t.col) + 1), e.t.id);
-						await source.deleteColumnSpans(cut.map((e) => ({ table: e.t.name, from: Math.max(c0, e.t.col) - e.t.col, to: Math.min(c1, e.lastCol) - e.t.col })));
-					} else for (const e of cut) for (let c = Math.min(c1, e.lastCol); c >= Math.max(c0, e.t.col); c--) await tableLines(e, 'deleteColumn', c - e.t.col);
-					schedule();
-				} catch (err) {
-					say(errorText(err));
-				}
-			});
-			return true;
-		}
-		const e = tableAt(r0, c0);
-		// En-tête compris ou données seules (Ctrl+Espace), toutes les lignes, au moins une.
-		if (!e || !source.deleteColumn || e.last <= e.t.row || (r0 !== e.t.row && (r0 !== e.t.row + 1 || r1 === r0)) || r1 < e.last || c1 > e.lastCol || (c0 === e.t.col && c1 === e.lastCol)) return false;
-		if (queryIn(r0, c0, r1, c1, true)) {
-			say(QUERY_READONLY);
-			return true;
-		}
-		// De droite à gauche : les numéros des colonnes restantes ne bougent pas.
-		writing = writing.catch(() => undefined).then(async () => {
-			try {
-				// Une seule étape d'annulation ; des colonnes vides au milieu coupent le tableau.
-				if (source.suppressColumns) {
-					hintLines(false, c0, -(c1 - c0 + 1), e.t.id);
-					await source.suppressColumns(e.t, c0 - e.t.col, c1 - e.t.col);
-				} else for (let c = c1; c >= c0; c--) await tableLines(e, 'deleteColumn', c - e.t.col);
-				schedule();
-			} catch (err) {
-				say(errorText(err));
-			}
-		});
-		return true;
-	}
-
-	/** Échap ferme le dialogue ouvert, où que soit le focus. */
-	function onGlobalKey(e: KeyboardEvent) {
-		if (e.key !== 'Escape') return;
-		if (!menusOpen()) return;
-		closeMenus();
-		wrap.focus();
-	}
-
-	/** Un menu, panneau ou boîte de la grille est-il ouvert ? */
-	function menusOpen(): boolean {
-		return !!(filterDlg || cfView || dedupDlg || fnDlg || menu || freeMenu || chartMenu || linesDlg || formatDlg || validDlg || dvAlert || noteDlg || listMenu || sizeDlg || (commentDlg && !commentDlg.preview));
-	}
-
-	/**
-	 * Ferme les menus, panneaux et boîtes ouverts sur la grille : un seul à la
-	 * fois (ouvrir le ▾ d'une colonne ferme celui d'une autre). Chaque ouverture
-	 * passe par ici ; un clic en dehors les ferme aussi (dismiss.ts).
-	 */
-	// --- « Filtrer l'onglet par cette colonne / ce champ » (tabchoice.ts) ---
-
-	/** L'entrée de menu pour la colonne column du tableau table (field : champ d'un TCD dont table est la source). */
-	function tabChoiceFor(table: string, column: string, o: { formula?: boolean; field?: boolean } = {}): TabChoiceItem {
-		return tabChoiceItem({ table, column, ...o, choice: data?.choice, candidates: choiceCands });
-	}
-
-	/** Pose ou retire l'onglet à choix (une étape d'annulation). */
-	function runTabChoice(table: string, column: string, it: TabChoiceItem) {
-		if (it.disabled) return;
-		closeMenus();
-		const set = source.setTabChoice;
-		const clear = source.clearTabChoice;
-		menuAction(it.clear ? clear && (() => clear(column)) : set && (() => set(table, column)));
-	}
-
-	function closeMenus() {
-		menu = freeMenu = chartMenu = listMenu = followMenu = null;
-		filterDlg = cfView = dedupDlg = fnDlg = linesDlg = pivotDlg = null;
-		formatDlg = noteDlg = sizeDlg = commentDlg = null;
-		// Plage source d'une validation en cours de pointage (peut-être sur
-		// une autre feuille) : le dialogue reste, retiré, jusqu'à Entrée ou Échap.
-		if (!dvPick) validDlg = null;
-		noteTip = null;
-	}
-
-	/** Plage sélectionnée (lignes et colonnes de la feuille, à partir de 0). */
-	export function selectedRange(): { r0: number; c0: number; r1: number; c1: number } {
-		const s = selection();
-		return { r0: s.r0, c0: s.c0, r1: s.r1, c1: s.c1 };
-	}
-
-	/** Sélectionne une plage (scripts : ui.select ; à partir de 0). */
-	export function selectRange(r0: number, c0: number, r1: number, c1: number) {
-		moveTo(r0, c0);
-		anchor = { row: clamp(r1, 0, SHEET_ROWS - 1), col: clamp(c1, 0, SHEET_COLS - 1) };
-		ensureVisible(r0, c0);
-		refreshFx();
-		refreshStatus();
-		schedule();
-	}
-
-	/** Rectangle à l'écran (pixels de la fenêtre) d'une plage : bulles de la visite guidée (lib/onboarding). */
-	export function cellBox(r0: number, c0: number, r1: number, c1: number): DOMRect | null {
-		if (!scroller) return null;
-		const k = zoomK();
-		const r = scroller.getBoundingClientRect();
-		const x0 = screenX(c0);
-		const y0 = screenY(r0);
-		return new DOMRect(r.left + x0 * k, r.top + y0 * k, (screenX(c1) + cax().size(c1) - x0) * k, (screenY(r1) + rh(r1) - y0) * k);
-	}
-
 	/** Géométrie de la feuille pour les objets posés (pixels de la feuille). */
 	const objGeo = { colOffset: (c: number) => cax().offset(c), rowTop: (r: number) => rowTop(r), colAt: (x: number) => cax().indexAt(x), rowAt: (y: number) => rax().indexAt(y) };
-
-	/** Insertion › Image, Formes, Zone de texte : objet posé à la cellule active. */
-	export function insertObject(kind: ObjectKind) {
-		if (kind === 'image') objectsLayer?.pickImage();
-		else objectsLayer?.insert(kind);
-	}
-
-	/** Insertion › Contrôles (bouton, case, liste, zone de saisie, sélecteur de fichier) : contrôle à la cellule active. */
-	export function insertButton(kind: ControlKind = '') {
-		if (!source.createButton) return;
-		buttonsLayer?.openEditor(undefined, kind);
-	}
 	// Les cases à cocher et listes relisent leur cellule liée à chaque mise à jour.
 	let controlsTick = $state(0);
-
-	function runButton(b: SheetButton) {
-		if (!source.runButton) return;
-		say(tr('grid.controls.running', { name: b.config.name || b.config.label }));
-		source.runButton(b.id).then(
-			(msg) => say(typeof msg === 'string' ? msg : ''),
-			(err) => say(errorText(err))
-		);
-	}
-
-	/** Évènement d'un contrôle de la feuille : son action et les écouteurs des scripts. */
-	function fireControl(b: SheetButton, event: 'click' | 'change', value: string, old: string) {
-		if (!source.fireControl) return runButton(b);
-		say(tr('grid.controls.running', { name: b.config.name || b.config.label }));
-		source.fireControl(b.id, event, value, old).then(
-			(msg) => say(typeof msg === 'string' ? msg : ''),
-			(err) => say(errorText(err))
-		);
-	}
-
-	/** Sélectionne un tableau ou un tableau croisé de la feuille par son nom (onglet SQL). */
-	export function revealObject(name: string): boolean {
-		const lower = name.toLowerCase();
-		const e = entries.find((x) => x.t.name.toLowerCase() === lower);
-		if (e) {
-			moveTo(e.t.row, e.t.col);
-			anchor = { row: e.last, col: e.lastCol };
-			ensureVisible(e.t.row, e.t.col);
-			refreshFx();
-			schedule();
-			return true;
-		}
-		const p = pivots.find((x) => (x.config.name ?? '').toLowerCase() === lower);
-		if (p) {
-			moveTo(p.row, p.col);
-			return true;
-		}
-		return false;
-	}
+	// Commandes du ruban : sheet/commands.svelte.ts (accès de createCommands à la feuille).
+	const commandsCtl = createCommands({
+		get fnDlg() { return fnDlg; }, set fnDlg(v) { fnDlg = v; },
+		get wrap() { return wrap; },
+		get startEdit() { return startEdit; },
+		get input() { return input; },
+		get onFormulaInput() { return onFormulaInput; },
+		get active() { return active; },
+		get tableAt() { return tableAt; },
+		get entries() { return entries; },
+		get catalog() { return catalog; },
+		get targetTable() { return targetTable; },
+		get source() { return source; },
+		get say() { return say; },
+		get menuAction() { return menuAction; },
+		get targetCol() { return targetCol; },
+		get selection() { return selection; },
+		get lastCol() { return lastCol; },
+		get lastRow() { return lastRow; },
+		get lastRepeat() { return lastRepeat; }, set lastRepeat(v) { lastRepeat = v; },
+		get hintLines() { return hintLines; },
+		get keyDlg() { return keyDlg; }, set keyDlg(v) { keyDlg = v; },
+		get write() { return write; },
+		get reopenFormula() { return reopenFormula; },
+		get handDlg() { return handDlg; }, set handDlg(v) { handDlg = v; },
+		get menu() { return menu; }, set menu(v) { menu = v; },
+		get toView() { return toView; },
+		get screenX() { return screenX; },
+		get screenY() { return screenY; },
+		get rh() { return rh; },
+		get linesDlg() { return linesDlg; }, set linesDlg(v) { linesDlg = v; },
+		get wholeKind() { return wholeKind; },
+		get queryIn() { return queryIn; },
+		get QUERY_READONLY() { return QUERY_READONLY; },
+		get writing() { return writing; }, set writing(v) { writing = v; },
+		get schedule() { return schedule; },
+		get filterDlg() { return filterDlg; }, set filterDlg(v) { filterDlg = v; },
+		get cfView() { return cfView; }, set cfView(v) { cfView = v; },
+		get dedupDlg() { return dedupDlg; }, set dedupDlg(v) { dedupDlg = v; },
+		get freeMenu() { return freeMenu; }, set freeMenu(v) { freeMenu = v; },
+		get chartMenu() { return chartMenu; }, set chartMenu(v) { chartMenu = v; },
+		get formatDlg() { return formatDlg; }, set formatDlg(v) { formatDlg = v; },
+		get validDlg() { return validDlg; }, set validDlg(v) { validDlg = v; },
+		get dvAlert() { return dvAlert; },
+		get noteDlg() { return noteDlg; }, set noteDlg(v) { noteDlg = v; },
+		get listMenu() { return listMenu; }, set listMenu(v) { listMenu = v; },
+		get sizeDlg() { return sizeDlg; }, set sizeDlg(v) { sizeDlg = v; },
+		get commentDlg() { return commentDlg; }, set commentDlg(v) { commentDlg = v; },
+		get data() { return data; },
+		get choiceCands() { return choiceCands; },
+		get followMenu() { return followMenu; }, set followMenu(v) { followMenu = v; },
+		get pivotDlg() { return pivotDlg; }, set pivotDlg(v) { pivotDlg = v; },
+		get dvPick() { return dvPick; },
+		get noteTip() { return noteTip; }, set noteTip(v) { noteTip = v; },
+		get moveTo() { return moveTo; },
+		get anchor() { return anchor; }, set anchor(v) { anchor = v; },
+		get ensureVisible() { return ensureVisible; },
+		get refreshFx() { return refreshFx; },
+		get refreshStatus() { return refreshStatus; },
+		get scroller() { return scroller; },
+		get zoomK() { return zoomK; },
+		get cax() { return cax; },
+		get objectsLayer() { return objectsLayer; },
+		get buttonsLayer() { return buttonsLayer; },
+		get pivots() { return pivots; }
+	});
+	const { shownFunctions, selectionLines, applyKeyDialog, cancelKeyDialog, applyHandDialog, cancelHandDialog, openHandKey, openLinesDialog, applyLinesDialog, tableLines, deleteWholeColumns, onGlobalKey, tabChoiceFor, runTabChoice, closeMenus, runButton, fireControl } = commandsCtl;
+	export const startFormula = commandsCtl.startFormula;
+	export const autoSum = commandsCtl.autoSum;
+	export const openFunctions = commandsCtl.openFunctions;
+	export const sortActive = commandsCtl.sortActive;
+	export const sheetLines = commandsCtl.sheetLines;
+	export const cellsActive = commandsCtl.cellsActive;
+	export const selectedRange = commandsCtl.selectedRange;
+	export const selectRange = commandsCtl.selectRange;
+	export const cellBox = commandsCtl.cellBox;
+	export const insertObject = commandsCtl.insertObject;
+	export const insertButton = commandsCtl.insertButton;
+	export const revealObject = commandsCtl.revealObject;
 
 	// --- Audit de formules : flèches des antécédents et des dépendants --------
 
