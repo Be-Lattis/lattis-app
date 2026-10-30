@@ -206,3 +206,21 @@ test('13. note sur une cellule', async ({ app }) => {
 	await app.getByRole('button', { name: 'Supprimer la note' }).click();
 	await expect(app.getByRole('button', { name: 'Nouvelle note' })).toBeVisible();
 });
+
+// Validation des données : liste de valeurs, saisie hors liste refusée.
+test('14. validation des données', async ({ app }) => {
+	await typeTable(app);
+	await goTo(app, 'A2');
+	await ribbonTab(app, 'Données');
+	await app.getByRole('button', { name: 'Validation des données', exact: true }).click();
+	const dlg = app.getByRole('dialog', { name: /Validation/ });
+	await expect(dlg).toBeVisible();
+	await dlg.locator('#dv-type').selectOption('list');
+	await dlg.locator('textarea').fill('Pomme\nPoire\nKiwi');
+	await dlg.getByRole('button', { name: 'OK', exact: true }).click();
+	await expect(dlg).toBeHidden();
+	await goTo(app, 'A2');
+	await app.keyboard.type('Banane');
+	await app.keyboard.press('Enter');
+	await expect(app.getByText(/n'est pas permis/).first()).toBeVisible();
+});

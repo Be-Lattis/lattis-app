@@ -31,8 +31,8 @@
 	import { PanGesture, SpaceHold } from './pan';
 	import { panes, toGrid, type Pane } from './panes';
 	import { afterWidthChange, sideRoom } from './keepinview';
-	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
-	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
+	import { dvPreview, hiddenLines, mergeAt, mergeList, validate, type DvList, type MergeRange } from './sheetfmt';
+	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
 	import { expandRange, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type Cell, type CellRange } from './mergesel';
 	import { findZone, inZone, zoneLabel, type Zone } from './findzone';
 	import { type FindOpts, type FoundCell } from './findopts';
@@ -64,7 +64,7 @@
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setColFolded, setFolded } from './pivottree';
 	import { newSlicer, withSlicer } from './pivotslicer';
 	import SheetSlicers from './SheetSlicers.svelte';
-	import { citeLabel, refMessage, refTarget, type Citation } from './reflink';
+	import { citeLabel, type Citation } from './reflink';
 	import { gridPalette } from './theme';
 	import { paint as themed } from './colors';
 	import { tableTheme } from './theme.svelte.js';
@@ -98,8 +98,8 @@
 	import { type CellSpeech } from './a11y';
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
-	import { formulaRefs, highlightParts, isFormula, previewShift, rangeRef, refRect, type FormulaError, type Rect } from './formulaEdit';
-	import { editorLeave, holdFormula, qualifyRef, updateHold, type FormulaHold } from './crossref';
+	import { formulaRefs, highlightParts, isFormula, previewShift, refRect, type FormulaError, type Rect } from './formulaEdit';
+	import { editorLeave, holdFormula, updateHold, type FormulaHold } from './crossref';
 	import OutlineBar from './OutlineBar.svelte';
 	import { bandSize, detailTarget, outlineDepth, type OutlineAction, type OutlineGeom, type SheetOutline } from './outline';
 	import { nameAlertOpen } from '#lib/ui/nameAlert.js';
@@ -134,6 +134,7 @@
 	import { createMouse } from './sheet/mouse.svelte.js';
 	import { createMenus } from './sheet/menus.svelte.js';
 	import { createNotes } from './sheet/notes.svelte.js';
+	import { createValidation } from './sheet/validation.svelte.js';
 
 
 	interface Props {
@@ -4401,160 +4402,15 @@
 
 	// --- Validation des données : liste déroulante ------------------------------
 
-	/** Propriété dv de la cellule (liste saisie ou plage source), hors en-tête. */
-	function dvAt(r: number, c: number): unknown {
-		const e = tableAt(r, c);
-		if (e && r === e.t.row) return undefined;
-		return styleAt(r, c, e)?.dv;
-	}
-
-	/** Plage source de la validation de la cellule (liste relue), ou undefined. */
-	function dvSrcAt(r: number, c: number): string | undefined {
-		return dvSource(dvAt(r, c));
-	}
-
-	/**
-	 * Valeurs permises de la cellule (validation par liste), ou undefined.
-	 * Liste tirée d'une plage : les valeurs relues (vide tant qu'elles ne le
-	 * sont pas : la cellule a quand même sa liste déroulante).
-	 */
-	function listOf(r: number, c: number): string[] | undefined {
-		const l = dvListOf(dvAt(r, c));
-		if (!l) return undefined;
-		if (l.src) return dvLists.get(l.src)?.values ?? [];
-		return l.list;
-	}
-
+	// --- Validation des données et colonnes de référence : sheet/validation.svelte.ts ---
 	// Listes tirées d'une plage, relues sur le serveur (par source) : vidées à
 	// chaque relecture de la feuille, relues à l'ouverture de la liste et
 	// quand la cellule active en a une (la saisie est vérifiée avec elles).
 	const dvLists = new Map<string, DvList>();
 	let dvGen = 0;
-
-	/** Relit la liste d'une plage source ; une erreur de lecture est une liste en erreur. */
-	async function loadDv(src: string): Promise<DvList> {
-		const gen = dvGen;
-		let l: DvList;
-		try {
-			l = source.validationList ? await source.validationList(src) : { values: [], error: tr('grid.validation.readImpossible') };
-		} catch (err) {
-			l = { values: [], error: errorText(err) };
-		}
-		if (gen === dvGen) dvLists.set(src, l);
-		return l;
-	}
-
-	/** La cellule active a une liste tirée d'une plage : la relire (vérification de la saisie). */
-	function prefetchDv() {
-		const src = dvSrcAt(active.row, active.col);
-		const k = `${dvGen}|${src}`;
-		if (!src || dvLists.has(src) || dvLoading.has(k)) return;
-		dvLoading.add(k);
-		void loadDv(src).finally(() => dvLoading.delete(k));
-	}
-	const dvLoading = new Set<string>();
-
-	/** Bouton ▾ de la liste, juste à droite de la cellule active (comme Excel). */
-	function dropButton() {
-		const g = mergeOf(active.row, active.col);
-		const right = g ? screenX(g.col) + cax().offset(g.col + g.cols) - cax().offset(g.col) : screenX(active.col) + cax().size(active.col);
-		const bottom = screenY(active.row) + (g ? rowTop(g.row + g.rows) - rowTop(g.row) : rh(active.row));
-		const h = Math.min(18, rh(active.row) - 2);
-		return { x: right + 1, y: bottom - h - 1, w: 16, h };
-	}
-
 	// Icône « Mettre sous forme de tableau » d'un îlot de cellules libres.
 	let tableHintBox: { x: number; y: number; w: number; h: number } | null = null;
-	/** La cellule active est dans un bloc d'au moins deux cellules libres, hors tableau : l'icône s'affiche. */
-	function asTableHint(): boolean {
-		const { row, col } = active;
-		if (!source.formatAsTable || locked || !cells.has(key(row, col)) || tableAt(row, col) || keptOut(row, col) || listOf(row, col)) return false;
-		// Le bloc libre (4-connexité, hors tableaux et légendes) : au moins trois
-		// cellules, et pas seulement des phrases (un texte de plusieurs lignes
-		// n'est pas une liste à mettre en tableau).
-		const seen = new Set<string>();
-		const stack = [[row, col]];
-		let n = 0;
-		let short = 0;
-		while (stack.length && seen.size < 200) {
-			const [r, c] = stack.pop()!;
-			const k = key(r, c);
-			if (seen.has(k) || !cells.has(k) || tableAt(r, c) || keptOut(r, c)) continue;
-			seen.add(k);
-			n++;
-			const v = (cells.get(k) ?? '').trim();
-			if (v.split(/s+/).length <= 3 && v.length <= 40) short++;
-			stack.push([r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]);
-		}
-		return n >= 3 && short * 2 >= n;
-	}
-	function tableHintAt(ev: MouseEvent): boolean {
-		const b = tableHintBox;
-		if (!b) return false;
-		const { x, y } = toLocal(ev);
-		return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
-	}
-
 	let listMenu = $state<{ x: number; y: number; values: string[]; row: number; col: number; error?: string; loading?: boolean } | null>(null);
-
-	/** Ouvre la liste déroulante ; une liste tirée d'une plage est relue à chaque ouverture. */
-	function openList() {
-		const values = listOf(active.row, active.col);
-		if (!values) return;
-		const src = dvSrcAt(active.row, active.col);
-		const b = dropButton();
-		closeMenus();
-		const at = { row: active.row, col: active.col };
-		const cached = src ? dvLists.get(src) : undefined;
-		listMenu = { x: toView(screenX(active.col)), y: toView(b.y + b.h) + 2, values, ...at, error: cached?.error, loading: !!src && !cached };
-		if (!src) return;
-		void loadDv(src).then((l) => {
-			const m = listMenu;
-			if (m && m.row === at.row && m.col === at.col) listMenu = { ...m, values: l.values, error: l.error, loading: false };
-		});
-	}
-
-	function pickFromList(v: string) {
-		const m = listMenu;
-		listMenu = null;
-		wrap.focus();
-		if (!m || locked) {
-			if (locked) say(locked);
-			return;
-		}
-		if (v !== cellInfo(m.row, m.col).value) write(m.row, m.col, v);
-	}
-
-	// --- Colonnes de référence (décision 0016) ---------------------------------
-
-	/** La cellule cite la clé d'un tableau (validation tirée de sa colonne clé) et a une valeur : la référence. */
-	function refAt(r: number, c: number): { src: string; table: string; key: string; value: string } | null {
-		if (!onreflink || !source.referenceRow) return null;
-		const src = dvSrcAt(r, c);
-		const t = refTarget(src, sources);
-		const value = t ? shownText(r, c).trim() : '';
-		return t && src && value ? { src, ...t, value } : null;
-	}
-
-	/** Adresse de la cellule pour « Revenir à » : Feuille!C5. */
-	const spotLabel = (r: number, c: number) => (sheetName ? `${sheetName}!` : '') + addrA1(r, c);
-
-	/** Basculer sur la ligne citée par la cellule (Ctrl+clic, clic droit, bouton ↗). */
-	async function followRef(r: number, c: number) {
-		const ref = refAt(r, c);
-		if (!ref) return;
-		try {
-			const k = await source.referenceRow!(ref.src, ref.value);
-			if (!k.found || k.id === undefined) {
-				say(tr('grid.refLink.missing', { value: ref.value, table: k.table || ref.table }));
-				return;
-			}
-			onreflink?.({ table: k.table, id: k.id, key: k.key }, { row: r, col: c, label: spotLabel(r, c) });
-		} catch (err) {
-			say(errorText(err));
-		}
-	}
-
 	// Entrées du clic droit : « Basculer sur » (cellule d'une référence),
 	// « Lignes qui citent » (cellule de la clé d'un tableau), relues à
 	// l'ouverture du menu.
@@ -4564,49 +4420,88 @@
 		go?: { table: string; value: string; found?: boolean };
 		cite?: { table: string; value: string; list: Citation[] | null };
 	} | null>(null);
+	// Dialogue : valeurs saisies (text) ou plage source (src), aperçu des
+	// valeurs de la plage (relu à chaque changement de la référence).
+	// Trois onglets (dvrule.ts) : Options, Message de saisie, Alerte d'erreur.
+	let validDlg = $state<(DvForm & { target: string; error: string; preview: DvList | null; loading: boolean }) | null>(null);
+	let previewTimer: ReturnType<typeof setTimeout> | undefined;
+	// « Sélectionner » : le dialogue se retire, la plage source se désigne
+	// dans la grille (clic, glissé, Maj+flèches, clic sur l'en-tête d'une
+	// colonne de tableau), au besoin sur une autre feuille (clic sur son
+	// onglet). Entrée la reprend dans le dialogue, Échap revient sans la
+	// changer ; dans les deux cas la feuille de la cellule et la sélection
+	// d'avant (la cible de la validation) sont rétablies. back : retour en
+	// cours vers la feuille d'origine, ref : la référence à reprendre.
+	let dvPick = $state<DvPick | null>(null);
+	let dvPickRef = $state('');
 
-	function loadRefItems(r: number, c: number) {
-		refItems = null;
-		const ref = refAt(r, c);
-		if (ref) {
-			const at = { row: r, col: c, go: { table: ref.table, value: ref.value } as { table: string; value: string; found?: boolean } };
-			refItems = at;
-			source.referenceRow!(ref.src, ref.value).then(
-				(k) => {
-					if (refItems?.row === r && refItems.col === c) refItems = { ...refItems, go: { table: k.table || ref.table, value: ref.value, found: k.found } };
-				},
-				() => undefined
-			);
-			return;
-		}
-		const e = tableAt(r, c);
-		if (!e || r <= e.t.row || e.t.key !== c - e.t.col || !source.citations || !onreflink) return;
-		const value = shownText(r, c).trim();
-		if (!value) return;
-		const table = e.t.name;
-		refItems = { row: r, col: c, cite: { table, value, list: null } };
-		source.citations(table, value).then(
-			(list) => {
-				// Aucune colonne ne cite ce tableau : pas d'entrée.
-				if (refItems?.row !== r || refItems.col !== c) return;
-				refItems = list?.length ? { ...refItems, cite: { table, value, list } } : null;
-			},
-			() => (refItems = null)
-		);
-	}
+	// Saisie refusée par le moteur (dvrules.go) : Arrêt (Réessayer, Annuler),
+	// Avertissement (Continuer ? Oui, Non, Annuler), Informations (OK, Annuler).
+	let dvAlert = $state<(DvAlert & { row: number; col: number; raw: string; keep: boolean }) | null>(null);
+	// Message de saisie de la cellule active, relevé en dessinant.
+	let inputTip = $state<InputTip | null>(null);
+	const validationCtl = createValidation({
+		get tableAt() { return tableAt; },
+		get styleAt() { return styleAt; },
+		get dvLists() { return dvLists; },
+		get dvGen() { return dvGen; },
+		get source() { return source; },
+		get active() { return active; }, set active(v) { active = v; },
+		get mergeOf() { return mergeOf; },
+		get screenX() { return screenX; },
+		get cax() { return cax; },
+		get screenY() { return screenY; },
+		get rowTop() { return rowTop; },
+		get rh() { return rh; },
+		get locked() { return locked; },
+		get cells() { return cells; },
+		get key() { return key; },
+		get keptOut() { return keptOut; },
+		get tableHintBox() { return tableHintBox; },
+		get toLocal() { return toLocal; },
+		get closeMenus() { return closeMenus; },
+		get listMenu() { return listMenu; }, set listMenu(v) { listMenu = v; },
+		get toView() { return toView; },
+		get wrap() { return wrap; },
+		get say() { return say; },
+		get cellInfo() { return cellInfo; },
+		get write() { return write; },
+		get onreflink() { return onreflink; },
+		get sources() { return sources; },
+		get shownText() { return shownText; },
+		get sheetName() { return sheetName; },
+		get addrA1() { return addrA1; },
+		get refItems() { return refItems; }, set refItems(v) { refItems = v; },
+		get menu() { return menu; }, set menu(v) { menu = v; },
+		get validDlg() { return validDlg; }, set validDlg(v) { validDlg = v; },
+		get selection() { return selection; },
+		get wholeKind() { return wholeKind; },
+		get previewTimer() { return previewTimer; }, set previewTimer(v) { previewTimer = v; },
+		get applyStyle() { return applyStyle; },
+		get dvPick() { return dvPick; }, set dvPick(v) { dvPick = v; },
+		get anchor() { return anchor; }, set anchor(v) { anchor = v; },
+		get wholeSel() { return wholeSel; }, set wholeSel(v) { wholeSel = v; },
+		get sheetId() { return sheetId; },
+		get dvPickRef() { return dvPickRef; }, set dvPickRef(v) { dvPickRef = v; },
+		get refTables() { return refTables; },
+		get onsheet() { return onsheet; },
+		get ensureVisible() { return ensureVisible; },
+		get schedule() { return schedule; },
+		get refreshStatus() { return refreshStatus; },
+		get dvAlert() { return dvAlert; }, set dvAlert(v) { dvAlert = v; },
+		get startEdit() { return startEdit; },
+		get ctx() { return ctx; },
+		get MARGIN() { return MARGIN; },
+		get viewW() { return viewW; },
+		get viewH() { return viewH; },
+		get inputTip() { return inputTip; }, set inputTip(v) { inputTip = v; }
+	});
+	const { dvAt, listOf, prefetchDv, dropButton, asTableHint, tableHintAt, openList, pickFromList, refAt, followRef, loadRefItems, openCitation, linkButton, refreshPreview, applyValidation, startPick, pickedRef, endPick, finishPick, refusal, answerDvAlert, dvAfterData, drawValidation } = validationCtl;
+	export const openValidation = validationCtl.openValidation;
+	export const circleInvalid = validationCtl.circleInvalid;
+	export const clearCircles = validationCtl.clearCircles;
 
-	/** Lignes qui citent : le tableau qui cite est filtré sur la valeur, la première ligne sélectionnée. */
-	function openCitation(r: number, c: number, ci: Citation, value: string) {
-		menu = null;
-		refItems = null;
-		onreflink?.({ table: ci.table, id: ci.first, key: ci.column, filter: { column: ci.column, value } }, { row: r, col: c, label: spotLabel(r, c) });
-	}
-
-	/** Bouton ↗ de la cellule active d'une référence, juste après la flèche de la liste. */
-	function linkButton() {
-		const b = dropButton();
-		return { ...b, x: b.x + b.w + 1 };
-	}
+	// --- Colonnes de référence (décision 0016) ---------------------------------
 
 	// Ligne atteinte par « Basculer sur » ou « Revenir » : éclat bref.
 	const JUMP_FLASH_MS = 1200;
@@ -4713,268 +4608,7 @@
 		if (motion()) animBusy = true;
 	}
 
-	// Dialogue : valeurs saisies (text) ou plage source (src), aperçu des
-	// valeurs de la plage (relu à chaque changement de la référence).
-	// Trois onglets (dvrule.ts) : Options, Message de saisie, Alerte d'erreur.
-	let validDlg = $state<(DvForm & { target: string; error: string; preview: DvList | null; loading: boolean }) | null>(null);
-	let previewTimer: ReturnType<typeof setTimeout> | undefined;
-	let dvDlgSeq = 0;
-
-	/** Données › Validation des données : liste des valeurs permises de la sélection. */
-	export function openValidation() {
-		if (!source.applyStyle) return;
-		if (locked) {
-			say(locked);
-			return;
-		}
-		closeMenus();
-		const dv = dvAt(active.row, active.col);
-		validDlg = { target: validationTarget(), ...dvForm(dvRule(dv)), error: '', preview: null, loading: false };
-		if (validDlg.type === 'list' && validDlg.mode === 'range') refreshPreview(0);
-		// Bornes et formule relues dans la langue de la session, écrites pour la cellule active.
-		const seq = ++dvDlgSeq;
-		if (dvRule(dv) && !dvLegacy(dv) && source.validationAt)
-			void source
-				.validationAt(active.row, active.col)
-				.then((r) => {
-					const cur = validDlg;
-					if (!cur || seq !== dvDlgSeq || !r?.type) return;
-					const f = dvForm(r);
-					cur.min = f.min;
-					cur.max = f.max;
-					cur.formula = f.formula;
-				})
-				.catch(() => undefined);
-	}
-
-	/** Ce que vise la validation (la sélection), pour le titre du dialogue. */
-	function validationTarget(): string {
-		const e = tableAt(active.row, active.col);
-		const table = e ? { name: e.t.name, row: e.t.row, last: e.last, col: e.t.col, columns: e.t.columns.map((c) => c.name) } : null;
-		return dvTarget({ sel: selection(), whole: wholeKind(), table, sheet: sheetName });
-	}
-
-	/** Relit l'aperçu de la plage source du dialogue (après delay ms). */
-	function refreshPreview(delay = 250) {
-		clearTimeout(previewTimer);
-		const d = validDlg;
-		if (!d) return;
-		const src = cleanSource(d.src);
-		if (d.type !== 'list' || d.mode !== 'range' || !src || !source.validationList) {
-			d.preview = null;
-			d.loading = false;
-			return;
-		}
-		d.loading = true;
-		previewTimer = setTimeout(async () => {
-			const l = await loadDv(src);
-			const cur = validDlg;
-			if (!cur || cleanSource(cur.src) !== src) return;
-			cur.preview = l;
-			cur.loading = false;
-		}, delay);
-	}
-
-	function applyValidation(clear = false) {
-		const d = validDlg;
-		if (!d) return;
-		let dv: unknown = null;
-		if (!clear) {
-			// La formule (et une borne en formule) est écrite pour la cellule active.
-			const p = dvFromForm(d, addrA1(active.row, active.col));
-			if ('error' in p) {
-				d.error = p.error;
-				d.tab = 'options';
-				return;
-			}
-			dv = p.dv;
-		}
-		clearTimeout(previewTimer);
-		validDlg = null;
-		wrap.focus();
-		applyStyle({ dv });
-		const l = dvListOf(dv);
-		if (!dv) say(tr('grid.validation.removed'));
-		else if (l?.list) say(tr('grid.validation.list.set', { n: l.list.length }));
-		else if (l?.src) {
-			// Tirée de la clé d'un tableau : la colonne en devient une référence (décision 0016).
-			const t = onreflink && source.referenceRow ? refTarget(l.src, sources) : null;
-			const e = tableAt(active.row, active.col);
-			if (t) say(refMessage(e ? e.t.columns[active.col - e.t.col].name : d.target, t.table));
-			else say(tr('grid.validation.list.source', { src: l.src }));
-		} else say(tr('grid.validation.set'));
-	}
-
-	// « Sélectionner » : le dialogue se retire, la plage source se désigne
-	// dans la grille (clic, glissé, Maj+flèches, clic sur l'en-tête d'une
-	// colonne de tableau), au besoin sur une autre feuille (clic sur son
-	// onglet). Entrée la reprend dans le dialogue, Échap revient sans la
-	// changer ; dans les deux cas la feuille de la cellule et la sélection
-	// d'avant (la cible de la validation) sont rétablies. back : retour en
-	// cours vers la feuille d'origine, ref : la référence à reprendre.
-	let dvPick = $state<DvPick | null>(null);
-	let dvPickRef = $state('');
-
-	function startPick() {
-		if (!validDlg) return;
-		dvPick = { active: { ...active }, anchor: { ...anchor }, whole: wholeSel, sheet: sheetId() };
-		dvPickRef = pickedRef() ?? '';
-		wrap.focus();
-		say(tr('grid.validation.pick'));
-	}
-
-	/**
-	 * Référence de la sélection pointée : Tableau[Colonne] (cellules de la
-	 * colonne ou son en-tête), Tableau[Colonne][a:b] ou Cell[A1:A10] ; sur une
-	 * autre feuille que celle de la cellule, Feuille2!Cell[A1:A10].
-	 */
-	function pickedRef(): string | null {
-		const ref = rangeRef(selection(), refTables());
-		return ref !== null && dvPick && dvPick.sheet !== sheetId() ? qualifyRef(ref, sheetName) : ref;
-	}
-
-	function endPick(keep: boolean) {
-		const p = dvPick;
-		if (!p || p.back) return;
-		const ref = keep ? pickedRef() : null;
-		if (keep && ref === null) {
-			say(tr('grid.validation.pick.oneColumn'));
-			return;
-		}
-		if (p.sheet !== sheetId() && onsheet) {
-			// Retour à la feuille de la cellule : fini quand elle est relue (applyData).
-			dvPick = { ...p, back: true, ref };
-			onsheet(p.sheet);
-			return;
-		}
-		finishPick(p, ref);
-	}
-
-	/** Sélection d'avant rétablie, référence reprise dans le dialogue. */
-	function finishPick(p: DvPick, ref: string | null | undefined) {
-		dvPick = null;
-		active = p.active;
-		anchor = p.anchor;
-		wholeSel = p.whole;
-		ensureVisible(p.active.row, p.active.col);
-		schedule();
-		refreshStatus();
-		const d = validDlg;
-		if (d && ref) {
-			d.src = ref;
-			d.mode = 'range';
-			d.error = '';
-			refreshPreview(0);
-		}
-	}
-
-	/** Saisie refusée par la validation de la cellule : le message, sinon null (value : la valeur de la liste). */
-	function refusal(row: number, col: number, text: string): { message: string } | { value: string } {
-		if (text.trimStart().startsWith('=')) return { value: text }; // une formule n'est pas vérifiée
-		// Validation sous forme objet (nombre, date, formule, alerte…) : vérifiée par le moteur (dvAlert).
-		if (!dvLegacy(dvAt(row, col))) return { value: text };
-		const src = dvSrcAt(row, col);
-		const r = src ? validateSource(src, dvLists.get(src), text) : validate(listOf(row, col), text);
-		return r.ok ? { value: r.value } : { message: r.message };
-	}
-
 	// --- Validation des données : alerte, message de saisie, cercles ---------------
-
-	// Saisie refusée par le moteur (dvrules.go) : Arrêt (Réessayer, Annuler),
-	// Avertissement (Continuer ? Oui, Non, Annuler), Informations (OK, Annuler).
-	let dvAlert = $state<(DvAlert & { row: number; col: number; raw: string; keep: boolean }) | null>(null);
-
-	function answerDvAlert(a: 'yes' | 'retry' | 'cancel') {
-		const d = dvAlert;
-		dvAlert = null;
-		wrap.focus();
-		if (!d) return;
-		if (a === 'yes') {
-			void write(d.row, d.col, d.raw, d.keep, undefined, 'dv');
-			return;
-		}
-		if (a === 'retry') {
-			// Le texte tapé revient dans l'éditeur.
-			active = { row: d.row, col: d.col };
-			anchor = { ...active };
-			ensureVisible(d.row, d.col);
-			startEdit(true, d.raw);
-		}
-	}
-
-	// Message de saisie de la cellule active, relevé en dessinant.
-	let inputTip = $state<InputTip | null>(null);
-	// Entourer les données non valides : cellules relues après chaque mise à jour.
-	let circlesOn = false;
-	let dvCircles: { row: number; col: number }[] = [];
-	let circleSeq = 0;
-
-	async function refreshCircles(announce = false) {
-		const get = source.invalidCells;
-		if (!get) return;
-		const seq = ++circleSeq;
-		let cells: { row: number; col: number }[] = [];
-		try {
-			cells = (await get()) ?? [];
-		} catch (err) {
-			say(errorText(err));
-		}
-		if (seq !== circleSeq || !circlesOn) return;
-		dvCircles = cells;
-		if (announce) say(cells.length ? tr('grid.validation.circles.found', { n: cells.length }) : tr('grid.validation.circles.none'));
-		schedule();
-	}
-
-	/** Données › Validation ▾ › Entourer les données non valides. */
-	export function circleInvalid() {
-		circlesOn = true;
-		void refreshCircles(true);
-	}
-
-	/** Données › Validation ▾ › Effacer les cercles. */
-	export function clearCircles() {
-		circlesOn = false;
-		circleSeq++;
-		dvCircles = [];
-		schedule();
-	}
-
-	/** Feuille relue : cercles relus (effacés en changeant de feuille). */
-	function dvAfterData(switching: boolean) {
-		if (switching) clearCircles();
-		else if (circlesOn) void refreshCircles();
-	}
-
-	/** Cercles rouges autour des données non valides, et message de saisie de la cellule active. */
-	function drawValidation() {
-		if (dvCircles.length) {
-			ctx.save();
-			ctx.beginPath();
-			ctx.rect(MARGIN, TOP_H, viewW - MARGIN, viewH - TOP_H);
-			ctx.clip();
-			ctx.strokeStyle = '#e02020';
-			ctx.lineWidth = 1.5;
-			for (const { row, col } of dvCircles) {
-				const h = rh(row);
-				const w = cax().size(col);
-				const x = screenX(col);
-				const y = screenY(row);
-				if (h <= 0 || w <= 0 || x > viewW || y > viewH || x + w < MARGIN || y + h < TOP_H) continue;
-				ctx.beginPath();
-				ctx.ellipse(x + w / 2, y + h / 2, w / 2 + 3, h / 2 + 2, 0, 0, Math.PI * 2);
-				ctx.stroke();
-			}
-			ctx.restore();
-		}
-		const inp = validDlg || dvAlert || dvPick ? null : dvInputOf(dvAt(active.row, active.col));
-		let tip: InputTip | null = null;
-		if (inp) {
-			const y = screenY(active.row) + rh(active.row) + 4;
-			const x = screenX(active.col) + Math.min(24, cax().size(active.col) / 2);
-			if (y > TOP_H && y < viewH && x > MARGIN && x < viewW) tip = { x: toView(Math.min(x, viewW - 250)), y: toView(y), ...inp };
-		}
-		if (JSON.stringify(tip) !== JSON.stringify(inputTip)) inputTip = tip;
-	}
 
 	// --- Notes et commentaires : sheet/notes.svelte.ts ---
 
