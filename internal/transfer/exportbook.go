@@ -352,7 +352,10 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 		if len(c.Spill) > 0 {
 			// Tableau dynamique : toujours ses valeurs.
 			if b != nil {
-				_, why, _ := b.translateWhy(c.Raw, at{sheet: b.sheets[strings.ToLower(s.Name)]})
+				_, why, ok := b.translateWhy(c.Raw, at{sheet: b.sheets[strings.ToLower(s.Name)]})
+				if ok {
+					why = spillWhy(c.Raw)
+				}
 				sh.rep.formula(false, false, why)
 			}
 			for i, row := range c.Spill {

@@ -50,7 +50,7 @@ Classés par fréquence d'usage probable. **[corrigé]** : fait, avec le commit 
 
 ### Fichiers
 
-18. **[plus tard]** Export .xlsx / .ods des nouvelles fonctions : `internal/transfer/exportformula.go` (`exportFuncs`) ne les connaît pas, la cellule exportée garde alors sa valeur sans formule. À ajouter avec le préfixe `_xlfn.` (EQUIVX, REGEX*, ASSEMB.V…, PLAFOND.MATH…) par l'audit des fichiers, qui travaille dans ce paquet. Environ 1 heure. L'import, lui, les lit déjà (le préfixe est retiré à la lecture).
+18. **[corrigé]** Export .xlsx / .ods des nouvelles fonctions : `exportFuncs` les écrit avec leur préfixe (`_xlfn.XMATCH`, `_xlfn.REGEXTEST`, `_xlfn.VSTACK`, `_xlfn._xlws.FILTER`, `_xlfn.CEILING.MATH`…) ; en .ods, seules les fonctions mathématiques et d'information (LibreOffice n'a pas les autres partout). Un tableau dynamique qui se déverse reste exporté en valeurs ; ces noms servent quand il est imbriqué (`SOMME(FILTRE(…))`). Chaque fonction du catalogue est traduite ou dans la liste `notExported` (essai `TestExportCatalogue`) ; aller-retour .xlsx du texte et de la valeur (`TestExportNewFunctionsRoundTrip`).
 
 ## Ce qui a été vérifié
 

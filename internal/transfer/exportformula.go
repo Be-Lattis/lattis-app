@@ -223,10 +223,51 @@ func init() {
 	for _, f := range strings.Fields(`GAMMA PHI GAUSS`) {
 		exportFuncs[f] = [2]string{"_xlfn." + f, f}
 	}
+	// Audit des formules du 30/10 : fonctions ajoutées depuis. Noms anciens,
+	// sans préfixe, les mêmes en .ods.
+	for _, f := range strings.Fields(`EVEN ODD FACT COMBIN PERMUT ATAN2 ISERR DAYS360`) {
+		exportFuncs[f] = [2]string{f, f}
+	}
+	exportFuncs["CEILING.MATH"] = [2]string{"_xlfn.CEILING.MATH", "COM.MICROSOFT.CEILING.MATH"}
+	exportFuncs["FLOOR.MATH"] = [2]string{"_xlfn.FLOOR.MATH", "COM.MICROSOFT.FLOOR.MATH"}
+	// Recherches, expressions régulières et tableaux dynamiques : préfixe
+	// _xlfn. (_xlfn._xlws. pour FILTRE et TRIER). Un tableau dynamique qui se
+	// déverse garde ses valeurs (exportbook.go) ; ces noms servent quand il
+	// est imbriqué dans un calcul (SOMME(FILTRE(…)), LIGNES(ASSEMB.V(…))).
+	// Pas en .ods : seules les versions récentes de LibreOffice les
+	// connaissent, la valeur est gardée.
+	for _, f := range strings.Fields(`XMATCH REGEXTEST REGEXEXTRACT REGEXREPLACE VSTACK HSTACK CHOOSECOLS CHOOSEROWS
+		TOCOL TOROW TAKE DROP SORTBY UNIQUE SEQUENCE TEXTSPLIT`) {
+		exportFuncs[f] = [2]string{"_xlfn." + f, ""}
+	}
+	for _, f := range strings.Fields(`FILTER SORT`) {
+		exportFuncs[f] = [2]string{"_xlfn._xlws." + f, ""}
+	}
 	// TEXTE : le format est écrit tel quel, comme le fait un tableur (un
 	// fichier .xlsx relu garde sa formule) ; pas en .ods, où les codes de
 	// format diffèrent.
 	exportFuncs["TEXT"] = [2]string{"TEXT", ""}
+}
+
+// exportSpecial : fonctions traduites à part (translator.call).
+var exportSpecial = map[string]bool{"REFERENCE": true, "REFERENCE.APPROX": true, "RANK": true, "CEILING": true, "FLOOR": true}
+
+// notExported : fonctions sans équivalent dans un fichier .xlsx ou .ods, la
+// cellule garde sa valeur. Une fonction ajoutée au catalogue doit être
+// traduite ou figurer ici (TestExportCatalogue).
+var notExported = map[string]bool{
+	// Propres à Lattis : calculs entre lignes, existence d'une clé, choix
+	// d'onglet, géographie, requête SQL.
+	"PREVIOUS": true, "NEXT": true, "RUNNINGSUM": true, "EXISTS": true, "SHEETCHOICE": true,
+	"MUNICIPALITY": true, "QUERY": true,
+	// Même nom, autre sens : base de données sans en-têtes, texte de
+	// référence, types d'information, LIGNE et COLONNE d'un tableau,
+	// arguments de GROUPER.PAR.
+	"DSUM": true, "DAVERAGE": true, "DCOUNT": true, "DCOUNTA": true, "DMAX": true, "DMIN": true,
+	"DPRODUCT": true, "DSTDEV": true, "DSTDEVP": true, "DVAR": true, "DVARP": true, "DGET": true,
+	"INDIRECT": true, "CELL": true, "ROW": true, "COLUMN": true, "GROUPBY": true,
+	// LET : ses noms s'écrivent _xlpm.nom dans le fichier.
+	"LET": true,
 }
 
 func (tr *translator) walk(n formula.Node) formula.Node {
@@ -458,6 +499,17 @@ func (tr *translator) call(v formula.Call) formula.Node {
 		return tr.failFn(v.Fn)
 	}
 	return tr.fn(v.Fn, v.Args)
+}
+
+// spillWhy nomme la fonction d'un tableau dynamique traduisible, exporté
+// en valeurs.
+func spillWhy(src string) []string {
+	if n, err := formula.Parse(src, formula.FR); err == nil {
+		if c, ok := n.(formula.Call); ok {
+			return []string{formula.LocalName(c.Fn, formula.FR)}
+		}
+	}
+	return nil
 }
 
 // fn écrit un appel de fonction aux arguments traduits.
