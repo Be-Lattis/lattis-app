@@ -130,6 +130,7 @@
 	import { createDraw } from './sheet/draw.svelte.js';
 	import { createPivotFold } from './sheet/pivotfold.svelte.js';
 	import { createSparklines } from './sheet/sparklines.svelte.js';
+	import { createBadges } from './sheet/badges.svelte.js';
 
 	interface Props {
 		data: SheetData;
@@ -1519,99 +1520,28 @@
 
 	let followMenu = $state<{ x: number; y: number; e: Entry } | null>(null);
 
-	function badgeAt(ev: MouseEvent) {
-		const { x, y } = toLocal(ev);
-		return followBadges.find((b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1) ?? null;
-	}
-	function followBadgeAt(ev: MouseEvent): Entry | null {
-		const b = badgeAt(ev);
-		return b?.kind === 'follow' ? b.e : null;
-	}
-	/** Pastille du nom d'un tableau sous la souris : son tableau. */
-	function nameBadgeAt(ev: MouseEvent): Entry | null {
-		const b = badgeAt(ev);
-		return b && (b.kind === 'name' || b.kind === 'unnamed') ? b.e : null;
-	}
-	/** Pastille du nom d'un tableau croisé sous la souris : son TCD. */
-	function pivotBadgeAt(ev: MouseEvent): SheetPivot | null {
-		const { x, y } = toLocal(ev);
-		return pivotBadges.find((b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1)?.p ?? null;
-	}
-	/** Pastille « sur ce poste » sous la souris : son tableau. */
-	function localBadgeAt(ev: MouseEvent): Entry | null {
-		const b = badgeAt(ev);
-		return b?.kind === 'local' ? b.e : null;
-	}
-
-	/** Texte coupé (…) pour tenir en w pixels (police courante). */
-	function fitText(t: string, w: number): string {
-		if (ctx.measureText(t).width <= w) return t;
-		let s = t;
-		while (s.length > 1 && ctx.measureText(s + '…').width > w) s = s.slice(0, -1);
-		return s + '…';
-	}
-
-	/** Clic sur la pastille du nom : la cellule passe sur l'en-tête du tableau et le champ du nom s'ouvre. */
-	async function renameFromBadge(en: Entry) {
-		moveTo(en.t.row, en.t.col);
-		ensureVisible(en.t.row, en.t.col);
-		await tick();
-		tableNameEl?.focus();
-		tableNameEl?.select();
-	}
-
-	/** Coche ou décoche « Suivre l'année » d'un tableau. */
-	function toggleFollow(t: SheetTable, on: boolean) {
-		const set = source.setFollow;
-		if (!set) return;
-		followMenu = menu = null;
-		wrap.focus();
-		writing = writing.catch(() => undefined).then(async () => {
-			try {
-				await set(t, on);
-			} catch (err) {
-				say(errorText(err));
-			}
-		});
-	}
+	// --- Pastilles des tableaux : sheet/badges.svelte.ts ---
+	const badgesCtl = createBadges({
+		get toLocal() { return toLocal; },
+		get followBadges() { return followBadges; },
+		get pivotBadges() { return pivotBadges; },
+		get ctx() { return ctx; },
+		get moveTo() { return moveTo; },
+		get ensureVisible() { return ensureVisible; },
+		get tableNameEl() { return tableNameEl; },
+		get source() { return source; },
+		get followMenu() { return followMenu; }, set followMenu(v) { followMenu = v; },
+		get menu() { return menu; }, set menu(v) { menu = v; },
+		get wrap() { return wrap; },
+		get writing() { return writing; }, set writing(v) { writing = v; },
+		get say() { return say; },
+		get keyHintBoxes() { return keyHintBoxes; },
+		get closeMenus() { return closeMenus; },
+		get hintMenu() { return hintMenu; }, set hintMenu(v) { hintMenu = v; }
+	});
+	const { followBadgeAt, nameBadgeAt, pivotBadgeAt, localBadgeAt, fitText, renameFromBadge, toggleFollow, keyHintAt, acceptKeyHint, openHintMenu } = badgesCtl;
 
 	const hasKeyHint = (e: Entry, i: number) => i === 0 && !!e.t.keyHint && e.t.key === undefined && !!source.setKey;
-
-	/** Tableau dont la clé proposée est sous la souris. */
-	function keyHintAt(ev: MouseEvent): Entry | null {
-		const { x, y } = toLocal(ev);
-		return keyHintBoxes.find((b) => x >= b.x0 - 2 && x <= b.x1 + 1 && y >= b.y0 && y <= b.y1)?.e ?? null;
-	}
-
-	/** Pose la clé proposée (une étape d'annulation). */
-	function acceptKeyHint(e: Entry) {
-		const setKey = source.setKey;
-		if (!setKey) return;
-		const t = e.t;
-		const name = t.columns[0]?.name ?? '';
-		wrap.focus();
-		writing = writing
-			.catch(() => undefined)
-			.then(async () => {
-				try {
-					await setKey(t, 0);
-					say(tr('grid.key.set', { name, table: t.name }));
-				} catch (err) {
-					say(errorText(err));
-				}
-			});
-	}
-
-	/** Clic droit sur la clé proposée : son petit menu. */
-	function openHintMenu(ev: MouseEvent): boolean {
-		const he = keyHintAt(ev);
-		if (!he) return false;
-		ev.preventDefault();
-		closeMenus();
-		const r = wrap.getBoundingClientRect();
-		hintMenu = { x: ev.clientX - r.left, y: ev.clientY - r.top, e: he };
-		return true;
-	}
 
 	// Bordures des cellules : relevées pendant le dessin des cellules, tracées
 	// après le quadrillage, sur ses lignes (deux cellules voisines partagent
