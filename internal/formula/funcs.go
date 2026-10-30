@@ -179,6 +179,9 @@ var funcs = []funcDef{
 	{"CLEAN", "EPURAGE", 1, 1, scalar, fnClean},
 	{"TEXTBEFORE", "TEXTE.AVANT", 2, 6, scalar, textAround(false)},
 	{"TEXTAFTER", "TEXTE.APRES", 2, 6, scalar, textAround(true)},
+	{"REGEXTEST", "REGEXTEST", 2, 3, scalar, fnRegexTest},
+	{"REGEXEXTRACT", "REGEXEXTRACT", 2, 4, scalar, fnRegexExtract},
+	{"REGEXREPLACE", "REGEXREPLACE", 3, 5, scalar, fnRegexReplace},
 	// Lien : rend le nom affiché (l'adresse sans nom) ; la grille fait de la
 	// cellule un lien (HyperlinkTarget, links.go).
 	{"HYPERLINK", "LIEN_HYPERTEXTE", 1, 2, scalar, fnHyperlink},

@@ -320,6 +320,28 @@
 =EQUIV(25;Etapes[Valeur])	2
 =EQUIV(25;Etapes[Valeur];-1)	3
 =EQUIV(5;Etapes[Valeur])	#N/A
+# Expressions régulières (audit des formules du 30/10 ; exemples des définitions du tableur)
+=REGEXTEST("Lattis 2026";"[0-9]+")	VRAI
+=REGEXTEST("abc";"B")	FAUX
+=REGEXTEST("abc";"B";1)	VRAI
+=REGEXTEST(123;"^\d+$")	VRAI
+=REGEXTEST("abc";"B";2)	#VALEUR!
+=REGEXTEST("abc";"(?=a)")	#VALEUR!
+=REGEXEXTRACT("DylanWilliams";"[A-Z][a-z]+")	Dylan
+=REGEXEXTRACT("abc";"[0-9]")	#N/A
+=REGEXEXTRACT("abc";"(")	#VALEUR!
+=REGEXEXTRACT("abc";"b";1)	#VALEUR!
+=REGEXEXTRACT("élève";"[èé]l")	él
+=REGEXREPLACE("(378) 555-4195";"[0-9]{3}-[0-9]{4}";"***-****")	(378) ***-****
+=REGEXREPLACE("Dupont Jean";"(\w+) (\w+)";"$2 $1")	Jean Dupont
+=REGEXREPLACE("a1b";"(\d)";"$1x")	a1xb
+=REGEXREPLACE("a-b-c";"-";"+";1)	a+b-c
+=REGEXREPLACE("a-b-c";"-";"+";2)	a-b+c
+=REGEXREPLACE("a-b-c";"-";"+";-1)	a-b+c
+=REGEXREPLACE("a-b-c";"-";"+";5)	a-b-c
+=REGEXREPLACE("aAa";"a";"x";0;1)	xxx
+=REGEXREPLACE("aAa";"a";"x")	xAx
+
 # EQUIVX (audit des formules du 30/10) : modes de correspondance et de recherche
 =EQUIVX("Martin";Clients[Nom])	2
 =EQUIVX("dur*";Clients[Nom])	#N/A
