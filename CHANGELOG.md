@@ -6,22 +6,14 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.5.1-beta (30/10/2026)
+
 ### Nouveautés
 
 - Formules : PLAFOND.MATH, PLANCHER.MATH, PAIR, IMPAIR, FACT, COMBIN, PERMUTATION, ATAN2, ESTERR et JOURS360.
 - Formules : EQUIVX, expressions régulières (REGEXTEST, REGEXEXTRACT, REGEXREPLACE), ASSEMB.V, ASSEMB.H, CHOISIRCOLS, CHOISIRLIGNES, VERS.COL et VERS.LIGNE ; PRENDRE et EXCLURE acceptent un nombre de colonnes.
 - Formules : RECHERCHEV en correspondance approchée, RECHERCHEX avec ses modes de correspondance et de recherche, et RECHERCHEV, RECHERCHEH, RECHERCHEX sur des cellules libres (`=RECHERCHEV(A2; D2:F20; 2; FAUX)`).
-
-### Corrections
-
-- Les erreurs de l'assistant IA (clé refusée, crédits épuisés, fournisseur surchargé, modèle local injoignable…) et ses remarques (réponse tronquée, arrêtée après N étapes) s'affichent dans la langue de l'interface au lieu du français ; de même « rien à annuler ou à rétablir », « requête vide » et l'erreur d'écriture du classeur.
-- Classeur collaboratif : il ne passe plus « hors ligne » quelques secondes toutes les 15 minutes (renouvellement de la connexion au suivi des changements).
-- Classeur collaboratif : des droits réduits pendant une coupure sont relus avant l'envoi des modifications faites hors ligne, avec le message « Vos droits sur ce classeur ont changé ».
-- Une plage tapée à la façon d'un tableur en source d'un tableau dynamique (`=UNIQUE(A1:A20)`) se déverse au lieu d'afficher #VALEUR!.
-- VERS.LIGNE dans un calcul (`=SOMME(VERS.LIGNE(Ventes[Qté]))`, `=SOMME(VERS.LIGNE(SEQUENCE(3)))`) donne son résultat au lieu de #VALEUR!.
-- Enregistrement en .xlsx et .ods : le résultat d'une formule est écrit comme un nombre à pleine précision ; un résultat à beaucoup de décimales (`=ATAN2(1;1)`) n'est plus enregistré comme du texte.
-- Enregistrement en .xlsx : les formules avec EQUIVX, les expressions régulières, ASSEMB.V, CHOISIRCOLS, PRENDRE, FILTRE ou TRIER dans un calcul, PLAFOND.MATH, PAIR, FACT, ESTERR, JOURS360 et les autres fonctions récentes gardent leur formule au lieu de leur seule valeur (aussi en .ods pour PLAFOND.MATH, PAIR, FACT, ESTERR, JOURS360…).
-- Fichier › Ouvrir ouvre un fichier `.xlsx` (aussi par « Ouvrir avec » et glisser-déposer) : au premier Ctrl+S, garder le format `.xlsx` ou convertir en `.lattis`, avec la liste de ce que le `.xlsx` ne garde pas ; « Ne plus demander » se règle dans Fichier › Paramètres › Fichiers.
+- Fichier › Exporter › Script SQL (.sql) : les tableaux et tableaux croisés deviennent un script `CREATE TABLE` + `INSERT` à rejouer dans une base de données, en SQL standard ou adapté à PostgreSQL, MySQL, SQL Server ou SQLite, pour tout le classeur, la feuille active ou le tableau actif.
 
 ### Changements
 
@@ -31,7 +23,6 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Accessibilité : les panneaux du filtre, du ▾ d'un tableau croisé, des fonctions, des doublons, de la note, de l'insertion ou suppression de lignes et de la taille sont annoncés comme des boîtes nommées au lecteur d'écran ; la liste des règles de mise en forme conditionnelle se parcourt au clavier (flèches, Entrée pour modifier, Suppr pour supprimer) ; dans le menu Mise en forme conditionnelle, Entrée ou → ouvre un sous-menu et y place le focus, ← y revient ; les entrées des menus sont annoncées comme des éléments de menu dès l'ouverture.
 - Raccourcis affichés dans la langue de l'interface : « Ctrl+Shift+L », « Entf », « PgDn »… au lieu de « Maj », « Suppr », « Pg.Suiv » en anglais, allemand, espagnol et chinois (ruban, menus, aide) ; le menu contextuel écrit ses raccourcis comme le ruban (Cmd sur macOS) et montre Maj+F2 sur la note.
 - Fichier `.xlsx` relu : formules en adresses (B2, Feuille2!B2:C5), références structurées (Ventes[Prix], [@Prix]), noms définis, SIERREUR et TEXTE sont gardés au lieu d'être remplacés par leur valeur ; une plage ordinaire reste une plage, un tableau garde son style, une date courte reste une date courte.
-
 - Démarrage plus léger : les éditeurs de texte (documents, SQL, scripts, pages web) ne se chargent qu'à leur première ouverture.
 - Un tableau croisé ou un graphique sur un grand tableau ne se recalcule plus après une saisie dans une colonne qu'il ne lit pas (un million de lignes : 6 s d'attente en moins).
 - Un tableau croisé sur un grand tableau se recalcule environ deux fois plus vite après une saisie dans une colonne qu'il lit.
@@ -45,26 +36,22 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Assistant IA : il connaît d'emblée les clés, les formules, les tableaux croisés, les graphiques et le nombre de valeurs distinctes des colonnes, et corrige les erreurs (#NOM?, #REF!…) des formules qu'il écrit avant de répondre.
 - Assistant IA : réponses plus courtes, qui commencent par le résultat.
 - Installeur Windows et mises à jour automatiques plus légers à télécharger (environ 20 Mo au lieu de 27).
-
-### Corrections
-
-- Classeur collaboratif : une mise en page (cellule libre, largeur, style…) modifiée pendant une synchronisation part aussitôt, au lieu d'attendre la modification suivante.
-- Classeur collaboratif : juste après une coupure du serveur, le classeur ne se dit plus « en ligne » par erreur.
-- Version web : deux classeurs créés au même instant s'ouvrent tous les deux (le second disait « ce classeur est déjà ouvert »).
-
-## 0.5.1-beta (27/10/2026)
-
-### Nouveautés
-
-- Fichier › Exporter › Script SQL (.sql) : les tableaux et tableaux croisés deviennent un script `CREATE TABLE` + `INSERT` à rejouer dans une base de données, en SQL standard ou adapté à PostgreSQL, MySQL, SQL Server ou SQLite, pour tout le classeur, la feuille active ou le tableau actif.
-
-### Changements
-
 - Assistant IA : le bouton de l'en-tête dit « Connecté » quand une connexion est active.
 - Clic droit ou du milieu glissé, ou Espace + clic gauche glissé, déplacent aussi la feuille quand on part d'un graphique, d'une image, d'une forme, d'un bouton ou d'un segment ; le clic gauche déplace toujours l'objet et le clic droit sans bouger ouvre son menu.
 
 ### Corrections
 
+- Les erreurs de l'assistant IA (clé refusée, crédits épuisés, fournisseur surchargé, modèle local injoignable…) et ses remarques (réponse tronquée, arrêtée après N étapes) s'affichent dans la langue de l'interface au lieu du français ; de même « rien à annuler ou à rétablir », « requête vide » et l'erreur d'écriture du classeur.
+- Classeur collaboratif : il ne passe plus « hors ligne » quelques secondes toutes les 15 minutes (renouvellement de la connexion au suivi des changements).
+- Classeur collaboratif : des droits réduits pendant une coupure sont relus avant l'envoi des modifications faites hors ligne, avec le message « Vos droits sur ce classeur ont changé ».
+- Une plage tapée à la façon d'un tableur en source d'un tableau dynamique (`=UNIQUE(A1:A20)`) se déverse au lieu d'afficher #VALEUR!.
+- VERS.LIGNE dans un calcul (`=SOMME(VERS.LIGNE(Ventes[Qté]))`, `=SOMME(VERS.LIGNE(SEQUENCE(3)))`) donne son résultat au lieu de #VALEUR!.
+- Enregistrement en .xlsx et .ods : le résultat d'une formule est écrit comme un nombre à pleine précision ; un résultat à beaucoup de décimales (`=ATAN2(1;1)`) n'est plus enregistré comme du texte.
+- Enregistrement en .xlsx : les formules avec EQUIVX, les expressions régulières, ASSEMB.V, CHOISIRCOLS, PRENDRE, FILTRE ou TRIER dans un calcul, PLAFOND.MATH, PAIR, FACT, ESTERR, JOURS360 et les autres fonctions récentes gardent leur formule au lieu de leur seule valeur (aussi en .ods pour PLAFOND.MATH, PAIR, FACT, ESTERR, JOURS360…).
+- Fichier › Ouvrir ouvre un fichier `.xlsx` (aussi par « Ouvrir avec » et glisser-déposer) : au premier Ctrl+S, garder le format `.xlsx` ou convertir en `.lattis`, avec la liste de ce que le `.xlsx` ne garde pas ; « Ne plus demander » se règle dans Fichier › Paramètres › Fichiers.
+- Classeur collaboratif : une mise en page (cellule libre, largeur, style…) modifiée pendant une synchronisation part aussitôt, au lieu d'attendre la modification suivante.
+- Classeur collaboratif : juste après une coupure du serveur, le classeur ne se dit plus « en ligne » par erreur.
+- Version web : deux classeurs créés au même instant s'ouvrent tous les deux (le second disait « ce classeur est déjà ouvert »).
 - Fermer un volet à droite (graphique, tableau croisé, assistant, commentaires…) ne fait plus sauter la feuille : elle garde sa position et s'élargit.
 
 ## 0.5.0-beta (26/10/2026)
