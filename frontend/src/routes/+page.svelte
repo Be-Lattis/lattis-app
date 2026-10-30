@@ -265,38 +265,130 @@
 		if (conflictsOpen || n) loadConflicts();
 	});
 
-	// --- Classeur partagé : ../lib/app/sharing.svelte.ts ---
-	const sharingCtl = createSharing({
-		get conflicts() { return conflicts; }, set conflicts(v) { conflicts = v; },
-		get held() { return held; }, set held(v) { held = v; },
-		get share() { return share; }, set share(v) { share = v; },
-		get notice() { return notice; }, set notice(v) { notice = v; },
-		get err() { return err; },
-		get docState() { return docState; }, set docState(v) { docState = v; },
-		get reload() { return reload; },
-		get conflictBusy() { return conflictBusy; }, set conflictBusy(v) { conflictBusy = v; },
-		get coedit() { return coedit; },
-		get conflictsOpen() { return conflictsOpen; }, set conflictsOpen(v) { conflictsOpen = v; },
-		get view() { return view; }, set view(v) { view = v; },
-		get sheetId() { return sheetId; }, set sheetId(v) { sheetId = v; },
-		get sheet() { return sheet; },
-		get mode() { return mode; }, set mode(v) { mode = v; },
-		get help() { return help; },
-		get refBack() { return refBack; }, set refBack(v) { refBack = v; },
-		get sourceTables() { return sourceTables; }, set sourceTables(v) { sourceTables = v; },
-		get shareRetrying() { return shareRetrying; }, set shareRetrying(v) { shareRetrying = v; },
-		get opened() { return opened; },
+	// Accès des modules et composants de lib/app à l'état de la fenêtre : un
+	// seul objet, des accesseurs (lus au moment de l'appel). Chaque module
+	// déclare dans son interface (XHost, XView) ce qu'il en lit.
+	const appCtx = {
+		get aboutOpen() { return aboutOpen; }, set aboutOpen(v) { aboutOpen = v; },
+		get activeDoc() { return activeDoc; },
+		get activeInfo() { return activeInfo; },
+		get addToShared() { return addToShared; },
+		get answerXlsx() { return answerXlsx; },
+		get applyCustomTheme() { return applyCustomTheme; },
+		get askDetach() { return askDetach; },
+		get askRemove() { return askRemove; },
+		get bookLock() { return bookLock; }, set bookLock(v) { bookLock = v; },
+		get bookTheme() { return bookTheme; },
+		get cancelClose() { return cancelClose; },
+		get canRights() { return canRights; },
 		get closeDoc() { return closeDoc; },
+		get closing() { return closing; }, set closing(v) { closing = v; },
+		get coedit() { return coedit; }, set coedit(v) { coedit = v; },
+		get confirmProtect() { return confirmProtect; },
+		get conflict() { return conflict; }, set conflict(v) { conflict = v; },
+		get conflictBusy() { return conflictBusy; }, set conflictBusy(v) { conflictBusy = v; },
+		get conflicts() { return conflicts; }, set conflicts(v) { conflicts = v; },
+		get conflictsOpen() { return conflictsOpen; }, set conflictsOpen(v) { conflictsOpen = v; },
+		get damaged() { return damaged; }, set damaged(v) { damaged = v; },
+		get dataInsert() { return dataInsert; }, set dataInsert(v) { dataInsert = v; },
+		get dataShare() { return dataShare; }, set dataShare(v) { dataShare = v; },
+		get dataShareAfter() { return dataShareAfter; }, set dataShareAfter(v) { dataShareAfter = v; },
+		get deleting() { return deleting; }, set deleting(v) { deleting = v; },
+		get deletingMany() { return deletingMany; }, set deletingMany(v) { deletingMany = v; },
+		get demo() { return demo; }, set demo(v) { demo = v; },
+		get demoProgress() { return demoProgress; }, set demoProgress(v) { demoProgress = v; },
 		get detachAsk() { return detachAsk; }, set detachAsk(v) { detachAsk = v; },
+		get docPage() { return docPage; },
+		get docState() { return docState; }, set docState(v) { docState = v; },
+		get err() { return err; },
+		get exportDocPdf() { return exportDocPdf; },
+		get exported() { return exported; }, set exported(v) { exported = v; },
+		get exportOpen() { return exportOpen; }, set exportOpen(v) { exportOpen = v; },
+		get exportSql() { return exportSql; },
+		get failure() { return failure; }, set failure(v) { failure = v; },
+		get file() { return file; },
+		get formAfter() { return formAfter; }, set formAfter(v) { formAfter = v; },
+		get formShare() { return formShare; }, set formShare(v) { formShare = v; },
+		get headerOffer() { return headerOffer; }, set headerOffer(v) { headerOffer = v; },
+		get held() { return held; }, set held(v) { held = v; },
+		get help() { return help; },
+		get joining() { return joining; }, set joining(v) { joining = v; },
+		get keepSheet() { return keepSheet; },
+		get layout() { return layout; }, set layout(v) { layout = v; },
+		get layoutShared() { return layoutShared; },
+		get linkAsk() { return linkAsk; }, set linkAsk(v) { linkAsk = v; },
+		get loadRecent() { return loadRecent; },
+		get loadSources() { return loadSources; },
+		get locked() { return locked; }, set locked(v) { locked = v; },
+		get lockedCoEdit() { return lockedCoEdit; }, set lockedCoEdit(v) { lockedCoEdit = v; },
+		get mcpOpen() { return mcpOpen; }, set mcpOpen(v) { mcpOpen = v; },
+		get mergeGroup() { return mergeGroup; }, set mergeGroup(v) { mergeGroup = v; },
+		get mergeOffer() { return mergeOffer; }, set mergeOffer(v) { mergeOffer = v; },
+		get mergeOthers() { return mergeOthers; }, set mergeOthers(v) { mergeOthers = v; },
+		get mergePlan() { return mergePlan; }, set mergePlan(v) { mergePlan = v; },
+		get mode() { return mode; }, set mode(v) { mode = v; },
+		get notice() { return notice; }, set notice(v) { notice = v; },
+		get offered() { return offered; },
+		get offerMerge() { return offerMerge; },
+		get opened() { return opened; },
+		get openedRemote() { return openedRemote; },
+		get openLocked() { return openLocked; },
+		get openRemote() { return openRemote; }, set openRemote(v) { openRemote = v; },
+		get openTogether() { return openTogether; },
+		get orphans() { return orphans; }, set orphans(v) { orphans = v; },
+		get pageDlg() { return pageDlg; }, set pageDlg(v) { pageDlg = v; },
+		get protecting() { return protecting; }, set protecting(v) { protecting = v; },
+		get pw1() { return pw1; }, set pw1(v) { pw1 = v; },
+		get pw2() { return pw2; }, set pw2(v) { pw2 = v; },
+		get pwError() { return pwError; }, set pwError(v) { pwError = v; },
+		get queryHost() { return queryHost; },
+		get quitting() { return quitting; }, set quitting(v) { quitting = v; },
+		get recoverError() { return recoverError; }, set recoverError(v) { recoverError = v; },
+		get refBack() { return refBack; }, set refBack(v) { refBack = v; },
+		get reload() { return reload; },
 		get removeAsk() { return removeAsk; }, set removeAsk(v) { removeAsk = v; },
 		get removing() { return removing; }, set removing(v) { removing = v; },
+		get resolveSave() { return resolveSave; },
+		get retryShare() { return retryShare; },
+		get rightsOpen() { return rightsOpen; }, set rightsOpen(v) { rightsOpen = v; },
+		get runSubtotal() { return runSubtotal; },
+		get salvage() { return salvage; },
+		get savePage() { return savePage; },
+		get saving() { return saving; },
+		get selectSheet() { return selectSheet; },
+		get settingsOpen() { return settingsOpen; }, set settingsOpen(v) { settingsOpen = v; },
+		get share() { return share; }, set share(v) { share = v; },
+		get shareDetach() { return shareDetach; },
+		get shareDlg() { return shareDlg; }, set shareDlg(v) { shareDlg = v; },
 		get shareReloading() { return shareReloading; }, set shareReloading(v) { shareReloading = v; },
-		get keepSheet() { return keepSheet; },
+		get shareRemove() { return shareRemove; },
+		get shareRetrying() { return shareRetrying; }, set shareRetrying(v) { shareRetrying = v; },
+		get sheet() { return sheet; },
+		get sheetAction() { return sheetAction; },
+		get sheetId() { return sheetId; }, set sheetId(v) { sheetId = v; },
+		get sheetStatus() { return sheetStatus; }, set sheetStatus(v) { sheetStatus = v; },
+		get showBreaks() { return showBreaks; }, set showBreaks(v) { showBreaks = v; },
+		get similar() { return similar; },
+		get sourceTables() { return sourceTables; }, set sourceTables(v) { sourceTables = v; },
+		get sqlExport() { return sqlExport; }, set sqlExport(v) { sqlExport = v; },
+		get subtotalDlg() { return subtotalDlg; }, set subtotalDlg(v) { subtotalDlg = v; },
+		get themeCat() { return themeCat; },
+		get themeOpen() { return themeOpen; }, set themeOpen(v) { themeOpen = v; },
+		get themePreview() { return themePreview; }, set themePreview(v) { themePreview = v; },
+		get unsentClose() { return unsentClose; }, set unsentClose(v) { unsentClose = v; },
+		get versionsOpen() { return versionsOpen; }, set versionsOpen(v) { versionsOpen = v; },
+		get view() { return view; }, set view(v) { view = v; },
+		get whatIf() { return whatIf; }, set whatIf(v) { whatIf = v; },
 		get workbook() { return workbook; }, set workbook(v) { workbook = v; },
-		get queryHost() { return queryHost; },
 		get workbookReady() { return workbookReady; },
-		get loadRecent() { return loadRecent; }
-	});
+		get xlsxAsk() { return xlsxAsk; }, set xlsxAsk(v) { xlsxAsk = v; },
+		get zoomKey() { return zoomKey; },
+		get zoomSet() { return zoomSet; }, set zoomSet(v) { zoomSet = v; },
+		get zoomTimer() { return zoomTimer; }, set zoomTimer(v) { zoomTimer = v; }
+	};
+
+	// --- Classeur partagé : ../lib/app/sharing.svelte.ts ---
+	const sharingCtl = createSharing(appCtx);
 	const { loadConflicts, addToShared, resolveConflict, resolveHeld, resolveAllConflicts, gotoConflict, gotoRow, followReference, refGoBack, loadSources, pushSource, retryShare, shareLocalCopy, shareForget, askDetach, shareDetach, askRemove, shareRemove, reloadShare, openedRemote } = sharingCtl;
 
 	// Colonnes de référence (décision 0016) : « Basculer sur » va à la ligne
@@ -520,20 +612,7 @@
 	const offered = new Set<string>();
 
 	// --- Onglets aux mêmes colonnes : ../lib/app/tabmerge.svelte.ts ---
-	const tabMergeCtl = createTabMerge({
-		get similar() { return similar; },
-		get offered() { return offered; },
-		get mergeOffer() { return mergeOffer; }, set mergeOffer(v) { mergeOffer = v; },
-		get mergeGroup() { return mergeGroup; }, set mergeGroup(v) { mergeGroup = v; },
-		get notice() { return notice; }, set notice(v) { notice = v; },
-		get mergeOthers() { return mergeOthers; }, set mergeOthers(v) { mergeOthers = v; },
-		get mergePlan() { return mergePlan; }, set mergePlan(v) { mergePlan = v; },
-		get docState() { return docState; }, set docState(v) { docState = v; },
-		get err() { return err; },
-		get layout() { return layout; },
-		get reload() { return reload; },
-		get selectSheet() { return selectSheet; }
-	});
+	const tabMergeCtl = createTabMerge(appCtx);
 	const { offerMerge, openMerge, openMergeMenu, openMergeFor, dismissGroup, doMerge } = tabMergeCtl;
 
 	async function reload() {
@@ -669,60 +748,7 @@
 	// le même chemin que « Ouvrir depuis un serveur ».
 	let linkAsk = $state<{ name: string; host: string; ok: (yes: boolean) => void } | null>(null);
 	// --- Fichiers : ../lib/app/files.svelte.ts ---
-	const filesCtl = createFiles({
-		get linkAsk() { return linkAsk; }, set linkAsk(v) { linkAsk = v; },
-		get openedRemote() { return openedRemote; },
-		get notice() { return notice; }, set notice(v) { notice = v; },
-		get err() { return err; },
-		get loadRecent() { return loadRecent; },
-		get locked() { return locked; }, set locked(v) { locked = v; },
-		get joining() { return joining; }, set joining(v) { joining = v; },
-		get mode() { return mode; }, set mode(v) { mode = v; },
-		get lockedCoEdit() { return lockedCoEdit; }, set lockedCoEdit(v) { lockedCoEdit = v; },
-		get orphans() { return orphans; }, set orphans(v) { orphans = v; },
-		get recoverError() { return recoverError; }, set recoverError(v) { recoverError = v; },
-		get damaged() { return damaged; }, set damaged(v) { damaged = v; },
-		get view() { return view; }, set view(v) { view = v; },
-		get sheetId() { return sheetId; }, set sheetId(v) { sheetId = v; },
-		get workbook() { return workbook; }, set workbook(v) { workbook = v; },
-		get queryHost() { return queryHost; },
-		get mergePlan() { return mergePlan; }, set mergePlan(v) { mergePlan = v; },
-		get mergeOffer() { return mergeOffer; }, set mergeOffer(v) { mergeOffer = v; },
-		get reload() { return reload; },
-		get offerMerge() { return offerMerge; },
-		get conflict() { return conflict; }, set conflict(v) { conflict = v; },
-		get quitting() { return quitting; }, set quitting(v) { quitting = v; },
-		get docState() { return docState; }, set docState(v) { docState = v; },
-		get saving() { return saving; },
-		get xlsxAsk() { return xlsxAsk; }, set xlsxAsk(v) { xlsxAsk = v; },
-		get closing() { return closing; }, set closing(v) { closing = v; },
-		get share() { return share; }, set share(v) { share = v; },
-		get unsentClose() { return unsentClose; }, set unsentClose(v) { unsentClose = v; },
-		get sheet() { return sheet; },
-		get layout() { return layout; }, set layout(v) { layout = v; },
-		get coedit() { return coedit; }, set coedit(v) { coedit = v; },
-		get sheetStatus() { return sheetStatus; }, set sheetStatus(v) { sheetStatus = v; },
-		get demoProgress() { return demoProgress; }, set demoProgress(v) { demoProgress = v; },
-		get demo() { return demo; }, set demo(v) { demo = v; },
-		get failure() { return failure; }, set failure(v) { failure = v; },
-		get aboutOpen() { return aboutOpen; }, set aboutOpen(v) { aboutOpen = v; },
-		get openRemote() { return openRemote; }, set openRemote(v) { openRemote = v; },
-		get canRights() { return canRights; },
-		get rightsOpen() { return rightsOpen; }, set rightsOpen(v) { rightsOpen = v; },
-		get shareDlg() { return shareDlg; }, set shareDlg(v) { shareDlg = v; },
-		get retryShare() { return retryShare; },
-		get askDetach() { return askDetach; },
-		get askRemove() { return askRemove; },
-		get versionsOpen() { return versionsOpen; }, set versionsOpen(v) { versionsOpen = v; },
-		get layoutShared() { return layoutShared; },
-		get exported() { return exported; }, set exported(v) { exported = v; },
-		get sqlExport() { return sqlExport; }, set sqlExport(v) { sqlExport = v; },
-		get activeDoc() { return activeDoc; },
-		get docPage() { return docPage; },
-		get exportDocPdf() { return exportDocPdf; },
-		get showBreaks() { return showBreaks; }, set showBreaks(v) { showBreaks = v; },
-		get settingsOpen() { return settingsOpen; }, set settingsOpen(v) { settingsOpen = v; }
-	});
+	const filesCtl = createFiles(appCtx);
 	const { openLink, openPath, openRecent, openLocked, openTogether, opened, resolveSave, answerXlsx, workbookReady, salvage, closeDoc, requestQuit, cancelClose, startDoc, startPresetDemo, openDemoPreset, openSample, startDemo, file, exportSql, recover } = filesCtl;
 
 	const loadRecent = async () => (recent = (await DocumentService.Recent().catch(() => null)) ?? []);
@@ -1167,16 +1193,7 @@
 	const data = $derived(mode === 'demo' ? demoData : docData);
 	const title = $derived(mode === 'demo' ? t('ribbon.file.demo') : mode === 'recover' ? t('shell.recovery.title') : docState.title);
 	const tabs = $derived(mode === 'demo' ? (demo ? [{ id: 1, name: demo.name }] : []) : (layout?.sheets ?? []).map((s) => ({ id: s.id, name: s.name, protected: s.protected, color: s.color, hidden: s.hidden, kind: s.kind, choice: s.choice ?? null })));
-	const sourceCtl = createSheetSource({
-		get headerOffer() { return headerOffer; }, set headerOffer(v) { headerOffer = v; },
-		get reload() { return reload; },
-		get notice() { return notice; }, set notice(v) { notice = v; },
-		get sheetId() { return sheetId; },
-		get queryHost() { return queryHost; },
-		get selectSheet() { return selectSheet; },
-		get err() { return err; },
-		get mode() { return mode; }
-	});
+	const sourceCtl = createSheetSource(appCtx);
 	const { titleToHeader, docSource, demoSource, query } = sourceCtl;
 
 	// --- Onglet à choix (« Ventes · 2025 ▾ », lib/shell/choice.ts) ----------
@@ -1376,32 +1393,7 @@
 	});
 
 	// --- Protection, thème et zoom : ../lib/app/protect.svelte.ts ---
-	const protectCtl = createProtect({
-		get docState() { return docState; }, set docState(v) { docState = v; },
-		get reload() { return reload; },
-		get notice() { return notice; }, set notice(v) { notice = v; },
-		get err() { return err; },
-		get mode() { return mode; },
-		get layoutShared() { return layoutShared; },
-		get activeDoc() { return activeDoc; },
-		get bookTheme() { return bookTheme; },
-		get themeOpen() { return themeOpen; }, set themeOpen(v) { themeOpen = v; },
-		get themeCat() { return themeCat; },
-		get themePreview() { return themePreview; }, set themePreview(v) { themePreview = v; },
-		get zoomSet() { return zoomSet; }, set zoomSet(v) { zoomSet = v; },
-		get zoomKey() { return zoomKey; },
-		get sheetId() { return sheetId; }, set sheetId(v) { sheetId = v; },
-		get zoomTimer() { return zoomTimer; }, set zoomTimer(v) { zoomTimer = v; },
-		get selectSheet() { return selectSheet; },
-		get sheet() { return sheet; },
-		get layout() { return layout; },
-		get pw1() { return pw1; }, set pw1(v) { pw1 = v; },
-		get pw2() { return pw2; }, set pw2(v) { pw2 = v; },
-		get pwError() { return pwError; }, set pwError(v) { pwError = v; },
-		get bookLock() { return bookLock; }, set bookLock(v) { bookLock = v; },
-		get protecting() { return protecting; }, set protecting(v) { protecting = v; },
-		get deleting() { return deleting; }, set deleting(v) { deleting = v; }
-	});
+	const protectCtl = createProtect(appCtx);
 	const { keepThemeFor, chooseTheme, applyCustomTheme, setZoom, gotoThread, toggleProtect, confirmProtect, askDeleteSheet, sheetAction } = protectCtl;
 	let zoomSet = $state<Record<string, number>>({});
 	const docKey = $derived(`${mode}|${docState.open}|${docState.path}|${docState.title}`);
@@ -1459,99 +1451,11 @@
 	);
 
 	// Questions posées par la fenêtre : ../lib/app/AskDialogs.svelte.
-	const askView: AskDialogsView = {
-		get answerXlsx() { return answerXlsx; },
-		get bookLock() { return bookLock; }, set bookLock(v) { bookLock = v; },
-		get cancelClose() { return cancelClose; },
-		get closeDoc() { return closeDoc; },
-		get closing() { return closing; },
-		get confirmProtect() { return confirmProtect; },
-		get conflict() { return conflict; },
-		get damaged() { return damaged; },
-		get deleting() { return deleting; }, set deleting(v) { deleting = v; },
-		get deletingMany() { return deletingMany; }, set deletingMany(v) { deletingMany = v; },
-		get detachAsk() { return detachAsk; }, set detachAsk(v) { detachAsk = v; },
-		get docState() { return docState; },
-		get err() { return err; },
-		get failure() { return failure; }, set failure(v) { failure = v; },
-		get joining() { return joining; },
-		get layout() { return layout; },
-		get linkAsk() { return linkAsk; },
-		get locked() { return locked; }, set locked(v) { locked = v; },
-		get lockedCoEdit() { return lockedCoEdit; },
-		get notice() { return notice; }, set notice(v) { notice = v; },
-		get openLocked() { return openLocked; },
-		get openTogether() { return openTogether; },
-		get protecting() { return protecting; }, set protecting(v) { protecting = v; },
-		get pw1() { return pw1; }, set pw1(v) { pw1 = v; },
-		get pw2() { return pw2; }, set pw2(v) { pw2 = v; },
-		get pwError() { return pwError; },
-		get quitting() { return quitting; }, set quitting(v) { quitting = v; },
-		get removeAsk() { return removeAsk; }, set removeAsk(v) { removeAsk = v; },
-		get removing() { return removing; },
-		get resolveSave() { return resolveSave; },
-		get salvage() { return salvage; },
-		get shareDetach() { return shareDetach; },
-		get shareRemove() { return shareRemove; },
-		get sheetAction() { return sheetAction; },
-		get unsentClose() { return unsentClose; },
-		get xlsxAsk() { return xlsxAsk; }
-	};
+	const askView: AskDialogsView = appCtx;
 	// Partage et données : ../lib/app/ShareDialogs.svelte.
-	const shareView: ShareDialogsView = {
-		get addToShared() { return addToShared; },
-		get askRemove() { return askRemove; },
-		get canRights() { return canRights; },
-		get dataInsert() { return dataInsert; }, set dataInsert(v) { dataInsert = v; },
-		get dataShare() { return dataShare; }, set dataShare(v) { dataShare = v; },
-		get dataShareAfter() { return dataShareAfter; }, set dataShareAfter(v) { dataShareAfter = v; },
-		get docState() { return docState; },
-		get err() { return err; },
-		get formAfter() { return formAfter; }, set formAfter(v) { formAfter = v; },
-		get formShare() { return formShare; }, set formShare(v) { formShare = v; },
-		get loadSources() { return loadSources; },
-		get mode() { return mode; },
-		get notice() { return notice; }, set notice(v) { notice = v; },
-		get openRemote() { return openRemote; }, set openRemote(v) { openRemote = v; },
-		get openedRemote() { return openedRemote; },
-		get reload() { return reload; },
-		get rightsOpen() { return rightsOpen; }, set rightsOpen(v) { rightsOpen = v; },
-		get share() { return share; }, set share(v) { share = v; },
-		get shareDlg() { return shareDlg; }, set shareDlg(v) { shareDlg = v; }
-	};
+	const shareView: ShareDialogsView = appCtx;
 	// Boîtes des menus : ../lib/app/ToolDialogs.svelte.
-	const toolsView: ToolDialogsView = {
-		get aboutOpen() { return aboutOpen; }, set aboutOpen(v) { aboutOpen = v; },
-		get activeInfo() { return activeInfo; },
-		get applyCustomTheme() { return applyCustomTheme; },
-		get bookTheme() { return bookTheme; },
-		get docState() { return docState; }, set docState(v) { docState = v; },
-		get err() { return err; },
-		get exportOpen() { return exportOpen; }, set exportOpen(v) { exportOpen = v; },
-		get exportSql() { return exportSql; },
-		get exported() { return exported; },
-		get file() { return file; },
-		get layout() { return layout; },
-		get mcpOpen() { return mcpOpen; }, set mcpOpen(v) { mcpOpen = v; },
-		get mode() { return mode; },
-		get notice() { return notice; }, set notice(v) { notice = v; },
-		get opened() { return opened; },
-		get pageDlg() { return pageDlg; }, set pageDlg(v) { pageDlg = v; },
-		get reload() { return reload; },
-		get runSubtotal() { return runSubtotal; },
-		get savePage() { return savePage; },
-		get selectSheet() { return selectSheet; },
-		get settingsOpen() { return settingsOpen; }, set settingsOpen(v) { settingsOpen = v; },
-		get sheet() { return sheet; },
-		get sheetId() { return sheetId; },
-		get sqlExport() { return sqlExport; }, set sqlExport(v) { sqlExport = v; },
-		get subtotalDlg() { return subtotalDlg; }, set subtotalDlg(v) { subtotalDlg = v; },
-		get themeCat() { return themeCat; },
-		get themeOpen() { return themeOpen; }, set themeOpen(v) { themeOpen = v; },
-		get themePreview() { return themePreview; }, set themePreview(v) { themePreview = v; },
-		get versionsOpen() { return versionsOpen; }, set versionsOpen(v) { versionsOpen = v; },
-		get whatIf() { return whatIf; }, set whatIf(v) { whatIf = v; }
-	};
+	const toolsView: ToolDialogsView = appCtx;
 </script>
 
 <svelte:window oncontextmenu={blockNativeMenu} />
