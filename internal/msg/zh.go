@@ -615,8 +615,7 @@ var zh = map[ID]string{
 	"formula.convert.sheetNotFound":      "找不到工作表“{sheet}”",
 	"formula.convert.rangeOverflow":      "区域 {range} 超出表格 {table}：请指定单独一列（{table}[列]）或自由单元格",
 	"formula.convert.rangeTooBig":        "区域 {range} 过大：最多 {max} 个单元格",
-	"formula.convert.hlookup":            "Lattis 中没有 HLOOKUP：表格按行组织。请转置数据，然后使用 REFERENCE",
-	"formula.convert.vlookupApprox":      "近似匹配的 VLOOKUP（省略第 4 个参数或为 TRUE）：请使用 REFERENCE.APPROX，或添加 FALSE 进行精确匹配",
+	"formula.convert.hlookup":            "HLOOKUP 只读取自由单元格：表格数据按列存放。请使用 VLOOKUP 或 REFERENCE",
 	"formula.convert.rangeNoTable":       "区域 {range} 不对应任何表格",
 	"formula.convert.vlookupRange":       "VLOOKUP 的第 2 个参数必须是区域或表格",
 	"formula.convert.tableNotFound":      "找不到表格 {table}",
@@ -625,7 +624,6 @@ var zh = map[ID]string{
 	"formula.convert.lookupKey":          "{fn}：表格 {table} 已有键 {key}，查找在 {column} 上进行",
 	"formula.convert.nameXlookup":        "XLOOKUP",
 	"formula.convert.nameIndexMatch":     "INDEX/MATCH",
-	"formula.convert.xlookupExact":       "XLOOKUP：仅支持精确匹配；分段查找请使用 REFERENCE.APPROX",
 	"formula.convert.xlookupColumns":     "XLOOKUP：第 2 和第 3 个参数必须是表格的列（表格[列]）",
 	"formula.convert.xlookupSameTable":   "XLOOKUP：查找列和返回列必须属于同一个表格",
 

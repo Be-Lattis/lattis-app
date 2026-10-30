@@ -173,6 +173,7 @@ var fullCalls = map[string]string{
 	"REFERENCE.APPROX": `=REFERENCE.APPROCHEE(Baremes;Taux;150)`,
 	"EXISTS":           `=EXISTE(Clients;2)`,
 	"MATCH":            `=EQUIV(3;Ventes[Qté];0)`,
+	"XMATCH":           `=EQUIVX(3;Ventes[Qté];1;-1)`,
 	"INDEX":            `=INDEX(Ventes[Produit];2)`,
 	"VLOOKUP":          `=RECHERCHEV(2;Clients;2;FAUX)`,
 	"XLOOKUP":          `=RECHERCHEX(2;Clients[Id];Clients[Nom];"x";0;1)`,

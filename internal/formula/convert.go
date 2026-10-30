@@ -100,7 +100,7 @@ func ConvertWith(n Node, s *Schema, r Resolver, original string, byRow func(tabl
 					return m, nil
 				}
 			case "HLOOKUP":
-				return nil, convErr("formula.convert.hlookup", nil)
+				out, err = hlookup(m, original)
 			default:
 				return m, nil
 			}
@@ -116,9 +116,10 @@ func ConvertWith(n Node, s *Schema, r Resolver, original string, byRow func(tabl
 }
 
 func vlookup(c Call, s *Schema, r Resolver, original string, byRow func(string) bool) (Node, KeyNeed, error) {
-	exact := len(c.Args) == 4 && c.Args[3] != nil && (c.Args[3] == BoolLit{false} || c.Args[3] == NumLit{0})
-	if !exact {
-		return nil, KeyNeed{}, convErr("formula.convert.vlookupApprox", nil)
+	exact := lookupExact(c)
+	if isCells(c.Args[1], r) {
+		out, _, err := cellLookup(c, false, exact, original)
+		return out, KeyNeed{}, err
 	}
 	var table string
 	var first int
@@ -143,6 +144,11 @@ func vlookup(c Call, s *Schema, r Resolver, original string, byRow func(string) 
 		return nil, KeyNeed{}, convErr("formula.convert.columnOutOfRange", nil)
 	}
 	keyCol := t.Cols[first].Name
+	if !exact {
+		// Approchée : la plus grande valeur inférieure ou égale, sans clé.
+		match := Call{Fn: "MATCH", Args: []Node{c.Args[0], Ref{Table: t.Name, Col: keyCol}, NumLit{1}}}
+		return Call{Fn: "INDEX", Args: []Node{Ref{Table: t.Name, Col: t.Cols[col].Name}, match}, Origin: original}, KeyNeed{}, nil
+	}
 	if t.Key == "" && byRow != nil && byRow(t.Name) {
 		return rowLookup(t, keyCol, t.Cols[col].Name, c.Args[0], original), KeyNeed{}, nil
 	}
@@ -215,8 +221,8 @@ func lookupCall(t *Table, key, ret string, k Node, origin string, fn msg.Message
 // devient REFERENCE(Tableau; Valeur; clé), dans SI.NON.DISP si une valeur
 // par défaut est donnée.
 func xlookup(c Call, s *Schema, r Resolver, original string, byRow func(string) bool) (Node, KeyNeed, error) {
-	if len(c.Args) > 4 && c.Args[4] != nil && c.Args[4] != (NumLit{0}) {
-		return nil, KeyNeed{}, convErr("formula.convert.xlookupExact", nil)
+	if out, ok := xlookupModes(c, isCells(c.Args[1], r) || isCells(c.Args[2], r), original); ok {
+		return out, KeyNeed{}, nil
 	}
 	kt, key, ok1 := columnOf(c.Args[1], s, r)
 	rt, ret, ok2 := columnOf(c.Args[2], s, r)
@@ -267,8 +273,8 @@ var suggestions = map[string]string{
 	"RECHERCHE":  "RECHERCHE n'existe pas dans Lattis : utilisez REFERENCE ou REFERENCE.APPROCHEE",
 	"LAMBDA":     "LAMBDA n'existe pas dans Lattis : utilisez un script Lua",
 	"VARP":       "VARP s'écrit VAR.P (VAR.P.N en français, VAR.P y est aussi accepté)",
-	"VLOOKUP":    "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
-	"RECHERCHEV": "RECHERCHEV est convertie en REFERENCE à la saisie (correspondance exacte seulement)",
+	"VLOOKUP":    "RECHERCHEV est convertie à la saisie (REFERENCE, ou INDEX et EQUIV)",
+	"RECHERCHEV": "RECHERCHEV est convertie à la saisie (REFERENCE, ou INDEX et EQUIV)",
 }
 
 // Suggestion donne l'infobulle d'une fonction inconnue (#NOM?) quand Lattis

@@ -613,8 +613,7 @@ var en = map[ID]string{
 	"formula.convert.sheetNotFound":      "sheet “{sheet}” not found",
 	"formula.convert.rangeOverflow":      "the range {range} spills over the table {table}: refer to a single column ({table}[Column]) or to free cells",
 	"formula.convert.rangeTooBig":        "the range {range} is too large: {max} cells at most",
-	"formula.convert.hlookup":            "HLOOKUP does not exist in Lattis: tables are row-oriented. Transpose the data, then use REFERENCE",
-	"formula.convert.vlookupApprox":      "VLOOKUP with approximate match (4th argument omitted or TRUE): use REFERENCE.APPROX, or add FALSE for an exact match",
+	"formula.convert.hlookup":            "HLOOKUP reads free cells only: table data is in columns. Use VLOOKUP or REFERENCE",
 	"formula.convert.rangeNoTable":       "the range {range} does not match any table",
 	"formula.convert.vlookupRange":       "the 2nd argument of VLOOKUP must be a range or a table",
 	"formula.convert.tableNotFound":      "table {table} not found",
@@ -623,7 +622,6 @@ var en = map[ID]string{
 	"formula.convert.lookupKey":          "{fn}: the table {table} already has the key {key}, the lookup is on {column}",
 	"formula.convert.nameXlookup":        "XLOOKUP",
 	"formula.convert.nameIndexMatch":     "INDEX/MATCH",
-	"formula.convert.xlookupExact":       "XLOOKUP: only exact match is supported; for brackets, use REFERENCE.APPROX",
 	"formula.convert.xlookupColumns":     "XLOOKUP: the 2nd and 3rd arguments must be table columns (Table[Column])",
 	"formula.convert.xlookupSameTable":   "XLOOKUP: the looked-up and returned columns must belong to the same table",
 

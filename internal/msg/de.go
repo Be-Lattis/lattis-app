@@ -614,8 +614,7 @@ var de = map[ID]string{
 	"formula.convert.sheetNotFound":      "Blatt „{sheet}“ nicht gefunden",
 	"formula.convert.rangeOverflow":      "der Bereich {range} ragt über die Tabelle {table} hinaus: wählen Sie eine einzige Spalte ({table}[Spalte]) oder freie Zellen",
 	"formula.convert.rangeTooBig":        "der Bereich {range} ist zu groß: höchstens {max} Zellen",
-	"formula.convert.hlookup":            "WVERWEIS gibt es in Lattis nicht: Tabellen sind zeilenweise aufgebaut. Transponieren Sie die Daten und verwenden Sie dann REFERENZ",
-	"formula.convert.vlookupApprox":      "SVERWEIS mit ungefährer Übereinstimmung (4. Argument fehlt oder WAHR): verwenden Sie REFERENZ.UNGEFÄHR oder fügen Sie FALSCH für eine genaue Übereinstimmung hinzu",
+	"formula.convert.hlookup":            "WVERWEIS liest nur freie Zellen: Tabellendaten stehen in Spalten. Verwenden Sie SVERWEIS oder REFERENZ",
 	"formula.convert.rangeNoTable":       "der Bereich {range} entspricht keiner Tabelle",
 	"formula.convert.vlookupRange":       "das 2. Argument von SVERWEIS muss ein Bereich oder eine Tabelle sein",
 	"formula.convert.tableNotFound":      "Tabelle {table} nicht gefunden",
@@ -624,7 +623,6 @@ var de = map[ID]string{
 	"formula.convert.lookupKey":          "{fn}: die Tabelle {table} hat bereits den Schlüssel {key}, die Suche erfolgt über {column}",
 	"formula.convert.nameXlookup":        "XVERWEIS",
 	"formula.convert.nameIndexMatch":     "INDEX/VERGLEICH",
-	"formula.convert.xlookupExact":       "XVERWEIS: nur die genaue Übereinstimmung wird unterstützt; für Staffeln verwenden Sie REFERENZ.UNGEFÄHR",
 	"formula.convert.xlookupColumns":     "XVERWEIS: das 2. und 3. Argument müssen Tabellenspalten sein (Tabelle[Spalte])",
 	"formula.convert.xlookupSameTable":   "XVERWEIS: die gesuchte und die zurückgegebene Spalte müssen zur selben Tabelle gehören",
 

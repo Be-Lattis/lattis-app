@@ -613,8 +613,7 @@ var es = map[ID]string{
 	"formula.convert.sheetNotFound":      "hoja «{sheet}» no encontrada",
 	"formula.convert.rangeOverflow":      "el rango {range} desborda la tabla {table}: indique una sola columna ({table}[Columna]) o celdas libres",
 	"formula.convert.rangeTooBig":        "el rango {range} es demasiado grande: {max} celdas como máximo",
-	"formula.convert.hlookup":            "BUSCARH no existe en Lattis: las tablas se organizan por filas. Transponga los datos y luego use REFERENCIA",
-	"formula.convert.vlookupApprox":      "BUSCARV con coincidencia aproximada (4.º argumento omitido o VERDADERO): use REFERENCIA.APROX o añada FALSO para una coincidencia exacta",
+	"formula.convert.hlookup":            "BUSCARH solo lee celdas libres: los datos de una tabla están en columnas. Use BUSCARV o REFERENCIA",
 	"formula.convert.rangeNoTable":       "el rango {range} no corresponde a ninguna tabla",
 	"formula.convert.vlookupRange":       "el 2.º argumento de BUSCARV debe ser un rango o una tabla",
 	"formula.convert.tableNotFound":      "tabla {table} no encontrada",
@@ -623,7 +622,6 @@ var es = map[ID]string{
 	"formula.convert.lookupKey":          "{fn}: la tabla {table} ya tiene la clave {key}, la búsqueda se hace en {column}",
 	"formula.convert.nameXlookup":        "BUSCARX",
 	"formula.convert.nameIndexMatch":     "INDICE/COINCIDIR",
-	"formula.convert.xlookupExact":       "BUSCARX: solo se admite la coincidencia exacta; para tramos, use REFERENCIA.APROX",
 	"formula.convert.xlookupColumns":     "BUSCARX: los argumentos 2.º y 3.º deben ser columnas de tabla (Tabla[Columna])",
 	"formula.convert.xlookupSameTable":   "BUSCARX: las columnas buscada y devuelta deben pertenecer a la misma tabla",
 

@@ -320,6 +320,23 @@
 =EQUIV(25;Etapes[Valeur])	2
 =EQUIV(25;Etapes[Valeur];-1)	3
 =EQUIV(5;Etapes[Valeur])	#N/A
+# EQUIVX (audit des formules du 30/10) : modes de correspondance et de recherche
+=EQUIVX("Martin";Clients[Nom])	2
+=EQUIVX("dur*";Clients[Nom])	#N/A
+=EQUIVX("dur*";Clients[Nom];2)	3
+=EQUIVX("M?rtin";Clients[Nom];2)	2
+=EQUIVX(25;Etapes[Valeur];-1)	2
+=EQUIVX(25;Etapes[Valeur];1)	3
+=EQUIVX(30;Etapes[Valeur];1)	3
+=EQUIVX(5;Etapes[Valeur];-1)	#N/A
+=EQUIVX(5;Etapes[Valeur];1)	1
+=EQUIVX(VRAI;Ventes[Payé])	1
+=EQUIVX(VRAI;Ventes[Payé];0;-1)	3
+=EQUIVX(20;Etapes[Valeur];0;2)	2
+=EQUIVX(20;Etapes[Valeur];3)	#VALEUR!
+=EQUIVX(20;Etapes[Valeur];0;3)	#VALEUR!
+=EQUIVX(20;Cell[B1:B3])	2
+=EQUIVX(1/0;Etapes[Valeur])	#DIV/0!
 =INDEX(Etapes[Nom];1)	A
 =INDEX(Etapes[Nom];4)	#REF!
 =INDEX(Clients[Ville];EQUIV("Durand";Clients[Nom];0))	Nice

@@ -378,6 +378,7 @@ var funcs = []funcDef{
 	{"REFERENCE.APPROX", "REFERENCE.APPROCHEE", 2, 3, special, nil},
 	{"EXISTS", "EXISTE", 2, 2, special, nil},
 	{"MATCH", "EQUIV", 2, 3, scan, nil},
+	{"XMATCH", "EQUIVX", 2, 4, scan, nil},
 	{"INDEX", "INDEX", 2, 2, scan, nil},
 	{"VLOOKUP", "RECHERCHEV", 3, 4, special, nil},
 	{"XLOOKUP", "RECHERCHEX", 3, 6, special, nil},
@@ -410,7 +411,7 @@ var funcs = []funcDef{
 
 // refused : fonctions d'Excel reconnues pour être refusées à la saisie avec
 // un message (voir Convert), et donc absentes de l'aide à la saisie.
-var refused = map[string]bool{"HLOOKUP": true}
+var refused = map[string]bool{}
 
 // funcIndex : chaque fonction sous ses noms anglais, français, allemand et
 // espagnol, tous acceptés quelle que soit la langue de la session, comme le

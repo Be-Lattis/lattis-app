@@ -615,8 +615,7 @@ var fr = map[ID]string{
 	"formula.convert.sheetNotFound":      "feuille « {sheet} » introuvable",
 	"formula.convert.rangeOverflow":      "la plage {range} déborde du tableau {table} : désignez une seule colonne ({table}[Colonne]) ou des cellules libres",
 	"formula.convert.rangeTooBig":        "la plage {range} est trop grande : {max} cellules au plus",
-	"formula.convert.hlookup":            "RECHERCHEH n'existe pas dans Lattis : les tableaux sont orientés lignes. Transposez les données, puis utilisez REFERENCE",
-	"formula.convert.vlookupApprox":      "RECHERCHEV en correspondance approchée (4e argument omis ou VRAI) : utilisez REFERENCE.APPROCHEE, ou ajoutez FAUX pour une correspondance exacte",
+	"formula.convert.hlookup":            "RECHERCHEH ne lit que des cellules libres : les données d'un tableau sont en colonnes. Utilisez RECHERCHEV ou REFERENCE",
 	"formula.convert.rangeNoTable":       "la plage {range} ne correspond à aucun tableau",
 	"formula.convert.vlookupRange":       "le 2e argument de RECHERCHEV doit être une plage ou un tableau",
 	"formula.convert.tableNotFound":      "tableau {table} introuvable",
@@ -625,7 +624,6 @@ var fr = map[ID]string{
 	"formula.convert.lookupKey":          "{fn} : le tableau {table} a déjà la clé {key}, la recherche se fait sur {column}",
 	"formula.convert.nameXlookup":        "RECHERCHEX",
 	"formula.convert.nameIndexMatch":     "INDEX/EQUIV",
-	"formula.convert.xlookupExact":       "RECHERCHEX : seule la correspondance exacte est prise en charge ; pour des tranches, utilisez REFERENCE.APPROCHEE",
 	"formula.convert.xlookupColumns":     "RECHERCHEX : les 2e et 3e arguments doivent être des colonnes de tableau (Tableau[Colonne])",
 	"formula.convert.xlookupSameTable":   "RECHERCHEX : les colonnes cherchée et renvoyée doivent appartenir au même tableau",
 

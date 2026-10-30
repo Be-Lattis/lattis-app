@@ -2,7 +2,7 @@
 
 *Bibliothèque livrée le 16/10/2026 (phase 4), d'après un catalogue du 15/10/2026 tenu hors du dépôt, que ce document remplace, complétée le 19/10/2026 (audit 6, I7 : statistiques, finances, mathématiques, texte, dates, position) et le 26/10/2026 (audit 16 : lois de probabilité et tests, régression, amortissements et titres, base de données, DECALER, INDIRECT, CELLULE, AGREGAT, TRANSPOSE). Code : `internal/formula`.*
 
-274 fonctions (dont RECHERCHEH, reconnue pour être refusée à la saisie), chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement) : par `testdata/conformite.txt`, et pour les ajouts de l'audit 16 par `funcs_stats_test.go` et `funcs_refs_test.go` (valeurs des exemples des définitions du tableur, à la tolérance de leurs chiffres affichés). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
+275 fonctions, chacune sous son nom français et son nom anglais (le nom anglais est stocké dans l'AST). Toutes sont vérifiées sur les **deux backends** (évaluateur Go et SQL compilé), sauf `REQUETE` (SQL seulement) : par `testdata/conformite.txt`, et pour les ajouts de l'audit 16 par `funcs_stats_test.go` et `funcs_refs_test.go` (valeurs des exemples des définitions du tableur, à la tolérance de leurs chiffres affichés). `TestCatalogueNames` vérifie qu'aucun nom ne désigne deux fonctions et `TestFonctionsDocumentees` que chaque fonction figure ici.
 
 L'aide détaillée de chaque fonction (description, arguments nommés et décrits, exemple) est dans `internal/formula/docs.go` : elle alimente l'infobulle de saisie (argument en cours en gras, comme Excel), l'autocomplétion et le dialogue « Insérer une fonction ». `TestFunctionDocs` vérifie que chaque fonction y figure, que ses arguments correspondent à son nombre d'arguments et que son exemple s'analyse.
 
@@ -91,7 +91,7 @@ Conventions d'Excel : une somme versée est négative, une somme reçue positive
 | SOMME.SI, NB.SI, MOYENNE.SI | SUMIF, COUNTIF, AVERAGEIF | ✅ critères `">=100"`, `"<>Paris"`, `"Dur*"`, `""`, `"<>"` ; `"10"` trouve le nombre 10 |
 | SOMME.SI.ENS, NB.SI.ENS, MOYENNE.SI.ENS, MAX.SI.ENS, MIN.SI.ENS | SUMIFS, COUNTIFS, AVERAGEIFS, MAXIFS, MINIFS | ✅ |
 | SOMMEPROD | SUMPRODUCT | ⚠️ colonnes d'un même tableau ; accepte des expressions : `SOMMEPROD((Ventes[Qté]>1)*Ventes[Prix])` |
-| SOUS.TOTAL | SUBTOTAL | ⚠️ codes 1 à 11 et 101 à 111, écrits en toutes lettres ; ne tient pas encore compte du filtre de la grille |
+| SOUS.TOTAL | SUBTOTAL | ⚠️ codes 1 à 11 et 101 à 111, écrits en toutes lettres ; sur un tableau, seules les lignes que le filtre de la grille laisse affichées comptent (les deux familles de codes, comme dans le tableur) ; sur une plage de cellules, les lignes masquées par le plan comptent encore (codes 101 à 111) |
 | AGREGAT | AGGREGATE | ⚠️ `AGREGAT(9; 6; Ventes[Montant])` : fonctions 1 à 19 et options 0 à 7, écrites en littéraux ; ignorer les erreurs revient à lire chaque valeur à travers SIERREUR ; les lignes masquées (options 1, 3, 5, 7) suivent SOUS.TOTAL pour les fonctions 1 à 13, et ne sont pas exclues pour 14 à 19 (GRANDE.VALEUR…) |
 
 Un agrégat accepte une **expression sur les colonnes** d'un tableau, calculée ligne à ligne : `SOMME(Ventes[Prix]*Ventes[Qté])`. Des colonnes de deux tableaux dans la même expression donnent #VALEUR!.
@@ -146,12 +146,13 @@ Une date est un **numéro de série** comme dans Excel (le 1er janvier 2026 vaut
 | REFERENCE | — | 🆕 `REFERENCE(Clients; Nom; [IdClient])` sur la clé du tableau ; sans clé, la ligne de ce numéro |
 | REFERENCE.APPROCHEE | REFERENCE.APPROX | 🆕 la plus grande clé inférieure ou égale (tranches, barèmes) ; sans clé, la ligne de ce numéro |
 | EXISTE | EXISTS | 🆕 `EXISTE(Clients; [IdClient])` ; sans clé, la ligne de ce numéro existe-t-elle |
-| RECHERCHEV, RECHERCHEX | VLOOKUP, XLOOKUP | ⚠️ **convertis** à la saisie (`Convert`), correspondance exacte seulement : en REFERENCE si la colonne cherchée est (ou devient) la clé, en `INDEX(T[Valeur]; EQUIV(x; T[Cherchée]; 0))` si le tableau garde ses numéros de ligne ; la valeur si absent de RECHERCHEX devient SI.NON.DISP |
-| INDEX, EQUIV | INDEX, MATCH | ⚠️ positions dans l'ordre affiché ; `INDEX(T[Valeur]; EQUIV(clé; T[Clé]; 0))` est converti en REFERENCE quand Clé est la clé du tableau |
+| RECHERCHEV, RECHERCHEX | VLOOKUP, XLOOKUP | ⚠️ **convertis** à la saisie (`Convert`). Correspondance exacte sur un tableau : en REFERENCE si la colonne cherchée est (ou devient) la clé, en `INDEX(T[Valeur]; EQUIV(x; T[Cherchée]; 0))` si le tableau garde ses numéros de ligne. RECHERCHEV approchée (4e argument omis ou VRAI) : `INDEX(T[Valeur]; EQUIV(x; T[Cherchée]; 1))`, la plus grande valeur inférieure ou égale (sans exiger un tri). Sur une plage de cellules libres (`RECHERCHEV(x; D2:F20; 2; FAUX)`) : `INDEX(Cell[E2:E20]; EQUIV(x; Cell[D2:D20]; 0))`. RECHERCHEX avec un mode de correspondance (-1, 1, 2) ou de recherche (-1), ou sur des cellules : `INDEX(renvoyée; EQUIVX(x; cherchée; mode; recherche))`. La valeur si absent de RECHERCHEX devient SI.NON.DISP |
+| INDEX, EQUIV | INDEX, MATCH | ⚠️ positions dans l'ordre affiché ; `INDEX(T[Valeur]; EQUIV(clé; T[Clé]; 0))` est converti en REFERENCE quand Clé est la clé du tableau ; EQUIV 1 et -1 trouvent la valeur la plus proche même si la colonne n'est pas triée |
+| EQUIVX | XMATCH | ⚠️ `EQUIVX(250; Barèmes[Seuil]; -1)` : modes 0 (exacte, sans jokers), -1, 1, 2 (jokers) ; recherche 1 ou -1 (depuis la fin) ; les recherches dichotomiques 2 et -2 parcourent toute la colonne (même résultat sur des données triées) ; colonne ou plage, pas un tableau dynamique |
 | LIGNES, COLONNES | ROWS, COLUMNS | ✅ forme de la référence : `Cell[A1:B3]`, `Tableau[Col]`, `Tableau[Col][2:5]`, tableau entier (`LIGNES(Ventes)` compte ses lignes, `COLONNES(Ventes)` ses colonnes), constante matricielle ; `[Col]` (valeur de la ligne) compte pour 1 |
 | LIGNE, COLONNE | ROW, COLUMN | ⚠️ avec une référence seulement : `LIGNE(Cell[B3])` vaut 3, `COLONNE(Cell[C1])` 3 ; pour un tableau, positions **dans le tableau** (`COLONNE(Ventes[Prix])` : rang de la colonne, `LIGNE(Ventes[Prix][2:5])` : 2) ; sans argument, #VALEUR! (le moteur ne connaît pas la position de la formule : pour numéroter les lignes d'un tableau, `CUMUL(1)`) |
 | ONGLET.CHOIX | SHEETCHOICE | 🆕 valeur choisie sur l'onglet à choix de la feuille de la formule (« Ventes · 2025 ▾ », pour une colonne calculée : la feuille de son tableau), avec le type de sa colonne (2025 est un nombre) ; vide pour « (Toutes) », #N/A sur une feuille sans choix. `SOMME.SI.ENS(Ventes[Montant]; Ventes[Année]; ONGLET.CHOIX())` suit l'onglet. Les formules libres de la feuille voient déjà ses tableaux filtrés par le choix (`SOMME(Ventes[Montant])` y donne le total de l'année affichée) ; celles des autres feuilles voient tout. Voir `canvas/choice.go` |
-| RECHERCHEH | HLOOKUP | ❌ refusée à la saisie avec un message (transposer les données, puis REFERENCE) ; absente de l'autocomplétion et d'« Insérer une fonction » |
+| RECHERCHEH | HLOOKUP | ⚠️ sur une plage de cellules libres seulement, **convertie** à la saisie : `RECHERCHEH(x; B2:F4; 3; FAUX)` devient `INDEX(Cell[B4:F4]; EQUIV(x; Cell[B2:F2]; 0))` (VRAI ou omis : EQUIV(…; 1)) ; sur un tableau, refusée avec un message (ses données sont en colonnes : RECHERCHEV ou REFERENCE) |
 | DECALER | OFFSET | ⚠️ voir « Références calculées » ci-dessous |
 | INDIRECT | INDIRECT | ⚠️ voir « Références calculées » ; style L1C1 (2e argument FAUX) : #REF! |
 | CELLULE | CELL | ⚠️ `CELLULE("adresse"; Cell[B3])` donne `$B$3` ; types `adresse`, `ligne`, `col`, `contenu`, `type` (`b` vide, `l` texte, `v` valeur), noms anglais acceptés ; la référence est obligatoire (la « dernière cellule modifiée » n'a pas de sens ici) ; pour un tableau, l'adresse est la référence dans la nomenclature (`Ventes[Prix][2]`) et la ligne celle de LIGNE ; autres types : #VALEUR! |
@@ -252,8 +253,8 @@ Une fonction inconnue donne #NOM? (l'import d'un classeur Excel garde alors la v
 | Excel (français / anglais) | Dans Lattis |
 |---|---|
 | RECHERCHE / LOOKUP | REFERENCE ou REFERENCE.APPROCHEE |
-| RECHERCHEH / HLOOKUP | refusée à la saisie : transposer les données, puis REFERENCE |
-| RECHERCHEV / VLOOKUP approchée, INDEX à 3 arguments | REFERENCE.APPROCHEE ; INDEX(colonne; ligne) |
+| RECHERCHEH / HLOOKUP sur un tableau | RECHERCHEV ou REFERENCE (les données d'un tableau sont en colonnes) |
+| INDEX à 3 arguments | INDEX(colonne; ligne) |
 | LAMBDA, MAP, BYROW… | un script Lua |
 | VARP (VAR.P en français) | VAR.P.N, que `VAR.P` désigne aussi |
 | LIGNE(), COLONNE() sans argument | CUMUL(1) pour numéroter les lignes d'un tableau |
@@ -287,4 +288,4 @@ Ces précalculs, comme les agrégats sortis de la requête, sont à recalculer q
 - `IsSpill`, `CompileSpill` : une cellule libre déverse son tableau dynamique (10 000 lignes au plus) ; une cellule ou un tableau sur le chemin donne #DEVERSEMENT!.
 - `Suggestion` : infobulle de #NOM?.
 - Nom de cellule : comme dans Excel, il peut reprendre le nom d'une fonction (`Taux`, `Date`), écrite, elle, avec ses parenthèses ; seuls les agrégats que GROUPER.PAR prend écrits seuls (`SOMME`, `MOYENNE`…) sont refusés (`BareFunction`). Un nom de LET, lui, ne peut pas être un nom de fonction.
-- `SOUS.TOTAL` : ne compte que les lignes que le filtre de la grille laisse affichées (`Table.Visible`).
+- `SOUS.TOTAL` (et `AGREGAT` avec les options 1, 3, 5, 7) : ne compte que les lignes que le filtre de la grille laisse affichées (`Table.Visible`), dans le moteur SQL qui calcule la grille ; l'évaluateur Go des essais n'a pas de filtre.

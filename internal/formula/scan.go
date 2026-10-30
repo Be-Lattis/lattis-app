@@ -93,6 +93,8 @@ var scans = map[string]scanDef{
 	}, make: func([]Value) scanner { return &sumProduct{} }},
 	"MATCH": {roles: func(n int) ([]role, bool) { return roles(param, column, param)[:n], true },
 		make: newMatch, ordered: true},
+	"XMATCH": {roles: func(n int) ([]role, bool) { return roles(param, column, param, param)[:n], true },
+		make: newXMatch, ordered: true},
 	"INDEX": {roles: func(n int) ([]role, bool) { return roles(column, param), n == 2 },
 		make: func(p []Value) scanner { return &index{n: p[0]} }, ordered: true},
 	"RANK": {roles: func(n int) ([]role, bool) { return roles(param, column, param)[:n], n >= 2 },

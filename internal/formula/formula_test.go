@@ -54,10 +54,8 @@ func TestConvertVLOOKUP(t *testing.T) {
 	}
 
 	for _, bad := range []string{
-		`=RECHERCHEV(1;Clients!$A$2:$C$100;2)`,      // approchée par défaut
-		`=RECHERCHEV(1;Clients!$A$2:$C$100;2;VRAI)`, // approchée explicite
-		`=RECHERCHEV(1;Feuil9!A1:B2;2;FAUX)`,        // plage hors tableau
 		`=RECHERCHEV(1;Clients!$A$2:$C$100;7;FAUX)`, // colonne hors plage
+		`=RECHERCHEV(1;Feuil9!A1:B2;3;FAUX)`,        // colonne hors plage de cellules
 		`=RECHERCHEV(1;Clients!B2:C100;2;FAUX)`,     // autre clé que celle du tableau
 	} {
 		var ce *ErrConvert
@@ -150,7 +148,6 @@ func TestConvertXLOOKUPAndIndexMatch(t *testing.T) {
 	for _, bad := range []string{
 		`=RECHERCHEX(1;Clients[Id];Ventes[Prix])`,      // deux tableaux
 		`=RECHERCHEX(1;Clients[Nom];Clients[Ville])`,   // autre clé que celle du tableau
-		`=RECHERCHEX(1;Clients[Id];Clients[Nom];"";1)`, // correspondance approchée
 		`=RECHERCHEH(1;Clients;2;FAUX)`,
 	} {
 		var ce *ErrConvert
