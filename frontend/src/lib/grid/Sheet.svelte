@@ -130,6 +130,7 @@
 	import FilterPanel, { type FilterPanelView } from './sheet/FilterPanel.svelte';
 	import ValidationDialog, { type ValidationDialogView } from './sheet/ValidationDialog.svelte';
 	import FunctionsDialog, { type FunctionsDialogView } from './sheet/FunctionsDialog.svelte';
+	import DedupDialog, { type DedupDialogView } from './sheet/DedupDialog.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6127,6 +6128,13 @@
 		get startFormula() { return startFormula; },
 		get wrap() { return wrap; }
 	};
+	// Supprimer les doublons : sheet/DedupDialog.svelte.
+	const dedupView: DedupDialogView = {
+		get applyDedup() { return applyDedup; },
+		get dedupDlg() { return dedupDlg; }, set dedupDlg(v) { dedupDlg = v; },
+		get previewDedup() { return previewDedup; },
+		get wrap() { return wrap; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6703,66 +6711,7 @@
 				}}
 			/>
 		{/if}
-		{#if dedupDlg}
-			{@const d = dedupDlg}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="rules filter"
-				use:dismissPanel={() => (dedupDlg = null)}
-				onkeydown={(ev) => {
-					ev.stopPropagation();
-					if (ev.key === 'Escape') {
-						dedupDlg = null;
-						wrap.focus();
-					}
-				}}
-			>
-				<div class="menu-title">{tr('grid.dedup.title', { table: d.e.t.name })}</div>
-				<p class="menu-note">{tr('grid.dedup.help')}</p>
-				<div class="values">
-					<label class="all">
-						<input
-							type="checkbox"
-							checked={d.on.every((x, i) => x || !!d.e.t.columns[i].formula)}
-							onchange={(ev) => {
-								const on = (ev.currentTarget as HTMLInputElement).checked;
-								d.on = d.e.t.columns.map((c) => on && !c.formula);
-								previewDedup();
-							}}
-						/>
-						{tr('grid.dedup.allColumns')}
-					</label>
-					{#each d.e.t.columns as c, i (i)}
-						<label>
-							<input
-								type="checkbox"
-								disabled={!!c.formula}
-								checked={d.on[i]}
-								onchange={(ev) => {
-									d.on[i] = (ev.currentTarget as HTMLInputElement).checked;
-									previewDedup();
-								}}
-							/>
-							<span class="what">{c.name}</span>
-						</label>
-					{/each}
-				</div>
-				<p class="menu-note">
-					{d.count === null ? tr('grid.dedup.computing') : d.count === 0 ? tr('grid.dedup.noneWith') : tr('grid.dedup.willRemove', { n: d.count })}
-				</p>
-				{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
-				<div class="foot">
-					<span class="sp"></span>
-					<button class="primary" disabled={!d.count} onclick={applyDedup}>{tr('common.delete')}</button>
-					<button
-						onclick={() => {
-							dedupDlg = null;
-							wrap.focus();
-						}}>{tr('common.cancel')}</button
-					>
-				</div>
-			</div>
-		{/if}
+		<DedupDialog v={dedupView} />
 		<FunctionsDialog v={functionsView} />
 		{#if pivotDlg}
 			{@const d = pivotDlg}
