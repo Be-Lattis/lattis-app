@@ -55,8 +55,7 @@
 	import { bandMerges, groupSpans, headerLabel, isSingle, tableTop } from './twolevel';
 	import { tableUnderTitle, titleAboveFilled } from './titlehead';
 	import { pivotColLayer, pivotLayer, pivotValueText } from './pivotformat';
-	import { foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setColFolded, setFolded } from './pivottree';
-	import { newSlicer, withSlicer } from './pivotslicer';
+	import { pivotLabelOffset } from './pivottree';
 	import SheetSlicers from './SheetSlicers.svelte';
 	import { type Citation } from './reflink';
 	import { gridPalette } from './theme';
@@ -129,6 +128,7 @@
 	import KeyHintMenu, { type KeyHintMenuView } from './sheet/KeyHintMenu.svelte';
 	import FollowMenu, { type FollowMenuView } from './sheet/FollowMenu.svelte';
 	import { createDraw } from './sheet/draw.svelte.js';
+	import { createPivotFold } from './sheet/pivotfold.svelte.js';
 
 	interface Props {
 		data: SheetData;
@@ -1505,83 +1505,18 @@
 	// Bouton ▾ d'un TCD (filtre de rapport, étiquette des lignes) : largeur réservée à droite de la cellule.
 	const PIVOT_DROP = 18;
 
-	/** Clic sur la case −/+ d'un groupe de colonnes : le plie ou le déplie. */
-	function toggleColFold(ev: MouseEvent, p: SheetPivot, cell: { row: number; col: number }): boolean {
-		if (!p.cols || !source.setPivot || cell.row < pivotHead(p) || cell.row > p.row) return false;
-		const j = cell.col - p.col;
-		const d = cell.row - pivotHead(p);
-		const info = p.cols[j];
-		const x = toLocal(ev).x - screenX(cell.col);
-		if (!info?.path || x < pivotBoxLeft(0) - 3 || x > pivotBoxLeft(0) + PIVOT_BOX + 3) return false;
-		let path: string[] | null = null;
-		let fold = false;
-		if (cell.row === p.row && info.collapsed) path = info.path;
-		else if (cell.row < p.row && p.colHead?.[d]?.[j] && info.path.length > d + 1) {
-			path = info.path.slice(0, d + 1);
-			fold = true;
-		}
-		if (!path) return false;
-		moveTo(cell.row, cell.col);
-		const set = source.setPivot;
-		const cfg = setColFolded(p.config, path, fold);
-		menuAction(() => set(p.id, cfg));
-		return true;
-	}
-
-	/** Nouveau segment (ou chronologie) du champ field, posé à droite du TCD. */
-	function addSlicer(p: SheetPivot, field: string, timeline: boolean) {
-		const set = source.setPivot;
-		if (!set) return;
-		const s = newSlicer(p.config, field, p.anchor ?? p.row, p.col + (p.cells[0]?.length ?? 1) - 1, timeline);
-		menuAction(() => set(p.id, withSlicer(p.config, p.config.slicers?.length ?? 0, s)), true);
-	}
-
-	/** Valeurs d'un champ d'un TCD (groupes et champs calculés compris). */
-	function pivotValuesOf(cfg: PivotConfig, field: string): Promise<{ text: string; count: number }[]> {
-		if (source.pivotValues) return source.pivotValues(cfg, field);
-		return source.pivotFieldValues?.(cfg.source, field) ?? Promise.resolve([]);
-	}
-
-	/** Le clic tombe-t-il sur une case −/+ de TCD ? Plie ou déplie alors le groupe (une étape d'annulation). */
-	function togglePivotFold(ev: MouseEvent, cell: { row: number; col: number }): boolean {
-		const pc = pivotAt(cell.row, cell.col);
-		if (pc && toggleColFold(ev, pc, cell)) return true;
-		const p = pivotAt(cell.row, cell.col);
-		if (!p?.rows || cell.col !== p.col || !source.setPivot) return false;
-		const info = pivotRowOf(p, cell.row);
-		if (!pivotBoxHit(info, toLocal(ev).x - screenX(cell.col)) || !info?.path) return false;
-		moveTo(cell.row, cell.col);
-		const set = source.setPivot;
-		const cfg = setFolded(p.config, info.path, !info.collapsed);
-		menuAction(() => set(p.id, cfg));
-		return true;
-	}
-
-	/** Développer, Réduire (le groupe de la cellule active), Développer tout, Réduire tout. */
-	function foldPivot(p: SheetPivot, what: 'expand' | 'collapse' | 'expandAll' | 'collapseAll') {
-		const set = source.setPivot;
-		if (!set) return;
-		let cfg: PivotConfig;
-		if (what === 'expandAll' || what === 'collapseAll') cfg = foldAll(p.config, what === 'collapseAll');
-		else {
-			const path = foldTarget(pivotRowOf(p, active.row), what === 'expand');
-			if (!path) return;
-			cfg = setFolded(p.config, path, what === 'collapse');
-		}
-		menuAction(() => set(p.id, cfg));
-	}
-
-	/** Valeur affichée d'un filtre de rapport : « (Tous) », la valeur, ou « (Plusieurs éléments) ». */
-	function pivotFilterText(values: string[]): string {
-		if (!values.length) return tr('grid.pivot.filter.all');
-		if (values.length === 1) return values[0] === '' ? tr('grid.filter.blanks') : values[0];
-		return tr('grid.pivot.filter.several');
-	}
-
-	/** Le champ f du TCD est-il filtré ou trié par le ▾ de son étiquette ? */
-	function pivotFiltered(p: SheetPivot, f: string): boolean {
-		return !!p.config.items?.some((x) => x.field === f && x.values.length) || !!p.config.sort?.[f];
-	}
+	// --- Arborescence des TCD : sheet/pivotfold.svelte.ts ---
+	const pivotFoldCtl = createPivotFold({
+		get source() { return source; },
+		get pivotHead() { return pivotHead; },
+		get toLocal() { return toLocal; },
+		get screenX() { return screenX; },
+		get moveTo() { return moveTo; },
+		get menuAction() { return menuAction; },
+		get pivotAt() { return pivotAt; },
+		get active() { return active; }
+	});
+	const { addSlicer, pivotValuesOf, togglePivotFold, foldPivot, pivotFilterText, pivotFiltered } = pivotFoldCtl;
 
 	// --- Clé proposée -------------------------------------------------------
 	// Quand la première colonne d'un tableau sans clé a des valeurs uniques

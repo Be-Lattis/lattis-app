@@ -15,7 +15,7 @@ type Options = { demo: string };
 
 export const test = base.extend<Options & { app: Page }>({
 	demo: ['', { option: true }],
-	app: async ({ page, demo }, use) => {
+	app: async ({ page, demo }, use, testInfo) => {
 		const dir = mkdtempSync(join(tmpdir(), 'lattis-e2e-'));
 		const cfg = join(dir, 'config');
 		const cache = join(dir, 'cache');
@@ -36,11 +36,18 @@ export const test = base.extend<Options & { app: Page }>({
 			},
 			stdio: ['ignore', 'pipe', 'pipe']
 		});
+		// Journal du moteur et console de la page : joints au rapport d'un essai en échec.
+		let log = '';
+		proc.stdout!.on('data', (b: Buffer) => (log += b.toString()));
+		proc.stderr!.on('data', (b: Buffer) => (log += b.toString()));
+		page.on('console', (m) => m.type() === 'error' && (log += `[console] ${m.text()}\n`));
+		page.on('pageerror', (e) => (log += `[page] ${e.message}\n`));
 		const url = await engineURL(proc);
 		await page.goto(url);
 		await expect(page.getByRole('button', { name: 'Fichier', exact: true })).toBeVisible({ timeout: 30_000 });
 		if (!demo) await expect(page.getByRole('grid')).toBeVisible();
 		await use(page);
+		if (testInfo.status !== testInfo.expectedStatus) await testInfo.attach('moteur', { body: log, contentType: 'text/plain' });
 		proc.kill();
 		await new Promise((r) => (proc.exitCode !== null ? r(null) : proc.once('exit', r)));
 		rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
