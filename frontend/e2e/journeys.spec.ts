@@ -149,6 +149,12 @@ test('11. menu contextuel, rechercher, format de cellule', async ({ app }) => {
 	await find.press('Enter');
 	await expect(activeCell(app)).toContainText('Kiwi');
 	await app.keyboard.press('Escape');
+	await expect(find).toBeHidden();
+	// Par le ruban : Remplacer ouvre la barre avec le second champ.
+	await ribbonTab(app, 'Accueil');
+	await app.getByRole('button', { name: 'Remplacer', exact: true }).click();
+	await expect(app.getByRole('textbox', { name: /Remplacer/ }).first()).toBeVisible();
+	await app.keyboard.press('Escape');
 	await goTo(app, 'B2');
 	await app.keyboard.press('Control+1');
 	const fmt = app.getByRole('dialog').first();

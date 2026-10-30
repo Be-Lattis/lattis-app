@@ -10,7 +10,7 @@
 	// éditeur DOM superposé à la cellule active, barre de formule.
 	import { flushSync, onMount, tick, untrack } from 'svelte';
 	import { noticeTtl } from '#lib/shell/notice.js';
-	import { RowCache, percentile, syncAt, type Fetched, type SyncKind } from './cache';
+	import { RowCache, percentile, syncAt, type SyncKind } from './cache';
 	import { VScroll, clamp } from './scroll';
 	import { Axis } from './axis';
 	import { allGenerated, defaultNameHint, isDefaultTableName, isGeneratedColumnName } from './defaultname';
@@ -33,11 +33,11 @@
 	import { panes, reveal, revealWhole, toGrid, type Pane } from './panes';
 	import { afterWidthChange, keepInView, seenIn, sideRoom, type Span as XSpan } from './keepinview';
 	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
-	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvAlertOf, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm, type DvRuleData } from './dvrule';
+	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvAlertOf, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
 	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
-	import { findKey, finderAction, findZone, foundCell, hitCount, inZone, replacedLabel, zoneLabel, type Zone } from './findzone';
-	import { defaultFindOpts, nextFound, optsKey, replaceLook, replaceSummary, searchAll, searchQuery, type FindOpts, type FoundCell, type ReplaceResult, type SearchQuery, type SearchResult } from './findopts';
+	import { findZone, inZone, zoneLabel, type Zone } from './findzone';
+	import { type FindOpts, type FoundCell } from './findopts';
 	import FindMore from './FindMore.svelte';
 	import { edgeScroll, frameStep } from './autoscroll';
 	import { blocksReach, boxesReach } from './objextent';
@@ -49,17 +49,15 @@
 	import { threadAt, threadPlace, type CommentHost } from './comments';
 	import SparklineDialog from './SparklineDialog.svelte';
 	import { a1 as sparkA1, defaultLocation, drawSparkline, freeSparkAt, sparkGeometry, sparkSvg, sparkValue, type SparkKind, type SparklineConfig, type SparklineGroup } from './sparkline';
-	import type { ErrorBars, ErrorValues, TrendFit, Trendline } from '#lib/chart/fits.js';
 	import { autoLink, isLinkClick, linkKind, onLinkText, openLink } from './hyperlink';
-	import { withoutField, type CustomList, type CustomOrder } from './customsort';
+	import { withoutField, type CustomOrder } from './customsort';
 	import { handQuestion, keyQuestion, type KeyChoice, type KeyQuestion } from './keychoice';
-	import type { TextColumnsOptions, TextColumnsPreview } from './textcols';
 	import { dismiss, dismissPanel } from './dismiss';
 	import { explainError } from './errors';
 	import { spillAt, spillTip } from './spillmenu';
 	import { freeDisplay } from './freecell';
 	import { bandAt, bandLabel, bandOpen, bandRefusal, hiddenBand } from './hidden';
-	import { choiceHiddenCols, type TabChoice } from '#lib/shell/choice.js';
+	import { choiceHiddenCols } from '#lib/shell/choice.js';
 	import { tabChoiceItem, type ChoiceCandidate, type TabChoiceItem } from './tabchoice';
 	import { placeFollowBadge, showNameBadge } from './followbadge';
 	import { ReadRecovery, readFailNotice } from './readfail';
@@ -69,41 +67,25 @@
 	import { tableUnderTitle, titleAboveFilled } from './titlehead';
 	import { grown as growFrame, type Grown } from './grown';
 	import { pivotColLayer, pivotLayer, pivotValueText } from './pivotformat';
-	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setColFolded, setFolded, type PivotRowInfo } from './pivottree';
-	import type { PivotGroup } from './pivotgroup';
-	import { newSlicer, withSlicer, type PivotSlicer, type PivotSlicerInfo } from './pivotslicer';
+	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setColFolded, setFolded } from './pivottree';
+	import { newSlicer, withSlicer } from './pivotslicer';
 	import SheetSlicers from './SheetSlicers.svelte';
 	import { fillSeries, shiftTableColumns } from './fill';
-	import { citeLabel, refMessage, refTarget, type Citation, type KeyRow } from './reflink';
+	import { citeLabel, refMessage, refTarget, type Citation } from './reflink';
 	import { gridPalette } from './theme';
 	import { paint as themed } from './colors';
 	import { tableTheme } from './theme.svelte.js';
-	import {
-		condArgs,
-		condLabel,
-		condOps,
-		describeConds,
-		filterKind,
-		kindTitle,
-		searchValues,
-		valuesFilter,
-		type ColumnFilter as Filter,
-		type CondOp,
-		type PanelValue
-	} from './filtercond';
+	import { condArgs, condLabel, condOps, describeConds, filterKind, kindTitle, searchValues, valuesFilter, type CondOp, type PanelValue } from './filtercond';
 	import { cellLines, copyFillBlock, copyFillPlan, fillBlock, insertAt, readKey, shortcutOf, timeText, todayText } from './shortcuts';
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
-	import Select from '#lib/ui/Select.svelte';
 	import Submenu from '#lib/ui/Submenu.svelte';
 	import { modal } from '#lib/ui/focus.js';
 	import { clip, clipped } from '#lib/ui/menu.js';
 	import Chart from '#lib/chart/Chart.svelte';
 	import { encodeObj, objFromText, rememberObj } from '#lib/clip/objects.js';
-	import { SINGLE_SERIES, chartFieldsFrom, defaultChartTitle, type ChartKind, type MapGuess } from '#lib/chart/kinds.js';
+	import { SINGLE_SERIES, chartFieldsFrom, defaultChartTitle } from '#lib/chart/kinds.js';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
-	import type { BoxStatsIn } from '#lib/chart/shapes.js';
-	import type { RowFormulaPreview } from '#lib/ui/rowformula.js';
 	import { svgToPng } from '#lib/chart/image.js';
 	import type { PrintCell, PrintChart, PrintSource } from '#lib/print/sheetprint.js';
 	import PivotPanel from './PivotPanel.svelte';
@@ -117,8 +99,8 @@
 	import SheetButtons from './SheetButtons.svelte';
 	import SheetObjects from './SheetObjects.svelte';
 	import { objectBox, type ObjectConfig, type ObjectKind, type SheetObject } from './objects';
-	import { BUTTON_H, BUTTON_W, type ButtonConfig, type ControlKind, type SheetButton } from './buttons';
-	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type RuleStats, type Stats, type StatsReq } from './rules';
+	import { BUTTON_H, BUTTON_W, type ControlKind, type SheetButton } from './buttons';
+	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type Stats, type StatsReq } from './rules';
 	import { chartMenu as chartMenuGroups, chartSubmenu, freeCellMenu, headerMenu, linesSubmenu, pivotSubmenu, tableCellMenu, tableColumnSubmenu, tableRowSubmenu } from './ctxmenu';
 	import { colLetters, formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
 	import { ICON_SETS, drawCfIcon } from './cficons';
@@ -129,7 +111,7 @@
 	import { drawIcon } from '#lib/icons/canvas.js';
 	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
 	import { checkFormula, closeParens, editorWidth, formulaRefs, highlightParts, isFormula, movedRef, pointedRef, previewShift, rangeRef, refRect, serverErrorPos, type FormulaError, type Rect, type RefTable } from './formulaEdit';
-	import { editorLeave, formulaTyping, fxLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
+	import { editorLeave, fxLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import { parseGoto, type GotoTable } from './goto';
 	import OutlineBar from './OutlineBar.svelte';
 	import { bandSize, detailTarget, outlineDepth, type OutlineAction, type OutlineGeom, type SheetOutline } from './outline';
@@ -150,9 +132,10 @@
 		sortLabels,
 		type ColumnType
 	} from './format';
-	import { errorText, fmtNumber, fnName, lower, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
+	import { errorText, fnName, lower, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
 	import { type Column, type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type ColumnFilter, type PageBreaksView, type SheetTable, type SheetData, type LinesOp, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, GUTTER_PAD, GUTTER_MAX, GUTTER_KEY_MAX, FONT, FONT_BOLD, FONT_SMALL, FONT_TINY } from './sheet/consts';
+	import { createFind } from './sheet/find.svelte.js';
 
 
 	interface Props {
@@ -10089,285 +10072,38 @@
 		busy: boolean;
 		current: number;
 	} | null>(null);
-	let findOpts = defaultFindOpts();
-	let findMore = false;
 	let findInput = $state<HTMLInputElement>();
 	let replaceInput = $state<HTMLInputElement>();
 	// Occurrences (toutes feuilles), ordre des feuilles parcourues (rang k), total.
 	let matches: FoundCell[] = [];
-	let matchOrder: number[] = [];
-	let matchTotal = 0;
 	// Recherche des occurrences en mémoire (texte, zone, feuille et options).
 	let matchKey = '';
-	// Recherche la plus récente (une plus ancienne qui finit après est ignorée).
-	let findGen = 0;
-	// Occurrence sur une autre feuille : on y va, puis elle se sélectionne (applyData).
-	let findGo: (FoundCell & { count: string }) | null = null;
-	// Barre ouverte ou fermée : redessiner le surlignage des occurrences.
-	$effect(() => {
-		void finder;
-		schedule();
-	});
-
 	// Cellule trouvée, repérée à l'image en cours (ligne et colonne entières teintées).
 	let findCross: Zone | null = null;
-
-	/** Étendue de la cellule trouvée à repérer (toute sa fusion), ou null. */
-	function foundRect(): Zone | null {
-		const f = finder && foundCell(finder.at, finder.zone, active, editing);
-		if (!f) return null;
-		const g = boxOf(f.row, f.col);
-		return g ? mergeRect(g) : { r0: f.row, r1: f.row, c0: f.col, c1: f.col };
-	}
-
 	/** Zone de recherche : la sélection si elle compte plusieurs cellules, sinon null (toute la feuille). */
 	const searchZone = () => findZone(selection(), singleSelection());
-
-	/** Clé des occurrences cherchées : texte, zone (feuille) ou classeur, options. */
-	function matchesKey(text: string, zone: Zone | null, o: FindOpts): string {
-		return findKey(text, o.book ? null : zone, o.book ? -1 : (data.sheet ?? 0)) + optsKey(o);
-	}
-
-	/** Suit la sélection : zone affichée dans la barre, cellule trouvée oubliée hors zone. */
-	function syncFinderZone() {
-		if (!finder) return;
-		const z = searchZone();
-		const old = finder.zone;
-		if (findKey('', z) !== findKey('', old)) {
-			finder.zone = z;
-			finder.count = '';
-		}
-		if (finder.at && (z ? !inZone(finder.at, z) : finder.at.row !== active.row || finder.at.col !== active.col)) finder.at = null;
-	}
-
-	/** Ouvre la barre de recherche (replace : avec le champ Remplacer par). */
-	export function openFinder(replace: boolean) {
-		if (!source.find && !source.search) return;
-		// Rendue tout de suite : le focus y est avant la frappe suivante.
-		flushSync(() => {
-			finder = {
-				replace,
-				text: finder?.text ?? '',
-				by: finder?.by ?? '',
-				count: '',
-				info: '',
-				zone: searchZone(),
-				at: null,
-				opts: finder?.opts ?? findOpts,
-				more: finder?.more ?? findMore,
-				list: finder?.list ?? null,
-				total: finder?.total ?? 0,
-				busy: false,
-				current: -1
-			};
-		});
-		findInput?.select();
-		// Ouverte depuis un menu qui reprend le focus en se fermant : y revenir.
-		requestAnimationFrame(() => {
-			if (findInput && !findInput.closest('.finder')?.contains(document.activeElement)) findInput.select();
-		});
-	}
-
-	/** Ferme la barre et rend la main à la grille. */
-	function closeFinder() {
-		if (finder) {
-			findOpts = finder.opts;
-			findMore = finder.more;
-		}
-		finder = null;
-		findGen++;
-		wrap.focus();
-	}
-
-	/** Affiche ou masque la ligne Remplacer par (le focus y va à l'ouverture). */
-	function toggleReplace(open = !finder?.replace) {
-		if (!finder || (!source.replace && !source.replaceAll)) return;
-		const f = finder;
-		flushSync(() => (f.replace = open));
-		if (open) replaceInput?.select();
-		else findInput?.focus();
-	}
-
-	/** Texte ou options changés : compteur, bilan et liste oubliés. */
-	function findChanged() {
-		if (!finder) return;
-		finder.count = '';
-		finder.info = '';
-		finder.list = null;
-		finder.current = -1;
-	}
-
-	/**
-	 * Occurrences du texte cherché (relues si le texte, la zone, la feuille
-	 * ou les options ont changé) ; faux si une recherche plus récente l'a
-	 * remplacée. onPart : la liste au fur et à mesure (classeur).
-	 */
-	async function findAll(zone: Zone | null, onPart?: (hits: FoundCell[], total: number) => void): Promise<boolean> {
-		if (!finder) return false;
-		const o = finder.opts;
-		const k = matchesKey(finder.text, zone, o);
-		if (k === matchKey) return true;
-		const sheet = data.sheet ?? 0;
-		const gen = ++findGen;
-		if (source.search) {
-			const r = await searchAll(source.search, searchQuery(finder.text, sheet, zone, o), 5000, onPart, () => gen !== findGen);
-			if (!r) return false;
-			matches = r.hits;
-			matchOrder = r.order;
-			matchTotal = r.total;
-		} else if (source.find) {
-			const ms = await source.find(finder.text, zone);
-			if (gen !== findGen) return false;
-			matches = ms.map((m) => ({ ...m, sheet, k: 0, name: sheetName, text: '' }));
-			matchOrder = [sheet];
-			matchTotal = matches.length;
-		}
-		matchKey = k;
-		return true;
-	}
-
-	/** Va à l'occurrence i (sur une autre feuille : elle s'y sélectionne une fois la feuille affichée). */
-	function goFound(i: number, zone: Zone | null) {
-		if (!finder) return;
-		const m = matches[i];
-		finder.current = i;
-		finder.count = hitCount(i, matchTotal);
-		if (m.sheet !== (data.sheet ?? 0)) {
-			if (!onsheet) return;
-			findGo = { ...m, count: finder.count };
-			onsheet(m.sheet);
-			return;
-		}
-		if (zone && !finder.opts.book) {
-			finder.at = { row: m.row, col: m.col };
-			ensureVisible(m.row, m.col);
-			schedule();
-		} else {
-			moveTo(m.row, m.col);
-			finder.at = { row: active.row, col: active.col };
-		}
-	}
-
-	/** Arrivé sur la feuille d'une occurrence (applyData) : elle se sélectionne. */
-	function findArrived(sheet: number) {
-		const g = findGo;
-		if (!g || g.sheet !== sheet) return;
-		findGo = null;
-		moveTo(g.row, g.col);
-		if (finder) {
-			finder.at = { row: active.row, col: active.col };
-			finder.count = g.count;
-		}
-	}
-
-	async function findNext(back = false) {
-		if (!finder || !finder.text) return;
-		const zone = searchZone();
-		finder.zone = zone;
-		if (!(await findAll(zone)) || !finder) return;
-		finder.info = '';
-		if (matches.length === 0) {
-			finder.at = null;
-			finder.current = -1;
-			finder.count = tr('grid.find.none');
-			schedule();
-			return;
-		}
-		// Dans la sélection : à partir de la dernière cellule trouvée (la
-		// sélection ne bouge pas) ; sur la feuille ou le classeur : de la
-		// cellule active.
-		const k = matchOrder.indexOf(data.sheet ?? 0);
-		const inSel = zone && !finder.opts.book;
-		const at = inSel ? (finder.at && inZone(finder.at, zone) ? finder.at : null) : active;
-		const i = nextFound(matches, at && k >= 0 ? { k, row: at.row, col: at.col } : null, back, finder.opts.byCols);
-		goFound(i, zone);
-	}
-
-	/** Rechercher tout : la liste des cellules trouvées, feuille après feuille. */
-	async function listAll() {
-		if (!finder || !finder.text) return;
-		const f = finder;
-		const zone = searchZone();
-		f.zone = zone;
-		f.info = '';
-		matchKey = '';
-		f.busy = true;
-		f.list = [];
-		const done = await findAll(zone, (hits, total) => {
-			f.list = [...hits];
-			f.total = total;
-		});
-		if (!done || finder !== f) return;
-		f.busy = false;
-		f.list = matches;
-		f.total = matchTotal;
-		f.current = -1;
-		f.count = matches.length ? '' : tr('grid.find.none');
-	}
-
-	/** Remplace la cellule trouvée (si elle contient le texte), puis passe à la suivante (Excel). */
-	async function replaceOne() {
-		if (!finder || !finder.text || (!source.replace && !source.replaceAll)) return;
-		const zone = searchZone();
-		if (!(await findAll(zone)) || !finder) return;
-		const sheet = data.sheet ?? 0;
-		const at = zone && !finder.opts.book ? finder.at : active;
-		if (at && inZone(at, finder.opts.book ? null : zone) && matches.some((m) => m.sheet === sheet && m.row === at.row && m.col === at.col)) {
-			const cell = { r0: at.row, c0: at.col, r1: at.row, c1: at.col };
-			try {
-				if (source.replaceAll) {
-					const r = await source.replaceAll(searchQuery(finder.text, sheet, cell, { ...replaceLook(finder.opts), book: false }), finder.by);
-					if (finder && r.skipped) finder.info = replaceSummary(r, 'sheet');
-				} else await source.replace!(finder.text, finder.by, cell);
-			} catch (e) {
-				if (finder) finder.info = errorText(e);
-				return;
-			}
-			matchKey = '';
-		}
-		await findNext();
-	}
-
-	async function replaceAll() {
-		if (!finder || !finder.text || (!source.replace && !source.replaceAll)) return;
-		const f = finder;
-		const { text, by, opts } = f;
-		const zone = searchZone();
-		try {
-			if (source.replaceAll) {
-				const r = await source.replaceAll(searchQuery(text, data.sheet ?? 0, zone, replaceLook(opts)), by);
-				if (finder !== f) return;
-				f.info = replaceSummary(r, opts.book ? 'book' : zone ? 'selection' : 'sheet');
-			} else {
-				const n = await source.replace!(text, by, zone);
-				if (finder !== f) return;
-				f.info = replacedLabel(n, !!zone);
-			}
-			f.count = '';
-			f.at = null;
-			matchKey = '';
-			if (f.list) {
-				const info = f.info;
-				await listAll();
-				f.info = info;
-			}
-		} catch (e) {
-			if (finder) finder.info = errorText(e);
-		}
-	}
-
-	/** Touches dans toute la barre (champs et boutons), voir finderAction. */
-	function onFinderKey(e: KeyboardEvent) {
-		e.stopPropagation();
-		const a = finderAction(e);
-		// Entrée sur un bouton, une liste ou une case : il agit, pas la recherche.
-		if (!a || (e.key === 'Enter' && (e.target instanceof HTMLButtonElement || e.target instanceof HTMLSelectElement))) return;
-		e.preventDefault();
-		if (a === 'close') closeFinder();
-		else if (a === 'next' || a === 'prev') findNext(a === 'prev');
-		else if (a === 'focusFind') findInput?.select();
-		else if (a === 'openReplace') toggleReplace(true);
-	}
+	// Rechercher / remplacer : sheet/find.svelte.ts (accès de createFind à la feuille).
+	const findCtl = createFind({
+		get finder() { return finder; }, set finder(v) { finder = v; },
+		get schedule() { return schedule; },
+		get active() { return active; },
+		get editing() { return editing; },
+		get boxOf() { return boxOf; },
+		get data() { return data; },
+		get searchZone() { return searchZone; },
+		get source() { return source; },
+		get findInput() { return findInput; },
+		get wrap() { return wrap; },
+		get replaceInput() { return replaceInput; },
+		get matchKey() { return matchKey; }, set matchKey(v) { matchKey = v; },
+		get matches() { return matches; }, set matches(v) { matches = v; },
+		get sheetName() { return sheetName; },
+		get onsheet() { return onsheet; },
+		get ensureVisible() { return ensureVisible; },
+		get moveTo() { return moveTo; }
+	});
+	const { foundRect, matchesKey, syncFinderZone, closeFinder, toggleReplace, findChanged, goFound, findArrived, findNext, listAll, replaceOne, replaceAll, onFinderKey } = findCtl;
+	export const openFinder = findCtl.openFinder;
 
 	// --- Presse-papiers -----------------------------------------------------
 
