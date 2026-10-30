@@ -182,6 +182,8 @@ func main() {
 		// Windows garde l'ombre, les coins arrondis et le redimensionnement par les
 		// bords ; sous Linux, le runtime Wails gère les bords en JavaScript.
 		Frameless: runtime.GOOS != "darwin",
+		// Classeur (.lattis, .xlsx) déposé sur la fenêtre : ouvert.
+		EnableFileDrop: true,
 		// macOS : barre native masquée, feux tricolores conservés.
 		Mac: application.MacWindow{
 			TitleBar:                application.MacTitleBarHidden,
@@ -193,10 +195,19 @@ func main() {
 	// (évènements des scripts Lua), qui peuvent l'annuler.
 	bridge.GuardClose(documents, win)
 
+	win.OnWindowEvent(events.Common.WindowFilesDropped, func(e *application.WindowEvent) {
+		for _, p := range e.Context().DroppedFiles() {
+			if bridge.Openable(p) {
+				documents.RequestOpen(p)
+				return
+			}
+		}
+	})
+
 	// macOS : un .lattis ouvert depuis le Finder arrive par un événement,
 	// au lancement comme pendant que l'application tourne.
 	app.Event.OnApplicationEvent(events.Common.ApplicationOpenedWithFile, func(e *application.ApplicationEvent) {
-		if p := e.Context().Filename(); bridge.IsWorkbook(p) {
+		if p := e.Context().Filename(); bridge.Openable(p) {
 			documents.RequestOpen(p)
 		}
 	})

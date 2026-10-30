@@ -84,7 +84,7 @@ func writeXLSX(ctx context.Context, w io.Writer, sheets []xsheet, fm *fmts) erro
 	for i, s := range sheets {
 		for _, xt := range s.tables {
 			p := xt.place
-			if p == nil || len(p.cols) == 0 || p.row+1 >= ExcelRows || p.col+len(p.cols)-1 >= ExcelCols {
+			if p == nil || p.plain || len(p.cols) == 0 || p.row+1 >= ExcelRows || p.col+len(p.cols)-1 >= ExcelCols {
 				continue
 			}
 			n++
@@ -252,8 +252,13 @@ func tablePart(t xlsxTable) string {
 			b.WriteString(`/>`)
 		}
 	}
-	// Style clair : la mise en forme exportée (en-têtes, couleurs) reste lisible.
-	b.WriteString(`</tableColumns><tableStyleInfo name="TableStyleLight1" showFirstColumn="0" showLastColumn="0" showRowStripes="1" showColumnStripes="0"/></table>`)
+	// Style clair : la mise en forme exportée (en-têtes, couleurs) reste
+	// lisible ; un tableau d'un fichier .xlsx ouvert garde le sien.
+	style := `name="TableStyleLight1" showFirstColumn="0" showLastColumn="0" showRowStripes="1" showColumnStripes="0"`
+	if s := t.xt.place.style; tableStyleAttrs.MatchString(s) {
+		style = s
+	}
+	b.WriteString(`</tableColumns><tableStyleInfo ` + style + `/></table>`)
 	return b.String()
 }
 

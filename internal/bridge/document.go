@@ -55,6 +55,12 @@ type DocState struct {
 	// Theme : thème de couleur du classeur (Affichage › Thème) ; nil : thème
 	// par défaut des réglages (ui.theme).
 	Theme *canvas.Theme `json:"theme,omitempty"`
+	// Format : "xlsx" pour un fichier .xlsx ouvert qui garde son format
+	// (xlsxdoc.go), vide pour un classeur .lattis.
+	Format string `json:"format,omitempty"`
+	// XLSX : rien n'a été enregistré, l'interface demande s'il faut garder
+	// le format .xlsx ou convertir en .lattis (SaveXLSX).
+	XLSX *XLSXQuestion `json:"xlsx,omitempty"`
 }
 
 // OpenResult est le résultat d'une ouverture : soit le classeur est ouvert,
@@ -124,6 +130,7 @@ type DocumentService struct {
 	sql      sqlRuns                 // requêtes en cours de l'onglet SQL (execute.go)
 	lang     langState               // langue de la session (lang.go)
 	work     workState               // opérations longues suivies (work.go)
+	xlsx     xlsxState               // fichier .xlsx ouvert : format gardé (xlsxdoc.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState
@@ -221,8 +228,12 @@ func (s *DocumentService) New(ctx context.Context) (DocState, error) {
 func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, error) {
 	if path == "" {
 		p, err := s.sys().OpenFile(FileDialog{
-			Title:   "Ouvrir un classeur",
-			Filters: []FileFilter{{"Classeur Lattis", "*.lattis"}},
+			Title: "Ouvrir un classeur",
+			Filters: []FileFilter{
+				{"Classeur Lattis ou Excel", "*.lattis;*.xlsx"},
+				{"Classeur Lattis", "*.lattis"},
+				{"Classeur Excel", "*.xlsx"},
+			},
 		})
 		if err != nil {
 			return OpenResult{}, err
@@ -234,6 +245,10 @@ func (s *DocumentService) Open(ctx context.Context, path string) (OpenResult, er
 	}
 	if err := s.sessionPath(path); err != nil {
 		return OpenResult{}, err
+	}
+	// Fichier .xlsx : ni partage, ni verrou ~$ (xlsxdoc.go).
+	if archive.Foreign(path) {
+		return s.open(ctx, path, doc.OpenNormal)
 	}
 	if r := sharedFile(path); r != nil {
 		return OpenResult{Shared: r}, nil
@@ -295,7 +310,7 @@ func (s *DocumentService) OpenLocked(ctx context.Context, path string, readOnly 
 }
 
 func (s *DocumentService) open(ctx context.Context, path string, mode doc.OpenMode) (OpenResult, error) {
-	d, err := doc.OpenAs(ctx, path, mode)
+	d, err := s.openDoc(ctx, path, mode)
 	var rec *archive.RecoverableError
 	if errors.As(err, &rec) {
 		return OpenResult{Recoverable: &rec.Orphan}, nil
@@ -395,9 +410,14 @@ func (s *DocumentService) Save(ctx context.Context, as bool) (DocState, error) {
 	case d.ReadOnly():
 		// Ouvert en lecture seule : une copie, sous un autre nom.
 		return s.saveAs(ctx, d, docCopyName(d))
+	case as && d.XLSX():
+		return s.saveAs(ctx, d, docBaseName(d)+".xlsx")
 	case as || d.Path() == "":
 		// Classeur du serveur : son titre, pas le nom de son cache.
 		return s.saveAs(ctx, d, docBaseName(d)+".lattis")
+	case d.XLSX():
+		// Fichier .xlsx : garder son format ou convertir (xlsxdoc.go).
+		return s.saveXLSXDoc(ctx, d)
 	}
 	if err := saveDoc(ctx, d, ""); err != nil {
 		return s.saveFailed(ctx, d, err)
@@ -445,14 +465,18 @@ func (s *DocumentService) ResolveSave(ctx context.Context, overwrite bool) (DocS
 // saveAs demande où enregistrer (name : nom proposé) et enregistre.
 func (s *DocumentService) saveAs(ctx context.Context, d *doc.Document, name string) (DocState, error) {
 	var werr error
+	// Enregistrer sous : .lattis ou .xlsx (le format proposé d'abord).
+	filters := []FileFilter{{"Classeur Lattis", "*.lattis"}, {"Classeur Excel", "*.xlsx"}}
+	if archive.Foreign(name) {
+		filters[0], filters[1] = filters[1], filters[0]
+	}
 	p, err := s.sys().SaveFile(FileDialog{
 		Title:     "Enregistrer le classeur",
 		Filename:  name,
 		Directory: docFolder(d),
-		Filters:   []FileFilter{{"Classeur Lattis", "*.lattis"}},
-		Ext:       ".lattis",
+		Filters:   filters,
 	}, func(p string) error {
-		werr = saveDoc(ctx, d, p)
+		werr = saveDoc(ctx, d, saveAsPath(p))
 		return werr
 	})
 	if werr != nil {
@@ -536,6 +560,10 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 	st := DocState{Open: true, Path: d.Path(), Title: s.say("doc.untitled", nil)}
 	if st.Path != "" {
 		st.Title = strings.TrimSuffix(filepath.Base(st.Path), filepath.Ext(st.Path))
+		// Fichier .xlsx : le nom avec son extension (« Ventes.xlsx »).
+		if d.XLSX() {
+			st.Title, st.Format = filepath.Base(st.Path), "xlsx"
+		}
 	}
 	// Classeur du serveur : son titre sur le serveur, pas le nom du cache.
 	if st.Remote = remoteDoc(d); st.Remote != nil {

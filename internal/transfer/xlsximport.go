@@ -156,7 +156,7 @@ type islandState struct {
 // types et formules) et prépare l'import ; les valeurs des tableaux sont
 // relues au moment de l'import.
 func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.ImportSheet, []string, error) {
-	rv := &resolver{bySheet: map[string][]*island{}}
+	rv := &resolver{bySheet: map[string][]*island{}, byXName: map[string]*island{}, cellNames: map[string]string{}, defined: map[string]string{}}
 	x.rv = rv
 	states := make([][]*islandState, len(x.sheets))
 	builds := make([]*sheetBuild, len(x.sheets))
@@ -165,9 +165,11 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 		states[si] = nil
 		delete(rv.bySheet, strings.ToLower(sh.name))
 		b := newIslands()
+		var heads headerCells
 		err := x.scan(ctx, sh, func(c *rawCell) error {
 			if !c.empty(x.sst) && !sh.skipped(c.row, c.col) {
 				b.add(c.row, c.col)
+				heads.note(x, c)
 			}
 			return nil
 		})
@@ -184,8 +186,10 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 		xnames := x.excelTables(sh)
 		for _, r := range rects {
 			is := &island{rect: r, sheet: sh.name}
+			is.free = heads.free(x, r)
 			st := &islandState{is: is}
 			if is.table() {
+				is.xname = xnames[r]
 				// Un tableau d'Excel à la même place garde son nom.
 				if n := identifier(xnames[r]); n != "" && !taken[n] && !canvas.A1Like(n) {
 					taken[n] = true
@@ -215,6 +219,15 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 			return nil, nil, err
 		}
 	}
+	// Tableaux d'Excel (références structurées) et noms définis.
+	for _, list := range rv.bySheet {
+		for _, is := range list {
+			if is.xname != "" {
+				rv.byXName[strings.ToLower(is.xname)] = is
+			}
+		}
+	}
+	named := x.definedNames(rv)
 
 	for si, sh := range x.sheets {
 		shared := map[string]struct {
@@ -329,6 +342,7 @@ func (x *xlsxFile) plan(ctx context.Context, taken map[string]bool) ([]canvas.Im
 		warnings = append(warnings, x.decorate(sh, builds[si], rv)...)
 		out[si].Format = builds[si].f
 		out[si].Pivots = x.sheetPivots(si)
+		out[si].Names = named[strings.ToLower(sh.name)]
 		for _, st := range states[si] {
 			is := st.is
 			if !is.table() {

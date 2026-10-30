@@ -28,6 +28,9 @@ type xfmt struct {
 	dp    int8 // décimales, -1 : celles du format
 	group bool // séparateur de milliers
 	df    string
+	// short : date courte par défaut (sans motif choisi) : format intégré
+	// 14 en .xlsx, qui suit la langue du poste.
+	short bool
 	b, i  bool
 	u, x  bool
 	font  string
@@ -126,6 +129,7 @@ func (f *fmts) date(n int32, serial float64) int32 {
 	if x.nk == 0 {
 		x.nk = 'd'
 		x.df = [3]string{"jj/mm/aaaa", "jj/mm/aaaa hh:mm", "hh:mm"}[t]
+		x.short = t == 0
 	}
 	d := f.idLocked(x)
 	f.dated[[2]int32{n, t}] = d
@@ -209,7 +213,7 @@ func toXfmt(st canvas.Style) xfmt {
 	case "date":
 		x.nk, x.dp, x.df = 'd', -1, str("df")
 		if x.df == "" {
-			x.df = "jj/mm/aaaa"
+			x.df, x.short = "jj/mm/aaaa", true
 		}
 	case "time":
 		x.nk, x.dp, x.df = 'd', -1, str("df")
@@ -224,7 +228,7 @@ func toXfmt(st canvas.Style) xfmt {
 		}
 	}
 	if c := strings.TrimSpace(str("nc")); c != "" {
-		x.nk, x.code, x.dp, x.df, x.group = 'x', c, -1, "", false
+		x.nk, x.code, x.dp, x.df, x.group, x.short = 'x', c, -1, "", false, false
 	}
 	x.group = x.group && (x.nk == 'n' || x.nk == 'c')
 	if x.nk != 'n' && x.nk != 'p' && x.nk != 'c' {
@@ -361,7 +365,9 @@ func xlsxStyles(list []xfmt) string {
 	nFonts, nFills, nBorders := 1, 2, 1
 	for _, x := range list {
 		num := 0
-		if code := x.excelNumFmt(); code != "" {
+		if x.nk == 'd' && x.short {
+			num = 14 // date courte
+		} else if code := x.excelNumFmt(); code != "" {
 			if id, ok := numIDs[code]; ok {
 				num = id
 			} else {

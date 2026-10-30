@@ -13,6 +13,10 @@ A Lattis workbook is a single `.lattis` file: a ZIP archive that contains a comp
 
 Closing the workbook or the window with unsaved changes first asks whether to save them.
 
+## Open an .xlsx file {#ouvrir-un-fichier-xlsx}
+
+File › Open (or “Open with”, or a drag and drop onto the window) also opens an `.xlsx` file: the title bar shows “name.xlsx”. On the first `Ctrl+S`, Lattis asks whether to keep the `.xlsx` format or convert to a `.lattis` workbook, and says what `.xlsx` does not keep (scripts, pivot tables, formulas without an equivalent…). “Don't ask again” remembers the choice (File › Settings › Files). Formulas, formats, styles, merges, notes, links, validations, conditional formatting, charts and images are written back to the file; a plain range stays a range. Recovery after an incident also works for an `.xlsx`.
+
 ## Version history {#historique-des-versions}
 
 Each save keeps a version of the workbook next to the file (hidden `.lattis-versions` folder): one per 10 minutes, 20 at most, and 10 times the workbook size in total. File › Version history lists them (date, author, size); **Save a version** keeps one under a name, which stays. **Open** shows a version read-only; **Restore** replaces the workbook with it, the previous version staying in the list. A workbook shared on a Lattis Server has no history.

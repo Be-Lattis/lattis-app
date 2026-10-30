@@ -13,6 +13,10 @@ Un libro de Lattis es un único archivo `.lattis`: un archivo ZIP que contiene u
 
 Cerrar el libro o la ventana con cambios sin guardar pregunta primero si desea guardarlos.
 
+## Abrir un archivo .xlsx {#ouvrir-un-fichier-xlsx}
+
+Archivo › Abrir (o «Abrir con», o arrastrar y soltar sobre la ventana) abre también un archivo `.xlsx`: la barra de título muestra «nombre.xlsx». Al primer `Ctrl+S`, Lattis pregunta si conservar el formato `.xlsx` o convertir en libro `.lattis`, y dice lo que `.xlsx` no conserva (scripts, tablas dinámicas, fórmulas sin equivalente…). «No volver a preguntar» recuerda la elección (Archivo › Configuración › Archivos). Fórmulas, formatos, estilos, combinaciones, notas, vínculos, validaciones, formato condicional, gráficos e imágenes se vuelven a escribir en el archivo; un rango normal sigue siendo un rango. La recuperación tras un incidente también vale para un `.xlsx`.
+
 ## Historial de versiones {#historique-des-versions}
 
 Cada guardado conserva una versión del libro junto al archivo (carpeta oculta `.lattis-versions`): una cada 10 minutos, 20 como máximo y 10 veces el tamaño del libro en total. Archivo › Historial de versiones las lista (fecha, autor, tamaño); **Guardar una versión** conserva una con nombre, que se mantiene. **Abrir** muestra una versión en solo lectura; **Restaurar** reemplaza el libro por ella y la versión anterior queda en la lista. Un libro compartido en un Lattis Server no tiene historial.

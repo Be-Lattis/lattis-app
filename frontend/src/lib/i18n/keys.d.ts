@@ -4146,6 +4146,7 @@ export interface MessageParams {
 	'shell.exportReport.lost.buttons': { n: number | string };
 	'shell.exportReport.lost.charts': { n: number | string };
 	'shell.exportReport.lost.clipped': { n: number | string };
+	'shell.exportReport.lost.favorites': { n: number | string };
 	'shell.exportReport.lost.formulas': { n: number | string };
 	'shell.exportReport.lost.lists': { n: number | string };
 	'shell.exportReport.lost.notes': { n: number | string };
@@ -4154,6 +4155,7 @@ export interface MessageParams {
 	'shell.exportReport.lost.protections': { n: number | string };
 	'shell.exportReport.lost.queries': { n: number | string };
 	'shell.exportReport.lost.rules': { n: number | string };
+	'shell.exportReport.lost.scenarios': { n: number | string };
 	'shell.exportReport.lost.scripts': { n: number | string };
 	'shell.exportReport.lost.twoLevel': { n: number | string };
 	'shell.exportReport.noticeAll': { path: number | string };
@@ -4530,6 +4532,7 @@ export interface MessageParams {
 	'shell.settings.scriptSeconds.label': Record<never, never>;
 	'shell.settings.sections.ai': Record<never, never>;
 	'shell.settings.sections.features': Record<never, never>;
+	'shell.settings.sections.files': Record<never, never>;
 	'shell.settings.sections.limits': Record<never, never>;
 	'shell.settings.sections.updates': Record<never, never>;
 	'shell.settings.sections.view': Record<never, never>;
@@ -4551,6 +4554,11 @@ export interface MessageParams {
 	'shell.settings.userName.label': Record<never, never>;
 	'shell.settings.whatIf.help': Record<never, never>;
 	'shell.settings.whatIf.label': Record<never, never>;
+	'shell.settings.xlsxSave.ask': Record<never, never>;
+	'shell.settings.xlsxSave.convert': Record<never, never>;
+	'shell.settings.xlsxSave.help': Record<never, never>;
+	'shell.settings.xlsxSave.keep': Record<never, never>;
+	'shell.settings.xlsxSave.label': Record<never, never>;
 	'shell.share.addTableConfirm': { table: number | string; workbook: number | string };
 	'shell.share.addingTable': { table: number | string };
 	'shell.share.connected': { server: number | string };
@@ -5014,6 +5022,15 @@ export interface MessageParams {
 	'shell.work.phase.send': Record<never, never>;
 	'shell.work.phase.update': Record<never, never>;
 	'shell.work.phase.window': Record<never, never>;
+	'shell.xlsxSave.aria': Record<never, never>;
+	'shell.xlsxSave.ask': Record<never, never>;
+	'shell.xlsxSave.convert': Record<never, never>;
+	'shell.xlsxSave.keep': Record<never, never>;
+	'shell.xlsxSave.keepAnyway': Record<never, never>;
+	'shell.xlsxSave.losses': Record<never, never>;
+	'shell.xlsxSave.lost': { list: number | string };
+	'shell.xlsxSave.remember': Record<never, never>;
+	'shell.xlsxSave.title': { file: number | string };
 	'shell.zoom.in': Record<never, never>;
 	'shell.zoom.level': Record<never, never>;
 	'shell.zoom.out': Record<never, never>;

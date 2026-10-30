@@ -73,5 +73,6 @@ export type {
     UICommand,
     VersionEntry,
     VersionList,
-    XLSXExport
+    XLSXExport,
+    XLSXQuestion
 } from "./models.js";

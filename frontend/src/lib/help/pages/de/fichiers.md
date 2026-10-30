@@ -13,6 +13,10 @@ Eine Lattis-Arbeitsmappe ist eine einzige `.lattis`-Datei: ein ZIP-Archiv mit ei
 
 Wird die Arbeitsmappe oder das Fenster mit ungespeicherten Änderungen geschlossen, fragt Lattis zuerst, ob sie gespeichert werden sollen.
 
+## Eine .xlsx-Datei öffnen {#ouvrir-un-fichier-xlsx}
+
+Datei › Öffnen (oder „Öffnen mit“, oder Ziehen und Ablegen auf das Fenster) öffnet auch eine `.xlsx`-Datei: Die Titelleiste zeigt „name.xlsx“. Beim ersten `Strg+S` fragt Lattis, ob das `.xlsx`-Format behalten oder in eine `.lattis`-Arbeitsmappe umgewandelt werden soll, und nennt, was `.xlsx` nicht behält (Skripte, Pivot-Tabellen, Formeln ohne Entsprechung…). „Nicht mehr fragen“ merkt sich die Wahl (Datei › Einstellungen › Dateien). Formeln, Formate, Stile, Verbindungen, Notizen, Links, Gültigkeitsregeln, bedingte Formatierung, Diagramme und Bilder werden in die Datei zurückgeschrieben; ein normaler Bereich bleibt ein Bereich. Die Wiederherstellung nach einem Zwischenfall gilt auch für eine `.xlsx`-Datei.
+
 ## Versionsverlauf {#historique-des-versions}
 
 Jedes Speichern bewahrt eine Version der Arbeitsmappe neben der Datei auf (versteckter Ordner `.lattis-versions`): eine pro 10 Minuten, höchstens 20 und insgesamt das Zehnfache der Dateigröße. Datei › Versionsverlauf listet sie auf (Datum, Verfasser, Größe); **Version speichern** bewahrt eine unter einem Namen auf, die bleibt. **Öffnen** zeigt eine Version schreibgeschützt; **Wiederherstellen** ersetzt die Arbeitsmappe durch sie, die vorherige Version bleibt in der Liste. Eine auf einem Lattis Server geteilte Arbeitsmappe hat keinen Verlauf.

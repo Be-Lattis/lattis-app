@@ -20,6 +20,13 @@ export interface ExportReport {
      * Clipped : cellules au-delà des limites d'Excel, non exportées.
      */
     "clipped": number;
+
+    /**
+     * Favorites : requêtes SQL favorites ; Scenarios : scénarios des
+     * simulations (Et si…) ; non exportés.
+     */
+    "favorites": number;
+    "scenarios": number;
 }
 
 /**

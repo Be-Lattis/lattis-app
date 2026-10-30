@@ -67,6 +67,10 @@ type xlsxFile struct {
 	// du classeur (minuscules), pour les sources des listes et des TCD.
 	st    *bookStyles
 	names map[string]string
+	// nameCase : noms définis tels qu'écrits (minuscules → nom).
+	nameCase map[string]string
+	// keep : fichier ouvert dans Lattis, qui s'y réécrira (OpenXLSX).
+	keep bool
 	// imp : ce qui a été repris (graphiques, TCD, notes) et ce qui ne l'a
 	// pas été, par feuille (xlsxdecorate.go).
 	imp importCounts
@@ -229,6 +233,10 @@ func (x *xlsxFile) load() error {
 				x.names = map[string]string{}
 			}
 			x.names[strings.ToLower(n.Name)] = n.Value
+			if x.nameCase == nil {
+				x.nameCase = map[string]string{}
+			}
+			x.nameCase[strings.ToLower(n.Name)] = n.Name
 		}
 	}
 	if p := byType["sharedStrings"]; p != "" {

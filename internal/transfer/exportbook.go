@@ -109,20 +109,32 @@ func exportBook(ctx context.Context, m *canvas.Model, tg target) ([]xsheet, *fmt
 	b := &book{target: tg, sheets: map[string]string{}, tables: map[string]*tablePlace{}, names: map[string]cellPlace{}}
 	layouts := make([]canvas.Layout, len(first.Sheets))
 	used := map[string]bool{}
+	// Fichier .xlsx ouvert : plages ordinaires (pas de tableau Excel) et
+	// style des tableaux Excel, réécrits tels quels.
+	var meta canvas.XLSXMeta
+	plain := map[int64]bool{}
+	if tg == toXLSX {
+		if meta, err = m.XLSXMeta(ctx); err != nil {
+			return nil, nil, err
+		}
+		for _, id := range meta.Ranges {
+			plain[id] = true
+		}
+	}
 	for i, s := range first.Sheets {
 		if layouts[i], err = m.Layout(ctx, s.ID); err != nil {
 			return nil, nil, err
 		}
 		b.sheets[strings.ToLower(s.Name)] = names[i]
 		for _, tb := range layouts[i].Tables {
-			p := &tablePlace{name: uniqueName(excelName(tb.Name), used), sheet: names[i], row: tb.Row, col: tb.Col, key: tb.Key, total: tb.Total}
+			p := &tablePlace{name: uniqueName(excelName(tb.Name), used), sheet: names[i], row: tb.Row, col: tb.Col, key: tb.Key, total: tb.Total, plain: plain[tb.ID], style: meta.Styles[tb.ID]}
 			for _, c := range tb.Columns {
 				p.cols = append(p.cols, c.Name)
 			}
 			b.tables[strings.ToLower(tb.Name)] = p
 		}
 		for _, n := range layouts[i].Names {
-			b.names[strings.ToLower(n.Name)] = cellPlace{sheet: names[i], row: n.Row, col: n.Col}
+			b.names[strings.ToLower(n.Name)] = cellPlace{sheet: names[i], row: n.Row, col: n.Col, name: n.Name}
 		}
 	}
 	fm := newFmts()
@@ -180,10 +192,7 @@ func tableRows(ctx context.Context, m *canvas.Model, xt *xtable, fm *fmts, tg ta
 		for j, v := range row {
 			x := tableCell(v, cols[j].Type)
 			if j < len(xt.formulas) && xt.formulas[j] != "" {
-				x.f = xt.formulas[j]
-				if tg == toODS {
-					x.f = strings.ReplaceAll(x.f, rowMark, strconv.Itoa(r+1))
-				}
+				x.f = strings.ReplaceAll(xt.formulas[j], rowMark, strconv.Itoa(r+1))
 			}
 			if j < len(xt.base) {
 				x.fm = xt.base[j]
@@ -416,7 +425,11 @@ func collectLayout(ctx context.Context, m *canvas.Model, s canvas.SheetInfo, l c
 				sc, tc := sh.colStyle[tb.Col+j], parseStyle(c.Style)
 				xt.layers = append(xt.layers, [2]canvas.Style{sc, tc})
 				xt.base = append(xt.base, fm.of(sc, tc))
-				xt.head = append(xt.head, fm.of(sc, sh.rowStyle[tb.Row], bold, parseStyle(c.HeaderStyle)))
+				head := bold
+				if xt.place != nil && xt.place.plain {
+					head = nil // plage ordinaire : l'en-tête garde son style
+				}
+				xt.head = append(xt.head, fm.of(sc, sh.rowStyle[tb.Row], head, parseStyle(c.HeaderStyle)))
 			}
 		}
 		if xt.place != nil {

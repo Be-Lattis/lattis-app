@@ -230,11 +230,12 @@ func TestXLSXStyleRoundTrip(t *testing.T) {
 		free[[2]int{s.Row, s.Col}] = styleOf(t, s.Style)
 	}
 	wantStyle(t, "fusion", free[[2]int{12, 0}], map[string]any{"mr": 1, "mc": 3})
-	if len(l.Tables) < 2 || l.Tables[1].Row != 6 {
+	if len(l.Tables) != 1 {
 		t.Fatalf("tableaux : %+v", l.Tables)
 	}
-	// B7 : en-tête du tableau A7:B11 (la somme et les formules dessous).
-	wantStyle(t, "B7", styleOf(t, l.Tables[1].Columns[1].HeaderStyle), map[string]any{"b": true, "nf": "€", "bg": "#ffff00", "al": "right", "u": true, "va": "top", "wr": true})
+	// B7 : la somme, en tête de l'îlot A7:B11 (une formule : pas un en-tête,
+	// les cellules restent libres).
+	wantStyle(t, "B7", free[[2]int{6, 1}], map[string]any{"b": true, "nf": "€", "bg": "#ffff00", "al": "right", "u": true, "va": "top", "wr": true})
 	h := styleOf(t, l.Tables[0].Columns[0].HeaderStyle)
 	wantStyle(t, "en-tête", h, map[string]any{"ff": "Georgia", "fs": 13, "bb": "double #c00000", "nc": `# ##0,0 "kg"`})
 	if len(l.Widths) == 0 || l.Widths[0].Width != 140 {

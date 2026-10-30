@@ -28,6 +28,8 @@ export interface ExportReport {
 	sheets: SheetReport[] | null;
 	scripts: number;
 	clipped: number;
+	favorites?: number;
+	scenarios?: number;
 }
 
 const sum = (r: ExportReport, f: (s: SheetReport) => number) => (r.sheets ?? []).reduce((n, s) => n + f(s), 0);
@@ -60,6 +62,8 @@ export function lostItems(r: ExportReport): string[] {
 	add(sum(r, (s) => s.queries), 'queries');
 	add(sheets.filter((s) => s.kind).length, 'pages');
 	add(r.scripts, 'scripts');
+	add(r.favorites ?? 0, 'favorites');
+	add(r.scenarios ?? 0, 'scenarios');
 	add(sheets.filter((s) => s.protected).length, 'protections');
 	add(sum(r, (s) => s.twoLevel), 'twoLevel');
 	add(r.clipped, 'clipped');

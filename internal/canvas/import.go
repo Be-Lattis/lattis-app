@@ -74,6 +74,15 @@ type ImportSheet struct {
 	Format *ImportFormat
 	Charts []ImportChart
 	Pivots []ImportPivot
+	// Names : cellules libres nommées (noms définis d'un fichier .xlsx) ; un
+	// nom refusé (pris, réservé) est passé.
+	Names []ImportName
+}
+
+// ImportName est le nom d'une cellule libre importée.
+type ImportName struct {
+	Row, Col int
+	Name     string
 }
 
 // ImportLink est le lien hypertexte d'une cellule importée (adresse sous
@@ -188,6 +197,23 @@ func (m *Model) Import(ctx context.Context, action string, sheets []ImportSheet)
 					return err
 				}
 				if err := t.ensureKey(tb.Name, tb.Cols[k-1].Name); err != nil {
+					return err
+				}
+			}
+		}
+		// Cellules nommées, avant les formules qui les citent.
+		for si, s := range sheets {
+			for _, n := range s.Names {
+				if err := t.checkName(n.Name, res.Sheets[si], n.Row, n.Col); err != nil {
+					var bad ErrName
+					if errors.As(err, &bad) {
+						continue
+					}
+					return err
+				}
+				del := st(`DELETE FROM _lattis_names WHERE sheet = ? AND row = ? AND col = ?`, res.Sheets[si], n.Row, n.Col)
+				put := st(`INSERT INTO _lattis_names (name, sheet, row, col) VALUES (?, ?, ?, ?)`, n.Name, res.Sheets[si], n.Row, n.Col)
+				if err := t.apply([]stmt{del, put}, []stmt{del}); err != nil {
 					return err
 				}
 			}

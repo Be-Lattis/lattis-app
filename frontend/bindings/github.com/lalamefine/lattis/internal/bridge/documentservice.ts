@@ -2136,6 +2136,15 @@ export function SaveVersion(name: string): $CancellablePromise<$models.DocState>
 }
 
 /**
+ * SaveXLSX répond à DocState.XLSX : keep enregistre dans le fichier .xlsx
+ * (sans plus demander jusqu'à la fermeture du classeur), sinon le classeur
+ * est converti en .lattis (Enregistrer sous, à côté du fichier).
+ */
+export function SaveXLSX(keep: boolean): $CancellablePromise<$models.DocState> {
+    return $Call.ByID(3532428356, keep);
+}
+
+/**
  * ScenarioSummary crée l'onglet de synthèse des scénarios et rend son
  * identifiant.
  */

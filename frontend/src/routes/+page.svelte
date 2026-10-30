@@ -13,6 +13,7 @@
 	import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 	import type { DamagedFile, DocState, FileQuestion, FormulaHelp, OpenResult, RecentFile } from '#bindings/internal/bridge/models.js';
 	import { docFile, docFileName, recentDemo, recentDetail, recentKey, recentLabel, recentRemote, remoteBadge, savedNotice, shareBadge } from '#lib/shell/doctitle.js';
+	import { rememberedMode, xlsxDialogView, XLSX_SAVE_SETTING, type XLSXQuestion } from '#lib/shell/xlsxsave.js';
 	import type { Layout, RuleChanges } from '#bindings/internal/canvas/models.js';
 	import type { Type } from '#bindings/internal/grid/models.js';
 	import type { Orphan } from '#bindings/internal/archive/models.js';
@@ -222,6 +223,8 @@
 	let coedit = $state<CoEditState | null>(null);
 	// Fichier modifié par un autre poste depuis l'ouverture : copie, écraser ou annuler (close : puis fermer).
 	let conflict = $state<(FileQuestion & { close: boolean }) | null>(null);
+	// Fichier .xlsx ouvert, premier enregistrement : garder le format ou convertir (close : puis fermer).
+	let xlsxAsk = $state<{ q: XLSXQuestion; close: boolean; remember: boolean } | null>(null);
 	// Échec d'une récupération de session : l'écran de récupération reste.
 	let recoverError = $state('');
 	// Boîtes de dialogue ouvertes par un script ou un assistant (ui.dialog…), la plus ancienne d'abord.
@@ -1132,6 +1135,31 @@
 		if (c.close) await closeDoc(false);
 	}
 
+	/** Fichier .xlsx ouvert : garder le format .xlsx (keep), convertir en .lattis, ou rien (null). */
+	async function answerXlsx(keep: boolean | null) {
+		const a = xlsxAsk;
+		xlsxAsk = null;
+		if (!a || keep === null) {
+			quitting = false;
+			return;
+		}
+		const mode = rememberedMode(keep, a.remember);
+		if (mode) await DocumentService.SetSetting(XLSX_SAVE_SETTING, mode).catch((e) => (notice = err(e)));
+		docState = await saving(() => DocumentService.SaveXLSX(keep));
+		if (docState.conflict) {
+			conflict = { ...docState.conflict, close: a.close };
+			return;
+		}
+		if (docState.dirty) {
+			quitting = false; // conversion annulée
+			if (docState.notice) notice = docState.notice;
+			return;
+		}
+		notice = savedNotice(docState, isWeb);
+		await loadRecent();
+		if (a.close) await closeDoc(false);
+	}
+
 	/** Classeur ouvert et affiché : ses écouteurs « open » (scripts Lua) s'exécutent, sans être attendus. */
 	function workbookReady() {
 		DocumentService.WorkbookReady().catch((e) => (notice = err(e)));
@@ -1183,6 +1211,11 @@
 			if (docState.conflict) {
 				// Fichier modifié par un autre poste : la question d'abord, puis la fermeture.
 				conflict = { ...docState.conflict, close: true };
+				return;
+			}
+			if (docState.xlsx) {
+				// Fichier .xlsx : garder le format ou convertir, puis la fermeture.
+				xlsxAsk = { q: docState.xlsx, close: true, remember: false };
 				return;
 			}
 			if (docState.dirty) {
@@ -1711,7 +1744,8 @@
 				case 'saveAs':
 					if (mode !== 'doc') return;
 					docState = await saving(() => DocumentService.Save(a === 'saveAs'));
-					if (docState.conflict) conflict = { ...docState.conflict, close: false };
+					if (docState.xlsx) xlsxAsk = { q: docState.xlsx, close: false, remember: false };
+					else if (docState.conflict) conflict = { ...docState.conflict, close: false };
 					else if (docState.notice || !docState.dirty) notice = savedNotice(docState, isWeb);
 					await loadRecent();
 					break;
@@ -3587,6 +3621,23 @@
 			</div>
 		</div>
 	{/if}
+	{#if xlsxAsk}
+		{@const v = xlsxDialogView(xlsxAsk.q)}
+		<div class="modal-back">
+			<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.xlsxSave.aria')} use:modal={() => answerXlsx(null)}>
+				<p><strong>{v.title}</strong><br />{v.text}</p>
+				{#if v.lost}<p class="hint">{v.lost}</p>{/if}
+				{#if v.remember}
+					<label class="remember"><input type="checkbox" bind:checked={xlsxAsk.remember} /> {t('shell.xlsxSave.remember')}</label>
+				{/if}
+				<div class="actions">
+					<button class="primary" onclick={() => answerXlsx(true).catch((e) => ((quitting = false), (notice = err(e))))}>{v.keepLabel}</button>
+					<button onclick={() => answerXlsx(false).catch((e) => ((quitting = false), (notice = err(e))))}>{v.convertLabel}</button>
+					<button onclick={() => answerXlsx(null)}>{t('common.cancel')}</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 	<footer class="statusbar" data-region="status" aria-label={t('shell.status.aria')}>
 		{#if placing}
 			<!-- Pose d'un tableau croisé : le clic sur une cellule le pose ; « Nouvelle feuille » garde l'ancienne façon. -->
@@ -4073,6 +4124,12 @@
 	}
 	.modal .actions {
 		justify-content: flex-end;
+	}
+	.modal .remember {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin: 0 0 14px;
 	}
 	.modal.protect {
 		min-width: 340px;

@@ -45,7 +45,7 @@ func exportFixture(t *testing.T) *fixture {
 	set(1, 7, 1, "=1/0")
 	set(1, 8, 1, `=REFERENCE(Ventes[Prix]; "Poire <b>")`)
 	set(1, 9, 1, "=Taux*Cell[B7]")
-	set(1, 10, 1, `=TEXTE(Cell[B7]; "0,00")`) // TEXTE : pas d'équivalent sûr, exportée en valeur
+	set(1, 10, 1, `=TEXTE(Cell[B7]; "0,00")`) // TEXTE : format écrit tel quel en .xlsx, valeur en .ods
 	must(d.ApplyStyle(ctx, 1, 6, 1, 6, 1, canvas.Style{"b": true, "nf": "€", "bg": "#FFFF00", "al": "right"}))
 	must(d.ApplyStyle(ctx, 1, 1, 1, 1, 1, canvas.Style{"i": true, "fg": "#C00000"}))
 	set(1, 12, 0, "Fusion")
@@ -134,7 +134,8 @@ func TestXLSXExport(t *testing.T) {
 		t.Fatalf("cellules coupées : %+v", rep)
 	}
 	parts := readZip(t, p)
-	contains(t, "classeur", parts["xl/workbook.xml"], `name="Données"`, `name="Notes"`, `name="Brouillon_ _2026_" sheetId="3" state="hidden"`, `fullCalcOnLoad="1"`)
+	contains(t, "classeur", parts["xl/workbook.xml"], `name="Données"`, `name="Notes"`, `name="Brouillon_ _2026_" sheetId="3" state="hidden"`, `fullCalcOnLoad="1"`,
+		`<definedName name="Taux">'Données'!$H$1</definedName>`)
 	contains(t, "types", parts["[Content_Types].xml"], `/xl/tables/table1.xml`)
 	contains(t, "liens de la feuille 1", parts["xl/worksheets/_rels/sheet1.xml.rels"], `Target="../tables/table1.xml"`)
 
@@ -153,22 +154,19 @@ func TestXLSXExport(t *testing.T) {
 		`<f>SUM(Ventes[Prix])</f><v>3.5</v>`,
 		`<c r="B8" t="e"><f>1/0</f><v>#DIV/0!</v></c>`,
 		`<f>INDEX(Ventes[Prix],MATCH(&quot;Poire &lt;b&gt;&quot;,Ventes[Produit],0))</f><v>2</v>`,
-		`<f>$H$1*B7</f><v>0.7</v>`,
-		`<c r="B11"><v>3.5</v></c>`,
+		`<f>Taux*B7</f><v>0.7</v>`,
+		`<c r="B11"><f>TEXT(B7,&quot;0,00&quot;)</f>`,
 		`<col min="1" max="1" width="20" customWidth="1"/>`,
 		`<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>`,
 		`<mergeCell ref="A13:C13"/>`,
 		`<tableParts count="1"><tablePart r:id="rId1"/></tableParts>`)
-	if strings.Contains(s1, `<c r="B11"><f>`) {
-		t.Error("TEXTE ne doit pas être exportée en formule")
-	}
 	s2 := parts["xl/worksheets/sheet2.xml"]
 	contains(t, "feuille 2", s2, `<f>'Données'!B7*2</f><v>7</v>`, `<f>SUM(Ventes[Total])</f><v>7</v>`,
 		`<c r="AB3" t="inlineStr"><is><t xml:space="preserve">à voir</t></is></c>`)
 
 	// Mise en forme : le style de B7 (gras, euros, fond jaune, à droite).
 	st := parts["xl/styles.xml"]
-	contains(t, "styles", st, `formatCode="#,##0.00\ &quot;€&quot;"`, `<fgColor rgb="FFFFFF00"/>`, `<color rgb="FFC00000"/>`, `formatCode="dd/mm/yyyy"`, `horizontal="right"`)
+	contains(t, "styles", st, `formatCode="#,##0.00\ &quot;€&quot;"`, `<fgColor rgb="FFFFFF00"/>`, `<color rgb="FFC00000"/>`, `<xf numFmtId="14"`, `horizontal="right"`) // date courte : format intégré 14
 	if !strings.Contains(s1, `<c r="B7" s="`) || !strings.Contains(s1, `<c r="B2" s="`) || !strings.Contains(s1, `<c r="C2" s="`) {
 		t.Errorf("cellules mises en forme sans style :\n%s", s1)
 	}
@@ -254,10 +252,10 @@ func TestTranslateFormulas(t *testing.T) {
 			{`=REFERENCE.APPROCHEE(Ventes[Prix HT]; "b")`, at{"Notes", nil}, `_xlfn.XLOOKUP("b",Ventes[Produit],Ventes[Prix HT],NA(),-1)`, ""},
 			{`=SI.CONDITIONS(VRAI; 1)`, at{"Notes", nil}, `_xlfn.IFS(TRUE,1)`, `COM.MICROSOFT.IFS(TRUE();1)`},
 			{`=RECHERCHEX(1; Ventes[Qté]; Ventes[Produit])`, at{"Notes", nil}, `_xlfn.XLOOKUP(1,Ventes[Qté],Ventes[Produit])`, ""},
-			{`=Ventes[Prix HT][2]`, at{"Notes", nil}, `INDEX(Ventes[Prix HT],2)`, `INDEX([$'Données'.$B$2:.$B$4];2)`},
+			{`=Ventes[Prix HT][2]`, at{"Notes", nil}, `'Données'!$B$3`, `INDEX([$'Données'.$B$2:.$B$4];2)`},
 			{`=PRECEDENT([Qté])`, at{"Données", ventes}, "", ""},
 			{`=[Qté][-1]`, at{"Données", ventes}, "", ""},
-			{`=[Qté][2]`, at{"Données", ventes}, `INDEX(Ventes[Qté],2)`, `INDEX([.$C$2:.$C$4];2)`},
+			{`=[Qté][2]`, at{"Données", ventes}, `$C$3`, `INDEX([.$C$2:.$C$4];2)`},
 			{`=RANG([Qté])`, at{"Données", ventes}, `RANK(Ventes[[#This Row],[Qté]],Ventes[Qté])`, `RANK([.C` + rowMark + `];[.$C$2:.$C$4])`},
 			{`=SOMME(Cell[A1:B2]) & "x,y"`, at{"Notes", nil}, `SUM(A1:B2)&"x,y"`, `SUM([.A1:.B2])&"x,y"`},
 			{`=Notes!Cell[C3]`, at{"Données", nil}, `'Notes'!C3`, `[$'Notes'.C3]`},

@@ -207,6 +207,32 @@ export const settingSections: SettingSection[] = [
 		]
 	},
 	{
+		id: 'files',
+		get title() {
+			return t('shell.settings.sections.files');
+		},
+		settings: [
+			{
+				// Fichier .xlsx ouvert : au premier enregistrement (lib/shell/xlsxsave.ts).
+				path: 'files.xlsxSave',
+				kind: 'choice',
+				get label() {
+					return t('shell.settings.xlsxSave.label');
+				},
+				get choices() {
+					return [
+						{ value: 'ask', label: t('shell.settings.xlsxSave.ask') },
+						{ value: 'keep', label: t('shell.settings.xlsxSave.keep') },
+						{ value: 'convert', label: t('shell.settings.xlsxSave.convert') }
+					];
+				},
+				get help() {
+					return t('shell.settings.xlsxSave.help');
+				}
+			}
+		]
+	},
+	{
 		id: 'limits',
 		get title() {
 			return t('shell.settings.sections.limits');

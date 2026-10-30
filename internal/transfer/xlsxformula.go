@@ -45,10 +45,14 @@ func (c coord) at(base int) int {
 	return base + c.n
 }
 
-// piece est un morceau de formule : du texte tel quel, ou une référence.
+// piece est un morceau de formule : du texte tel quel, une référence A1,
+// une référence structurée (Tableau[Colonne]) ou un nom (nom défini,
+// tableau entier, constante).
 type piece struct {
 	text string
 	ref  *ref
+	sref *sref
+	name string
 }
 
 // errFormula signale une formule Excel que Lattis ne sait pas reprendre.
@@ -96,7 +100,16 @@ func splitFormula(src string, row, col int) ([]piece, error) {
 			lastIdent = ""
 			continue
 		case c == '[':
-			return nil, unsupported("références de tableau Excel non reprises")
+			// [@Colonne] : ligne courante du tableau de la formule.
+			sr, end, err := parseStructured(rs, i, "")
+			if err != nil {
+				return nil, err
+			}
+			flush()
+			out = append(out, piece{sref: sr})
+			lastIdent = ""
+			i = end
+			continue
 		case c == '{':
 			return nil, unsupported("constantes matricielles non reprises")
 		case c == '(':
@@ -163,6 +176,26 @@ func splitFormula(src string, row, col int) ([]piece, error) {
 			}
 			if strings.ContainsAny(word, ":!") {
 				return nil, unsupported("référence %s non reprise", word)
+			}
+			// Tableau[Colonne], Tableau[[#This Row],[Colonne]]…
+			if k < len(rs) && rs[k] == '[' && word != "" {
+				sr, end, err := parseStructured(rs, k, word)
+				if err != nil {
+					return nil, err
+				}
+				flush()
+				out = append(out, piece{sref: sr})
+				lastIdent = ""
+				i = end
+				continue
+			}
+			// Nom (défini, tableau entier, TRUE…) : résolu à la réécriture.
+			if !call && word != "" && !unicode.IsDigit(rune(word[0])) && word[0] != '.' {
+				flush()
+				out = append(out, piece{name: word})
+				lastIdent = ""
+				i = k
+				continue
 			}
 			lastIdent = word
 			lit.WriteString(word)
@@ -254,7 +287,14 @@ func parseRef(w string, row, col int) (ref, bool) {
 func key(ps []piece) string {
 	var b strings.Builder
 	for _, p := range ps {
-		if p.ref == nil {
+		switch {
+		case p.sref != nil:
+			fmt.Fprintf(&b, "\x01%s|%v|%s|%s\x01", strings.ToLower(p.sref.table), p.sref.thisRow, p.sref.item, strings.ToLower(strings.Join(p.sref.cols, "\x02")))
+			continue
+		case p.name != "":
+			b.WriteString(p.name)
+			continue
+		case p.ref == nil:
 			b.WriteString(p.text)
 			continue
 		}
@@ -271,13 +311,23 @@ type island struct {
 	sheet   string
 	name    string
 	headers []string
+	xname   string // tableau d'Excel à la même place ("" : plage ordinaire)
+	// free : îlot de cellules libres malgré ses lignes (voir headerCells).
+	free bool
 }
 
-func (is *island) table() bool { return is.r1 > is.r0 }
+func (is *island) table() bool { return is.r1 > is.r0 && !is.free }
 
 // resolver situe les références dans les îlots du classeur.
 type resolver struct {
 	bySheet map[string][]*island // nom de feuille en minuscules
+	// byXName : tableaux d'Excel repris, par nom d'Excel (minuscules).
+	byXName map[string]*island
+	// cellNames : noms définis d'une cellule libre, repris en cellules
+	// nommées (minuscules → nom) ; defined : les autres noms définis
+	// (minuscules → plage), remplacés par leur plage.
+	cellNames map[string]string
+	defined   map[string]string
 }
 
 // where décrit la cellule d'une formule.
@@ -293,15 +343,21 @@ func (rv *resolver) rewrite(ps []piece, at where) (string, error) {
 	var b strings.Builder
 	b.WriteByte('=')
 	for _, p := range ps {
-		if p.ref == nil {
-			t := p.text
+		var s string
+		var err error
+		switch {
+		case p.sref != nil:
+			s, err = rv.structured(p.sref, at)
+		case p.name != "":
+			s, err = rv.named(p.name, at)
+		case p.ref != nil:
+			s, err = rv.ref(p.ref, at)
+		default:
+			s = p.text
 			for _, prefix := range []string{"_xlfn._xlws.", "_xlfn.", "_xlws."} {
-				t = strings.ReplaceAll(t, prefix, "")
+				s = strings.ReplaceAll(s, prefix, "")
 			}
-			b.WriteString(t)
-			continue
 		}
-		s, err := rv.ref(p.ref, at)
 		if err != nil {
 			return "", err
 		}
@@ -312,7 +368,7 @@ func (rv *resolver) rewrite(ps []piece, at where) (string, error) {
 		return "", unsupported("formule illisible (%v)", err)
 	}
 	n = booleans(n)
-	if err := checkFormula(n, false); err != nil {
+	if err := rv.check(n, false); err != nil {
 		return "", err
 	}
 	return formula.Format(n, formula.FR), nil
@@ -344,23 +400,27 @@ func booleans(n formula.Node) formula.Node {
 	return n
 }
 
-// checkFormula refuse ce que Lattis calculerait en #NOM? : fonctions inconnues,
-// noms définis d'Excel.
-func checkFormula(n formula.Node, nameOK bool) error {
+// check refuse ce que Lattis calculerait en #NOM? : fonctions inconnues,
+// noms inconnus. Les adresses A1 (B2, Feuille2!B2:C5) restent : la saisie
+// de la formule les convertit (canvas.prepareFormula : Cell[B2],
+// Tableau[Col][k], Cell[B2:C5]).
+func (rv *resolver) check(n formula.Node, nameOK bool) error {
 	switch n := n.(type) {
 	case formula.Name:
-		if !nameOK {
+		if _, _, _, a1 := formula.A1Address(n.Name); !nameOK && !a1 && !rv.known(n.Name) {
 			return unsupported("nom %s inconnu", n.Name)
 		}
 	case formula.Range:
-		return unsupported("plage %s non reprise", n.Text)
+		if !a1Range(n.Text) {
+			return unsupported("plage %s non reprise", n.Text)
+		}
 	case formula.Unary:
-		return checkFormula(n.X, false)
+		return rv.check(n.X, false)
 	case formula.Binary:
-		if err := checkFormula(n.L, false); err != nil {
+		if err := rv.check(n.L, false); err != nil {
 			return err
 		}
-		return checkFormula(n.R, false)
+		return rv.check(n.R, false)
 	case formula.Call:
 		if !formula.Known(n.Fn) {
 			return unsupported("fonction %s non disponible", n.Fn)
@@ -370,7 +430,7 @@ func checkFormula(n formula.Node, nameOK bool) error {
 				continue
 			}
 			ok := n.Fn == "VLOOKUP" && i == 1 || n.Fn == "REFERENCE" && i < 2
-			if err := checkFormula(a, ok); err != nil {
+			if err := rv.check(a, ok); err != nil {
 				return err
 			}
 		}
@@ -378,7 +438,75 @@ func checkFormula(n formula.Node, nameOK bool) error {
 	return nil
 }
 
+// known : cellule nommée importée, ou tableau du classeur.
+func (rv *resolver) known(name string) bool {
+	low := strings.ToLower(name)
+	if _, ok := rv.cellNames[low]; ok {
+		return true
+	}
+	for _, list := range rv.bySheet {
+		for _, is := range list {
+			if is.table() && strings.EqualFold(is.name, name) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// a1Range : plage A1 (B2:C5, Feuille!$B$2:$C$5) de cellules (pas de
+// colonnes ni de lignes entières).
+func a1Range(text string) bool {
+	if k := strings.LastIndexByte(text, '!'); k >= 0 {
+		text = text[k+1:]
+	}
+	r, ok := parseRef(text, 0, 0)
+	return ok && r.rangeOf && !r.cols
+}
+
+// ref traduit une référence A1 : colonne de tableau ([@Col], Tableau[Col]),
+// tableau entier de RECHERCHEV ; sinon l'adresse elle-même, que la saisie
+// de la formule convertit (cellule libre, cellule ou plage d'un tableau).
+// Une colonne calculée n'accepte que des adresses absolues : une adresse
+// relative changerait d'une ligne à l'autre.
 func (rv *resolver) ref(r *ref, at where) (string, error) {
+	s, err := rv.tableRef(r, at)
+	if err == nil || r.cols {
+		return s, err
+	}
+	if at.table != nil && !(r.r0.abs && r.c0.abs && r.r1.abs && r.c1.abs) {
+		return "", err
+	}
+	if r.sheet != "" {
+		if _, ok := rv.bySheet[strings.ToLower(r.sheet)]; !ok {
+			return "", err
+		}
+	}
+	return r.a1(at), nil
+}
+
+// a1 écrit l'adresse de la référence vue de la cellule at (sans $ : Lattis
+// n'a pas d'adresses relatives).
+func (r *ref) a1(at where) string {
+	s := ""
+	if r.sheet != "" {
+		s = r.sheet
+		if identifier(s) != s {
+			s = "'" + strings.ReplaceAll(s, "'", "''") + "'"
+		}
+		s += "!"
+	}
+	r0, c0 := r.r0.at(at.row), r.c0.at(at.col)
+	s += cellName(r0, c0)
+	if r.rangeOf {
+		s += ":" + cellName(r.r1.at(at.row), r.c1.at(at.col))
+	}
+	return s
+}
+
+// tableRef traduit une référence vers un tableau, ou dit pourquoi elle n'en
+// est pas une.
+func (rv *resolver) tableRef(r *ref, at where) (string, error) {
 	sheet := r.sheet
 	if sheet == "" {
 		sheet = at.sheet

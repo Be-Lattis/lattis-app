@@ -50,6 +50,8 @@ func versionsPath(d *doc.Document) (path, viewing string, err error) {
 		return "", "", msg.New("versions.shared", nil)
 	case p == "":
 		return "", "", msg.New("versions.unsaved", nil)
+	case d.XLSX():
+		return "", "", msg.New("versions.xlsx", nil)
 	}
 	return p, "", nil
 }
@@ -75,7 +77,7 @@ func filepathBase(p string) string {
 // dans son fichier (saveDoc) ; un échec n'empêche pas l'enregistrement.
 func keepVersion(ctx context.Context, d *doc.Document) {
 	p := d.Path()
-	if p == "" || publicDemo.Load() || liveShared(d) {
+	if p == "" || publicDemo.Load() || liveShared(d) || d.XLSX() {
 		return
 	}
 	if _, ok := versions.OriginalOf(p); ok {

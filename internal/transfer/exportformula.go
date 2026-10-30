@@ -31,6 +31,12 @@ type tablePlace struct {
 	cols     []string
 	key      int // rang de la colonne clé, -1 sans clé
 	total    int // lignes de données
+	// plain : plage ordinaire d'un fichier .xlsx ouvert dans Lattis, écrite
+	// sans tableau Excel (références en adresses A1) ; style : style du
+	// tableau Excel de ce fichier (attributs de tableStyleInfo, "" : style
+	// de Lattis).
+	plain bool
+	style string
 }
 
 // colIndex donne le rang d'une colonne (sans tenir compte de la casse).
@@ -49,6 +55,7 @@ func (t *tablePlace) lastRow() int { return t.row + max(t.total, 1) }
 type cellPlace struct {
 	sheet    string // nom exporté
 	row, col int
+	name     string // nom de la cellule, tel qu'écrit
 }
 
 // book décrit le classeur pour la traduction des formules.
@@ -169,7 +176,7 @@ func (tr *translator) failFn(fn string) formula.Node {
 var exportFuncs = map[string][2]string{}
 
 func init() {
-	for _, f := range strings.Fields(`IF AND OR NOT ISERROR ISNA ISBLANK ISNUMBER ISTEXT ISLOGICAL CHOOSE
+	for _, f := range strings.Fields(`IF IFERROR AND OR NOT ISERROR ISNA ISBLANK ISNUMBER ISTEXT ISLOGICAL CHOOSE
 		ROUND ROUNDUP ROUNDDOWN INT TRUNC ABS SIGN MOD POWER SQRT EXP LN LOG10 PI RAND RANDBETWEEN
 		CONCATENATE LEN UPPER LOWER PROPER TRIM LEFT RIGHT MID SUBSTITUTE REPLACE FIND SEARCH VALUE REPT EXACT
 		TODAY NOW DATE YEAR MONTH DAY HOUR MINUTE SECOND WEEKDAY WEEKNUM TIME EOMONTH EDATE DATEDIF NETWORKDAYS WORKDAY
@@ -216,6 +223,10 @@ func init() {
 	for _, f := range strings.Fields(`GAMMA PHI GAUSS`) {
 		exportFuncs[f] = [2]string{"_xlfn." + f, f}
 	}
+	// TEXTE : le format est écrit tel quel, comme le fait un tableur (un
+	// fichier .xlsx relu garde sa formule) ; pas en .ods, où les codes de
+	// format diffèrent.
+	exportFuncs["TEXT"] = [2]string{"TEXT", ""}
 }
 
 func (tr *translator) walk(n formula.Node) formula.Node {
@@ -297,7 +308,7 @@ func structCol(c string) string {
 
 // column écrit une colonne entière de données.
 func (tr *translator) column(t *tablePlace, c int) formula.Node {
-	if tr.b.target == toXLSX {
+	if tr.b.target == toXLSX && !t.plain {
 		name := structCol(t.cols[c])
 		if simpleCol.MatchString(t.cols[c]) && strings.TrimSpace(t.cols[c]) == t.cols[c] {
 			return raw(t.name + "[" + name + "]")
@@ -309,7 +320,7 @@ func (tr *translator) column(t *tablePlace, c int) formula.Node {
 
 // body écrit les données d'un tableau (toutes ses colonnes).
 func (tr *translator) body(t *tablePlace) formula.Node {
-	if tr.b.target == toXLSX {
+	if tr.b.target == toXLSX && !t.plain {
 		return raw(t.name)
 	}
 	return tr.cells(t.sheet, t.row+1, t.col, t.lastRow(), t.col+len(t.cols)-1, true)
@@ -331,7 +342,10 @@ func (tr *translator) ref(r formula.Ref) formula.Node {
 	if t != tr.at.table {
 		return tr.fail()
 	}
-	if tr.b.target == toXLSX {
+	switch {
+	case tr.b.target == toXLSX && t.plain:
+		return raw(colName(t.col+c) + rowMark)
+	case tr.b.target == toXLSX:
 		return raw(t.name + "[[#This Row],[" + structCol(t.cols[c]) + "]]")
 	}
 	return raw("[." + colName(t.col+c) + rowMark + "]")
@@ -340,6 +354,9 @@ func (tr *translator) ref(r formula.Ref) formula.Node {
 // name traduit une cellule nommée ou une adresse Cell_A1 (Feuille.Cell_A1).
 func (tr *translator) name(n string) formula.Node {
 	if p, ok := tr.b.names[strings.ToLower(n)]; ok {
+		if tr.b.target == toXLSX && tr.b.definedName(p) {
+			return raw(p.name)
+		}
 		return tr.cells(p.sheet, p.row, p.col, p.row, p.col, true)
 	}
 	if t := tr.b.tables[strings.ToLower(n)]; t != nil {
@@ -412,6 +429,15 @@ func (tr *translator) call(v formula.Call) formula.Node {
 			return tr.fail()
 		}
 		r.Row = false
+		// Rang écrit en chiffres : l'adresse de la cellule ($B$2), comme
+		// la formule tapée à l'origine.
+		if k, ok := v.Args[1].(formula.NumLit); ok && tr.b.target == toXLSX {
+			if t := tr.table(r.Table); t != nil {
+				if c := t.colIndex(r.Col); c >= 0 && k.V >= 1 && k.V <= float64(t.total) && k.V == float64(int(k.V)) {
+					return tr.cells(t.sheet, t.row+int(k.V), t.col+c, t.row+int(k.V), t.col+c, true)
+				}
+			}
+		}
 		return formula.Call{Fn: "INDEX", Args: []formula.Node{tr.walk(r), tr.walk(v.Args[1])}}
 	case "RANK":
 		// RANG([@Score]) : rang dans sa propre colonne.

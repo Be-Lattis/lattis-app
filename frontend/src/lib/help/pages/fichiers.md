@@ -13,6 +13,10 @@ Un classeur Lattis est un seul fichier `.lattis` : une archive ZIP qui contient 
 
 Fermer le classeur ou la fenêtre avec des modifications non enregistrées demande d'abord s'il faut les enregistrer.
 
+## Ouvrir un fichier .xlsx
+
+Fichier › Ouvrir (ou « Ouvrir avec », ou un glisser-déposer sur la fenêtre) ouvre aussi un fichier `.xlsx` : la barre de titre montre « nom.xlsx ». Au premier `Ctrl+S`, Lattis demande s'il faut garder le format `.xlsx` ou convertir en classeur `.lattis`, et dit ce que le `.xlsx` ne garde pas (scripts, tableaux croisés, formules sans équivalent…). « Ne plus demander » retient le choix (Fichier › Paramètres › Fichiers). Formules, formats, styles, fusions, notes, liens, validations, mise en forme conditionnelle, graphiques et images sont réécrits dans le fichier ; une plage ordinaire reste une plage. La récupération après un incident vaut aussi pour un `.xlsx`.
+
 ## Historique des versions
 
 Chaque enregistrement garde une version du classeur, à côté du fichier (dossier caché `.lattis-versions`) : une par tranche de 10 minutes, 20 au plus, et 10 fois la taille du classeur en tout. Fichier › Historique des versions les liste (date, auteur, taille) ; **Enregistrer une version** en garde une sous un nom, qui reste. **Ouvrir** montre une version en lecture seule ; **Restaurer** remplace le classeur par elle, la version d'avant restant dans la liste. Un classeur partagé sur un Serveur Lattis n'a pas d'historique.

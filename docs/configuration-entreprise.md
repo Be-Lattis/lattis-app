@@ -100,6 +100,12 @@ Les thèmes de l'organisation s'ajoutent à ceux que l'utilisateur garde dans so
 
 L'utilisateur la choisit dans Fichier › Paramètres › Affichage ; posée dans la stratégie, elle est imposée. Elle règle aussi l'affichage des nombres et des dates, et la lecture des nombres écrits en texte par les fonctions (« 1,234 ») ; l'écriture des formules la suivra (séparateurs `;` et décimale `,` en français, allemand et espagnol ; `,` et `.` en anglais et en chinois). Le classeur enregistré n'en dépend pas (docs/i18n.md). Les traductions sont en cours : l'interface reste en français pour les textes pas encore traduits.
 
+### Fichiers
+
+| Clé | Rôle | Défaut |
+|---|---|---|
+| `files.xlsxSave` | fichier `.xlsx` ouvert dans Lattis, au premier enregistrement : `ask` (demander), `keep` (garder le format `.xlsx`, après avoir dit ce qu'il ne garde pas) ou `convert` (convertir en `.lattis`) | `ask` |
+
 ### Mises à jour
 
 | Clé | Rôle | Défaut |

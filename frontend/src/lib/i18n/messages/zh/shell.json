@@ -9,7 +9,8 @@
 			"ai": "AI 助手",
 			"view": "视图",
 			"limits": "限制",
-			"updates": "更新"
+			"updates": "更新",
+			"files": "文件"
 		},
 		"sharedWorkbooks": {
 			"label": "共享工作簿（Lattis 服务器）",
@@ -87,6 +88,13 @@
 		"userName": {
 			"label": "您的姓名",
 			"help": "评论和版本的作者（留空：使用系统用户名）"
+		},
+		"xlsxSave": {
+			"label": "已打开的 .xlsx 文件",
+			"help": "首次保存时：询问、保留 .xlsx 格式或转换为 .lattis。",
+			"ask": "询问",
+			"keep": "保留 .xlsx",
+			"convert": "转换为 .lattis"
 		}
 	},
 	"shortcuts": {
@@ -499,7 +507,9 @@
 			"scripts": "{n, plural, other {# 个脚本}}",
 			"protections": "{n, plural, other {# 个工作表保护}}",
 			"twoLevel": "{n, plural, other {# 个标题组（并入名称）}}",
-			"clipped": "{n, plural, other {# 个超出范围的单元格}}"
+			"clipped": "{n, plural, other {# 个超出范围的单元格}}",
+			"favorites": "{n, plural, other {# 个收藏查询}}",
+			"scenarios": "{n, plural, other {# 个方案}}"
 		},
 		"withFunctions": "{text}（{functions}）",
 		"noticeAll": "工作簿已导出：{path}；已全部导出",
@@ -1253,5 +1263,16 @@
 		"unitKB": "KB",
 		"unitMB": "MB",
 		"unitGB": "GB"
+	},
+	"xlsxSave": {
+		"aria": "保存 .xlsx 文件",
+		"title": "保存 {file}",
+		"ask": "保留 .xlsx 格式，还是转换为 Lattis 工作簿？",
+		"losses": ".xlsx 格式无法保留全部内容。",
+		"lost": ".xlsx 中不保留：{list}。",
+		"keep": "保留 .xlsx",
+		"keepAnyway": "仍然保存",
+		"convert": "转换为 .lattis",
+		"remember": "不再询问"
 	}
 }

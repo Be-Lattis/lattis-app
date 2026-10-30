@@ -499,6 +499,18 @@ export interface DocState {
      * par défaut des réglages (ui.theme).
      */
     "theme"?: canvas$0.Theme | null;
+
+    /**
+     * Format : "xlsx" pour un fichier .xlsx ouvert qui garde son format
+     * (xlsxdoc.go), vide pour un classeur .lattis.
+     */
+    "format"?: string;
+
+    /**
+     * XLSX : rien n'a été enregistré, l'interface demande s'il faut garder
+     * le format .xlsx ou convertir en .lattis (SaveXLSX).
+     */
+    "xlsx"?: XLSXQuestion | null;
 }
 
 /**
@@ -1330,5 +1342,17 @@ export interface VersionList {
 export interface XLSXExport {
     "path": string;
     "clipped": number;
+    "report": transfer$0.ExportReport;
+}
+
+/**
+ * XLSXQuestion est la question posée à l'enregistrement d'un classeur
+ * adossé à un .xlsx : Ask, garder le .xlsx ou convertir (sinon garder est
+ * déjà choisi, il reste à confirmer les pertes) ; Report : ce que le .xlsx
+ * ne garde pas tel quel.
+ */
+export interface XLSXQuestion {
+    "file": string;
+    "ask": boolean;
     "report": transfer$0.ExportReport;
 }

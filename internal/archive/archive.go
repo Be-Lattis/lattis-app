@@ -194,6 +194,10 @@ type Doc struct {
 	// plusieurs : un collègue l'a enregistré) : l'enregistrer par-dessus ne
 	// perd rien, ChangedError n'est pas rendu.
 	Known func(m Manifest) bool
+	// Export écrit le classeur au format d'un fichier .xlsx (Foreign) :
+	// l'enregistrement dans un tel fichier passe par lui (foreign.go).
+	Export ExportFunc
+
 	lock  *os.File
 	extra []func(*sqliteConn) error
 	peer  *peerLock // verrou ~$ posé à côté du fichier (nil : aucun)
@@ -408,7 +412,7 @@ func Open(path string, extra ...func(*sqliteConn) error) (*Doc, error) {
 // dossier où l'on ne peut pas écrire, une autre erreur (sans gravité :
 // l'enregistrement contrôle encore le fichier).
 func (d *Doc) Lock() error {
-	if d.Path == "" || d.peer != nil {
+	if d.Path == "" || d.peer != nil || Foreign(d.Path) {
 		return nil
 	}
 	l, err := takePeer(d.Path)
@@ -727,7 +731,11 @@ func (d *Doc) saveTo(ctx context.Context, path string, force bool) error {
 	} else if h := LockedBy(path); h != nil {
 		return &LockedError{Path: path, Holder: *h}
 	}
-	if err := d.save(ctx, path); err != nil {
+	save := d.save
+	if Foreign(path) {
+		save = d.saveForeign
+	}
+	if err := save(ctx, path); err != nil {
 		if _, serr := os.Stat(path); serr == nil {
 			return msg.Wrap(err, "archive.saveFailedUnchanged", msg.Args{"file": filepath.Base(path), "err": err})
 		}

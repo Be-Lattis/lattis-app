@@ -9,7 +9,8 @@
 			"ai": "Assistant IA",
 			"view": "Affichage",
 			"limits": "Limites",
-			"updates": "Mises à jour"
+			"updates": "Mises à jour",
+			"files": "Fichiers"
 		},
 		"sharedWorkbooks": {
 			"label": "Classeurs partagés (Serveur Lattis)",
@@ -87,6 +88,13 @@
 		"userName": {
 			"label": "Votre nom",
 			"help": "Auteur des commentaires et des versions (vide : celui de la session)"
+		},
+		"xlsxSave": {
+			"label": "Fichier .xlsx ouvert",
+			"help": "Au premier enregistrement : demander, garder le format .xlsx ou convertir en .lattis.",
+			"ask": "Demander",
+			"keep": "Garder .xlsx",
+			"convert": "Convertir en .lattis"
 		}
 	},
 	"shortcuts": {
@@ -499,7 +507,9 @@
 			"scripts": "{n, plural, one {# script} other {# scripts}}",
 			"protections": "{n, plural, one {# protection de feuille} other {# protections de feuille}}",
 			"twoLevel": "{n, plural, one {# groupe d'en-têtes (dans les noms)} other {# groupes d'en-têtes (dans les noms)}}",
-			"clipped": "{n, plural, one {# cellule hors des limites} other {# cellules hors des limites}}"
+			"clipped": "{n, plural, one {# cellule hors des limites} other {# cellules hors des limites}}",
+			"favorites": "{n, plural, one {# requête favorite} other {# requêtes favorites}}",
+			"scenarios": "{n, plural, one {# scénario} other {# scénarios}}"
 		},
 		"withFunctions": "{text} ({functions})",
 		"noticeAll": "Classeur exporté : {path} ; tout a été exporté",
@@ -1253,5 +1263,16 @@
 		"unitKB": "Ko",
 		"unitMB": "Mo",
 		"unitGB": "Go"
+	},
+	"xlsxSave": {
+		"aria": "Enregistrer un fichier .xlsx",
+		"title": "Enregistrer {file}",
+		"ask": "Garder le format .xlsx ou convertir en classeur Lattis ?",
+		"losses": "Le format .xlsx ne garde pas tout.",
+		"lost": "Non gardé en .xlsx : {list}.",
+		"keep": "Garder .xlsx",
+		"keepAnyway": "Enregistrer quand même",
+		"convert": "Convertir en .lattis",
+		"remember": "Ne plus demander"
 	}
 }

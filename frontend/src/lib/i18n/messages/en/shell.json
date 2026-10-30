@@ -9,7 +9,8 @@
 			"ai": "AI assistant",
 			"view": "View",
 			"limits": "Limits",
-			"updates": "Updates"
+			"updates": "Updates",
+			"files": "Files"
 		},
 		"sharedWorkbooks": {
 			"label": "Shared workbooks (Lattis Server)",
@@ -87,6 +88,13 @@
 		"userName": {
 			"label": "Your name",
 			"help": "Author of comments and versions (empty: your system user name)"
+		},
+		"xlsxSave": {
+			"label": "Opened .xlsx file",
+			"help": "On first save: ask, keep the .xlsx format or convert to .lattis.",
+			"ask": "Ask",
+			"keep": "Keep .xlsx",
+			"convert": "Convert to .lattis"
 		}
 	},
 	"shortcuts": {
@@ -499,7 +507,9 @@
 			"scripts": "{n, plural, one {# script} other {# scripts}}",
 			"protections": "{n, plural, one {# sheet protection} other {# sheet protections}}",
 			"twoLevel": "{n, plural, one {# header group (in the names)} other {# header groups (in the names)}}",
-			"clipped": "{n, plural, one {# cell out of bounds} other {# cells out of bounds}}"
+			"clipped": "{n, plural, one {# cell out of bounds} other {# cells out of bounds}}",
+			"favorites": "{n, plural, one {# favorite query} other {# favorite queries}}",
+			"scenarios": "{n, plural, one {# scenario} other {# scenarios}}"
 		},
 		"withFunctions": "{text} ({functions})",
 		"noticeAll": "Workbook exported: {path}; everything was exported",
@@ -1253,5 +1263,16 @@
 		"unitKB": "KB",
 		"unitMB": "MB",
 		"unitGB": "GB"
+	},
+	"xlsxSave": {
+		"aria": "Save an .xlsx file",
+		"title": "Save {file}",
+		"ask": "Keep the .xlsx format or convert to a Lattis workbook?",
+		"losses": "The .xlsx format does not keep everything.",
+		"lost": "Not kept in .xlsx: {list}.",
+		"keep": "Keep .xlsx",
+		"keepAnyway": "Save anyway",
+		"convert": "Convert to .lattis",
+		"remember": "Don't ask again"
 	}
 }

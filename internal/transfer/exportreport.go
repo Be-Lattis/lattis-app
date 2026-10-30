@@ -19,6 +19,36 @@ type ExportReport struct {
 	Scripts int `json:"scripts"`
 	// Clipped : cellules au-delà des limites d'Excel, non exportées.
 	Clipped int `json:"clipped"`
+	// Favorites : requêtes SQL favorites ; Scenarios : scénarios des
+	// simulations (Et si…) ; non exportés.
+	Favorites int `json:"favorites"`
+	Scenarios int `json:"scenarios"`
+}
+
+// Lossy dit si le compte rendu signale quelque chose que le fichier ne
+// garde pas tel quel (formules en valeurs, scripts…).
+func (r ExportReport) Lossy() bool {
+	if r.Scripts > 0 || r.Clipped > 0 || r.Favorites > 0 || r.Scenarios > 0 {
+		return true
+	}
+	for _, s := range r.Sheets {
+		if s.Kind != "" || s.Protected || s.Formulas+s.Columns+s.Pivots+s.Charts+s.Rules+s.Notes+s.Lists+s.Buttons+s.Queries+s.TwoLevel+s.Clipped > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// XLSXLosses dit, sans rien écrire, ce qu'un enregistrement au format .xlsx
+// ne garderait pas tel quel (fichier .xlsx ouvert dans Lattis : question
+// avant de l'enregistrer dans son format). Les cellules au-delà des limites
+// d'Excel des tableaux ne sont comptées qu'à l'écriture.
+func XLSXLosses(ctx context.Context, m *canvas.Model) (ExportReport, error) {
+	sheets, _, err := exportBook(ctx, m, toXLSX)
+	if err != nil {
+		return ExportReport{}, err
+	}
+	return report(ctx, m, sheets), nil
 }
 
 // SheetReport est le compte rendu d'une feuille.
@@ -126,6 +156,14 @@ func report(ctx context.Context, m *canvas.Model, sheets []xsheet) ExportReport 
 	}
 	if ss, err := m.Scripts(ctx); err == nil {
 		rep.Scripts = len(ss)
+	}
+	if fs, err := m.Favorites(ctx); err == nil {
+		rep.Favorites = len(fs)
+	}
+	for _, sh := range sheets {
+		if sc, err := m.Scenarios(ctx, sh.info.ID); err == nil {
+			rep.Scenarios += len(sc)
+		}
 	}
 	return rep
 }

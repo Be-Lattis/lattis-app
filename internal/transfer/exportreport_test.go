@@ -54,11 +54,15 @@ func TestExportReport(t *testing.T) {
 		if s.Name != "Données" || s.Charts != lost || s.Rules != lost || s.Notes != lost || s.Tables != 1 {
 			t.Errorf("%s : feuille Données : %+v", ext, s)
 		}
-		// TEXTE et FILTRE (cellules), CUMUL (colonne calculée).
-		if s.Formulas != 2 || s.Columns != 1 {
+		// FILTRE (cellule), TEXTE en .ods (cellule), CUMUL (colonne calculée).
+		cells, fns := 2, []string{"CUMUL", "FILTRE", "TEXTE"}
+		if ext == ".xlsx" {
+			cells, fns = 1, fns[:2]
+		}
+		if s.Formulas != cells || s.Columns != 1 {
 			t.Errorf("%s : formules en valeurs : %+v", ext, s)
 		}
-		for _, f := range []string{"CUMUL", "FILTRE", "TEXTE"} {
+		for _, f := range fns {
 			if !slices.Contains(s.Functions, f) {
 				t.Errorf("%s : %s attendue parmi %v", ext, f, s.Functions)
 			}

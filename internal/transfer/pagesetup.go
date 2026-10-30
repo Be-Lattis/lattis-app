@@ -238,6 +238,9 @@ func xlsxDefinedNames(sheets []xsheet) string {
 			fmt.Fprintf(&b, `<definedName name="_xlnm.Print_Titles" localSheetId="%d">%s</definedName>`, i, xmlEscape(strings.Join(t, ",")))
 		}
 	}
+	if len(sheets) > 0 && sheets[0].book != nil {
+		b.WriteString(sheets[0].book.definedNamesXML())
+	}
 	if b.Len() == 0 {
 		return ""
 	}

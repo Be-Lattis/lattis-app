@@ -9,7 +9,8 @@
 			"ai": "KI-Assistent",
 			"view": "Ansicht",
 			"limits": "Grenzen",
-			"updates": "Updates"
+			"updates": "Updates",
+			"files": "Dateien"
 		},
 		"sharedWorkbooks": {
 			"label": "Freigegebene Arbeitsmappen (Lattis-Server)",
@@ -87,6 +88,13 @@
 		"userName": {
 			"label": "Ihr Name",
 			"help": "Verfasser von Kommentaren und Versionen (leer: Name des Systembenutzers)"
+		},
+		"xlsxSave": {
+			"label": "Geöffnete .xlsx-Datei",
+			"help": "Beim ersten Speichern: fragen, das .xlsx-Format behalten oder in .lattis umwandeln.",
+			"ask": "Fragen",
+			"keep": ".xlsx behalten",
+			"convert": "In .lattis umwandeln"
 		}
 	},
 	"shortcuts": {
@@ -499,7 +507,9 @@
 			"scripts": "{n, plural, one {# Skript} other {# Skripts}}",
 			"protections": "{n, plural, one {# Blattschutz} other {# Blattschutze}}",
 			"twoLevel": "{n, plural, one {# Überschriftengruppe (in den Namen)} other {# Überschriftengruppen (in den Namen)}}",
-			"clipped": "{n, plural, one {# Zelle außerhalb der Grenzen} other {# Zellen außerhalb der Grenzen}}"
+			"clipped": "{n, plural, one {# Zelle außerhalb der Grenzen} other {# Zellen außerhalb der Grenzen}}",
+			"favorites": "{n, plural, one {# Favoritenabfrage} other {# Favoritenabfragen}}",
+			"scenarios": "{n, plural, one {# Szenario} other {# Szenarien}}"
 		},
 		"withFunctions": "{text} ({functions})",
 		"noticeAll": "Arbeitsmappe exportiert: {path}; alles wurde exportiert",
@@ -1253,5 +1263,16 @@
 		"unitKB": "KB",
 		"unitMB": "MB",
 		"unitGB": "GB"
+	},
+	"xlsxSave": {
+		"aria": "Eine .xlsx-Datei speichern",
+		"title": "{file} speichern",
+		"ask": "Das .xlsx-Format behalten oder in eine Lattis-Arbeitsmappe umwandeln?",
+		"losses": "Das .xlsx-Format behält nicht alles.",
+		"lost": "In .xlsx nicht behalten: {list}.",
+		"keep": ".xlsx behalten",
+		"keepAnyway": "Trotzdem speichern",
+		"convert": "In .lattis umwandeln",
+		"remember": "Nicht mehr fragen"
 	}
 }

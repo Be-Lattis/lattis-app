@@ -27,6 +27,15 @@ type Settings struct {
 	Limits              Limits                       `json:"limits,omitempty"`
 	UI                  UI                           `json:"ui,omitempty"`
 	Updates             Updates                      `json:"updates,omitempty"`
+	Files               Files                        `json:"files,omitempty"`
+}
+
+// Files règle l'ouverture et l'enregistrement des fichiers.
+type Files struct {
+	// XLSXSave : enregistrer un fichier .xlsx ouvert dans Lattis : ask
+	// (demander au premier enregistrement, par défaut), keep (garder le
+	// format .xlsx) ou convert (convertir en .lattis).
+	XLSXSave string `json:"xlsxSave,omitempty"`
 }
 
 // Updates règle la mise à jour de l'application de bureau
@@ -240,6 +249,8 @@ func Defaults() Tree {
 		"ui": Tree{"theme": DefaultTheme, "builtinThemes": true, "language": "auto", "userName": ""},
 		// Recherche des nouvelles versions (bureau seulement).
 		"updates": Tree{"check": true},
+		// Fichier .xlsx ouvert : demander au premier enregistrement.
+		"files": Tree{"xlsxSave": "ask"},
 		"limits": Tree{
 			"undoDepth":       float64(LimitRanges["limits.undoDepth"].Default),
 			"scriptSeconds":   float64(LimitRanges["limits.scriptSeconds"].Default),
@@ -250,7 +261,7 @@ func Defaults() Tree {
 }
 
 var topLevel = []string{"version", "organization", "configUrl", "remote", "allowPolicyOverride",
-	"identity", "connections", "ai", "mcp", "features", "limits", "ui", "updates"}
+	"identity", "connections", "ai", "mcp", "features", "limits", "ui", "updates", "files"}
 
 func knownTopLevel(k string) bool {
 	for _, t := range topLevel {
@@ -388,6 +399,7 @@ var validators = []struct {
 	{"ui.builtinThemes", isBool},
 	{"ui.userName", isDisplayName},
 	{"updates.check", isBool},
+	{"files.xlsxSave", oneOf("ask", "keep", "convert")},
 	{"ui.themes", isThemes},
 	{"ui.themes.*", isTheme},
 	{"limits.*", inLimitRange},

@@ -115,13 +115,12 @@ func TestXLSXImport(t *testing.T) {
 	for _, w := range []string{
 		"colonne « Note » : formules différentes",
 		"Tableau Commandes : 1 valeur(s) en erreur",
-		"cellule D7 : référence à une cellule (A2)",
 	} {
 		if !strings.Contains(warn, w) {
 			t.Errorf("avertissement attendu %q dans :\n%s", w, warn)
 		}
 	}
-	if len(res.Warnings) != 3 {
+	if len(res.Warnings) != 2 {
 		t.Errorf("avertissements :\n%s", warn)
 	}
 
@@ -164,8 +163,8 @@ func TestXLSXImport(t *testing.T) {
 		"A7": "Total général → ",
 		"B7": "=SOMME(Commandes[Total]) → 23,5",
 		"C7": "=SOMME(Commandes[Total])*2 → 47",
-		"D7": "2 → ",
-		"E7": "Riche → ", // texte enrichi, sans l'indication phonétique
+		"D7": "=Commandes[Code][1]*2 → 2", // adresse A1 d'une cellule de tableau
+		"E7": "Riche → ",                  // texte enrichi, sans l'indication phonétique
 	} {
 		if cells[ref] != w {
 			t.Errorf("%s : %q, attendu %q", ref, cells[ref], w)
@@ -244,7 +243,10 @@ func TestSplitFormula(t *testing.T) {
 			t.Errorf("%s : %q, attendu %q", c.src, k, c.key)
 		}
 	}
-	for _, src := range []string{"Table1[@Prix]", "SUM(1:1)", "Taux!x", "{1,2}"} {
+	if ps, err := splitFormula("Table1[@Prix]*Table1[[#This Row],['#Qté]]", 0, 0); err != nil || len(ps) != 3 || ps[0].sref == nil || !ps[0].sref.thisRow || ps[2].sref.cols[0] != "#Qté" {
+		t.Errorf("références structurées : %+v, %v", ps, err)
+	}
+	for _, src := range []string{"Table1[#All]", "SUM(1:1)", "Taux!x", "{1,2}"} {
 		if _, err := splitFormula(src, 0, 0); err == nil {
 			t.Errorf("%s : erreur attendue", src)
 		}

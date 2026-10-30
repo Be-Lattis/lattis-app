@@ -42,7 +42,7 @@ type coeditState struct {
 // coeditable : le classeur se prête au travail à plusieurs (ouvert depuis
 // son fichier, modifiable, pas partagé sur un Serveur Lattis).
 func coeditable(d *doc.Document) bool {
-	return d != nil && d.Path() != "" && !d.ReadOnly() && d.Share.Info() == nil && config.CoEditing(config.Current())
+	return d != nil && d.Path() != "" && !d.XLSX() && !d.ReadOnly() && d.Share.Info() == nil && config.CoEditing(config.Current())
 }
 
 // startCoEdit démarre la session du classeur d (après une ouverture) :

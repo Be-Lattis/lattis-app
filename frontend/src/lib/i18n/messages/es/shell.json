@@ -9,7 +9,8 @@
 			"ai": "Asistente de IA",
 			"view": "Vista",
 			"limits": "Límites",
-			"updates": "Actualizaciones"
+			"updates": "Actualizaciones",
+			"files": "Archivos"
 		},
 		"sharedWorkbooks": {
 			"label": "Libros compartidos (Servidor Lattis)",
@@ -87,6 +88,13 @@
 		"userName": {
 			"label": "Su nombre",
 			"help": "Autor de los comentarios y versiones (vacío: el del usuario del sistema)"
+		},
+		"xlsxSave": {
+			"label": "Archivo .xlsx abierto",
+			"help": "Al guardar por primera vez: preguntar, conservar el formato .xlsx o convertir en .lattis.",
+			"ask": "Preguntar",
+			"keep": "Conservar .xlsx",
+			"convert": "Convertir en .lattis"
 		}
 	},
 	"shortcuts": {
@@ -499,7 +507,9 @@
 			"scripts": "{n, plural, one {# script} other {# scripts}}",
 			"protections": "{n, plural, one {# protección de hoja} other {# protecciones de hoja}}",
 			"twoLevel": "{n, plural, one {# grupo de encabezados (en los nombres)} other {# grupos de encabezados (en los nombres)}}",
-			"clipped": "{n, plural, one {# celda fuera de los límites} other {# celdas fuera de los límites}}"
+			"clipped": "{n, plural, one {# celda fuera de los límites} other {# celdas fuera de los límites}}",
+			"favorites": "{n, plural, one {# consulta favorita} other {# consultas favoritas}}",
+			"scenarios": "{n, plural, one {# escenario} other {# escenarios}}"
 		},
 		"withFunctions": "{text} ({functions})",
 		"noticeAll": "Libro exportado: {path}; se ha exportado todo",
@@ -1253,5 +1263,16 @@
 		"unitKB": "KB",
 		"unitMB": "MB",
 		"unitGB": "GB"
+	},
+	"xlsxSave": {
+		"aria": "Guardar un archivo .xlsx",
+		"title": "Guardar {file}",
+		"ask": "¿Conservar el formato .xlsx o convertir en libro de Lattis?",
+		"losses": "El formato .xlsx no lo conserva todo.",
+		"lost": "No se conserva en .xlsx: {list}.",
+		"keep": "Conservar .xlsx",
+		"keepAnyway": "Guardar de todos modos",
+		"convert": "Convertir en .lattis",
+		"remember": "No volver a preguntar"
 	}
 }

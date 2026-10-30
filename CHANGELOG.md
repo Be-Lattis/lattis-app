@@ -15,8 +15,11 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Corrections
 
 - Une plage tapée à la façon d'un tableur en source d'un tableau dynamique (`=UNIQUE(A1:A20)`) se déverse au lieu d'afficher #VALEUR!.
+- Fichier › Ouvrir ouvre un fichier `.xlsx` (aussi par « Ouvrir avec » et glisser-déposer) : au premier Ctrl+S, garder le format `.xlsx` ou convertir en `.lattis`, avec la liste de ce que le `.xlsx` ne garde pas ; « Ne plus demander » se règle dans Fichier › Paramètres › Fichiers.
 
 ### Changements
+
+- Fichier `.xlsx` relu : formules en adresses (B2, Feuille2!B2:C5), références structurées (Ventes[Prix], [@Prix]), noms définis, SIERREUR et TEXTE sont gardés au lieu d'être remplacés par leur valeur ; une plage ordinaire reste une plage, un tableau garde son style, une date courte reste une date courte.
 
 - Assistant IA décoché dans Fichier › Paramètres › Fonctionnalités : son bouton du ruban, Alt+I, son volet et « Rédiger avec l’assistant » disparaissent ; le recocher les rend aussitôt.
 - Fichier › Paramètres : un réglage défini par votre organisation (stratégie, variables LATTIS_*, Registre) est grisé avec un cadenas, ne peut être changé par aucun autre moyen, et « Réinitialiser » le garde.
