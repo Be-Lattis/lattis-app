@@ -70,7 +70,6 @@
 	import { cellLines } from './shortcuts';
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
-	import Submenu from '#lib/ui/Submenu.svelte';
 	import { modal } from '#lib/ui/focus.js';
 	import { clip, clipped } from '#lib/ui/menu.js';
 	import Chart from '#lib/chart/Chart.svelte';
@@ -86,7 +85,6 @@
 	import { objectBox, type ObjectConfig, type SheetObject } from './objects';
 	import { type SheetButton } from './buttons';
 	import { parseRules, todaySerial, type CfOut, type Rule, type Stats } from './rules';
-	import { chartMenu as chartMenuGroups, chartSubmenu } from './ctxmenu';
 	import { type RuleChanges } from './cfmodel';
 	import { ICON_SETS, drawCfIcon } from './cficons';
 	import CondFormat, { type CondHost, type CondView } from './CondFormat.svelte';
@@ -131,6 +129,7 @@
 	import ValidationDialog, { type ValidationDialogView } from './sheet/ValidationDialog.svelte';
 	import FunctionsDialog, { type FunctionsDialogView } from './sheet/FunctionsDialog.svelte';
 	import DedupDialog, { type DedupDialogView } from './sheet/DedupDialog.svelte';
+	import ChartMenu, { type ChartMenuView } from './sheet/ChartMenu.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6135,6 +6134,19 @@
 		get previewDedup() { return previewDedup; },
 		get wrap() { return wrap; }
 	};
+	// Menu d'un graphique : sheet/ChartMenu.svelte.
+	const chartMenuView: ChartMenuView = {
+		get chartClip() { return chartClip; },
+		get chartMenu() { return chartMenu; }, set chartMenu(v) { chartMenu = v; },
+		get copyChart() { return copyChart; },
+		get copyChartImage() { return copyChartImage; },
+		get editChart() { return editChart; },
+		get hold() { return hold; },
+		get locked() { return locked; },
+		get pasteChart() { return pasteChart; },
+		get removeChart() { return removeChart; },
+		get structure() { return structure; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6612,51 +6624,7 @@
 				</div>
 			</div>
 		{/if}
-		{#if chartMenu}
-			{@const m = chartMenu}
-			{@const name = m.ch.config.title?.trim() ? tr('grid.chart.aria.titled', { title: clip(m.ch.config.title) }) : tr('grid.chart.aria')}
-			{#snippet chartItem(id: string)}
-				{#if id === 'cut'}
-					<button onclick={() => copyChart(m.ch, true)}>{tr('common.cut')} <span class="keys">Ctrl+X</span></button>
-				{:else if id === 'copy'}
-					<button onclick={() => copyChart(m.ch, false)}>{tr('common.copy')} <span class="keys">Ctrl+C</span></button>
-				{:else if id === 'copyImage'}
-					<button onclick={() => copyChartImage(m.ch)}>{tr('grid.chart.copyImage')}</button>
-				{:else if id === 'pasteHere'}
-					<button
-						disabled={!chartClip}
-						onclick={() => {
-							chartMenu = null;
-							if (chartClip) pasteChart(chartClip);
-						}}>{tr('grid.chart.pasteHere')}</button
-					>
-				{:else if id === 'edit'}
-					<button
-						onclick={() => {
-							chartMenu = null;
-							editChart(m.ch);
-						}}>{tr('grid.chart.edit')}</button
-					>
-				{:else if id === 'delete'}
-					<button onclick={() => removeChart(m.ch.id)}>{tr('grid.chart.delete')}</button>
-				{:else if id === 'chart'}
-					<!-- Le graphique, titré de son nom (son titre) quand il en a un ; sa suppression en dernier. -->
-					<Submenu label={name} title={clipped(m.ch.config.title) ? m.ch.config.title : undefined}>
-						{#each chartSubmenu({ edit: !(locked || structure) || !!hold }) as g, gi (gi)}
-							{#if gi}<hr />{/if}
-							{#each g as cid (cid)}{@render chartItem(cid)}{/each}
-						{/each}
-					</Submenu>
-				{/if}
-			{/snippet}
-			<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (chartMenu = null)}>
-				<!-- Le sous-menu du graphique, puis le presse-papiers (ctxmenu.ts). -->
-				{#each chartMenuGroups({ image: m.ch.config.kind !== 'map' && !m.ch.error }) as g, gi (gi)}
-					{#if gi}<hr />{/if}
-					{#each g as id (id)}{@render chartItem(id)}{/each}
-				{/each}
-			</div>
-		{/if}
+		<ChartMenu v={chartMenuView} />
 		{#if customDlg}
 			{@const d = customDlg}
 			<CustomSort
@@ -7631,17 +7599,6 @@
 		align-items: center;
 		gap: 6px;
 		padding: 3px 2px;
-	}
-	.menu hr {
-		border: none;
-		border-top: 1px solid #e3e5e8;
-		margin: 4px 0;
-	}
-	.menu .keys {
-		float: right;
-		color: #6b7280;
-		font-size: 12px;
-		margin-left: 16px;
 	}
 	.list-menu {
 		min-width: 140px;
