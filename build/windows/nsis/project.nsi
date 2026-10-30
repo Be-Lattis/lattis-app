@@ -1,5 +1,10 @@
 Unicode true
 
+## Lattis : LZMA en bloc unique (zlib par defaut) : installeur de 27,4 Mo
+## (0.5.0-beta) ramene vers 20 Mo, mesure sur lattis.exe (xz -9 : 19,8 Mo,
+## gzip -9 : 25,7 Mo). Avant toute donnee compressee.
+SetCompressor /SOLID lzma
+
 ####
 ## Please note: Template replacements don't work in this file. They are provided with default defines like
 ## mentioned underneath.
