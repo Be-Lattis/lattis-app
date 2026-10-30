@@ -85,6 +85,8 @@ var namesDE = map[string]string{
 	"FILTER": "FILTER", "SORT": "SORTIEREN", "SORTBY": "SORTIERENNACH", "UNIQUE": "EINDEUTIG",
 	"TAKE": "ÜBERNEHMEN", "DROP": "WEGLASSEN", "GROUPBY": "GRUPPIERENNACH", "QUERY": "ABFRAGE",
 	"SEQUENCE": "SEQUENZ", "TEXTSPLIT": "TEXTTEILEN",
+	"VSTACK": "VSTAPELN", "HSTACK": "HSTAPELN", "CHOOSECOLS": "SPALTENWAHL", "CHOOSEROWS": "ZEILENWAHL",
+	"TOCOL": "ZUSPALTE", "TOROW": "ZUZEILE",
 
 	// Ajouts de l'audit 16 : finances, statistiques, base de données,
 	// références. SYD s'appelle DIA dans le tableur allemand, nom déjà pris
@@ -177,6 +179,8 @@ var namesES = map[string]string{
 	"FILTER": "FILTRAR", "SORT": "ORDENAR", "SORTBY": "ORDENARPOR", "UNIQUE": "UNICOS",
 	"TAKE": "TOMAR", "DROP": "EXCLUIR", "GROUPBY": "AGRUPARPOR", "QUERY": "CONSULTA",
 	"SEQUENCE": "SECUENCIA", "TEXTSPLIT": "DIVIDIRTEXTO",
+	"VSTACK": "APILARV", "HSTACK": "APILARH", "CHOOSECOLS": "ELEGIRCOLS", "CHOOSEROWS": "ELEGIRFILAS",
+	"TOCOL": "ENCOL", "TOROW": "ENFILA",
 
 	// Ajouts de l'audit 16 : finances, statistiques, base de données, références
 	"XNPV": "VNA.NO.PER", "XIRR": "TIR.NO.PER", "EFFECT": "INT.EFECTIVO", "NOMINAL": "TASA.NOMINAL",

@@ -36,7 +36,7 @@ var docsES = func() docSet {
 	critRange1 := ta("rango_criterios1", "Columna que comprueba el criterio siguiente.")
 	logical := ta("valor_lógico1", "Condición que se comprueba.")
 	sig := ta("cifra_significativa", "Múltiplo deseado (1 si se omite).")
-	noCols := ta("columnas", "No admitido: déjelo vacío ({=#VALUE!} si no).")
+	noCols := ta("columnas", "Número de columnas, escrito en la fórmula; negativo: desde el final.")
 	ascDesc := "1: ascendente (predeterminado); -1: descendente."
 	return docSet{
 		cats: map[string]string{catLogic: "Lógica", catMath: "Matemáticas", catText: "Texto", catDate: "Fechas", catAgg: "Agregados",

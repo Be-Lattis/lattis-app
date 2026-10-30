@@ -37,7 +37,7 @@ var docsZH = func() docSet {
 	critRange1 := ta("条件区域1", "由其后条件检测的列。")
 	logical := ta("逻辑值1", "要检测的条件。")
 	sig := ta("基数", "目标倍数（省略时为 1）。")
-	noCols := ta("列数", "不支持：请留空（否则为 {=#VALUE!}）。")
+	noCols := ta("列数", "列数，写在公式中；负数：从末尾开始。")
 	ascDesc := "1：升序（默认）；-1：降序。"
 	return docSet{
 		cats: map[string]string{catLogic: "逻辑", catMath: "数学", catText: "文本", catDate: "日期", catAgg: "聚合",

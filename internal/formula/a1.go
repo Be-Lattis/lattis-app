@@ -132,7 +132,8 @@ func ConvertA1(n Node, l Locator) (Node, error) {
 			}
 			args := make([]Node, len(m.Args))
 			for i, a := range m.Args {
-				if i < names {
+				if _, isRange := a.(Range); i < names && !isRange {
+					// Une plage A1 en source se convertit : UNIQUE(A1:B20).
 					args[i] = a
 					continue
 				}

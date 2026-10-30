@@ -62,6 +62,18 @@ func Deps(n Node) (names, tables []string) {
 					add(&tables, t.Name)
 					args = args[1:]
 				}
+				if stackFn(n.Fn) {
+					// ASSEMB.V(Ventes2025; Ventes2026) : chaque argument.
+					var rest []Node
+					for _, a := range args {
+						if t, ok := a.(Name); ok {
+							add(&tables, t.Name)
+						} else {
+							rest = append(rest, a)
+						}
+					}
+					args = rest
+				}
 				if n.Fn == "GROUPBY" && len(args) == 3 {
 					args = args[:2]
 				}

@@ -238,6 +238,8 @@ func renameBody(body string, loc Locale, r Renames, self string) (string, bool) 
 				case f != nil && whole(i) && (isLookup(f.fn) || f.fn == "EXISTS" || f.spill) && f.arg == 0:
 					f.table = tk.text
 					replace(i, r.Table(tk.text))
+				case f != nil && whole(i) && stackFn(f.fn):
+					replace(i, r.Table(tk.text)) // ASSEMB.V(Ventes2025; Ventes2026)
 				case f != nil && whole(i) && isShape(f.fn) && f.arg == 0 && !isCellName(tk.text):
 					replace(i, r.Table(tk.text)) // LIGNES(Ventes)
 				case f != nil && whole(i) && isLookup(f.fn) && f.arg == 1:

@@ -36,7 +36,7 @@ var docsEN = func() docSet {
 	critRange1 := ta("criteria_range1", "Column tested by the criteria that follows.")
 	logical := ta("logical1", "Condition to test.")
 	sig := ta("significance", "Multiple to round to (1 if omitted).")
-	noCols := ta("columns", "Not supported: leave blank ({=#VALUE!} otherwise).")
+	noCols := ta("columns", "Number of columns, written in the formula; negative: from the end.")
 	ascDesc := "1: ascending (default); -1: descending."
 	return docSet{
 		cats: map[string]string{catLogic: "Logic", catMath: "Math", catText: "Text", catDate: "Dates", catAgg: "Aggregates",

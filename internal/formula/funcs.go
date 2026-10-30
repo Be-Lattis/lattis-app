@@ -410,6 +410,12 @@ var funcs = []funcDef{
 	{"SEQUENCE", "SEQUENCE", 1, 4, spill, nil},
 	{"TEXTSPLIT", "FRACTIONNER.TEXTE", 2, 6, spill, nil},
 	{"TRANSPOSE", "TRANSPOSE", 1, 1, spill, nil},
+	{"VSTACK", "ASSEMB.V", 1, -1, spill, nil},
+	{"HSTACK", "ASSEMB.H", 1, -1, spill, nil},
+	{"CHOOSECOLS", "CHOISIRCOLS", 2, -1, spill, nil},
+	{"CHOOSEROWS", "CHOISIRLIGNES", 2, -1, spill, nil},
+	{"TOCOL", "VERS.COL", 1, 3, spill, nil},
+	{"TOROW", "VERS.LIGNE", 1, 3, spill, nil},
 }
 
 // refused : fonctions d'Excel reconnues pour être refusées à la saisie avec

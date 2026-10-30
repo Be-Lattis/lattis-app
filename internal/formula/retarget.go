@@ -48,6 +48,10 @@ func RetargetTables(n Node, names map[string]string) (Node, bool) {
 				}
 			}
 			for i := start; i < len(args); i++ {
+				if a, ok := args[i].(Name); ok && stackFn(n.Fn) {
+					args[i] = Name{Name: swap(a.Name)} // ASSEMB.V(Ventes2025; Ventes2026)
+					continue
+				}
 				args[i] = walk(args[i])
 			}
 			n.Args = args

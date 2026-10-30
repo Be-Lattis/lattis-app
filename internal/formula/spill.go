@@ -62,7 +62,7 @@ func IsFreeSpill(n Node, s *Schema) bool {
 // tableau en premier argument : renommages et dépendances le suivent de même.
 func NamesSource(c Call) bool {
 	switch c.Fn {
-	case "SEQUENCE", "TEXTSPLIT", "LET", "TRANSPOSE", "LINEST", "LOGEST":
+	case "SEQUENCE", "TEXTSPLIT", "LET", "TRANSPOSE", "LINEST", "LOGEST", "TOROW":
 		return false
 	}
 	if _, ok := dbFns[c.Fn]; ok {
@@ -308,6 +308,8 @@ func (env *Env) spill(n Node) (rel, Value) {
 		return rel{cols: seqHeaders(len(vals[0])), values: vals}, Value{}
 	case "LINEST", "LOGEST":
 		return env.linest(c)
+	case "VSTACK", "HSTACK", "CHOOSECOLS", "CHOOSEROWS", "TOCOL", "TOROW":
+		return env.arrayShape(c)
 	}
 	if c.Fn == "QUERY" {
 		return rel{}, Err(ErrValue) // SQL libre : seulement dans le moteur SQL
@@ -410,17 +412,24 @@ func (env *Env) spill(n Node) (rel, Value) {
 		}
 		return out, Value{}
 	case "TAKE", "DROP":
-		if len(c.Args) > 2 && c.Args[2] != nil {
+		cols, ok := takeCols(c, len(src.cols))
+		if !ok {
 			return rel{}, Err(ErrValue)
 		}
-		n, e := spillCount(arg(1))
-		if e.IsErr() {
-			return rel{}, e
+		lo, hi := 0, len(src.values)
+		if c.Args[1] != nil { // PRENDRE(Ventes; ; 2) : toutes les lignes
+			n, e := spillCount(arg(1))
+			if e.IsErr() {
+				return rel{}, e
+			}
+			lo, hi = takeRange(c.Fn == "DROP", n, len(src.values))
 		}
-		lo, hi := takeRange(c.Fn == "DROP", n, len(src.values))
 		out := rel{cols: src.cols, values: src.values[lo:hi]}
 		if src.base != nil {
 			out.base, out.rows = src.base, src.rows[lo:hi]
+		}
+		if cols != nil {
+			out = pickCols(out, cols)
 		}
 		return out, Value{}
 	}
@@ -646,6 +655,8 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 		return c.constRel(transpose(vals))
 	case "LINEST", "LOGEST":
 		return c.linest(call, sc)
+	case "VSTACK", "HSTACK", "CHOOSECOLS", "CHOOSEROWS", "TOCOL", "TOROW":
+		return c.arrayShape(call, sc)
 	case "QUERY":
 		q, ok := call.Args[0].(StrLit)
 		if !ok {
@@ -732,16 +743,24 @@ func (c *compiler) spill(n Node, sc scope) (sqlRel, ErrCode) {
 		}
 		return sqlRel{cols: src.cols, from: fmt.Sprintf("SELECT %s, min(_n) AS _n FROM (%s) GROUP BY %s%s", vcols(k, ""), src.sql(), strings.Join(keys, ", "), having)}, 0
 	case "TAKE", "DROP":
-		if len(call.Args) > 2 && call.Args[2] != nil {
+		cols, ok := takeCols(call, k)
+		if !ok {
 			return sqlRel{}, ErrValue
 		}
-		drop := 0
-		if call.Fn == "DROP" {
-			drop = 1
+		out := src
+		if call.Args[1] != nil {
+			drop := 0
+			if call.Fn == "DROP" {
+				drop = 1
+			}
+			out = sqlRel{cols: src.cols, from: fmt.Sprintf(
+				"SELECT %s, _n FROM (SELECT *, row_number() OVER (ORDER BY _n) AS _r, count(*) OVER () AS _c FROM (%s)) WHERE slt_take(_r, _c, %s, %d)",
+				vcols(k, ""), src.sql(), arg(1), drop)}
 		}
-		return sqlRel{cols: src.cols, from: fmt.Sprintf(
-			"SELECT %s, _n FROM (SELECT *, row_number() OVER (ORDER BY _n) AS _r, count(*) OVER () AS _c FROM (%s)) WHERE slt_take(_r, _c, %s, %d)",
-			vcols(k, ""), src.sql(), arg(1), drop)}, 0
+		if cols != nil {
+			out = c.pickCols(out, cols)
+		}
+		return out, 0
 	}
 	return sqlRel{}, ErrValue
 }

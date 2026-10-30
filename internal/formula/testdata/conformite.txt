@@ -391,6 +391,14 @@
 =NBVAL(UNIQUE(Ventes[Qté];FAUX;VRAI))	4
 =JOINDRE.TEXTE(",";VRAI;TRIER(Cell[A1:A3];1;-1;0))	x,2,1
 =JOINDRE.TEXTE(",";VRAI;PRENDRE({1;2;3};-2))	2,3
+# ASSEMB.V, CHOISIRCOLS, VERS.COL… dans un agrégat (audit des formules du 30/10)
+=SOMME(ASSEMB.V(Cell[B1:B3];{5}))	65
+=NBVAL(ASSEMB.H(Etapes[Nom];Clients[Nom]))	6
+=JOINDRE.TEXTE(",";VRAI;CHOISIRCOLS(Clients;2))	Dupont,Martin,Durand
+=JOINDRE.TEXTE(",";VRAI;CHOISIRLIGNES(Etapes[Nom];-1;1))	C,A
+=JOINDRE.TEXTE(",";VRAI;VERS.COL(Cell[A1:B2];0;VRAI))	1,2,10,20
+=SOMME(VERS.LIGNE(Cell[A1:B3]))	63
+=JOINDRE.TEXTE(",";VRAI;PRENDRE(Clients;-1;-2))	Durand,Nice
 # Un tableau dynamique n'est pas une colonne parcourue (NB.SI, GRANDE.VALEUR…)
 =NB.SI(UNIQUE(Ventes[Qté]);">1")	#VALEUR!
 =GRANDE.VALEUR({1;2};1)	#VALEUR!

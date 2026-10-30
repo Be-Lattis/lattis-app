@@ -36,7 +36,7 @@ var docsDE = func() docSet {
 	critRange1 := ta("Kriterienbereich1", "Spalte, die vom folgenden Kriterium geprüft wird.")
 	logical := ta("Wahrheitswert1", "Zu prüfende Bedingung.")
 	sig := ta("Schritt", "Vielfaches, auf das gerundet wird (1, wenn nicht angegeben).")
-	noCols := ta("Spalten", "Nicht unterstützt: leer lassen (sonst {=#VALUE!}).")
+	noCols := ta("Spalten", "Anzahl der Spalten, in der Formel geschrieben; negativ: vom Ende an.")
 	ascDesc := "1: aufsteigend (Standard); -1: absteigend."
 	return docSet{
 		cats: map[string]string{catLogic: "Logik", catMath: "Mathematik", catText: "Text", catDate: "Datum", catAgg: "Aggregate",

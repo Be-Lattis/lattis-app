@@ -1,6 +1,9 @@
 package canvas
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 // RECHERCHEV, RECHERCHEH et RECHERCHEX tapées sur des cellules libres, à la
 // manière d'un tableur : converties en INDEX / EQUIV(X) sur Cell[…], avec
@@ -24,6 +27,27 @@ func TestLookupFreeCells(t *testing.T) {
 		cell := cellOn(t, d, 1, 6, 0)
 		if cell.Raw != c.raw || cell.Value != c.want {
 			t.Errorf("%s : %q = %q, attendu %q = %q", c.src, cell.Raw, cell.Value, c.raw, c.want)
+		}
+	}
+}
+
+// ASSEMB.V et VERS.COL tapés dans une cellule libre se déversent.
+func TestStackSpills(t *testing.T) {
+	d := open(t)
+	for r, row := range [][]string{{"1", "a"}, {"2", "b"}} {
+		for c, v := range row {
+			mustSet(t, d, 1, r, c, v)
+		}
+	}
+	for _, c := range []struct{ src, raw, want string }{
+		{`=VERS.COL(A1:B2;0;VRAI)`, `=VERS.COL(Cell[A1:B2]; 0; VRAI)`, "[[1] [2] [a] [b]]"},
+		{`=ASSEMB.V(A1:B1;{"c".3})`, `=ASSEMB.V(Cell[A1:B1]; {"c".3})`, "[[1 a] [c 3]]"},
+		{`=UNIQUE(A1:A2)`, `=UNIQUE(Cell[A1:A2])`, "[[1] [2]]"},
+	} {
+		mustSet(t, d, 1, 0, 4, c.src)
+		cell := cellOn(t, d, 1, 0, 4)
+		if got := fmt.Sprint(cell.Spill); cell.Raw != c.raw || got != c.want {
+			t.Errorf("%s : %q déverse %s, attendu %q, %s", c.src, cell.Raw, got, c.raw, c.want)
 		}
 	}
 }

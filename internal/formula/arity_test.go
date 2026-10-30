@@ -174,6 +174,12 @@ var fullCalls = map[string]string{
 	"EXISTS":           `=EXISTE(Clients;2)`,
 	"MATCH":            `=EQUIV(3;Ventes[Qté];0)`,
 	"XMATCH":           `=EQUIVX(3;Ventes[Qté];1;-1)`,
+	"VSTACK":           `=ASSEMB.V(Etapes;Clients)`,
+	"HSTACK":           `=ASSEMB.H(Etapes;Clients)`,
+	"CHOOSECOLS":       `=CHOISIRCOLS(Clients;1;-1)`,
+	"CHOOSEROWS":       `=CHOISIRLIGNES(Clients;1;-1)`,
+	"TOCOL":            `=VERS.COL(Clients;1;VRAI)`,
+	"TOROW":            `=VERS.LIGNE(Cell[A1:B3];3;VRAI)`,
 	"REGEXTEST":        `=REGEXTEST("abc";"B";1)`,
 	"REGEXEXTRACT":     `=REGEXEXTRACT("abc";"B";0;1)`,
 	"REGEXREPLACE":     `=REGEXREPLACE("abc";"B";"x";1;1)`,
@@ -457,8 +463,7 @@ var extraCalls = map[string]string{
 var unsupported = map[string]bool{
 	"=LIGNE()":                        true, // Lattis ne lit pas la position de la formule
 	"=COLONNE()":                      true,
-	"=PRENDRE(Ventes[Produit]; 2; 1)": true, // colonnes : non pris en charge
-	"=EXCLURE(Ventes[Produit]; 1; 1)": true,
+	"=EXCLURE(Ventes[Produit]; 1; 1)": true, // plus aucune colonne (#CALC! dans le tableur)
 }
 
 // skipCount : nombres d'arguments qui coupent un groupe répété en son milieu
