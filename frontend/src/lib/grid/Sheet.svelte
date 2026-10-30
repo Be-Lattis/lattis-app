@@ -33,7 +33,7 @@
 	import { afterWidthChange, sideRoom } from './keepinview';
 	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
 	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
-	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
+	import { expandRange, extendCorner, intersect, isSingleCell, mergeRect, rangeOf, stepCell, wholeLines, type Cell, type CellRange } from './mergesel';
 	import { jumpLine, lineSpans, type Area, type Span } from './jump';
 	import { findZone, inZone, zoneLabel, type Zone } from './findzone';
 	import { type FindOpts, type FoundCell } from './findopts';
@@ -125,7 +125,7 @@
 		type ColumnType
 	} from './format';
 	import { errorText, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
-	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer } from './sheet/model';
+	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer, type WholeSel, type DvPick, type InputTip, type DragPtr } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, GUTTER_PAD, GUTTER_MAX, GUTTER_KEY_MAX, FONT, FONT_BOLD, FONT_SMALL, FONT_TINY } from './sheet/consts';
 	import { createFind } from './sheet/find.svelte.js';
 	import { createScrolling } from './sheet/scrolling.svelte.js';
@@ -4814,14 +4814,7 @@
 	// changer ; dans les deux cas la feuille de la cellule et la sélection
 	// d'avant (la cible de la validation) sont rétablies. back : retour en
 	// cours vers la feuille d'origine, ref : la référence à reprendre.
-	let dvPick = $state<{
-		active: { row: number; col: number };
-		anchor: { row: number; col: number };
-		whole: typeof wholeSel;
-		sheet: number;
-		back?: boolean;
-		ref?: string | null;
-	} | null>(null);
+	let dvPick = $state<DvPick | null>(null);
 	let dvPickRef = $state('');
 
 	function startPick() {
@@ -4860,7 +4853,7 @@
 	}
 
 	/** Sélection d'avant rétablie, référence reprise dans le dialogue. */
-	function finishPick(p: NonNullable<typeof dvPick>, ref: string | null | undefined) {
+	function finishPick(p: DvPick, ref: string | null | undefined) {
 		dvPick = null;
 		active = p.active;
 		anchor = p.anchor;
@@ -4912,7 +4905,7 @@
 	}
 
 	// Message de saisie de la cellule active, relevé en dessinant.
-	let inputTip = $state<{ x: number; y: number; title: string; msg: string } | null>(null);
+	let inputTip = $state<InputTip | null>(null);
 	// Entourer les données non valides : cellules relues après chaque mise à jour.
 	let circlesOn = false;
 	let dvCircles: { row: number; col: number }[] = [];
@@ -4976,7 +4969,7 @@
 			ctx.restore();
 		}
 		const inp = validDlg || dvAlert || dvPick ? null : dvInputOf(dvAt(active.row, active.col));
-		let tip: typeof inputTip = null;
+		let tip: InputTip | null = null;
 		if (inp) {
 			const y = screenY(active.row) + rh(active.row) + 4;
 			const x = screenX(active.col) + Math.min(24, cax().size(active.col) / 2);
@@ -5631,7 +5624,7 @@
 	// Menu ▾ fermé par un clic ailleurs : si ce clic est sur le ▾ de la même
 	// colonne, il ne le rouvre pas (le ▾ ouvre et ferme son menu, comme Excel).
 	let filterClosed = { key: '', at: 0 };
-	// Filtres et tri personnalisé : sheet/filters.svelte.ts (accès de createFilters à la feuille).
+	// --- Filtres et tri personnalisé : sheet/filters.svelte.ts ---
 	const filtersCtl = createFilters({
 		get pivotAt() { return pivotAt; },
 		get source() { return source; },
@@ -5745,7 +5738,7 @@
 	let selChart = $state<number | null>(null);
 	let chartMenu = $state<{ ch: SheetChart; x: number; y: number } | null>(null);
 	let chartClip = $state.raw<ChartConfig | null>(null);
-	// Graphiques : sheet/charts.svelte.ts (accès de createCharts à la feuille).
+	// --- Graphiques : sheet/charts.svelte.ts ---
 	const chartsCtl = createCharts({
 		get selChart() { return selChart; }, set selChart(v) { selChart = v; },
 		get panel() { return panel; }, set panel(v) { panel = v; },
@@ -5818,7 +5811,7 @@
 				loadedIn(e, c0, c1) &&
 				!(whole && e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1)
 		);
-	// Tableau croisé dynamique : sheet/pivot.svelte.ts (accès de createPivot à la feuille).
+	// --- Tableau croisé dynamique : sheet/pivot.svelte.ts ---
 	const pivotCtl = createPivot({
 		get pivotIn() { return pivotIn; },
 		get pivotZone() { return pivotZone; },
@@ -5895,8 +5888,7 @@
 	/** Taille du tableau croisé déplacé (lignes × colonnes) ; une cellule pour une création. */
 	let placeSize = { h: 1, w: 1 };
 
-	// --- Outils de données ---
-	// Outils de données : sheet/datatools.svelte.ts (accès de createDataTools à la feuille).
+	// --- Outils de données : sheet/datatools.svelte.ts ---
 	const dataToolsCtl = createDataTools({
 		get ownerAt() { return ownerAt; },
 		get active() { return active; },
@@ -5944,7 +5936,7 @@
 	const objGeo = { colOffset: (c: number) => cax().offset(c), rowTop: (r: number) => rowTop(r), colAt: (x: number) => cax().indexAt(x), rowAt: (y: number) => rax().indexAt(y) };
 	// Les cases à cocher et listes relisent leur cellule liée à chaque mise à jour.
 	let controlsTick = $state(0);
-	// Commandes du ruban : sheet/commands.svelte.ts (accès de createCommands à la feuille).
+	// --- Commandes du ruban : sheet/commands.svelte.ts ---
 	const commandsCtl = createCommands({
 		get fnDlg() { return fnDlg; }, set fnDlg(v) { fnDlg = v; },
 		get wrap() { return wrap; },
@@ -6029,7 +6021,7 @@
 	// Liens affichés : pour chaque cellule de la sélection, ses antécédents
 	// (flèches bleues vers elle) et ses dépendants (flèches rouges depuis elle).
 	let links = $state<Link[]>([]);
-	// Audit de formules : sheet/audit.svelte.ts (accès de createAudit à la feuille).
+	// --- Audit de formules : sheet/audit.svelte.ts ---
 	const auditCtl = createAudit({
 		get active() { return active; },
 		get anchor() { return anchor; },
@@ -6092,7 +6084,7 @@
 	const space = new SpaceHold();
 	let panCursor = $state<'' | 'grab' | 'grabbing'>('');
 	let sizedZoom = 0;
-	// Défilement, doigt, main, volet ouvert : sheet/scrolling.svelte.ts (accès de createScrolling à la feuille).
+	// --- Défilement, doigt, main, volet ouvert : sheet/scrolling.svelte.ts ---
 	const scrollCtl = createScrolling({
 		get holdCols() { return holdCols; },
 		get growAtEnd() { return growAtEnd; },
@@ -6537,7 +6529,7 @@
 	// s'agrandir aux fusions qui les traversent, comme Excel (voir wholeLines) ;
 	// from : la ligne (colonne) où le clic a commencé, d'où partent le glisser
 	// et Maj+clic (la cellule active, elle, est le haut de sa fusion).
-	let wholeSel: { kind: 'rows' | 'cols'; from: number; range: CellRange; anchor: { row: number; col: number }; active: { row: number; col: number } } | null = null;
+	let wholeSel: WholeSel | null = null;
 	function wholeKind(): 'rows' | 'cols' | null {
 		const w = wholeSel;
 		if (!w) return null;
@@ -7150,7 +7142,7 @@
 	// --- Défilement automatique pendant un glisser (autoscroll.ts) ----------
 
 	// Dernière position de la souris pendant un glisser (coordonnées de l'écran).
-	let dragPtr: { x: number; y: number; ctrl: boolean; meta: boolean; shift: boolean } | null = null;
+	let dragPtr: DragPtr | null = null;
 	let autoFrame = 0;
 	let autoLast = 0;
 
@@ -7183,7 +7175,7 @@
 	 * qui défile) : hors de la grille, la sélection suit la ligne ou la
 	 * colonne du bord, comme Excel.
 	 */
-	function dragAt(p: NonNullable<typeof dragPtr>, dir: { dx: number; dy: number }) {
+	function dragAt(p: DragPtr, dir: { dx: number; dy: number }) {
 		const r = scroller.getBoundingClientRect();
 		const k = zoomK();
 		const a = scrollArea();
@@ -7607,7 +7599,7 @@
 	// la précédente (une saisie fait naître un tableau, la suivante le remplit).
 	// Une écriture qui échoue ne bloque jamais les suivantes (catch).
 	let writing: Promise<void> = Promise.resolve();
-	// Édition et zone de nom : sheet/edit.svelte.ts (accès de createEdit à la feuille).
+	// --- Édition et zone de nom : sheet/edit.svelte.ts ---
 	const editCtl = createEdit({
 		get locked() { return locked; },
 		get ownerAt() { return ownerAt; },
@@ -7733,7 +7725,7 @@
 	let findCross: Zone | null = null;
 	/** Zone de recherche : la sélection si elle compte plusieurs cellules, sinon null (toute la feuille). */
 	const searchZone = () => findZone(selection(), singleSelection());
-	// Rechercher / remplacer : sheet/find.svelte.ts (accès de createFind à la feuille).
+	// --- Rechercher / remplacer : sheet/find.svelte.ts ---
 	const findCtl = createFind({
 		get finder() { return finder; }, set finder(v) { finder = v; },
 		get schedule() { return schedule; },

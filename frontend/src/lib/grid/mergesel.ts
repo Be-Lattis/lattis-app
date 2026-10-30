@@ -5,7 +5,7 @@
 import { mergeAt, type MergeRange } from './sheetfmt';
 
 export type CellRange = { r0: number; r1: number; c0: number; c1: number };
-type Cell = { row: number; col: number };
+export type Cell = { row: number; col: number };
 
 /** Plage couverte par une fusion. */
 export function mergeRect(g: MergeRange): CellRange {

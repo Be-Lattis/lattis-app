@@ -1,6 +1,7 @@
 // Modèle de la feuille (Sheet.svelte) : ce que la page et le classeur
 // échangent avec la grille (données, source, état, TCD, graphiques), les
 // types internes partagés par les modules de sheet/, et les lignes d'un TCD.
+import { type CellRange } from '../mergesel';
 import { RowCache, type Fetched } from '../cache';
 import { type Rect as ClipRect } from '../clipboard';
 import { type PasteOptions } from '../pastespecial';
@@ -668,3 +669,19 @@ export type TextField = HTMLInputElement | HTMLTextAreaElement;
 export type HiddenMark = { rows: boolean; i0: number; i1: number; x: number; y: number; w: number; h: number };
 export type Link = { row: number; col: number; pre: DepTarget[]; dep: DepTarget[] };
 export type Range = { r0: number; r1: number; c0: number; c1: number };
+
+/** Lignes ou colonnes entières sélectionnées (clic sur le bandeau ou la gouttière). */
+export type WholeSel = { kind: 'rows' | 'cols'; from: number; range: CellRange; anchor: { row: number; col: number }; active: { row: number; col: number } };
+/** Référence pointée pour une validation des données (sélection d'avant, feuille d'origine). */
+export type DvPick = {
+	active: { row: number; col: number };
+	anchor: { row: number; col: number };
+	whole: WholeSel | null;
+	sheet: number;
+	back?: boolean;
+	ref?: string | null;
+};
+/** Message de saisie d'une validation des données, sous la cellule. */
+export type InputTip = { x: number; y: number; title: string; msg: string };
+/** Pointeur pendant un glisser (défilement automatique). */
+export type DragPtr = { x: number; y: number; ctrl: boolean; meta: boolean; shift: boolean };
