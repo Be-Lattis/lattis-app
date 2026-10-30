@@ -36,9 +36,10 @@ func (t *tx) spillFree(sheet int64, raw string) ([][]string, bool, formula.Value
 	return r.rows, r.ok, r.err
 }
 
-// pivotDeps : les tableaux que lit le calcul d'un TCD, ou faux s'il peut en
-// lire d'autres (champ calculé, onglet à choix par une formule, colonne
-// calculée de la source : formules, recherches…).
+// pivotDeps : les colonnes de la source que lit le calcul d'un TCD
+// (cachecols.go), ou faux s'il peut lire d'autres tableaux (champ calculé,
+// onglet à choix par une formule, colonne calculée de la source : formules,
+// recherches…).
 func (t *tx) pivotDeps(cfg PivotConfig) ([]string, bool) {
 	tb, err := t.tableByName(cfg.Source)
 	if err != nil || cfg.byFormula() {
@@ -49,7 +50,7 @@ func (t *tx) pivotDeps(cfg PivotConfig) ([]string, bool) {
 			return nil, false
 		}
 	}
-	return []string{tb.sql()}, true
+	return colDeps(tb, cfg, false), true
 }
 
 // pivotUses : le TCD cite le champ name (zones, filtres, groupes, segments).
@@ -167,7 +168,7 @@ func (t *tx) chartLater(cfg ChartConfig) bool {
 		return false
 	}
 	key := t.chartKey(cfg)
-	if deps, ok := t.chartDeps(cfg.Source); ok {
+	if deps, ok := t.chartDeps(cfg); ok {
 		_, hit := peekOn[chartResult](t, key, deps)
 		return !hit
 	}
@@ -175,18 +176,27 @@ func (t *tx) chartLater(cfg ChartConfig) bool {
 	return !hit
 }
 
-// chartDeps donne les tableaux que lit un graphique, ou faux s'il peut en
-// lire d'autres (colonne calculée de la source : formules, REFERENCE…).
-func (t *tx) chartDeps(source string) ([]string, bool) {
-	if tb, err := t.tableByName(source); err == nil {
+// chartDeps donne ce que lit un graphique : les colonnes de son tableau
+// source nommées par ses axes et son filtre (cachecols.go), tout le tableau
+// d'une carte à repérer ou sans axe, ce que lit le TCD source ; ou faux
+// s'il peut lire d'autres tableaux (colonne calculée de la source :
+// formules, REFERENCE…).
+func (t *tx) chartDeps(cfg ChartConfig) ([]string, bool) {
+	if tb, err := t.tableByName(cfg.Source); err == nil {
 		for _, c := range tb.Cols {
 			if c.Formula != "" {
 				return nil, false
 			}
 		}
-		return []string{tb.sql()}, true
+		if cfg.MapDraft || cfg.X == "" || len(cfg.Series) == 0 {
+			return []string{tb.sql()}, true
+		}
+		return colDeps(tb, ChartConfig{Kind: cfg.Kind, X: cfg.X, Series: cfg.Series, MapCoords: cfg.MapCoords, ColorBy: cfg.ColorBy, Bins: cfg.Bins}, !cfg.Hidden), true
 	}
-	if pc, ok, err := t.pivotByName(source); err == nil && ok {
+	if pc, ok, err := t.pivotByName(cfg.Source); err == nil && ok {
+		if deps, ok := t.pivotDeps(pc); ok {
+			return deps, true
+		}
 		if tb, err := t.tableByName(pc.Source); err == nil {
 			return []string{tb.sql()}, true
 		}
@@ -233,7 +243,7 @@ func (t *tx) chartData(cfg ChartConfig) (chartResult, error) {
 	}
 	var r chartResult
 	var err error
-	if deps, ok := t.chartDeps(cfg.Source); ok {
+	if deps, ok := t.chartDeps(cfg); ok {
 		r, err = cachedOn(t, key, deps, calc)
 	} else {
 		r, err = cached(t, key, calc)
