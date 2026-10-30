@@ -29,7 +29,7 @@
 	import { arrowNotes, arrowSpan, spanBox, spanPoint, type ArrowGeometry } from './auditarrows';
 	import { Velocity } from './touch';
 	import { PanGesture, SpaceHold } from './pan';
-	import { panes, reveal, toGrid, type Pane } from './panes';
+	import { panes, toGrid, type Pane } from './panes';
 	import { afterWidthChange, sideRoom } from './keepinview';
 	import { cleanSource, dvTarget, dvPreview, dvSource, hiddenLines, mergeAt, mergeList, skipHidden, validate, validateSource, type DvList, type MergeRange } from './sheetfmt';
 	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvAlertOf, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
@@ -83,9 +83,7 @@
 	import { clip, clipped } from '#lib/ui/menu.js';
 	import Chart from '#lib/chart/Chart.svelte';
 	import { encodeObj, objFromText, rememberObj } from '#lib/clip/objects.js';
-	import { SINGLE_SERIES, chartFieldsFrom, defaultChartTitle } from '#lib/chart/kinds.js';
 	import ChartPanel from '#lib/chart/ChartPanel.svelte';
-	import { svgToPng } from '#lib/chart/image.js';
 	import type { PrintCell, PrintChart, PrintSource } from '#lib/print/sheetprint.js';
 	import PivotPanel from './PivotPanel.svelte';
 	import { panelAtCell, changeSource, startValues } from './pivotfields';
@@ -98,7 +96,7 @@
 	import SheetButtons from './SheetButtons.svelte';
 	import SheetObjects from './SheetObjects.svelte';
 	import { objectBox, type ObjectConfig, type ObjectKind, type SheetObject } from './objects';
-	import { BUTTON_H, BUTTON_W, type ControlKind, type SheetButton } from './buttons';
+	import { type ControlKind, type SheetButton } from './buttons';
 	import { applyRules, computeStats, mergeStats, parseRules, prepareStats, reqKey, statsReq, todaySerial, type CfOut, type Rule, type RuleEnv, type Stats, type StatsReq } from './rules';
 	import { chartMenu as chartMenuGroups, chartSubmenu, freeCellMenu, headerMenu, linesSubmenu, pivotSubmenu, tableCellMenu, tableColumnSubmenu, tableRowSubmenu } from './ctxmenu';
 	import { colLetters, formatLocs, groupKey, rectLocs, type Loc, type RuleChanges, type SheetRules } from './cfmodel';
@@ -132,10 +130,11 @@
 		type ColumnType
 	} from './format';
 	import { errorText, fnName, lower, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
-	import { type Column, type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type ColumnFilter, type PageBreaksView, type SheetTable, type SheetData, type LinesOp, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer } from './sheet/model';
+	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type ColumnFilter, type PageBreaksView, type SheetTable, type SheetData, type LinesOp, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, GUTTER_PAD, GUTTER_MAX, GUTTER_KEY_MAX, FONT, FONT_BOLD, FONT_SMALL, FONT_TINY } from './sheet/consts';
 	import { createFind } from './sheet/find.svelte.js';
 	import { createScrolling } from './sheet/scrolling.svelte.js';
+	import { createCharts } from './sheet/charts.svelte.js';
 
 
 	interface Props {
@@ -6029,340 +6028,51 @@
 	// Graphique sélectionné (cadre, poignées, volet) et redimensionnement en cours.
 	let selChart = $state<number | null>(null);
 	let chartMenu = $state<{ ch: SheetChart; x: number; y: number } | null>(null);
-
-	function selectChart(ch: SheetChart) {
-		selChart = ch.id;
-		panel = { kind: 'chart', id: ch.id };
-		wrap.focus();
-	}
-
-	/** Déplace le graphique sélectionné au clavier (resize : le redimensionne), de dx, dy pixels. */
-	function nudgeChart(ch: SheetChart, dx: number, dy: number, resize: boolean) {
-		if (!source.placeChart) return;
-		const b = { ...chartBox(ch) };
-		if (resize) {
-			b.w = Math.max(160, b.w + dx);
-			b.h = Math.max(120, b.h + dy);
-		} else {
-			b.x = Math.max(0, b.x + dx);
-			b.y = Math.max(0, b.y + dy);
-		}
-		const col = cax().indexAt(b.x);
-		const row = rax().indexAt(b.y);
-		const place = source.placeChart;
-		writing = writing.catch(() => undefined).then(() =>
-			place(ch.id, row, col, Math.round(b.x - cax().offset(col)), Math.round(b.y - rowTop(row)), Math.round(b.w), Math.round(b.h)).then(
-				() => undefined,
-				(err) => say(errorText(err))
-			)
-		);
-	}
-
-	/** Colonnes du tableau source d'un graphique ou d'un TCD (autre feuille comprise). */
-	function sourceColumns(name: string): { name: string; numeric: boolean; type: string }[] {
-		const e = entries.find((x) => x.t.name.toLowerCase() === name.toLowerCase());
-		if (e) return e.t.columns.map((c) => ({ name: c.name, type: c.type, numeric: c.type === 'integer' || c.type === 'decimal' || c.type === 'formula' }));
-		const t = sources.find((x) => x.name.toLowerCase() === name.toLowerCase());
-		return (t?.columns ?? []).map((c, i) => ({ name: c, type: t!.types[i], numeric: ['integer', 'decimal', 'formula'].includes(t!.types[i]) }));
-	}
-
-	/** Position et taille d'un graphique, en pixels de la feuille (ancrage libre). */
-	function chartBox(ch: SheetChart) {
-		if (chartGesture?.id === ch.id) return chartGesture.box;
-		return {
-			x: cax().offset(ch.col) + (ch.config.offX ?? 0),
-			y: rowTop(ch.row) + (ch.config.offY ?? 0),
-			w: ch.config.width ?? CHART_W,
-			h: ch.config.height ?? CHART_H
-		};
-	}
-
-	/** Position et taille d'un bouton ou contrôle, en pixels de la feuille (comme SheetButtons). */
-	function buttonBox(b: SheetButton) {
-		return {
-			x: cax().offset(b.col) + (b.config.offX ?? 0),
-			y: rowTop(b.row) + (b.config.offY ?? 0),
-			w: b.config.width || BUTTON_W,
-			h: b.config.height || BUTTON_H
-		};
-	}
-
-	let chartGesture = $state<{ id: number; box: { x: number; y: number; w: number; h: number } } | null>(null);
-
-	/** Déplace (dir vide) ou redimensionne (n, s, e, w et coins) un graphique. */
-	function startChartGesture(ev: MouseEvent, ch: SheetChart, dir = '') {
-		if (locked || structure) {
-			ev.preventDefault(); // feuille protégée : le graphique ne se sélectionne pas
-			return;
-		}
-		if (ev.button !== 0 || !source.placeChart) return;
-		ev.preventDefault();
-		ev.stopPropagation();
-		selectChart(ch);
-		const b0 = chartBox(ch);
-		const x0 = ev.clientX;
-		const y0 = ev.clientY;
-		chartGesture = { id: ch.id, box: { ...b0 } };
-		const move = (e: MouseEvent) => {
-			if (!chartGesture) return;
-			const k = zoomK();
-			const dx = (e.clientX - x0) / k;
-			const dy = (e.clientY - y0) / k;
-			const b = { ...b0 };
-			if (!dir) {
-				b.x = Math.max(0, b0.x + dx);
-				b.y = Math.max(0, b0.y + dy);
-			}
-			if (dir.includes('e')) b.w = Math.max(160, b0.w + dx);
-			if (dir.includes('s')) b.h = Math.max(120, b0.h + dy);
-			if (dir.includes('w')) {
-				const w = Math.max(160, b0.w - dx);
-				b.x = Math.max(0, b0.x + b0.w - w);
-				b.w = b0.x + b0.w - b.x;
-			}
-			if (dir.includes('n')) {
-				const h = Math.max(120, b0.h - dy);
-				b.y = Math.max(0, b0.y + b0.h - h);
-				b.h = b0.y + b0.h - b.y;
-			}
-			chartGesture.box = b;
-		};
-		const up = () => {
-			window.removeEventListener('mousemove', move);
-			window.removeEventListener('mouseup', up);
-			const g = chartGesture;
-			if (!g || (g.box.x === b0.x && g.box.y === b0.y && g.box.w === b0.w && g.box.h === b0.h)) {
-				chartGesture = null;
-				return;
-			}
-			const b = g.box;
-			const col = cax().indexAt(b.x);
-			const row = rax().indexAt(b.y);
-			const place = source.placeChart!;
-			writing = writing.catch(() => undefined).then(() =>
-				place(ch.id, row, col, Math.round(b.x - cax().offset(col)), Math.round(b.y - rowTop(row)), Math.round(b.w), Math.round(b.h)).then(
-					() => {
-						chartGesture = null;
-					},
-					(err) => {
-						chartGesture = null;
-						say(errorText(err));
-					}
-				)
-			);
-		};
-		window.addEventListener('mousemove', move);
-		window.addEventListener('mouseup', up);
-	}
-
-	function onChartMenu(ev: MouseEvent, ch: SheetChart) {
-		ev.preventDefault();
-		ev.stopPropagation();
-		if (locked && !hold) return;
-		selectChart(ch);
-		const r = wrap.getBoundingClientRect();
-		closeMenus();
-		chartMenu = { ch, x: ev.clientX - r.left, y: ev.clientY - r.top };
-	}
-
-	async function copyChart(ch: SheetChart, cut: boolean) {
-		chartMenu = null;
-		try {
-			await navigator.clipboard.writeText(encodeObj({ kind: 'chart', config: ch.config as never }));
-		} catch {
-			chartClip = ch.config;
-		}
-		chartClip = ch.config;
-		if (cut) await removeChart(ch.id);
-		else say(tr('grid.chart.copied'));
-	}
 	let chartClip = $state.raw<ChartConfig | null>(null);
-
-	/** Copie le graphique comme image PNG (à coller dans un courriel, un document). */
-	async function copyChartImage(ch: SheetChart) {
-		chartMenu = null;
-		const svg = wrap.querySelector<SVGSVGElement>('.chart.selected svg');
-		if (!svg || selChart !== ch.id) return;
-		try {
-			const blob = await svgToPng(svg);
-			await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-			say(tr('grid.chart.copiedImage'));
-		} catch (err) {
-			say(tr('grid.chart.copyImageFailed', { error: errorText(err) }));
-		}
-	}
-
-	/** Après la création d'un graphique : le nouveau est sélectionné (Excel), prêt à être déplacé, redimensionné ou mis en forme. */
-	function selectNewChart(before: Set<number>): SheetChart | undefined {
-		const ch = charts.find((c) => !before.has(c.id));
-		if (!ch) return;
-		selChart = ch.id;
-		// Amené à l'écran, en entier s'il tient (son coin haut gauche sinon).
-		updateExtent();
-		const b = chartBox(ch);
-		const t = reveal(b.y, b.y + b.h, vs.top, vs.view, rowTop(fRows()));
-		const l = reveal(b.x, b.x + b.w, scroller.scrollLeft, viewW - MARGIN, cax().offset(fCols()));
-		wrap.focus();
-		glideTo(t, l);
-		return ch;
-	}
-
-	/** Défile jusqu'à (top, left) : en douceur avec les animations (Affichage › Animations), d'un coup sinon. */
-	function glideTo(top: number, left: number) {
-		const t0 = vs.top;
-		const l0 = scroller.scrollLeft;
-		if (top === t0 && left === l0) return schedule();
-		const set = (t: number, l: number) => {
-			if (t !== vs.top) vs.to(t);
-			if (l !== scroller.scrollLeft) scroller.scrollLeft = l;
-			syncNative();
-			schedule();
-		};
-		if (!motion()) return set(top, left);
-		const start = performance.now();
-		const D = 320;
-		const step = (now: number) => {
-			const k = Math.min(1, (now - start) / D);
-			const e = 1 - Math.pow(1 - k, 3); // décélération
-			set(Math.round(t0 + (top - t0) * e), Math.round(l0 + (left - l0) * e));
-			if (k < 1) requestAnimationFrame(step);
-		};
-		requestAnimationFrame(step);
-	}
-
-	/**
-	 * Place libre pour un nouveau graphique (w × h px) à partir de (row, col) :
-	 * sous les graphiques qu'il chevaucherait, avec une ligne d'écart, pour
-	 * qu'aucun ne se superpose par défaut.
-	 */
-	function freeChartSpot(row: number, col: number, w = CHART_W, h = CHART_H): { row: number; col: number } {
-		const x = colAxis.offset(col);
-		for (let k = 0; k < 50; k++) {
-			const y = rowTop(row);
-			const hit = charts.map(chartBox).find((b) => x < b.x + b.w && b.x < x + w && y < b.y + b.h && b.y < y + h);
-			if (!hit) break;
-			row = rowAxis.indexAt(hit.y + hit.h) + 2;
-		}
-		return { row, col };
-	}
-
-	/** Carte zoomée ou déplacée (MapChart) : vue enregistrée dans sa configuration (annulable). */
-	function setMapView(id: number, v: ChartConfig['mapView'] | null) {
-		const ch = charts.find((c) => c.id === id);
-		if (!ch || !source.setChart) return;
-		const set = source.setChart;
-		writing = writing.catch(() => undefined).then(() => set(id, { ...ch.config, mapView: v ?? undefined }).then(undefined, (err) => say(errorText(err))));
-	}
-
-	/** Point de carte cliqué : la carte se désélectionne (comme un clic dans la grille), puis la ligne est sélectionnée. */
-	function pointToRow(ch: SheetChart, id: number) {
-		if (selChart === ch.id) selChart = null;
-		if (panel?.kind === 'chart') panel = null;
-		onrowlink?.(ch.config.source, id);
-	}
-
-	function pasteChart(cfg: ChartConfig) {
-		if (!source.createChart) return;
-		const create = source.createChart;
-		const { row, col } = active;
-		const before = new Set(charts.map((c) => c.id));
-		writing = writing.catch(() => undefined).then(() =>
-			create(freeChartSpot(row, col, cfg.width, cfg.height).row, col, cfg).then(
-				() => {
-					say(tr('grid.chart.pasted'));
-					selectNewChart(before);
-				},
-				(err) => say(errorText(err))
-			)
-		);
-	}
-
-	/** Insère un graphique du tableau actif à sa droite (ruban Insertion). */
-	export function chartActive(kind: ChartConfig['kind']) {
-		const pv = pivotAt(active.row, active.col);
-		if (pv && source.createChart) {
-			// Graphique d'un tableau croisé : X = premier champ de lignes, séries = mesures.
-			const head = pv.cells[0];
-			// En arborescence, une seule colonne d'étiquettes ; le graphique lit le TCD à plat (premier champ).
-			const nk = pv.rows ? 1 : Math.max(1, pv.config.rowFields?.length ?? 0);
-			const x = pv.rows ? (pv.config.rowFields?.[0] ?? head[0]) : head[0];
-			let series = head.slice(nk).filter((h) => !h.startsWith('Total'));
-			if (SINGLE_SERIES.has(kind)) series = series.slice(0, 1);
-			const create = source.createChart;
-			const name = pv.config.name ?? '';
-			const before = new Set(charts.map((c) => c.id));
-			writing = writing.catch(() => undefined).then(() =>
-				create(freeChartSpot(pv.row, pv.col + head.length + 1).row, pv.col + head.length + 1, { source: name, kind, x, series, title: defaultChartTitle(series) }).then(
-					() => {
-						say(tr('grid.chart.pivotInserted', { name }));
-						selectNewChart(before);
-					},
-					(err) => say(errorText(err))
-				)
-			);
-			return;
-		}
-		const e = targetTable();
-		if (!e || !source.createChart) {
-			say(tr('grid.chart.placeActive'));
-			return;
-		}
-		const cols = e.t.columns;
-		const num = (c: Column) => c.type === 'integer' || c.type === 'decimal' || (c.type === 'formula' && c.formula !== undefined);
-		// Plusieurs colonnes du tableau sélectionnées : elles fixent X et les séries (comme Excel).
-		const { c0, c1 } = selection();
-		const picked: number[] = [];
-		for (let c = Math.max(c0, e.t.col); c <= Math.min(c1, e.lastCol); c++) picked.push(c - e.t.col);
-		const { x: xName, series } = chartFieldsFrom(kind, cols.map((c) => ({ name: c.name, numeric: num(c) })), picked, targetCol(e));
-		const x = cols.find((c) => c.name === xName) ?? cols[0];
-		if (kind === 'map') {
-			// Carte : un carré grisé, en attente de ses coordonnées ; le volet
-			// s'ouvre avec les colonnes repérées par le classeur.
-			const create = source.createChart;
-			const before = new Set(charts.map((c) => c.id));
-			const side = CHART_H + 32;
-			const at = freeChartSpot(e.t.row, e.lastCol + 2, side, side);
-			writing = writing.catch(() => undefined).then(() =>
-				create(at.row, e.lastCol + 2, { source: e.t.name, kind, x: '', series: [], mapDraft: true, width: side, height: side }).then(
-					() => {
-						say(tr('grid.chart.mapInserted'));
-						const ch = selectNewChart(before);
-						if (ch) panel = { kind: 'chart', id: ch.id };
-					},
-					(err) => say(errorText(err))
-				)
-			);
-			return;
-		}
-		if (!series.length) {
-			say(tr('grid.chart.noNumbers'));
-			return;
-		}
-		const create = source.createChart;
-		const before = new Set(charts.map((c) => c.id));
-		writing = writing.catch(() => undefined).then(() =>
-			create(freeChartSpot(e.t.row, e.lastCol + 2).row, e.lastCol + 2, { source: e.t.name, kind, x: x.name, series, title: defaultChartTitle(series) }).then(
-				() => {
-					say(tr('grid.chart.inserted'));
-					selectNewChart(before);
-				},
-				(err) => say(errorText(err))
-			)
-		);
-	}
-
-	function editChart(ch: SheetChart) {
-		if ((locked || structure) && !hold) return;
-		selectChart(ch);
-	}
-	async function removeChart(id: number) {
-		chartMenu = null;
-		if (selChart === id) selChart = null;
-		if (panel?.kind === 'chart' && panel.id === id) panel = null;
-		await source.deleteChart?.(id);
-		wrap.focus();
-	}
-
+	// Graphiques : sheet/charts.svelte.ts (accès de createCharts à la feuille).
+	const chartsCtl = createCharts({
+		get selChart() { return selChart; }, set selChart(v) { selChart = v; },
+		get panel() { return panel; }, set panel(v) { panel = v; },
+		get wrap() { return wrap; },
+		get source() { return source; },
+		get cax() { return cax; },
+		get rax() { return rax; },
+		get writing() { return writing; }, set writing(v) { writing = v; },
+		get rowTop() { return rowTop; },
+		get say() { return say; },
+		get entries() { return entries; },
+		get sources() { return sources; },
+		get CHART_W() { return CHART_W; },
+		get CHART_H() { return CHART_H; },
+		get locked() { return locked; },
+		get structure() { return structure; },
+		get zoomK() { return zoomK; },
+		get hold() { return hold; },
+		get closeMenus() { return closeMenus; },
+		get chartMenu() { return chartMenu; }, set chartMenu(v) { chartMenu = v; },
+		get chartClip() { return chartClip; }, set chartClip(v) { chartClip = v; },
+		get charts() { return charts; },
+		get updateExtent() { return updateExtent; },
+		get vs() { return vs; },
+		get fRows() { return fRows; },
+		get scroller() { return scroller; },
+		get viewW() { return viewW; },
+		get MARGIN() { return MARGIN; },
+		get fCols() { return fCols; },
+		get schedule() { return schedule; },
+		get syncNative() { return syncNative; },
+		get motion() { return motion; },
+		get colAxis() { return colAxis; },
+		get rowAxis() { return rowAxis; },
+		get onrowlink() { return onrowlink; },
+		get active() { return active; },
+		get pivotAt() { return pivotAt; },
+		get targetTable() { return targetTable; },
+		get selection() { return selection; },
+		get targetCol() { return targetCol; }
+	});
+	const { selectChart, nudgeChart, sourceColumns, chartBox, buttonBox, startChartGesture, onChartMenu, copyChart, copyChartImage, setMapView, pointToRow, pasteChart, editChart, removeChart } = chartsCtl;
+	export const chartActive = chartsCtl.chartActive;
 
 	// --- Tableau croisé dynamique ---------------------------------------------
 
