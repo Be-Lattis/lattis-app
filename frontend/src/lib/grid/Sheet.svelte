@@ -34,9 +34,8 @@
 	import { dvPreview, hiddenLines, mergeAt, mergeList, validate, type DvList, type MergeRange } from './sheetfmt';
 	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvRule, hasBounds, twoBounds, type DvAlert, type DvForm } from './dvrule';
 	import { expandRange, intersect, isSingleCell, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
-	import { findZone, inZone, zoneLabel, type Zone } from './findzone';
+	import { findZone, inZone, type Zone } from './findzone';
 	import { type FindOpts, type FoundCell } from './findopts';
-	import FindMore from './FindMore.svelte';
 	import { blocksReach, boxesReach } from './objextent';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import TextToColumns from './TextToColumns.svelte';
@@ -127,7 +126,7 @@
 	import { createFormula } from './sheet/formula.svelte.js';
 	import { createMeasure } from './sheet/measure.svelte.js';
 	import { createCondFormat } from './sheet/condformat.svelte.js';
-
+	import FindBar, { type FindBarView } from './sheet/FindBar.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -281,7 +280,6 @@
 
 	// --- Tableaux posés sur la feuille ------------------------------------
 
-
 	let entries: Entry[] = [];
 	let cells = new Map<string, string>();
 	let names = new Map<string, string>(); // position → nom
@@ -349,7 +347,6 @@
 	export const rulesMenu = cfCtl.rulesMenu;
 	export const rulesActive = cfCtl.rulesActive;
 	export const rulesTarget = cfCtl.rulesTarget;
-
 
 	const noMark = () => false;
 	/** Règle « formule » d'une cellule libre vérifiée (calculée par le classeur). */
@@ -657,7 +654,6 @@
 		get updateExtent() { return updateExtent; }
 	});
 	const { textWidth, cellWidth, headerWidth, rebuildAxis, measureHeights, measureHeader, measureBand, fitVisibleRows } = measureCtl;
-
 
 	// Format de cellule : fusions, lignes et colonnes masquées (voir sheetfmt.ts)
 	// et hauteurs automatiques (renvoyer à la ligne, grande police).
@@ -5985,6 +5981,23 @@
 		}
 		wrap?.focus();
 	}
+	// Barre Rechercher / remplacer : sheet/FindBar.svelte.
+	const findView: FindBarView = {
+		get closeFinder() { return closeFinder; },
+		get findChanged() { return findChanged; },
+		get findInput() { return findInput; }, set findInput(v) { findInput = v; },
+		get findNext() { return findNext; },
+		get finder() { return finder; },
+		get goFound() { return goFound; },
+		get listAll() { return listAll; },
+		get onFinderKey() { return onFinderKey; },
+		get replaceAll() { return replaceAll; },
+		get replaceInput() { return replaceInput; }, set replaceInput(v) { replaceInput = v; },
+		get replaceOne() { return replaceOne; },
+		get searchZone() { return searchZone; },
+		get source() { return source; },
+		get toggleReplace() { return toggleReplace; }
+	};
 </script>
 
 {#snippet linesSub(kind: 'rows' | 'cols', x: number, y: number)}
@@ -6501,110 +6514,7 @@
 				</div>
 			{/if}
 		</div>
-		{#if finder}
-			<!-- Entrée, F3, Échap, Ctrl+F et Ctrl+H dans toute la barre (onFinderKey) ;
-			     les boutons d'icône gardent le focus dans le champ (mousedown). -->
-			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-			<div class="finder" class:wide={!!finder.list || finder.more} role="search" aria-label={tr('grid.find.aria')} onkeydown={onFinderKey}>
-				<div class="fd-row">
-					{#if source.replace || source.replaceAll}
-						<button
-							class="fd-icon fd-toggle"
-							class:open={finder.replace}
-							onclick={() => toggleReplace()}
-							aria-expanded={finder.replace}
-							aria-controls="fd-replace"
-							aria-label={finder.replace ? tr('grid.find.replace.hide') : tr('grid.find.replace.show')}
-							title={finder.replace ? tr('grid.find.replace.hide') : tr('grid.find.replace.tooltip')}
-						><Icon name="chevron-down" size={14} /></button>
-					{/if}
-					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-					<div class="fd-field" class:miss={finder.count === tr('grid.find.none')} onclick={() => findInput?.focus()}>
-						<Icon name="search" size={14} />
-						<input
-							bind:this={findInput}
-							bind:value={finder.text}
-							oninput={findChanged}
-							placeholder={tr('grid.find.placeholder')}
-							title={source.search ? tr('grid.find.placeholder.tooltip') : undefined}
-							aria-label={tr('grid.find.placeholder')}
-							aria-describedby="fd-count"
-							spellcheck="false"
-							autocomplete="off"
-						/>
-						<span id="fd-count" class="fd-count" aria-live="polite">{finder.count}</span>
-					</div>
-					<button class="fd-icon fd-up" onmousedown={(e) => e.preventDefault()} onclick={() => findNext(true)} disabled={!finder.text} aria-label={tr('grid.find.prev')} title={tr('grid.find.prev.tooltip')}
-						><Icon name="chevron-down" size={16} /></button
-					>
-					<button class="fd-icon" onmousedown={(e) => e.preventDefault()} onclick={() => findNext()} disabled={!finder.text} aria-label={tr('grid.find.next')} title={tr('grid.find.next.tooltip')}
-						><Icon name="chevron-down" size={16} /></button
-					>
-					<button class="fd-icon fd-close" onclick={closeFinder} aria-label={tr('grid.find.close')} title={tr('grid.find.close.tooltip')}><Icon name="win-close" size={14} /></button>
-				</div>
-				{#if finder.replace}
-					<div class="fd-row fd-indent" id="fd-replace">
-						<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-						<div class="fd-field" onclick={() => replaceInput?.focus()}>
-							<Icon name="replace" size={14} />
-							<input bind:this={replaceInput} bind:value={finder.by} placeholder={tr('grid.find.replaceBy')} aria-label={tr('grid.find.replaceBy')} spellcheck="false" autocomplete="off" />
-						</div>
-					</div>
-				{/if}
-				<div class="fd-row fd-foot" class:fd-indent={!!(source.replace || source.replaceAll)}>
-					{#if finder.opts.book}
-						<span class="fd-chip on" aria-label={tr('grid.find.zone', { zone: tr('grid.find.zone.book') })}>
-							<Icon name="sheet" size={13} />
-							<span>{tr('grid.find.zone', { zone: tr('grid.find.zone.book') })}</span>
-						</span>
-					{:else}
-						<span
-							class="fd-chip"
-							class:on={!!finder.zone}
-							title={finder.zone
-								? tr('grid.find.zone.selection.tooltip')
-								: tr('grid.find.zone.sheet.tooltip')}
-							aria-label={finder.zone ? tr('grid.find.zone.selection.aria', { range: zoneLabel(finder.zone) }) : tr('grid.find.zone.sheet.aria')}
-						>
-							<Icon name={finder.zone ? 'print-area' : 'sheet'} size={13} />
-							<span>{tr('grid.find.zone', { zone: finder.zone ? zoneLabel(finder.zone) : tr('grid.find.zone.sheet') })}</span>
-						</span>
-					{/if}
-					{#if source.search}
-						<button class="fd-link" class:open={finder.more} onclick={() => finder && (finder.more = !finder.more)} aria-expanded={finder.more} title={tr('grid.find.options.tooltip')}
-							>{tr('grid.find.options')} {finder.more ? '<<' : '>>'}</button
-						>
-					{/if}
-					<span class="fd-spacer"></span>
-					{#if source.search && !finder.replace}
-						<button class="fd-btn" onclick={listAll} disabled={!finder.text} title={tr('grid.find.findAll.tooltip')}>{tr('grid.find.findAll')}</button>
-					{/if}
-					{#if finder.replace}
-						<button class="fd-btn" onclick={replaceOne} disabled={!finder.text} title={tr('grid.find.replaceOne.tooltip')}>{tr('grid.find.replaceOne')}</button>
-						<button class="fd-btn primary" onclick={replaceAll} disabled={!finder.text} title={tr('grid.find.replaceAll.tooltip')}>{tr('grid.find.replaceAll')}</button>
-					{/if}
-				</div>
-				{#if source.search}
-					<FindMore
-						bind:opts={finder.opts}
-						more={finder.more}
-						replace={finder.replace}
-						hits={finder.list}
-						total={finder.total}
-						busy={finder.busy}
-						current={finder.current}
-						onchange={findChanged}
-						onpick={(i) => {
-							if (finder) finder.current = i;
-							goFound(i, searchZone());
-						}}
-					/>
-				{/if}
-				{#if finder.info}
-					<div class="fd-info" class:fd-indent={!!(source.replace || source.replaceAll)} role="status">{finder.info}</div>
-				{/if}
-			</div>
-		{/if}
+		<FindBar v={findView} />
 		{#if menu}
 			{@const m = menu}
 			{@const col = m.e.t.columns[m.i]}
@@ -8116,211 +8026,10 @@
 		font-size: 12px;
 		color: #1f2937;
 	}
-	.fd-row {
-		display: flex;
-		align-items: center;
-		gap: 2px;
-		min-width: 0;
-	}
 	/* Sous le champ Rechercher, alignés sur lui (après la flèche Remplacer). */
-	.fd-indent {
-		padding-left: 26px;
-	}
-	.fd-field {
-		flex: 1;
-		min-width: 0;
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		height: 26px;
-		box-sizing: border-box;
-		padding: 0 7px;
-		margin-right: 4px;
-		border: 1px solid #c9cdd2;
-		border-radius: 4px;
-		background: #fff;
-		color: #6b7280;
-		cursor: text;
-	}
-	.fd-field:hover {
-		border-color: #a8aeb5;
-	}
-	.fd-field:focus-within {
-		border-color: #217346;
-		box-shadow: 0 0 0 2px rgba(33, 115, 70, 0.18);
-		color: #217346;
-	}
-	.fd-field.miss {
-		border-color: #dc2626;
-		background: #fef6f6;
-	}
-	.fd-field.miss:focus-within {
-		box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
-	}
-	.fd-field input {
-		flex: 1;
-		min-width: 0;
-		font: inherit;
-		font-size: 13px;
-		color: #111827;
-		border: none;
-		outline: none;
-		padding: 0;
-		background: transparent;
-	}
-	.fd-field input::placeholder {
-		color: #9ca3af;
-	}
-	.fd-count {
-		flex: none;
-		color: #6b7280;
-		font-size: 11px;
-		font-variant-numeric: tabular-nums;
-		white-space: nowrap;
-	}
-	.fd-field.miss .fd-count {
-		color: #b91c1c;
-	}
 	/* Boutons d'icône sans cadre, comme ceux des volets. */
-	.fd-icon {
-		flex: none;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		padding: 0;
-		border: 1px solid transparent;
-		border-radius: 4px;
-		background: none;
-		color: #4b5563;
-		cursor: pointer;
-	}
-	.fd-icon:hover:not(:disabled) {
-		background: #eef6f0;
-		color: #217346;
-	}
-	.fd-icon:active:not(:disabled) {
-		background: #d3e7dc;
-	}
-	.fd-icon:disabled {
-		opacity: 0.4;
-		cursor: default;
-	}
-	.fd-icon:focus-visible,
-	.fd-btn:focus-visible {
-		outline: 2px solid #217346;
-		outline-offset: 1px;
-	}
-	.fd-up :global(svg) {
-		transform: rotate(180deg);
-	}
-	.fd-toggle {
-		margin-right: 2px;
-	}
-	.fd-toggle :global(svg) {
-		transform: rotate(-90deg);
-		transition: transform 0.12s ease;
-	}
-	.fd-toggle.open :global(svg) {
-		transform: none;
-	}
-	.fd-close {
-		margin-left: 2px;
-	}
-	.fd-close:hover:not(:disabled) {
-		background: #f3f4f6;
-		color: #111827;
-	}
-	.fd-foot {
-		gap: 6px;
-		min-height: 24px;
-	}
-	.fd-spacer {
-		flex: 1;
-	}
 	/* Portée : la feuille, ou la sélection qui borne la recherche (verte). */
-	.fd-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		min-width: 0;
-		height: 20px;
-		padding: 0 8px 0 6px;
-		border-radius: 10px;
-		background: #f3f4f6;
-		color: #4b5563;
-		font-size: 11px;
-		white-space: nowrap;
-		cursor: default;
-	}
-	.fd-chip span {
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.fd-chip.on {
-		background: #e3efe7;
-		color: #14532d;
-		--icon-accent: #217346;
-	}
-	.fd-btn {
-		flex: none;
-		font: inherit;
-		height: 24px;
-		padding: 0 10px;
-		border: 1px solid #c4c8cc;
-		border-radius: 3px;
-		background: #fff;
-		color: inherit;
-		cursor: pointer;
-		white-space: nowrap;
-	}
-	.fd-btn:hover:not(:disabled) {
-		border-color: #217346;
-		background: #eef6f0;
-	}
-	.fd-btn.primary {
-		background: #217346;
-		border-color: #217346;
-		color: #fff;
-	}
-	.fd-btn.primary:hover:not(:disabled) {
-		background: #1a5c38;
-		border-color: #1a5c38;
-	}
-	.fd-btn:disabled {
-		opacity: 0.55;
-		cursor: default;
-	}
-	.finder.wide {
-		width: 460px;
-	}
 	/* « Options >> » : un lien discret, comme dans le dialogue d'un tableur. */
-	.fd-link {
-		flex: none;
-		font: inherit;
-		font-size: 11px;
-		height: 20px;
-		padding: 0 4px;
-		border: none;
-		border-radius: 3px;
-		background: none;
-		color: #217346;
-		cursor: pointer;
-		white-space: nowrap;
-	}
-	.fd-link:hover {
-		background: #eef6f0;
-	}
-	.fd-link:focus-visible {
-		outline: 2px solid #217346;
-		outline-offset: 1px;
-	}
-	.fd-info {
-		color: #4b5563;
-		font-size: 11px;
-		line-height: 1.35;
-	}
 	.bench {
 		padding: 4px 10px;
 		background: #eef6f1;
