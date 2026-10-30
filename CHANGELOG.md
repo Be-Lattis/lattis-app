@@ -21,6 +21,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 - Fichier `.xlsx` relu : formules en adresses (B2, Feuille2!B2:C5), références structurées (Ventes[Prix], [@Prix]), noms définis, SIERREUR et TEXTE sont gardés au lieu d'être remplacés par leur valeur ; une plage ordinaire reste une plage, un tableau garde son style, une date courte reste une date courte.
 
+- Colonnes calculées qui comparent chaque ligne aux autres (SOMME.SI(T[Qté];">"&[@Qté];…), NB.SI.ENS avec « < » ou « >= » sur une date, cumul par client) : calculées en une fraction de seconde même sur un grand tableau, au lieu de plusieurs minutes.
 - Assistant IA décoché dans Fichier › Paramètres › Fonctionnalités : son bouton du ruban, Alt+I, son volet et « Rédiger avec l’assistant » disparaissent ; le recocher les rend aussitôt.
 - Fichier › Paramètres : un réglage défini par votre organisation (stratégie, variables LATTIS_*, Registre) est grisé avec un cadenas, ne peut être changé par aucun autre moyen, et « Réinitialiser » le garde.
 - Assistant IA : il répond dans la langue de l'interface et écrit les formules comme votre grille (noms des fonctions, `;` ou `,`, virgule ou point décimal).

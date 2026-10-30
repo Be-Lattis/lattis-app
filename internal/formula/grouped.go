@@ -65,6 +65,12 @@ type grouped struct {
 	tmpl   *cond // critères constants, colonnes, agrégat
 	rowDep []int // indices des critères qui dépendent de la ligne
 	groups map[string]*cond
+
+	// cmp : indice du critère de comparaison (">"&[@Qté]) parmi rowDep, ou
+	// -1 ; ranked range alors les lignes de chaque combinaison des autres
+	// clés par la valeur que ce critère compare (voir compared.go).
+	cmp    int
+	ranked map[string]*rankedGroup
 }
 
 // tupleKey joint des clés (préfixées de leur longueur).
@@ -85,7 +91,10 @@ func (g *grouped) add(cols []Value) {
 	}
 	// Toutes les combinaisons de clés (une valeur peut en avoir deux).
 	combos := [][]string{nil}
-	for _, i := range g.rowDep {
+	for j, i := range g.rowDep {
+		if j == g.cmp {
+			continue
+		}
 		keys := cellKeys(cols[t.cols[i]])
 		var next [][]string
 		for _, c := range combos {
@@ -94,6 +103,10 @@ func (g *grouped) add(cols []Value) {
 			}
 		}
 		combos = next
+	}
+	if g.cmp >= 0 {
+		g.addRanked(combos, cols)
+		return
 	}
 	for _, c := range combos {
 		k := tupleKey(c)
@@ -121,8 +134,18 @@ func (c *cond) addValue(cols []Value) {
 // lookup donne le résultat pour les critères d'une ligne, ou false si l'un
 // d'eux n'est pas une égalité simple.
 func (g *grouped) lookup(crits []Value) (Value, bool) {
+	// Un critère constant en erreur : le résultat est cette erreur, comme
+	// par le parcours complet (cond.result).
+	for i, cr := range g.tmpl.crits {
+		if !isIn(i, g.rowDep) && cr.err.IsErr() {
+			return cr.err, true
+		}
+	}
 	combos := [][]string{nil}
-	for _, v := range crits {
+	for j, v := range crits {
+		if j == g.cmp {
+			continue
+		}
 		k, ok := critKey(v)
 		if !ok {
 			return Value{}, false
@@ -138,6 +161,9 @@ func (g *grouped) lookup(crits []Value) (Value, bool) {
 			}
 		}
 		combos = next
+	}
+	if g.cmp >= 0 {
+		return g.lookupRanked(combos, crits[g.cmp])
 	}
 	out := &cond{value: g.tmpl.value, agg: newAgg(g.tmpl.agg.Fn, g.tmpl.agg.rule)}
 	for _, c := range combos {
@@ -214,6 +240,16 @@ func (c *compiler) grouped(s scanCall, t *Table, sc scope) (string, bool) {
 	if len(rowDep) == 0 || len(rowDep) > 3 {
 		return "", false
 	}
+	// Au plus un critère de comparaison (">"&[@Qté]) parmi eux.
+	cmpAt := -1
+	for j, i := range rowDep {
+		if comparison(s.params[i]) {
+			if cmpAt >= 0 {
+				return "", false
+			}
+			cmpAt = j
+		}
+	}
 	// Le parcours, sans dépendance à la ligne : les critères qui en dépendent
 	// sont remplacés par NULL et désignés dans spec.
 	sub := c.sub()
@@ -223,6 +259,9 @@ func (c *compiler) grouped(s scanCall, t *Table, sc scope) (string, bool) {
 		spec[i] = 'c'
 		if isIn(i, rowDep) {
 			spec[i] = 'r'
+			if cmpAt >= 0 && rowDep[cmpAt] == i {
+				spec[i] = 'x'
+			}
 			head = append(head, "NULL")
 			continue
 		}
@@ -248,10 +287,16 @@ func (c *compiler) grouped(s scanCall, t *Table, sc scope) (string, bool) {
 
 // groupAggFn construit le parcours (slt_group) : nom, spec, nparams,
 // paramètres…, colonnes….
-type groupAggFn struct{ g *grouped }
+type groupAggFn struct {
+	g    *grouped
+	none bool // pas de totaux possibles : chaque ligne parcourt le tableau
+}
 
 func (a *groupAggFn) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	np := arg[2].Int()
+	if a.none {
+		return
+	}
 	if a.g == nil {
 		name, rule := splitKey(arg[0].Text())
 		def, ok := scans[name]
@@ -264,9 +309,17 @@ func (a *groupAggFn) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		if !ok {
 			return
 		}
-		a.g = &grouped{tmpl: tmpl, groups: map[string]*cond{}}
+		a.g = &grouped{tmpl: tmpl, groups: map[string]*cond{}, cmp: -1}
 		for i := range spec {
-			if spec[i] == 'r' {
+			if spec[i] == 'x' {
+				if !rankable(tmpl) {
+					a.g, a.none = nil, true // agrégat que les cumuls ne savent pas combiner
+					return
+				}
+				a.g.cmp = len(a.g.rowDep)
+				a.g.ranked = map[string]*rankedGroup{}
+			}
+			if spec[i] == 'r' || spec[i] == 'x' {
 				a.g.rowDep = append(a.g.rowDep, i)
 			}
 		}
@@ -280,6 +333,7 @@ func (a *groupAggFn) Value(ctx sqlite3.Context) {
 		ctx.ResultNull()
 		return
 	}
+	a.g.finish()
 	ctx.ResultInt64(register(a.g))
 }
 
