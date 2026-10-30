@@ -49,7 +49,7 @@
 	import SparklineDialog from './SparklineDialog.svelte';
 	import { a1 as sparkA1, defaultLocation, drawSparkline, freeSparkAt, sparkGeometry, sparkSvg, sparkValue, type SparkKind, type SparklineConfig, type SparklineGroup } from './sparkline';
 	import { autoLink, isLinkClick, linkKind, onLinkText, openLink } from './hyperlink';
-	import { withoutField, type CustomOrder } from './customsort';
+	import { type CustomOrder } from './customsort';
 	import { handQuestion, keyQuestion, type KeyChoice, type KeyQuestion } from './keychoice';
 	import { dismiss, dismissPanel } from './dismiss';
 	import { explainError } from './errors';
@@ -74,7 +74,7 @@
 	import { gridPalette } from './theme';
 	import { paint as themed } from './colors';
 	import { tableTheme } from './theme.svelte.js';
-	import { condArgs, condLabel, condOps, describeConds, filterKind, kindTitle, searchValues, valuesFilter, type CondOp, type PanelValue } from './filtercond';
+	import { condArgs, condLabel, condOps, describeConds, filterKind, kindTitle, searchValues, type CondOp, type PanelValue } from './filtercond';
 	import { cellLines, copyFillBlock, copyFillPlan, fillBlock, insertAt, readKey, shortcutOf, timeText, todayText } from './shortcuts';
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
@@ -130,11 +130,12 @@
 		type ColumnType
 	} from './format';
 	import { errorText, fnName, lower, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
-	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type ColumnFilter, type PageBreaksView, type SheetTable, type SheetData, type LinesOp, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer } from './sheet/model';
+	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type LinesOp, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, GUTTER_PAD, GUTTER_MAX, GUTTER_KEY_MAX, FONT, FONT_BOLD, FONT_SMALL, FONT_TINY } from './sheet/consts';
 	import { createFind } from './sheet/find.svelte.js';
 	import { createScrolling } from './sheet/scrolling.svelte.js';
 	import { createCharts } from './sheet/charts.svelte.js';
+	import { createFilters } from './sheet/filters.svelte.js';
 
 
 	interface Props {
@@ -5595,81 +5596,6 @@
 		loading: boolean;
 		search: string;
 	} | null>(null);
-
-	/** Le clic tombe-t-il sur un ▾ de TCD ? Ouvre alors son menu. */
-	function openPivotMenu(ev: MouseEvent, cell: { row: number; col: number }): boolean {
-		const p = pivotAt(cell.row, cell.col);
-		if (!p || !source.setPivot) return false;
-		const near = screenX(cell.col) + cax().size(cell.col) - toLocal(ev).x <= PIVOT_DROP + 2;
-		if (!near) return false;
-		const a = p.anchor ?? p.row;
-		const filters = p.config.filters ?? [];
-		let field: string | undefined;
-		let kind: 'filter' | 'rows' = 'filter';
-		if (cell.row - a < filters.length && cell.col === p.col + 1) field = filters[cell.row - a].field;
-		else if (cell.row === p.row && cell.col - p.col < (p.rows ? Math.min(1, p.config.rowFields?.length ?? 0) : (p.config.rowFields?.length ?? 0))) {
-			field = p.config.rowFields![cell.col - p.col];
-			kind = 'rows';
-		}
-		if (field === undefined) return false;
-		moveTo(cell.row, cell.col);
-		closeMenus();
-		pivotDlg = {
-			p,
-			field,
-			kind,
-			// Arborescence : un seul ▾ pour tous les champs des lignes (« Sélectionner un champ », Excel).
-			fields: kind === 'rows' && p.rows ? [...(p.config.rowFields ?? [])] : undefined,
-			x: Math.max(4, Math.min(toView(screenX(cell.col)), toView(scroller.clientWidth) - 280)),
-			y: toView(screenY(cell.row) + rh(cell.row)),
-			values: [],
-			loading: !!source.pivotFieldValues,
-			search: ''
-		};
-		loadPivotValues();
-		return true;
-	}
-
-	/** Charge les valeurs du champ du menu ▾ ouvert (cochées : celles gardées). */
-	function loadPivotValues() {
-		const d = pivotDlg;
-		if (!d) return;
-		const { p, field, kind } = d;
-		const kept = (kind === 'filter' ? (p.config.filters ?? []) : (p.config.items ?? [])).find((x) => x.field === field)?.values ?? [];
-		const keep = kept.length ? new Set(kept) : null;
-		d.values = [];
-		d.loading = !!source.pivotFieldValues;
-		const mine = () => pivotDlg?.p.id === p.id && pivotDlg.field === field;
-		pivotValuesOf(p.config, field).then(
-			(vals) => {
-				if (!mine()) return;
-				pivotDlg!.values = vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) }));
-				pivotDlg!.loading = false;
-			},
-			(err) => {
-				if (mine()) pivotDlg!.loading = false;
-				say(errorText(err));
-			}
-		);
-	}
-
-	/** Enregistre la configuration du TCD du menu ▾ (annulable comme un changement du volet). */
-	function savePivot(cfg: PivotConfig) {
-		const d = pivotDlg;
-		pivotDlg = null;
-		if (!d || !source.setPivot) return;
-		const set = source.setPivot;
-		menuAction(() => set(d.p.id, cfg));
-	}
-
-	function sortPivot(dir: 'asc' | 'desc') {
-		const d = pivotDlg;
-		if (!d) return;
-		const cfg: PivotConfig = { ...d.p.config, sort: { ...d.p.config.sort, [d.field]: dir }, orders: withoutField(d.p.config.orders, d.field) };
-		if (!cfg.orders) delete cfg.orders;
-		savePivot(cfg);
-	}
-
 	// --- Tri personnalisé… ------------------------------------------------------
 
 	/** Dialogue « Tri personnalisé » ouvert : champ, valeurs, ordre enregistré et application. */
@@ -5679,79 +5605,6 @@
 		loadOrder?: () => Promise<CustomOrder | null>;
 		apply: (o: CustomOrder) => void;
 	} | null>(null);
-
-	/** Tri personnalisé… d'une colonne de tableau (menus ▾ et clic droit, ruban Données). */
-	function openCustomSort(e: Entry, i: number) {
-		const run = source.sortTableCustom;
-		if (!run) return;
-		const t = e.t;
-		menu = null;
-		filterDlg = null;
-		customDlg = {
-			field: t.columns[i]?.name ?? '',
-			loadValues: async () => ((await source.filterValues?.(t, i)) ?? []).map((v) => v.text),
-			loadOrder: source.columnOrder ? () => source.columnOrder!(t, i) : undefined,
-			apply: (o) => {
-				menuAction(() => run(t, i, o)).then((ok) => ok && say(tr('grid.customSort.applied')));
-			}
-		};
-	}
-
-	/** Tri personnalisé… du champ du menu ▾ d'un TCD : enregistré dans sa configuration. */
-	function openPivotCustomSort() {
-		const d = pivotDlg;
-		if (!d || !source.setPivot) return;
-		const { p, field } = d;
-		const set = source.setPivot;
-		pivotDlg = null;
-		customDlg = {
-			field,
-			loadValues: async () => (await pivotValuesOf(p.config, field)).map((v) => v.text),
-			loadOrder: async () => p.config.orders?.[field] ?? null,
-			apply: (o) => {
-				const cfg: PivotConfig = { ...p.config, orders: { ...p.config.orders, [field]: o }, sort: withoutField(p.config.sort, field) };
-				if (!cfg.sort) delete cfg.sort;
-				menuAction(() => set(p.id, cfg));
-			}
-		};
-	}
-
-	/** Tri personnalisé de la colonne active (ruban : Trier et filtrer). */
-	export function sortCustomActive() {
-		const e = targetTable();
-		if (!e || !source.sortTableCustom) {
-			say(tr('grid.sort.placeActive'));
-			return;
-		}
-		openCustomSort(e, targetCol(e));
-	}
-
-	/** OK : valeurs cochées gardées (toutes : plus de filtre) ; clear : efface le filtre et le tri du champ. */
-	function applyPivotFilter(clear = false) {
-		const d = pivotDlg;
-		if (!d) return;
-		const on = d.values.filter((v) => v.on).map((v) => v.text);
-		if (!clear && !on.length) {
-			say(tr('grid.filter.chooseOne'));
-			return;
-		}
-		const values = clear || on.length === d.values.length ? [] : on;
-		const cfg = { ...d.p.config };
-		if (d.kind === 'filter') {
-			cfg.filters = (cfg.filters ?? []).map((f) => (f.field === d.field ? { field: f.field, values } : f));
-		} else {
-			const rest = (cfg.items ?? []).filter((x) => x.field !== d.field);
-			cfg.items = values.length ? [...rest, { field: d.field, values }] : rest;
-			if (!cfg.items.length) delete cfg.items;
-			if (clear && cfg.sort) {
-				const { [d.field]: _, ...sort } = cfg.sort;
-				cfg.sort = Object.keys(sort).length ? sort : undefined;
-			}
-			if (clear && cfg.orders) cfg.orders = withoutField(cfg.orders, d.field);
-		}
-		savePivot(cfg);
-	}
-
 	// --- Filtre -----------------------------------------------------------------
 
 	let filterDlg = $state<{
@@ -5775,179 +5628,42 @@
 		keyWhy?: string | null;
 		mix?: TypeMix | null;
 	} | null>(null);
-
-	/** Position d'un panneau ancré sous l'en-tête de la colonne i du tableau e
-	 * (sous le bandeau quand l'en-tête est figé), gardé dans la grille (width :
-	 * largeur du panneau). */
-	function anchorUnder(e: Entry, i: number, width: number) {
-		// Hors du calque zoomé : en pixels de l'écran (toView).
-		const x = toView(screenX(e.t.col + i));
-		return {
-			x: Math.max(4, Math.min(x, toView(scroller.clientWidth) - width - 4)),
-			y: toView(clamp(screenY(e.t.row) + rh(e.t.row), TOP_H, Math.max(TOP_H, scroller.clientHeight - 200 / zoom)))
-		};
-	}
-
-	/** Met le focus sur le premier champ d'un panneau à son ouverture. */
-	function focusFirst(node: HTMLElement) {
-		requestAnimationFrame(() => (node.querySelector<HTMLElement>('.add input, .add textarea') ?? node.querySelector<HTMLElement>('.add button'))?.focus());
-	}
-
-	/**
-	 * Menu ▾ d'une colonne de tableau, comme celui d'Excel (le ▾ et l'icône de
-	 * type de l'en-tête, figé ou non, et le clic droit l'ouvrent) : tri,
-	 * filtres (conditions, recherche, liste à cocher, OK / Annuler), puis le
-	 * type de données et la clé du tableau.
-	 */
-	async function openFilter(e: Entry, i: number) {
-		closeMenus();
-		const f = e.t.columns[i]?.filter;
-		const keep = f?.values ? new Set(f.values) : null;
-		const lists = !!source.filterValues;
-		const checksKey = !!source.keyCheck && e.t.key !== i;
-		// Le menu s'ouvre tout de suite (tri, filtres, type) ; la liste des
-		// valeurs et le contrôle de la clé, longs sur un grand tableau,
-		// arrivent ensuite à la place de leur indicateur de chargement.
-		filterDlg = {
-			e,
-			i,
-			...anchorUnder(e, i, 310),
-			values: [],
-			loading: lists,
-			search: '',
-			errors: !!f?.errors,
-			error: '',
-			touched: false,
-			sub: false,
-			custom: null,
-			keyWhy: checksKey ? undefined : null
-		};
-		const mine = () => filterDlg !== null && filterDlg.e.t.id === e.t.id && filterDlg.i === i;
-		mixOf(e, i).then((mix) => mine() && (filterDlg!.mix = mix));
-		if (checksKey)
-			source.keyCheck!(e.t, i).then(
-				(why) => mine() && (filterDlg!.keyWhy = why),
-				() => mine() && (filterDlg!.keyWhy = null)
-			);
-		if (lists)
-			source.filterValues!(e.t, i).then(
-				(vals) => {
-					if (!mine()) return;
-					filterDlg!.values = vals.map((v) => ({ ...v, on: !keep || keep.has(v.text) }));
-					filterDlg!.loading = false;
-				},
-				(err) => {
-					if (mine()) filterDlg!.loading = false;
-					say(errorText(err));
-				}
-			);
-	}
-
-	/** Filtre de la colonne de la cellule active (ruban Données). */
-	export function filterActive(errorsOnly = false) {
-		const e = targetTable();
-		if (!e || !source.setFilter) {
-			say(tr('grid.filter.placeActive'));
-			return;
-		}
-		const i = targetCol(e);
-		if (errorsOnly) {
-			const f = e.t.columns[i]?.filter;
-			const set = source.setFilter;
-			const rest: ColumnFilter = { ...f };
-			delete rest.errors;
-			menuAction(() => set(e.t, i, f?.errors ? (rest.values || rest.conds?.length ? rest : null) : { ...f, errors: true }));
-			return;
-		}
-		openFilter(e, i);
-	}
-
-	/** Ctrl+Maj+L : efface les filtres du tableau actif, sinon ouvre celui de la colonne. */
-	function toggleFilters() {
-		const e = ownerAt(active.row, active.col);
-		if (e && source.clearFilters && e.t.columns.some((c) => c.filter)) {
-			const clear = source.clearFilters;
-			menuAction(() => clear(e.t));
-			return;
-		}
-		filterActive();
-	}
-
-	function filterShown() {
-		const d = filterDlg;
-		return d ? searchValues(d.values, d.search) : [];
-	}
-
-	/** Filtre personnalisé : première condition op (sous-menu), ou les conditions du filtre actif. */
-	function startCustom(op?: CondOp) {
-		const d = filterDlg;
-		if (!d) return;
-		d.sub = false;
-		d.error = '';
-		const cur = d.e.t.columns[d.i]?.filter;
-		if (op && condArgs(op) === 0) {
-			d.custom = { conds: [{ op, value: '', to: '' }], or: false };
-			applyFilter();
-			return;
-		}
-		const conds = op
-			? [{ op, value: op === 'top' || op === 'bottom' ? '10' : '', to: '' }]
-			: (cur?.conds ?? []).map((c) => ({ op: c.op as CondOp | '', value: c.value ?? '', to: c.to ?? '' }));
-		while (conds.length < 2) conds.push({ op: conds.length ? '' : 'eq', value: '', to: '' });
-		d.custom = { conds, or: !op && !!cur?.or };
-	}
-
-	async function applyFilter(clear = false) {
-		const d = filterDlg;
-		if (!d || !source.setFilter) return;
-		let f: ColumnFilter | null = null;
-		const cur = d.e.t.columns[d.i]?.filter;
-		if (clear) f = null;
-		else if (d.custom) {
-			const conds = d.custom.conds
-				.filter((c) => c.op && (condArgs(c.op) === 0 || c.value.trim() !== ''))
-				.map((c) => ({ op: c.op as CondOp, ...(condArgs(c.op as CondOp) ? { value: c.value } : {}), ...(condArgs(c.op as CondOp) === 2 ? { to: c.to } : {}) }));
-			if (!conds.length) {
-				d.error = tr('grid.filter.cond.missingValue');
-				return;
-			}
-			f = { conds };
-			if (d.custom.or && conds.length > 1) f.or = true;
-			if (d.errors) f.errors = true;
-		} else if (!d.touched && cur?.conds?.length) {
-			// Liste pas touchée : le filtre par condition reste.
-			f = { ...cur };
-			if (d.errors) f.errors = true;
-			else delete f.errors;
-		} else {
-			const r = valuesFilter(d.values, d.search, d.errors);
-			if (r.error) {
-				d.error = r.error;
-				return;
-			}
-			f = r.filter;
-		}
-		try {
-			await source.setFilter(d.e.t, d.i, f);
-			closeFilter();
-		} catch (err) {
-			d.error = errorText(err);
-		}
-	}
-
-	function closeFilter() {
-		filterDlg = null;
-		wrap.focus();
-	}
-
 	// Menu ▾ fermé par un clic ailleurs : si ce clic est sur le ▾ de la même
 	// colonne, il ne le rouvre pas (le ▾ ouvre et ferme son menu, comme Excel).
 	let filterClosed = { key: '', at: 0 };
-	function dismissFilter() {
-		const d = filterDlg;
-		if (d) filterClosed = { key: `${d.e.t.id}:${d.i}`, at: performance.now() };
-		filterDlg = null;
-	}
+	// Filtres et tri personnalisé : sheet/filters.svelte.ts (accès de createFilters à la feuille).
+	const filtersCtl = createFilters({
+		get pivotAt() { return pivotAt; },
+		get source() { return source; },
+		get screenX() { return screenX; },
+		get cax() { return cax; },
+		get toLocal() { return toLocal; },
+		get PIVOT_DROP() { return PIVOT_DROP; },
+		get moveTo() { return moveTo; },
+		get closeMenus() { return closeMenus; },
+		get pivotDlg() { return pivotDlg; }, set pivotDlg(v) { pivotDlg = v; },
+		get toView() { return toView; },
+		get scroller() { return scroller; },
+		get screenY() { return screenY; },
+		get rh() { return rh; },
+		get pivotValuesOf() { return pivotValuesOf; },
+		get say() { return say; },
+		get menuAction() { return menuAction; },
+		get menu() { return menu; }, set menu(v) { menu = v; },
+		get filterDlg() { return filterDlg; }, set filterDlg(v) { filterDlg = v; },
+		get customDlg() { return customDlg; }, set customDlg(v) { customDlg = v; },
+		get targetTable() { return targetTable; },
+		get targetCol() { return targetCol; },
+		get zoom() { return zoom; },
+		get mixOf() { return mixOf; },
+		get ownerAt() { return ownerAt; },
+		get active() { return active; },
+		get wrap() { return wrap; },
+		get filterClosed() { return filterClosed; }, set filterClosed(v) { filterClosed = v; }
+	});
+	const { openPivotMenu, loadPivotValues, sortPivot, openCustomSort, openPivotCustomSort, applyPivotFilter, focusFirst, openFilter, toggleFilters, filterShown, startCustom, applyFilter, closeFilter, dismissFilter } = filtersCtl;
+	export const sortCustomActive = filtersCtl.sortCustomActive;
+	export const filterActive = filtersCtl.filterActive;
 
 	// --- Mise en forme conditionnelle -----------------------------------------
 	// Menu du ruban, petites boîtes, nouvelle règle et gestionnaire des règles :
