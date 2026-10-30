@@ -17,11 +17,11 @@
 | `Sheet2!Cell[A1]` | 另一个工作表中的自由单元格 A1（如果名称包含空格，则写作 `'My sheet'!Cell[A1]`） |
 | `Cell[C14:C16]` | 一个自由单元格区域 |
 
-行序号遵循显示顺序：对表格排序会改变所指的行，与 Excel 相同。若要按键查找某一行，请使用 [REFERENCE](fonction:REFERENCE)。
+行序号遵循显示顺序：对表格排序会改变所指的行，与电子表格相同。若要按键查找某一行，请使用 [REFERENCE](fonction:REFERENCE)。
 
 在公式模式下，单击单元格会插入其引用；拖动则插入一个区域。从自由单元格出发，单击表格中的单元格会插入该单个值（`Report[TEST][2]`，按其行序号）；单击标题或拖过整列会插入整列（`Report[TEST]`）。
 
-## Excel 样式的地址 {#adresses-a-la-excel}
+## 单元格地址（C14、A1:B5） {#adresses-a-la-excel}
 
 出于习惯键入的地址（`=C14*2`、`=SUM(C14:C16)`、`$C$14`、`Sheet2!B3`）会在确认时自动转换：自由单元格转换为 `Cell[C14]`，表格中的单元格转换为 `Table[Column][k]`，`C14:C16` 转换为区域。
 
@@ -37,7 +37,7 @@
 
 ## 溢出的结果 {#resultats-qui-se-deversent}
 
-某些函数会返回多个值（[FILTER](fonction:FILTER)、[SORT](fonction:SORT)、[UNIQUE](fonction:UNIQUE)、[SEQUENCE](fonction:SEQUENCE)、[TEXTSPLIT](fonction:TEXTSPLIT)、[QUERY](fonction:QUERY) 等）：结果会溢出到相邻的单元格中，与 Excel 的动态数组相同。单独位于自由单元格中的整列（`=Sales[Price]`）也会以同样方式按表格的行顺序溢出。如果位置已被占用，公式会显示 `#SPILL!`。在聚合函数中，这些函数提供其值：`=COUNTA(TEXTSPLIT(Cell[A1], ","))` 计算文本被拆分的段数；而遍历列的函数（COUNTIF、LARGE、MATCH 等）不读取这些值（`#VALUE!`）。UNIQUE、SORT、TAKE 和 DROP 可读取一列（`=UNIQUE(NestTracking[Nest ID])`）、整个表格、单元格区域（`Cell[A1:A20]`）或另一个动态数组；FILTER 和 SORTBY 可读取表格或列。
+某些函数会返回多个值（[FILTER](fonction:FILTER)、[SORT](fonction:SORT)、[UNIQUE](fonction:UNIQUE)、[SEQUENCE](fonction:SEQUENCE)、[TEXTSPLIT](fonction:TEXTSPLIT)、[QUERY](fonction:QUERY) 等）：结果会溢出到相邻的单元格中，与电子表格的动态数组相同。单独位于自由单元格中的整列（`=Sales[Price]`）也会以同样方式按表格的行顺序溢出。如果位置已被占用，公式会显示 `#SPILL!`。在聚合函数中，这些函数提供其值：`=COUNTA(TEXTSPLIT(Cell[A1], ","))` 计算文本被拆分的段数；而遍历列的函数（COUNTIF、LARGE、MATCH 等）不读取这些值（`#VALUE!`）。UNIQUE、SORT、TAKE 和 DROP 可读取一列（`=UNIQUE(NestTracking[Nest ID])`）、整个表格、单元格区域（`Cell[A1:A20]`）或另一个动态数组；FILTER 和 SORTBY 可读取表格或列。
 
 `=TEXTSPLIT("Name=Smith;City=Paris", "=", ";")` 先将文本按行拆分（在 `;` 处），再按列拆分（在 `=` 处）；较短的行用 `#N/A` 或最后一个参数补齐。要溢出，文本不能依赖于表格的某一行：应为单元格，或 `Sales[Notes][2]` 这样的值。
 
@@ -56,7 +56,7 @@
 
 在文本列中，需要数字的函数（[SUM](fonction:SUM)、[AVERAGE](fonction:AVERAGE)、[MIN](fonction:MIN)、[MAX](fonction:MAX)、[SUMIF](fonction:SUMIF)、[SUMPRODUCT](fonction:SUMPRODUCT)、统计函数等）会将每个文本读取为它所表示的数字：“12”、“1,234.5”、“$12”、“15%”（0.15）、“(12)”（−12），以及其他地区的写法“1.234,56”或“1'234.5”。**不是数字的文本按 0 计算**：“12”和“abc”的平均值为 6。空单元格仍然被忽略。[COUNT](fonction:COUNT) 只计算是数字的文本：`=COUNTA(Sales[Score]) - COUNT(Sales[Score])` 给出不是数字的文本个数。
 
-Excel 的情况不同，它会忽略这些文本。自由单元格区域（`Cell[A1:A10]`）遵循 Excel 的规则：其中的文本被视为标签而忽略。在直接计算中（`=[Score]*2`），不是数字的文本会得到 `#VALUE!`。
+电子表格会忽略这些文本。自由单元格区域（`Cell[A1:A10]`）遵循这一规则：其中的文本被视为标签而忽略。在直接计算中（`=[Score]*2`），不是数字的文本会得到 `#VALUE!`。
 
 ## 中间名称 {#noms-intermediaires}
 
@@ -78,7 +78,7 @@ Excel 的情况不同，它会忽略这些文本。自由单元格区域（`Cell
 
 统计函数可读取整列、区域或基于表格各列的表达式；其中的布尔值和空值被忽略，文本按上文所述方式读取：[STDEV.S](fonction:STDEV.S)、[VAR](fonction:VAR)、[MODE](fonction:MODE)、[PERCENTILE](fonction:PERCENTILE)、[QUARTILE](fonction:QUARTILE)、[CORREL](fonction:CORREL)、[SLOPE](fonction:SLOPE) 等：`=QUARTILE(Sales[Amount], 3)`。
 
-财务函数遵循 Excel 的约定：支出的金额为负数，利率为每期利率。一笔 200,000 元、期限 20 年、年利率 4% 的贷款，其月还款额写作 `=PMT(4%/12, 20*12, 200000)`（−1,211.96）。另请参阅 [PV](fonction:PV)、[FV](fonction:FV)、[NPER](fonction:NPER)、[RATE](fonction:RATE)、[IPMT](fonction:IPMT) 和 [PPMT](fonction:PPMT)，用于制作分期还款表。[NPV](fonction:NPV) 和 [IRR](fonction:IRR) **按表格的显示顺序**读取某列中的现金流：`=IRR(CashFlows[Amount])`。
+财务函数遵循电子表格的通用约定：支出的金额为负数，利率为每期利率。一笔 200,000 元、期限 20 年、年利率 4% 的贷款，其月还款额写作 `=PMT(4%/12, 20*12, 200000)`（−1,211.96）。另请参阅 [PV](fonction:PV)、[FV](fonction:FV)、[NPER](fonction:NPER)、[RATE](fonction:RATE)、[IPMT](fonction:IPMT) 和 [PPMT](fonction:PPMT)，用于制作分期还款表。[NPV](fonction:NPV) 和 [IRR](fonction:IRR) **按表格的显示顺序**读取某列中的现金流：`=IRR(CashFlows[Amount])`。
 
 还提供概率分布（[NORM.DIST](fonction:NORM.DIST)、[T.DIST](fonction:T.DIST)…）、检验（[T.TEST](fonction:T.TEST)）、回归（[FORECAST.LINEAR](fonction:FORECAST.LINEAR)、[LINEST](fonction:LINEST)）、折旧（[SLN](fonction:SLN)、[AMORDEGRC](fonction:AMORDEGRC)）和证券（[PRICE](fonction:PRICE)）函数。[DSUM](fonction:DSUM) 等数据库函数从单元格区域读取条件：`=DSUM(销售, "金额", Cell[E1:F3])`。[OFFSET](fonction:OFFSET) 和 [INDIRECT](fonction:INDIRECT) 计算引用：`=SUM(OFFSET(Cell[B2], 0, 0, Cell[A1]))`。
 

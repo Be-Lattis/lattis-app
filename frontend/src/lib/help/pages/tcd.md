@@ -9,7 +9,7 @@ Un tableau croisé dynamique (TCD) résume un tableau : des totaux par client, p
 3. Cliquez sur la cellule où poser le coin haut gauche du TCD. Rien n'est bloqué en attendant : vous pouvez faire défiler la feuille, vous déplacer au clavier, changer d'onglet (le TCD se pose alors sur l'autre feuille) ou utiliser le ruban. `Échap` (ou **Annuler** dans la barre d'état) abandonne.
 4. Le TCD se pose et le volet **Champs de tableau croisé dynamique** s'ouvre à droite.
 
-Pour le poser seul sur une nouvelle feuille, comme Excel par défaut, cliquez sur **Nouvelle feuille** dans la barre d'état au lieu de choisir une cellule.
+Pour le poser seul sur une nouvelle feuille, cliquez sur **Nouvelle feuille** dans la barre d'état au lieu de choisir une cellule.
 
 ## Déplacer un tableau croisé
 
@@ -50,7 +50,7 @@ Plusieurs champs en **Colonnes** donnent des en-têtes imbriqués, avec un sous-
 
 ## Trier et filtrer les étiquettes
 
-Le ▾ d'une étiquette de lignes (ou le menu ▾ d'une puce des zones Lignes et Colonnes du volet) trie le champ : de A à Z, de Z à A, dans l'ordre de la source, ou par **Tri personnalisé…**, qui range les valeurs du champ dans l'ordre voulu ou d'après une liste (Jours, Mois, listes du classeur), comme pour une [colonne de tableau](prise-en-main). Le ▾ d'une étiquette filtre aussi ses valeurs en les cochant. Sans tri choisi, les étiquettes suivent l'ordre du tableau source. L'ordre choisi est gardé dans le TCD : quand les données changent, une valeur de la liste qui apparaît prend sa place, les autres suivent dans l'ordre croissant. Comme dans Excel, les cellules vides du champ forment toujours le dernier élément, quel que soit le tri : la dernière ligne (ou colonne) avant le total, et « (Vides) » en fin de liste dans le menu ▾.
+Le ▾ d'une étiquette de lignes (ou le menu ▾ d'une puce des zones Lignes et Colonnes du volet) trie le champ : de A à Z, de Z à A, dans l'ordre de la source, ou par **Tri personnalisé…**, qui range les valeurs du champ dans l'ordre voulu ou d'après une liste (Jours, Mois, listes du classeur), comme pour une [colonne de tableau](prise-en-main). Le ▾ d'une étiquette filtre aussi ses valeurs en les cochant. Sans tri choisi, les étiquettes suivent l'ordre du tableau source. L'ordre choisi est gardé dans le TCD : quand les données changent, une valeur de la liste qui apparaît prend sa place, les autres suivent dans l'ordre croissant. Les cellules vides du champ forment toujours le dernier élément, quel que soit le tri : la dernière ligne (ou colonne) avant le total, et « (Vides) » en fin de liste dans le menu ▾.
 
 ## Mise à jour
 

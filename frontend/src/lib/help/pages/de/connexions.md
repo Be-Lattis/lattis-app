@@ -7,7 +7,7 @@ Daten › Daten abrufen importiert Daten in eine Tabelle, nach Art von Power Que
 | Quelle | Details |
 | --- | --- |
 | Text- oder CSV-Datei | Trennzeichen Ihrer Wahl |
-| Excel-Arbeitsmappe | Ein Blatt Ihrer Wahl |
+| .xlsx-Datei | Ein Blatt Ihrer Wahl |
 | JSON-Datei, Parquet-Datei | |
 | SQLite-Datenbank (Datei) | Eine Tabelle oder eine Abfrage |
 | PostgreSQL, MySQL / MariaDB, SQL Server | Über eine Verbindung (siehe unten) |

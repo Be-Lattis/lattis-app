@@ -1,6 +1,6 @@
 # Archivos y recuperación
 
-Un libro de Lattis es un único archivo `.lattis`: un archivo ZIP que contiene una base de datos SQLite comprimida y un breve manifiesto. Puede enviarlo por correo y archivarlo como un libro de Excel; una vez descomprimido con 7-Zip o WinRAR (el Explorador de archivos de Windows no lee su compresión, Zstandard), cualquier herramienta SQLite puede leer sus tablas.
+Un libro de Lattis es un único archivo `.lattis`: un archivo ZIP que contiene una base de datos SQLite comprimida y un breve manifiesto. Puede enviarlo por correo y archivarlo como un archivo .xlsx; una vez descomprimido con 7-Zip o WinRAR (el Explorador de archivos de Windows no lee su compresión, Zstandard), cualquier herramienta SQLite puede leer sus tablas.
 
 ## Guardar {#enregistrer}
 
@@ -41,8 +41,8 @@ Para datos que actualizar (archivo JSON o Parquet, base de datos SQLite, Postgre
 
 ## Exportar {#exporter}
 
-- **CSV**: la tabla activa o toda la hoja. En un CSV para Excel, un texto que empieza por `=`, `+`, `-` o `@` va precedido de un apóstrofo, para que Excel no lo ejecute como una fórmula.
-- **Excel (`.xlsx`) y OpenDocument (`.ods`)**: todo el libro. Las tablas se convierten en tablas de Excel, las fórmulas se traducen cuando el formato tiene un equivalente; si no, se exportan como su valor. Las tablas dinámicas salen como valores; los gráficos, el formato condicional, las listas de validación y las notas salen en `.xlsx`; los scripts no se exportan. Un informe indica lo que no salió tal cual.
+- **CSV**: la tabla activa o toda la hoja. En un CSV para una hoja de cálculo, un texto que empieza por `=`, `+`, `-` o `@` va precedido de un apóstrofo, para que la hoja de cálculo no lo ejecute como una fórmula.
+- **`.xlsx` y OpenDocument (`.ods`)**: todo el libro. Las tablas siguen siendo tablas, las fórmulas se traducen cuando el formato tiene un equivalente; si no, se exportan como su valor. Las tablas dinámicas salen como valores; los gráficos, el formato condicional, las listas de validación y las notas salen en `.xlsx`; los scripts no se exportan. Un informe indica lo que no salió tal cual.
 - **SQL (`.sql`)**: un script `CREATE TABLE` y luego `INSERT` de las tablas y las tablas dinámicas (en valores), para todo el libro, la hoja activa o la tabla activa. El dialecto Estándar sirve para la mayoría de las bases; PostgreSQL, MySQL, SQL Server y SQLite ajustan nombres, tipos y booleanos a su base. La columna clave pasa a ser la clave primaria; una columna calculada sale como valores, con su fórmula en un comentario; las celdas libres no se exportan.
 - **PDF**: Archivo › Imprimir, con la impresora «Microsoft Print to PDF» (consulte [Diseño de página e impresión](impression)).
 

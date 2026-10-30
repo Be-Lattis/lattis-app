@@ -1,6 +1,6 @@
 # Botones y controles
 
-Como los controles de formulario de Excel, los controles se colocan libremente en una hoja (o en un [documento](onglets)): Insertar › Botón, o Insertar › Campo.
+Como los controles de formulario de una hoja de cálculo, los controles se colocan libremente en una hoja (o en un [documento](onglets)): Insertar › Botón, o Insertar › Campo.
 
 ## Tipos de controles {#types-de-controles}
 

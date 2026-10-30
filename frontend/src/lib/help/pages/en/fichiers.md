@@ -1,6 +1,6 @@
 # Files and recovery
 
-A Lattis workbook is a single `.lattis` file: a ZIP archive that contains a compressed SQLite database and a short manifest. You can email it and archive it like an Excel workbook; once unzipped with 7-Zip or WinRAR (Windows File Explorer can't read its compression, Zstandard), any SQLite tool can read its tables.
+A Lattis workbook is a single `.lattis` file: a ZIP archive that contains a compressed SQLite database and a short manifest. You can email it and archive it like an .xlsx file; once unzipped with 7-Zip or WinRAR (Windows File Explorer can't read its compression, Zstandard), any SQLite tool can read its tables.
 
 ## Save {#enregistrer}
 
@@ -41,8 +41,8 @@ For data to refresh (JSON or Parquet file, SQLite database, PostgreSQL, MySQL, S
 
 ## Export {#exporter}
 
-- **CSV**: the active table or the whole sheet. In a CSV for Excel, a text that starts with `=`, `+`, `-` or `@` is preceded by an apostrophe, so that Excel doesn't run it as a formula.
-- **Excel (`.xlsx`) and OpenDocument (`.ods`)**: the whole workbook. Tables become Excel tables, formulas are translated when the format has an equivalent, otherwise exported as their value. PivotTables go out as values; charts, conditional formatting, validation lists and notes go out in `.xlsx`; scripts are not exported. A report says what didn't go out as is.
+- **CSV**: the active table or the whole sheet. In a CSV for a spreadsheet, a text that starts with `=`, `+`, `-` or `@` is preceded by an apostrophe, so that the spreadsheet doesn't run it as a formula.
+- **`.xlsx` and OpenDocument (`.ods`)**: the whole workbook. Tables stay tables, formulas are translated when the format has an equivalent, otherwise exported as their value. PivotTables go out as values; charts, conditional formatting, validation lists and notes go out in `.xlsx`; scripts are not exported. A report says what didn't go out as is.
 - **SQL (`.sql`)**: a `CREATE TABLE` then `INSERT` script of the tables and PivotTables (as values), for the whole workbook, the active sheet or the active table. The Standard dialect suits most databases; PostgreSQL, MySQL, SQL Server and SQLite adjust names, types and booleans to their database. The key column becomes the primary key; a calculated column goes out as values, its formula in a comment; free cells are not exported.
 - **PDF**: File › Print, with the “Microsoft Print to PDF” printer (see [Page layout and printing](impression)).
 

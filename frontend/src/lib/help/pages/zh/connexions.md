@@ -7,7 +7,7 @@
 | 数据源 | 说明 |
 | --- | --- |
 | 文本或 CSV 文件 | 可选择分隔符 |
-| Excel 工作簿 | 可选择一个工作表 |
+| .xlsx 文件 | 可选择一个工作表 |
 | JSON 文件、Parquet 文件 | |
 | SQLite 数据库（文件） | 一个表或一个查询 |
 | PostgreSQL、MySQL / MariaDB、SQL Server | 通过连接（见下文） |

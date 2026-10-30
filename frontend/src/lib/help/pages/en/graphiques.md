@@ -8,13 +8,13 @@ A chart is connected to a table or a PivotTable, and updates with it.
 2. Insert › choose a chart type.
 3. The chart is placed on the sheet and the **Chart** pane opens on the right.
 
-If several columns of the table are selected, they set up the chart, as in Excel: the first text column gives the categories, the number columns the series.
+If several columns of the table are selected, they set up the chart: the first text column gives the categories, the number columns the series.
 
 The chart moves with the mouse and is resized by its handles. Clicking it reopens the pane; right-click: cut, copy, copy as picture (to paste in an email or a document), delete. With the keyboard, once the chart is selected: the arrows move it, Shift+arrows resize it, Tab goes to the next chart, Del deletes it.
 
 ## Plotted data {#donnees-tracees}
 
-As in Excel, a chart only shows the rows displayed by the table's filter; the pane's **Rows hidden by the filter** box takes them all back.
+A chart only shows the rows displayed by the table's filter; the pane's **Rows hidden by the filter** box takes them all back.
 
 A chart plots at most 2,000 points: beyond that, it says so under the drawing (“First 2,000 points of 50,000”). A line that is too long is reduced rather than cut: each interval keeps its first and last points, its minimum and its maximum. Box & whisker charts and histograms are always calculated on all rows.
 

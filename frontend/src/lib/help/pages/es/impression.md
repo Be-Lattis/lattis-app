@@ -17,7 +17,7 @@ Insertar o eliminar filas y columnas desplaza con ellas el área, los títulos y
 
 ## Ajuste de escala {#mise-a-l-echelle}
 
-**Ancho** y **Alto** ajustan la hoja a un número de páginas: Lattis la reduce (hasta el 10 %) para que quepa. «1 página» de ancho y «Automático» de alto pone todas las columnas en el ancho de una página. Mientras se ajusta, los saltos de página manuales se ignoran, como en Excel. **Escala** imprime con un porcentaje fijo y deja de ajustar.
+**Ancho** y **Alto** ajustan la hoja a un número de páginas: Lattis la reduce (hasta el 10 %) para que quepa. «1 página» de ancho y «Automático» de alto pone todas las columnas en el ancho de una página. Mientras se ajusta, los saltos de página manuales se ignoran. **Escala** imprime con un porcentaje fijo y deja de ajustar.
 
 ## Opciones de la hoja {#options-de-la-feuille}
 
@@ -48,7 +48,7 @@ Límites:
 - En la ventana de impresión, deje los márgenes en «Predeterminado» y la escala al 100 %. Si no, las páginas preparadas por Lattis se desplazan.
 - Si la ventana ofrece la opción «Encabezados y pies de página», déjela sin marcar: agrega los del navegador (fecha, dirección).
 
-## Excel y OpenDocument {#excel-et-opendocument}
+## Archivos .xlsx y .ods {#excel-et-opendocument}
 
 El diseño de página acompaña al libro exportado en `.xlsx` u `.ods`: papel, orientación, márgenes, escala o ajuste, área de impresión, títulos, saltos de página, líneas de cuadrícula, encabezados, centrado, encabezado y pie de página. Al importar un `.xlsx`, Lattis recupera el diseño de página de cada hoja.
 

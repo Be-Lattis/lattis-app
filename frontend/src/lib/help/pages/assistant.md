@@ -1,6 +1,6 @@
 # Assistant IA
 
-L'**Assistant ✦** aide à construire une analyse : il lit la structure de vos tableaux, propose une démarche, et peut ajouter des colonnes calculées, des clés, des tableaux croisés et des graphiques, trier ou mettre en forme. Il s'ouvre dans un volet à droite de la grille, comme Copilot dans Excel, et reste ouvert quand vous changez de feuille.
+L'**Assistant ✦** aide à construire une analyse : il lit la structure de vos tableaux, propose une démarche, et peut ajouter des colonnes calculées, des clés, des tableaux croisés et des graphiques, trier ou mettre en forme. Il s'ouvre dans un volet à droite de la grille, et reste ouvert quand vous changez de feuille.
 
 ## Activer l'assistant
 

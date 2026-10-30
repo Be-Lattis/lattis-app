@@ -9,7 +9,7 @@ Una tabla dinámica resume una tabla: totales por cliente, por mes, por región�
 3. Haga clic en la celda donde debe ir la esquina superior izquierda de la tabla dinámica. Mientras tanto no se bloquea nada: puede desplazar la hoja, moverse con el teclado, cambiar de pestaña (la tabla dinámica se coloca entonces en la otra hoja) o usar la cinta. `Esc` (o **Cancelar** en la barra de estado) renuncia.
 4. La tabla dinámica se coloca y el panel **Campos de tabla dinámica** se abre a la derecha.
 
-Para colocarla sola en una hoja nueva, como hace Excel de forma predeterminada, haga clic en **Hoja nueva** en la barra de estado en lugar de elegir una celda.
+Para colocarla sola en una hoja nueva, haga clic en **Hoja nueva** en la barra de estado en lugar de elegir una celda.
 
 ## Mover una tabla dinámica {#deplacer-un-tableau-croise}
 
@@ -50,7 +50,7 @@ Varios campos en **Columnas** dan encabezados anidados, con un subtotal por grup
 
 ## Ordenar y filtrar las etiquetas {#trier-et-filtrer-les-etiquettes}
 
-El ▾ de una etiqueta de fila (o el menú ▾ de una etiqueta de campo en las áreas Filas y Columnas del panel) ordena el campo: de A a Z, de Z a A, en el orden del origen, o con **Orden personalizado…**, que dispone los valores del campo en el orden que usted quiera o según una lista (Días, Meses, listas del libro), como para una [columna de tabla](prise-en-main). El ▾ de una etiqueta también filtra sus valores activándolos. Sin orden elegido, las etiquetas siguen el orden de la tabla de origen. El orden elegido se conserva en la tabla dinámica: cuando los datos cambian, un valor de la lista que aparece ocupa su lugar, los demás siguen en orden ascendente. Como en Excel, las celdas vacías del campo forman siempre el último elemento, sea cual sea el orden: la última fila (o columna) antes del total, y «(en blanco)» al final de la lista en el menú ▾.
+El ▾ de una etiqueta de fila (o el menú ▾ de una etiqueta de campo en las áreas Filas y Columnas del panel) ordena el campo: de A a Z, de Z a A, en el orden del origen, o con **Orden personalizado…**, que dispone los valores del campo en el orden que usted quiera o según una lista (Días, Meses, listas del libro), como para una [columna de tabla](prise-en-main). El ▾ de una etiqueta también filtra sus valores activándolos. Sin orden elegido, las etiquetas siguen el orden de la tabla de origen. El orden elegido se conserva en la tabla dinámica: cuando los datos cambian, un valor de la lista que aparece ocupa su lugar, los demás siguen en orden ascendente. Las celdas vacías del campo forman siempre el último elemento, sea cual sea el orden: la última fila (o columna) antes del total, y «(en blanco)» al final de la lista en el menú ▾.
 
 ## Actualización {#mise-a-jour}
 

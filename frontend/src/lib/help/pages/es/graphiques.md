@@ -8,13 +8,13 @@ Un gráfico está conectado a una tabla o a una tabla dinámica, y se actualiza 
 2. Insertar › elija un tipo de gráfico.
 3. El gráfico se coloca en la hoja y el panel **Gráfico** se abre a la derecha.
 
-Si hay varias columnas de la tabla seleccionadas, definen el gráfico, como en Excel: la primera columna de texto da las categorías, las columnas de números las series.
+Si hay varias columnas de la tabla seleccionadas, definen el gráfico: la primera columna de texto da las categorías, las columnas de números las series.
 
 El gráfico se mueve con el mouse y se cambia de tamaño con sus controladores. Un clic en él vuelve a abrir el panel; clic derecho: cortar, copiar, copiar como imagen (para pegarlo en un correo o un documento), eliminar. Con el teclado, una vez seleccionado el gráfico: las flechas lo mueven, Mayús+flechas cambian su tamaño, Tab pasa al gráfico siguiente, Supr lo elimina.
 
 ## Datos representados {#donnees-tracees}
 
-Como en Excel, un gráfico solo muestra las filas que deja visibles el filtro de la tabla; la casilla **Filas ocultas por el filtro** del panel las vuelve a incluir todas.
+Un gráfico solo muestra las filas que deja visibles el filtro de la tabla; la casilla **Filas ocultas por el filtro** del panel las vuelve a incluir todas.
 
 Un gráfico representa como máximo 2.000 puntos: por encima, lo indica bajo el dibujo («Primeros 2.000 puntos de 50.000»). Una línea demasiado larga se reduce en lugar de cortarse: cada intervalo conserva su primer y su último punto, su mínimo y su máximo. Los gráficos de cajas y bigotes y los histogramas se calculan siempre sobre todas las filas.
 

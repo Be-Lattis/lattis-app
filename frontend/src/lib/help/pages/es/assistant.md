@@ -1,6 +1,6 @@
 # Asistente de IA
 
-El **Asistente ✦** le ayuda a construir un análisis: lee la estructura de sus tablas, sugiere un enfoque y puede agregar columnas calculadas, claves, tablas dinámicas y gráficos, ordenar o dar formato. Se abre en un panel a la derecha de la cuadrícula, como Copilot en Excel, y sigue abierto cuando cambia de hoja.
+El **Asistente ✦** le ayuda a construir un análisis: lee la estructura de sus tablas, sugiere un enfoque y puede agregar columnas calculadas, claves, tablas dinámicas y gráficos, ordenar o dar formato. Se abre en un panel a la derecha de la cuadrícula, y sigue abierto cuando cambia de hoja.
 
 ## Activar el asistente {#activer-l-assistant}
 

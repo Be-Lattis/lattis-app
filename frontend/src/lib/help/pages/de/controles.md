@@ -1,6 +1,6 @@
 # Schaltflächen und Steuerelemente
 
-Wie die Formularsteuerelemente von Excel werden Steuerelemente frei auf einem Blatt (oder in einem [Dokument](onglets)) platziert: Einfügen › Schaltfläche oder Einfügen › Feld.
+Wie die Formularsteuerelemente einer Tabellenkalkulation werden Steuerelemente frei auf einem Blatt (oder in einem [Dokument](onglets)) platziert: Einfügen › Schaltfläche oder Einfügen › Feld.
 
 ## Arten von Steuerelementen {#types-de-controles}
 

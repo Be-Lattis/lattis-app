@@ -7,7 +7,7 @@ Données › Obtenir des données importe des données dans un tableau, à la ma
 | Source | Détail |
 | --- | --- |
 | Fichier texte ou CSV | Séparateur au choix |
-| Classeur Excel | Une feuille au choix |
+| Fichier .xlsx | Une feuille au choix |
 | Fichier JSON, Fichier Parquet | |
 | Base SQLite (fichier) | Une table ou une requête |
 | PostgreSQL, MySQL / MariaDB, SQL Server | Par une connexion (voir plus bas) |

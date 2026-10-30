@@ -1,6 +1,6 @@
 # KI-Assistent
 
-Der **Assistent ✦** hilft Ihnen, eine Analyse aufzubauen: Er liest die Struktur Ihrer Tabellen, schlägt einen Ansatz vor und kann berechnete Spalten, Schlüssel, PivotTables und Diagramme hinzufügen, sortieren oder formatieren. Er öffnet sich in einem Bereich rechts neben dem Raster, wie Copilot in Excel, und bleibt geöffnet, wenn Sie das Blatt wechseln.
+Der **Assistent ✦** hilft Ihnen, eine Analyse aufzubauen: Er liest die Struktur Ihrer Tabellen, schlägt einen Ansatz vor und kann berechnete Spalten, Schlüssel, PivotTables und Diagramme hinzufügen, sortieren oder formatieren. Er öffnet sich in einem Bereich rechts neben dem Raster, und bleibt geöffnet, wenn Sie das Blatt wechseln.
 
 ## Den Assistenten aktivieren {#activer-l-assistant}
 

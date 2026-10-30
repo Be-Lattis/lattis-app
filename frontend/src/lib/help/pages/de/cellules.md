@@ -1,23 +1,23 @@
 # Formatierung, Notizen und Anzeige
 
-Die Befehle des Menübands folgen denen von Excel, an denselben Stellen. Sie gelten für die Auswahl (oder die aktive Zelle) und lassen sich mit `Strg+Z` rückgängig machen.
+Die Befehle des Menübands stehen an den von Tabellenkalkulationen gewohnten Stellen. Sie gelten für die Auswahl (oder die aktive Zelle) und lassen sich mit `Strg+Z` rückgängig machen.
 
 ## Zellen formatieren {#mise-en-forme-des-cellules}
 
 **Rahmen ▾** setzt eine Kante (unten, oben, links, rechts, außen, innen, dicker Rahmen) mit der gewählten **Linienart** (dünn, mittel, dick, doppelt, gepunktet, gestrichelt) und **Linienfarbe**; die Registerkarte Rahmen von `Strg+1` tut dasselbe Kante für Kante. Zellen formatieren › Zahl bietet auch Buchhaltung, Bruch, Wissenschaftlich und **Benutzerdefiniert**, ein Formatcode wie in einer Tabellenkalkulation (`# ##0,00 "kg"`, `0,00E+00`, `# ?/?`, `[Rot]-# ##0`, Abschnitte `positiv;negativ;null;Text`); die Funktion TEXT versteht dieselben Codes.
 
-Start › Schriftart, Ausrichtung und Zahl formatieren die Auswahl; das kleine Startprogramm in der Ecke jeder Gruppe oder `Strg+1` öffnet das Dialogfeld **Zellen formatieren** (Zahl, Ausrichtung, Schrift, Rahmen, Ausfüllen). Ein Klick auf die bereits gewählte Ausrichtung (Links, Zentriert, Rechts) stellt wie in Excel die Standardausrichtung wieder her.
+Start › Schriftart, Ausrichtung und Zahl formatieren die Auswahl; das kleine Startprogramm in der Ecke jeder Gruppe oder `Strg+1` öffnet das Dialogfeld **Zellen formatieren** (Zahl, Ausrichtung, Schrift, Rahmen, Ausfüllen). Ein Klick auf die bereits gewählte Ausrichtung (Links, Zentriert, Rechts) stellt die Standardausrichtung wieder her.
 
 ## Schrift- und Füllfarben {#couleurs-de-police-et-de-remplissage}
 
-Start › Schriftfarbe und Füllfarbe (Hervorheben in einem Dokument): Die Schaltfläche wendet die zuletzt gewählte Farbe an, der ▾-Pfeil öffnet die Palette, wie in Excel.
+Start › Schriftfarbe und Füllfarbe (Hervorheben in einem Dokument): Die Schaltfläche wendet die zuletzt gewählte Farbe an, der ▾-Pfeil öffnet die Palette.
 
 - **Designfarben**: die zehn Farben des Designs der Arbeitsmappe (Hintergrund 1 und Text 1, Weiß und Schwarz; Hintergrund 2 und Text 2; Akzent 1 bis 6, darunter die Farbe der Tabellen und die der externen Quellen), und unter jeder fünf hellere oder dunklere Abstufungen. Eine hier gewählte Farbe **folgt dem Design**: Wird das Design geändert (Ansicht › Design), werden diese Zellen neu eingefärbt.
 - **Standardfarben**: Dunkelrot, Rot, Orange, Gelb, Hellgrün, Grün, Hellblau, Blau, Dunkelblau und Lila, unabhängig vom Design immer gleich.
 - **Zuletzt verwendete Farben**: die auf diesem Computer mit „Weitere Farben…“ gewählten.
 - **Keine Füllung** oder **Automatisch** entfernt die Farbe; **Weitere Farben…** erlaubt eine beliebige Farbe.
 
-Die QuickInfo jedes Farbfelds nennt seinen Namen („Grün, Akzent 1, heller 40 %“). Mit der Tastatur bewegen die Pfeiltasten durch die Farbfelder, und `Eingabe` wählt aus. Dieselbe Palette wird in Zellen formatieren (`Strg+1`) und in der bedingten Formatierung verwendet. Beim Export nach Excel oder OpenDocument werden Designfarben so geschrieben, wie sie angezeigt werden.
+Die QuickInfo jedes Farbfelds nennt seinen Namen („Grün, Akzent 1, heller 40 %“). Mit der Tastatur bewegen die Pfeiltasten durch die Farbfelder, und `Eingabe` wählt aus. Dieselbe Palette wird in Zellen formatieren (`Strg+1`) und in der bedingten Formatierung verwendet. Beim Export nach `.xlsx` oder `.ods` werden Designfarben so geschrieben, wie sie angezeigt werden.
 
 Start › Bearbeiten › Löschen entfernt die Formate, den Inhalt (`Entf`) oder die Notiz der Auswahl. Füllbereich kopiert die erste Zeile nach unten (`Strg+D`) oder die erste Spalte nach rechts (`Strg+R`).
 
@@ -33,10 +33,10 @@ Start › Bedingte Formatierung färbt Zellen abhängig von ihrem Wert: Regeln z
 
 Daten › Datenüberprüfung legt die Liste der Werte fest, die in der Auswahl oder in einer ganzen Tabellenspalte zulässig sind: Die Zelle zeigt einen Dropdownpfeil (`Alt+↓` öffnet ihn), und jede andere Eingabe wird abgelehnt.
 
-Die Liste wird eingegeben (**Eingegebene Werte**, einer pro Zeile) oder wie in Excel aus einem **Bereich** übernommen:
+Die Liste wird eingegeben (**Eingegebene Werte**, einer pro Zeile) oder aus einem **Bereich** übernommen:
 
 - eine Tabellenspalte, zum Beispiel einer Nachschlagetabelle: `Kunden[Ort]` (oder einige ihrer Zeilen, `Kunden[Ort][1:5]`);
-- Zellen: `Cell[A1:A10]` oder `Tabelle2!Cell[A1:A10]` auf einem anderen Blatt (`A1:A10`, nach Excel-Art eingegeben, wird akzeptiert);
+- Zellen: `Cell[A1:A10]` oder `Tabelle2!Cell[A1:A10]` auf einem anderen Blatt (`A1:A10`, wie in einer Tabellenkalkulation eingegeben, wird akzeptiert);
 - eine benannte Zelle.
 
 **Auswählen** blendet das Dialogfeld aus, während Sie auf den Bereich zeigen (Klicken, Ziehen oder `Umschalt+Pfeiltasten`; ein Klick auf die Überschrift einer Tabellenspalte übernimmt die ganze Spalte), bei Bedarf auf einem anderen Blatt: Klicken Sie auf sein Register, der Bezug wird zu `Tabelle2!Cell[A1:A10]`. `Eingabe` übernimmt ihn, `Esc` kehrt zurück, ohne ihn zu ändern; in beiden Fällen kommen Sie zum ursprünglichen Blatt und zur ursprünglichen Auswahl zurück. Der Titel des Dialogfelds nennt, wofür die Überprüfung gilt (Tabellenspalte, Zellen), und das Dialogfeld zeigt eine Vorschau der Werte.

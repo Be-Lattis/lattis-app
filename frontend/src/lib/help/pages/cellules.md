@@ -1,23 +1,23 @@
 # Mise en forme, notes et affichage
 
-Les commandes du ruban suivent celles d'Excel, aux mêmes places. Elles s'appliquent à la sélection (ou à la cellule active) et s'annulent par `Ctrl+Z`.
+Les commandes du ruban sont aux places habituelles d'un tableur. Elles s'appliquent à la sélection (ou à la cellule active) et s'annulent par `Ctrl+Z`.
 
 ## Mise en forme des cellules
 
-Accueil › Police, Alignement et Nombre mettent en forme la sélection ; le petit lanceur dans le coin de chaque groupe, ou `Ctrl+1`, ouvre la boîte **Format de cellule** (nombre, alignement, police, bordure, remplissage). Cliquer sur l'alignement déjà choisi (Gauche, Centrer, Droite) revient à l'alignement standard, comme dans Excel.
+Accueil › Police, Alignement et Nombre mettent en forme la sélection ; le petit lanceur dans le coin de chaque groupe, ou `Ctrl+1`, ouvre la boîte **Format de cellule** (nombre, alignement, police, bordure, remplissage). Cliquer sur l'alignement déjà choisi (Gauche, Centrer, Droite) revient à l'alignement standard.
 
 **Bordures ▾** pose un bord (inférieur, supérieur, gauche, droit, extérieur, intérieur, épais en encadré) avec le **style de trait** (fin, moyen, épais, double, pointillé, tirets) et la **couleur de trait** choisis ; l'onglet Bordure de `Ctrl+1` fait de même bord par bord. Format de cellule › Nombre propose aussi Comptabilité, Fraction, Scientifique et **Personnalisé**, un code de format comme dans un tableur (`# ##0,00 "kg"`, `0,00E+00`, `# ?/?`, `[Rouge]-# ##0`, sections `positif;négatif;zéro;texte`, `jj/mm/aaaa hh:mm`) ; la fonction TEXTE comprend les mêmes codes.
 
 ## Couleurs de police et de remplissage
 
-Accueil › Couleur de police et Couleur de remplissage (Surlignage dans un Document) : le bouton pose la dernière couleur choisie, la flèche ▾ ouvre la palette, comme dans Excel.
+Accueil › Couleur de police et Couleur de remplissage (Surlignage dans un Document) : le bouton pose la dernière couleur choisie, la flèche ▾ ouvre la palette.
 
 - **Couleurs du thème** : les dix couleurs du thème du classeur (Arrière-plan 1 et Texte 1, le blanc et le noir ; Arrière-plan 2 et Texte 2 ; Accent 1 à 6, dont la couleur des tableaux et celle des sources externes), et sous chacune cinq variantes plus claires ou plus foncées. Une couleur prise ici **suit le thème** : changer de thème (Affichage › Thème) recolore ces cellules.
 - **Couleurs standard** : rouge foncé, rouge, orange, jaune, vert clair, vert, bleu clair, bleu, bleu foncé et violet, les mêmes quel que soit le thème.
 - **Couleurs récentes** : celles choisies par « Autres couleurs… » sur ce poste.
 - **Aucun remplissage** ou **Automatique** retire la couleur ; **Autres couleurs…** en choisit une librement.
 
-L'infobulle de chaque pastille donne son nom (« Vert, Accent 1, plus clair 40 % »). Au clavier, les flèches parcourent les pastilles et `Entrée` choisit. La même palette sert dans Format de cellule (`Ctrl+1`) et dans la mise en forme conditionnelle. À l'export Excel ou OpenDocument, les couleurs du thème sont écrites telles qu'elles s'affichent.
+L'infobulle de chaque pastille donne son nom (« Vert, Accent 1, plus clair 40 % »). Au clavier, les flèches parcourent les pastilles et `Entrée` choisit. La même palette sert dans Format de cellule (`Ctrl+1`) et dans la mise en forme conditionnelle. À l'export en `.xlsx` ou `.ods`, les couleurs du thème sont écrites telles qu'elles s'affichent.
 
 Accueil › Édition › Effacer retire les formats, le contenu (`Suppr`) ou la note de la sélection. Remplissage recopie la première ligne vers le bas (`Ctrl+D`) ou la première colonne vers la droite (`Ctrl+R`).
 
@@ -33,10 +33,10 @@ Accueil › Mise en forme conditionnelle colore les cellules selon leur valeur :
 
 Données › Validation des données donne la liste des valeurs permises dans la sélection, ou dans toute une colonne de tableau : la cellule affiche une flèche de liste déroulante (`Alt+Bas` l'ouvre), et une autre saisie est refusée.
 
-La liste se saisit (**Valeurs saisies**, une par ligne) ou se tire d'une **Plage**, comme dans Excel :
+La liste se saisit (**Valeurs saisies**, une par ligne) ou se tire d'une **Plage** :
 
 - une colonne de tableau, par exemple une table de référence : `Clients[Ville]` (ou certaines de ses lignes, `Clients[Ville][1:5]`) ;
-- des cellules : `Cell[A1:A10]`, ou `Feuille2!Cell[A1:A10]` sur une autre feuille (`A1:A10` tapé à la Excel est accepté) ;
+- des cellules : `Cell[A1:A10]`, ou `Feuille2!Cell[A1:A10]` sur une autre feuille (`A1:A10` tapé comme dans un tableur est accepté) ;
 - une cellule nommée.
 
 **Sélectionner** retire le dialogue le temps de désigner la plage (clic, glissé ou `Maj+flèches` ; un clic sur l'en-tête d'une colonne de tableau la prend entière), au besoin sur une autre feuille : cliquez son onglet, la référence devient `Feuille2!Cell[A1:A10]`. `Entrée` la reprend, `Échap` revient sans la changer ; dans les deux cas, on retrouve la feuille et la sélection de départ. Le titre du dialogue dit ce que vise la validation (colonne d'un tableau, cellules), et le dialogue montre un aperçu des valeurs.

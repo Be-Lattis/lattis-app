@@ -1,23 +1,23 @@
 # Formatting, notes and display
 
-The ribbon commands follow Excel's, in the same places. They apply to the selection (or to the active cell) and are undone with `Ctrl+Z`.
+The ribbon commands are where a spreadsheet usually has them. They apply to the selection (or to the active cell) and are undone with `Ctrl+Z`.
 
 ## Cell formatting {#mise-en-forme-des-cellules}
 
-Home › Font, Alignment and Number format the selection; the small launcher in the corner of each group, or `Ctrl+1`, opens the **Format Cells** dialog box (number, alignment, font, border, fill). Clicking the alignment already chosen (Left, Center, Right) goes back to the standard alignment, as in Excel.
+Home › Font, Alignment and Number format the selection; the small launcher in the corner of each group, or `Ctrl+1`, opens the **Format Cells** dialog box (number, alignment, font, border, fill). Clicking the alignment already chosen (Left, Center, Right) goes back to the standard alignment.
 
 **Borders ▾** draws an edge (bottom, top, left, right, outside, inside, thick box) with the chosen **line style** (thin, medium, thick, double, dotted, dashed) and **line color**; the Border tab of `Ctrl+1` does the same edge by edge. Format Cells › Number also offers Accounting, Fraction, Scientific and **Custom**, a number format code as in a spreadsheet (`#,##0.00 "kg"`, `0.00E+00`, `# ?/?`, `[Red]-#,##0`, sections `positive;negative;zero;text`, `dd/mm/yyyy hh:mm`); the TEXT function understands the same codes.
 
 ## Font and fill colors {#couleurs-de-police-et-de-remplissage}
 
-Home › Font Color and Fill Color (Highlight in a Document): the button applies the last color chosen, the ▾ arrow opens the palette, as in Excel.
+Home › Font Color and Fill Color (Highlight in a Document): the button applies the last color chosen, the ▾ arrow opens the palette.
 
 - **Theme Colors**: the ten colors of the workbook's theme (Background 1 and Text 1, white and black; Background 2 and Text 2; Accent 1 to 6, including the color of tables and that of external sources), and under each one five lighter or darker variants. A color taken from here **follows the theme**: changing the theme (View › Theme) recolors these cells.
 - **Standard Colors**: dark red, red, orange, yellow, light green, green, light blue, blue, dark blue and purple, the same whatever the theme.
 - **Recent Colors**: those chosen with “More Colors…” on this computer.
 - **No Fill** or **Automatic** removes the color; **More Colors…** lets you pick any color.
 
-Each swatch's tooltip gives its name (“Green, Accent 1, Lighter 40%”). With the keyboard, the arrows move through the swatches and `Enter` chooses. The same palette is used in Format Cells (`Ctrl+1`) and in conditional formatting. When exporting to Excel or OpenDocument, theme colors are written as they are displayed.
+Each swatch's tooltip gives its name (“Green, Accent 1, Lighter 40%”). With the keyboard, the arrows move through the swatches and `Enter` chooses. The same palette is used in Format Cells (`Ctrl+1`) and in conditional formatting. When exporting to `.xlsx` or `.ods`, theme colors are written as they are displayed.
 
 Home › Editing › Clear removes the formats, the contents (`Del`) or the note of the selection. Fill copies the first row down (`Ctrl+D`) or the first column to the right (`Ctrl+R`).
 
@@ -33,10 +33,10 @@ Home › Conditional Formatting colors cells according to their value: highlight
 
 Data › Data Validation gives the list of values allowed in the selection, or in a whole table column: the cell shows a drop-down arrow (`Alt+Down` opens it), and any other entry is refused.
 
-The list is typed (**Typed values**, one per line) or taken from a **Range**, as in Excel:
+The list is typed (**Typed values**, one per line) or taken from a **Range**:
 
 - a table column, for example a lookup table: `Customers[City]` (or some of its rows, `Customers[City][1:5]`);
-- cells: `Cell[A1:A10]`, or `Sheet2!Cell[A1:A10]` on another sheet (`A1:A10` typed the Excel way is accepted);
+- cells: `Cell[A1:A10]`, or `Sheet2!Cell[A1:A10]` on another sheet (`A1:A10` typed as in a spreadsheet is accepted);
 - a named cell.
 
 **Select** hides the dialog while you point to the range (click, drag or `Shift+arrows`; clicking the header of a table column takes the whole column), if needed on another sheet: click its tab, the reference becomes `Sheet2!Cell[A1:A10]`. `Enter` takes it, `Esc` goes back without changing it; in both cases, you return to the original sheet and selection. The dialog's title says what the validation applies to (table column, cells), and the dialog shows a preview of the values.

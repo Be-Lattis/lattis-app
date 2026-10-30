@@ -17,11 +17,11 @@ While you type, Lattis suggests functions, tables and columns, shows the signatu
 | `Sheet2!Cell[A1]` | Free cell A1 of another sheet (`'My sheet'!Cell[A1]` if the name has spaces) |
 | `Cell[C14:C16]` | A range of free cells |
 
-Ranks follow the display order: sorting a table changes the row referred to, as in Excel. To look up a row by its key, use [REFERENCE](fonction:REFERENCE).
+Ranks follow the display order: sorting a table changes the row referred to, as in a spreadsheet. To look up a row by its key, use [REFERENCE](fonction:REFERENCE).
 
 In formula mode, clicking a cell inserts its reference; dragging inserts a range. From a free cell, clicking a cell of a table inserts that single value (`Report[TEST][2]`, by its row's rank); clicking the header, or dragging over the whole column, inserts the entire column (`Report[TEST]`).
 
-## Excel-style addresses {#adresses-a-la-excel}
+## Cell addresses (C14, A1:B5) {#adresses-a-la-excel}
 
 An address typed out of habit (`=C14*2`, `=SUM(C14:C16)`, `$C$14`, `Sheet2!B3`) is converted when you confirm: to `Cell[C14]` for a free cell, to `Table[Column][k]` in a table, to a range for `C14:C16`.
 
@@ -37,7 +37,7 @@ Right-click a calculated column › **Convert to values** (or Formulas › Conve
 
 ## Results that spill {#resultats-qui-se-deversent}
 
-Some functions return several values ([FILTER](fonction:FILTER), [SORT](fonction:SORT), [UNIQUE](fonction:UNIQUE), [SEQUENCE](fonction:SEQUENCE), [TEXTSPLIT](fonction:TEXTSPLIT), [QUERY](fonction:QUERY)…): the result spills into the neighboring cells, like Excel's dynamic arrays. A whole column alone in a free cell (`=Sales[Price]`) spills the same way, in the table's row order. If the space is taken, the formula shows `#SPILL!`. In an aggregate, they provide their values: `=COUNTA(TEXTSPLIT(Cell[A1], ","))` counts the pieces of a text; functions that scan a column (COUNTIF, LARGE, MATCH…) don't read them (`#VALUE!`). UNIQUE, SORT, TAKE and DROP read a column (`=UNIQUE(NestTracking[Nest ID])`), a whole table, a range of cells (`Cell[A1:A20]`) or another dynamic array; FILTER and SORTBY, a table or a column.
+Some functions return several values ([FILTER](fonction:FILTER), [SORT](fonction:SORT), [UNIQUE](fonction:UNIQUE), [SEQUENCE](fonction:SEQUENCE), [TEXTSPLIT](fonction:TEXTSPLIT), [QUERY](fonction:QUERY)…): the result spills into the neighboring cells, like a spreadsheet's dynamic arrays. A whole column alone in a free cell (`=Sales[Price]`) spills the same way, in the table's row order. If the space is taken, the formula shows `#SPILL!`. In an aggregate, they provide their values: `=COUNTA(TEXTSPLIT(Cell[A1], ","))` counts the pieces of a text; functions that scan a column (COUNTIF, LARGE, MATCH…) don't read them (`#VALUE!`). UNIQUE, SORT, TAKE and DROP read a column (`=UNIQUE(NestTracking[Nest ID])`), a whole table, a range of cells (`Cell[A1:A20]`) or another dynamic array; FILTER and SORTBY, a table or a column.
 
 `=TEXTSPLIT("Name=Smith;City=Paris", "=", ";")` splits a text into rows (at `;`) then into columns (at `=`); shorter rows are padded with `#N/A`, or with the last argument. To spill, the text must not depend on a table row: a cell, or a value such as `Sales[Notes][2]`.
 
@@ -56,7 +56,7 @@ In both cases, **the headers** are the texts placed just above the formula, if t
 
 In a text column, functions that expect numbers ([SUM](fonction:SUM), [AVERAGE](fonction:AVERAGE), [MIN](fonction:MIN), [MAX](fonction:MAX), [SUMIF](fonction:SUMIF), [SUMPRODUCT](fonction:SUMPRODUCT), statistics…) read each text as the number it spells: “12”, “1,234.5”, “$12”, “15%” (0.15), “(12)” (−12), and foreign notations “1.234,56” or “1'234.5”. **A text that isn't a number counts as 0**: the average of “12” and “abc” is 6. Empty cells are still ignored. [COUNT](fonction:COUNT) only counts the texts that are numbers: `=COUNTA(Sales[Score]) - COUNT(Sales[Score])` gives the number of texts that aren't.
 
-This is not the case in Excel, which ignores these texts. A range of free cells (`Cell[A1:A10]`) follows Excel: its texts are labels, ignored. In a direct calculation (`=[Score]*2`), a text that isn't a number gives `#VALUE!`.
+A spreadsheet ignores these texts. A range of free cells (`Cell[A1:A10]`) follows that rule: its texts are labels, ignored. In a direct calculation (`=[Score]*2`), a text that isn't a number gives `#VALUE!`.
 
 ## Intermediate names {#noms-intermediaires}
 
@@ -78,7 +78,7 @@ This is not the case in Excel, which ignores these texts. A range of free cells 
 
 Statistics read a whole column, a range or an expression on a table's columns; Booleans and blanks are ignored, texts are read as described above: [STDEV.S](fonction:STDEV.S), [VAR](fonction:VAR), [MODE](fonction:MODE), [PERCENTILE](fonction:PERCENTILE), [QUARTILE](fonction:QUARTILE), [CORREL](fonction:CORREL), [SLOPE](fonction:SLOPE)…: `=QUARTILE(Sales[Amount], 3)`.
 
-Financial functions follow Excel's conventions: an amount paid out is negative, and the rate is the rate per period. The monthly payment on a loan of $200,000 over 20 years at 4% per year is written `=PMT(4%/12, 20*12, 200000)` (−1,211.96). See also [PV](fonction:PV), [FV](fonction:FV), [NPER](fonction:NPER), [RATE](fonction:RATE), [IPMT](fonction:IPMT) and [PPMT](fonction:PPMT) for an amortization table. [NPV](fonction:NPV) and [IRR](fonction:IRR) read the cash flows of a column **in the table's display order**: `=IRR(CashFlows[Amount])`.
+Financial functions follow the usual spreadsheet conventions: an amount paid out is negative, and the rate is the rate per period. The monthly payment on a loan of $200,000 over 20 years at 4% per year is written `=PMT(4%/12, 20*12, 200000)` (−1,211.96). See also [PV](fonction:PV), [FV](fonction:FV), [NPER](fonction:NPER), [RATE](fonction:RATE), [IPMT](fonction:IPMT) and [PPMT](fonction:PPMT) for an amortization table. [NPV](fonction:NPV) and [IRR](fonction:IRR) read the cash flows of a column **in the table's display order**: `=IRR(CashFlows[Amount])`.
 
 Probability distributions ([NORM.DIST](fonction:NORM.DIST), [T.DIST](fonction:T.DIST)…), tests ([T.TEST](fonction:T.TEST)), regression ([FORECAST.LINEAR](fonction:FORECAST.LINEAR), [LINEST](fonction:LINEST)), depreciation ([SLN](fonction:SLN), [AMORDEGRC](fonction:AMORDEGRC)) and securities ([PRICE](fonction:PRICE)) are also available. [DSUM](fonction:DSUM) and the other database functions read their criteria from a cell range: `=DSUM(Sales, "Amount", Cell[E1:F3])`. [OFFSET](fonction:OFFSET) and [INDIRECT](fonction:INDIRECT) compute a reference: `=SUM(OFFSET(Cell[B2], 0, 0, Cell[A1]))`.
 

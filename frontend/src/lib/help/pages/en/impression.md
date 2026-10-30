@@ -17,7 +17,7 @@ Inserting or deleting rows and columns moves the area, the titles and the breaks
 
 ## Scaling {#mise-a-l-echelle}
 
-**Width** and **Height** fit the sheet to a number of pages: Lattis shrinks it (down to 10%) so that it fits. “1 page” wide and “Automatic” tall gives all the columns across the width of one page. While fitting, manual page breaks are ignored, as in Excel. **Scale** prints at a fixed percentage and stops fitting.
+**Width** and **Height** fit the sheet to a number of pages: Lattis shrinks it (down to 10%) so that it fits. “1 page” wide and “Automatic” tall gives all the columns across the width of one page. While fitting, manual page breaks are ignored. **Scale** prints at a fixed percentage and stops fitting.
 
 ## Sheet options {#options-de-la-feuille}
 
@@ -48,7 +48,7 @@ Limits:
 - In the print window, keep the margins on “Default” and the scale at 100%. Otherwise the pages prepared by Lattis are shifted.
 - If the window offers the “Headers and footers” option, leave it unchecked: it adds the browser's own (date, address).
 
-## Excel and OpenDocument {#excel-et-opendocument}
+## .xlsx and .ods files {#excel-et-opendocument}
 
 The page layout goes with the workbook exported as `.xlsx` or `.ods`: paper, orientation, margins, scale or fit, print area, titles, page breaks, gridlines, headings, centering, header and footer. When importing an `.xlsx`, Lattis takes over the page layout of each sheet.
 

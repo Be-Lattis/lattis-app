@@ -1,6 +1,6 @@
 # Buttons and controls
 
-Like Excel's form controls, controls are placed freely on a sheet (or in a [document](onglets)): Insert › Button, or Insert › Field.
+Like a spreadsheet's form controls, controls are placed freely on a sheet (or in a [document](onglets)): Insert › Button, or Insert › Field.
 
 ## Control types {#types-de-controles}
 

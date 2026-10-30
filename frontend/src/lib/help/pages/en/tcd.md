@@ -9,7 +9,7 @@ A PivotTable summarizes a table: totals by customer, by month, by region… Latt
 3. Click the cell where the PivotTable's top-left corner should go. Nothing is blocked in the meantime: you can scroll the sheet, move with the keyboard, change tabs (the PivotTable is then placed on the other sheet) or use the ribbon. `Esc` (or **Cancel** in the status bar) gives up.
 4. The PivotTable is placed and the **PivotTable Fields** pane opens on the right.
 
-To place it alone on a new sheet, as Excel does by default, click **New sheet** in the status bar instead of choosing a cell.
+To place it alone on a new sheet, click **New sheet** in the status bar instead of choosing a cell.
 
 ## Move a PivotTable {#deplacer-un-tableau-croise}
 
@@ -50,7 +50,7 @@ Several fields in **Columns** give nested headers, with a subtotal per group and
 
 ## Sort and filter labels {#trier-et-filtrer-les-etiquettes}
 
-The ▾ of a row label (or the ▾ menu of a chip in the pane's Rows and Columns areas) sorts the field: from A to Z, from Z to A, in the source's order, or with **Custom sort…**, which arranges the field's values in the order you want or according to a list (Days, Months, workbook lists), as for a [table column](prise-en-main). A label's ▾ also filters its values by checking them. With no sort chosen, labels follow the source table's order. The chosen order is kept in the PivotTable: when the data changes, a value of the list that appears takes its place, the others follow in ascending order. As in Excel, the field's empty cells always form the last item, whatever the sort: the last row (or column) before the total, and “(Blanks)” at the end of the list in the ▾ menu.
+The ▾ of a row label (or the ▾ menu of a chip in the pane's Rows and Columns areas) sorts the field: from A to Z, from Z to A, in the source's order, or with **Custom sort…**, which arranges the field's values in the order you want or according to a list (Days, Months, workbook lists), as for a [table column](prise-en-main). A label's ▾ also filters its values by checking them. With no sort chosen, labels follow the source table's order. The chosen order is kept in the PivotTable: when the data changes, a value of the list that appears takes its place, the others follow in ascending order. The field's empty cells always form the last item, whatever the sort: the last row (or column) before the total, and “(Blanks)” at the end of the list in the ▾ menu.
 
 ## Updating {#mise-a-jour}
 

@@ -7,7 +7,7 @@ Data › Get Data imports data into a table, in the manner of Power Query: each 
 | Source | Details |
 | --- | --- |
 | Text or CSV file | Delimiter of your choice |
-| Excel workbook | One sheet of your choice |
+| .xlsx file | One sheet of your choice |
 | JSON file, Parquet file | |
 | SQLite database (file) | A table or a query |
 | PostgreSQL, MySQL / MariaDB, SQL Server | Through a connection (see below) |

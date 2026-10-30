@@ -1,6 +1,6 @@
 # Fórmulas
 
-Una fórmula empieza por `=`. Las funciones se escriben con su nombre del Excel en español (`SUMA`, `SI`, `CONTAR.SI`…, igual que `VERDADERO`, `FALSO` y los valores de error `#¡VALOR!`, `#N/D`…); los nombres en inglés (`SUM`, `IF`…) también se aceptan. Los argumentos se separan con `;` y los decimales se escriben con coma: `=REDONDEAR([Precio]*1,2; 2)`.
+Una fórmula empieza por `=`. Las funciones se escriben con su nombre en español (`SUMA`, `SI`, `CONTAR.SI`…, igual que `VERDADERO`, `FALSO` y los valores de error `#¡VALOR!`, `#N/D`…); los nombres en inglés (`SUM`, `IF`…) también se aceptan. Los argumentos se separan con `;` y los decimales se escriben con coma: `=REDONDEAR([Precio]*1,2; 2)`.
 
 Mientras escribe, Lattis sugiere funciones, tablas y columnas, muestra la sintaxis de la función en curso (el argumento que hay que escribir en negrita) y colorea las referencias. `F1` abre aquí la página de la función bajo el cursor; Fórmulas › Insertar función abre la lista completa.
 
@@ -17,11 +17,11 @@ Mientras escribe, Lattis sugiere funciones, tablas y columnas, muestra la sintax
 | `Hoja2!Cell[A1]` | La celda libre A1 de otra hoja (`'Mi hoja'!Cell[A1]` si el nombre tiene espacios) |
 | `Cell[C14:C16]` | Un rango de celdas libres |
 
-Los números de fila siguen el orden de presentación: ordenar una tabla cambia la fila designada, como en Excel. Para buscar una fila por su clave, use [REFERENCIA](fonction:REFERENCIA).
+Los números de fila siguen el orden de presentación: ordenar una tabla cambia la fila designada, como en una hoja de cálculo. Para buscar una fila por su clave, use [REFERENCIA](fonction:REFERENCIA).
 
 En modo fórmula, un clic en una celda inserta su referencia; arrastrar inserta un rango. Desde una celda libre, un clic en una celda de una tabla inserta ese único valor (`Informe[PRUEBA][2]`, por el número de su fila); un clic en el encabezado, o arrastrar sobre toda la columna, inserta la columna entera (`Informe[PRUEBA]`).
 
-## Direcciones al estilo de Excel {#adresses-a-la-excel}
+## Direcciones de celda (C14, A1:B5) {#adresses-a-la-excel}
 
 Una dirección escrita por costumbre (`=C14*2`, `=SUMA(C14:C16)`, `$C$14`, `Hoja2!B3`) se convierte al confirmar: en `Cell[C14]` para una celda libre, en `Tabla[Columna][k]` en una tabla, en un rango para `C14:C16`.
 
@@ -37,7 +37,7 @@ Clic derecho en una columna calculada › **Convertir en valores** (o Fórmulas 
 
 ## Resultados que se desbordan {#resultats-qui-se-deversent}
 
-Algunas funciones devuelven varios valores ([FILTRAR](fonction:FILTRAR), [ORDENAR](fonction:ORDENAR), [UNICOS](fonction:UNICOS), [SECUENCIA](fonction:SECUENCIA), [DIVIDIRTEXTO](fonction:DIVIDIRTEXTO), [CONSULTA](fonction:CONSULTA)…): el resultado se desborda en las celdas vecinas, como las matrices dinámicas de Excel. Una columna entera sola en una celda libre (`=Ventas[Precio]`) se desborda igual, en el orden de las filas de la tabla. Si el espacio está ocupado, la fórmula muestra `#¡DESBORDAMIENTO!`. En un agregado, aportan sus valores: `=CONTARA(DIVIDIRTEXTO(Cell[A1]; ","))` cuenta los trozos de un texto; las funciones que recorren una columna (CONTAR.SI, K.ESIMO.MAYOR, COINCIDIR…) no los leen (`#¡VALOR!`). UNICOS, ORDENAR, TOMAR y EXCLUIR leen una columna (`=UNICOS(SeguimientoNidos[ID nido])`), una tabla entera, un rango de celdas (`Cell[A1:A20]`) u otra matriz dinámica; FILTRAR y ORDENARPOR, una tabla o una columna.
+Algunas funciones devuelven varios valores ([FILTRAR](fonction:FILTRAR), [ORDENAR](fonction:ORDENAR), [UNICOS](fonction:UNICOS), [SECUENCIA](fonction:SECUENCIA), [DIVIDIRTEXTO](fonction:DIVIDIRTEXTO), [CONSULTA](fonction:CONSULTA)…): el resultado se desborda en las celdas vecinas, como las matrices dinámicas de una hoja de cálculo. Una columna entera sola en una celda libre (`=Ventas[Precio]`) se desborda igual, en el orden de las filas de la tabla. Si el espacio está ocupado, la fórmula muestra `#¡DESBORDAMIENTO!`. En un agregado, aportan sus valores: `=CONTARA(DIVIDIRTEXTO(Cell[A1]; ","))` cuenta los trozos de un texto; las funciones que recorren una columna (CONTAR.SI, K.ESIMO.MAYOR, COINCIDIR…) no los leen (`#¡VALOR!`). UNICOS, ORDENAR, TOMAR y EXCLUIR leen una columna (`=UNICOS(SeguimientoNidos[ID nido])`), una tabla entera, un rango de celdas (`Cell[A1:A20]`) u otra matriz dinámica; FILTRAR y ORDENARPOR, una tabla o una columna.
 
 `=DIVIDIRTEXTO("Nombre=García;Ciudad=Madrid"; "="; ";")` divide un texto en filas (en `;`) y luego en columnas (en `=`); las filas más cortas se completan con `#N/D`, o con el último argumento. Para desbordarse, el texto no debe depender de una fila de tabla: una celda, o un valor como `Ventas[Notas][2]`.
 
@@ -56,7 +56,7 @@ En ambos casos, **los encabezados** son los textos colocados justo encima de la 
 
 En una columna de texto, las funciones que esperan números ([SUMA](fonction:SUMA), [PROMEDIO](fonction:PROMEDIO), [MIN](fonction:MIN), [MAX](fonction:MAX), [SUMAR.SI](fonction:SUMAR.SI), [SUMAPRODUCTO](fonction:SUMAPRODUCTO), las estadísticas…) leen cada texto como el número que representa: «12», «1.234,5», «12 €», «15 %» (0,15), «(12)» (−12), y las notaciones extranjeras «1,234.56» o «1'234.5». **Un texto que no es un número cuenta como 0**: el promedio de «12» y «abc» es 6. Las celdas vacías siguen ignorándose. [CONTAR](fonction:CONTAR) solo cuenta los textos que son números: `=CONTARA(Ventas[Nota]) - CONTAR(Ventas[Nota])` da el número de textos que no lo son.
 
-No es el caso de Excel, que ignora estos textos. Un rango de celdas libres (`Cell[A1:A10]`) sigue a Excel: sus textos son etiquetas, ignoradas. En un cálculo directo (`=[Nota]*2`), un texto que no es un número da `#¡VALOR!`.
+Una hoja de cálculo ignora estos textos. Un rango de celdas libres (`Cell[A1:A10]`) sigue esta regla: sus textos son etiquetas, ignoradas. En un cálculo directo (`=[Nota]*2`), un texto que no es un número da `#¡VALOR!`.
 
 ## Nombres intermedios {#noms-intermediaires}
 
@@ -78,7 +78,7 @@ No es el caso de Excel, que ignora estos textos. Un rango de celdas libres (`Cel
 
 Las funciones estadísticas leen una columna entera, un rango o una expresión sobre las columnas de una tabla; los booleanos y los vacíos se ignoran, los textos se leen como se describe arriba: [DESVEST.M](fonction:DESVEST.M), [VAR](fonction:VAR), [MODA](fonction:MODA), [PERCENTIL](fonction:PERCENTIL), [CUARTIL](fonction:CUARTIL), [COEF.DE.CORREL](fonction:COEF.DE.CORREL), [PENDIENTE](fonction:PENDIENTE)…: `=CUARTIL(Ventas[Importe]; 3)`.
 
-Las funciones financieras siguen las convenciones de Excel: un importe pagado es negativo, y la tasa es la de un período. La cuota mensual de un préstamo de 200.000 € a 20 años al 4 % anual se escribe `=PAGO(4%/12; 20*12; 200000)` (−1.211,96). Consulte también [VA](fonction:VA), [VF](fonction:VF), [NPER](fonction:NPER), [TASA](fonction:TASA), [PAGOINT](fonction:PAGOINT) y [PAGOPRIN](fonction:PAGOPRIN) para un cuadro de amortización. [VNA](fonction:VNA) e [TIR](fonction:TIR) leen los flujos de una columna **en el orden de presentación** de la tabla: `=TIR(Flujos[Importe])`.
+Las funciones financieras siguen las convenciones habituales de las hojas de cálculo: un importe pagado es negativo, y la tasa es la de un período. La cuota mensual de un préstamo de 200.000 € a 20 años al 4 % anual se escribe `=PAGO(4%/12; 20*12; 200000)` (−1.211,96). Consulte también [VA](fonction:VA), [VF](fonction:VF), [NPER](fonction:NPER), [TASA](fonction:TASA), [PAGOINT](fonction:PAGOINT) y [PAGOPRIN](fonction:PAGOPRIN) para un cuadro de amortización. [VNA](fonction:VNA) e [TIR](fonction:TIR) leen los flujos de una columna **en el orden de presentación** de la tabla: `=TIR(Flujos[Importe])`.
 
 También están disponibles distribuciones de probabilidad ([DISTR.NORM.N](fonction:DISTR.NORM.N), [DISTR.T.N](fonction:DISTR.T.N)…), pruebas ([PRUEBA.T.N](fonction:PRUEBA.T.N)), regresión ([PRONOSTICO.LINEAL](fonction:PRONOSTICO.LINEAL), [ESTIMACION.LINEAL](fonction:ESTIMACION.LINEAL)), amortizaciones ([SLN](fonction:SLN), [AMORTIZ.PROGRE](fonction:AMORTIZ.PROGRE)) y valores ([PRECIO](fonction:PRECIO)). [BDSUMA](fonction:BDSUMA) y las demás funciones de base de datos leen sus criterios en un rango de celdas: `=BDSUMA(Ventas; "Importe"; Cell[E1:F3])`. [DESREF](fonction:DESREF) e [INDIRECTO](fonction:INDIRECTO) calculan una referencia: `=SUMA(DESREF(Cell[B2]; 0; 0; Cell[A1]))`.
 

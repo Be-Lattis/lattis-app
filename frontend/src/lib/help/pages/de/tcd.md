@@ -9,7 +9,7 @@ Eine PivotTable fasst eine Tabelle zusammen: Summen nach Kunde, nach Monat, nach
 3. Klicken Sie auf die Zelle, in die die linke obere Ecke der PivotTable kommen soll. In der Zwischenzeit ist nichts blockiert: Sie können im Blatt scrollen, sich mit der Tastatur bewegen, das Blatt wechseln (die PivotTable wird dann auf dem anderen Blatt platziert) oder das Menüband verwenden. `Esc` (oder **Abbrechen** in der Statusleiste) bricht ab.
 4. Die PivotTable wird platziert, und der Bereich **PivotTable-Felder** öffnet sich rechts.
 
-Um sie allein auf einem neuen Blatt zu platzieren, wie es Excel standardmäßig tut, klicken Sie statt auf eine Zelle auf **Neues Blatt** in der Statusleiste.
+Um sie allein auf einem neuen Blatt zu platzieren, klicken Sie statt auf eine Zelle auf **Neues Blatt** in der Statusleiste.
 
 ## Eine PivotTable verschieben {#deplacer-un-tableau-croise}
 
@@ -50,7 +50,7 @@ Mehrere Felder in **Spalten** ergeben verschachtelte Überschriften, mit einem T
 
 ## Beschriftungen sortieren und filtern {#trier-et-filtrer-les-etiquettes}
 
-Das ▾ einer Zeilenbeschriftung (oder das ▾-Menü eines Chips in den Bereichen Zeilen und Spalten) sortiert das Feld: von A bis Z, von Z bis A, in der Reihenfolge der Quelle oder mit **Benutzerdefiniertes Sortieren…**, das die Werte des Felds in die gewünschte Reihenfolge bringt oder nach einer Liste (Tage, Monate, Listen der Arbeitsmappe), wie bei einer [Tabellenspalte](prise-en-main). Das ▾ einer Beschriftung filtert auch ihre Werte durch Ankreuzen. Ohne gewählte Sortierung folgen die Beschriftungen der Reihenfolge der Quelltabelle. Die gewählte Reihenfolge wird in der PivotTable gespeichert: Ändern sich die Daten, nimmt ein auftauchender Wert der Liste seinen Platz ein, die anderen folgen aufsteigend. Wie in Excel bilden die leeren Zellen des Felds unabhängig von der Sortierung immer das letzte Element: die letzte Zeile (oder Spalte) vor der Summe und „(Leere)“ am Ende der Liste im ▾-Menü.
+Das ▾ einer Zeilenbeschriftung (oder das ▾-Menü eines Chips in den Bereichen Zeilen und Spalten) sortiert das Feld: von A bis Z, von Z bis A, in der Reihenfolge der Quelle oder mit **Benutzerdefiniertes Sortieren…**, das die Werte des Felds in die gewünschte Reihenfolge bringt oder nach einer Liste (Tage, Monate, Listen der Arbeitsmappe), wie bei einer [Tabellenspalte](prise-en-main). Das ▾ einer Beschriftung filtert auch ihre Werte durch Ankreuzen. Ohne gewählte Sortierung folgen die Beschriftungen der Reihenfolge der Quelltabelle. Die gewählte Reihenfolge wird in der PivotTable gespeichert: Ändern sich die Daten, nimmt ein auftauchender Wert der Liste seinen Platz ein, die anderen folgen aufsteigend. Die leeren Zellen des Felds unabhängig von der Sortierung immer das letzte Element: die letzte Zeile (oder Spalte) vor der Summe und „(Leere)“ am Ende der Liste im ▾-Menü.
 
 ## Aktualisierung {#mise-a-jour}
 

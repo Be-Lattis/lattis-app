@@ -17,7 +17,7 @@ Insérer ou supprimer des lignes et des colonnes déplace la zone, les titres et
 
 ## Mise à l'échelle
 
-**Largeur** et **Hauteur** ajustent la feuille à un nombre de pages : Lattis la réduit (jusqu'à 10 %) pour qu'elle tienne. « 1 page » en largeur et « Automatique » en hauteur donne toutes les colonnes sur la largeur d'une page. Pendant un ajustement, les sauts de page manuels sont ignorés, comme dans Excel. **Échelle** imprime à un pourcentage fixe et arrête l'ajustement.
+**Largeur** et **Hauteur** ajustent la feuille à un nombre de pages : Lattis la réduit (jusqu'à 10 %) pour qu'elle tienne. « 1 page » en largeur et « Automatique » en hauteur donne toutes les colonnes sur la largeur d'une page. Pendant un ajustement, les sauts de page manuels sont ignorés. **Échelle** imprime à un pourcentage fixe et arrête l'ajustement.
 
 ## Options de la feuille
 
@@ -48,7 +48,7 @@ Limites :
 - Dans la fenêtre d'impression, gardez les marges « Par défaut » et l'échelle à 100 %. Sinon les pages préparées par Lattis se décalent.
 - Si la fenêtre propose l'option « En-têtes et pieds de page », laissez-la décochée : elle ajoute ceux du navigateur (date, adresse).
 
-## Excel et OpenDocument
+## Fichiers .xlsx et .ods {#excel-et-opendocument}
 
 La mise en page part avec le classeur exporté en `.xlsx` ou `.ods` : papier, orientation, marges, échelle ou ajustement, zone d'impression, titres, sauts de page, quadrillage, en-têtes, centrage, en-tête et pied de page. À l'import d'un `.xlsx`, Lattis reprend la mise en page de chaque feuille.
 

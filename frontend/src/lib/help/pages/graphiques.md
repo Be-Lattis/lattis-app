@@ -8,13 +8,13 @@ Un graphique se branche sur un tableau ou un tableau croisé, et se met à jour 
 2. Insertion › choisissez un type de graphique.
 3. Le graphique se pose sur la feuille et le volet **Graphique** s'ouvre à droite.
 
-Si plusieurs colonnes du tableau sont sélectionnées, elles fixent le graphique, comme dans Excel : la première colonne de texte donne les catégories, les colonnes de nombres les séries.
+Si plusieurs colonnes du tableau sont sélectionnées, elles fixent le graphique : la première colonne de texte donne les catégories, les colonnes de nombres les séries.
 
 Le graphique se déplace à la souris et se redimensionne par ses poignées. Un clic dessus rouvre le volet ; clic droit : couper, copier, copier comme image (à coller dans un courriel ou un document), supprimer. Au clavier, une fois le graphique sélectionné : les flèches le déplacent, Maj+flèches le redimensionnent, Tab passe au graphique suivant, Suppr le supprime.
 
 ## Données tracées
 
-Comme dans Excel, un graphique ne montre que les lignes affichées par le filtre du tableau ; la case **Lignes masquées par le filtre** du volet les reprend toutes.
+Un graphique ne montre que les lignes affichées par le filtre du tableau ; la case **Lignes masquées par le filtre** du volet les reprend toutes.
 
 Un graphique trace au plus 2 000 points : au-delà, il l'indique sous le dessin (« 2 000 premiers points sur 50 000 »). Une courbe trop longue est réduite plutôt que coupée : chaque intervalle garde son premier et son dernier point, son minimum et son maximum. Les boîtes à moustaches et les fréquences sont toujours calculées sur toutes les lignes.
 

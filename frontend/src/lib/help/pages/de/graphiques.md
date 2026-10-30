@@ -8,13 +8,13 @@ Ein Diagramm ist mit einer Tabelle oder einer PivotTable verbunden und wird mit 
 2. Einfügen › wählen Sie einen Diagrammtyp.
 3. Das Diagramm wird auf dem Blatt platziert, und der Bereich **Diagramm** öffnet sich rechts.
 
-Sind mehrere Spalten der Tabelle ausgewählt, bestimmen sie das Diagramm, wie in Excel: Die erste Textspalte liefert die Kategorien, die Zahlenspalten die Datenreihen.
+Sind mehrere Spalten der Tabelle ausgewählt, bestimmen sie das Diagramm: Die erste Textspalte liefert die Kategorien, die Zahlenspalten die Datenreihen.
 
 Das Diagramm lässt sich mit der Maus verschieben und an seinen Ziehpunkten in der Größe ändern. Ein Klick darauf öffnet den Bereich wieder; Rechtsklick: ausschneiden, kopieren, als Bild kopieren (zum Einfügen in eine E-Mail oder ein Dokument), löschen. Mit der Tastatur, sobald das Diagramm ausgewählt ist: Die Pfeiltasten verschieben es, Umschalt+Pfeiltasten ändern seine Größe, Tab geht zum nächsten Diagramm, Entf löscht es.
 
 ## Dargestellte Daten {#donnees-tracees}
 
-Wie in Excel zeigt ein Diagramm nur die vom Filter der Tabelle angezeigten Zeilen; das Kontrollkästchen **Vom Filter ausgeblendete Zeilen** im Bereich nimmt sie alle wieder auf.
+Ein Diagramm zeigt nur die vom Filter der Tabelle angezeigten Zeilen; das Kontrollkästchen **Vom Filter ausgeblendete Zeilen** im Bereich nimmt sie alle wieder auf.
 
 Ein Diagramm zeichnet höchstens 2.000 Punkte: Darüber hinaus meldet es dies unter der Zeichnung („Erste 2.000 Punkte von 50.000“). Eine zu lange Linie wird reduziert statt abgeschnitten: Jedes Intervall behält seinen ersten und letzten Punkt, sein Minimum und sein Maximum. Kastengrafiken und Histogramme werden immer auf allen Zeilen berechnet.
 

@@ -17,7 +17,7 @@ Das Einfügen oder Löschen von Zeilen und Spalten verschiebt den Bereich, die T
 
 ## Skalierung {#mise-a-l-echelle}
 
-**Breite** und **Höhe** passen das Blatt an eine Anzahl von Seiten an: Lattis verkleinert es (bis auf 10 %), damit es passt. „1 Seite“ breit und „Automatisch“ hoch bringt alle Spalten auf die Breite einer Seite. Beim Anpassen werden manuelle Seitenumbrüche wie in Excel ignoriert. **Skalierung** druckt mit einem festen Prozentsatz und beendet das Anpassen.
+**Breite** und **Höhe** passen das Blatt an eine Anzahl von Seiten an: Lattis verkleinert es (bis auf 10 %), damit es passt. „1 Seite“ breit und „Automatisch“ hoch bringt alle Spalten auf die Breite einer Seite. Beim Anpassen werden manuelle Seitenumbrüche ignoriert. **Skalierung** druckt mit einem festen Prozentsatz und beendet das Anpassen.
 
 ## Blattoptionen {#options-de-la-feuille}
 
@@ -48,7 +48,7 @@ Grenzen:
 - Lassen Sie im Druckfenster die Ränder auf „Standard“ und die Skalierung auf 100 %. Andernfalls werden die von Lattis vorbereiteten Seiten verschoben.
 - Bietet das Fenster die Option „Kopf- und Fußzeilen“ an, lassen Sie sie deaktiviert: Sie fügt die des Browsers hinzu (Datum, Adresse).
 
-## Excel und OpenDocument {#excel-et-opendocument}
+## .xlsx- und .ods-Dateien {#excel-et-opendocument}
 
 Das Seitenlayout geht mit der als `.xlsx` oder `.ods` exportierten Arbeitsmappe mit: Papier, Ausrichtung, Ränder, Skalierung oder Anpassen, Druckbereich, Titel, Seitenumbrüche, Gitternetzlinien, Überschriften, Zentrierung, Kopf- und Fußzeile. Beim Import einer `.xlsx` übernimmt Lattis das Seitenlayout jedes Blatts.
 

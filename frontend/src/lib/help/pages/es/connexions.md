@@ -7,7 +7,7 @@ Datos › Obtener datos importa datos en una tabla, al estilo de Power Query: ca
 | Origen | Detalles |
 | --- | --- |
 | Archivo de texto o CSV | Delimitador a elección |
-| Libro de Excel | Una hoja a elección |
+| Archivo .xlsx | Una hoja a elección |
 | Archivo JSON, archivo Parquet | |
 | Base de datos SQLite (archivo) | Una tabla o una consulta |
 | PostgreSQL, MySQL / MariaDB, SQL Server | Mediante una conexión (ver más abajo) |

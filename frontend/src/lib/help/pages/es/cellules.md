@@ -1,23 +1,23 @@
 # Formato, notas y presentación
 
-Los comandos de la cinta siguen los de Excel, en los mismos lugares. Se aplican a la selección (o a la celda activa) y se deshacen con `Ctrl+Z`.
+Los comandos de la cinta están en los lugares habituales de una hoja de cálculo. Se aplican a la selección (o a la celda activa) y se deshacen con `Ctrl+Z`.
 
 ## Formato de las celdas {#mise-en-forme-des-cellules}
 
-Inicio › Fuente, Alineación y Número dan formato a la selección; el pequeño iniciador en la esquina de cada grupo, o `Ctrl+1`, abre el cuadro de diálogo **Formato de celdas** (número, alineación, fuente, borde, relleno). Un clic en la alineación ya elegida (Izquierda, Centro, Derecha) vuelve a la alineación estándar, como en Excel.
+Inicio › Fuente, Alineación y Número dan formato a la selección; el pequeño iniciador en la esquina de cada grupo, o `Ctrl+1`, abre el cuadro de diálogo **Formato de celdas** (número, alineación, fuente, borde, relleno). Un clic en la alineación ya elegida (Izquierda, Centro, Derecha) vuelve a la alineación estándar.
 
 **Bordes ▾** pone un borde (inferior, superior, izquierdo, derecho, externo, interno, cuadro grueso) con el **estilo de línea** (fina, media, gruesa, doble, punteada, discontinua) y el **color de línea** elegidos; la pestaña Borde de `Ctrl+1` hace lo mismo borde a borde. Formato de celdas › Número ofrece también Contabilidad, Fracción, Científica y **Personalizada**, un código de formato como en una hoja de cálculo (`# ##0,00 "kg"`, `0,00E+00`, `# ?/?`, `[Rojo]-# ##0`, secciones `positivo;negativo;cero;texto`); la función TEXTO entiende los mismos códigos.
 
 ## Colores de fuente y de relleno {#couleurs-de-police-et-de-remplissage}
 
-Inicio › Color de fuente y Color de relleno (Color de resaltado en un documento): el botón aplica el último color elegido, la flecha ▾ abre la paleta, como en Excel.
+Inicio › Color de fuente y Color de relleno (Color de resaltado en un documento): el botón aplica el último color elegido, la flecha ▾ abre la paleta.
 
 - **Colores del tema**: los diez colores del tema del libro (Fondo 1 y Texto 1, blanco y negro; Fondo 2 y Texto 2; Énfasis 1 a 6, entre ellos el color de las tablas y el de los orígenes externos), y debajo de cada uno cinco variantes más claras o más oscuras. Un color tomado de aquí **sigue al tema**: cambiar el tema (Vista › Tema) vuelve a colorear estas celdas.
 - **Colores estándar**: rojo oscuro, rojo, naranja, amarillo, verde claro, verde, azul claro, azul, azul oscuro y morado, los mismos sea cual sea el tema.
 - **Colores recientes**: los elegidos con «Más colores…» en este equipo.
 - **Sin relleno** o **Automático** quita el color; **Más colores…** permite elegir cualquier color.
 
-La información sobre herramientas de cada muestra da su nombre («Verde, Énfasis 1, 40 % más claro»). Con el teclado, las flechas recorren las muestras y `Entrar` elige. La misma paleta se usa en Formato de celdas (`Ctrl+1`) y en el formato condicional. Al exportar a Excel u OpenDocument, los colores del tema se escriben tal como se muestran.
+La información sobre herramientas de cada muestra da su nombre («Verde, Énfasis 1, 40 % más claro»). Con el teclado, las flechas recorren las muestras y `Entrar` elige. La misma paleta se usa en Formato de celdas (`Ctrl+1`) y en el formato condicional. Al exportar a `.xlsx` u `.ods`, los colores del tema se escriben tal como se muestran.
 
 Inicio › Edición › Borrar quita los formatos, el contenido (`Supr`) o la nota de la selección. Rellenar copia la primera fila hacia abajo (`Ctrl+D`) o la primera columna hacia la derecha (`Ctrl+R`).
 
@@ -33,10 +33,10 @@ Inicio › Formato condicional colorea las celdas según su valor: reglas para r
 
 Datos › Validación de datos da la lista de valores permitidos en la selección, o en toda una columna de tabla: la celda muestra una flecha desplegable (`Alt+Abajo` la abre), y cualquier otra entrada se rechaza.
 
-La lista se escribe (**Valores escritos**, uno por línea) o se toma de un **Rango**, como en Excel:
+La lista se escribe (**Valores escritos**, uno por línea) o se toma de un **Rango**:
 
 - una columna de tabla, por ejemplo una tabla de referencia: `Clientes[Ciudad]` (o algunas de sus filas, `Clientes[Ciudad][1:5]`);
-- celdas: `Cell[A1:A10]`, o `Hoja2!Cell[A1:A10]` en otra hoja (se acepta `A1:A10` escrito a la manera de Excel);
+- celdas: `Cell[A1:A10]`, o `Hoja2!Cell[A1:A10]` en otra hoja (se acepta `A1:A10` escrito como en una hoja de cálculo);
 - una celda con nombre.
 
 **Seleccionar** oculta el cuadro de diálogo mientras señala el rango (clic, arrastrar o `Mayús+flechas`; un clic en el encabezado de una columna de tabla toma la columna entera), si hace falta en otra hoja: haga clic en su pestaña, la referencia se convierte en `Hoja2!Cell[A1:A10]`. `Entrar` la toma, `Esc` vuelve sin cambiarla; en ambos casos, vuelve a la hoja y a la selección de partida. El título del cuadro de diálogo indica a qué se aplica la validación (columna de tabla, celdas), y el cuadro muestra una vista previa de los valores.

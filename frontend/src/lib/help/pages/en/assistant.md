@@ -1,6 +1,6 @@
 # AI Assistant
 
-The **Assistant ✦** helps you build an analysis: it reads the structure of your tables, suggests an approach, and can add calculated columns, keys, PivotTables and charts, sort or format. It opens in a pane to the right of the grid, like Copilot in Excel, and stays open when you change sheets.
+The **Assistant ✦** helps you build an analysis: it reads the structure of your tables, suggests an approach, and can add calculated columns, keys, PivotTables and charts, sort or format. It opens in a pane to the right of the grid, and stays open when you change sheets.
 
 ## Turn on the assistant {#activer-l-assistant}
 

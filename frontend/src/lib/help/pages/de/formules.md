@@ -1,6 +1,6 @@
 # Formeln
 
-Eine Formel beginnt mit `=`. Funktionen werden mit ihren Namen aus dem deutschen Excel geschrieben (`SUMME`, `WENN`, `ZÄHLENWENN`…, ebenso `WAHR`, `FALSCH` und die Fehlerwerte `#WERT!`, `#NV`…); die englischen Namen (`SUM`, `IF`…) werden ebenfalls akzeptiert. Argumente werden durch `;` getrennt, und Dezimalstellen werden mit einem Komma geschrieben: `=RUNDEN([Preis]*1,2; 2)`.
+Eine Formel beginnt mit `=`. Funktionen werden mit ihren deutschen Namen geschrieben (`SUMME`, `WENN`, `ZÄHLENWENN`…, ebenso `WAHR`, `FALSCH` und die Fehlerwerte `#WERT!`, `#NV`…); die englischen Namen (`SUM`, `IF`…) werden ebenfalls akzeptiert. Argumente werden durch `;` getrennt, und Dezimalstellen werden mit einem Komma geschrieben: `=RUNDEN([Preis]*1,2; 2)`.
 
 Während der Eingabe schlägt Lattis Funktionen, Tabellen und Spalten vor, zeigt die Syntax der aktuellen Funktion (das einzugebende Argument fett) und färbt die Bezüge ein. `F1` öffnet hier die Seite der Funktion unter dem Cursor; Formeln › Funktion einfügen öffnet die vollständige Liste.
 
@@ -17,11 +17,11 @@ Während der Eingabe schlägt Lattis Funktionen, Tabellen und Spalten vor, zeigt
 | `Tabelle2!Cell[A1]` | Die freie Zelle A1 eines anderen Blatts (`'Mein Blatt'!Cell[A1]`, wenn der Name Leerzeichen enthält) |
 | `Cell[C14:C16]` | Einen Bereich freier Zellen |
 
-Die Ränge folgen der Anzeigereihenfolge: Das Sortieren einer Tabelle ändert die referenzierte Zeile, wie in Excel. Um eine Zeile über ihren Schlüssel nachzuschlagen, verwenden Sie [REFERENZ](fonction:REFERENZ).
+Die Ränge folgen der Anzeigereihenfolge: Das Sortieren einer Tabelle ändert die referenzierte Zeile, wie in einer Tabellenkalkulation. Um eine Zeile über ihren Schlüssel nachzuschlagen, verwenden Sie [REFERENZ](fonction:REFERENZ).
 
 Im Formelmodus fügt ein Klick auf eine Zelle ihren Bezug ein; Ziehen fügt einen Bereich ein. Von einer freien Zelle aus fügt ein Klick auf eine Zelle einer Tabelle genau diesen Wert ein (`Bericht[TEST][2]`, über den Rang seiner Zeile); ein Klick auf die Überschrift oder Ziehen über die ganze Spalte fügt die gesamte Spalte ein (`Bericht[TEST]`).
 
-## Adressen nach Excel-Art {#adresses-a-la-excel}
+## Zelladressen (C14, A1:B5) {#adresses-a-la-excel}
 
 Eine aus Gewohnheit eingegebene Adresse (`=C14*2`, `=SUMME(C14:C16)`, `$C$14`, `Tabelle2!B3`) wird beim Bestätigen umgewandelt: in `Cell[C14]` für eine freie Zelle, in `Tabelle[Spalte][k]` in einer Tabelle, in einen Bereich für `C14:C16`.
 
@@ -37,7 +37,7 @@ Rechtsklick auf eine berechnete Spalte › **In Werte umwandeln** (oder Formeln 
 
 ## Überlaufende Ergebnisse {#resultats-qui-se-deversent}
 
-Manche Funktionen geben mehrere Werte zurück ([FILTER](fonction:FILTER), [SORTIEREN](fonction:SORTIEREN), [EINDEUTIG](fonction:EINDEUTIG), [SEQUENZ](fonction:SEQUENZ), [TEXTTEILEN](fonction:TEXTTEILEN), [ABFRAGE](fonction:ABFRAGE)…): Das Ergebnis läuft in die benachbarten Zellen über, wie die dynamischen Arrays von Excel. Eine ganze Spalte allein in einer freien Zelle (`=Umsatz[Preis]`) läuft ebenso über, in der Zeilenreihenfolge der Tabelle. Ist der Platz belegt, zeigt die Formel `#ÜBERLAUF!`. In einer Aggregatfunktion liefern sie ihre Werte: `=ANZAHL2(TEXTTEILEN(Cell[A1]; ","))` zählt die Teile eines Texts; Funktionen, die eine Spalte durchlaufen (ZÄHLENWENN, KGRÖSSTE, VERGLEICH…), lesen sie nicht (`#WERT!`). EINDEUTIG, SORTIEREN, ÜBERNEHMEN und WEGLASSEN lesen eine Spalte (`=EINDEUTIG(Nestbeobachtung[Nest-ID])`), eine ganze Tabelle, einen Zellbereich (`Cell[A1:A20]`) oder ein anderes dynamisches Array; FILTER und SORTIERENNACH eine Tabelle oder eine Spalte.
+Manche Funktionen geben mehrere Werte zurück ([FILTER](fonction:FILTER), [SORTIEREN](fonction:SORTIEREN), [EINDEUTIG](fonction:EINDEUTIG), [SEQUENZ](fonction:SEQUENZ), [TEXTTEILEN](fonction:TEXTTEILEN), [ABFRAGE](fonction:ABFRAGE)…): Das Ergebnis läuft in die benachbarten Zellen über, wie die dynamischen Arrays einer Tabellenkalkulation. Eine ganze Spalte allein in einer freien Zelle (`=Umsatz[Preis]`) läuft ebenso über, in der Zeilenreihenfolge der Tabelle. Ist der Platz belegt, zeigt die Formel `#ÜBERLAUF!`. In einer Aggregatfunktion liefern sie ihre Werte: `=ANZAHL2(TEXTTEILEN(Cell[A1]; ","))` zählt die Teile eines Texts; Funktionen, die eine Spalte durchlaufen (ZÄHLENWENN, KGRÖSSTE, VERGLEICH…), lesen sie nicht (`#WERT!`). EINDEUTIG, SORTIEREN, ÜBERNEHMEN und WEGLASSEN lesen eine Spalte (`=EINDEUTIG(Nestbeobachtung[Nest-ID])`), eine ganze Tabelle, einen Zellbereich (`Cell[A1:A20]`) oder ein anderes dynamisches Array; FILTER und SORTIERENNACH eine Tabelle oder eine Spalte.
 
 `=TEXTTEILEN("Name=Müller;Ort=Paris"; "="; ";")` teilt einen Text in Zeilen (am `;`) und dann in Spalten (am `=`); kürzere Zeilen werden mit `#NV` oder mit dem letzten Argument aufgefüllt. Um überzulaufen, darf der Text nicht von einer Tabellenzeile abhängen: eine Zelle oder ein Wert wie `Umsatz[Notizen][2]`.
 
@@ -56,7 +56,7 @@ In beiden Fällen sind **die Überschriften** die Texte direkt über der Formel,
 
 In einer Textspalte lesen Funktionen, die Zahlen erwarten ([SUMME](fonction:SUMME), [MITTELWERT](fonction:MITTELWERT), [MIN](fonction:MIN), [MAX](fonction:MAX), [SUMMEWENN](fonction:SUMMEWENN), [SUMMENPRODUKT](fonction:SUMMENPRODUKT), Statistik…), jeden Text als die Zahl, die er darstellt: „12“, „1.234,5“, „12 €“, „15 %“ (0,15), „(12)“ (−12) sowie fremde Schreibweisen „1,234.56“ oder „1'234.5“. **Ein Text, der keine Zahl ist, zählt als 0**: Der Mittelwert von „12“ und „abc“ ist 6. Leere Zellen werden weiterhin ignoriert. [ANZAHL](fonction:ANZAHL) zählt nur die Texte, die Zahlen sind: `=ANZAHL2(Umsatz[Punkte]) - ANZAHL(Umsatz[Punkte])` ergibt die Anzahl der Texte, die keine sind.
 
-In Excel ist das nicht so: Es ignoriert diese Texte. Ein Bereich freier Zellen (`Cell[A1:A10]`) folgt Excel: Seine Texte sind Beschriftungen und werden ignoriert. In einer direkten Berechnung (`=[Punkte]*2`) ergibt ein Text, der keine Zahl ist, `#WERT!`.
+Eine Tabellenkalkulation ignoriert diese Texte. Ein Bereich freier Zellen (`Cell[A1:A10]`) folgt dieser Regel: Seine Texte sind Beschriftungen und werden ignoriert. In einer direkten Berechnung (`=[Punkte]*2`) ergibt ein Text, der keine Zahl ist, `#WERT!`.
 
 ## Zwischennamen {#noms-intermediaires}
 
@@ -78,7 +78,7 @@ In Excel ist das nicht so: Es ignoriert diese Texte. Ein Bereich freier Zellen (
 
 Statistikfunktionen lesen eine ganze Spalte, einen Bereich oder einen Ausdruck über die Spalten einer Tabelle; Wahrheitswerte und leere Zellen werden ignoriert, Texte werden wie oben beschrieben gelesen: [STABW.S](fonction:STABW.S), [VARIANZ](fonction:VARIANZ), [MODALWERT](fonction:MODALWERT), [QUANTIL](fonction:QUANTIL), [QUARTILE](fonction:QUARTILE), [KORREL](fonction:KORREL), [STEIGUNG](fonction:STEIGUNG)…: `=QUARTILE(Umsatz[Betrag]; 3)`.
 
-Finanzfunktionen folgen den Konventionen von Excel: Ein ausgezahlter Betrag ist negativ, und der Zinssatz ist der Satz pro Periode. Die Monatsrate eines Darlehens von 200.000 € über 20 Jahre zu 4 % pro Jahr schreibt sich `=RMZ(4%/12; 20*12; 200000)` (−1.211,96). Siehe auch [BW](fonction:BW), [ZW](fonction:ZW), [ZZR](fonction:ZZR), [ZINS](fonction:ZINS), [ZINSZ](fonction:ZINSZ) und [KAPZ](fonction:KAPZ) für einen Tilgungsplan. [NBW](fonction:NBW) und [IKV](fonction:IKV) lesen die Zahlungsströme einer Spalte **in der Anzeigereihenfolge der Tabelle**: `=IKV(Zahlungen[Betrag])`.
+Finanzfunktionen folgen den üblichen Konventionen von Tabellenkalkulationen: Ein ausgezahlter Betrag ist negativ, und der Zinssatz ist der Satz pro Periode. Die Monatsrate eines Darlehens von 200.000 € über 20 Jahre zu 4 % pro Jahr schreibt sich `=RMZ(4%/12; 20*12; 200000)` (−1.211,96). Siehe auch [BW](fonction:BW), [ZW](fonction:ZW), [ZZR](fonction:ZZR), [ZINS](fonction:ZINS), [ZINSZ](fonction:ZINSZ) und [KAPZ](fonction:KAPZ) für einen Tilgungsplan. [NBW](fonction:NBW) und [IKV](fonction:IKV) lesen die Zahlungsströme einer Spalte **in der Anzeigereihenfolge der Tabelle**: `=IKV(Zahlungen[Betrag])`.
 
 Auch verfügbar: Wahrscheinlichkeitsverteilungen ([NORM.VERT](fonction:NORM.VERT), [T.VERT](fonction:T.VERT)…), Tests ([T.TEST](fonction:T.TEST)), Regression ([PROGNOSE.LINEAR](fonction:PROGNOSE.LINEAR), [RGP](fonction:RGP)), Abschreibungen ([LIA](fonction:LIA), [AMORDEGRK](fonction:AMORDEGRK)) und Wertpapiere ([KURS](fonction:KURS)). [DBSUMME](fonction:DBSUMME) und die anderen Datenbankfunktionen lesen ihre Kriterien aus einem Zellbereich: `=DBSUMME(Verkäufe; "Betrag"; Cell[E1:F3])`. [BEREICH.VERSCHIEBEN](fonction:BEREICH.VERSCHIEBEN) und [INDIREKT](fonction:INDIREKT) berechnen einen Bezug: `=SUMME(BEREICH.VERSCHIEBEN(Cell[B2]; 0; 0; Cell[A1]))`.
 
