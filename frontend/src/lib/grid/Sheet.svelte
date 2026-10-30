@@ -66,7 +66,7 @@
 	import { gridPalette } from './theme';
 	import { paint as themed } from './colors';
 	import { tableTheme } from './theme.svelte.js';
-	import { searchValues, type CondOp, type PanelValue } from './filtercond';
+	import { type CondOp, type PanelValue } from './filtercond';
 	import { cellLines } from './shortcuts';
 	import { SheetViews } from './sheetview';
 	import { besideGutter, gutterOwner } from './gutter';
@@ -133,6 +133,7 @@
 	import SizeDialog, { type SizeDialogView } from './sheet/SizeDialog.svelte';
 	import DvAlertBox, { type DvAlertBoxView } from './sheet/DvAlertBox.svelte';
 	import ListMenu, { type ListMenuView } from './sheet/ListMenu.svelte';
+	import PivotFilter, { type PivotFilterView } from './sheet/PivotFilter.svelte';
 
 	interface Props {
 		data: SheetData;
@@ -6182,6 +6183,21 @@
 		get listMenu() { return listMenu; }, set listMenu(v) { listMenu = v; },
 		get pickFromList() { return pickFromList; }
 	};
+	// Filtres d'un TCD : sheet/PivotFilter.svelte.
+	const pivotFilterView: PivotFilterView = {
+		get applyPivotFilter() { return applyPivotFilter; },
+		get focusFirst() { return focusFirst; },
+		get loadPivotValues() { return loadPivotValues; },
+		get openPivotCustomSort() { return openPivotCustomSort; },
+		get pivotDlg() { return pivotDlg; }, set pivotDlg(v) { pivotDlg = v; },
+		get pivotFiltered() { return pivotFiltered; },
+		get runTabChoice() { return runTabChoice; },
+		get sortPivot() { return sortPivot; },
+		get source() { return source; },
+		get tabChoiceFor() { return tabChoiceFor; },
+		get toView() { return toView; },
+		get viewH() { return viewH; }
+	};
 </script>
 
 <!-- Formule colorée (références, faute soulignée), sur une seule ligne : le texte est affiché tel quel (pre-wrap). -->
@@ -6703,91 +6719,7 @@
 		{/if}
 		<DedupDialog v={dedupView} />
 		<FunctionsDialog v={functionsView} />
-		{#if pivotDlg}
-			{@const d = pivotDlg}
-			{@const shown = searchValues(d.values, d.search)}
-			<!-- Menu ▾ d'un TCD (comme Excel) : tri des étiquettes, valeurs à cocher. -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="rules filter colfilter anchored"
-				style:left="{d.x}px"
-				style:top="{d.y}px"
-				style:max-height="{Math.max(200, toView(viewH) - d.y - 8)}px"
-				use:focusFirst
-				use:dismissPanel={() => (pivotDlg = null)}
-				onkeydown={(ev) => {
-					ev.stopPropagation();
-					if (ev.key === 'Escape') pivotDlg = null;
-					if (ev.key === 'Enter' && !(ev.target instanceof HTMLButtonElement)) applyPivotFilter();
-				}}
-			>
-				{#if d.fields && d.fields.length > 1}
-					<label class="pick-field"
-						>{tr('grid.pivot.filter.field')}
-						<select
-							value={d.field}
-							onchange={(ev) => {
-								d.field = (ev.currentTarget as HTMLSelectElement).value;
-								d.search = '';
-								loadPivotValues();
-							}}
-						>
-							{#each d.fields as f (f)}<option value={f}>{f}</option>{/each}
-						</select>
-					</label>
-				{:else}
-					<div class="menu-title" title={clipped(d.field) ? d.field : undefined}>{d.kind === 'filter' ? tr('grid.pivot.filter.reportField', { field: clip(d.field) }) : tr('grid.quoted', { text: clip(d.field) })}</div>
-				{/if}
-				{#if d.kind === 'rows'}
-					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'asc'} onclick={() => sortPivot('asc')}>{tr('grid.sort.text.asc')}</button>
-					<button class="sort" class:on={d.p.config.sort?.[d.field] === 'desc'} onclick={() => sortPivot('desc')}>{tr('grid.sort.text.desc')}</button>
-					{#if source.pivotFieldValues}
-						<button class="sort" class:on={!!d.p.config.orders?.[d.field]} onclick={openPivotCustomSort}>{tr('grid.pivot.menu.customSort')}</button>
-					{/if}
-					<hr />
-				{/if}
-				{#if d.kind === 'filter' ? d.p.config.filters?.some((f) => f.field === d.field && f.values.length) : pivotFiltered(d.p, d.field)}
-					<button class="sort" onclick={() => applyPivotFilter(true)}>{tr('grid.filter.clearOf', { field: d.field })}</button>
-				{/if}
-				{#if source.setTabChoice}
-					{@const tc = tabChoiceFor(d.p.config.source, d.field, { field: true })}
-					<button class="sort" title={tc.title} disabled={tc.disabled} onclick={() => runTabChoice(d.p.config.source, d.field, tc)}>{tc.label}</button>
-					<hr />
-				{/if}
-				<div class="add">
-					<input class="search" bind:value={d.search} placeholder={tr('grid.filter.search.placeholder')} />
-				</div>
-				<div class="values">
-					{#if d.loading}
-						<p class="loading"><span class="spinner" aria-hidden="true"></span> {tr('grid.filter.loading')}</p>
-					{:else}
-						<label class="all">
-							<input
-								type="checkbox"
-								checked={shown.every((v) => v.on)}
-								onchange={(ev) => {
-									const on = (ev.currentTarget as HTMLInputElement).checked;
-									for (const v of shown) v.on = on;
-								}}
-							/>
-							{d.search.trim() ? tr('grid.filter.selectAllResults') : d.kind === 'filter' ? tr('grid.pivot.filter.all') : tr('grid.filter.selectAll')}
-						</label>
-						{#each shown as v (v.text)}
-							<label>
-								<input type="checkbox" bind:checked={v.on} />
-								<span class="what">{v.text === '' ? tr('grid.filter.blanks') : v.text}</span>
-								<span class="count">{v.count}</span>
-							</label>
-						{/each}
-					{/if}
-				</div>
-				<div class="foot">
-					<span class="sp"></span>
-					<button class="primary" disabled={d.loading} onclick={() => applyPivotFilter()}>{tr('common.ok')}</button>
-					<button onclick={() => (pivotDlg = null)}>{tr('common.cancel')}</button>
-				</div>
-			</div>
-		{/if}
+		<PivotFilter ui={pivotFilterView} />
 		<FilterPanel v={filterView} />
 		{#if cfView}
 			{#key cfView}
@@ -7251,37 +7183,14 @@
 		padding: 6px 0 8px;
 		min-width: 460px;
 	}
-	.rules .add,
 	.rules .foot {
 		display: flex;
 		align-items: center;
 		gap: 8px;
 		padding: 3px 14px;
 	}
-	.rules .what {
-		flex: 1;
-	}
 	.filter {
 		min-width: 300px;
-	}
-	.colfilter {
-		max-width: 310px;
-		overflow-y: auto;
-		box-sizing: border-box;
-	}
-	.rules.anchored {
-		transform: none;
-	}
-	.filter .sort {
-		display: block;
-		width: 100%;
-		text-align: left;
-		padding: 5px 14px;
-		border: none;
-		border-radius: 0;
-	}
-	.filter .sort:hover {
-		background: #e3efe7;
 	}
 	/* Section « Type de données » du menu ▾ de la colonne. */
 	.charts {
@@ -7374,9 +7283,6 @@
 	.handle.se {
 		cursor: nwse-resize;
 	}
-	.filter .search {
-		width: 100%;
-	}
 	/* Indicateur de chargement (liste des valeurs, contrôle de la clé). */
 	.loading {
 		display: flex;
@@ -7385,44 +7291,10 @@
 		margin: 6px 10px;
 		color: #6b7280;
 	}
-	.spinner {
-		width: 12px;
-		height: 12px;
-		flex: none;
-		border: 2px solid #d1d5db;
-		border-top-color: #217346;
-		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
-	}
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);
 		}
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.spinner {
-			animation-duration: 2.5s;
-		}
-	}
-	.filter .values {
-		max-height: 260px;
-		overflow: auto;
-		margin: 4px 14px;
-		border: 1px solid #e5e7eb;
-		padding: 4px 0;
-	}
-	.filter label {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 1px 8px;
-	}
-	.filter .values input {
-		width: auto;
-	}
-	.filter .count {
-		color: #6b7280;
-		font-size: 11px;
 	}
 	.rules input {
 		font: inherit;
@@ -7452,11 +7324,6 @@
 	.rules .sp {
 		flex: 1;
 	}
-	.rules hr {
-		border: none;
-		border-top: 1px solid #e5e7eb;
-		margin: 6px 0;
-	}
 	.menu-title {
 		padding: 4px 14px;
 		font-size: 11px;
@@ -7466,19 +7333,6 @@
 		color: #c42b1c; /* DEFAULT_NAME_COLOR */
 	}
 	/* Menu ▾ d'un TCD en arborescence : choix du champ des lignes (Excel). */
-	.pick-field {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 4px 14px;
-		font-size: 11px;
-		color: #6b7280;
-	}
-	.pick-field select {
-		flex: 1;
-		font: inherit;
-		color: #1f2328;
-	}
 	.menu button {
 		display: block;
 		width: 100%;
