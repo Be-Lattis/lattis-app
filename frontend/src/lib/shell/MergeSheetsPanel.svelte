@@ -180,7 +180,7 @@
 </script>
 
 <aside class="panel" use:resizePanel={{ key: 'mergesheets' }} use:panelKeys={onclose} aria-label={t('shell.merge.panel.title')}>
-	<PanelHeader title={t('shell.merge.panel.title')} help="prise-en-main#regrouper-des-onglets" {onclose}>
+	<PanelHeader title={t('shell.merge.panel.title')} help="regroupement#regrouper-des-onglets" {onclose}>
 		<span class="sub">{t('shell.merge.panel.subtitle')}</span>
 	</PanelHeader>
 
