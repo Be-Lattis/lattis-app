@@ -67,26 +67,53 @@ func (s *EventsServer) Listen(ctx context.Context, channel string, ready func(),
 	if s.none.Load() || s.URL == "" {
 		return s.Server.Listen(ctx, channel, ready, fn)
 	}
+	start := time.Now()
 	err := s.follow(ctx, ready, fn)
 	// restart : ce lattisd s'arrête pour une mise à jour (contrat client
 	// §11) ; on se réabonne aussitôt, la demande arrive à un autre lattisd.
 	// Pendant l'arrêt, 503 et Retry-After : on attend ce qu'il dit, sans
 	// passer à l'écoute PostgreSQL ni signaler de déconnexion.
-	for waited := time.Duration(0); errors.Is(err, errRestart); {
-		err = s.follow(ctx, ready, fn)
+	// reset, expired : lattisd a pu perdre des changements (écoute
+	// reprise, poste trop lent) ou ferme le flux à l'expiration du jeton
+	// (toutes les 15 min) : on se réabonne aussitôt, avec un jeton neuf ;
+	// « ready » fait tout relire. Sans cela, le classeur passait hors ligne
+	// à chaque expiration du jeton. Plus de quickResets réabonnements de
+	// suite qui ne tiennent pas : coupure, comme avant.
+	quick := 0
+	for waited := time.Duration(0); ; {
 		var busy *retryAfter
-		for errors.As(err, &busy) && waited < restartPatience {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(busy.d):
-			}
-			waited += busy.d
+		switch {
+		case errors.Is(err, errRestart):
+			start = time.Now()
 			err = s.follow(ctx, ready, fn)
+			for errors.As(err, &busy) && waited < restartPatience {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(busy.d):
+				}
+				waited += busy.d
+				start = time.Now()
+				err = s.follow(ctx, ready, fn)
+			}
+			if errors.As(err, &busy) {
+				err = errNoRelay
+			}
+			continue
+		case errors.Is(err, errEventsReset) && ctx.Err() == nil:
+			if time.Since(start) < quickReset {
+				quick++
+			} else {
+				quick = 0
+			}
+			if quick > quickResets {
+				return err
+			}
+			start = time.Now()
+			err = s.follow(ctx, ready, fn)
+			continue
 		}
-		if errors.As(err, &busy) {
-			err = errNoRelay
-		}
+		break
 	}
 	var busy *retryAfter
 	if errors.Is(err, errNoRelay) || errors.As(err, &busy) {
@@ -94,6 +121,15 @@ func (s *EventsServer) Listen(ctx context.Context, channel string, ready func(),
 	}
 	return err
 }
+
+// quickReset, quickResets : un flux réabonné après reset ou expired qui se
+// referme en moins de quickReset compte comme un échec ; au-delà de
+// quickResets de suite, Listen rend l'erreur (le suivi passe hors ligne et
+// réessaie avec ses délais).
+const (
+	quickReset  = 5 * time.Second
+	quickResets = 3
+)
 
 // errRestart : le lattisd du flux s'arrête (événement restart).
 var errRestart = errors.New("relais : lattisd redémarre")
