@@ -10,13 +10,12 @@
 	// éditeur DOM superposé à la cellule active, barre de formule.
 	import { onMount, tick, untrack } from 'svelte';
 	import { noticeTtl } from '#lib/shell/notice.js';
-	import { RowCache } from './cache';
 	import { VScroll } from './scroll';
 	import { Axis } from './axis';
 	import { isDefaultTableName } from './defaultname';
 	import { ease, reducedMotion, type AxisLike, type BarSpan, type Geo, type LinesShift, type Motion } from './anim';
 	import { watchSource, WORK_DELAY, type WorkLookup, type WorkZone } from './working';
-	import { followClip, overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
+	import { overlaps, parseTSV, pasteArea, richClip, sameClipText, tileBlock, toTSV, type Clip, type Rect as ClipRect } from './clipboard';
 	import { clipValues, hasClipStyles, parseClipHtml, toClipHtml, type ClipStyle } from './clipboardHtml';
 	import { pasteOptions, plainPaste, type PasteKind, type PasteOptions } from './pastespecial';
 	import PasteSpecial from './PasteSpecial.svelte';
@@ -30,7 +29,7 @@
 	import { PanGesture, SpaceHold } from './pan';
 	import { panes, toGrid, type Pane } from './panes';
 	import { afterWidthChange, sideRoom } from './keepinview';
-	import { hiddenLines, mergeAt, mergeList, validate, type DvList, type MergeRange } from './sheetfmt';
+	import { mergeAt, validate, type DvList, type MergeRange } from './sheetfmt';
 	import { type DvAlert, type DvForm } from './dvrule';
 	import { expandRange, isSingleCell, rangeOf, stepCell, wholeLines, type CellRange } from './mergesel';
 	import { findZone, type Zone } from './findzone';
@@ -49,9 +48,8 @@
 	import { type KeyChoice, type KeyQuestion } from './keychoice';
 	import { dismissPanel } from './dismiss';
 	import { freeDisplay } from './freecell';
-	import { choiceHiddenCols } from '#lib/shell/choice.js';
 	import { type ChoiceCandidate } from './tabchoice';
-	import { ReadRecovery, readFailNotice } from './readfail';
+	import { ReadRecovery } from './readfail';
 	import { bandMerges, groupSpans, headerLabel, isSingle, tableTop } from './twolevel';
 	import { tableUnderTitle, titleAboveFilled } from './titlehead';
 	import { pivotColLayer, pivotLayer, pivotValueText } from './pivotformat';
@@ -74,7 +72,7 @@
 	import SheetObjects from './SheetObjects.svelte';
 	import { objectBox, type ObjectConfig, type SheetObject } from './objects';
 	import { type SheetButton } from './buttons';
-	import { parseRules, todaySerial, type Rule, type Stats } from './rules';
+	import { todaySerial, type Rule, type Stats } from './rules';
 	import { type RuleChanges } from './cfmodel';
 	import CondFormat, { type CondHost, type CondView } from './CondFormat.svelte';
 	import GridA11y from './GridA11y.svelte';
@@ -85,7 +83,7 @@
 	import OutlineBar from './OutlineBar.svelte';
 	import { bandSize, outlineDepth, type SheetOutline } from './outline';
 	import { nameAlertOpen } from '#lib/ui/nameAlert.js';
-	import { isErrorValue, valueAlignment, alignment, editValue, formatColumnValue, NULL_MARK, showsNull, typeLabel, type ColumnType } from './format';
+	import { isErrorValue, valueAlignment, alignment, editValue, NULL_MARK, showsNull, typeLabel, type ColumnType } from './format';
 	import { errorText, t as tr } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
 	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type WholeSel, type DvPick, type InputTip } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, FONT, FONT_BOLD } from './sheet/consts';
@@ -131,6 +129,7 @@
 	import { createPivotFold } from './sheet/pivotfold.svelte.js';
 	import { createSparklines } from './sheet/sparklines.svelte.js';
 	import { createBadges } from './sheet/badges.svelte.js';
+	import { createData } from './sheet/data.svelte.js';
 
 	interface Props {
 		data: SheetData;
@@ -529,199 +528,92 @@
 	// Tableaux rechargés après une lecture refusée (une fois par période).
 	const recovery = new ReadRecovery();
 
-	/**
-	 * Lecture d'un tableau refusée (le bloc n'est pas redemandé, cache.ts) :
-	 * la mise en page est relue et le tableau rechargé, une fois, avec un
-	 * message en français ; le détail technique va dans la console (le moteur
-	 * l'écrit aussi dans son journal).
-	 */
-	function readFailed(e: Entry, err: string) {
-		console.warn(`[grille] lecture du tableau « ${e.t.name} » (${e.t.rows} lignes affichées) refusée : ${err}`);
-		if (recovery.take(e.t.id, Date.now())) {
-			fetchError = err;
-			say(readFailNotice(e.t.name));
-			if (source.reload) void source.reload().catch(() => {});
-			else e.cache.invalidate(e.t.rows);
-			return;
-		}
-		if (err !== fetchError) {
-			fetchError = err;
-			say(readFailNotice(e.t.name));
-		}
-	}
-
-	function makeEntry(t: SheetTable): Entry {
-		const e: Entry = {
-			t,
-			last: t.row + t.rows,
-			lastCol: t.col + t.columns.length - 1,
-			cache: new RowCache(
-				(first, count) => source.window(e.t, first, count),
-				t.rows,
-				(c, v) => formatColumnValue(e.t.columns[c], v),
-				(first, count) => {
-					// Lecture refusée : un tableau quitté (bloc en route au
-					// changement d'onglet) ne dit rien ; sinon rechargé.
-					const err = e.cache.error;
-					if (err && entries.includes(e)) readFailed(e, err);
-					// Bloc arrivé : ses lignes se mesurent (hauteur automatique) au prochain dessin.
-					if (first !== undefined && count) autoRows.forget(e.t.row + 1 + first, count);
-					schedule();
-					refreshFx();
-				}
-			)
-		};
-		return e;
-	}
-
+	// --- Données de la feuille : sheet/data.svelte.ts ---
+	const dataCtl = createData({
+		get recovery() { return recovery; },
+		get fetchError() { return fetchError; }, set fetchError(v) { fetchError = v; },
+		get say() { return say; },
+		get source() { return source; },
+		get entries() { return entries; }, set entries(v) { entries = v; },
+		get autoRows() { return autoRows; },
+		get schedule() { return schedule; },
+		get refreshFx() { return refreshFx; },
+		get placedSheet() { return placedSheet; }, set placedSheet(v) { placedSheet = v; },
+		get keepFormula() { return keepFormula; },
+		get dvGen() { return dvGen; }, set dvGen(v) { dvGen = v; },
+		get dvLists() { return dvLists; },
+		get dvAfterData() { return dvAfterData; },
+		get sheetViews() { return sheetViews; },
+		get active() { return active; }, set active(v) { active = v; },
+		get anchor() { return anchor; }, set anchor(v) { anchor = v; },
+		get vs() { return vs; },
+		get scroller() { return scroller; },
+		get placed() { return placed; },
+		get finder() { return finder; },
+		get matchKey() { return matchKey; }, set matchKey(v) { matchKey = v; },
+		get charts() { return charts; }, set charts(v) { charts = v; },
+		get cells() { return cells; }, set cells(v) { cells = v; },
+		get key() { return key; },
+		get mixes() { return mixes; },
+		get tipCell() { return tipCell; }, set tipCell(v) { tipCell = v; },
+		get clipRange() { return clipRange; }, set clipRange(v) { clipRange = v; },
+		get pivots() { return pivots; }, set pivots(v) { pivots = v; },
+		get openPivotOnLoad() { return openPivotOnLoad; }, set openPivotOnLoad(v) { openPivotOnLoad = v; },
+		get panel() { return panel; }, set panel(v) { panel = v; },
+		get buttons() { return buttons; }, set buttons(v) { buttons = v; },
+		get sheetObjects() { return sheetObjects; }, set sheetObjects(v) { sheetObjects = v; },
+		get sparkGroups() { return sparkGroups; }, set sparkGroups(v) { sparkGroups = v; },
+		get controlsTick() { return controlsTick; }, set controlsTick(v) { controlsTick = v; },
+		get spills() { return spills; }, set spills(v) { spills = v; },
+		get shown() { return shown; }, set shown(v) { shown = v; },
+		get freeLinks() { return freeLinks; }, set freeLinks(v) { freeLinks = v; },
+		get userWidths() { return userWidths; }, set userWidths(v) { userWidths = v; },
+		get userHeights() { return userHeights; }, set userHeights(v) { userHeights = v; },
+		get names() { return names; }, set names(v) { names = v; },
+		get cellRules() { return cellRules; }, set cellRules(v) { cellRules = v; },
+		get freeStyles() { return freeStyles; }, set freeStyles(v) { freeStyles = v; },
+		get freeMarks() { return freeMarks; }, set freeMarks(v) { freeMarks = v; },
+		get cfStats() { return cfStats; }, set cfStats(v) { cfStats = v; },
+		get cfStale() { return cfStale; },
+		get cfGen() { return cfGen; }, set cfGen(v) { cfGen = v; },
+		get cfToday() { return cfToday; }, set cfToday(v) { cfToday = v; },
+		get sheetRowStyles() { return sheetRowStyles; }, set sheetRowStyles(v) { sheetRowStyles = v; },
+		get sheetColStyles() { return sheetColStyles; }, set sheetColStyles(v) { sheetColStyles = v; },
+		get merges() { return merges; }, set merges(v) { merges = v; },
+		get boxes() { return boxes; }, set boxes(v) { boxes = v; },
+		get isSplit() { return isSplit; },
+		get outline() { return outline; }, set outline(v) { outline = v; },
+		get styleHiddenRows() { return styleHiddenRows; }, set styleHiddenRows(v) { styleHiddenRows = v; },
+		get hiddenRows() { return hiddenRows; }, set hiddenRows(v) { hiddenRows = v; },
+		get styleHiddenCols() { return styleHiddenCols; }, set styleHiddenCols(v) { styleHiddenCols = v; },
+		get hiddenCols() { return hiddenCols; }, set hiddenCols(v) { hiddenCols = v; },
+		get sheetRowRules() { return sheetRowRules; }, set sheetRowRules(v) { sheetRowRules = v; },
+		get sheetColRules() { return sheetColRules; }, set sheetColRules(v) { sheetColRules = v; },
+		get colStyles() { return colStyles; }, set colStyles(v) { colStyles = v; },
+		get headStyles() { return headStyles; }, set headStyles(v) { headStyles = v; },
+		get colRules() { return colRules; }, set colRules(v) { colRules = v; },
+		get rebuildAxis() { return rebuildAxis; },
+		get topRow() { return topRow; },
+		get measureHeights() { return measureHeights; },
+		get rebuildRows() { return rebuildRows; },
+		get wholeSel() { return wholeSel; }, set wholeSel(v) { wholeSel = v; },
+		get dvPick() { return dvPick; },
+		get finishPick() { return finishPick; },
+		get updateExtent() { return updateExtent; },
+		get syncNative() { return syncNative; },
+		get findArrived() { return findArrived; },
+		get linkGo() { return linkGo; }, set linkGo(v) { linkGo = v; },
+		get selectPlace() { return selectPlace; },
+		get startAnims() { return startAnims; },
+		get refreshStatus() { return refreshStatus; },
+		get hold() { return hold; },
+		get placeHold() { return placeHold; }
+	});
+	const { applyData } = dataCtl;
 	// Feuille des tableaux affichés (entries) : leurs positions avant une mise à jour de la même feuille.
 	let placedSheet: number | undefined;
 	const placed = () => entries.map((e) => ({ id: e.t.id, r0: e.t.row, c0: e.t.col, r1: e.last, c1: e.lastCol }));
 
-	/** Recalcule la géométrie quand la mise en page change (après une saisie). */
-	function applyData(d: SheetData) {
-		// Changement de feuille pendant la saisie d'une formule : la saisie est
-		// gardée (texte, curseur, cellule et feuille d'origine), pour pointer
-		// des références sur l'autre feuille (crossref.ts).
-		const switching = placedSheet !== undefined && placedSheet !== (d.sheet ?? 0);
-		if (switching) keepFormula(placedSheet!);
-		// Listes tirées d'une plage : relues (la source a pu changer).
-		dvGen++;
-		dvLists.clear();
-		dvAfterData(switching);
-		// Changement de feuille : garder la position de la feuille quittée,
-		// retrouver celle de la nouvelle (A1 si elle n'a pas été visitée).
-		const back = sheetViews.switchTo(d.sheet ?? 1, { active: { ...active }, anchor: { ...anchor }, top: vs.top, left: scroller?.scrollLeft ?? 0 });
-		const old = new Map(entries.map((e) => [e.t.id, e]));
-		fetchError = '';
-		const placedBefore = placedSheet === (d.sheet ?? 0) ? placed() : null;
-		// Navigation (ouverture, autre feuille) : rien ne s'anime.
-		const nav = placedSheet !== (d.sheet ?? 0);
-		if (nav) recovery.reset();
-		// Recherche : occurrences relues après une saisie, un Ctrl+Z, une actualisation ou sur une autre feuille
-		// (sauf dans tout le classeur : passer d'une feuille à l'autre ne les change pas).
-		if (!nav || !finder?.opts.book) matchKey = '';
-		if (nav && finder) {
-			finder.at = null;
-			finder.count = '';
-			finder.info = '';
-		}
-		const oldCharts = new Set(charts.map((c) => c.id));
-		entries =d.tables.map((t) => {
-			const e = old.get(t.id);
-			if (!e) return makeEntry(t);
-			// Colonnes existantes déplacées (une colonne ajoutée devant, par
-			// exemple) : l'ancien contenu ne s'affiche pas en attendant.
-			const kept = e.t.columns.every((c, i) => t.columns[i]?.name === c.name);
-			e.t = t;
-			e.last = t.row + t.rows;
-			e.lastCol = t.col + t.columns.length - 1;
-			e.cache.invalidate(t.rows, kept);
-			return e;
-		});
-		cells = new Map(d.cells.map((c) => [key(c.row, c.col), c.raw]));
-		mixes.clear();
-		tipCell = '';
-		// Cadre de copie : il suit le tableau copié poussé par un collage, ou
-		// disparaît s'il ne désigne plus ce qui a été copié.
-		if (clipRange && clipRange.sheet === (d.sheet ?? 0) && placedBefore) clipRange = followClip(clipRange, placedBefore, placed());
-		placedSheet = d.sheet ?? 0;
-		pivots = (d.pivots ?? []).map((p) => {
-			// Pas encore calculé (LayoutFirst) : traité comme un TCD en erreur
-			// (une seule cellule, sans contenu), avec son propre message.
-			if (p.pending) p = { ...p, error: p.error || '…', cells: [] };
-			const f = p.error ? 0 : (p.config.filters?.length ?? 0);
-			return { ...p, anchor: p.row, row: p.row + (f ? f + 1 : 0) + (p.error ? 0 : (p.colHead?.length ?? 0)) };
-		});
-		if (openPivotOnLoad && pivots.length) {
-			openPivotOnLoad = false;
-			const p = pivots[pivots.length - 1];
-			panel = { kind: 'pivot', id: p.id };
-			active = { row: p.row, col: p.col };
-			anchor = { ...active };
-		}
-		charts = d.charts ?? [];
-		buttons = d.buttons ?? [];
-		sheetObjects = d.objects ?? [];
-		sparkGroups = d.sparklines ?? [];
-		controlsTick++;
-		spills = d.cells.filter((c) => c.spill?.length).map((c) => ({ row: c.row, col: c.col, rows: c.spill! }));
-		shown = new Map(d.cells.filter((c) => c.raw.startsWith('=')).map((c) => [key(c.row, c.col), { text: c.value ?? '', error: !!c.error }]));
-		freeLinks = new Map(d.cells.filter((c) => c.link).map((c) => [key(c.row, c.col), c.link!]));
-		userWidths = new Map((d.widths ?? []).map((w) => [w.col, w.width]));
-		userHeights = new Map((d.heights ?? []).map((h) => [h.row, h.height]));
-		names = new Map((d.names ?? []).map((n) => [key(n.row, n.col), n.name]));
-		// Règles des cellules libres : dans leur style (propriété cf), mises à part.
-		cellRules = new Map();
-		freeStyles = new Map(
-			(d.styles ?? []).map((s) => {
-				const l = (parseStyle(s.style) ?? {}) as StyleLayer & { cf?: Rule[] };
-				if (Array.isArray(l.cf) && l.cf.length) cellRules.set(key(s.row, s.col), l.cf.map((r) => ({ ...r, style: r.style ?? {} })));
-				delete l.cf;
-				return [key(s.row, s.col), l];
-			})
-		);
-		freeMarks = new Set((d.ruleMarks ?? []).map((m) => `${m.row},${m.col},${m.rule}`));
-		for (const [k, v] of cfStats) if (v) cfStale.set(k, v);
-		cfStats = new Map();
-		cfGen++;
-		cfToday = todaySerial();
-		sheetRowStyles = new Map((d.rowStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
-		sheetColStyles = new Map((d.colStyles ?? []).map((s) => [s.index, parseStyle(s.style) ?? {}]));
-		merges = mergeList(freeStyles);
-		boxes = [...merges, ...bandMerges(d.tables, isSplit)];
-		outline = d.outline ?? null;
-		styleHiddenRows = hiddenLines(sheetRowStyles);
-		hiddenRows = new Set([...styleHiddenRows, ...(outline?.hiddenRows ?? [])]);
-		styleHiddenCols = hiddenLines(sheetColStyles);
-		// Onglet à choix sur une valeur : la colonne de catégorie (la même
-		// partout) n'est pas affichée ; elle revient avec « (Toutes) ».
-		hiddenCols = new Set([...styleHiddenCols, ...(outline?.hiddenCols ?? []), ...choiceHiddenCols(d.choice, d.tables, d.cells)]);
-		sheetRowRules = new Map((d.rowRules ?? []).map((s) => [s.index, parseRules(s.rules) ?? []]));
-		sheetColRules = new Map((d.colRules ?? []).map((s) => [s.index, parseRules(s.rules) ?? []]));
-		colStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.style))]));
-		headStyles = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseStyle(c.headerStyle))]));
-		colRules = new Map(d.tables.map((t) => [t.id, t.columns.map((c) => parseRules(c.rules))]));
-		rebuildAxis();
-		// Données ou mise en forme changées : les lignes de tableau affichées se
-		// remesurent (elles gardent leur hauteur d'ici là, sans clignoter).
-		if (back) autoRows.clear();
-		else autoRows.forgetAll((r) => entries.some((e) => r >= topRow(e.t) && r <= e.t.row + e.t.rows));
-		autoRows.free = measureHeights();
-		rebuildRows();
-		if (back) {
-			active = back.active;
-			anchor = back.anchor;
-			wholeSel = null;
-		}
-		// Plage source d'une validation pointée sur une autre feuille : de
-		// retour sur la feuille de la cellule, la sélection d'avant revient.
-		const pick = dvPick;
-		if (pick?.back && (d.sheet ?? 0) === pick.sheet) finishPick(pick, pick.ref);
-		updateExtent();
-		if (back && scroller) {
-			vs.to(back.top);
-			scroller.scrollLeft = back.left;
-			updateExtent();
-			syncNative();
-		}
-		// Occurrence trouvée sur une autre feuille : arrivé, elle se sélectionne.
-		findArrived(d.sheet ?? 0);
-		// Lien suivi vers une autre feuille : arrivé, sa destination se sélectionne.
-		const go = linkGo;
-		if (go && (d.sheet ?? 0) === go.sheet) {
-			linkGo = null;
-			selectPlace(go);
-		}
-		startAnims(nav, new Set(old.keys()), oldCharts, performance.now());
-		refreshFx();
-		if (back) refreshStatus();
-		schedule();
-		if (switching && hold) {
-			const sheet = d.sheet ?? 0;
-			queueMicrotask(() => placeHold(sheet));
-		}
-	}
 	const sheetViews = new SheetViews();
 
 	// Largeurs : choisies par l'utilisateur, sinon selon le type de la colonne
