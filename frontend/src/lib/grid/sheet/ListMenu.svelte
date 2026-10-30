@@ -20,7 +20,6 @@
 
 {#if ui.listMenu}
 	{@const m = ui.listMenu}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="menu list-menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (ui.listMenu = null)}>
 		{#each m.values as v (v)}
 			<button class:on={ui.cellInfo(m.row, m.col).value === v} onclick={() => ui.pickFromList(v)}>{v}</button>

@@ -20,9 +20,11 @@
 
 {#if v.dedupDlg}
 	{@const d = v.dedupDlg}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="rules filter"
+		role="dialog"
+		tabindex="-1"
+		aria-label={tr('grid.dedup.title', { table: d.e.t.name })}
 		use:dismissPanel={() => (v.dedupDlg = null)}
 		onkeydown={(ev) => {
 			ev.stopPropagation();

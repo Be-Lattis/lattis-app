@@ -70,7 +70,6 @@
 </script>
 
 <div class="back" role="presentation" use:backdrop={() => !busy && ondone(null)}>
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"
 		role="dialog"

@@ -129,7 +129,7 @@
 	{@const box = boxOf(it)}
 	{@const tl = it.s.kind === 'timeline'}
 	{@const level = it.s.level ?? 'months'}
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions (segment : ses valeurs sont des boutons ; le cadre ne sert qu'à la souris) -->
 	<div
 		class="slicer"
 		class:timeline={tl}
@@ -145,7 +145,7 @@
 		}}
 		onmousedown={(ev) => ev.stopPropagation()}
 	>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<!-- svelte-ignore a11y_no_static_element_interactions (déplacement à la souris ; équivalent au clavier à faire, voir l'audit d'ergonomie) -->
 		<header onmousedown={(ev) => start(ev, it)} title={tl ? t('grid.pivot.slicer.hintTimeline') : t('grid.pivot.slicer.hint')}>
 			<span class="name">{it.s.field}</span>
 			{#if tl}
@@ -183,7 +183,7 @@
 			</div>
 		{/if}
 		{#if !locked && onset}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_no_static_element_interactions (taille à la souris ; équivalent au clavier à faire, voir l'audit d'ergonomie) -->
 			<div class="grip" onmousedown={(ev) => start(ev, it, 'se')}></div>
 		{/if}
 	</div>

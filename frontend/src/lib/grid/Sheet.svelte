@@ -3327,7 +3327,7 @@
 	{/if}
 	{#if completion?.where === where}
 		{#each completion.items as s, i (s.kind + s.label)}
-			<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions (suggestion de la complétion : le clavier passe par le champ (flèches, Tab, Entrée)) -->
 			<div
 				class="sugg"
 				class:on={i === completion.sel}
@@ -3456,13 +3456,12 @@
 	<!-- Barre du plan (Données › Grouper) à gauche et au-dessus de la grille. -->
 	<div class="ol-frame" style:padding-left="{olW}px" style:padding-top="{olH}px">
 	{#if olW || olH}<OutlineBar bind:this={outlineBar} {outline} geom={outlineGeom} onfold={foldOutline} onlevel={outlineLevel} />{/if}
-	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" aria-label={tr('grid.sheet.aria', { name: sheetName })} aria-rowcount={-1} aria-colcount={-1} aria-activedescendant={a11yId} aria-keyshortcuts="Shift+F10" data-region-focus onkeydown={onKeyDown}>
 		<GridA11y cellId={a11yId} {speech} row={active.row + 1} col={active.col + 1} editing={editing || fxEditing} selection={speechSel} />
 		<!-- Calque zoomé (zoom.ts) : grille, graphiques, boutons, éditeur et notes ; menus et dialogues hors du calque. -->
 		<div class="zoom" style:zoom={zoom === 1 ? undefined : zoom}>
 			<canvas bind:this={canvas}></canvas>
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_no_static_element_interactions (surface de la grille à la souris ; le clavier passe par la grille (role=grid) qui l'entoure) -->
 			<div
 				class="scroller"
 				class:grab={panCursor === 'grab'}
@@ -3484,11 +3483,10 @@
 			</div>
 			<!-- Calque découpé à la zone des cellules : les graphiques ne passent pas sur les barres de défilement. -->
 			<!-- Main (pan.ts) : milieu, droit glissé ou Espace + gauche font aussi glisser la feuille depuis un objet. -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="charts" class:grabbing={panCursor === 'grabbing'} style:left="{MARGIN}px" style:top="{TOP_H}px" style:width="{Math.max(0, viewW - MARGIN)}px" style:height="{Math.max(0, viewH - TOP_H)}px" onmousedowncapture={objectPanDown}>
 				{#each charts as ch (ch.id)}
 					{@const box = chartBox(ch)}
-					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+					<!-- svelte-ignore a11y_no_noninteractive_element_interactions (graphique : flèches, Maj+flèches, Tab et Suppr captés quand il est sélectionné) -->
 					<div
 						class="chart"
 						data-chart-id={ch.id}
@@ -3513,7 +3511,7 @@
 						{/if}
 						{#if selChart === ch.id}
 							{#each ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as dir (dir)}
-								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<!-- svelte-ignore a11y_no_static_element_interactions (poignée de taille à la souris ; au clavier, Maj+flèches sur le graphique sélectionné) -->
 								<div class="handle {dir}" onmousedown={(ev) => startChartGesture(ev, ch, dir)}></div>
 							{/each}
 						{/if}
@@ -3794,7 +3792,6 @@
 			{@const host = comments}
 			{@const th = threadAt(host.threads, d.row, d.col)}
 			{#if th || !d.preview}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div class="comment-pop" class:preview={d.preview} style:left="{d.x}px" style:top="{d.y}px" use:dismissPanel={() => commentDlg && !commentDlg.preview && ((commentDlg = null), wrap.focus())}>
 					<CommentThread
 						thread={th}

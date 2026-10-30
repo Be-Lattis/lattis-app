@@ -484,7 +484,7 @@
 	{@const box = boxOf(b)}
 	{@const kind = b.config.kind ?? ''}
 	{@const value = kind ? linked(b, tick) : ''}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_no_static_element_interactions (cadre d'un contrôle : sélection et déplacement à la souris en mode conception ; le contrôle lui-même est un bouton ou un champ) -->
 	<div
 		class="action"
 		class:ctl={kind !== ''}
@@ -547,7 +547,7 @@
 		{/if}
 		{#if selected === b.id}
 			{#each ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as dir (dir)}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<!-- svelte-ignore a11y_no_static_element_interactions (poignée de taille à la souris ; équivalent au clavier à faire, voir l'audit d'ergonomie) -->
 				<div class="handle {dir}" onmousedown={(ev) => start(ev, b, dir)}></div>
 			{/each}
 		{/if}
@@ -603,7 +603,7 @@
 	{@const e = editor}
 	{@const at = dock?.() ?? { top: 140, bottom: 24 }}
 	<!-- Volet de droite, non modal : la feuille reste cliquable (un clic remplit le champ actif). -->
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions (touches du volet captées à son niveau ; ses commandes sont des boutons) -->
 	<aside
 		class="cpanel"
 		use:resizePanel={{ key: 'control' }}

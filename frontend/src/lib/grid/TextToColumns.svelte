@@ -257,7 +257,6 @@
 	</div>
 {/snippet}
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="back" use:backdrop={() => onclose()}>
 	<div class="dlg" role="dialog" aria-label={t('grid.textCols.title')} tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
 		<div class="head">{t('grid.textCols.heading', { step, name: STEPS[step - 1] })}</div>
@@ -309,7 +308,7 @@
 					{t('grid.textCols.fixed.hint')}
 				</p>
 				<div class="lbl">{t('grid.textCols.preview')}</div>
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (coupures à la souris seulement ; équivalent au clavier à faire, voir l'audit d'ergonomie) -->
 				<div class="pv mono ruler" bind:this={ruler} onclick={addAt} style:--ch="{chPx}px">
 					<span class="meter" use:measure>0000000000</span>
 					<div class="scale" style:width="{(width + 2) * chPx + PAD * 2}px">
@@ -323,7 +322,7 @@
 						{/each}
 						{#each breaks as b, i (i)}
 							{#if b > 0}
-								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (coupures à la souris seulement ; équivalent au clavier à faire, voir l'audit d'ergonomie) -->
 								<div class="brk" style:left="{PAD + b * chPx}px" onmousedown={(e) => startDrag(e, i)} ondblclick={(e) => removeBreak(e, i)} onclick={(e) => e.stopPropagation()} title={t('grid.textCols.break.tooltip')}></div>
 							{/if}
 						{/each}

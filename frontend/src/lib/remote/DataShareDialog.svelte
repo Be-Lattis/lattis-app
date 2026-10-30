@@ -209,7 +209,6 @@
 </script>
 
 <div class="back" role="presentation" use:backdrop={() => !busy && ondone()}>
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"
 		role="dialog"
@@ -246,7 +245,7 @@
 					{#if choose?.why}<button type="button" class="why" title={choose.why} aria-expanded={whyOpen} onclick={() => (whyOpen = !whyOpen)}>{t('remote.dataShare.whyNotWorkbook')}</button>{/if}
 				</p>
 				{#if whyOpen && choose?.why}<p class="sf-hint whytext">{choose.why}</p>{/if}
-				<!-- svelte-ignore a11y_interactive_supports_focus -->
+				<!-- svelte-ignore a11y_interactive_supports_focus (Entrée captée par le groupe ; le focus va aux boutons radio) -->
 				<div
 					class="ways"
 					role="radiogroup"
@@ -280,7 +279,7 @@
 				>
 			</footer>
 		{:else}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_no_static_element_interactions (Entrée et Échap captés pour toute la boîte ; ses commandes sont des boutons et des champs) -->
 			<div class="sf-body" bind:this={body} onkeydown={onKey}>
 				{#if !info}
 					<p class="sf-hint">{error ? '' : t('remote.dataShare.reading')}</p>

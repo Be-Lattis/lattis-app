@@ -140,7 +140,6 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="back" use:backdrop={() => onclose()}>
 	<div
 		class="dlg"
@@ -172,7 +171,6 @@
 				</label>
 				<p class="hint">{t('grid.customSort.hint')}</p>
 				<div class="split">
-					<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 					<ul
 						class="items"
 						role="listbox"

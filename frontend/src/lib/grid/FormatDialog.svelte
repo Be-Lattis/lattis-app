@@ -176,7 +176,6 @@
 	<div class="colors"><ColorPalette {value} {none} onpick={(c) => set(c ?? '')} /></div>
 {/snippet}
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="back" use:backdrop={() => onclose()}>
 	<div class="dlg" role="dialog" aria-label={t('grid.format.title')} tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
 		<div class="head">{t('grid.format.title')}</div>

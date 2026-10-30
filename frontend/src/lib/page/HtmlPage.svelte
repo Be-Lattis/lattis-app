@@ -298,7 +298,7 @@
 		{:else}
 			<button onclick={startEdit} disabled={!!locked} title={locked || t('doc.page.edit.tooltip')}><Icon name="edit" size={14} />{url ? t('doc.page.edit.html') : t('doc.page.edit.label')}</button>
 			{#if asking !== null}
-				<!-- svelte-ignore a11y_autofocus -->
+				<!-- svelte-ignore a11y_autofocus (champ d'une boîte ou d'une saisie que l'on vient d'ouvrir) -->
 				<input
 					class="url"
 					bind:value={asking}

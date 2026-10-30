@@ -125,7 +125,7 @@
 	<button class="link" onclick={() => go(`fonction:${f.name}`)}>{f.name}</button>
 {/snippet}
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions (touches du volet captées à son niveau ; ses commandes sont des boutons) -->
 <aside class="help" class:over data-modal-exempt={over ? '' : undefined} use:resizePanel={{ key: 'help', min: 420 }} aria-label={t('help.title')} onkeydown={onKey}>
 	<header>
 		<button class="icon" title={t('help.back')} aria-label={t('help.back')} disabled={!history.length} onclick={back}>←</button>

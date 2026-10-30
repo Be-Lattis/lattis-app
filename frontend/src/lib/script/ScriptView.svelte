@@ -398,7 +398,7 @@ end
 		<div class="items" role="list">
 		{#each scripts as s (s.id)}
 			{#if renaming === s.id}
-				<!-- svelte-ignore a11y_autofocus -->
+				<!-- svelte-ignore a11y_autofocus (champ d'une boîte ou d'une saisie que l'on vient d'ouvrir) -->
 				<input
 					class="rename"
 					bind:this={renameInput}

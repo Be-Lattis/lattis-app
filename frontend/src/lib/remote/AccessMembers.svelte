@@ -244,7 +244,7 @@
 					<ul class="am-list" id="am-invite-list" role="listbox" aria-label={t('remote.members.invite.suggestions')}>
 						{#each options as o, i (o.kind === 'person' ? o.person.id : 'join')}
 							<!-- La souris choisit sans ôter le focus du champ ; le clavier passe par le champ (flèches, Entrée). -->
-							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_click_events_have_key_events (option de la liste : le clavier passe par le champ (flèches, Entrée)) -->
 							<li
 								id="am-invite-opt-{i}"
 								role="option"

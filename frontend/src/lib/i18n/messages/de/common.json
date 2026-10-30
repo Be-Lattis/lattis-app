@@ -7,5 +7,27 @@
 	"cut": "Ausschneiden",
 	"copy": "Kopieren",
 	"paste": "Einfügen",
-	"delete": "Löschen"
+	"delete": "Löschen",
+	"keys": {
+		"shift": "Umschalt",
+		"enter": "Eingabe",
+		"space": "Leertaste",
+		"esc": "Esc",
+		"del": "Entf",
+		"home": "Pos1",
+		"end": "Ende",
+		"pageDown": "Bild↓",
+		"pageUp": "Bild↑",
+		"arrow": "Pfeiltaste",
+		"arrows": "Pfeiltasten",
+		"up": "Nach-oben",
+		"down": "Nach-unten",
+		"left": "Links",
+		"right": "Rechts",
+		"letter": "Buchstabe",
+		"then": "dann",
+		"click": "Klick",
+		"wheel": "Mausrad",
+		"menu": "Menü"
+	}
 }

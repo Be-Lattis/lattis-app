@@ -20,7 +20,6 @@
 
 {#if v.keyDlg}
 	{@const d = v.keyDlg}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="rules lines-dlg key-dlg"
 		role="dialog"

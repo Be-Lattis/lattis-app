@@ -22,9 +22,11 @@
 
 {#if v.noteDlg}
 	{@const d = v.noteDlg}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="note-dlg"
+		role="dialog"
+		tabindex="-1"
+		aria-label={tr('grid.note.edit')}
 		style:left="{d.x}px"
 		style:top="{d.y}px"
 		use:v.focusFirst

@@ -20,7 +20,6 @@
 {#if v.dvAlert}
 	{@const d = v.dvAlert}
 	<div class="dlg-back" role="presentation">
-		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div
 			class="rules dv-alert"
 			role="alertdialog"

@@ -41,7 +41,6 @@
 	const opLabel = (o: PasteOp) => t(`grid.pasteSpecial.${o || 'none'}`);
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="back" use:backdrop={() => onclose()}>
 	<div class="dlg" role="dialog" aria-label={t('grid.pasteSpecial.title')} tabindex="-1" aria-modal="true" use:modal onkeydown={onKey}>
 		<div class="head">{t('grid.pasteSpecial.title')}</div>

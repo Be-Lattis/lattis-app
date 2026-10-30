@@ -217,7 +217,6 @@
 	{#if selection}<button class="plain small" title={t('shell.pageSetup.dialog.fromSelectionTooltip')} onclick={() => fromSelection(what)}>{t('shell.pageSetup.dialog.fromSelection')}</button>{/if}
 {/snippet}
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="back" use:backdrop={() => onclose()}>
 	<div class="dlg" role="dialog" aria-label={t('shell.pageSetup.dialog.title')} tabindex="-1" aria-modal="true" use:grab use:modal onkeydown={onKey}>
 		<div class="head">{t('shell.pageSetup.dialog.title')}</div>

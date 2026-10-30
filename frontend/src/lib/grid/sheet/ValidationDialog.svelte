@@ -43,7 +43,6 @@
 	{@const d = v.validDlg}
 	<!-- Boîte modale, comme celle d'Excel : un clic à côté ou un redimensionnement ne la ferme plus. -->
 	<div class="dlg-back" role="presentation">
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="rules valid-dlg"
 		role="dialog"

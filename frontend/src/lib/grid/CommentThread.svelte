@@ -122,7 +122,7 @@
 				{/if}
 			</div>
 			{#if editing?.id === c.id}
-				<!-- svelte-ignore a11y_autofocus -->
+				<!-- svelte-ignore a11y_autofocus (champ d'une boîte ou d'une saisie que l'on vient d'ouvrir) -->
 				<textarea
 					rows="3"
 					bind:value={editing.text}

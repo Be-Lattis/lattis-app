@@ -67,9 +67,11 @@
 	{@const filterable = !!v.source.setFilter}
 	{@const typed = !!v.source.setType && !fcol?.formula}
 	<!-- Menu ▾ de la colonne (comme Excel) : tri, filtres, type de données, clé. -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="rules filter colfilter anchored"
+		role="dialog"
+		tabindex="-1"
+		aria-label={tr('grid.quoted', { text: fcol?.name ?? '' })}
 		style:left="{d.x}px"
 		style:top="{d.y}px"
 		style:max-height="{Math.max(200, v.toView(v.viewH) - d.y - 8)}px"

@@ -19,9 +19,11 @@
 
 {#if v.sizeDlg}
 	{@const d = v.sizeDlg}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="rules lines-dlg"
+		role="dialog"
+		tabindex="-1"
+		aria-label={d.rows ? tr('grid.size.rowHeight') : tr('grid.size.colWidth')}
 		use:v.focusFirst
 		use:dismissPanel={() => (v.sizeDlg = null)}
 		onkeydown={(ev) => {

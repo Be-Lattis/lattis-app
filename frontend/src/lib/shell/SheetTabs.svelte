@@ -405,7 +405,7 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions (flèches et raccourcis captés pour toute la barre ; les onglets sont des boutons) -->
 <div class="sheet-tabs" bind:this={host} bind:clientWidth={width} data-region="tabs" onkeydown={tabKeys}>
 	<div class="nav" bind:clientWidth={navW}>
 		<button disabled={index <= 0} onclick={() => onselect(shown[index - 1].id)} title={t('shell.tabs.previousTooltip')} aria-label={t('shell.tabs.previous')}>◀</button>
@@ -414,7 +414,7 @@
 	<div class="strip" class:scroll={coarse} bind:this={strip}>
 	{#each vis as s, si (s.id)}
 		{#if renaming === s.id}
-			<!-- svelte-ignore a11y_autofocus -->
+			<!-- svelte-ignore a11y_autofocus (champ d'une boîte ou d'une saisie que l'on vient d'ouvrir) -->
 			<input
 				class="rename"
 				bind:this={renameInput}
@@ -573,7 +573,7 @@
 		</div>
 	{/if}
 	{#if hscroll && !coarse}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<!-- svelte-ignore a11y_no_static_element_interactions (barre de défilement à la souris ; au clavier, la grille défile) -->
 		<div
 			class="hbar"
 			bind:this={bar}

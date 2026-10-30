@@ -249,7 +249,7 @@
 	const stepsOpen = (it: Reply, at: number) => toggled[`${it.run}:${at}`] ?? !it.done;
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions (touches du volet captées à son niveau ; ses commandes sont des boutons) -->
 <aside class="ai-panel" class:over data-modal-exempt={over ? '' : undefined} use:resizePanel={{ key: 'assistant', min: 320 }} aria-label={t('ai.panel.title')} bind:offsetWidth={width} onkeydown={panelKey}>
 	<header>
 		<Icon name="sparkle" size={16} />

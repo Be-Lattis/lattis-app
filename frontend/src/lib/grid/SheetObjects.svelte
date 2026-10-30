@@ -525,7 +525,7 @@
 	{@const c = shown(o)}
 	{@const line = isLine(c.kind)}
 	{@const lw = c.line ? (c.lineWidth ?? 1) : 0}
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions (objet de la feuille : flèches, Suppr, Entrée captés quand il est sélectionné) -->
 	<div
 		class="obj"
 		class:line
@@ -591,7 +591,7 @@
 					style:font-style={c.italic ? 'italic' : null}
 				>
 					{#if editing === o.id}
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<!-- svelte-ignore a11y_no_static_element_interactions (texte modifiable (contenteditable), déjà élément du clavier) -->
 						<span class="edit" contenteditable="plaintext-only" spellcheck="false" use:focusEnd onkeydown={editKey} onblur={commitEdit} onmousedown={(ev) => ev.stopPropagation()}>{c.text ?? ''}</span>
 					{:else}
 						<span>{c.text}</span>
@@ -602,13 +602,13 @@
 		{#if selected === o.id && !locked && editing !== o.id}
 			{#if line}
 				{@const e = lineEnds(c)}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<!-- svelte-ignore a11y_no_static_element_interactions (poignée de taille à la souris ; au clavier, l'objet sélectionné se déplace aux flèches, sa taille pas encore) -->
 				<div class="handle end" style:left="{e.x1 - 4}px" style:top="{e.y1 - 4}px" onmousedown={(ev) => start(ev, o, 'p1')}></div>
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<!-- svelte-ignore a11y_no_static_element_interactions (poignée de taille à la souris ; au clavier, l'objet sélectionné se déplace aux flèches, sa taille pas encore) -->
 				<div class="handle end" style:left="{e.x2 - 4}px" style:top="{e.y2 - 4}px" onmousedown={(ev) => start(ev, o, 'p2')}></div>
 			{:else}
 				{#each HANDLES as dir (dir)}
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<!-- svelte-ignore a11y_no_static_element_interactions (poignée de taille à la souris ; au clavier, l'objet sélectionné se déplace aux flèches, sa taille pas encore) -->
 					<div class="handle {dir}" onmousedown={(ev) => start(ev, o, dir)}></div>
 				{/each}
 			{/if}

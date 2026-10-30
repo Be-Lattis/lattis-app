@@ -48,7 +48,7 @@
 {#if v.finder}
 	<!-- Entrée, F3, Échap, Ctrl+F et Ctrl+H dans toute la barre (onFinderKey) ;
 	     les boutons d'icône gardent le focus dans le champ (mousedown). -->
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions (zone de recherche : Entrée, Maj+Entrée et Échap captés pour ses champs) -->
 	<div class="finder" class:wide={!!v.finder.list || v.finder.more} role="search" aria-label={tr('grid.find.aria')} onkeydown={v.onFinderKey}>
 		<div class="fd-row">
 			{#if v.source.replace || v.source.replaceAll}
@@ -62,7 +62,7 @@
 					title={v.finder.replace ? tr('grid.find.replace.hide') : tr('grid.find.replace.tooltip')}
 				><Icon name="chevron-down" size={14} /></button>
 			{/if}
-			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (clic sur le cadre : focus au champ, cible agrandie) -->
 			<div class="fd-field" class:miss={v.finder.count === tr('grid.find.none')} onclick={() => v.findInput?.focus()}>
 				<Icon name="search" size={14} />
 				<input
@@ -88,7 +88,7 @@
 		</div>
 		{#if v.finder.replace}
 			<div class="fd-row fd-indent" id="fd-replace">
-				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (clic sur le cadre : focus au champ, cible agrandie) -->
 				<div class="fd-field" onclick={() => v.replaceInput?.focus()}>
 					<Icon name="replace" size={14} />
 					<input bind:this={v.replaceInput} bind:value={v.finder.by} placeholder={tr('grid.find.replaceBy')} aria-label={tr('grid.find.replaceBy')} spellcheck="false" autocomplete="off" />

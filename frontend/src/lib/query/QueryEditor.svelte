@@ -418,7 +418,6 @@
 								<tr>
 									<td class="num">{i + 1}</td>
 									{#each r as v, j (j)}
-										<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 										<td
 											class:on={onCol[j]}
 											class:right={preview.columns?.[j]?.type === 'integer' || preview.columns?.[j]?.type === 'decimal'}

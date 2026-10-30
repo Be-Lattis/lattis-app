@@ -86,7 +86,7 @@
 	);
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions (capture du clic en mode « choisir une cellule » ; le contrôle lui-même est un bouton ou un champ) -->
 <span
 	class="dctl"
 	class:picking={picker.active}

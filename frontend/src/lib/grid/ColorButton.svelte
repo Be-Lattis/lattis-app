@@ -47,7 +47,6 @@
 	<span class="sw" class:empty={!value} style:background={shown || 'transparent'}></span><span class="arrow" aria-hidden="true">▾</span>
 </button>
 {#if open}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="pop"
 		role="dialog"

@@ -17,8 +17,7 @@
 
 {#if v.linesDlg}
 	{@const d = v.linesDlg}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="rules lines-dlg" use:dismissPanel={() => (v.linesDlg = null)} onkeydown={(e) => e.key === 'Enter' && v.applyLinesDialog()}>
+	<div class="rules lines-dlg" role="dialog" tabindex="-1" aria-label={d.insert ? tr('grid.menu.insert') : tr('common.delete')} use:dismissPanel={() => (v.linesDlg = null)} onkeydown={(e) => e.key === 'Enter' && v.applyLinesDialog()}>
 		<div class="menu-title">{d.insert ? tr('grid.menu.insert') : tr('common.delete')}</div>
 		<label><input type="radio" bind:group={d.choice} value="rows" /> {d.insert ? tr('grid.lines.dialog.rowAbove') : tr('grid.lines.dialog.row')}</label>
 		<label><input type="radio" bind:group={d.choice} value="cols" /> {d.insert ? tr('grid.lines.dialog.colLeft') : tr('grid.lines.dialog.col')}</label>

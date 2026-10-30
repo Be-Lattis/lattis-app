@@ -146,7 +146,6 @@
 	{#if ring}
 		<div class="ring" class:still={reducedMotion()} style:left="{ring.x}px" style:top="{ring.y}px" style:width="{ring.w}px" style:height="{ring.h}px" aria-hidden="true"></div>
 	{/if}
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="bubble"
 		class:still={reducedMotion()}

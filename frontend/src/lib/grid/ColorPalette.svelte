@@ -95,7 +95,7 @@
 	</div>
 {/snippet}
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions (flèches captées par la palette ; les couleurs sont des boutons) -->
 <div class="cp" bind:this={el} onkeydown={key}>
 	<div class="sec">{t('grid.color.palette.theme')}</div>
 	<div role="grid" aria-label={t('grid.color.palette.theme')}>

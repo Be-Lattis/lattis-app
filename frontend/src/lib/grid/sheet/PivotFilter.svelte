@@ -45,9 +45,11 @@
 	{@const d = ui.pivotDlg}
 	{@const shown = searchValues(d.values, d.search)}
 	<!-- Menu ▾ d'un TCD (comme Excel) : tri des étiquettes, valeurs à cocher. -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="rules filter colfilter anchored"
+		role="dialog"
+		tabindex="-1"
+		aria-label={d.field}
 		style:left="{d.x}px"
 		style:top="{d.y}px"
 		style:max-height="{Math.max(200, ui.toView(ui.viewH) - d.y - 8)}px"

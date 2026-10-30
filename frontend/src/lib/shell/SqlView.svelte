@@ -693,7 +693,7 @@
 		<div class="code" style:height="{codeH}px">
 			{#await loadEditor() then m}<m.default bind:this={editor} bind:value={sql} {catalog} onrun={execute} onhistory={step} onhelp={refHelp} />{/await}
 		</div>
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (séparateur focalisable réglé aux flèches : rôle interactif que Svelte ne reconnaît pas) -->
 		<div
 			class="split"
 			role="separator"

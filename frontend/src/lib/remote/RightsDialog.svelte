@@ -172,7 +172,6 @@
 </script>
 
 <div class="back" role="presentation" use:backdrop={() => !busy && onclose()}>
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog ac-dialog"
 		bind:this={dialogEl}
@@ -201,7 +200,7 @@
 				<button type="button" class="sf-btn" onclick={copyLink} title={t('remote.rightsDialog.link.tooltip')}>{linkCopied ? t('remote.rightsDialog.link.copied') : t('remote.formQR.copy')}</button>
 			</div>
 		{/if}
-		<!-- svelte-ignore a11y_interactive_supports_focus -->
+		<!-- svelte-ignore a11y_interactive_supports_focus (flèches captées par la liste ; le focus va aux onglets, tabindex mobile) -->
 		<div class="tabs" role="tablist" aria-label={t('remote.rightsDialog.tabs')} bind:this={tabsEl} onkeydown={tabKey}>
 			{#each tabs as tb (tb.id)}
 				<button

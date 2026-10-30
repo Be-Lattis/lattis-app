@@ -7,5 +7,27 @@
 	"cut": "Cut",
 	"copy": "Copy",
 	"paste": "Paste",
-	"delete": "Delete"
+	"delete": "Delete",
+	"keys": {
+		"shift": "Shift",
+		"enter": "Enter",
+		"space": "Space",
+		"esc": "Esc",
+		"del": "Del",
+		"home": "Home",
+		"end": "End",
+		"pageDown": "PgDn",
+		"pageUp": "PgUp",
+		"arrow": "Arrow",
+		"arrows": "Arrows",
+		"up": "Up",
+		"down": "Down",
+		"left": "Left",
+		"right": "Right",
+		"letter": "Letter",
+		"then": "then",
+		"click": "click",
+		"wheel": "wheel",
+		"menu": "Menu"
+	}
 }

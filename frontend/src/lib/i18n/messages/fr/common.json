@@ -7,5 +7,27 @@
 	"cut": "Couper",
 	"copy": "Copier",
 	"paste": "Coller",
-	"delete": "Supprimer"
+	"delete": "Supprimer",
+	"keys": {
+		"shift": "Maj",
+		"enter": "Entrée",
+		"space": "Espace",
+		"esc": "Échap",
+		"del": "Suppr",
+		"home": "Origine",
+		"end": "Fin",
+		"pageDown": "Pg.Suiv",
+		"pageUp": "Pg.Préc",
+		"arrow": "Flèche",
+		"arrows": "Flèches",
+		"up": "Haut",
+		"down": "Bas",
+		"left": "Gauche",
+		"right": "Droite",
+		"letter": "Lettre",
+		"then": "puis",
+		"click": "clic",
+		"wheel": "molette",
+		"menu": "Menu"
+	}
 }

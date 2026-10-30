@@ -23,9 +23,11 @@
 	{@const d = v.fnDlg}
 	{@const shownFns = v.shownFunctions()}
 	{@const cur = shownFns.find((f) => f.name === d.sel) ?? shownFns[0]}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="rules filter"
+		role="dialog"
+		tabindex="-1"
+		aria-label={tr('grid.functions.title', { n: v.catalog?.functions.length ?? 0 })}
 		use:dismissPanel={() => (v.fnDlg = null)}
 		onkeydown={(ev) => {
 			ev.stopPropagation();
@@ -36,7 +38,7 @@
 		}}
 	>
 		<div class="menu-title">{tr('grid.functions.title', { n: v.catalog?.functions.length ?? 0 })}</div>
-		<!-- svelte-ignore a11y_autofocus -->
+		<!-- svelte-ignore a11y_autofocus (champ d'une boîte ou d'une saisie que l'on vient d'ouvrir) -->
 		<div class="add"><input class="search" bind:value={d.search} placeholder={tr('grid.functions.search')} autofocus /></div>
 		<div class="values">
 			{#each shownFns as f (f.name)}

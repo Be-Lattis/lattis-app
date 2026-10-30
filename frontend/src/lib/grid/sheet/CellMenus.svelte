@@ -21,6 +21,7 @@
 	import { freeCellMenu, headerMenu, linesSubmenu, pivotSubmenu, tableCellMenu, tableColumnSubmenu, tableRowSubmenu } from '../ctxmenu';
 	import { sortLabels } from '../format';
 	import { t as tr } from '#lib/i18n/index.js';
+	import { keyLabel } from '#lib/web/platform.js';
 	import { type SheetPivot, type ChartConfig, type SheetTable, type SheetData, type SheetSource, type Entry, pivotRowOf } from './model';
 	import type { TabChoiceItem } from '../tabchoice';
 	import type { LinesOp } from './model';
@@ -152,28 +153,28 @@
 			onclick={() => {
 				v.menu = v.freeMenu = null;
 				v.copySelection(true);
-			}}>{tr('common.cut')} <span class="keys">Ctrl+X</span></button
+			}}>{tr('common.cut')} <span class="keys">{keyLabel('Ctrl+X')}</span></button
 		>
 	{:else if id === 'copy'}
 		<button data-shed="3"
 			onclick={() => {
 				v.menu = v.freeMenu = null;
 				v.copySelection();
-			}}>{tr('common.copy')} <span class="keys">Ctrl+C</span></button
+			}}>{tr('common.copy')} <span class="keys">{keyLabel('Ctrl+C')}</span></button
 		>
 	{:else if id === 'paste'}
 		<button data-shed="3"
 			onclick={() => {
 				v.menu = v.freeMenu = null;
 				v.pasteClipboard();
-			}}>{tr('common.paste')} <span class="keys">Ctrl+V</span></button
+			}}>{tr('common.paste')} <span class="keys">{keyLabel('Ctrl+V')}</span></button
 		>
 	{:else if id === 'pasteSpecial'}
 		<button data-shed="3"
 			onclick={() => {
 				v.menu = v.freeMenu = null;
 				void v.pasteSpecial();
-			}}>{tr('grid.pasteSpecial.menu')} <span class="keys">Ctrl+Alt+V</span></button
+			}}>{tr('grid.pasteSpecial.menu')} <span class="keys">{keyLabel('Ctrl+Alt+V')}</span></button
 		>
 	{:else if id === 'pasteChart'}
 		<button
@@ -192,14 +193,14 @@
 	{:else if id === 'clear'}
 		<button onclick={clear}>{tr('grid.menu.clearContents')}</button>
 	{:else if id === 'format'}
-		<button data-shed="1" onclick={() => v.openFormat()}>{tr('grid.menu.formatCells')} <span class="keys">Ctrl+1</span></button>
+		<button data-shed="1" onclick={() => v.openFormat()}>{tr('grid.menu.formatCells')} <span class="keys">{keyLabel('Ctrl+1')}</span></button>
 	{:else if id === 'rules'}
 		<button data-shed="1" onclick={rules}>{tr('grid.menu.conditionalFormat')}</button>
 	{:else if id === 'note'}
 		{@render linkItems()}
 		{@render noteItems()}
 	{:else if id === 'comment'}
-		<button data-shed="1" onclick={v.newComment}>{v.activeThread() ? tr('grid.comment.menuReply') : tr('grid.comment.menuNew')} <span class="keys">Ctrl+Alt+M</span></button>
+		<button data-shed="1" onclick={v.newComment}>{v.activeThread() ? tr('grid.comment.menuReply') : tr('grid.comment.menuNew')} <span class="keys">{keyLabel('Ctrl+Alt+M')}</span></button>
 	{/if}
 {/snippet}
 
@@ -214,17 +215,17 @@
 					void v.followLink(url);
 				}}>{tr('grid.link.open')}</button
 			>
-			<button data-shed="1" onclick={v.editLink}>{tr('grid.link.menuEdit')} <span class="keys">Ctrl+K</span></button>
+			<button data-shed="1" onclick={v.editLink}>{tr('grid.link.menuEdit')} <span class="keys">{keyLabel('Ctrl+K')}</span></button>
 			<button data-shed="1" onclick={v.removeLink}>{tr('grid.link.remove')}</button>
 		{:else}
-			<button data-shed="1" onclick={v.editLink}>{tr('grid.link.menu')} <span class="keys">Ctrl+K</span></button>
+			<button data-shed="1" onclick={v.editLink}>{tr('grid.link.menu')} <span class="keys">{keyLabel('Ctrl+K')}</span></button>
 		{/if}
 	{/if}
 {/snippet}
 
 {#snippet noteItems()}
 	{#if v.noteOf(v.active.row, v.active.col)}
-		<button data-shed="1" onclick={v.editNote}>{tr('grid.note.edit')}</button>
+		<button data-shed="1" onclick={v.editNote}>{tr('grid.note.edit')} <span class="keys">{keyLabel('Maj+F2')}</span></button>
 		<button data-shed="1"
 			onclick={() => {
 				v.menu = v.freeMenu = null;
@@ -232,7 +233,7 @@
 			}}>{tr('grid.note.delete')}</button
 		>
 	{:else}
-		<button data-shed="1" onclick={v.editNote}>{tr('grid.note.insert')}</button>
+		<button data-shed="1" onclick={v.editNote}>{tr('grid.note.insert')} <span class="keys">{keyLabel('Maj+F2')}</span></button>
 	{/if}
 {/snippet}
 
@@ -248,7 +249,7 @@
 				v.menu = v.freeMenu = null;
 				v.refItems = null;
 				void v.followRef(at.row, at.col);
-			}}>{tr('grid.refLink.go', { table: clip(g.table), value: clip(g.value) })} <span class="keys">Ctrl+clic</span></button
+			}}>{tr('grid.refLink.go', { table: clip(g.table), value: clip(g.value) })} <span class="keys">{keyLabel('Ctrl+clic')}</span></button
 		>
 	{:else if v.refItems?.cite?.list?.length}
 		{@const ci = v.refItems.cite}
@@ -339,7 +340,6 @@
 			<button onclick={() => v.menuAction(() => v.source.clearFilters!(m.e.t))}>{tr('grid.menu.clearTableFilter')}</button>
 		{/if}
 	{/snippet}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (v.menu = null)}>
 		<!-- Les noms (ligne, colonne, tableau) n'apparaissent qu'en titre de leur sous-menu, abrégés ; jamais dans les libellés. -->
 		{#if m.confirmDelete}

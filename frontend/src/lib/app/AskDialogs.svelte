@@ -105,7 +105,7 @@
 {#if ui.protecting}
 	{@const p = ui.protecting}
 	<div class="modal-back">
-		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions (Entrée et Échap captés pour toute la boîte ; ses commandes sont des boutons et des champs) -->
 		<form
 			class="modal protect"
 			use:modal
@@ -154,7 +154,7 @@
 			{/if}
 			<label>
 				{p.off ? t('shell.protect.password') : t('shell.protect.passwordOptional')}
-				<!-- svelte-ignore a11y_autofocus -->
+				<!-- svelte-ignore a11y_autofocus (champ d'une boîte ou d'une saisie que l'on vient d'ouvrir) -->
 				<input type="password" bind:value={ui.pw1} autofocus autocomplete="off" />
 			</label>
 			{#if !p.off}

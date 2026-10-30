@@ -378,7 +378,7 @@
 	<text x={width / 2} y={height / 2 + 34} text-anchor="middle" class="small muted">{t('chart.map.pending.text')}</text>
 </svg>
 {:else}
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions (survol seulement : montre les commandes de la carte, qui sont des boutons) -->
 <div class="mapbox" class:pan={interactive && pts.length > 0} class:dragging class:point={interactive && canGo && !!hotPt && !dragging} bind:this={box} onmouseenter={() => (hover = true)} onmouseleave={() => (hover = false)}>
 <svg {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={style.title || t('chart.kind.map.label')}>
 	<defs>

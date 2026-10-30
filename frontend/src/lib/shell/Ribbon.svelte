@@ -1612,7 +1612,6 @@
 			</button>
 			<button class="drop" disabled={!c.run} onclick={(ev) => openPalette(kind, ev)} title={t('ribbon.color.choose')} aria-label={t('ribbon.color.chooseAria', { command: c.label })} aria-haspopup="menu" aria-expanded={palette === kind} data-kt="{c.label} ▾">▾</button>
 			{#if palette === kind}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div class="palette" role="dialog" data-own-keys aria-label={c.label} style:left="{palettePos.x}px" style:top="{palettePos.y}px" use:dismiss={() => (palette = null)}>
 					<ColorPalette value={cur} none={kind === 'bg' ? t('ribbon.color.noFill') : t('ribbon.color.auto')} autofocus onpick={(col) => pick(kind, col)} />
 				</div>
@@ -1620,7 +1619,7 @@
 		</div>
 {/snippet}
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions (flèches et accélérateurs captés pour tout le ruban ; ses commandes sont des boutons) -->
 <header
 	class="ribbon"
 	bind:this={headerEl}
@@ -1635,7 +1634,6 @@
 		<div class="file-wrap">
 			<button class="tab file" data-tab="file" data-label={tabLabel('file')} aria-haspopup="menu" aria-expanded={fileOpen} aria-keyshortcuts="Alt+F" onclick={(ev) => openFile(ev)}>{tabLabel('file')}</button>
 			{#if fileOpen}
-				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 				<div class="file-menu" role="menu" aria-label={tabLabel('file')} style:left="{filePos.x}px" style:top="{filePos.y}px" use:dismiss={() => (fileOpen = false)}>
 					{#each [['new', t('ribbon.file.new'), 'Ctrl+N'], ['open', t('ribbon.file.open'), 'Ctrl+O']] as [a, label, keys] (a)}
 						<button role="menuitem" onclick={() => { fileOpen = false; onfile(a as FileAction); }}><span>{label}</span><span class="keys">{keyLabel(keys)}</span></button>
@@ -1688,7 +1686,7 @@
 		<button class="tab help" data-tab="help" title={t('ribbon.helpButton.tooltip')} aria-label={t('ribbon.helpButton.aria')} onclick={() => onfile('help')}>?</button>
 	</nav>
 	{#if !isView(tab) && (!folded || peek)}
-		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (ruban replié : le clic l'affiche ; au clavier, Alt ou Ctrl+F1) -->
 		<div class="fold-wrap" class:peek={folded} use:peekWatch onclick={peekClick} transition:slide={{ duration: foldAnim && !reducedMotion() ? 200 : 0 }}>
 		<div class="groups" class:off={disabled} id="ribbon-panel" tabindex="-1" oncontextmenu={(e) => { if (e.target !== e.currentTarget) return; e.preventDefault(); hideMenu = { x: e.clientX, y: e.clientY }; }} role="tabpanel" aria-labelledby="ribbon-tab-{shownTabs.indexOf(tab as (typeof tabs)[number])}" use:observe>
 			{#each visibleGroups as g, gi (g.id)}
@@ -1712,7 +1710,6 @@
 							</button>
 						</div>
 						{#if openGroup?.id === g.id}
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div class="group-menu" style:left="{openGroup.x}px" style:top="{openGroup.y}px" use:dismiss={() => (openGroup = null)}>
 								{#if g.fonts}{@render fontCombos()}{/if}
 								{#each g.commands as c, cIndex (cIndex)}
@@ -1837,6 +1834,7 @@
 							{/each}
 						</div>
 					{/if}
+					<!-- svelte-ignore a11y_no_static_element_interactions (masquer ou montrer un groupe : préférence d'affichage à la souris, aucune commande n'en dépend) -->
 					<div class="title" oncontextmenu={(e) => { e.preventDefault(); hideMenu = { x: e.clientX, y: e.clientY, group: { id: g.id, title: g.title } }; }}>
 						<span id="ribbon-group-{gi}">{g.title}</span>
 						{#if g.launch}
@@ -1857,7 +1855,6 @@
 	{/if}
 	{#if hideMenu}
 		{@const m = hideMenu}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="drop-menu" role="menu" aria-label={t('ribbon.hideMenu.aria')} style:left="{m.x}px" style:top="{m.y}px" use:dismiss={() => (hideMenu = null)}>
 			{#if m.group}
 				{@const grp = m.group}
@@ -1877,7 +1874,6 @@
 	{#if dropMenu}
 		{@const c = ribbons[tab]?.flatMap((g) => g.commands).find((x) => x.label === dropMenu!.label)}
 		{#if c?.items}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="drop-menu" role="menu" aria-label={c.label} style:left="{dropMenu.x}px" style:top="{dropMenu.y}px" use:dismiss={() => (dropMenu = null)}>
 				{#each c.items as it, i (i)}
 					{#if it.sub || it.palette}

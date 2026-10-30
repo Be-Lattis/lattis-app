@@ -212,6 +212,21 @@
 		screen.subY = el.getBoundingClientRect().top - box.top;
 		// Pas la place à droite (menu près du bord de la fenêtre) : sous-menu à gauche.
 		subLeft = box.right + 320 > window.innerWidth;
+		// Ouvert au clavier (Entrée, Espace : clic sans souris) : le focus entre dans le sous-menu.
+		if (ev.detail === 0 && ev.type === 'click') tick().then(() => el.closest('.cf-menu')?.querySelector<HTMLElement>('.cf-sub > button')?.focus());
+	}
+
+	// menuKey : → ouvre le sous-menu, ← y revient ; ↑ ↓, Entrée et la première
+	// lettre viennent de menuKeys (ui/focus.ts, par use:dismiss).
+	function menuKey(e: KeyboardEvent) {
+		if (e.key === 'Escape') return onclose();
+		const at = document.activeElement as HTMLElement | null;
+		const sub = at?.closest('.cf-sub');
+		if (e.key === 'ArrowRight' && at?.matches('.cf-menu > button.item') && at.querySelector('.chev')) at.click();
+		else if (e.key === 'ArrowLeft' && sub) sub.closest('.cf-menu')?.querySelector<HTMLElement>('button.item.open')?.focus();
+		else return;
+		e.preventDefault();
+		e.stopPropagation();
 	}
 	let subLeft = $state(false);
 
@@ -544,6 +559,30 @@
 		screen = { kind: 'edit', d: draftOf(m.rule, formatLocs(m.locs, tables)), back: true, editing: m.key };
 	}
 
+	// ruleKey : la liste des règles au clavier (flèches, Début, Fin, Entrée, Suppr).
+	function ruleKey(e: KeyboardEvent, i: number) {
+		const rows = (e.currentTarget as HTMLElement).parentElement?.querySelectorAll<HTMLElement>('.trow');
+		let j = -1;
+		if (e.key === 'ArrowDown') j = Math.min(i + 1, shown.length - 1);
+		else if (e.key === 'ArrowUp') j = Math.max(i - 1, 0);
+		else if (e.key === 'Home') j = 0;
+		else if (e.key === 'End') j = shown.length - 1;
+		else if (e.key === 'Enter' || e.key === 'F2') {
+			picked = shown[i].key;
+			editPicked();
+		} else if (e.key === 'Delete') {
+			picked = shown[i].key;
+			remove();
+		} else if (e.key === ' ') picked = shown[i].key;
+		else return;
+		e.preventDefault();
+		e.stopPropagation();
+		if (j >= 0 && shown[j]) {
+			picked = shown[j].key;
+			rows?.[j]?.focus();
+		}
+	}
+
 	function setApplies(m: Managed, text: string) {
 		const locs = parseLocs(text, tables);
 		if (typeof locs === 'string') {
@@ -679,8 +718,8 @@
 
 {#if screen.kind === 'menu'}
 	{@const m = screen}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="cf-menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={onclose} onkeydown={(e) => e.key === 'Escape' && onclose()}>
+	<!-- svelte-ignore a11y_no_static_element_interactions (menu : flèches, Entrée et Échap captés au niveau du menu, ui/focus.ts menuKeys) -->
+	<div class="cf-menu" style:left="{m.x}px" style:top="{m.y}px" use:dismiss={onclose} onkeydown={menuKey}>
 		{#each [['hl', t('grid.cf.menu.highlight')], ['tb', t('grid.cf.menu.topBottom')], ['bar', t('grid.cf.menu.bars')], ['scale', t('grid.cf.menu.scales')], ['icons', t('grid.cf.menu.icons')]] as [id, label] (id)}
 			<button class="item" class:open={m.sub === id} onmouseenter={(e) => openSub(id, e)} onclick={(e) => openSub(id, e)}>
 				<canvas use:paint={{ w: 22, h: 18, draw: id === 'hl'
@@ -817,7 +856,6 @@
 {:else if screen.kind === 'quick'}
 	{@const q = screen.q}
 	<div class="cf-back" role="presentation">
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div class="cf-dlg" role="dialog" aria-modal="true" aria-label={QUICK_TITLES[q.op]} tabindex="-1" use:modal use:autofocus onkeydown={(e) => keys(e, quickOk)}>
 		<div class="title">{QUICK_TITLES[q.op]}</div>
 		<p class="lead">
@@ -863,7 +901,6 @@
 {:else if screen.kind === 'edit'}
 	{@const d = screen.d}
 	<div class="cf-back" role="presentation">
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="cf-dlg wide"
 		role="dialog"
@@ -1089,7 +1126,6 @@
 	</div>
 {:else}
 	<div class="cf-back" role="presentation">
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="cf-dlg manager"
 		role="dialog"
@@ -1114,13 +1150,22 @@
 		</div>
 		<div class="table">
 			<div class="thead"><span>{t('grid.cf.manager.col.rule')}</span><span>{t('grid.cf.manager.col.format')}</span><span>{t('grid.cf.manager.col.appliesTo')}</span><span>{t('grid.cf.stop')}</span></div>
-			<div class="tbody">
+			<div class="tbody" role="listbox" aria-label={t('grid.cf.manager.col.rule')}>
 				{#if shown.length === 0}
 					<p class="note">{scope === 'selection' ? t('grid.cf.manager.none.selection') : t('grid.cf.manager.none.sheet')}</p>
 				{/if}
-				{#each shown as m (m.key)}
-					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-					<div class="trow" class:sel={picked === m.key} onclick={() => (picked = m.key)} ondblclick={editPicked}>
+				{#each shown as m, i (m.key)}
+					<!-- Liste des règles au clavier : flèches pour choisir, Entrée pour modifier, Suppr pour supprimer. -->
+					<div
+						class="trow"
+						class:sel={picked === m.key}
+						role="option"
+						aria-selected={picked === m.key}
+						tabindex={picked === m.key || (!picked && i === 0) ? 0 : -1}
+						onclick={() => (picked = m.key)}
+						ondblclick={editPicked}
+						onkeydown={(e) => ruleKey(e, i)}
+					>
 						<span class="what" title={describeRule(m.rule)}>{describeRule(m.rule)}</span>
 						<span>
 							{#if visual(m.rule)}

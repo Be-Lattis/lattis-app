@@ -163,7 +163,6 @@
 {/snippet}
 
 <div class="back" role="presentation" use:backdrop={() => !busy && ondone(false)}>
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="dialog"
 		role="dialog"
@@ -192,7 +191,7 @@
 						<p class="muted">{query ? t('remote.catalog.noMatch') : t('remote.catalog.empty')}</p>
 					{:else}
 						{#if catalog.can_publish && dragging}
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<!-- svelte-ignore a11y_no_static_element_interactions (cible de glisser-déposer ; pas encore d'équivalent au clavier, voir l'audit d'ergonomie) -->
 							<div class="root-drop" ondragover={(e) => e.preventDefault()} ondrop={() => drop('')}>{t('remote.catalog.dropRoot')}</div>
 						{/if}
 						{@render nodes(tree, 0)}

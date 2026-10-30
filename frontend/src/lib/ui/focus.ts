@@ -233,6 +233,8 @@ export function menuKeys(node: HTMLElement): () => void {
 	if (!node.hasAttribute('role')) node.setAttribute('role', 'menu');
 	menus.push(node);
 	const t = setTimeout(() => {
+		// Rôle des entrées dès l'ouverture (le lecteur d'écran annonce « élément de menu », pas « bouton »).
+		for (const el of menuItems(node)) if (!el.hasAttribute('role') && el instanceof HTMLButtonElement) el.setAttribute('role', 'menuitem');
 		if (byKeyboard() && !node.contains(document.activeElement)) menuItems(node)[0]?.focus({ preventScroll: true });
 	});
 	const key = (e: KeyboardEvent) => {

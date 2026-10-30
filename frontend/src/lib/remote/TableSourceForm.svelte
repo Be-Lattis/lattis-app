@@ -243,7 +243,7 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions (Entrée et Échap captés pour toute la boîte ; ses commandes sont des boutons et des champs) -->
 <div class="sf-body" bind:this={body} onkeydown={onKey}>
 	{#if !info}
 		<p class="sf-hint">{error ? '' : t('remote.sourceForm.reading')}</p>

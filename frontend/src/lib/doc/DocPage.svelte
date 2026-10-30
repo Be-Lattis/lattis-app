@@ -919,7 +919,7 @@
 
 <div class="doc" style:--doc-font={DOC_FONT} style:--doc-size="{DOC_PT}pt">
 	<div class="scroll">
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<!-- svelte-ignore a11y_no_static_element_interactions (survol seulement : montre les poignées de taille) -->
 		<div class="page" aria-label={t('doc.page.aria', { name })} bind:this={pageEl} onmouseover={onHover} onfocus={() => {}} onmouseleave={() => !sizing && (grip = null)}>
 			<div bind:this={host}></div>
 			{#if grip}
@@ -1101,7 +1101,7 @@
 			<header><span>{t('doc.link.title')}</span><button class="x" title={t('remote.closeEsc')} aria-label={t('doc.panel.close')} onclick={() => openPanel(null)}>✕</button></header>
 			<label
 				>{t('doc.link.address')}
-				<!-- svelte-ignore a11y_autofocus -->
+				<!-- svelte-ignore a11y_autofocus (champ d'une boîte ou d'une saisie que l'on vient d'ouvrir) -->
 				<input
 					type="url"
 					value={p.url}

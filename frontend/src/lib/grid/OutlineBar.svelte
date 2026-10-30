@@ -201,11 +201,9 @@
 </script>
 
 {#if W > 0}
-	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 	<canvas class="ol-rows" bind:this={left} style:width="{W}px" aria-label={t('grid.outline.rows')} onmousedown={(e) => click(e, true)}></canvas>
 {/if}
 {#if H > 0}
-	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 	<canvas class="ol-cols" bind:this={topCv} style:height="{H}px" style:left="{W}px" style:width="calc(100% - {W}px)" aria-label={t('grid.outline.cols')} onmousedown={(e) => click(e, false)}></canvas>
 {/if}
 
