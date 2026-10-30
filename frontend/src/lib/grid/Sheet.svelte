@@ -37,7 +37,6 @@
 	import { findZone, inZone, zoneLabel, type Zone } from './findzone';
 	import { type FindOpts, type FoundCell } from './findopts';
 	import FindMore from './FindMore.svelte';
-	import { edgeScroll, frameStep } from './autoscroll';
 	import { blocksReach, boxesReach } from './objextent';
 	import FormatDialog, { type FormatTab } from './FormatDialog.svelte';
 	import TextToColumns from './TextToColumns.svelte';
@@ -66,7 +65,6 @@
 	import { canFoldAll, foldAll, foldTarget, pivotBoxHit, pivotBoxLeft, pivotLabelOffset, PIVOT_BOX, setColFolded, setFolded } from './pivottree';
 	import { newSlicer, withSlicer } from './pivotslicer';
 	import SheetSlicers from './SheetSlicers.svelte';
-	import { fillSeries, shiftTableColumns } from './fill';
 	import { citeLabel, refMessage, refTarget, type Citation } from './reflink';
 	import { gridPalette } from './theme';
 	import { paint as themed } from './colors';
@@ -85,10 +83,8 @@
 	import PivotPanel from './PivotPanel.svelte';
 	import { brokenPivotAt } from './pivotzone';
 	import { midEllipsis } from './midellipsis';
-	import { fitColumns, fitRows } from './autofit';
-	import { handAlign, handKeptNote, handStart, pivotHandAt } from './pivothand';
-	import { pivotRangeRef, pivotRefText } from './pivotref';
-	import { placesOnClick, type Placement } from './pivotplace';
+	import { handAlign, handKeptNote, handStart } from './pivothand';
+	import { type Placement } from './pivotplace';
 	import SheetButtons from './SheetButtons.svelte';
 	import SheetObjects from './SheetObjects.svelte';
 	import { objectBox, type ObjectConfig, type SheetObject } from './objects';
@@ -102,9 +98,9 @@
 	import GridA11y from './GridA11y.svelte';
 	import { type CellSpeech } from './a11y';
 	import { drawIcon } from '#lib/icons/canvas.js';
-	import { apply as applySuggestion, argKindAt, needsNextArg, signature, toNextArg, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
-	import { formulaRefs, highlightParts, isFormula, movedRef, pointedRef, previewShift, rangeRef, refRect, type FormulaError, type Rect, type RefTable } from './formulaEdit';
-	import { editorLeave, holdFormula, insertRefAt, qualifyRef, updateHold, type FormulaHold } from './crossref';
+	import { apply as applySuggestion, signature, signatureParts, suggest, type Catalog, type Completion, type FunctionDoc } from './autocomplete';
+	import { formulaRefs, highlightParts, isFormula, previewShift, rangeRef, refRect, type FormulaError, type Rect } from './formulaEdit';
+	import { editorLeave, holdFormula, qualifyRef, updateHold, type FormulaHold } from './crossref';
 	import OutlineBar from './OutlineBar.svelte';
 	import { bandSize, detailTarget, outlineDepth, type OutlineAction, type OutlineGeom, type SheetOutline } from './outline';
 	import { nameAlertOpen } from '#lib/ui/nameAlert.js';
@@ -124,7 +120,7 @@
 		type ColumnType
 	} from './format';
 	import { errorText, t as tr, tAny } from '#lib/i18n/index.js'; // t est souvent un tableau ici : la traduction s'appelle tr
-	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer, type WholeSel, type DvPick, type InputTip, type DragPtr } from './sheet/model';
+	import { type TypeMix, type PivotConfig, type SheetPivot, type ChartConfig, type SheetChart, type PageBreaksView, type SheetTable, type SheetData, type SheetSource, type SheetStatus, type Box, type TableAnim, type TextField, type HiddenMark, type Link, type Range, type Entry, pivotTotalRow, pivotRowOf, pivotBold, type Layer, type WholeSel, type DvPick, type InputTip } from './sheet/model';
 	import { SHEET_ROWS, SHEET_COLS, ROW_H, DEF_W, TOP_H, MIN_MARGIN, GUTTER_PAD, GUTTER_MAX, GUTTER_KEY_MAX, FONT, FONT_BOLD, FONT_SMALL, FONT_TINY } from './sheet/consts';
 	import { createFind } from './sheet/find.svelte.js';
 	import { createScrolling } from './sheet/scrolling.svelte.js';
@@ -136,6 +132,7 @@
 	import { createAudit } from './sheet/audit.svelte.js';
 	import { createEdit } from './sheet/edit.svelte.js';
 	import { createKeyboard } from './sheet/keyboard.svelte.js';
+	import { createMouse } from './sheet/mouse.svelte.js';
 
 
 	interface Props {
@@ -6221,314 +6218,14 @@
 		get clearSelection() { return clearSelection; }
 	});
 	const { tabMove, enterMove, moveTo, jump, cellAt, copyFill, onKeyDown } = keyboardCtl;
-	// --- Largeur des colonnes : glisser une séparation du bandeau du haut ----
+	// --- Souris : sheet/mouse.svelte.ts ---
 
 	let resizing: { col: number; startX: number; startW: number; width: number } | null = null;
 	let rowResizing: { row: number; startY: number; startH: number; height: number } | null = null;
 
-	/** Ligne dont le bord bas est sous la souris (marge de gauche), ou null. */
-	function rowBoundaryAt(e: MouseEvent): number | null {
-		if (structure) return null; // structure protégée : pas de hauteur à tirer
-		const { x, y } = toLocal(e);
-		if (x >= MARGIN || y <= TOP_H) return null;
-		const py = toGrid(y, TOP_H, rowTop(fRows()), vs.top);
-		const row = rax().indexAt(py);
-		if (rowTop(row + 1) - py <= 3) return row;
-		if (py - rowTop(row) <= 3 && row > 0) return row - 1;
-		return null;
-	}
-
-	/** Colonne dont le bord droit est sous la souris (bandeau du haut), ou null. */
-	function boundaryAt(e: MouseEvent): number | null {
-		if (structure) return null; // structure protégée : pas de largeur à tirer
-		const { x, y } = toLocal(e);
-		if (y >= TOP_H || x <= MARGIN) return null;
-		const px = toGrid(x, MARGIN, cax().offset(fCols()), scroller.scrollLeft);
-		const c = cax().indexAt(px);
-		const right = cax().offset(c + 1);
-		const left = cax().offset(c);
-		if (right - px <= 4) return c;
-		if (px - left <= 4 && c > 0) return c - 1;
-		return null;
-	}
-
-	/** Largeurs ajustées au contenu affiché des colonnes cols (double-clic sur
-	 * le trait de droite d'un en-tête, comme Excel) : en-têtes des tableaux,
-	 * lignes visibles seulement (rien de plus n'est lu, même sur un tableau
-	 * d'un million de lignes), cellules libres et tableaux croisés. Un seul
-	 * passage pour toutes les colonnes (toute la feuille sélectionnée). */
-	function fitWidths(cols: number[]): Map<number, number> {
-		const want = new Set(cols);
-		const w = new Map<number, number>();
-		const up = (c: number, v: number) => v > (w.get(c) ?? 0) && w.set(c, v);
-		if (!cols.length) return w;
-		let lo = cols[0];
-		let hi = cols[0];
-		for (const c of cols) (lo = Math.min(lo, c)), (hi = Math.max(hi, c));
-		const { first, last } = visibleRows();
-		for (const e of entries) {
-			if (e.lastCol < lo || e.t.col > hi) continue;
-			const d = visibleData(e, first, last);
-			for (let c = Math.max(lo, e.t.col); c <= Math.min(hi, e.lastCol); c++) {
-				if (!want.has(c)) continue;
-				const i = c - e.t.col;
-				let m = headerWidth(e, i);
-				if (d)
-					for (let k = d.first; k <= d.last; k++) {
-						const row = e.cache.row(k);
-						m = Math.max(m, cellWidth(row?.text[i] ?? '', row?.cells[i], styleAt(e.t.row + 1 + k, c, e)));
-					}
-				up(c, m);
-			}
-		}
-		for (const [k, raw] of cells) {
-			const [r, cc] = k.split(',').map(Number);
-			if (want.has(cc)) up(cc, cellWidth(shown.get(k)?.text ?? raw, undefined, styleAt(r, cc, undefined)));
-		}
-		for (const p of pivots) {
-			const n = p.cells[0]?.length ?? 0;
-			if (p.error || p.col > hi || p.col + n - 1 < lo) continue;
-			for (let j = 0; j < n; j++) {
-				if (!want.has(p.col + j)) continue;
-				p.cells.forEach((r, i) => up(p.col + j, textWidth(r[j] ?? '', pivotBold(p, p.row + i)) + (j === 0 ? pivotLabelOffset(pivotRowOf(p, p.row + i)) : 0)));
-			}
-		}
-		const out = new Map<number, number>();
-		for (const c of cols) {
-			const v = w.get(c) ?? 0;
-			out.set(c, v ? clamp(Math.ceil(v) + 14, 24, MAX_FIT) : DEF_W);
-		}
-		return out;
-	}
-
-	/** Ajuste les colonnes cols à leur contenu, en une seule étape d'annulation. */
-	function autoFitColumns(cols: number[]) {
-		const one = source.setColumnWidth;
-		const many = source.setColumnWidths;
-		if (!one && !many) return;
-		const widths: { col: number; width: number }[] = [];
-		for (const [col, width] of fitWidths(cols)) if (width !== cax().size(col)) widths.push({ col, width });
-		if (!widths.length) return;
-		for (const { col, width } of widths) userWidths.set(col, width);
-		rebuildAxis();
-		updateExtent();
-		schedule();
-		const write = many && (widths.length > 1 || !one) ? () => many(widths) : () => one!(widths[0].col, widths[0].width);
-		writing = writing.catch(() => undefined).then(() => write().then(() => undefined, (err) => say(errorText(err))));
-	}
-
-	/** La souris est-elle sur la bordure de la sélection (poignée de déplacement) ? */
-	function onSelectionEdge(e: MouseEvent): boolean {
-		if (!source.transfer) return false;
-		const { x, y } = toLocal(e);
-		if (x < MARGIN || y < TOP_H) return false;
-		const { r0, r1, c0, c1 } = selection();
-		const left = screenX(c0);
-		const right = screenX(c1) + cax().size(c1);
-		const top = screenY(r0);
-		const bottom = screenY(r1) + rh(r1);
-		const near = (v: number, edge: number) => Math.abs(v - edge) <= 3;
-		const inX = x >= left - 3 && x <= right + 3;
-		const inY = y >= top - 3 && y <= bottom + 3;
-		return (inY && (near(x, left) || near(x, right))) || (inX && (near(y, top) || near(y, bottom)));
-	}
-
-	/**
-	 * Fin du glisser de la bordure de la sélection, comme Excel : la zone se
-	 * déplace (Ctrl : se copie) d'un seul bloc, en une étape d'annulation —
-	 * tableaux entiers, colonnes entières, cellules libres et cellules de
-	 * tableau mêlés (voir transfer). Posée sur un tableau, elle remplace ses
-	 * valeurs ; juste à côté, elle l'étend ou le fusionne ; un tableau
-	 * chevauché s'écarte vers la droite.
-	 */
-	async function dropMove() {
-		const m = moving;
-		moving = null;
-		scroller.style.cursor = '';
-		schedule();
-		if (!m?.to || !source.transfer) return;
-		const dr = m.to.row - m.from.row;
-		const dc = m.to.col - m.from.col;
-		if (!dr && !dc) return;
-		const { r0, r1, c0, c1 } = m.sel;
-		const dst = { r0: r0 + dr, c0: c0 + dc, r1: r1 + dr, c1: c1 + dc };
-		if (dst.r0 < 0 || dst.c0 < 0) return;
-		// Tableau croisé emporté : il se déplace (Ctrl : se copie) en entier ;
-		// ce qu'il recouvre s'écarte (le moteur).
-		if (m.pivot !== undefined) {
-			const op = m.copy ? source.copyPivot : source.movePivot;
-			if (!op) return;
-			const id = m.pivot;
-			clipRange = null;
-			writing = writing.catch(() => undefined).then(() =>
-				op(id, dst.r0, dst.c0).then(
-					() => {
-						active = { row: dst.r0, col: dst.c0 };
-						anchor = { ...active };
-						message = m.copy ? tr('grid.pivot.pasted') : tr('grid.pivot.place.moved');
-						refreshFx();
-						refreshStatus();
-						schedule();
-					},
-					(err) => say(errorText(err))
-				)
-			);
-			return;
-		}
-		// Des cellules déposées sur un tableau croisé (ou une partie de lui
-		// emportée avec d'autres cellules) : ce n'est pas un déplacement de
-		// tableau croisé.
-		const hitPivot = pivotIn(dst.r0, dst.c0, dst.r1, dst.c1) ?? (!m.copy ? pivotIn(r0, c0, r1, c1) : undefined);
-		if (hitPivot) {
-			say(tr('grid.pivot.overlap', { name: hitPivot.config.name ?? '' }));
-			return;
-		}
-		// Un tableau de requête déplacé en entier reste permis ; ses cellules, non.
-		const carried = (e: Entry) => !m.copy && e.t.row >= r0 && e.last <= r1 && e.t.col >= c0 && e.lastCol <= c1;
-		const hit = entries.some((e) => e.t.query && !carried(e) && e.t.row <= dst.r1 && e.last >= dst.r0 && e.t.col <= dst.c1 && e.lastCol >= dst.c0);
-		if (hit || (!m.copy && queryIn(r0, c0, r1, c1, true))) {
-			say(QUERY_READONLY);
-			return;
-		}
-		const values = rangeValues(m.sel);
-		if (!values) return;
-		const copy = !!m.copy;
-		const transfer = source.transfer;
-		clipRange = null;
-		writing = writing.catch(() => undefined).then(async () => {
-			try {
-				const msg = await transfer(sheetId(), m.sel, dst, !copy, values);
-				active = snapMerge(dst.r0, dst.c0);
-				anchor = { row: dst.r1, col: dst.c1 };
-				message = msg || (copy ? tr('grid.cells.copied') : tr('grid.cells.moved'));
-			} catch (err) {
-				message = errorText(err);
-			}
-			refreshFx();
-			refreshStatus();
-			schedule();
-		});
-	}
-
-	// --- Poignée de recopie ------------------------------------------------------
-
 	let filling = $state<{ sel: Range; to?: Range } | null>(null);
-
-	/** Position (écran) du coin bas droit de la sélection. */
-	function fillHandle() {
-		let { r1, c1 } = selection();
-		const g = boxOf(r1, c1);
-		if (g) {
-			r1 = g.row + g.rows - 1;
-			c1 = g.col + g.cols - 1;
-		}
-		return { x: screenX(c1) + cax().size(c1), y: screenY(r1) + rh(r1) };
-	}
-
-	function onFillHandle(e: MouseEvent): boolean {
-		if (editing || !source.paste) return false;
-		const p = toLocal(e);
-		const h = fillHandle();
-		return Math.abs(p.x - h.x) <= 5 && Math.abs(p.y - h.y) <= 5;
-	}
-
-	/** Zone étendue par la poignée jusqu'à la cellule visée (une seule direction). */
-	function fillTarget(sel: Range, cell: { row: number; col: number }): Range | undefined {
-		const down = cell.row - sel.r1;
-		const up = sel.r0 - cell.row;
-		const right = cell.col - sel.c1;
-		const left = sel.c0 - cell.col;
-		const best = Math.max(down, up, right, left);
-		if (best <= 0) return undefined;
-		if (best === down) return { ...sel, r1: cell.row };
-		if (best === up) return { ...sel, r0: cell.row };
-		if (best === right) return { ...sel, c1: cell.col };
-		return { ...sel, c0: cell.col };
-	}
-
-	/** Remplit to à partir de sel (séries, dates, mois… voir fill.ts). */
-	function doFill(sel: Range, to: Range) {
-		if (!source.paste) return;
-		const val = (r: number, c: number) => cellInfo(r, c).value;
-		let row = 0;
-		let col = 0;
-		let block: string[][] = [];
-		if (to.r1 > sel.r1 || to.r0 < sel.r0) {
-			const down = to.r1 > sel.r1;
-			const n = down ? to.r1 - sel.r1 : sel.r0 - to.r0;
-			const cols: string[][] = [];
-			for (let c = sel.c0; c <= sel.c1; c++) {
-				const src: string[] = [];
-				for (let r = sel.r0; r <= sel.r1; r++) src.push(val(r, c));
-				cols.push(down ? fillSeries(src, n) : fillSeries([...src].reverse(), n).reverse());
-			}
-			block = Array.from({ length: n }, (_, k) => cols.map((x) => x[k]));
-			row = down ? sel.r1 + 1 : to.r0;
-			col = sel.c0;
-		} else {
-			const right = to.c1 > sel.c1;
-			const n = right ? to.c1 - sel.c1 : sel.c0 - to.c0;
-			const w = sel.c1 - sel.c0 + 1;
-			const tables = refTables();
-			for (let r = sel.r0; r <= sel.r1; r++) {
-				const src: string[] = [];
-				for (let c = sel.c0; c <= sel.c1; c++) src.push(val(r, c));
-				const line = right ? fillSeries(src, n) : fillSeries([...src].reverse(), n).reverse();
-				// Les colonnes de tableau citées suivent le décalage (Ventes[Prix] → Ventes[Qté]).
-				block.push(
-					line.map((v, j) => {
-						const dest = right ? sel.c1 + 1 + j : to.c0 + j;
-						const from = right ? sel.c0 + (j % w) : sel.c1 - ((sel.c0 - 1 - dest) % w);
-						return shiftTableColumns(v, dest - from, tables);
-					})
-				);
-			}
-			row = sel.r0;
-			col = right ? sel.c1 + 1 : to.c0;
-		}
-		const paste = source.paste;
-		writing = writing.catch(() => undefined).then(async () => {
-			try {
-				await paste(row, col, block);
-				message = tr('grid.fill.series');
-			} catch (err) {
-				message = errorText(err);
-			}
-			active = { row: to.r0, col: to.c0 };
-			anchor = { row: to.r1, col: to.c1 };
-			refreshFx();
-			refreshStatus();
-			schedule();
-		});
-	}
-
-	/** Double-clic sur la poignée : recopie jusqu'en bas du tableau voisin. */
-	function fillDown() {
-		const sel = selection();
-		const near = entries.find((e) => e.t.col <= sel.c1 + 1 && e.lastCol >= sel.c0 - 1 && e.t.row <= sel.r1 && e.last > sel.r1);
-		if (!near) return;
-		doFill(sel, { ...sel, r1: near.last });
-	}
-
 	// Sélection de lignes ou de colonnes entières par la marge ou le bandeau.
 	let headerDrag: 'rows' | 'cols' | null = null;
-
-	/** Ligne (marge de gauche) ou colonne (bandeau du haut) sous la souris. */
-	function headerAt(e: MouseEvent): { kind: 'rows'; row: number } | { kind: 'cols'; col: number } | null {
-		const { x, y } = toLocal(e);
-		if (x < MARGIN && y >= TOP_H) return { kind: 'rows', row: clamp(rowAtY(y), 0, SHEET_ROWS - 1) };
-		if (y < TOP_H && x >= MARGIN) return { kind: 'cols', col: colAtX(x) };
-		return null;
-	}
-
-	/** Dernière ligne et colonne de la zone affichée (la sélection entière s'y arrête). */
-	function lastRow() {
-		return Math.max(0, rax().indexAt(vs.content) - 1);
-	}
-	function lastCol() {
-		return Math.max(0, extentCols - 1);
-	}
-
 	// Sélection de lignes ou colonnes entières (marge ou bandeau) : tant que la
 	// sélection n'a pas changé, la mise en forme vaut pour les lignes ou
 	// colonnes entières. Elles restent exactement celles choisies (range), sans
@@ -6536,742 +6233,157 @@
 	// from : la ligne (colonne) où le clic a commencé, d'où partent le glisser
 	// et Maj+clic (la cellule active, elle, est le haut de sa fusion).
 	let wholeSel: WholeSel | null = null;
-	function wholeKind(): 'rows' | 'cols' | null {
-		const w = wholeSel;
-		if (!w) return null;
-		const same = (a: { row: number; col: number }, b: { row: number; col: number }) => a.row === b.row && a.col === b.col;
-		return same(w.anchor, anchor) && same(w.active, active) ? w.kind : null;
-	}
-	/** Début d'un Maj+clic ou d'un glisser dans la gouttière (rows) ou le bandeau. */
-	function wholeFrom(kind: 'rows' | 'cols'): number {
-		return wholeKind() === kind ? wholeSel!.from : kind === 'rows' ? active.row : active.col;
-	}
-
-	/** Lignes from à to entières ; la cellule active est au début de from (comme Excel). */
-	function selectRows(from: number, to: number) {
-		const w = wholeLines('rows', from, to, lastCol(), boxes);
-		active = w.active;
-		anchor = { row: to, col: lastCol() };
-		wholeSel = { kind: 'rows', from, range: w.range, anchor: { ...anchor }, active: { ...active } };
-		refreshFx();
-		refreshStatus();
-		schedule();
-	}
-	function selectCols(from: number, to: number) {
-		const w = wholeLines('cols', from, to, lastRow(), boxes);
-		active = w.active;
-		anchor = { row: lastRow(), col: to };
-		wholeSel = { kind: 'cols', from, range: w.range, anchor: { ...anchor }, active: { ...active } };
-		refreshFx();
-		refreshStatus();
-		schedule();
-	}
-
-	/** La cellule est-elle dans la sélection en cours ? */
-	function inSelection(row: number, col: number) {
-		const { r0, r1, c0, c1 } = selection();
-		return row >= r0 && row <= r1 && col >= c0 && col <= c1;
-	}
-
-	function onMouseDown(e: MouseEvent) {
-		if (!scroller) return;
-		if (panDown(e)) return;
-		if (hold) {
-			pointAway(e);
-			return;
-		}
-		// Pose d'un tableau croisé : le clic gauche sur une cellule le pose ;
-		// en-têtes, marge et clic droit gardent leur rôle.
-		if (placing) {
-			const cell = cellAt(e);
-			if (placesOnClick(e.button, !!cell && headerAt(e) === null)) {
-				e.preventDefault();
-				if (!commitEditor()) return;
-				wrap.focus();
-				placePivotAt(cell!);
-				return;
-			}
-		}
-		// Flèches d'audit : un clic dans la grille les efface, même sur la cellule
-		// active (le ruban n'a plus de « Supprimer les flèches »).
-		if (links.length) {
-			links = [];
-			schedule();
-		}
-		// Feuille protégée : comme Excel, un clic place la cellule active (pour
-		// lire, copier, figer les volets), sans glisser ni menus de tableau ni
-		// redimensionnement.
-		if (locked) {
-			e.preventDefault();
-			wrap.focus();
-			if (selChart !== null) selChart = null;
-			const cell = e.button === 0 ? cellAt(e) : null;
-			if (cell) moveTo(cell.row, cell.col, e.shiftKey);
-			return;
-		}
-		{
-			const hm = e.button === 0 ? hiddenMarkAt(e) : undefined;
-			if (hm && source.setLinesHidden) {
-				e.preventDefault();
-				const set = source.setLinesHidden;
-				menuAction(() => set(hm.rows, hm.i0, hm.i1, false));
-				return;
-			}
-		}
-		if (e.button === 0 && onFillHandle(e)) {
-			e.preventDefault();
-			if (e.detail === 2) {
-				fillDown();
-				return;
-			}
-			filling = { sel: selection() };
-			return;
-		}
-		// Flèche de la liste déroulante (validation) de la cellule active.
-		if (e.button === 0 && !editing && listOf(active.row, active.col)) {
-			const b = dropButton();
-			const { x, y } = toLocal(e);
-			if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
-				e.preventDefault();
-				if (listMenu) listMenu = null;
-				else openList();
-				return;
-			}
-			const l = linkButton();
-			if (x >= l.x && x <= l.x + l.w && y >= l.y && y <= l.y + l.h && refAt(active.row, active.col)) {
-				e.preventDefault();
-				void followRef(active.row, active.col);
-				return;
-			}
-		}
-		// Ctrl+clic sur une cellule d'une colonne de référence : basculer sur la ligne citée.
-		if (e.button === 0 && (e.ctrlKey || e.metaKey) && !e.shiftKey && !editing && !formulaMode) {
-			const cell = cellAt(e);
-			if (cell && refAt(cell.row, cell.col)) {
-				e.preventDefault();
-				wrap.focus();
-				moveTo(cell.row, cell.col);
-				void followRef(cell.row, cell.col);
-				return;
-			}
-		}
-		if (selChart !== null) {
-			selChart = null;
-			if (panel?.kind === 'chart') panel = null;
-		}
-		if (e.button === 0 && !formulaMode && tableHintAt(e) && source.formatAsTable) {
-			e.preventDefault();
-			if (!commitEditor()) return;
-			const { row, col } = active;
-			const fmt = source.formatAsTable;
-			writing = writing.catch(() => undefined).then(() => fmt(row, col).then(
-					() => undefined,
-					(err) => say(errorText(err))
-				)
-			);
-			return;
-		}
-		if (e.button === 0 && !formulaMode && nameBadgeAt(e)) {
-			e.preventDefault();
-			if (!commitEditor()) return;
-			const ne = nameBadgeAt(e)!;
-			closeMenus();
-			void renameFromBadge(ne);
-			return;
-		}
-		if (e.button === 0 && !formulaMode && pivotBadgeAt(e)) {
-			// Nom d'un TCD : sa cellule d'en-tête et son volet (où se lit son nom).
-			e.preventDefault();
-			if (!commitEditor()) return;
-			const pb = pivotBadgeAt(e)!;
-			closeMenus();
-			moveTo(pb.row, pb.col);
-			ensureVisible(pb.row, pb.col);
-			panel = { kind: 'pivot', id: pb.id };
-			return;
-		}
-		if (e.button === 0 && !formulaMode && localBadgeAt(e)) {
-			// « Sur ce poste » : propose de l'ajouter au classeur partagé
-			// (confirmation, ou pourquoi pas maintenant).
-			e.preventDefault();
-			if (!commitEditor()) return;
-			const le = localBadgeAt(e)!;
-			closeMenus();
-			if (!le.t.query) onaddshared?.(le.t.name);
-			return;
-		}
-		if (e.button === 0 && !formulaMode && followBadgeAt(e)) {
-			e.preventDefault();
-			if (!commitEditor()) return;
-			const fe = followBadgeAt(e)!;
-			closeMenus();
-			const r = wrap.getBoundingClientRect();
-			followMenu = { x: e.clientX - r.left, y: e.clientY - r.top, e: fe };
-			return;
-		}
-		if (e.button !== 1 && !formulaMode && keyHintAt(e)) {
-			e.preventDefault();
-			if (!commitEditor()) return;
-			if (e.button === 0) acceptKeyHint(keyHintAt(e)!);
-			return;
-		}
-		const frozen = e.button === 0 && boundaryAt(e) === null ? frozenHeaderAt(e) : null;
-		if (frozen) {
-			commitEditor();
-			if (headerButton(e, frozen.e, frozen.col, true)) {
-				e.preventDefault();
-				return;
-			}
-		}
-		// Coin en haut à gauche (entre la marge et le bandeau) : toute la
-		// feuille, toutes les lignes et toutes les colonnes, comme dans Excel.
-		{
-			const { x, y } = toLocal(e);
-			if (e.button === 0 && x < MARGIN && y < TOP_H) {
-				e.preventDefault();
-				if (!commitEditor()) return;
-				wrap.focus();
-				selectRows(0, lastRow());
-				return;
-			}
-		}
-		const hd = boundaryAt(e) === null && rowBoundaryAt(e) === null ? headerAt(e) : null;
-		if (hd && e.button !== 1) {
-			e.preventDefault();
-			if (!commitEditor()) return; // saisie refusée : l'éditeur reste ouvert
-			wrap.focus();
-			// Clic droit dans la sélection : on la garde.
-			if (e.button === 2 && (hd.kind === 'rows' ? inSelection(hd.row, active.col) : inSelection(active.row, hd.col))) return;
-			if (hd.kind === 'rows') selectRows(e.shiftKey ? wholeFrom('rows') : hd.row, hd.row);
-			else selectCols(e.shiftKey ? wholeFrom('cols') : hd.col, hd.col);
-			headerDrag = e.button === 0 ? hd.kind : null;
-			return;
-		}
-		if (e.button === 0 && !editing && onSelectionEdge(e)) {
-			const cell = cellAt(e);
-			if (cell) {
-				e.preventDefault();
-				// Point saisi ramené dans la sélection : la bordure se prend à
-				// quelques pixels de part et d'autre, et une prise juste à
-				// l'extérieur décalait le dépôt d'une ligne ou d'une colonne.
-				const sel = selection();
-				const from = { row: clamp(cell.row, sel.r0, sel.r1), col: clamp(cell.col, sel.c0, sel.c1) };
-				// Sélection dans un seul tableau croisé (une cellule, une partie,
-				// ou lui en entier) : c'est le tableau croisé entier qui se
-				// déplace, comme un objet, son contour suit la souris.
-				const pv = pivotHeld(sel);
-				if (pv && source.movePivot) {
-					moving = { sel: pivotZone(pv), from, pivot: pv.id };
-					return;
-				}
-				moving = { sel, from };
-				return;
-			}
-		}
-		const rb = rowBoundaryAt(e);
-		if (rb !== null && source.setRowHeight) {
-			e.preventDefault();
-			if (e.detail === 2) {
-				// Double-clic : hauteur automatique ; sur une ligne de la
-				// sélection, toutes les lignes sélectionnées (comme Excel).
-				const { r0, r1 } = selection();
-				const write = resetRowHeights(fitRows(rb, r0, r1, userHeights.keys()));
-				if (write) writing = writing.catch(() => undefined).then(() => write().then(() => undefined, (err) => say(errorText(err))));
-				return;
-			}
-			rowResizing = { row: rb, startY: e.clientY, startH: rh(rb), height: rh(rb) };
-			return;
-		}
-		const b = boundaryAt(e);
-		if (b !== null && source.setColumnWidth) {
-			e.preventDefault();
-			resizing = { col: b, startX: e.clientX, startW: cax().size(b), width: cax().size(b) };
-			return;
-		}
-		const cell = cellAt(e);
-		if (!cell) return;
-		if (e.button === 0 && formulaMode && grabRefMark(e, cell)) {
-			e.preventDefault();
-			return;
-		}
-		if (e.button === 0 && formulaMode && insertRef(cell)) {
-			e.preventDefault();
-			// Glisser ensuite insère une plage (Cell[A1:B3], Tableau[Col][1:3]…).
-			refDrag = { from: cell, to: cell };
-			return;
-		}
-		e.preventDefault();
-		if (!commitEditor()) return; // saisie refusée : l'éditeur reste ouvert
-		// Clic droit dans la sélection : elle reste (le menu porte sur elle).
-		if (e.button === 2 && inSelection(cell.row, cell.col)) return;
-		// Volet d'un contrôle ouvert, champ actif : le clic y met l'adresse ou la valeur de la cellule.
-		if (e.button === 0 && buttonsLayer?.pickCell(cell.row, cell.col, shownValue(cell.row, cell.col))) return;
-		if (e.button === 0 && openTypeMenu(e, cell)) return;
-		if (e.button === 0 && openPivotMenu(e, cell)) return;
-		if (e.button === 0 && togglePivotFold(e, cell)) {
-			wrap.focus();
-			return;
-		}
-		// Texte d'un lien : un clic court le suit au relâcher, Ctrl+clic tout de suite.
-		if (pressLink(e)) return;
-		wrap.focus();
-		moveTo(cell.row, cell.col, e.shiftKey);
-		dragging = e.button === 0; // clic droit glissé : la feuille glisse (pan.ts)
-	}
-
-	/**
-	 * Clic sur la grille pendant le pointage d'une formule d'une autre feuille :
-	 * la référence au curseur (ou une plage au glissé), rien d'autre ; la saisie
-	 * reste ouverte dans la barre de formule.
-	 */
-	function pointAway(e: MouseEvent) {
-		e.preventDefault();
-		const cell = boundaryAt(e) === null && rowBoundaryAt(e) === null ? cellAt(e) : null;
-		if (!cell || e.button !== 0) return;
-		if (grabRefMark(e, cell)) return;
-		if (insertRef(cell)) {
-			refDrag = { from: cell, to: cell };
-			return;
-		}
-		say(tr('grid.formula.refPlace'));
-	}
-
 	// Dernière référence insérée au clic : un autre clic la remplace (comme Excel).
 	let lastRef: { el: TextField; start: number; end: number; value: string } | null = null;
-
-	/**
-	 * Référence d'une cellule dans une formule (nomenclature de Lattis) :
-	 * Cell[A1] pour une cellule libre ; dans le tableau de la formule, [Col]
-	 * pour sa ligne et [Col][k] pour une autre ; ailleurs Tableau[Col][k]
-	 * (k : le rang de la ligne, même si le tableau a une clé) ; un en-tête donne
-	 * Tableau[Col], toute la colonne.
-	 */
-	function refFor(r: number, c: number, kind: '' | 'table' | 'column' = ''): string {
-		const e = tableAt(r, c);
-		// Tableau croisé : lu comme un tableau nommé (TCD1[Col], [Col] dans
-		// ses colonnes saisies), jamais par l'adresse de la cellule (pivotref.ts).
-		const pv = e ? undefined : pivotAt(r, c);
-		const pref = pv ? pivotRefText(pv, r, c, hold ? null : active, kind) : null;
-		if (pref) return pref;
-		if (!e) return cellAddr(r, c);
-		const col = e.t.columns[c - e.t.col].name;
-		// L'argument en cours attend un tableau ou une colonne entière
-		// (REFERENCE(Tableau[Colonne]; …), SOMME(T[Col]), EXISTE(Tableau; …)) :
-		// le clic dans le tableau donne cette forme, quelle que soit la ligne.
-		if (kind === 'table') return e.t.name;
-		if (kind === 'column') return `${e.t.name}[${col}]`;
-		// Formule d'une autre feuille (pointage) : elle n'est dans aucun tableau
-		// d'ici. Sinon [Col] / [Col][-1] dans le tableau de la formule (ou à côté),
-		// Tableau[Col][n] depuis une cellule libre : une valeur, pas la colonne
-		// (demande de Louis) ; l'en-tête seul donne Tableau[Col] (voir pointedRef).
-		return pointedRef(r, c, refTables(), hold ? null : active);
-	}
-
-	/** Pendant la saisie d'une formule, insère la référence de la cellule cliquée au curseur. */
-	function insertRef(cell: { row: number; col: number }, text?: string): boolean {
-		const el = editing ? input : fxEditing ? fxInput : null;
-		if (!el) return false;
-		if (text === undefined && editing && cell.row === active.row && cell.col === active.col) return false;
-		const v = el.value;
-		const s0 = el.selectionStart ?? v.length;
-		const s1 = el.selectionEnd ?? s0;
-		const last = lastRef?.el === el ? lastRef : null;
-		const at = insertRefAt(v, s0, s1, '', last);
-		if (!at) return false;
-		let ref = text ?? refFor(cell.row, cell.col, catalog ? argKindAt(v, at.start, catalog) : '');
-		// Formule d'une autre feuille : une cellule libre d'ici prend le nom de la feuille.
-		if (hold) ref = qualifyRef(ref, sheetName);
-		const r = insertRefAt(v, s0, s1, ref, last)!;
-		if (editing) editValueText = r.value;
-		else fxText = r.value;
-		el.value = r.value;
-		el.setSelectionRange(r.end, r.end);
-		el.focus();
-		lastRef = { el, start: r.start, end: r.end, value: r.value };
-		return true;
-	}
-
-	/**
-	 * Référence pointée (clic ou glissé terminé) : si la fonction attend encore
-	 * un argument obligatoire, la saisie passe au suivant (« ; »), comme le
-	 * ferait l'utilisateur (choix de Louis) ; pas après le dernier argument.
-	 */
-	function nextArg() {
-		const el = editing ? input : fxEditing ? fxInput : null;
-		if (!el || !catalog) return;
-		const caret = el.selectionEnd ?? el.value.length;
-		if (!needsNextArg(el.value, caret, catalog)) return;
-		const r = toNextArg(el.value, caret);
-		if (editing) editValueText = r.text;
-		else fxText = r.text;
-		el.value = r.text;
-		el.setSelectionRange(r.caret, r.caret);
-		lastRef = null; // le clic suivant ajoute une référence, il ne remplace plus celle-ci
-		onFormulaInput(el, editing ? 'cell' : 'fx');
-		// Pointage sur une autre feuille : l'argument suivant se saisit dans la
-		// feuille de la formule, où l'on revient (demande de Louis).
-		if (hold) {
-			hold = updateHold(hold, r.text, r.caret, r.caret);
-			completion = sig = null;
-			// Après la fin du clic (mouseup) : la saisie reprend dans sa cellule sans être validée.
-			const back = hold.sheet;
-			setTimeout(() => onsheet?.(back));
-		}
-	}
-
 	// Glissé en mode formule depuis une référence insérée : la plage couverte.
 	let refDrag: { from: { row: number; col: number }; to: { row: number; col: number } } | null = null;
-
 	// Marqueur de référence glissé (comme Excel : on attrape le bord du cadre
 	// coloré d'une référence pendant la saisie d'une formule, on le dépose
 	// ailleurs, la référence est réécrite).
 	let refMove = $state<{ start: number; end: number; rect: Rect; from: { row: number; col: number }; to: { row: number; col: number } } | null>(null);
-
-	/** Contexte des références : tableaux et ligne de la formule. */
-	function refContext() {
-		const tables = refTables();
-		// Formule d'une autre feuille (pointage) : ni tableau ni ligne d'ici.
-		if (hold) return { tables, at: undefined };
-		const here = tableAt(active.row, active.col);
-		const at = here && active.row > here.t.row ? { table: tables[entries.indexOf(here)], row: active.row } : undefined;
-		return { tables, at };
-	}
-
-	/** Le bord d'un marqueur de référence est-il sous la souris ? */
-	function hitRefMark(e: MouseEvent): boolean {
-		return markAt(e) !== null;
-	}
-
-	/** Attrape le marqueur dont le bord est sous la souris ; faux s'il n'y en a pas. */
-	function grabRefMark(e: MouseEvent, cell: { row: number; col: number }): boolean {
-		const m = markAt(e);
-		if (!m) return false;
-		refMove = { start: m.f.start, end: m.f.end, rect: m.k, from: cell, to: cell };
-		return true;
-	}
-
-	/** Marqueur (référence et plage) dont le bord est à moins de 4 px de la souris. */
-	function markAt(e: MouseEvent) {
-		const { tables, at } = refContext();
-		const { x, y } = toLocal(e);
-		for (const f of formulaRefs(editing ? editValueText : fxText)) {
-			const k = refRect(f.text, tables, sheetName, at, !!hold);
-			if (!k) continue;
-			const left = screenX(k.c0);
-			const right = screenX(k.c1) + cax().size(k.c1);
-			const top = screenY(k.r0);
-			const bottom = screenY(k.r1) + rh(k.r1);
-			const near = (v: number, edge: number) => Math.abs(v - edge) <= 4;
-			const inX = x >= left - 4 && x <= right + 4;
-			const inY = y >= top - 4 && y <= bottom + 4;
-			if ((inY && (near(x, left) || near(x, right))) || (inX && (near(y, top) || near(y, bottom)))) return { f, k };
-		}
-		return null;
-	}
-
-	/** Dépose le marqueur glissé : la référence est réécrite dans la formule. */
-	function dropRefMark() {
-		const m = refMove;
-		refMove = null;
-		schedule();
-		if (!m) return;
-		const dr = m.to.row - m.from.row;
-		const dc = m.to.col - m.from.col;
-		if (!dr && !dc) return;
-		const { tables, at } = refContext();
-		const moved = movedRef(m.rect, dr, dc, tables, at, m.to);
-		const text = moved !== null && hold ? qualifyRef(moved, sheetName) : moved;
-		if (text === null) {
-			say(tr('grid.formula.refRange'));
-			return;
-		}
-		const el = editing ? input : fxEditing ? fxInput : null;
-		if (!el) return;
-		const next = el.value.slice(0, m.start) + text + el.value.slice(m.end);
-		if (editing) editValueText = next;
-		else fxText = next;
-		el.value = next;
-		const caret = m.start + text.length;
-		el.setSelectionRange(caret, caret);
-		el.focus();
-		lastRef = null;
-	}
-
-	/** Tableaux de la feuille, pour situer et écrire les références. */
-	function refTables(): RefTable[] {
-		return entries.map((e) => ({
-			name: e.t.name,
-			row: e.t.row,
-			col: e.t.col,
-			columns: e.t.columns.map((c) => c.name),
-			rows: e.t.rows,
-			keyed: false, // [k] est toujours un rang
-			keyRow: (k: string) => {
-				if (e.t.key === undefined) return undefined;
-				for (let n = 0; n < e.t.rows; n++) {
-					const v = e.cache.row(n)?.text[e.t.key];
-					if (v !== undefined && (v === k || v.replace(/\s/g, '') === k)) return n;
-				}
-				return undefined;
-			}
-		}));
-	}
-
-	/** Plage glissée en mode formule : sa référence remplace celle insérée au clic. */
-	function dragRef(cell: { row: number; col: number }) {
-		if (!refDrag || (cell.row === refDrag.to.row && cell.col === refDrag.to.col)) return;
-		refDrag.to = cell;
-		const { from } = refDrag;
-		const { tables, at } = refContext();
-		const hereT = at?.table;
-		const pv = pivotAt(from.row, from.col);
-		const text =
-			from.row === cell.row && from.col === cell.col
-				? refFor(cell.row, cell.col)
-				: pv && pivotAt(cell.row, cell.col) === pv
-					? pivotRangeRef(pv, from.row, from.col, cell.row, cell.col)
-					: rangeRef({ r0: from.row, c0: from.col, r1: cell.row, c1: cell.col }, tables, hereT);
-		if (text === null) {
-			say(tr('grid.formula.refOneColumn'));
-			return;
-		}
-		insertRef(cell, text);
-		schedule();
-	}
-
-	function onMouseMove(e: MouseEvent) {
-		if (pan.panning) return; // la feuille glisse (pan.ts) : ni survol ni sélection
-		{
-			const hc = entries.some((x) => x.t.access === 'participant') ? cellAt(e) : null;
-			const hl = hc && lockedRowAt(hc.row, hc.col) ? hc.row : -1;
-			if (hl !== hoverLocked) {
-				hoverLocked = hl;
-				schedule();
-			}
-		}
-		if (refMove) {
-			const cell = cellAt(e);
-			if (cell && (cell.row !== refMove.to.row || cell.col !== refMove.to.col)) {
-				refMove.to = cell;
-				schedule();
-			}
-			return;
-		}
-		if (refDrag) {
-			const cell = cellAt(e);
-			if (cell) dragRef(cell);
-			return;
-		}
-		if (rowResizing) {
-			rowResizing.height = Math.max(12, Math.round(rowResizing.startH + (e.clientY - rowResizing.startY) / zoomK()));
-			rebuildRows({ row: rowResizing.row, height: rowResizing.height });
-			updateExtent();
-			schedule();
-			return;
-		}
-		if (resizing) {
-			resizing.width = Math.max(24, Math.round(resizing.startW + (e.clientX - resizing.startX) / zoomK()));
-			rebuildAxis({ col: resizing.col, width: resizing.width });
-			schedule();
-			return;
-		}
-		if (filling) {
-			const cell = cellAt(e);
-			if (cell) {
-				filling.to = fillTarget(filling.sel, cell);
-				schedule();
-			}
-			return;
-		}
-		if (moving) {
-			const cell = cellAt(e);
-			moving.copy = e.ctrlKey || e.metaKey;
-			// Ctrl : petit + sur le curseur, comme Excel.
-			scroller.style.cursor = moving.copy ? 'copy' : 'move';
-			if (cell) {
-				moving.to = cell;
-				schedule();
-			}
-			return;
-		}
-		if (headerDrag) {
-			const p = toLocal(e);
-			if (headerDrag === 'rows') {
-				const row = clamp(rowAtY(p.y), 0, SHEET_ROWS - 1);
-				selectRows(wholeFrom('rows'), row);
-			} else {
-				const col = colAtX(Math.max(MARGIN, p.x));
-				selectCols(wholeFrom('cols'), col);
-			}
-			return;
-		}
-		if (placing) {
-			const cell = cellAt(e);
-			if (cell?.row !== placeHover?.row || cell?.col !== placeHover?.col) {
-				placeHover = cell;
-				schedule();
-			}
-			if (cell && !dragging) {
-				scroller.style.cursor = 'crosshair';
-				return;
-			}
-		}
-		scroller.style.cursor =
-			formulaMode && !refDrag && hitRefMark(e)
-				? 'move' // bord d'un marqueur de référence : il se glisse
-				: source.setRowHeight && rowBoundaryAt(e) !== null
-				? 'row-resize'
-				: source.setColumnWidth && boundaryAt(e) !== null
-				? 'col-resize'
-				: !dragging && onFillHandle(e)
-					? 'crosshair'
-					: !dragging && onSelectionEdge(e)
-						? 'move'
-						: headerAt(e)
-							? 'pointer'
-							: '';
-		// Texte d'un lien : la main, comme sur une page web.
-		if (!dragging && !scroller.style.cursor && linkUnder(e)) scroller.style.cursor = 'pointer';
-		if (!dragging) updateHeaderTip(e);
-		updateNoteTip(dragging ? null : cellAt(e));
-		updateCommentTip(dragging ? null : cellAt(e));
-		if (!dragging) return;
-		const cell = cellAt(e);
-		if (!cell) return;
-		// Glisser : le coin mobile suit la souris, la cellule active reste.
-		anchor = cell;
-		const sel = selection();
-		nameBox = !singleSelection() ? tr('grid.nameBox.size', { rows: String(sel.r1 - sel.r0 + 1), cols: String(sel.c1 - sel.c0 + 1) }) : cellName(active.row, active.col);
-		schedule();
-	}
-
-	// --- Défilement automatique pendant un glisser (autoscroll.ts) ----------
-
-	// Dernière position de la souris pendant un glisser (coordonnées de l'écran).
-	let dragPtr: DragPtr | null = null;
-	let autoFrame = 0;
-	let autoLast = 0;
-
-	/** Un glisser qui suit la souris sur les cellules est-il en cours ? */
-	const cellDrag = () => dragging || !!filling || !!moving || !!refDrag || !!refMove || !!headerDrag;
-
-	/** Zone qui défile, en pixels locaux (hors marge, bandeau et volets figés). */
-	function scrollArea() {
-		return {
-			left: MARGIN + cax().offset(fCols()),
-			top: TOP_H + rowTop(fRows()),
-			right: scroller.clientWidth,
-			bottom: scroller.clientHeight
-		};
-	}
-
-	/** Défilement voulu (pixels par image, signés) pour la souris p (coordonnées de l'écran). */
-	function dragScroll(p: { x: number; y: number }) {
-		const r = scroller.getBoundingClientRect();
-		const k = zoomK();
-		const a = scrollArea();
-		// Rien à défiler en largeur si les colonnes figées prennent tout.
-		const dx = headerDrag === 'rows' ? 0 : edgeScroll((p.x - r.left) / k, a.left, a.right);
-		const dy = headerDrag === 'cols' ? 0 : edgeScroll((p.y - r.top) / k, a.top, a.bottom);
-		return { dx: scroller.scrollLeft <= 0 && dx < 0 ? 0 : dx, dy: vs.top <= 0 && dy < 0 ? 0 : dy };
-	}
-
-	/**
-	 * Rejoue le glisser à la souris ramenée sur la zone des cellules (au bord
-	 * qui défile) : hors de la grille, la sélection suit la ligne ou la
-	 * colonne du bord, comme Excel.
-	 */
-	function dragAt(p: DragPtr, dir: { dx: number; dy: number }) {
-		const r = scroller.getBoundingClientRect();
-		const k = zoomK();
-		const a = scrollArea();
-		let x = (p.x - r.left) / k;
-		let y = (p.y - r.top) / k;
-		// Dans le sens du défilement, la souris est ramenée sur la zone qui
-		// défile (pas sur les volets figés) ; sinon sur la grille.
-		x = clamp(x, dir.dx < 0 ? a.left : MARGIN, scroller.clientWidth - 1);
-		y = clamp(y, dir.dy < 0 ? a.top : TOP_H, scroller.clientHeight - 1);
-		if (headerDrag === 'rows') x = Math.min(x, MARGIN - 1);
-		if (headerDrag === 'cols') y = Math.min(y, TOP_H - 1);
-		onMouseMove(new MouseEvent('mousemove', { clientX: r.left + x * k, clientY: r.top + y * k, ctrlKey: p.ctrl, metaKey: p.meta, shiftKey: p.shift, buttons: 1 }));
-	}
-
-	/** Souris pendant un glisser, sur toute la fenêtre : hors de la grille, la sélection continue et la feuille défile. */
-	function onDragMove(e: MouseEvent) {
-		if (!cellDrag() || !scroller) return;
-		dragPtr = { x: e.clientX, y: e.clientY, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey };
-		const dir = dragScroll(dragPtr);
-		// Hors de la grille (ou sur un graphique) : la grille ne reçoit pas l'évènement.
-		if (!(e.target instanceof Node && scroller.contains(e.target))) dragAt(dragPtr, dir);
-		if ((dir.dx || dir.dy) && !autoFrame) {
-			autoLast = performance.now();
-			autoFrame = requestAnimationFrame(autoTick);
-		}
-	}
-
-	function stopAutoScroll() {
-		cancelAnimationFrame(autoFrame);
-		autoFrame = 0;
-		dragPtr = null;
-	}
-
-	function autoTick(now: number) {
-		autoFrame = 0;
-		if (!cellDrag() || !dragPtr || !scroller) return stopAutoScroll();
-		const dir = dragScroll(dragPtr);
-		if (!dir.dx && !dir.dy) return;
-		const dt = now - autoLast;
-		autoLast = now;
-		holdWhileScrolling();
-		const dy = frameStep(dir.dy, dt);
-		const dx = frameStep(dir.dx, dt);
-		if (dy) {
-			// Vers le bas, la feuille s'agrandit d'autant (comme à la molette).
-			if (dy > 0) vs.content = Math.min(rax().total, Math.max(vs.content, vs.top + dy + 2 * vs.view));
-			vs.by(dy);
-			updateExtent();
-			scroller.scrollTop = vs.toNative();
-		}
-		if (dx) {
-			if (dx > 0 && spacer) {
-				const want = cax().indexAt(scroller.scrollLeft + dx + viewW) + 2;
-				spacer.style.width = `${MARGIN + cax().offset(Math.min(SHEET_COLS, Math.max(extentCols, want)))}px`;
-			}
-			scroller.scrollLeft += dx;
-			updateExtent();
-		}
-		dragAt(dragPtr, dir);
-		schedule();
-		autoFrame = requestAnimationFrame(autoTick);
-	}
-
-	function onDblClick(e: MouseEvent) {
-		if (hold) return; // pointage d'une formule d'une autre feuille
-		if (locked) return; // feuille protégée : pas de saisie, sans message
-		const b = boundaryAt(e);
-		if (b !== null && (source.setColumnWidth || source.setColumnWidths)) {
-			// Poignée d'une colonne de la sélection : toutes les colonnes
-			// sélectionnées (toute la feuille comprise), comme Excel.
-			const { c0, c1 } = selection();
-			autoFitColumns(fitColumns(b, c0, c1, hiddenCols));
-			return;
-		}
-		const cell = cellAt(e);
-		const pv = cell && pivotAt(cell.row, cell.col);
-		if (cell && pv && pivotHandAt(pv, cell.row, cell.col) >= 0) {
-			// Colonne saisie à droite du TCD (en-tête vert compris) : elle se
-			// modifie comme une cellule, au lieu d'ouvrir le volet des champs.
-			startEdit(false);
-			return;
-		}
-		if (cell && pv) {
-			// Double clic sur −/+ : deux bascules, pas le volet.
-			if (pv.rows && cell.col === pv.col && pivotBoxHit(pivotRowOf(pv, cell.row), toLocal(e).x - screenX(cell.col))) return;
-			pivotActive();
-			return;
-		}
-		if (cell) startEdit(false);
-	}
+	const mouseCtl = createMouse({
+		get structure() { return structure; },
+		get toLocal() { return toLocal; },
+		get MARGIN() { return MARGIN; },
+		get rowTop() { return rowTop; },
+		get fRows() { return fRows; },
+		get vs() { return vs; },
+		get rax() { return rax; },
+		get cax() { return cax; },
+		get fCols() { return fCols; },
+		get scroller() { return scroller; },
+		get visibleRows() { return visibleRows; },
+		get entries() { return entries; },
+		get visibleData() { return visibleData; },
+		get headerWidth() { return headerWidth; },
+		get cellWidth() { return cellWidth; },
+		get styleAt() { return styleAt; },
+		get cells() { return cells; },
+		get shown() { return shown; },
+		get pivots() { return pivots; },
+		get textWidth() { return textWidth; },
+		get MAX_FIT() { return MAX_FIT; },
+		get source() { return source; },
+		get userWidths() { return userWidths; },
+		get rebuildAxis() { return rebuildAxis; },
+		get updateExtent() { return updateExtent; },
+		get schedule() { return schedule; },
+		get writing() { return writing; }, set writing(v) { writing = v; },
+		get say() { return say; },
+		get selection() { return selection; },
+		get screenX() { return screenX; },
+		get screenY() { return screenY; },
+		get rh() { return rh; },
+		get moving() { return moving; }, set moving(v) { moving = v; },
+		get clipRange() { return clipRange; }, set clipRange(v) { clipRange = v; },
+		get active() { return active; }, set active(v) { active = v; },
+		get anchor() { return anchor; }, set anchor(v) { anchor = v; },
+		get message() { return message; }, set message(v) { message = v; },
+		get refreshFx() { return refreshFx; },
+		get refreshStatus() { return refreshStatus; },
+		get pivotIn() { return pivotIn; },
+		get queryIn() { return queryIn; },
+		get QUERY_READONLY() { return QUERY_READONLY; },
+		get rangeValues() { return rangeValues; },
+		get sheetId() { return sheetId; },
+		get snapMerge() { return snapMerge; },
+		get boxOf() { return boxOf; },
+		get editing() { return editing; },
+		get cellInfo() { return cellInfo; },
+		get rowAtY() { return rowAtY; },
+		get colAtX() { return colAtX; },
+		get extentCols() { return extentCols; },
+		get wholeSel() { return wholeSel; }, set wholeSel(v) { wholeSel = v; },
+		get boxes() { return boxes; },
+		get panDown() { return panDown; },
+		get hold() { return hold; }, set hold(v) { hold = v; },
+		get placing() { return placing; },
+		get cellAt() { return cellAt; },
+		get commitEditor() { return commitEditor; },
+		get wrap() { return wrap; },
+		get placePivotAt() { return placePivotAt; },
+		get links() { return links; }, set links(v) { links = v; },
+		get locked() { return locked; },
+		get selChart() { return selChart; }, set selChart(v) { selChart = v; },
+		get moveTo() { return moveTo; },
+		get hiddenMarkAt() { return hiddenMarkAt; },
+		get menuAction() { return menuAction; },
+		get filling() { return filling; }, set filling(v) { filling = v; },
+		get listOf() { return listOf; },
+		get dropButton() { return dropButton; },
+		get listMenu() { return listMenu; }, set listMenu(v) { listMenu = v; },
+		get openList() { return openList; },
+		get linkButton() { return linkButton; },
+		get refAt() { return refAt; },
+		get followRef() { return followRef; },
+		get formulaMode() { return formulaMode; },
+		get panel() { return panel; }, set panel(v) { panel = v; },
+		get tableHintAt() { return tableHintAt; },
+		get nameBadgeAt() { return nameBadgeAt; },
+		get closeMenus() { return closeMenus; },
+		get renameFromBadge() { return renameFromBadge; },
+		get pivotBadgeAt() { return pivotBadgeAt; },
+		get ensureVisible() { return ensureVisible; },
+		get localBadgeAt() { return localBadgeAt; },
+		get onaddshared() { return onaddshared; },
+		get followBadgeAt() { return followBadgeAt; },
+		get followMenu() { return followMenu; }, set followMenu(v) { followMenu = v; },
+		get keyHintAt() { return keyHintAt; },
+		get acceptKeyHint() { return acceptKeyHint; },
+		get frozenHeaderAt() { return frozenHeaderAt; },
+		get headerButton() { return headerButton; },
+		get headerDrag() { return headerDrag; }, set headerDrag(v) { headerDrag = v; },
+		get pivotHeld() { return pivotHeld; },
+		get pivotZone() { return pivotZone; },
+		get resetRowHeights() { return resetRowHeights; },
+		get userHeights() { return userHeights; },
+		get rowResizing() { return rowResizing; }, set rowResizing(v) { rowResizing = v; },
+		get resizing() { return resizing; }, set resizing(v) { resizing = v; },
+		get refDrag() { return refDrag; }, set refDrag(v) { refDrag = v; },
+		get buttonsLayer() { return buttonsLayer; },
+		get shownValue() { return shownValue; },
+		get openTypeMenu() { return openTypeMenu; },
+		get openPivotMenu() { return openPivotMenu; },
+		get togglePivotFold() { return togglePivotFold; },
+		get pressLink() { return pressLink; },
+		get dragging() { return dragging; }, set dragging(v) { dragging = v; },
+		get tableAt() { return tableAt; },
+		get pivotAt() { return pivotAt; },
+		get cellAddr() { return cellAddr; },
+		get input() { return input; },
+		get fxEditing() { return fxEditing; },
+		get fxInput() { return fxInput; },
+		get lastRef() { return lastRef; }, set lastRef(v) { lastRef = v; },
+		get catalog() { return catalog; },
+		get sheetName() { return sheetName; },
+		get editValueText() { return editValueText; }, set editValueText(v) { editValueText = v; },
+		get fxText() { return fxText; }, set fxText(v) { fxText = v; },
+		get onFormulaInput() { return onFormulaInput; },
+		get completion() { return completion; }, set completion(v) { completion = v; },
+		get sig() { return sig; }, set sig(v) { sig = v; },
+		get onsheet() { return onsheet; },
+		get refMove() { return refMove; }, set refMove(v) { refMove = v; },
+		get pan() { return pan; },
+		get lockedRowAt() { return lockedRowAt; },
+		get hoverLocked() { return hoverLocked; }, set hoverLocked(v) { hoverLocked = v; },
+		get zoomK() { return zoomK; },
+		get rebuildRows() { return rebuildRows; },
+		get placeHover() { return placeHover; }, set placeHover(v) { placeHover = v; },
+		get linkUnder() { return linkUnder; },
+		get updateHeaderTip() { return updateHeaderTip; },
+		get updateNoteTip() { return updateNoteTip; },
+		get updateCommentTip() { return updateCommentTip; },
+		get nameBox() { return nameBox; }, set nameBox(v) { nameBox = v; },
+		get singleSelection() { return singleSelection; },
+		get cellName() { return cellName; },
+		get holdWhileScrolling() { return holdWhileScrolling; },
+		get spacer() { return spacer; },
+		get viewW() { return viewW; },
+		get hiddenCols() { return hiddenCols; },
+		get startEdit() { return startEdit; },
+		get pivotActive() { return pivotActive; }
+	});
+	const { autoFitColumns, dropMove, fillHandle, doFill, fillDown, headerAt, lastRow, lastCol, wholeKind, selectRows, inSelection, onMouseDown, nextArg, refContext, dropRefMark, refTables, onMouseMove, onDragMove, stopAutoScroll, onDblClick } = mouseCtl;
 
 	// --- Édition et zone de nom : sheet/edit.svelte.ts ---
 	const editCtl = createEdit({
