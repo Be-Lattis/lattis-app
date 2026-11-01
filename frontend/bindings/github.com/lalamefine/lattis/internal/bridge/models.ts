@@ -501,6 +501,12 @@ export interface DocState {
     "theme"?: canvas$0.Theme | null;
 
     /**
+     * PrivateTables : classeur partagé, tableaux qui ne sont pas sur le serveur.
+     * En édition web il n'y a pas de poste : ils ne sont que dans la session.
+     */
+    "privateTables"?: number;
+
+    /**
      * Format : "xlsx" pour un fichier .xlsx ouvert qui garde son format
      * (xlsxdoc.go), vide pour un classeur .lattis.
      */

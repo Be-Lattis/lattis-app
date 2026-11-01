@@ -9,6 +9,18 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Nouveautés
 
 - Fichiers récents : une petite croix (ou Suppr dans le menu) retire une entrée de la liste ; le fichier ou le classeur reste.
+### Changements
+
+- Publier sur un serveur : tous les tableaux sont cochés d'avance. Un tableau coché qui a un problème bloque Publier, avec la raison ; on le corrige ou on le décoche, et une ligne à côté du bouton dit combien de tableaux ne seront pas publiés.
+- Édition web : fermer l'onglet ou le classeur avertit aussi quand des tableaux ne sont pas sur le serveur ; Enregistrer télécharge alors le classeur.
+
+### Corrections
+
+- Plus aucune perte sans question : Nouveau, Ouvrir, Récents, Ouvrir depuis un serveur et les liens vers un classeur demandent d'abord s'il faut enregistrer le classeur modifié (il était effacé en silence, tableaux non publiés compris).
+- Le fichier d'un classeur collaboratif qui a des tableaux non publiés se rouvre tel quel : depuis le serveur, ces tableaux disparaissaient de la vue.
+- Édition web : après une coupure ou un redémarrage de la session, la récupération ou le classeur du serveur s'ouvre, au lieu d'une grille qui ne répond plus ; une copie locale à récupérer est proposée au lieu d'un classeur vide.
+- Édition web, réseau lent : une réponse en retard n'affiche plus les tableaux d'une autre feuille.
+- Publier ne bloque plus sur un texte avec des octets illisibles ou un caractère nul (« invalid byte sequence ») ; la démonstration big se publie.
 
 ## 0.5.1-beta (30/10/2026)
 

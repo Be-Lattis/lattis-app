@@ -34,7 +34,7 @@ import type { Mode } from '#lib/app/model.js';
 /** Ce que createFiles lit et modifie dans +page.svelte. */
 export interface FilesHost {
 	linkAsk: { name: string; host: string; ok: (yes: boolean) => void } | null;
-	readonly openedRemote: (r: { state: DocState; }) => Promise<void>;
+	readonly openedRemote: (r: OpenResult) => Promise<void>;
 	notice: string;
 	readonly err: (e: unknown) => string;
 	readonly loadRecent: () => Promise<RecentFile[]>;
@@ -88,7 +88,30 @@ export interface FilesHost {
 }
 
 export function createFiles(h: FilesHost) {
-	async function openLink(raw: string) {
+	// Action à reprendre une fois le classeur modifié fermé (whenClosed).
+	let afterClose: (() => Promise<unknown>) | null = null;
+
+	/**
+	 * Un autre classeur va prendre la place du classeur ouvert : modifié, la
+	 * question de Fichier › Fermer d'abord, puis next ; rien sinon. Le classeur
+	 * quitté était effacé sans question (tableaux qui n'étaient pas sur le
+	 * serveur compris).
+	 */
+	async function whenClosed(next: () => Promise<unknown>) {
+		if (h.mode !== 'doc' || !h.docState.dirty) {
+			await next();
+			return;
+		}
+		afterClose = next;
+		await closeDoc();
+	}
+
+	/** Classeur choisi sur un serveur (ou lien /w/<id> de l'édition web), après la question si le classeur ouvert est modifié. */
+	const openRemoteFrom = (server: string, id: string, title: string) => whenClosed(async () => h.openedRemote(await DocumentService.ShareOpen(server, id, title)));
+
+	const openLink = (raw: string) => whenClosed(() => followLink(raw));
+
+	async function followLink(raw: string) {
 		const t = await DocumentService.ParseLink(raw);
 		await loadLattis();
 		if (!t.known) {
@@ -102,16 +125,16 @@ export function createFiles(h: FilesHost) {
 		await h.openedRemote(await DocumentService.ShareOpen(t.server, t.workbook, ''));
 	}
 
-	async function openPath(path: string) {
-		await opened(await DocumentService.Open(path));
-	}
+	const openPath = (path: string) => whenClosed(async () => opened(await DocumentService.Open(path)));
 
 	/**
 	 * Ouvre un récent : un classeur du serveur se rouvre depuis le serveur
 	 * (connexion d'abord si besoin) ; serveur injoignable, sa copie locale
 	 * s'ouvre (hors ligne, lecture seule).
 	 */
-	async function openRecent(r: RecentFile) {
+	const openRecent = (r: RecentFile) => whenClosed(() => reopen(r));
+
+	async function reopen(r: RecentFile) {
 		if (recentDemo(r)) return openDemoPreset(r);
 		if (!recentRemote(r)) return openPath(r.path);
 		const server = r.server ?? '';
@@ -173,7 +196,7 @@ export function createFiles(h: FilesHost) {
 		// Fichier de l'auteur d'un classeur partagé en direct : ouvert depuis le
 		// serveur (en ligne, synchronisé), pas le fichier qui ne l'est pas.
 		if (r.shared) {
-			await openRecent(r.shared);
+			await reopen(r.shared);
 			if (h.mode === 'doc' && !h.notice) h.notice = t('shell.share.openedOnline', { title: r.shared.title ?? '', server: serverLabel({ server: r.shared.server ?? '', serverName: r.shared.serverName ?? '' }) });
 			return;
 		}
@@ -283,7 +306,10 @@ export function createFiles(h: FilesHost) {
 			h.quitting = false;
 			return;
 		}
-		if (h.mode === 'doc' && h.docState.dirty && save === undefined) {
+		// Édition web : un tableau qui n'est pas sur le serveur n'est que dans la
+		// session (privateTables) ; même classeur enregistré, la question.
+		const onlyHere = isWeb && h.mode === 'doc' && !!h.docState.privateTables;
+		if (h.mode === 'doc' && (h.docState.dirty || onlyHere) && save === undefined) {
 			h.closing = true;
 			return;
 		}
@@ -296,7 +322,7 @@ export function createFiles(h: FilesHost) {
 		}
 		h.unsentClose = 0;
 		if (save) {
-			h.docState = await h.saving(() => DocumentService.Save(false));
+			h.docState = await h.saving(() => DocumentService.Save(onlyHere));
 			if (h.docState.conflict) {
 				// Fichier modifié par un autre poste : la question d'abord, puis la fermeture.
 				h.conflict = { ...h.docState.conflict, close: true };
@@ -332,10 +358,14 @@ export function createFiles(h: FilesHost) {
 		if (kept) h.notice = kept;
 		if (h.quitting) {
 			h.quitting = false;
+			afterClose = null;
 			await DocumentService.QuitApp();
 			return;
 		}
 		await h.loadRecent();
+		const next = afterClose;
+		afterClose = null;
+		if (next) await next();
 	}
 
 	/** Croix de la fenêtre avec un classeur modifié : la question de Fichier › Fermer, puis Lattis se ferme. */
@@ -356,6 +386,7 @@ export function createFiles(h: FilesHost) {
 		h.closing = false;
 		h.unsentClose = 0;
 		h.quitting = false;
+		afterClose = null;
 	}
 
 	async function startDoc() {
@@ -450,7 +481,7 @@ export function createFiles(h: FilesHost) {
 		try {
 			switch (a) {
 				case 'new':
-					await startDoc();
+					await whenClosed(startDoc);
 					break;
 				case 'open':
 					await openPath('');
@@ -634,6 +665,8 @@ export function createFiles(h: FilesHost) {
 	}
 
 	return {
+		whenClosed,
+		openRemoteFrom,
 		openLink,
 		openPath,
 		openRecent,

@@ -1202,7 +1202,8 @@
 		"rows": "{n, plural, other {# 行}}",
 		"private": {
 			"label": "私有",
-			"tooltip": "私有表格：保留在本计算机上，从不发送到服务器"
+			"tooltip": "私有表格：保留在本计算机上，从不发送到服务器",
+			"tooltipWeb": "未发送到服务器：会话结束后丢失，除非下载工作簿"
 		},
 		"rename": "{problem} — 请在工作簿中将其重命名",
 		"frozenTypes": "发布时固定的类型：{columns}",
@@ -1215,7 +1216,6 @@
 			"local": "从本计算机使用你的连接刷新：你的刷新将为所有成员替换这些行",
 			"lake": "数据湖源：该表格也会发送到数据湖，供其他工作簿使用"
 		},
-		"uncheckedPrivate": "未选中的表格保持私有：仅在本计算机上。",
 		"publishing": "正在发布…",
 		"republish": "重新发布",
 		"publish": "发布",
@@ -1226,7 +1226,10 @@
 			"cancelTooltip": "中止发布：不会发布任何内容，工作簿保持原样",
 			"noReturn": "即将完成：发布已无法取消",
 			"cancelled": "发布已取消：服务器和工作簿均未改变。"
-		}
+		},
+		"stay": "{n, plural, other {# 个表格}}将仅保留在此电脑上。",
+		"stayWeb": "{n, plural, other {# 个表格}}不会发布：会话结束后丢失，除非下载。",
+		"uncheckIt": "{problem}：请取消勾选"
 	},
 	"dataShare": {
 		"title": {

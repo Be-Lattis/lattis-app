@@ -223,6 +223,15 @@ Points d'attention pour `lattisd` :
 4. **Classeurs récents du serveur** et ouverture d'un classeur partagé : à brancher sur l'API du Serveur Lattis (étapes 2 et 3), à la place des fichiers récents locaux.
 5. **Secrets** : passer `Options.Secrets` ; sans lui, un coffre en mémoire perdu à la fermeture.
 
+### 6.3 Ce qui n'est que dans la session
+
+Il n'y a pas de « poste » en web : ce qui n'est pas sur le serveur (classeur jamais enregistré, tableaux non cochés à la publication, tableaux refusés au partage automatique) n'existe que dans `--dir`. Le moteur s'arrête après `LATTIS_WEB_IDLE` (5 min par défaut) sans onglet connecté, coupure réseau et veille comprises. `--dir` ne survit au moteur qu'avec un volume par utilisateur (Docker : volume nommé ; Kubernetes : `web.cache.size` renseigné ; processus : dossier de l'utilisateur) ; **un moteur de la réserve (`LATTIS_WEB_POOL_SPARE` > 0) et un pod sans `web.cache.size` (`emptyDir`, défaut du chart) perdent `--dir` à l'arrêt.**
+
+- Publier : tous les tableaux sont cochés ; en décocher dit qu'il sera perdu à la fin de la session, sauf téléchargement.
+- Fermer (onglet ou Fichier › Fermer) : la question aussi quand un classeur partagé a des tableaux qui ne sont pas sur le serveur ; Enregistrer télécharge alors le classeur.
+- Remplacer un classeur modifié (Ouvrir, Nouveau, Récents, Ouvrir depuis un serveur, lien `/app/?workbook=<id>`) : la question d'abord ; sans interface pour la poser, le moteur le garde en récupération.
+- Liaison retrouvée avec un moteur neuf : récupération s'il y a de quoi, sinon le classeur du serveur, sinon un message ; une réponse en retard n'écrase plus la mise en page d'une relecture plus récente.
+
 ## 7. Reste à faire
 
 - Fichiers récents du serveur, ouverture d'un classeur du Serveur Lattis, chemins masqués (point 3 ci-dessus).

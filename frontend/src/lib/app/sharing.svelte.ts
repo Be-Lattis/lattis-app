@@ -336,7 +336,10 @@ export function createSharing(sh: SharingHost) {
 	}
 
 	/** Classeur ouvert depuis un serveur (cache local). */
-	async function openedRemote(r: { state: DocState }) {
+	async function openedRemote(r: OpenResult) {
+		// Session interrompue sur la copie locale (moteur arrêté net) : la
+		// récupération, pas un classeur vide qui cacherait ses tableaux.
+		if (r.recoverable) return sh.opened(r);
 		sh.docState = r.state;
 		sh.view = 'grid';
 		sh.sheetId = 1;

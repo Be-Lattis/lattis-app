@@ -1019,7 +1019,8 @@
 		"reconnected": "Connection to the server restored",
 		"expired": "Your session has expired: sign in again to continue (the changes you already made are kept on the server).",
 		"reconnect": "Sign in again",
-		"lost": "Connection to the server lost: retrying… What you do now waits for the connection to come back."
+		"lost": "Connection to the server lost: retrying… What you do now waits for the connection to come back.",
+		"sessionLost": "The session restarted: the unsaved workbook could not be restored."
 	},
 	"protect": {
 		"sheetLocked": "Sheet “{name}” is protected: unprotect it (Review › Unprotect sheet) to change it",
@@ -1091,7 +1092,8 @@
 		"question": "Save the changes to “{title}” before closing it?",
 		"questionQuit": "Save the changes to “{title}” before quitting Lattis?",
 		"save": "Save",
-		"dontSave": "Don't save"
+		"dontSave": "Don't save",
+		"privateWeb": "{n, plural, one {# table is} other {# tables are}} not on the server: download the workbook to keep them."
 	},
 	"damaged": {
 		"title": "Damaged workbook",

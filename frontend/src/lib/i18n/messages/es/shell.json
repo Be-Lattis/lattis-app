@@ -1019,7 +1019,8 @@
 		"reconnected": "Conexión con el servidor restablecida",
 		"expired": "Su sesión ha caducado: vuelva a iniciar sesión para continuar (los cambios ya realizados se conservan en el servidor).",
 		"reconnect": "Volver a iniciar sesión",
-		"lost": "Conexión con el servidor perdida: reintentando… Lo que haga ahora espera a que vuelva la conexión."
+		"lost": "Conexión con el servidor perdida: reintentando… Lo que haga ahora espera a que vuelva la conexión.",
+		"sessionLost": "La sesión se reinició: no se pudo recuperar el libro sin guardar."
 	},
 	"protect": {
 		"sheetLocked": "La hoja «{name}» está protegida: desprotéjala (Revisar › Desproteger hoja) para modificarla",
@@ -1091,7 +1092,8 @@
 		"question": "¿Guardar los cambios de «{title}» antes de cerrarlo?",
 		"questionQuit": "¿Guardar los cambios de «{title}» antes de salir de Lattis?",
 		"save": "Guardar",
-		"dontSave": "No guardar"
+		"dontSave": "No guardar",
+		"privateWeb": "{n, plural, one {# tabla no está} other {# tablas no están}} en el servidor: descargue el libro para conservarlas."
 	},
 	"damaged": {
 		"title": "Libro dañado",

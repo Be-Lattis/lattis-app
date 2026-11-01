@@ -20,6 +20,7 @@ import (
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/internal/trace"
 	"github.com/lalamefine/lattis/internal/work"
 	"github.com/lalamefine/lattis/protocol"
 )
@@ -53,6 +54,9 @@ type DocState struct {
 	// Theme : thème de couleur du classeur (Affichage › Thème) ; nil : thème
 	// par défaut des réglages (ui.theme).
 	Theme *canvas.Theme `json:"theme,omitempty"`
+	// PrivateTables : classeur partagé, tableaux qui ne sont pas sur le serveur.
+	// En édition web il n'y a pas de poste : ils ne sont que dans la session.
+	PrivateTables int `json:"privateTables,omitempty"`
 	// Format : "xlsx" pour un fichier .xlsx ouvert qui garde son format
 	// (xlsxdoc.go), vide pour un classeur .lattis.
 	Format string `json:"format,omitempty"`
@@ -199,7 +203,13 @@ func (s *DocumentService) replace(d *doc.Document) error {
 	s.stopCoEdit()
 	s.startCoEdit(d)
 	var lost error
-	if old != nil {
+	if old != nil && d != nil && unsaved(old) {
+		// Un autre classeur prend la place d'un classeur modifié sans que
+		// l'interface l'ait demandé (lien ouvert dans un autre onglet, script) :
+		// ses modifications restent récupérables, jamais effacées en silence.
+		trace.Logf(1, trace.Doc, "classeur remplacé avec des modifications non enregistrées : gardé en récupération")
+		old.Release()
+	} else if old != nil {
 		if lost = closeKeeping(old); lost != nil {
 			s.mu.Lock()
 			s.lost = lost.Error()
@@ -209,6 +219,17 @@ func (s *DocumentService) replace(d *doc.Document) error {
 	// Conversation de l'assistant : propre au classeur.
 	s.aiReplaced(d)
 	return lost
+}
+
+// unsaved dit si le classeur d a des modifications qu'une fermeture perdrait
+// (le cache d'un classeur en direct se garde de lui-même : keepCollabQueue ;
+// la démo publique est jetable).
+func unsaved(d *doc.Document) bool {
+	if publicDemo.Load() || liveCache(d) || d.ReadOnly() {
+		return false
+	}
+	dirty, err := d.Dirty(context.Background())
+	return err == nil && dirty
 }
 
 // New crée un classeur vide.
@@ -275,6 +296,12 @@ func sharedFile(path string) *RecentFile {
 	// ligne, puis Ctrl+S) : le fichier s'ouvre tel quel, elles partent de
 	// lui-même au serveur (ouvert depuis le serveur, elles y resteraient).
 	if m.Remote.Unsent > 0 {
+		return nil
+	}
+	// Tableaux qui ne sont que dans ce fichier (non cochés à la publication,
+	// refusés au partage automatique) : depuis le serveur, ils disparaîtraient
+	// de la vue. Inconnu (fichier d'une version d'avant, -1) : le fichier aussi.
+	if m.Remote.Private != 0 {
 		return nil
 	}
 	abs, _ := filepath.Abs(path)
@@ -586,6 +613,11 @@ func (s *DocumentService) State(ctx context.Context) (DocState, error) {
 	// sur le serveur au fil de l'eau (liveCache).
 	if st.Dirty && liveCache(d) {
 		st.Dirty = false
+	}
+	if d.Share != nil && d.Share.Info() != nil {
+		if st.PrivateTables, err = workbook.PrivateTables(ctx, d.DB().Read()); err != nil {
+			return st, err
+		}
 	}
 	if st.Theme, err = d.Theme(ctx); err != nil {
 		return st, err

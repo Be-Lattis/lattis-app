@@ -18,8 +18,10 @@
 	interface Props {
 		/** Ouvert (résultat) ou abandon (null). */
 		ondone: (r: OpenResult | null) => void;
+		/** Classeur ouvert modifié : le choix passe par la question d'enregistrement. */
+		onpick?: (server: string, w: Listing) => void;
 	}
-	let { ondone }: Props = $props();
+	let { ondone, onpick }: Props = $props();
 
 	let server = $state('');
 	let list = $state<Listing[] | null>(null);
@@ -57,6 +59,10 @@
 	}
 
 	async function open(w: Listing) {
+		if (onpick) {
+			onpick(server, w);
+			return;
+		}
 		error = '';
 		busy = true;
 		try {

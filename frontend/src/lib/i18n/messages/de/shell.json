@@ -1019,7 +1019,8 @@
 		"reconnected": "Verbindung zum Server wiederhergestellt",
 		"expired": "Ihre Sitzung ist abgelaufen: Melden Sie sich erneut an, um fortzufahren (Ihre bereits vorgenommenen Änderungen bleiben auf dem Server erhalten).",
 		"reconnect": "Erneut anmelden",
-		"lost": "Verbindung zum Server unterbrochen: neuer Versuch… Was Sie jetzt tun, wartet auf die Wiederherstellung der Verbindung."
+		"lost": "Verbindung zum Server unterbrochen: neuer Versuch… Was Sie jetzt tun, wartet auf die Wiederherstellung der Verbindung.",
+		"sessionLost": "Die Sitzung wurde neu gestartet: Die nicht gespeicherte Arbeitsmappe konnte nicht wiederhergestellt werden."
 	},
 	"protect": {
 		"sheetLocked": "Das Blatt „{name}“ ist geschützt: Heben Sie den Schutz auf (Überprüfen › Blattschutz aufheben), um es zu ändern",
@@ -1091,7 +1092,8 @@
 		"question": "Änderungen an „{title}“ vor dem Schließen speichern?",
 		"questionQuit": "Änderungen an „{title}“ vor dem Beenden von Lattis speichern?",
 		"save": "Speichern",
-		"dontSave": "Nicht speichern"
+		"dontSave": "Nicht speichern",
+		"privateWeb": "{n, plural, one {# Tabelle ist} other {# Tabellen sind}} nicht auf dem Server: Laden Sie die Arbeitsmappe herunter, um sie zu behalten."
 	},
 	"damaged": {
 		"title": "Beschädigte Arbeitsmappe",

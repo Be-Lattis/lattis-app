@@ -1202,7 +1202,8 @@
 		"rows": "{n, plural, one {# fila} other {# filas}}",
 		"private": {
 			"label": "privada",
-			"tooltip": "Tabla privada: se queda en este equipo, nunca se envía al servidor"
+			"tooltip": "Tabla privada: se queda en este equipo, nunca se envía al servidor",
+			"tooltipWeb": "No se envía al servidor: se pierde al terminar la sesión, salvo que descargue el libro"
 		},
 		"rename": "{problem} — cámbiele el nombre en el libro",
 		"frozenTypes": "Tipos fijados en la publicación: {columns}",
@@ -1215,7 +1216,6 @@
 			"local": "Desde este equipo, con sus conexiones: sus actualizaciones reemplazan las filas para todos los miembros",
 			"lake": "Origen del Data Lake: la tabla también se envía al Data Lake, para otros libros"
 		},
-		"uncheckedPrivate": "Las tablas no marcadas siguen siendo privadas: solo en este equipo.",
 		"publishing": "Publicando…",
 		"republish": "Volver a publicar",
 		"publish": "Publicar",
@@ -1226,7 +1226,10 @@
 			"cancelTooltip": "Detener la publicación: no se publica nada, el libro queda como estaba",
 			"noReturn": "Casi listo: la publicación ya no se puede cancelar",
 			"cancelled": "Publicación cancelada: no ha cambiado nada ni en el servidor ni en el libro."
-		}
+		},
+		"stay": "{n, plural, one {# tabla se queda} other {# tablas se quedan}} solo en este equipo.",
+		"stayWeb": "{n, plural, one {# tabla no se publicará: se pierde al terminar la sesión, salvo descarga.} other {# tablas no se publicarán: se pierden al terminar la sesión, salvo descarga.}}",
+		"uncheckIt": "{problem}: desmárquela"
 	},
 	"dataShare": {
 		"title": {

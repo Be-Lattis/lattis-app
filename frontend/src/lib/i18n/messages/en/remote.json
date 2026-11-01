@@ -1202,7 +1202,8 @@
 		"rows": "{n, plural, one {# row} other {# rows}}",
 		"private": {
 			"label": "private",
-			"tooltip": "Private table: stays on this computer, never sent to the server"
+			"tooltip": "Private table: stays on this computer, never sent to the server",
+			"tooltipWeb": "Not sent to the server: lost when the session ends, unless you download the workbook"
 		},
 		"rename": "{problem} — rename it in the workbook",
 		"frozenTypes": "Types fixed at publication: {columns}",
@@ -1215,7 +1216,6 @@
 			"local": "From this computer, with your connections: your refreshes replace the rows for all members",
 			"lake": "Data Lake source: the table is also sent to the Data Lake, for other workbooks"
 		},
-		"uncheckedPrivate": "Unchecked tables stay private: on this computer only.",
 		"publishing": "Publishing…",
 		"republish": "Republish",
 		"publish": "Publish",
@@ -1226,7 +1226,10 @@
 			"cancelTooltip": "Stop publishing: nothing is published, the workbook stays as it was",
 			"noReturn": "Almost done: publishing can no longer be cancelled",
 			"cancelled": "Publishing cancelled: nothing changed on the server or in the workbook."
-		}
+		},
+		"stay": "{n, plural, one {# table stays} other {# tables stay}} on this computer only.",
+		"stayWeb": "{n, plural, one {# table won't be published: lost when the session ends, unless you download.} other {# tables won't be published: lost when the session ends, unless you download.}}",
+		"uncheckIt": "{problem} — untick it"
 	},
 	"dataShare": {
 		"title": {

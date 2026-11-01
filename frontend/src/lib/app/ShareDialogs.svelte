@@ -5,7 +5,7 @@
 	Sorti de routes/+page.svelte (docs/decoupage-sheet.md).
 -->
 <script lang="ts">
-	import type { DocState } from '#bindings/internal/bridge/models.js';
+	import type { DocState, OpenResult } from '#bindings/internal/bridge/models.js';
 	import ShareDialog from '#lib/remote/ShareDialog.svelte';
 	import OpenRemoteDialog from '#lib/remote/OpenRemoteDialog.svelte';
 	import DataCatalogDialog from '#lib/remote/DataCatalogDialog.svelte';
@@ -32,7 +32,8 @@
 		readonly mode: Mode;
 		notice: string;
 		openRemote: boolean;
-		readonly openedRemote: (r: { state: DocState; }) => Promise<void>;
+		readonly openRemoteFrom: (server: string, id: string, title: string) => Promise<void>;
+		readonly openedRemote: (r: OpenResult) => Promise<void>;
 		readonly reload: () => Promise<void>;
 		rightsOpen: boolean;
 		share: ShareState | null;
@@ -123,6 +124,12 @@
 
 {#if v.openRemote}
 	<OpenRemoteDialog
+		onpick={v.docState.dirty
+			? (server, w) => {
+					v.openRemote = false;
+					v.openRemoteFrom(server, w.id, w.title).catch((e) => (v.notice = v.err(e)));
+				}
+			: undefined}
 		ondone={(r) => {
 			v.openRemote = false;
 			if (r) v.openedRemote(r).catch((e) => (v.notice = v.err(e)));

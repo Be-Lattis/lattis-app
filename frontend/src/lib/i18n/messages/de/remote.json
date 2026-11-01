@@ -1202,7 +1202,8 @@
 		"rows": "{n, plural, one {# Zeile} other {# Zeilen}}",
 		"private": {
 			"label": "privat",
-			"tooltip": "Private Tabelle: bleibt auf diesem Computer, wird nie an den Server gesendet"
+			"tooltip": "Private Tabelle: bleibt auf diesem Computer, wird nie an den Server gesendet",
+			"tooltipWeb": "Nicht an den Server gesendet: am Sitzungsende verloren, außer Sie laden die Arbeitsmappe herunter"
 		},
 		"rename": "{problem} — benennen Sie sie in der Arbeitsmappe um",
 		"frozenTypes": "Bei der Veröffentlichung festgelegte Typen: {columns}",
@@ -1215,7 +1216,6 @@
 			"local": "Von diesem Computer, mit Ihren Verbindungen: Ihre Aktualisierungen ersetzen die Zeilen für alle Mitglieder",
 			"lake": "Data-Lake-Quelle: Die Tabelle wird auch an den Data Lake gesendet, für andere Arbeitsmappen"
 		},
-		"uncheckedPrivate": "Nicht aktivierte Tabellen bleiben privat: nur auf diesem Computer.",
 		"publishing": "Wird veröffentlicht…",
 		"republish": "Erneut veröffentlichen",
 		"publish": "Veröffentlichen",
@@ -1226,7 +1226,10 @@
 			"cancelTooltip": "Veröffentlichung abbrechen: Nichts wird veröffentlicht, die Arbeitsmappe bleibt unverändert",
 			"noReturn": "Fast fertig: Die Veröffentlichung kann nicht mehr abgebrochen werden",
 			"cancelled": "Veröffentlichung abgebrochen: Weder auf dem Server noch in der Arbeitsmappe hat sich etwas geändert."
-		}
+		},
+		"stay": "{n, plural, one {# Tabelle bleibt} other {# Tabellen bleiben}} nur auf diesem Rechner.",
+		"stayWeb": "{n, plural, one {# Tabelle wird nicht veröffentlicht: am Sitzungsende verloren, außer beim Herunterladen.} other {# Tabellen werden nicht veröffentlicht: am Sitzungsende verloren, außer beim Herunterladen.}}",
+		"uncheckIt": "{problem} – Häkchen entfernen"
 	},
 	"dataShare": {
 		"title": {

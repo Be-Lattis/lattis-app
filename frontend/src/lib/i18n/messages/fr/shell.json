@@ -1019,7 +1019,8 @@
 		"reconnected": "Connexion au serveur rétablie",
 		"expired": "Votre session a expiré : reconnectez-vous pour continuer (vos modifications déjà faites sont gardées sur le serveur).",
 		"reconnect": "Se reconnecter",
-		"lost": "Connexion au serveur perdue : nouvelle tentative… Ce que vous faites maintenant attend la reconnexion."
+		"lost": "Connexion au serveur perdue : nouvelle tentative… Ce que vous faites maintenant attend la reconnexion.",
+		"sessionLost": "La session a redémarré : le classeur non enregistré n'a pas pu être repris."
 	},
 	"protect": {
 		"sheetLocked": "La feuille « {name} » est protégée : ôtez la protection (Révision › Ôter la protection de la feuille) pour la modifier",
@@ -1091,7 +1092,8 @@
 		"question": "Enregistrer les modifications de « {title} » avant de le fermer ?",
 		"questionQuit": "Enregistrer les modifications de « {title} » avant de quitter Lattis ?",
 		"save": "Enregistrer",
-		"dontSave": "Ne pas enregistrer"
+		"dontSave": "Ne pas enregistrer",
+		"privateWeb": "{n, plural, one {# tableau n'est} other {# tableaux ne sont}} pas sur le serveur : téléchargez le classeur pour les garder."
 	},
 	"damaged": {
 		"title": "Classeur endommagé",

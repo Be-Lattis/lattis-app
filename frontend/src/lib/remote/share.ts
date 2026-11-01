@@ -61,11 +61,20 @@ export function remoteTypeLabel(type: string): string {
 	return TYPES.has(type) ? tAny(`remote.share.type.${type}`) : type;
 }
 
-/** Tableaux cochés d'avance : déjà publiés (republication), sinon ceux qui se publient tels quels. */
+/**
+ * Tableaux cochés d'avance : déjà publiés (republication), sinon tous. Un
+ * tableau coché qui a un problème bloque Publier (blocking) : on le corrige ou
+ * on le décoche, jamais en silence, car un tableau non coché n'est pas sur le
+ * serveur.
+ */
 export function defaultSelection(check: Check | null, republish: boolean): number[] {
 	const tables = check?.tables ?? [];
-	if (republish) return tables.filter((t) => t.published).map((t) => t.id);
-	return tables.filter((t) => !(t.problems ?? []).length && !t.invalid).map((t) => t.id);
+	return (republish ? tables.filter((t) => t.published) : tables).map((t) => t.id);
+}
+
+/** Tableaux non cochés : ils ne seront pas sur le serveur. */
+export function uncheckedCount(check: Check | null, ids: readonly number[]): number {
+	return (check?.tables ?? []).filter((t) => !ids.includes(t.id)).length;
 }
 
 /**

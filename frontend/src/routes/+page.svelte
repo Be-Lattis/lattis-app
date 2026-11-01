@@ -334,6 +334,7 @@
 		get openedRemote() { return openedRemote; },
 		get openLocked() { return openLocked; },
 		get openRemote() { return openRemote; }, set openRemote(v) { openRemote = v; },
+		get openRemoteFrom() { return openRemoteFrom; },
 		get openTogether() { return openTogether; },
 		get orphans() { return orphans; }, set orphans(v) { orphans = v; },
 		get pageDlg() { return pageDlg; }, set pageDlg(v) { pageDlg = v; },
@@ -559,7 +560,10 @@
 		if (mode === 'demo') return;
 		const blank = mode === 'doc' && !docState.dirty && !docState.path && !docState.remote && !layout?.tables?.length && !layout?.cells?.length && (layout?.sheets?.length ?? 0) <= 1;
 		try {
-			if (!blank) await startDoc();
+			if (!blank) {
+				if (mode === 'doc' && docState.dirty) return await whenClosed(startTour);
+				await startDoc();
+			}
 			view = 'grid';
 			await DocumentService.RenameSheet(sheetId, tourSample().sheet);
 			await reload();
@@ -634,7 +638,12 @@
 		// parcourt en entier (suggestion de clé, TCD, graphique…) vient après
 		// (completeLayout).
 		const gen = workbook;
+		const seq = ++reloadSeq;
 		const [st, first] = await Promise.all([DocumentService.State(), DocumentService.LayoutFirst(sheetId)]);
+		// Réponse en retard (édition web, réseau lent) : une relecture plus récente
+		// est partie, peut-être pour une autre feuille ; la montrer afficherait les
+		// tableaux d'une autre feuille à la place de ceux de celle-ci.
+		if (seq !== reloadSeq) return;
 		docState = st;
 		// Ce qui reste à calculer garde ce que la feuille montrait (même classeur).
 		layout = keepShown(layoutOf === gen ? layout : null, first);
@@ -643,7 +652,9 @@
 		const shownId = visibleSheet(layout?.sheets ?? [], sheetId);
 		if (layout && shownId !== sheetId) {
 			sheetId = shownId;
-			layout = await DocumentService.LayoutFirst(sheetId);
+			const again = await DocumentService.LayoutFirst(shownId);
+			if (seq !== reloadSeq) return;
+			layout = again;
 		}
 		if (layout?.pending) completeLayout(layout, sheetId);
 		// Onglet page HTML ou Document affiché : son contenu (la page se recharge s'il change).
@@ -674,6 +685,34 @@
 		queryHost?.reloadLists();
 	}
 
+	/**
+	 * Édition web, liaison retrouvée avec un moteur neuf (le précédent s'est
+	 * arrêté : plus d'onglet connecté depuis LATTIS_WEB_IDLE, ordinateur en
+	 * veille, serveur redémarré) : le classeur affiché n'y est plus ouvert.
+	 * Ce qui n'était pas enregistré d'abord, sinon le classeur du serveur, sinon
+	 * le dire ; pas une grille qui ne répond plus.
+	 */
+	async function resumeSession() {
+		if (mode !== 'doc' || (await DocumentService.State()).open) return;
+		const was = share;
+		orphans = (await DocumentService.Orphans()) ?? [];
+		if (orphans.length > 0) {
+			recoverError = '';
+			mode = 'recover';
+			return;
+		}
+		if (was?.shared && was.workbookId) return openedRemote(await DocumentService.ShareOpen(was.server, was.workbookId, was.title));
+		docState = { open: false, path: '', title: '', dirty: false, undo: '', redo: '' };
+		layout = null;
+		share = null;
+		mode = 'closed';
+		workbook++;
+		notice = t('shell.web.sessionLost');
+		await loadRecent();
+	}
+
+	// Dernière relecture demandée (reload).
+	let reloadSeq = 0;
 	// Classeur (génération workbook) de la mise en page affichée.
 	let layoutOf = -1;
 	// Mise en page complète demandée (completeLayout), par feuille : une
@@ -749,7 +788,7 @@
 	let linkAsk = $state<{ name: string; host: string; ok: (yes: boolean) => void } | null>(null);
 	// --- Fichiers : ../lib/app/files.svelte.ts ---
 	const filesCtl = createFiles(appCtx);
-	const { openLink, openPath, openRecent, openLocked, openTogether, opened, resolveSave, answerXlsx, workbookReady, salvage, closeDoc, requestQuit, cancelClose, startDoc, startPresetDemo, openDemoPreset, openSample, startDemo, file, exportSql, recover } = filesCtl;
+	const { whenClosed, openRemoteFrom, openLink, openPath, openRecent, openLocked, openTogether, opened, resolveSave, answerXlsx, workbookReady, salvage, closeDoc, requestQuit, cancelClose, startDoc, startPresetDemo, openDemoPreset, openSample, startDemo, file, exportSql, recover } = filesCtl;
 
 	const loadRecent = async () => (recent = (await DocumentService.Recent().catch(() => null)) ?? []);
 	// La croix d'un récent : retiré de la liste, le fichier ou le classeur reste.
@@ -938,6 +977,7 @@
 		const offBack = Events.On('host:reconnected', () => {
 			if (webLink) notice = t('shell.web.reconnected');
 			webLink = '';
+			resumeSession().catch((x) => (notice = err(x)));
 		});
 		// Lien lattis:// reçu pendant que l'application tourne.
 		const offLink = Events.On('doc:open-link', (e: { data: string }) => {
@@ -955,6 +995,24 @@
 					loadRecent();
 					await loadLattis();
 					const server = lattis.state.servers?.[0]?.url ?? '';
+					const cur = await DocumentService.State();
+					// Le moteur survit à la page : un classeur modifié encore ouvert
+					// d'abord montré, avec la question ; il n'est plus remplacé en silence.
+					if (cur.dirty) {
+						mode = 'doc';
+						view = 'grid';
+						sheetId = 1;
+						await reload();
+						return await openRemoteFrom(server, wb, '');
+					}
+					// Moteur neuf : ce que la session précédente n'a pas enregistré d'abord.
+					if (!cur.open) {
+						orphans = (await DocumentService.Orphans()) ?? [];
+						if (orphans.length > 0) {
+							mode = 'recover';
+							return;
+						}
+					}
 					try {
 						return await openedRemote(await DocumentService.ShareOpen(server, wb, ''));
 					} catch (e) {
@@ -1031,7 +1089,10 @@
 		// Web : Ctrl+W ou la fermeture de l'onglet demandent confirmation
 		// quand le classeur a des modifications non enregistrées.
 		const leave = (e: BeforeUnloadEvent) => {
-			if (isWeb && mode === 'doc' && docState.dirty) e.preventDefault();
+			if (isWeb && mode === 'doc' && (docState.dirty || docState.privateTables)) {
+				e.preventDefault();
+				e.returnValue = ''; // anciens navigateurs
+			}
 		};
 		window.addEventListener('beforeunload', leave);
 		// F5 et Ctrl+R ne rechargent jamais la page de l'application (fenêtre

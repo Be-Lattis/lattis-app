@@ -1202,7 +1202,8 @@
 		"rows": "{n, plural, one {# ligne} other {# lignes}}",
 		"private": {
 			"label": "privé",
-			"tooltip": "Tableau privé : reste sur ce poste, jamais envoyé au serveur"
+			"tooltip": "Tableau privé : reste sur ce poste, jamais envoyé au serveur",
+			"tooltipWeb": "Pas envoyé au serveur : perdu à la fin de la session, sauf si vous téléchargez le classeur"
 		},
 		"rename": "{problem} — renommez-le dans le classeur",
 		"frozenTypes": "Types figés à la publication : {columns}",
@@ -1215,7 +1216,6 @@
 			"local": "Depuis ce poste, avec vos connexions : vos actualisations remplacent les lignes pour tous les membres",
 			"lake": "Source du Data Lake : le tableau est aussi envoyé au Data Lake, pour d'autres classeurs"
 		},
-		"uncheckedPrivate": "Les tableaux non cochés restent privés : sur ce poste seulement.",
 		"publishing": "Publication…",
 		"republish": "Republier",
 		"publish": "Publier",
@@ -1226,7 +1226,10 @@
 			"cancelTooltip": "Interrompre la publication : rien n'est publié, le classeur reste tel qu'avant",
 			"noReturn": "Presque fini : la publication ne peut plus être annulée",
 			"cancelled": "Publication annulée : rien n'a changé sur le serveur ni dans le classeur."
-		}
+		},
+		"stay": "{n, plural, one {# tableau restera} other {# tableaux resteront}} sur ce poste seulement.",
+		"stayWeb": "{n, plural, one {# tableau ne sera pas publié : perdu à la fin de la session, sauf téléchargement.} other {# tableaux ne seront pas publiés : perdus à la fin de la session, sauf téléchargement.}}",
+		"uncheckIt": "{problem} — décochez-le"
 	},
 	"dataShare": {
 		"title": {

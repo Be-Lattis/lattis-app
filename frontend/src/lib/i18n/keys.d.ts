@@ -3273,6 +3273,7 @@ export interface MessageParams {
 	'remote.shareDialog.noTables.or': Record<never, never>;
 	'remote.shareDialog.private.label': Record<never, never>;
 	'remote.shareDialog.private.tooltip': Record<never, never>;
+	'remote.shareDialog.private.tooltipWeb': Record<never, never>;
 	'remote.shareDialog.progress.aria': Record<never, never>;
 	'remote.shareDialog.progress.cancel': Record<never, never>;
 	'remote.shareDialog.progress.cancelTooltip': Record<never, never>;
@@ -3290,8 +3291,10 @@ export interface MessageParams {
 	'remote.shareDialog.republishHelp': { mode: number | string; server: number | string; title: number | string; version: number | string };
 	'remote.shareDialog.republishTitle': Record<never, never>;
 	'remote.shareDialog.rows': { n: number | string };
+	'remote.shareDialog.stay': { n: number | string };
+	'remote.shareDialog.stayWeb': { n: number | string };
 	'remote.shareDialog.tables': Record<never, never>;
-	'remote.shareDialog.uncheckedPrivate': Record<never, never>;
+	'remote.shareDialog.uncheckIt': { problem: number | string };
 	'remote.shareDialog.why.blocked': { n: number | string };
 	'remote.shareDialog.why.cannotCreate': Record<never, never>;
 	'remote.shareDialog.why.noTables': Record<never, never>;
@@ -4072,6 +4075,7 @@ export interface MessageParams {
 	'shell.choice.status': { name: number | string; value: number | string };
 	'shell.choice.statusHidden': { n: number | string; status: number | string };
 	'shell.close.dontSave': Record<never, never>;
+	'shell.close.privateWeb': { n: number | string };
 	'shell.close.question': { title: number | string };
 	'shell.close.questionQuit': { title: number | string };
 	'shell.close.quit': Record<never, never>;
@@ -4967,6 +4971,7 @@ export interface MessageParams {
 	'shell.web.lost': Record<never, never>;
 	'shell.web.reconnect': Record<never, never>;
 	'shell.web.reconnected': Record<never, never>;
+	'shell.web.sessionLost': Record<never, never>;
 	'shell.welcome.first.guide': Record<never, never>;
 	'shell.welcome.first.intro': Record<never, never>;
 	'shell.welcome.first.language': Record<never, never>;

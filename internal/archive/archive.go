@@ -171,6 +171,11 @@ type Remote struct {
 	// et conflits) au moment de l'enregistrement : lu sans ouvrir la base
 	// (fichier d'auteur à rouvrir tel quel pour qu'elles partent).
 	Unsent int
+	// Private : tableaux qui ne sont que dans ce fichier, pas sur le serveur
+	// (non cochés à la publication, refusés au partage automatique…) : le
+	// fichier d'auteur se rouvre tel quel, sinon ils disparaîtraient de la vue.
+	// -1 : section écrite par une version qui ne le disait pas (inconnu).
+	Private int
 }
 
 // Doc est un document ouvert.
@@ -1027,6 +1032,7 @@ func (r *Remote) yaml() string {
 	if r.Unsent > 0 {
 		fmt.Fprintf(&b, "  unsent: %d\n", r.Unsent)
 	}
+	fmt.Fprintf(&b, "  private: %d\n", r.Private)
 	if len(r.Since) > 0 {
 		b.WriteString("  since:\n")
 		keys := make([]string, 0, len(r.Since))
@@ -1109,7 +1115,7 @@ func readManifest(f *zip.File) (Manifest, error) {
 				m.Saved, _ = time.Parse(time.RFC3339, v)
 			case "remote":
 				section = "remote"
-				m.Remote = &Remote{}
+				m.Remote = &Remote{Private: -1}
 			case "journal":
 				section = "journal"
 				m.Journal = map[string]int64{}
@@ -1133,6 +1139,8 @@ func readManifest(f *zip.File) (Manifest, error) {
 				fmt.Sscan(v, &m.Remote.Version)
 			case "unsent":
 				fmt.Sscan(v, &m.Remote.Unsent)
+			case "private":
+				fmt.Sscan(v, &m.Remote.Private)
 			case "since":
 				m.Remote.Since = map[string]string{}
 			}

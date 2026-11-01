@@ -97,6 +97,15 @@ func readBase(ctx context.Context, q queryer) ([]byte, error) {
 	return []byte(raw), err
 }
 
+// PrivateTables compte les tableaux qui ne sont que dans ce classeur, pas sur
+// le serveur.
+func PrivateTables(ctx context.Context, db *sql.DB) (int, error) {
+	var n int
+	err := db.QueryRowContext(ctx, `SELECT count(*) FROM _lattis_tables t
+		WHERE NOT EXISTS (SELECT 1 FROM _lattis_remote_tables r WHERE r.tbl = t.id AND r.published = 1)`).Scan(&n)
+	return n, err
+}
+
 // Manifest donne la section remote du manifeste (nil : classeur local).
 func Manifest(ctx context.Context, db *sql.DB) (*archive.Remote, error) {
 	i, err := ReadInfo(ctx, db)
@@ -104,6 +113,9 @@ func Manifest(ctx context.Context, db *sql.DB) (*archive.Remote, error) {
 		return nil, err
 	}
 	r := &archive.Remote{Server: i.Server, WorkbookID: i.WorkbookID, Schema: i.Schema, Mode: i.Mode, Version: i.Version, Since: map[string]string{}}
+	if r.Private, err = PrivateTables(ctx, db); err != nil {
+		return nil, err
+	}
 	rs, err := db.QueryContext(ctx, `SELECT tbl, coalesce(since, '') FROM _lattis_remote_tables WHERE published = 1 ORDER BY tbl`)
 	if err != nil {
 		return nil, err

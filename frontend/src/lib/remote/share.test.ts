@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Check, State } from '#bindings/internal/remote/workbook/models.js';
 import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 import { syncAt } from '#lib/grid/cache.js';
-import { banner, blocking, detachQuestion, removeQuestion, goneError, goneText, offlineText, serverDown, serverLabel, canRepublish, conflictText, defaultSelection, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, roleChip, rolesLabel, whenLabel } from './share';
+import { banner, blocking, detachQuestion, removeQuestion, goneError, goneText, offlineText, serverDown, serverLabel, canRepublish, conflictText, defaultSelection, uncheckedCount, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, roleChip, rolesLabel, whenLabel } from './share';
 
 const check: Check = {
 	tables: [
@@ -17,7 +17,9 @@ const state = (s: Partial<State>): State => ({ shared: true, server: 'https://l.
 
 describe('partage', () => {
 	it('coche d’avance ce qui se publie', () => {
-		expect(defaultSelection(check, false)).toEqual([1, 4]);
+		// Première publication : tous, même ceux qui ont un problème (ils bloquent Publier).
+		expect(defaultSelection(check, false)).toEqual((check.tables ?? []).map((t) => t.id));
+		expect(uncheckedCount(check, [1])).toBe((check.tables ?? []).length - 1);
 		expect(defaultSelection(check, true)).toEqual([1]);
 		expect(defaultSelection(null, false)).toEqual([]);
 	});
