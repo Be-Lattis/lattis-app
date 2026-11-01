@@ -3,7 +3,8 @@ package demo
 import (
 	"fmt"
 	"math"
-	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/lalamefine/lattis/internal/grid"
 )
@@ -307,7 +308,8 @@ var Livres = Theme{
 		}),
 		c("Titre", grid.Text, func(g *Gen, i int, _ []any) any {
 			a, b := Pick(g, mots), Pick(g, mots)
-			t := strings.ToUpper(a[:1]) + a[1:] + " et " + b
+			first, size := utf8.DecodeRuneInString(a) // « étoiles » : pas un octet de « é »
+			t := string(unicode.ToUpper(first)) + a[size:] + " et " + b
 			if g.Chance(0.15) {
 				t += fmt.Sprintf(" (tome %d)", g.Int(1, 5))
 			}

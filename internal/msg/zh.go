@@ -1553,6 +1553,7 @@ var zh = map[ID]string{
 	"check.invalidEntries": "“{table}”：{n} 个无效输入需要更正，或将该列作为文本接受",
 	"check.nameEmpty":      "名称为空",
 	"check.nameNul":        "名称中有空字符",
+	"check.nameInvalid": "名称中有无法读取的字符",
 	"check.namePrefix":     "lattis_ 前缀为保留前缀",
 	"check.nameSpaces":     "名称开头或结尾有空格",
 	"check.nameTooLong":    "名称对服务器而言太长（{n} 字节，最多 63 字节）",

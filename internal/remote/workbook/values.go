@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
@@ -196,7 +198,7 @@ func ToRemote(typ string, v any) (any, error) {
 	default:
 		switch x := v.(type) {
 		case string:
-			return x, nil
+			return cleanText(x), nil
 		case int64:
 			return strconv.FormatInt(x, 10), nil
 		case float64:
@@ -204,6 +206,18 @@ func ToRemote(typ string, v any) (any, error) {
 		}
 	}
 	return nil, msg.New("workbook.valueIncompatible", msg.Args{"value": fmt.Sprint(v), "type": typ})
+}
+
+// cleanText rend un texte que PostgreSQL accepte : le classeur local (SQLite)
+// garde n'importe quels octets, mais un seul octet hors UTF-8 ou un caractère
+// nul faisait échouer toute la publication (« invalid byte sequence »). Les
+// octets invalides deviennent le caractère de remplacement, le reste du texte
+// est gardé.
+func cleanText(s string) string {
+	if utf8.ValidString(s) && !strings.ContainsRune(s, 0) {
+		return s
+	}
+	return strings.ToValidUTF8(strings.ReplaceAll(s, string(rune(0)), ""), string(utf8.RuneError))
 }
 
 // FromRemote convertit une valeur lue sur le serveur (voir selectExpr) en

@@ -1552,6 +1552,7 @@ var de = map[ID]string{
 	"check.invalidEntries": "„{table}“: {n} ungültige Eingabe(n) zu korrigieren oder Spalte als Text zu akzeptieren",
 	"check.nameEmpty":      "leerer Name",
 	"check.nameNul":        "Nullzeichen im Namen",
+	"check.nameInvalid": "unlesbare Zeichen im Namen",
 	"check.namePrefix":     "Das Präfix lattis_ ist reserviert",
 	"check.nameSpaces":     "Leerzeichen am Anfang oder Ende des Namens",
 	"check.nameTooLong":    "Name zu lang für den Server ({n} Bytes, höchstens 63)",

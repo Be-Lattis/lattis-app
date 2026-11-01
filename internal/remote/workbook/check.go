@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
@@ -108,6 +109,8 @@ func nameProblem(l msg.Lang, name string) string {
 		id = "check.namePrefix"
 	case strings.ContainsRune(name, 0):
 		id = "check.nameNul"
+	case !utf8.ValidString(name):
+		id = "check.nameInvalid"
 	default:
 		return ""
 	}
