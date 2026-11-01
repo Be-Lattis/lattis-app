@@ -7,20 +7,25 @@
 // qui décrit la cellule active.
 import { test as base, expect, type Page } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-type Options = { demo: string };
+type Options = { demo: string; recent: object[] };
 
 export const test = base.extend<Options & { app: Page }>({
 	demo: ['', { option: true }],
-	app: async ({ page, demo }, use, testInfo) => {
+	recent: [[], { option: true }],
+	app: async ({ page, demo, recent }, use, testInfo) => {
 		const dir = mkdtempSync(join(tmpdir(), 'lattis-e2e-'));
 		const cfg = join(dir, 'config');
 		const cache = join(dir, 'cache');
 		mkdirSync(cfg);
 		mkdirSync(cache);
+		if (recent.length) {
+			mkdirSync(join(cache, 'Lattis'));
+			writeFileSync(join(cache, 'Lattis', 'recent.json'), JSON.stringify(recent));
+		}
 		const args = ['--addr', '127.0.0.1:0', '--static', resolve(import.meta.dirname, '..', 'dist-web'), '--dir', join(dir, 'session')];
 		if (demo) args.push('--demo', demo);
 		const proc = spawn(process.env.LATTIS_E2E_ENGINE!, args, {

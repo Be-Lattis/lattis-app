@@ -210,15 +210,23 @@ func dropRecent(r RecentFile) {
 	list := readRecent()
 	n := len(list)
 	list = slices.DeleteFunc(list, func(o RecentFile) bool {
-		return r.same(o) || r.Path != "" && o.Path != "" && samePath(o.Path, r.Path)
+		if r.same(o) || r.Path != "" && o.Path != "" && samePath(o.Path, r.Path) {
+			return true
+		}
+		// Fichier de l'auteur montré comme son classeur du serveur (Recent).
+		if !r.remote() || o.remote() || o.Path == "" {
+			return false
+		}
+		m, err := archive.ReadManifest(o.Path)
+		return err == nil && m.Remote != nil && m.Remote.Server == r.Server && m.Remote.WorkbookID == r.WorkbookID
 	})
 	if len(list) != n {
 		writeRecent(list)
 	}
 }
 
-// RemoveRecent retire un classeur de la liste des récents (classeur
-// supprimé du serveur, ou auquel l'utilisateur n'a plus accès).
+// RemoveRecent retire un classeur de la liste des récents (croix de la
+// liste, classeur supprimé du serveur, ou plus d'accès) ; le fichier reste.
 func (s *DocumentService) RemoveRecent(ctx context.Context, r RecentFile) {
 	dropRecent(r)
 }

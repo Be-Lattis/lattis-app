@@ -144,6 +144,7 @@
 		/** Classeurs récents (chemins), pour Fichier › Récents. */
 		recent?: RecentFile[];
 		onrecent?: (r: RecentFile) => void;
+		onrecentremove?: (r: RecentFile) => void;
 		onview: (v: View) => void;
 		/** Volet de l'Assistant IA ouvert, et sa bascule (bouton « Assistant ✦ », Alt+I). */
 		ai?: boolean;
@@ -279,7 +280,7 @@
 		ontheme?: (id: string) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, onsparkline, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onoutline, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, oncomment, comment = false, commentsPane = false, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onrecentremove, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, onsparkline, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onoutline, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, oncomment, comment = false, commentsPane = false, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -1641,7 +1642,7 @@
 					<!-- Comme Excel : les fichiers récents juste sous Ouvrir ; sous-menus au survol, par Entrée ou →, ← les referme. -->
 					<Submenu label={t('ribbon.file.recent')} disabled={!recent.length} title={recent.length ? undefined : t('ribbon.file.recentNone')}>
 						{#each recent as r (recentKey(r))}
-							<button role="menuitem" title={recentDetail(r)} onclick={() => { fileOpen = false; onrecent?.(r); }}>{#if recentRemote(r)}<Icon name="cloud" size={14} />{/if}<span class="name">{recentLabel(r)}</span></button>
+							<div class="recent-row" role="none"><button role="menuitem" title={recentDetail(r)} onclick={() => { fileOpen = false; onrecent?.(r); }} onkeydown={(e) => { if (e.key === 'Delete' && !platform.demo) { e.preventDefault(); e.stopPropagation(); onrecentremove?.(r); } }}>{#if recentRemote(r)}<Icon name="cloud" size={14} />{/if}<span class="name">{recentLabel(r)}</span></button>{#if !platform.demo}<button class="recent-x" tabindex="-1" title={t('ribbon.file.recentRemove')} aria-label={t('ribbon.file.recentRemove')} onclick={(e) => { e.stopPropagation(); onrecentremove?.(r); }}>×</button>{/if}</div>
 						{/each}
 					</Submenu>
 					{#each [...(sharedWorkbooksEnabled() ? [['openRemote', t('ribbon.file.openRemote'), '']] : []), ['close', t('ribbon.file.close'), 'Ctrl+W']] as [a, label, keys] (a)}
@@ -2085,6 +2086,31 @@
 		border: none;
 		border-top: 1px solid #e5e7eb;
 		margin: 4px 0;
+	}
+	/* Récent : la croix le retire de la liste (le fichier reste). */
+	.file-menu .recent-row {
+		display: flex;
+		align-items: stretch;
+	}
+	.file-menu .recent-row > button:first-child {
+		flex: 1;
+		min-width: 0;
+	}
+	.file-menu .recent-row .recent-x {
+		flex: none;
+		width: 28px;
+		padding: 0;
+		justify-content: center;
+		align-items: center;
+		color: #6b7280;
+		visibility: hidden;
+	}
+	.file-menu .recent-row:hover .recent-x,
+	.file-menu .recent-row:focus-within .recent-x {
+		visibility: visible;
+	}
+	.file-menu .recent-row .recent-x:hover {
+		color: #111;
 	}
 	/* Récent du serveur : nuage puis nom, à gauche (pas écartés par space-between). */
 	.file-menu .name {

@@ -3756,6 +3756,7 @@ export interface MessageParams {
 	'ribbon.file.print': Record<never, never>;
 	'ribbon.file.recent': Record<never, never>;
 	'ribbon.file.recentNone': Record<never, never>;
+	'ribbon.file.recentRemove': Record<never, never>;
 	'ribbon.file.reconnect': Record<never, never>;
 	'ribbon.file.remove': Record<never, never>;
 	'ribbon.file.report': Record<never, never>;

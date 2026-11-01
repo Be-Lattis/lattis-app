@@ -52,6 +52,7 @@
 		"open": "Abrir…",
 		"recent": "Abrir un archivo reciente",
 		"recentNone": "No hay archivos recientes",
+		"recentRemove": "Quitar de la lista",
 		"openRemote": "Abrir desde un servidor…",
 		"close": "Cerrar",
 		"save": "Guardar",

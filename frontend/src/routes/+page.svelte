@@ -752,6 +752,8 @@
 	const { openLink, openPath, openRecent, openLocked, openTogether, opened, resolveSave, answerXlsx, workbookReady, salvage, closeDoc, requestQuit, cancelClose, startDoc, startPresetDemo, openDemoPreset, openSample, startDemo, file, exportSql, recover } = filesCtl;
 
 	const loadRecent = async () => (recent = (await DocumentService.Recent().catch(() => null)) ?? []);
+	// La croix d'un récent : retiré de la liste, le fichier ou le classeur reste.
+	const removeRecent = (r: RecentFile) => DocumentService.RemoveRecent(r).then(loadRecent).catch((e) => (notice = err(e)));
 
 	/** Enregistre en montrant, pour un gros classeur, l'avancement dans la barre d'état. */
 	function saving(run: () => Promise<DocState>): Promise<DocState> {
@@ -1484,6 +1486,7 @@
 		disabled={mode !== 'doc' && mode !== 'demo'}
 		{recent}
 		onrecent={(r) => openRecent(r).catch((e) => (notice = err(e)))}
+		onrecentremove={removeRecent}
 		undo={mode === 'doc' ? docState.undo : ''}
 		redo={mode === 'doc' ? docState.redo : ''}
 		ai={aiChat.open}
@@ -1699,7 +1702,10 @@
 					<div class="recent">
 						<p class="muted">{t('shell.welcome.recent')}</p>
 						{#each recent as r (recentKey(r))}
-							<button class="link" title={recentDetail(r)} onclick={() => openRecent(r).catch((e) => (notice = err(e)))}>{recentLabel(r)}</button>
+							<div class="recent-row">
+								<button class="link" title={recentDetail(r)} onclick={() => openRecent(r).catch((e) => (notice = err(e)))}>{recentLabel(r)}</button>
+								{#if !platform.demo}<button class="recent-x" title={t('ribbon.file.recentRemove')} aria-label={t('ribbon.file.recentRemove')} onclick={() => removeRecent(r)}>×</button>{/if}
+							</div>
 						{/each}
 					</div>
 				{/if}
@@ -2430,6 +2436,24 @@
 		align-items: center;
 		gap: 2px;
 		margin-top: 12px;
+	}
+	.recent-row {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+	.recent-x {
+		padding: 0 4px;
+		background: none;
+		border: none;
+		font: inherit;
+		color: #6b7280;
+		cursor: pointer;
+		opacity: 0;
+	}
+	.recent-row:hover .recent-x,
+	.recent-x:focus-visible {
+		opacity: 1;
 	}
 	.recent .muted {
 		margin: 0 0 4px;

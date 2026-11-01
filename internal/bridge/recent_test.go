@@ -188,3 +188,38 @@ func TestSharedFile(t *testing.T) {
 		t.Fatalf("fichier avec des modifications en attente ouvert depuis le serveur : %+v", r)
 	}
 }
+
+// La croix sur le classeur du serveur retire aussi le fichier de l'auteur
+// qu'il représente, sans toucher au fichier.
+func TestRemoveRecentAuthorFile(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	old := recentFile
+	recentFile = func() (string, error) { return filepath.Join(dir, "recent.json"), nil }
+	t.Cleanup(func() { recentFile = old })
+	a, err := archive.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	a.Remote = func(context.Context) (*archive.Remote, error) {
+		return &archive.Remote{Server: "https://srv.test", WorkbookID: "id", Mode: "collaborative"}, nil
+	}
+	p := filepath.Join(dir, "Suivi.lattis")
+	if err := a.Save(ctx, p); err != nil {
+		t.Fatal(err)
+	}
+	addRecent(p)
+	s := &DocumentService{}
+	got := s.Recent(ctx)
+	if len(got) != 1 || got[0].WorkbookID != "id" {
+		t.Fatalf("Recent = %+v", got)
+	}
+	s.RemoveRecent(ctx, got[0])
+	if got := s.Recent(ctx); len(got) != 0 {
+		t.Fatalf("toujours là : %+v", got)
+	}
+	if _, err := os.Stat(p); err != nil {
+		t.Fatal(err)
+	}
+}

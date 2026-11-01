@@ -6,6 +6,10 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Fichiers récents : une petite croix (ou Suppr dans le menu) retire une entrée de la liste ; le fichier ou le classeur reste.
+
 ## 0.5.1-beta (30/10/2026)
 
 ### Nouveautés

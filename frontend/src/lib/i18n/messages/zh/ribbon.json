@@ -52,6 +52,7 @@
 		"open": "打开…",
 		"recent": "打开最近使用的文件",
 		"recentNone": "没有最近使用的文件",
+		"recentRemove": "从列表中移除",
 		"openRemote": "从服务器打开…",
 		"close": "关闭",
 		"save": "保存",

@@ -52,6 +52,7 @@
 		"open": "Open…",
 		"recent": "Open a recent file",
 		"recentNone": "No recent files",
+		"recentRemove": "Remove from list",
 		"openRemote": "Open from a server…",
 		"close": "Close",
 		"save": "Save",
