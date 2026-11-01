@@ -9,6 +9,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Nouveautés
 
 - Fichiers récents : une petite croix (ou Suppr dans le menu) retire une entrée de la liste ; le fichier ou le classeur reste.
+
 ### Changements
 
 - Publier sur un serveur : tous les tableaux sont cochés d'avance. Un tableau coché qui a un problème bloque Publier, avec la raison ; on le corrige ou on le décoche, et une ligne à côté du bouton dit combien de tableaux ne seront pas publiés.
