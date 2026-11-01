@@ -75,6 +75,8 @@ type Engine struct {
 	// dispose : répertoire de la session à effacer à la fermeture (démo
 	// publique).
 	dispose string
+	// starting : fermé à la fin de Starting (nil sans Starting).
+	starting chan struct{}
 }
 
 // New crée et démarre un moteur.
@@ -128,6 +130,9 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 		guard: guard,
 	}
 	e.hub.OnIdle = e.host.cancelPicks
+	// Un onglet qui arrive pendant une opération longue (ouverture du classeur
+	// de la session, page rechargée) la voit tout de suite.
+	e.hub.OnConnect = func() { bridge.ReplayWork(e.docs) }
 	bridge.UseHost(e.host, e.grid, e.docs)
 	if o.Demo != "" {
 		e.docs.SetDemo(o.Demo, o.Seed)
@@ -153,6 +158,31 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 	return e, nil
 }
 
+// Starting exécute fn (ouverture du classeur de la session) à côté du
+// serveur HTTP, déjà là : la page s'affiche et suit l'avancement (work:step)
+// au lieu d'attendre que le moteur écoute. Les appels de l'interface attendent
+// la fin de fn, comme s'il s'était ouvert avant ; seuls passent « Annuler » et
+// ce qu'il faut pour afficher la page dans sa langue. À appeler une fois,
+// avant de servir.
+func (e *Engine) Starting(fn func()) {
+	done := make(chan struct{})
+	e.starting = done
+	e.hub.Hold = func(ctx context.Context, m *transport.Method) {
+		switch m.Short {
+		case "DocumentService.CancelWork", "DocumentService.Platform", "DocumentService.Settings", "DocumentService.SetLanguage":
+			return
+		}
+		select {
+		case <-done:
+		case <-ctx.Done():
+		}
+	}
+	go func() {
+		defer close(done)
+		fn()
+	}()
+}
+
 // Handler sert le WebSocket /ws, l'envoi et le téléchargement de fichiers,
 // et le frontend si Options.Static est donné.
 func (e *Engine) Handler() http.Handler { return e.mux }
@@ -172,6 +202,9 @@ func (e *Engine) Connected() bool { return e.hub.Connected() }
 // enregistré reste dans le répertoire de travail (récupération), sauf en
 // démo publique : tout le répertoire de la session est effacé.
 func (e *Engine) Close() error {
+	if e.starting != nil {
+		<-e.starting
+	}
 	e.host.cancelPicks()
 	err := errors.Join(e.docs.ServiceShutdown(), e.grid.ServiceShutdown())
 	if e.dispose != "" {

@@ -10,6 +10,7 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
+	import Late from '#lib/ui/Late.svelte';
 	import HelpLink from '#lib/help/HelpLink.svelte';
 	import { openOutside } from '#lib/ai/links.js';
 	import { onMount } from 'svelte';
@@ -384,7 +385,7 @@
 		</header>
 
 		{#if !info}
-			<div class="sf-body"><p class={error ? 'sf-error' : 'sf-hint'}>{error || t('remote.formDialog.reading')}</p></div>
+			<div class="sf-body">{#if error}<p class="sf-error" role="alert">{error}</p>{:else}<Late><p class="sf-hint" role="status">{t('remote.formDialog.reading')}</p></Late>{/if}</div>
 			<footer class="sf-foot"><span class="sf-grow"></span><button type="button" class="sf-btn" onclick={ondone}>{t('common.close')}</button></footer>
 		{:else if step === 'reason'}
 			{@const a = reasonAction(info.reason)}

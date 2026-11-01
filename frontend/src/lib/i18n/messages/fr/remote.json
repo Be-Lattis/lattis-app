@@ -247,7 +247,8 @@
 		"version": "version {version}",
 		"republishing": "nouvelle version en préparation",
 		"loading": "Chargement du classeur…",
-		"cached": "Le classeur est gardé sur ce poste : il reste consultable hors ligne."
+		"cached": "Le classeur est gardé sur ce poste : il reste consultable hors ligne.",
+		"cancelled": "Ouverture annulée."
 	},
 	"audience": {
 		"inherit": "Hériter de l’audience du dossier",
@@ -338,7 +339,8 @@
 		"openLocal": {
 			"label": "Ouvrir quand même (en local)",
 			"tooltip": "Ouvrir la copie de ce poste, sans le serveur"
-		}
+		},
+		"discovering": "Connexion au serveur…"
 	},
 	"forms": {
 		"reason": {

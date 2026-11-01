@@ -10,6 +10,7 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
+	import Late from '#lib/ui/Late.svelte';
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { DeviceCode, Provider, ServerState } from '#bindings/internal/remote/auth/models.js';
@@ -154,6 +155,7 @@
 					<label>{t('remote.login.address')} <input bind:value={address} placeholder="https://lattis.acme.fr" disabled={busy} /></label>
 					<button class="primary" type="submit" disabled={busy || !address.trim()}>{t('remote.login.continue')}</button>
 				</form>
+				{#if busy}<Late><p class="muted" role="status">{t('remote.login.discovering')}</p></Late>{/if}
 			{:else if waiting?.device}
 				{@const d = waiting.device}
 				<p>{t('remote.login.device.help', { provider: waiting.provider.label })}</p>

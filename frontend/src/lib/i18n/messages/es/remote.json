@@ -247,7 +247,8 @@
 		"version": "versión {version}",
 		"republishing": "nueva versión en preparación",
 		"loading": "Cargando el libro…",
-		"cached": "El libro se conserva en este equipo: sigue disponible sin conexión."
+		"cached": "El libro se conserva en este equipo: sigue disponible sin conexión.",
+		"cancelled": "Apertura cancelada."
 	},
 	"audience": {
 		"inherit": "Heredar la audiencia de la carpeta",
@@ -338,7 +339,8 @@
 		"openLocal": {
 			"label": "Abrir de todos modos (copia local)",
 			"tooltip": "Abrir la copia de este equipo, sin el servidor"
-		}
+		},
+		"discovering": "Conectando al servidor…"
 	},
 	"forms": {
 		"reason": {

@@ -86,6 +86,13 @@ type Hub struct {
 	// Guard refuse un appel avant de l'exécuter (fin d'une démo publique :
 	// plus de modification) ; nil : tout est permis.
 	Guard func(m *Method) error
+	// Hold retient un appel avant son exécution (classeur de la session en
+	// cours d'ouverture), dans sa goroutine : les autres appels et « $/cancel »
+	// passent ; nil : rien n'est retenu.
+	Hold func(ctx context.Context, m *Method)
+	// OnConnect est appelé à chaque nouvelle connexion, une fois comptée
+	// (redire ce qui est en cours à un onglet qui arrive).
+	OnConnect func()
 
 	mu    sync.Mutex
 	conns map[*conn]struct{}
@@ -157,6 +164,9 @@ func (h *Hub) Serve(ctx context.Context, ws *websocket.Conn) {
 	h.mu.Lock()
 	h.conns[c] = struct{}{}
 	h.mu.Unlock()
+	if h.OnConnect != nil {
+		h.OnConnect()
+	}
 	defer func() {
 		cancel() // annule les appels en cours de cette connexion
 		h.mu.Lock()
@@ -245,6 +255,9 @@ func (h *Hub) handle(c *conn, req request) {
 				c.mu.Unlock()
 			}
 		}()
+		if h.Hold != nil {
+			h.Hold(ctx, m)
+		}
 		res, err := m.Call(ctx, params)
 		if len(req.ID) == 0 {
 			return // notification : pas de réponse

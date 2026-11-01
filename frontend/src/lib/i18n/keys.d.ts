@@ -2877,6 +2877,7 @@ export interface MessageParams {
 	'remote.login.device.help': { provider: number | string };
 	'remote.login.device.valid': { time: number | string };
 	'remote.login.device.waiting': Record<never, never>;
+	'remote.login.discovering': Record<never, never>;
 	'remote.login.imposed': Record<never, never>;
 	'remote.login.invitation': Record<never, never>;
 	'remote.login.noProvider': Record<never, never>;
@@ -2945,6 +2946,7 @@ export interface MessageParams {
 	'remote.members.viewAs.label': Record<never, never>;
 	'remote.members.viewAs.tooltip': { who: number | string };
 	'remote.open.cached': Record<never, never>;
+	'remote.open.cancelled': Record<never, never>;
 	'remote.open.empty': Record<never, never>;
 	'remote.open.loading': Record<never, never>;
 	'remote.open.reading': Record<never, never>;
@@ -5010,10 +5012,13 @@ export interface MessageParams {
 	'shell.work.op.insertRows': Record<never, never>;
 	'shell.work.op.layout': Record<never, never>;
 	'shell.work.op.load': Record<never, never>;
+	'shell.work.op.openRemote': Record<never, never>;
 	'shell.work.op.print': Record<never, never>;
 	'shell.work.op.publish': { name: number | string };
 	'shell.work.op.query': Record<never, never>;
+	'shell.work.op.receive': Record<never, never>;
 	'shell.work.op.redo': Record<never, never>;
+	'shell.work.op.reloadRemote': Record<never, never>;
 	'shell.work.op.republish': { name: number | string };
 	'shell.work.op.setType': { name: number | string };
 	'shell.work.op.sort': { name: number | string };
@@ -5024,6 +5029,7 @@ export interface MessageParams {
 	'shell.work.phase.chart': Record<never, never>;
 	'shell.work.phase.check': Record<never, never>;
 	'shell.work.phase.commit': Record<never, never>;
+	'shell.work.phase.connect': Record<never, never>;
 	'shell.work.phase.count': Record<never, never>;
 	'shell.work.phase.delete': Record<never, never>;
 	'shell.work.phase.drop': Record<never, never>;
@@ -5039,15 +5045,19 @@ export interface MessageParams {
 	'shell.work.phase.order': Record<never, never>;
 	'shell.work.phase.pages': Record<never, never>;
 	'shell.work.phase.pivot': Record<never, never>;
+	'shell.work.phase.place': Record<never, never>;
 	'shell.work.phase.prepare': Record<never, never>;
 	'shell.work.phase.rank': Record<never, never>;
+	'shell.work.phase.readLayout': Record<never, never>;
 	'shell.work.phase.record': Record<never, never>;
 	'shell.work.phase.rewrite': Record<never, never>;
+	'shell.work.phase.rows': { table: number | string };
 	'shell.work.phase.save': Record<never, never>;
 	'shell.work.phase.schema': Record<never, never>;
 	'shell.work.phase.send': Record<never, never>;
 	'shell.work.phase.update': Record<never, never>;
 	'shell.work.phase.window': Record<never, never>;
+	'shell.work.rowsRead': { n: number | string };
 	'shell.xlsxSave.aria': Record<never, never>;
 	'shell.xlsxSave.ask': Record<never, never>;
 	'shell.xlsxSave.convert': Record<never, never>;

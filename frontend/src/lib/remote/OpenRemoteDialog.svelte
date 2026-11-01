@@ -5,6 +5,7 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
+	import Late from '#lib/ui/Late.svelte';
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { OpenResult } from '#bindings/internal/bridge/models.js';
@@ -13,7 +14,8 @@
 	import ServerPicker from './ServerPicker.svelte';
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import { modeLabel, rolesLabel } from './share';
-	import { errorText, t } from '#lib/i18n/index.js';
+	import { errorText, isCancelled, t } from '#lib/i18n/index.js';
+	import { work, workPhaseText } from '#lib/shell/work.js';
 
 	interface Props {
 		/** Ouvert (résultat) ou abandon (null). */
@@ -25,28 +27,36 @@
 
 	let server = $state('');
 	let list = $state<Listing[] | null>(null);
-	let busy = $state(false);
+	let ready = $state(false);
+	let reading = $state(false);
+	let opening = $state(false);
+	let stopping = $state(false);
 	let error = $state('');
+	let notice = $state('');
+	const busy = $derived(reading || opening);
+	// Montrée par le moteur au-delà de work.Delay : rien pour une ouverture rapide.
+	const step = $derived(opening && $work?.op === 'openRemote' ? $work : null);
 	const err = errorText;
 	const servers = $derived(connected(lattis.state.servers));
 
 	onMount(async () => {
 		await loadLattis();
 		server = connected(lattis.state.servers)[0]?.url ?? '';
+		ready = true;
 		if (server) await load();
 	});
 
 	async function load() {
-		error = '';
+		error = notice = '';
 		list = null;
 		if (!server) return;
-		busy = true;
+		reading = true;
 		try {
 			list = (await DocumentService.ShareWorkbooks(server)) ?? [];
 		} catch (e) {
 			error = err(e);
 		} finally {
-			busy = false;
+			reading = false;
 		}
 	}
 
@@ -63,19 +73,27 @@
 			onpick(server, w);
 			return;
 		}
-		error = '';
-		busy = true;
+		error = notice = '';
+		opening = true;
 		try {
 			ondone(await DocumentService.ShareOpen(server, w.id, w.title));
 		} catch (e) {
-			error = err(e);
+			if (isCancelled(e)) notice = t('remote.open.cancelled');
+			else error = err(e);
 		} finally {
-			busy = false;
+			opening = stopping = false;
 		}
+	}
+
+	/** « Annuler » : le chargement est défait, rien n'a changé sur ce poste. */
+	function stop() {
+		if (!step?.cancel || stopping) return;
+		stopping = true;
+		DocumentService.CancelWork(step.id).catch(() => undefined);
 	}
 </script>
 
-<div class="back" role="presentation" use:backdrop={() => !busy && ondone(null)}>
+<div class="back" role="presentation" use:backdrop={() => !opening && ondone(null)}>
 	<div
 		class="dialog"
 		role="dialog"
@@ -85,7 +103,7 @@
 		use:modal
 		onkeydown={(e) => {
 			e.stopPropagation();
-			if (e.key === 'Escape' && !busy) ondone(null);
+			if (e.key === 'Escape' && !opening) ondone(null);
 		}}
 	>
 		<header><Icon name="open" size={18} /><span>{t('remote.open.title')}</span></header>
@@ -93,14 +111,14 @@
 			<div class="row">
 				<label for="open-remote-server">{t('remote.serverPicker.aria')}</label>
 				<ServerPicker id="open-remote-server" bind:value={server} {servers} disabled={busy} onchange={load}>
-					{#snippet none()}<span class="grow"><button class="primary" onclick={login}>{t('remote.account.connectServer')}</button></span>{/snippet}
+					{#snippet none()}{#if ready}<span class="grow"><button class="primary" onclick={login}>{t('remote.account.connectServer')}</button></span>{/if}{/snippet}
 				</ServerPicker>
 			</div>
 			{#if !servers.length}
-				<p class="muted">{t('remote.open.signIn')}</p>
+				{#if ready}<p class="muted">{t('remote.open.signIn')}</p>{/if}
 			{:else}
 				{#if list === null}
-					<p class="muted">{busy ? t('remote.open.reading') : ''}</p>
+					{#if reading}<Late><p class="muted" role="status">{t('remote.open.reading')}</p></Late>{/if}
 				{:else if !list.length}
 					<p class="muted">{t('remote.open.empty')}</p>
 				{:else}
@@ -117,10 +135,22 @@
 				{/if}
 			{/if}
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			{#if notice}<p class="muted" role="status">{notice}</p>{/if}
 		</div>
+		{#if step}
+			{@const label = workPhaseText(step) || t('remote.open.loading')}
+			<div class="progress" role="progressbar" aria-label={t('remote.open.loading')} aria-valuetext={label}>
+				<span class="plabel" title={label}>{label}</span>
+				<span class="track"><span class="bar"></span></span>
+			</div>
+		{/if}
 		<footer>
-			<span class="muted grow">{busy && list ? t('remote.open.loading') : t('remote.open.cached')}</span>
-			<button onclick={() => ondone(null)} disabled={busy}>{t('common.close')}</button>
+			<span class="muted grow">{t('remote.open.cached')}</span>
+			{#if step?.cancel || stopping}
+				<button onclick={stop} disabled={stopping} title={t('shell.work.cancelTooltip')}>{stopping ? t('shell.work.cancelling') : t('shell.work.cancel')}</button>
+			{:else}
+				<button onclick={() => ondone(null)} disabled={opening}>{t('common.close')}</button>
+			{/if}
 		</footer>
 	</div>
 </div>
@@ -216,6 +246,56 @@
 	}
 	.error {
 		color: #c0392b;
+	}
+	.progress {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 16px;
+		border-top: 1px solid #e3e5e8;
+		font-size: 12px;
+	}
+	.plabel {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-variant-numeric: tabular-nums;
+	}
+	.track {
+		position: relative;
+		flex: none;
+		width: 120px;
+		height: 6px;
+		border-radius: 3px;
+		background: #e3e5e8;
+		overflow: hidden;
+	}
+	.bar {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 40%;
+		border-radius: 3px;
+		background: #217346;
+		animation: slide 1.1s ease-in-out infinite;
+	}
+	@keyframes slide {
+		from {
+			left: -40%;
+		}
+		to {
+			left: 100%;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.bar {
+			animation: none;
+			left: 0;
+			width: 100%;
+			opacity: 0.6;
+		}
 	}
 	footer {
 		display: flex;

@@ -207,6 +207,10 @@ func (s *DocumentService) watchShare(d *doc.Document) {
 		// la validation locale ; index du serveur (API).
 		d.Oplog.SetStructure(eng.Structure)
 		d.SetIndexer(eng)
+		eng.SetTrack(func(ctx context.Context) (context.Context, func()) {
+			wctx, t := s.track(ctx, false)
+			return wctx, func() { s.untrack(t, nil) }
+		})
 		s.share.mu.Unlock()
 		go func() {
 			defer recoverPanic("classeur partagé")
@@ -845,8 +849,23 @@ func shareCachePath(server, id string) (string, error) {
 // ShareOpen ouvre un classeur du serveur : chargé en entier dans son cache
 // local (un fichier .lattis du dossier cache de l'utilisateur, rouvert et
 // actualisé s'il existe), qui reste consultable hors ligne.
-func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title string) (OpenResult, error) {
-	srv, user, name, err := remoteServer(ctx, server)
+//
+// Suivi dans la barre d'état : « Annuler » tant que le chargement n'est pas
+// validé. Il tient dans une transaction locale, sur un classeur neuf ou sur
+// la copie de travail du cache : interrompu, il ne laisse rien, le cache
+// reste tel qu'avant.
+func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title string) (res OpenResult, err error) {
+	wctx, t := s.track(ctx, true)
+	defer s.untrack(t, &err)
+	work.Op(wctx, "openRemote", "")
+	return s.shareOpen(ctx, wctx, server, id, title)
+}
+
+// shareOpen : wctx porte le suivi, pour ce qui attend le serveur et peut
+// s'interrompre ; ctx sert au reste.
+func (s *DocumentService) shareOpen(ctx, wctx context.Context, server, id, title string) (OpenResult, error) {
+	work.Loop(wctx, "connect", 0)
+	srv, user, name, err := remoteServer(wctx, server)
 	if err != nil {
 		return OpenResult{}, err
 	}
@@ -862,7 +881,7 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 			st, err := s.State(ctx) // collaboratif : déjà suivi, à jour par ses deltas
 			return OpenResult{State: st}, err
 		}
-		if _, err := workbook.Load(ctx, srv, cur.DB(), src, false); err != nil {
+		if _, err := workbook.Load(wctx, srv, cur.DB(), src, false); err != nil {
 			gone := workbook.GoneReason(err)
 			if gone == "" {
 				return OpenResult{}, err
@@ -873,7 +892,7 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 			st, err := s.State(ctx)
 			return OpenResult{State: st}, err
 		}
-		_, err := s.afterShare(ctx, cur)
+		_, err := s.afterShare(savingShare(wctx), cur)
 		st, serr := s.State(ctx)
 		return OpenResult{State: st}, errors.Join(err, serr)
 	}
@@ -915,7 +934,7 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 	// par les pierres tombales du serveur est relu en entier).
 	gone := ""
 	if fresh || !keepCollabCache(ctx, d) {
-		if _, err := workbook.Load(ctx, srv, d.DB(), src, fresh); err != nil {
+		if _, err := workbook.Load(wctx, srv, d.DB(), src, fresh); err != nil {
 			// Classeur supprimé du serveur, ou plus d'accès : son cache s'ouvre
 			// tel quel, avec le bandeau qui le dit (pas « ne répond pas ») ;
 			// sans cache, une erreur qui le dit.
@@ -928,6 +947,12 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 			}
 		}
 	}
+	// Dernier moment pour annuler : ni le cache ni le classeur ouvert n'ont
+	// encore changé.
+	if !work.Final(wctx) {
+		d.Close()
+		return OpenResult{}, errWorkCancelled
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		d.Close()
 		return OpenResult{}, err
@@ -936,7 +961,7 @@ func (s *DocumentService) ShareOpen(ctx context.Context, server, id, title strin
 		d.Close()
 		return OpenResult{}, err
 	}
-	if err := saveDoc(ctx, d, path); err != nil {
+	if err := saveDoc(savingShare(wctx), d, path); err != nil {
 		d.Close()
 		return OpenResult{}, err
 	}
@@ -984,10 +1009,27 @@ func keepCollabCache(ctx context.Context, d *doc.Document) bool {
 	return info != nil && info.Mode == workbook.Collaborative
 }
 
+// savingShare : un chargement validé (transaction locale faite), il faut
+// aller au bout : plus d'annulation, l'étape dit l'enregistrement.
+func savingShare(wctx context.Context) context.Context {
+	work.Final(wctx)
+	work.Loop(wctx, "save", 0)
+	return context.WithoutCancel(wctx)
+}
+
 // ShareReload recharge la version publiée du classeur partagé ouvert
 // (bandeau « Nouvelle version disponible ») : les ajouts locaux (tableaux
-// privés, cellules libres, feuilles) sont gardés.
-func (s *DocumentService) ShareReload(ctx context.Context) (DocState, error) {
+// privés, cellules libres, feuilles) sont gardés. Suivi dans la barre
+// d'état : « Annuler » défait la transaction du chargement, le classeur
+// reste tel qu'avant.
+func (s *DocumentService) ShareReload(ctx context.Context) (st DocState, err error) {
+	wctx, t := s.track(ctx, true)
+	defer s.untrack(t, &err)
+	work.Op(wctx, "reloadRemote", "")
+	return s.shareReload(ctx, wctx)
+}
+
+func (s *DocumentService) shareReload(ctx, wctx context.Context) (DocState, error) {
 	d, err := s.current()
 	if err != nil {
 		return DocState{}, err
@@ -996,15 +1038,16 @@ func (s *DocumentService) ShareReload(ctx context.Context) (DocState, error) {
 	if info == nil {
 		return DocState{}, msg.New("share.notSharedPlain", nil)
 	}
-	srv, user, name, err := remoteServer(ctx, info.Server)
+	work.Loop(wctx, "connect", 0)
+	srv, user, name, err := remoteServer(wctx, info.Server)
 	if err != nil {
 		return DocState{}, err
 	}
 	src := workbook.Source{Server: info.Server, ServerName: name, User: user.PGRole, WorkbookID: info.WorkbookID}
-	if _, err := workbook.Load(ctx, srv, d.DB(), src, false); err != nil {
+	if _, err := workbook.Load(wctx, srv, d.DB(), src, false); err != nil {
 		return DocState{}, err
 	}
-	if _, err := s.afterShare(ctx, d); err != nil {
+	if _, err := s.afterShare(savingShare(wctx), d); err != nil {
 		return DocState{}, err
 	}
 	return s.State(ctx)

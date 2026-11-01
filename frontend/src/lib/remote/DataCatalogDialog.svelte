@@ -7,6 +7,7 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
+	import Late from '#lib/ui/Late.svelte';
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import { connected } from './lattis';
@@ -33,6 +34,8 @@
 	let pushed = $state<PushedSource[]>([]);
 	let open = $state<Set<string>>(new Set());
 	let busy = $state(false);
+	let ready = $state(false);
+	let reading = $state(false);
 	let error = $state('');
 	const err = errorText;
 	const servers = $derived(connected(lattis.state.servers));
@@ -41,6 +44,7 @@
 	onMount(async () => {
 		await loadLattis();
 		server = servers[0]?.url ?? '';
+		ready = true;
 		if (server) await load();
 	});
 
@@ -50,10 +54,13 @@
 		catalog = null;
 		if (!server) return;
 		pushed = [];
+		reading = true;
 		try {
 			catalog = (await DocumentService.DataCatalog(server)) as DataCatalog;
 		} catch (e) {
 			error = err(e);
+		} finally {
+			reading = false;
 		}
 		// Sources poussées de l'utilisateur (tous ses classeurs) : vide pour un serveur sans elles.
 		if (catalog?.can_publish) {
@@ -178,7 +185,7 @@
 		<header><Icon name="database" size={18} /><span>{t('remote.catalog.title')}</span></header>
 		<div class="body">
 			<div class="top">
-				<ServerPicker bind:value={server} {servers} disabled={busy} onchange={load}>
+				<ServerPicker bind:value={server} {servers} disabled={busy || reading} onchange={load}>
 					{#snippet none()}<button onclick={login}>{t('remote.account.connectServer')}</button>{/snippet}
 				</ServerPicker>
 				<input type="search" placeholder={t('remote.catalog.search.placeholder')} bind:value={query} aria-label={t('remote.catalog.search.aria')} spellcheck="false" />
@@ -186,7 +193,11 @@
 			<div class="panes">
 				<div class="tree" role="tree" aria-label={t('remote.catalog.tree')}>
 					{#if !catalog}
-						<p class="muted">{server ? t('remote.dataShare.reading') : t('remote.catalog.signIn')}</p>
+						{#if reading}
+							<Late><p class="muted" role="status">{t('remote.dataShare.reading')}</p></Late>
+						{:else if ready && !server}
+							<p class="muted">{t('remote.catalog.signIn')}</p>
+						{/if}
 					{:else if !tree.length}
 						<p class="muted">{query ? t('remote.catalog.noMatch') : t('remote.catalog.empty')}</p>
 					{:else}

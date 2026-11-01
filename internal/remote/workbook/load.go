@@ -17,6 +17,7 @@ import (
 	"github.com/lalamefine/lattis/internal/meta"
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/store"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // Source désigne le classeur du serveur à charger.
@@ -45,6 +46,7 @@ type Source struct {
 func Load(ctx context.Context, srv Server, db *store.Store, src Source, fresh bool) (*Info, error) {
 	var info *Info
 	err := srv.Read(ctx, func(r Reader) error {
+		work.Loop(ctx, "readLayout", 0)
 		caps, err := r.Capabilities(ctx, src.WorkbookID)
 		if err != nil {
 			return err
@@ -214,6 +216,7 @@ func (l *loader) run(tx *sql.Tx) error {
 	if err := l.loadTables(); err != nil {
 		return err
 	}
+	work.Loop(l.ctx, "place", 0)
 	for _, name := range layoutTables {
 		rows := l.layout.Tables[name]
 		if rows == nil || !l.byRow(rows) {
@@ -564,6 +567,9 @@ func (l *loader) layoutColumns(tbl int64) ([]canvas.Column, int64) {
 // loadTables crée les tableaux publiés et y copie leurs lignes.
 func (l *loader) loadTables() error {
 	for _, t := range l.tables {
+		// Lignes lues, sans total : compter coûterait une lecture de plus du
+		// tableau sur le serveur (droits de lecture appliqués).
+		work.LoopOn(l.ctx, "rows", t.Name)
 		cols, key := l.layoutColumns(t.LocalID)
 		byID := map[int64]bool{}
 		for _, c := range cols {
@@ -610,6 +616,7 @@ func (l *loader) loadTables() error {
 		var rid int64
 		err = l.r.Rows(l.ctx, l.info.Schema, t, func(id, pos, author string, vals []any) error {
 			rid++
+			work.Progress(l.ctx, rid, 0)
 			args := []any{rid, pos}
 			for _, i := range keep {
 				args = append(args, vals[i])

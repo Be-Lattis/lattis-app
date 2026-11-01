@@ -6,6 +6,7 @@
 	// (lattisd, au plus 1 000, lecture seule). Ouvert aussi depuis la ligne
 	// d'un membre ou d'un rôle : le tableau s'affiche tout de suite.
 	import Icon from '#lib/icons/Icon.svelte';
+	import Late from '#lib/ui/Late.svelte';
 	import Select from '#lib/ui/Select.svelte';
 	import { untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
@@ -132,5 +133,7 @@
 		</div>
 	{:else if !user}
 		<p class="sf-hint">{t('remote.preview.chooseMember')}</p>
+	{:else if busy}
+		<Late><p class="sf-hint" role="status">{t('remote.sourceForm.reading')}</p></Late>
 	{/if}
 {/if}

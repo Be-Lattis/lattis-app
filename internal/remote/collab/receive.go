@@ -14,6 +14,7 @@ import (
 	"github.com/lalamefine/lattis/internal/command"
 	"github.com/lalamefine/lattis/internal/msg"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // Receive lit les changements des tableaux publiés depuis leur point de
@@ -60,6 +61,20 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 	since := map[int64]string{}
 	probe := ""
 	reloaded := 0
+	// Suivi dans la barre d'état (rien d'émis sous work.Delay) : première
+	// lecture après une connexion, tableau relu en entier. Pas pour la
+	// lecture d'un tableau sur notification : la barre ne s'agite pas à
+	// chaque modification d'un collègue sur une liaison lente.
+	wctx, end := ctx, func() {}
+	track := func() {
+		if work.From(wctx) == nil {
+			wctx, end = e.tracked(ctx)
+		}
+	}
+	defer func() { end() }()
+	if only == nil {
+		track()
+	}
 	err = srv.Delta(ctx, func(r workbook.Reader) error {
 		batches, since, probe, reloaded = nil, map[int64]string{}, "", 0
 		withProbe := false
@@ -91,9 +106,14 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 			if full[tbl] {
 				covered = false // structure changée : tout est relu
 			}
+			if !covered {
+				track()
+			}
+			work.LoopOn(wctx, "rows", t.remote.Name)
 			if covered {
 				err = r.Changes(ctx, info.WorkbookID, t.remote, t.since, skipSince(sent, t.since), func(c workbook.Change) error {
 					rt.Rows = append(rt.Rows, t.toLocal(c))
+					work.Progress(wctx, int64(len(rt.Rows)), 0)
 					if c.UpdatedBy != "" {
 						who[whoKey{tbl, c.ID}] = [2]string{c.UpdatedBy, c.UpdatedAt}
 					}
@@ -106,6 +126,7 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 				reloaded++
 				err = r.Rows(ctx, info.Schema, t.remote, func(id, pos, author string, vals []any) error {
 					rt.Rows = append(rt.Rows, t.rowToLocal(id, pos, author, vals))
+					work.Progress(wctx, int64(len(rt.Rows)), 0)
 					return nil
 				})
 			}
@@ -150,7 +171,8 @@ func (e *Engine) receive(ctx context.Context, only, full map[int64]bool) (Report
 	if n := mineDeleted(ctx, e.db.Read(), batches); n > 0 {
 		rep.notice(mineDeletedNotice(e.lang(), n))
 	}
-	applied, err := e.model.ApplyRemote(ctx, batches, e.keep, func(tx *sql.Tx) error {
+	work.Loop(wctx, "update", 0)
+	applied, err := e.model.ApplyRemote(wctx, batches, e.keep, func(tx *sql.Tx) error {
 		// Cellule en conflit modifiée encore par un collègue : la réception
 		// ne la touche pas (keep), mais le conflit prend la nouvelle valeur
 		// du serveur (« Garder la sienne » la remet, le volet la montre).

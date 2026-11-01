@@ -23,6 +23,11 @@ export function msgCause(e: unknown): MsgCause | null {
 	return null;
 }
 
+/** L'utilisateur a interrompu l'opération (« Annuler », internal/work). */
+export function isCancelled(e: unknown): boolean {
+	return msgCause(e)?.id === 'work.cancelled';
+}
+
 /**
  * Texte d'une erreur pour l'utilisateur : le message traduit d'une erreur
  * du moteur, sinon le message de l'erreur (à la place de

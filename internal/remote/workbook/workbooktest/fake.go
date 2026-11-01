@@ -45,6 +45,9 @@ type Fake struct {
 	listeners map[string][]chan string
 	// Calls compte les appels de l'API SQL par nom (essais).
 	Calls map[string]int
+	// Latency, s'il est fixé, simule un serveur distant : chaque appel attend
+	// d'autant ; RowLatency : chaque ligne lue (Reader.Rows).
+	Latency, RowLatency time.Duration
 	// Fail, s'il est fixé, fait échouer l'appel de ce nom (save_meta,
 	// finish_publish…) : la transaction est défaite.
 	Fail string
@@ -418,6 +421,9 @@ type session struct {
 
 func (s *session) begin(name string) error {
 	s.f.Calls[name]++
+	if s.f.Latency > 0 {
+		time.Sleep(s.f.Latency)
+	}
 	if s.f.down {
 		return ErrDown
 	}
@@ -1000,6 +1006,9 @@ func (r *reader) Rows(ctx context.Context, name string, t workbook.RemoteTable, 
 			continue
 		}
 		for _, rw := range x.sorted() {
+			if r.s.f.RowLatency > 0 {
+				time.Sleep(r.s.f.RowLatency)
+			}
 			vals := make([]any, len(t.Columns))
 			for i, c := range t.Columns {
 				j := slices.IndexFunc(x.cols, func(rc workbook.RemoteColumn) bool { return rc.ID == c.ID })

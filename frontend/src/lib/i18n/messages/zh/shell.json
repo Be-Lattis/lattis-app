@@ -352,7 +352,10 @@
 			"publish": "正在发布 {name}",
 			"republish": "正在重新发布 {name}",
 			"print": "打印",
-			"exportSql": "SQL 导出"
+			"exportSql": "SQL 导出",
+			"openRemote": "正在打开",
+			"reloadRemote": "新版本",
+			"receive": "正在接收"
 		},
 		"phase": {
 			"keep": "保存撤销副本",
@@ -382,8 +385,13 @@
 			"record": "记录行标识",
 			"save": "保存文件",
 			"pages": "正在准备页面",
-			"export": "写入脚本"
-		}
+			"export": "写入脚本",
+			"connect": "连接服务器",
+			"readLayout": "读取布局",
+			"rows": "读取 {table}",
+			"place": "应用布局"
+		},
+		"rowsRead": "{n, plural, other {# 行}}"
 	},
 	"sync": {
 		"busyTooltip": "你的更改已完成；正在发送到服务器",

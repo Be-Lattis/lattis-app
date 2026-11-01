@@ -12,6 +12,7 @@
 	import { isTextField, modal, tabbables } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
+	import Late from '#lib/ui/Late.svelte';
 	import HelpLink from '#lib/help/HelpLink.svelte';
 	import { onMount, tick, untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
@@ -220,7 +221,7 @@
 		</div>
 		<div class="sf-body" id="ra-panel" role="tabpanel" bind:this={panel} aria-labelledby="ra-tab-{tab}">
 			{#if !view}
-				<p class="sf-hint">{error ? '' : t('remote.rightsDialog.reading')}</p>
+				{#if !error}<Late><p class="sf-hint" role="status">{t('remote.rightsDialog.reading')}</p></Late>{/if}
 			{:else}
 				{#if drift.length && tab !== 'drift'}
 					<p class="ac-warn">
@@ -275,7 +276,7 @@
 			{:else if notice}
 				<p class="sf-grow notice" role="status">{notice}</p>
 			{:else}
-				<span class="sf-grow sf-hint">{busy ? t('remote.rightsDialog.sending') : view && !manage ? t('remote.rightsDialog.designerOnly') : ''}</span>
+				<span class="sf-grow sf-hint">{#if busy && view}<Late>{t('remote.rightsDialog.sending')}</Late>{:else if view && !manage}{t('remote.rightsDialog.designerOnly')}{/if}</span>
 			{/if}
 			<button type="button" class="sf-btn" onclick={onclose} disabled={busy}>{t('common.close')}</button>
 		</footer>

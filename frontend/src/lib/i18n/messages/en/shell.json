@@ -352,7 +352,10 @@
 			"publish": "Publishing {name}",
 			"republish": "Republishing {name}",
 			"print": "Printing",
-			"exportSql": "SQL export"
+			"exportSql": "SQL export",
+			"openRemote": "Opening",
+			"reloadRemote": "New version",
+			"receive": "Receiving"
 		},
 		"phase": {
 			"keep": "saving a copy for undo",
@@ -382,8 +385,13 @@
 			"record": "saving row identifiers",
 			"save": "saving the file",
 			"pages": "preparing pages",
-			"export": "writing the script"
-		}
+			"export": "writing the script",
+			"connect": "connecting to the server",
+			"readLayout": "reading the layout",
+			"rows": "reading {table}",
+			"place": "applying the layout"
+		},
+		"rowsRead": "{n, plural, one {# row} other {# rows}}"
 	},
 	"sync": {
 		"busyTooltip": "Your changes are made; they are being sent to the server",

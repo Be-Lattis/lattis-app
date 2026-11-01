@@ -2,7 +2,7 @@
 //   import { t, fmtNumber } from '#lib/i18n/index.js';
 //   t('common.rows', { n: 3 })   →  « 3 lignes »
 export { FALLBACK, LANG_NAMES, LANGS, LOCALES, parseLang, resolveLang, type Lang, type LanguageSetting, type Params } from './core.js';
-export { errorText, msgCause } from './errors.js';
+export { errorText, isCancelled, msgCause } from './errors.js';
 export {
 	compareText,
 	dateTimeFormat,

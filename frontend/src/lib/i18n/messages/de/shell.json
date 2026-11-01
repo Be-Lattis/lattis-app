@@ -352,7 +352,10 @@
 			"publish": "Veröffentlichung von {name}",
 			"republish": "Neuveröffentlichung von {name}",
 			"print": "Drucken",
-			"exportSql": "SQL-Export"
+			"exportSql": "SQL-Export",
+			"openRemote": "Öffnen",
+			"reloadRemote": "Neue Version",
+			"receive": "Empfang"
 		},
 		"phase": {
 			"keep": "Kopie für Rückgängig",
@@ -382,8 +385,13 @@
 			"record": "Speichern der Zeilenkennungen",
 			"save": "Speichern der Datei",
 			"pages": "Seiten werden vorbereitet",
-			"export": "Skript wird geschrieben"
-		}
+			"export": "Skript wird geschrieben",
+			"connect": "Verbindung zum Server",
+			"readLayout": "Lesen des Layouts",
+			"rows": "Lesen von {table}",
+			"place": "Anwenden des Layouts"
+		},
+		"rowsRead": "{n, plural, one {# Zeile} other {# Zeilen}}"
 	},
 	"sync": {
 		"busyTooltip": "Ihre Änderungen sind übernommen; sie werden an den Server gesendet",

@@ -189,7 +189,7 @@ LATTIS_ENGINE_SECRET=<secret> lattis-engine \
   --server <issuer> --token-url <url> [--workbook <id>] [--idle 30m] [--scripting]
 ```
 
-- **Démarrage** : quand il écoute, le moteur écrit `LISTENING 127.0.0.1:<port>` sur sa sortie standard ; `lattisd` relaie `/app/`, `/app/ws`, `/app/upload/…` et `/app/download/…` vers ce port (`/app` redirige vers `/app/`).
+- **Démarrage** : quand il écoute, le moteur écrit `LISTENING 127.0.0.1:<port>` sur sa sortie standard ; `lattisd` relaie `/app/`, `/app/ws`, `/app/upload/…` et `/app/download/…` vers ce port (`/app` redirige vers `/app/`). Il écoute avant d'ouvrir `--workbook` : la page s'affiche aussitôt et suit l'avancement (`work:step`, redit à chaque nouvelle connexion) ; ses appels attendent la fin de l'ouverture, sauf `CancelWork`, `Platform`, `Settings` et `SetLanguage` (`Engine.Starting`).
 - **Arrêt** : à la fermeture de l'entrée standard (session finie, `lattisd` arrêté), ou après `--idle` sans onglet connecté. Un classeur modifié et non enregistré reste dans `<dir>/work` (récupération).
 - **Jetons** : `GET <token-url>` avec `Authorization: Bearer $LATTIS_ENGINE_SECRET` rend `{"access_token", "pg_role", "expires_in"}` ; le moteur le redemande une minute avant l'expiration, ou après un refus de PostgreSQL. Ce jeton sert de fournisseur `OAUTHBEARER` (pgx) pour ce seul serveur : ouverture de `--workbook` au démarrage (même chemin que « Ouvrir depuis un serveur », copie locale dans `<dir>/partages`), « Ouvrir depuis un serveur » dans la session. Aucun autre serveur n'est joignable.
 - **Chemins** : `DocState.Path` ne donne que le nom du fichier (`bridge.HidePaths`) ; tout ce que la session écrit reste dans `--dir`.

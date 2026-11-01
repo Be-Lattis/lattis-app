@@ -9,6 +9,7 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
+	import Late from '#lib/ui/Late.svelte';
 	import { onMount } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import type { ServerState } from '#bindings/internal/remote/auth/models.js';
@@ -235,6 +236,7 @@
 						/>
 						<button class="primary" disabled={busy || !address.trim()} onclick={add}><Icon name="plus" size={13} />{t('remote.servers.add.submit')}</button>
 					</div>
+					{#if busy && address.trim()}<Late><p class="muted" role="status">{t('remote.login.discovering')}</p></Late>{/if}
 				{:else}
 					<p class="muted">{t('remote.servers.add.locked')}</p>
 				{/if}

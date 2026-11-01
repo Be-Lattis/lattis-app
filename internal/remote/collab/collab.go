@@ -33,6 +33,7 @@ import (
 	"github.com/lalamefine/lattis/internal/remote/oplog"
 	"github.com/lalamefine/lattis/internal/remote/workbook"
 	"github.com/lalamefine/lattis/internal/store"
+	"github.com/lalamefine/lattis/internal/work"
 )
 
 // Engine synchronise un classeur collaboratif ouvert.
@@ -70,9 +71,33 @@ type Engine struct {
 	// rereads : tableaux à relire en entier, droits de lecture changés
 	// (RefreshRights) ; sous mu.
 	rereads map[int64]bool
+	// track : suivi des longues réceptions (SetTrack) ; sous mu.
+	track func(context.Context) (context.Context, func())
 	// toldLocal : le message « tableau resté sur ce poste » d'un éditeur
 	// est déjà dit (AutoShare, une fois par session) ; sous mu.
 	toldLocal bool
+}
+
+// SetTrack règle le suivi des longues réceptions (barre d'état) : track
+// commence le suivi d'une opération, et rend sa fin.
+func (e *Engine) SetTrack(track func(context.Context) (context.Context, func())) {
+	e.mu.Lock()
+	e.track = track
+	e.mu.Unlock()
+}
+
+// tracked commence le suivi d'une réception (sans suivi réglé : ctx, et une
+// fin qui ne fait rien).
+func (e *Engine) tracked(ctx context.Context) (context.Context, func()) {
+	e.mu.Lock()
+	track := e.track
+	e.mu.Unlock()
+	if track == nil {
+		return ctx, func() {}
+	}
+	wctx, end := track(ctx)
+	work.Op(wctx, "receive", "")
+	return wctx, end
 }
 
 // SetBackoff règle les nouveaux essais de connexion du suivi (délais

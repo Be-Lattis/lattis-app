@@ -12,6 +12,7 @@
 	// avancées » replié avec son résumé ; erreurs sous leur champ ; Entrée
 	// publie, Échap ferme (DataShareDialog).
 	import Icon from '#lib/icons/Icon.svelte';
+	import Late from '#lib/ui/Late.svelte';
 	import Select from '#lib/ui/Select.svelte';
 	import { openHelp } from '#lib/help/state.svelte.js';
 	import { onMount, tick, untrack } from 'svelte';
@@ -246,7 +247,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions (Entrée et Échap captés pour toute la boîte ; ses commandes sont des boutons et des champs) -->
 <div class="sf-body" bind:this={body} onkeydown={onKey}>
 	{#if !info}
-		<p class="sf-hint">{error ? '' : t('remote.sourceForm.reading')}</p>
+		{#if !error}<Late><p class="sf-hint" role="status">{t('remote.sourceForm.reading')}</p></Late>{/if}
 	{:else}
 		<p class="sf-banner">
 			<Icon name="local" size={14} />

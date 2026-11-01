@@ -2,6 +2,7 @@
 // .xlsx), fermer, quitter, démonstrations, export SQL, récupération. Sorti de routes/+page.svelte
 // (docs/decoupage-sheet.md).
 import { reportIssue } from '#lib/shell/report.js';
+import { isCancelled } from '#lib/i18n/index.js';
 import { DocumentService, GridService } from '#bindings/internal/bridge/index.js';
 import type { DamagedFile, DocState, FileQuestion, OpenResult, RecentFile } from '#bindings/internal/bridge/models.js';
 import { recentDemo, recentLabel, recentRemote, savedNotice } from '#lib/shell/doctitle.js';
@@ -155,6 +156,11 @@ export function createFiles(h: FilesHost) {
 		try {
 			res = await DocumentService.ShareOpen(server, r.workbookId ?? '', r.title ?? '');
 		} catch (e) {
+			// « Annuler » dans la barre d'état : rien de plus à ouvrir.
+			if (isCancelled(e)) {
+				h.notice = h.err(e);
+				return;
+			}
 			// Supprimé du serveur, ou plus d'accès (sans cache à ouvrir) : pas une coupure.
 			if (goneError(h.err(e))) {
 				h.notice = h.err(e);

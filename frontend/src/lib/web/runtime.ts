@@ -7,6 +7,7 @@
 // Fenêtre et système : sans effet. Voir docs/collaboration/version-web.md.
 
 import { t } from '#lib/i18n/index.js';
+import { callStarted } from '#lib/shell/busy.js';
 
 // ---------------------------------------------------------------- promesses
 
@@ -190,6 +191,7 @@ export class RpcClient {
 		const ws = this.#open(this.#url);
 		this.#ws = ws;
 		ws.onopen = () => {
+			const wasDown = this.#down;
 			this.#retry = 0;
 			this.#down = this.#expired = false;
 			for (const m of this.#queue.splice(0)) ws.send(m);
@@ -197,6 +199,9 @@ export class RpcClient {
 				// Reconnecté : la page relit le classeur (il a pu changer).
 				dispatch('host:reconnected', null);
 				dispatch('doc:changed', null);
+			} else if (wasDown) {
+				// Première connexion, après des essais manqués.
+				dispatch('host:reconnected', null);
 			}
 			this.#connectedOnce = true;
 		};
@@ -209,7 +214,8 @@ export class RpcClient {
 			if (this.#closed) return;
 			// La page le montre (bandeau) : les appels suivants attendent la
 			// reconnexion dans la file.
-			if (this.#connectedOnce && !this.#down) {
+			// Dès la première connexion : un moteur injoignable se dit aussi.
+			if (!this.#down) {
 				this.#down = true;
 				dispatch('host:disconnected', null);
 			}
@@ -259,9 +265,20 @@ export class RpcClient {
 	/** Appelle une méthode liée (identifiant des liaisons ou nom). */
 	call(method: number | string, params: unknown[]): CancellablePromise<unknown> {
 		const id = ++this.#next;
+		// Barre d'état : « Traitement… » pour un appel qui dure (shell/busy.ts).
+		const done = callStarted();
 		return new CancellablePromise<unknown>(
 			(resolve, reject) => {
-				this.#pending.set(id, { resolve, reject });
+				this.#pending.set(id, {
+					resolve: (v) => {
+						done();
+						resolve(v);
+					},
+					reject: (e) => {
+						done();
+						reject(e);
+					}
+				});
 				this.#send({ id, method: String(method), params });
 			},
 			(cause) => {

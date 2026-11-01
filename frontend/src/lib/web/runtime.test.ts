@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+import { busy, DELAY } from '#lib/shell/busy.js';
 import { describe, expect, it, vi } from 'vitest';
 import { Call, Events, RpcClient, setClient, type SocketLike } from './runtime';
 import { keyLabel } from './platform';
@@ -48,6 +50,42 @@ describe('transport web (JSON-RPC sur WebSocket)', () => {
 		expect(ws.sent).toEqual([{ jsonrpc: '2.0', id: 1, method: '2316013313', params: ['a', 2] }]);
 		ws.push({ id: 1, result: { open: true } });
 		await expect(p).resolves.toEqual({ open: true });
+	});
+
+	it('compte les appels pour la barre d’état, jusqu’à leur fin', async () => {
+		vi.useFakeTimers();
+		try {
+			const { sockets } = setup();
+			const p = Call.ByName('DocumentService.ShareOpen');
+			sockets[0].open();
+			expect(get(busy)).toBe(false);
+			await vi.advanceTimersByTimeAsync(DELAY + 50);
+			vi.setSystemTime(Date.now());
+			expect(get(busy)).toBe(true);
+			sockets[0].push({ id: 1, result: null });
+			await p;
+			expect(get(busy)).toBe(false);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('dit aussi une première connexion manquée, puis son retour', async () => {
+		vi.useFakeTimers();
+		try {
+			const { sockets } = setup();
+			const seen: string[] = [];
+			const offs = ['host:disconnected', 'host:reconnected', 'doc:changed'].map((n) => Events.On(n, () => seen.push(n)));
+			Call.ByName('X').catch(() => {});
+			sockets[0].close();
+			expect(seen).toEqual(['host:disconnected']);
+			await vi.advanceTimersByTimeAsync(10_000);
+			sockets[1].open();
+			expect(seen).toEqual(['host:disconnected', 'host:reconnected']);
+			offs.forEach((off) => off());
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it('rejette avec le genre d’erreur du moteur', async () => {

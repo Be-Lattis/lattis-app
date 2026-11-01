@@ -1,6 +1,7 @@
-// Tâches longues : chaque appel au moteur (Wails passe par fetch vers
-// /wails/runtime) est compté ; tant qu'au moins un appel dure depuis plus de
-// DELAY ms, la barre d'état affiche une barre de progression (BusyBar).
+// Tâches longues : chaque appel au moteur est compté (bureau : Wails passe par
+// fetch vers /wails/runtime ; web : lib/web/runtime.ts, sur le WebSocket) ;
+// tant qu'au moins un appel dure depuis plus de DELAY ms, la barre d'état
+// affiche une barre de progression (BusyBar).
 
 import { writable, type Readable } from 'svelte/store';
 
@@ -55,29 +56,35 @@ export async function syncCall<T>(p: Promise<T>): Promise<T> {
 	}
 }
 
+const pending = new Pending();
+let timer: ReturnType<typeof setTimeout> | undefined;
+function refresh() {
+	const now = performance.now();
+	state.set(pending.long(now));
+	clearTimeout(timer);
+	if (pending.size) timer = setTimeout(refresh, pending.long(now) ? 250 : DELAY);
+}
+
+/** Compte un appel au moteur ; rend sa fin (à appeler une fois). */
+export function callStarted(): () => void {
+	const id = pending.begin(performance.now());
+	refresh();
+	return () => {
+		pending.end(id);
+		refresh();
+	};
+}
+
 let installed = false;
 
-/** Installe le suivi des appels (une fois). */
+/** Installe le suivi des appels passant par fetch (une fois). */
 export function trackCalls() {
 	if (installed || typeof window === 'undefined' || !window.fetch) return;
 	installed = true;
-	const pending = new Pending();
-	let timer = 0;
-	const refresh = () => {
-		const now = performance.now();
-		state.set(pending.long(now));
-		window.clearTimeout(timer);
-		if (pending.size) timer = window.setTimeout(refresh, pending.long(now) ? 250 : DELAY);
-	};
 	const fetch0 = window.fetch.bind(window);
 	window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
 		const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 		if (!url.includes('/wails/runtime')) return fetch0(input, init);
-		const id = pending.begin(performance.now());
-		refresh();
-		return fetch0(input, init).finally(() => {
-			pending.end(id);
-			refresh();
-		});
+		return fetch0(input, init).finally(callStarted());
 	};
 }

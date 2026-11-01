@@ -89,6 +89,7 @@
 	import { clampZoom } from '#lib/grid/zoom.js';
 	import ZoomBar from '#lib/shell/ZoomBar.svelte';
 	import BusyBar from '#lib/shell/BusyBar.svelte';
+	import { work as workNow, workText } from '#lib/shell/work.js';
 	import SyncStatusBar from '#lib/shell/SyncStatus.svelte';
 	import UpdateStatus from '#lib/shell/UpdateStatus.svelte';
 	import { syncOf, type SyncStatus } from '#lib/shell/sync.js';
@@ -975,6 +976,8 @@
 		const offDown = Events.On('host:disconnected', () => (webLink = 'lost'));
 		const offExpired = Events.On('host:expired', () => (webLink = 'expired'));
 		const offBack = Events.On('host:reconnected', () => {
+			// Démarrage manqué (moteur pas encore joignable) : la page repart de zéro.
+			if (failure) return location.reload();
 			if (webLink) notice = t('shell.web.reconnected');
 			webLink = '';
 			resumeSession().catch((x) => (notice = err(x)));
@@ -1981,7 +1984,7 @@
 		{:else}
 			<div class="splash">
 				<h1>Lattis</h1>
-				<p>{demoProgress || t('shell.demo.openingShort')}</p>
+				<p>{$workNow ? workText($workNow) : demoProgress || t('shell.demo.openingShort')}</p>
 				<div class="boot-bar" aria-hidden="true"></div>
 			</div>
 		{/if}

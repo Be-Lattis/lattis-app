@@ -247,7 +247,8 @@
 		"version": "版本 {version}",
 		"republishing": "正在准备新版本",
 		"loading": "正在加载工作簿…",
-		"cached": "工作簿保存在本计算机上：离线时仍可使用。"
+		"cached": "工作簿保存在本计算机上：离线时仍可使用。",
+		"cancelled": "已取消打开。"
 	},
 	"audience": {
 		"inherit": "继承文件夹的受众",
@@ -338,7 +339,8 @@
 		"openLocal": {
 			"label": "仍然打开（本地副本）",
 			"tooltip": "打开本机副本，不连接服务器"
-		}
+		},
+		"discovering": "正在连接服务器…"
 	},
 	"forms": {
 		"reason": {

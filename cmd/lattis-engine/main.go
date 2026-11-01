@@ -263,17 +263,21 @@ func main() {
 		fail(err)
 	}
 	defer e.Close()
-	if workbook != "" {
-		if _, err := e.Documents().ShareOpen(ctx, server, workbook, ""); err != nil {
-			// Le classeur reste à ouvrir depuis l'interface (« Ouvrir depuis un
-			// serveur ») : l'erreur est journalisée, la session démarre.
-			log.Printf("lattis-engine : ouverture du classeur %s : %v", workbook, err)
-		}
-	}
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		fail(err)
+	}
+	if workbook != "" {
+		// Pendant que le moteur écoute : la page s'affiche et dit l'avancement,
+		// même pour un gros classeur sur un serveur lent.
+		e.Starting(func() {
+			if _, err := e.Documents().ShareOpen(ctx, server, workbook, ""); err != nil {
+				// Le classeur reste à ouvrir depuis l'interface (« Ouvrir depuis un
+				// serveur ») : l'erreur est journalisée, la session démarre.
+				log.Printf("lattis-engine : ouverture du classeur %s : %v", workbook, err)
+			}
+		})
 	}
 	srv := &http.Server{Handler: e.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {

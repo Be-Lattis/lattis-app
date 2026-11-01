@@ -11,7 +11,7 @@
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
 	import { t } from '#lib/i18n/index.js';
 	import { busy, syncCalls, trackCalls } from './busy';
-	import { onWorkStep, work, workRatio, workText, type WorkStep } from './work';
+	import { onWorkStep, resetWork, work, workRatio, workText, type WorkStep } from './work';
 
 	// Durée affichée au-delà de 3 s : le moteur travaille encore.
 	const SHOW_ELAPSED = 3000;
@@ -22,12 +22,15 @@
 	let stopping = $state(0);
 
 	let off: (() => void) | undefined;
+	let offLost: (() => void) | undefined;
 	onMount(() => {
 		trackCalls();
 		off = Events.On('work:step', (e: { data?: WorkStep }) => onWorkStep(e?.data));
+		offLost = Events.On('host:disconnected', () => resetWork());
 	});
 	onDestroy(() => {
 		off?.();
+		offLost?.();
 		clearInterval(tick);
 	});
 

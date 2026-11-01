@@ -22,12 +22,14 @@ import (
 
 // Step est l'état d'une opération, tel que l'interface l'affiche. Op et
 // Phase sont des clés (traduites par l'interface : shell.work.*), Name ce
-// que l'action vise (colonne, tableau). End : l'opération est finie.
+// que l'action vise (colonne, tableau), Item ce que l'étape lit (tableau
+// reçu du serveur). End : l'opération est finie.
 type Step struct {
 	ID     int64  `json:"id"`
 	Op     string `json:"op,omitempty"`
 	Name   string `json:"name,omitempty"`
 	Phase  string `json:"phase,omitempty"`
+	Item   string `json:"item,omitempty"`
 	Done   int64  `json:"done,omitempty"`
 	Total  int64  `json:"total,omitempty"`
 	Cancel bool   `json:"cancel,omitempty"`
@@ -154,6 +156,13 @@ func Final(ctx context.Context) bool {
 // Cancelled : l'opération a été interrompue par Cancel.
 func (t *Tracker) Cancelled() bool { return t != nil && t.stopped.Load() }
 
+// Shown donne l'état courant d'une opération déjà montrée.
+func (t *Tracker) Shown() (Step, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.cur, t.shown && !t.ended
+}
+
 // End termine le suivi : si l'opération a été montrée, l'interface reçoit
 // sa fin. Le contexte de l'opération est libéré.
 func (t *Tracker) End() {
@@ -250,13 +259,25 @@ func Loop(ctx context.Context, phase string, total int64) {
 	}
 }
 
+// LoopOn est Loop pour une boucle sur un élément nommé (lignes d'un tableau
+// reçu du serveur), de total inconnu : Progress en donne le nombre de tours.
+func LoopOn(ctx context.Context, phase, item string) {
+	if t := From(ctx); t != nil {
+		t.step(phase, item, true, 0)
+	}
+}
+
 func (t *Tracker) phase(phase string, hold bool, total int64) {
+	t.step(phase, "", hold, total)
+}
+
+func (t *Tracker) step(phase, item string, hold bool, total int64) {
 	t.change(func(s *Step) bool {
 		t.hold = hold
-		if s.Phase == phase && s.Total == total && s.Done == 0 {
+		if s.Phase == phase && s.Item == item && s.Total == total && s.Done == 0 {
 			return false
 		}
-		s.Phase, s.Done, s.Total = phase, 0, total
+		s.Phase, s.Item, s.Done, s.Total = phase, item, 0, total
 		return true
 	})
 }

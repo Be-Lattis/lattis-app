@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { setLang } from '#lib/i18n/index.js';
-import { WorkList, workPhaseText, workRatio, workText } from './work';
+import { get } from 'svelte/store';
+import { onWorkStep, resetWork, work, WorkList, workPhaseText, workRatio, workText } from './work';
 
 describe('WorkList', () => {
 	it('montre l’action annulable la plus ancienne, sinon la lecture la plus récente', () => {
@@ -18,6 +19,26 @@ describe('WorkList', () => {
 		expect(l.current()?.id).toBe(1);
 		l.apply({ id: 1, end: true });
 		expect(l.current()).toBeNull();
+	});
+});
+
+describe('chargement depuis un serveur', () => {
+	it('dit le tableau lu et le nombre de lignes', async () => {
+		await setLang('fr');
+		expect(workText({ id: 1, op: 'openRemote', phase: 'connect' })).toBe('Ouverture : connexion au serveur');
+		expect(workText({ id: 1, op: 'openRemote', phase: 'rows', item: 'Clients' })).toBe('Ouverture : lecture de Clients');
+		expect(workText({ id: 1, op: 'openRemote', phase: 'rows', item: 'Clients', done: 12000 })).toMatch(/^Ouverture : lecture de Clients · 12\s000 lignes$/);
+		expect(workPhaseText({ id: 1, op: 'openRemote', phase: 'rows', item: 'Clients', done: 1 })).toBe('Lecture de Clients · 1 ligne');
+		expect(workRatio({ id: 1, phase: 'rows', item: 'Clients', done: 12000 })).toBeNull();
+		await setLang('zh');
+		expect(workPhaseText({ id: 1, phase: 'rows', item: 'Clients', done: 3 })).toContain('Clients');
+		await setLang('fr');
+	});
+	it('oublie les opérations quand le lien avec le moteur est coupé', () => {
+		onWorkStep({ id: 77, op: 'openRemote', phase: 'rows', item: 'Clients', cancel: true });
+		expect(get(work)?.id).toBe(77);
+		resetWork();
+		expect(get(work)).toBeNull();
 	});
 });
 

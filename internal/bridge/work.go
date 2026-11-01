@@ -69,6 +69,24 @@ func (s *DocumentService) CancelWork(id int64) bool {
 	return t.Cancel()
 }
 
+// ReplayWork redit les opérations déjà montrées (édition web : un onglet qui
+// arrive n'a pas reçu leurs états). Pas une méthode : rien à lier pour
+// l'interface.
+func ReplayWork(s *DocumentService) {
+	w := &s.work
+	w.mu.Lock()
+	var steps []work.Step
+	for _, t := range w.running {
+		if st, ok := t.Shown(); ok {
+			steps = append(steps, st)
+		}
+	}
+	w.mu.Unlock()
+	for _, st := range steps {
+		s.sys().Emit(WorkEvent, st)
+	}
+}
+
 // actw est act pour une opération suivie dans la barre d'état ; fn reçoit
 // le contexte du suivi. cancellable : fn fait une seule transaction
 // (Model.Do), CancelWork peut l'interrompre.

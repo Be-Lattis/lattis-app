@@ -22,6 +22,13 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 - Édition web : après une coupure ou un redémarrage de la session, la récupération ou le classeur du serveur s'ouvre, au lieu d'une grille qui ne répond plus ; une copie locale à récupérer est proposée au lieu d'un classeur vide.
 - Édition web, réseau lent : une réponse en retard n'affiche plus les tableaux d'une autre feuille.
 - Publier ne bloque plus sur un texte avec des octets illisibles ou un caractère nul (« invalid byte sequence ») ; la démonstration big se publie.
+### Changements
+
+- Serveur Lattis : ouvrir ou recharger un classeur dit où l'on en est (connexion, mise en page, tableau lu et lignes reçues), avec « Annuler » tant que rien n'est validé ; les boîtes qui lisent le serveur affichent « Lecture… » quand cela dure, sans clignoter sur une réponse rapide.
+
+### Corrections
+
+- Édition web : la barre d'état montre de nouveau qu'un traitement est en cours ; le classeur d'un lien s'ouvre avec la page déjà affichée et l'avancement visible, et un moteur injoignable au démarrage se dit au lieu de laisser l'écran en attente.
 
 ## 0.5.1-beta (30/10/2026)
 

@@ -12,6 +12,8 @@ export interface WorkStep {
 	op?: string;
 	name?: string;
 	phase?: string;
+	/** Ce que l'étape lit (tableau reçu du serveur). */
+	item?: string;
 	done?: number;
 	total?: number;
 	cancel?: boolean;
@@ -44,6 +46,10 @@ export class WorkList {
 		return best;
 	}
 
+	clear() {
+		this.steps.clear();
+	}
+
 	get size() {
 		return this.steps.size;
 	}
@@ -71,7 +77,7 @@ export function workPhaseText(s: WorkStep): string {
 
 function phaseText(s: WorkStep): string {
 	const key = `shell.work.phase.${s.phase}`;
-	return s.phase && hasKey(key) ? tAny(key) : '';
+	return s.phase && hasKey(key) ? tAny(key, s.item === undefined ? undefined : { table: s.item }) : '';
 }
 
 function capital(s: string): string {
@@ -79,6 +85,7 @@ function capital(s: string): string {
 }
 
 function countText(s: WorkStep): string {
+	if (s.phase === 'rows') return s.done ? ` · ${t('shell.work.rowsRead', { n: s.done })}` : '';
 	if (s.total && s.total > 0) return ` ${fmtInteger(Math.min(s.done ?? 0, s.total))} / ${fmtInteger(s.total)}`;
 	if (s.done && s.done > 0) return ` ${fmtInteger(s.done)}`;
 	return '';
@@ -93,6 +100,12 @@ const list = new WorkList();
 const state = writable<WorkStep | null>(null);
 /** Opération montrée dans la barre d'état (null : aucune). */
 export const work: Readable<WorkStep | null> = { subscribe: state.subscribe };
+
+/** Oublie les opérations en cours : le lien avec le moteur est coupé, leur fin n'arrivera pas. */
+export function resetWork() {
+	list.clear();
+	state.set(null);
+}
 
 /** Reçoit un évènement work:step. */
 export function onWorkStep(s: WorkStep | undefined | null) {

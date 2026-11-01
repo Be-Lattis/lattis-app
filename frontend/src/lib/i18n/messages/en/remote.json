@@ -247,7 +247,8 @@
 		"version": "version {version}",
 		"republishing": "new version being prepared",
 		"loading": "Loading the workbook…",
-		"cached": "The workbook is kept on this computer: it remains available offline."
+		"cached": "The workbook is kept on this computer: it remains available offline.",
+		"cancelled": "Opening cancelled."
 	},
 	"audience": {
 		"inherit": "Inherit the folder's audience",
@@ -338,7 +339,8 @@
 		"openLocal": {
 			"label": "Open anyway (local copy)",
 			"tooltip": "Open this computer's copy, without the server"
-		}
+		},
+		"discovering": "Connecting to the server…"
 	},
 	"forms": {
 		"reason": {

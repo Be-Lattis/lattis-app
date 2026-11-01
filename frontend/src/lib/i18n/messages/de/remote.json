@@ -247,7 +247,8 @@
 		"version": "Version {version}",
 		"republishing": "neue Version in Vorbereitung",
 		"loading": "Arbeitsmappe wird geladen…",
-		"cached": "Die Arbeitsmappe bleibt auf diesem Computer: Sie ist offline weiterhin verfügbar."
+		"cached": "Die Arbeitsmappe bleibt auf diesem Computer: Sie ist offline weiterhin verfügbar.",
+		"cancelled": "Öffnen abgebrochen."
 	},
 	"audience": {
 		"inherit": "Zielgruppe des Ordners übernehmen",
@@ -338,7 +339,8 @@
 		"openLocal": {
 			"label": "Trotzdem öffnen (lokal)",
 			"tooltip": "Die Kopie dieses Computers ohne Server öffnen"
-		}
+		},
+		"discovering": "Verbindung zum Server…"
 	},
 	"forms": {
 		"reason": {

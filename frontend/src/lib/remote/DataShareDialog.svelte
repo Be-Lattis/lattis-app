@@ -16,6 +16,7 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { backdrop } from '#lib/ui/backdrop.js';
 	import Icon from '#lib/icons/Icon.svelte';
+	import Late from '#lib/ui/Late.svelte';
 	import HelpLink from '#lib/help/HelpLink.svelte';
 	import { onMount, tick, untrack } from 'svelte';
 	import { DocumentService } from '#bindings/internal/bridge/index.js';
@@ -282,7 +283,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions (Entrée et Échap captés pour toute la boîte ; ses commandes sont des boutons et des champs) -->
 			<div class="sf-body" bind:this={body} onkeydown={onKey}>
 				{#if !info}
-					<p class="sf-hint">{error ? '' : t('remote.dataShare.reading')}</p>
+					{#if !error}<Late><p class="sf-hint" role="status">{t('remote.dataShare.reading')}</p></Late>{/if}
 				{:else if info.reason}
 					<p>{info.reason}</p>
 				{:else}
