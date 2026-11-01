@@ -692,6 +692,17 @@ func (s *DocumentService) LayoutFirst(ctx context.Context, sheet int64) (canvas.
 	return d.LayoutFirst(ctx, sheet)
 }
 
+// LayoutVisible donne la mise en page d'une feuille qu'on arrive sur : sur
+// une grande feuille de cellules libres, les lignes [top, top+rows[ d'abord
+// (Partial) ; l'interface demande ensuite Layout, qui donne le reste.
+func (s *DocumentService) LayoutVisible(ctx context.Context, sheet int64, top, rows int) (canvas.Layout, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.Layout{}, err
+	}
+	return d.LayoutVisible(ctx, sheet, top, rows)
+}
+
 // gridTable donne le tableau prêt à lire par fenêtres (gardé en cache).
 func (s *DocumentService) gridTable(ctx context.Context, sheet, table int64) (*grid.Table, error) {
 	d, err := s.current()

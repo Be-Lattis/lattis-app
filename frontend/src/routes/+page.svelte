@@ -163,7 +163,10 @@
 
 	// Classeur.
 	let docState = $state<DocState>({ open: false, path: '', title: '', dirty: false, undo: '', redo: '' });
-	let layout = $state<Layout | null>(null);
+	// Remplacée en entier, jamais modifiée sur place : $state.raw, un proxy par
+	// cellule coûterait plusieurs centaines de millisecondes sur une feuille de
+	// dizaines de milliers de cellules libres.
+	let layout = $state.raw<Layout | null>(null);
 	let sheetId = $state(1);
 	// Défilement horizontal de la grille, affiché dans la ligne des onglets.
 	let hscroll = $state<{ content: number; view: number; left: number } | undefined>();
@@ -640,7 +643,10 @@
 		// (completeLayout).
 		const gen = workbook;
 		const seq = ++reloadSeq;
-		const [st, first] = await Promise.all([DocumentService.State(), DocumentService.LayoutFirst(sheetId)]);
+		// Feuille qu'on arrive sur : ses premières lignes d'abord (grande feuille
+		// de cellules libres), completeLayout donne le reste.
+		const quick = (id: number) => (layoutOf !== gen || layout?.sheet !== id ? DocumentService.LayoutVisible(id, 0, VISIBLE_ROWS) : DocumentService.LayoutFirst(id));
+		const [st, first] = await Promise.all([DocumentService.State(), quick(sheetId)]);
 		// Réponse en retard (édition web, réseau lent) : une relecture plus récente
 		// est partie, peut-être pour une autre feuille ; la montrer afficherait les
 		// tableaux d'une autre feuille à la place de ceux de celle-ci.
@@ -653,7 +659,7 @@
 		const shownId = visibleSheet(layout?.sheets ?? [], sheetId);
 		if (layout && shownId !== sheetId) {
 			sheetId = shownId;
-			const again = await DocumentService.LayoutFirst(shownId);
+			const again = await quick(shownId);
 			if (seq !== reloadSeq) return;
 			layout = again;
 		}
@@ -714,6 +720,10 @@
 
 	// Dernière relecture demandée (reload).
 	let reloadSeq = 0;
+	// Lignes lues d'abord en arrivant sur une feuille (plus qu'un grand écran).
+	const VISIBLE_ROWS = 150;
+	// Feuille demandée, sa mise en page pas encore là : la grille le montre.
+	const sheetLoading = $derived(mode === 'doc' && !!layout && layout.sheet !== sheetId);
 	// Classeur (génération workbook) de la mise en page affichée.
 	let layoutOf = -1;
 	// Mise en page complète demandée (completeLayout), par feuille : une
@@ -737,7 +747,14 @@
 				// (le calcul est maintenant en cache, ou presque).
 				else if (layout?.pending && sheetId === id && layout !== l) completeLayout(layout, id);
 			})
-			.catch(() => completing.delete(id));
+			.catch((e) => {
+				completing.delete(id);
+				// Le reste de la feuille n'arrive pas : le dire, et rendre la main.
+				if (layout === l && l.partial) {
+					layout = { ...l, partial: false, pending: false };
+					notice = err(e);
+				}
+			});
 	}
 
 	/** Enregistre la mise en page de la feuille active (une étape d'annulation) ; les sauts de page s'affichent, comme dans Excel. */
@@ -1217,7 +1234,10 @@
 					sheet: sheetId,
 					sheets: (layout.sheets ?? []).map((s) => s.name),
 					choice: layout.sheets?.find((s) => s.id === sheetId)?.choice ?? null,
-					cells: (layout.cells ?? []).map((c) => ({ ...c, spill: c.spill?.map((r) => r ?? []) })),
+					cells: (layout.cells ?? []).map((c) => (c.spill ? { ...c, spill: c.spill.map((r) => r ?? []) } : (c as Omit<typeof c, 'spill'>))),
+					partial: layout.partial || undefined,
+					usedRow: layout.usedRow,
+					usedCol: layout.usedCol,
 					widths: layout.widths ?? [],
 					heights: layout.heights ?? [],
 					names: layout.names ?? [],
@@ -1778,6 +1798,7 @@
 			{#key mode}
 				<div class="pane" data-region="grid" class:hidden={view !== 'grid' || !!activePage}>
 					<Sheet
+						loading={sheetLoading}
 						bind:this={sheet}
 						{data}
 						source={mode === 'demo' ? demoSource : docSource}

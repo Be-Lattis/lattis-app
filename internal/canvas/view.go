@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 
 	"github.com/lalamefine/lattis/internal/formula"
@@ -218,6 +219,11 @@ type Layout struct {
 	// Pending : LayoutFirst a laissé de côté un calcul sur un grand tableau
 	// (Pending d'un tableau, d'un TCD ou d'un graphique) ; Layout le donne.
 	Pending bool `json:"pending,omitempty"`
+	// Partial (LayoutVisible) : Cells et Styles ne couvrent que les lignes
+	// demandées ; UsedRow et UsedCol disent où va la feuille entière.
+	Partial bool `json:"partial,omitempty"`
+	UsedRow int  `json:"usedRow,omitempty"`
+	UsedCol int  `json:"usedCol,omitempty"`
 }
 
 // CellStyle est la mise en forme d'une cellule hors tableau.
@@ -241,7 +247,7 @@ type ColWidth struct {
 
 // Layout lit la mise en page d'une feuille, tout calculé.
 func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
-	return m.layout(ctx, sheet, false)
+	return m.layout(ctx, sheet, false, nil)
 }
 
 // LayoutFirst lit la mise en page d'une feuille pour l'afficher tout de
@@ -251,10 +257,27 @@ func (m *Model) Layout(ctx context.Context, sheet int64) (Layout, error) {
 // TCD ou d'un graphique). Layout, appelé ensuite, le calcule et le garde
 // en cache.
 func (m *Model) LayoutFirst(ctx context.Context, sheet int64) (Layout, error) {
-	return m.layout(ctx, sheet, true)
+	return m.layout(ctx, sheet, true, nil)
 }
 
-func (m *Model) layout(ctx context.Context, sheet int64, later bool) (Layout, error) {
+// visibleCells : à partir de ce nombre de cellules libres et de mises en
+// forme, LayoutVisible ne donne d'abord que les lignes demandées.
+const visibleCells = 2000
+
+// rowSpan : lignes à lire d'abord (LayoutVisible).
+type rowSpan struct{ top, rows int }
+
+func (s rowSpan) has(row int) bool { return row >= s.top && row < s.top+s.rows }
+
+// LayoutVisible est LayoutFirst pour une feuille qu'on arrive sur : sur une
+// grande feuille de cellules libres, seules les lignes [top, top+rows[ sont
+// lues et calculées (Partial, Pending) ; Layout, demandé ensuite, donne le
+// reste. Une petite feuille vient entière.
+func (m *Model) LayoutVisible(ctx context.Context, sheet int64, top, rows int) (Layout, error) {
+	return m.layout(ctx, sheet, true, &rowSpan{top, rows})
+}
+
+func (m *Model) layout(ctx context.Context, sheet int64, later bool, span *rowSpan) (Layout, error) {
 	l := Layout{Sheet: sheet, Tables: []TableInfo{}, Cells: []CellInfo{}, Widths: []ColWidth{}, Heights: []RowHeight{}, Names: []NameInfo{}, Styles: []CellStyle{}}
 	err := m.read(ctx, func(t *tx) error {
 		rs, err := t.query(`SELECT id, name, gridlines = 0, headings <> 0, color, hidden <> 0, freeze_rows, freeze_cols, zoom,
@@ -447,6 +470,17 @@ func (m *Model) layout(ctx context.Context, sheet int64, later bool) (Layout, er
 		cells, err := t.cells(sheet)
 		if err != nil {
 			return err
+		}
+		if span != nil && len(cells)+len(l.Styles) >= visibleCells {
+			l.Partial, l.Pending = true, true
+			for _, c := range cells {
+				l.UsedRow, l.UsedCol = max(l.UsedRow, c.Row), max(l.UsedCol, c.Col)
+			}
+			for _, c := range l.Styles {
+				l.UsedRow, l.UsedCol = max(l.UsedRow, c.Row), max(l.UsedCol, c.Col)
+			}
+			cells = slices.DeleteFunc(cells, func(c cell) bool { return !span.has(c.Row) })
+			l.Styles = slices.DeleteFunc(l.Styles, func(c CellStyle) bool { return !span.has(c.Row) })
 		}
 		for _, c := range cells {
 			ci := CellInfo{Row: c.Row, Col: c.Col, Raw: c.Raw}

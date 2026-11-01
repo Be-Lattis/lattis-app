@@ -25,6 +25,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Changements
 
 - Serveur Lattis : ouvrir ou recharger un classeur dit où l'on en est (connexion, mise en page, tableau lu et lignes reçues), avec « Annuler » tant que rien n'est validé ; les boîtes qui lisent le serveur affichent « Lecture… » quand cela dure, sans clignoter sur une réponse rapide.
+- Grande feuille de cellules libres : les premières lignes s'affichent d'abord, le reste suit ; une fine barre animée en haut de la grille et des emplacements qui scintillent montrent ce qui arrive.
+- Édition web : pages bien plus rapides sur une liaison lente (échanges et application compressés, application gardée par le navigateur) ; changer d'onglet ne fige plus la page sur une feuille chargée.
 
 ### Corrections
 

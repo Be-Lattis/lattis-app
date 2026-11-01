@@ -311,6 +311,10 @@ export interface SheetData {
 	tables: SheetTable[];
 	/** value : résultat d'une formule (sinon raw est affiché). */
 	cells: { row: number; col: number; raw: string; value?: string; error?: boolean; spill?: string[][]; link?: string }[];
+	/** Grande feuille : cellules des premières lignes seulement, le reste arrive (LayoutVisible). */
+	partial?: boolean;
+	usedRow?: number;
+	usedCol?: number;
 	/** Noms des feuilles du classeur (dialogue Lien). */
 	sheets?: string[];
 	/** Largeurs choisies par l'utilisateur (sinon : selon le type). */

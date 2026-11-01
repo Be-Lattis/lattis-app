@@ -30,6 +30,7 @@ import { type SheetPivot, type SheetTable, type SheetSource, type TextField, typ
 
 /** Ce que createEdit lit et modifie dans Sheet.svelte. */
 export interface EditHost {
+	readonly partial: boolean;
 	readonly locked: string;
 	readonly ownerAt: (r: number, c: number) => Entry | undefined;
 	readonly layoutLocked: string;
@@ -164,6 +165,7 @@ export function createEdit(h: EditHost) {
 	}
 
 	function startEdit(byTyping: boolean, initial?: string) {
+		if (h.partial) return; // le contenu de la feuille arrive
 		const reason = readOnlyReason(h.active.row, h.active.col);
 		const mode = editMode(reason, byTyping);
 		if (mode === 'refuse') {

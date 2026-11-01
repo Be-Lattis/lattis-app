@@ -11,13 +11,17 @@
 package engine
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"errors"
 	"io/fs"
+	"mime"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -101,7 +105,10 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 		return nil, err
 	}
 	e.hub = transport.NewHub(reg)
-	e.hub.Accept = &websocket.AcceptOptions{OriginPatterns: o.OriginPatterns}
+	// Compressé : une mise en page de feuille est un gros JSON répétitif,
+	// long à passer sur une liaison lente (dix fois moins d'octets). Sans
+	// mémoire de contexte entre messages : moins de mémoire par connexion.
+	e.hub.Accept = &websocket.AcceptOptions{OriginPatterns: o.OriginPatterns, CompressionMode: websocket.CompressionNoContextTakeover}
 	// Messages du moteur dans la langue de la session (internal/msg).
 	e.hub.Translate = bridge.ErrorTranslator(e.docs)
 	secrets := o.Secrets
@@ -233,7 +240,7 @@ func removeAll(dir string) error {
 // sont réécrites sous le préfixe (/app/_app/…, base "/app"), sinon la page
 // reste blanche (ressources en 404, lattisd ne route que /app/*).
 func spa(files fs.FS, base string) http.Handler {
-	fsrv := http.FileServerFS(files)
+	fsrv := compressed(files, http.FileServerFS(files))
 	var once sync.Once
 	var page []byte
 	index := func(w http.ResponseWriter, r *http.Request) bool {
@@ -271,6 +278,59 @@ func spa(files fs.FS, base string) http.Handler {
 			return
 		}
 		fsrv.ServeHTTP(w, r)
+	})
+}
+
+// compressed sert les fichiers par next, compressés quand le navigateur
+// l'accepte (gzip, gardé en mémoire : le frontend ne change pas), et gardés
+// par le navigateur pour ceux de _app/immutable, dont le nom change avec le
+// contenu. Sans cela, le frontend embarqué (sans date de modification, donc
+// sans 304) repassait en entier à chaque ouverture de la page.
+func compressed(files fs.FS, next http.Handler) http.Handler {
+	var mu sync.Mutex
+	cache := map[string][]byte{} // chemin → gzip ; nil : à servir tel quel
+	zipped := func(p string) []byte {
+		mu.Lock()
+		defer mu.Unlock()
+		if b, ok := cache[p]; ok {
+			return b
+		}
+		var out []byte
+		if raw, err := fs.ReadFile(files, p); err == nil && len(raw) >= 1024 {
+			var buf bytes.Buffer
+			if z, err := gzip.NewWriterLevel(&buf, gzip.BestCompression); err == nil {
+				z.Write(raw)
+				if z.Close() == nil && buf.Len() < len(raw) {
+					out = buf.Bytes()
+				}
+			}
+		}
+		cache[p] = out
+		return out
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+		if strings.HasPrefix(p, "_app/immutable/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		}
+		ext := path.Ext(p)
+		if (ext == ".js" || ext == ".css" || ext == ".json" || ext == ".svg" || ext == ".html") && r.Method == http.MethodGet && strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && r.Header.Get("Range") == "" {
+			if st, err := fs.Stat(files, p); err == nil && !st.IsDir() {
+				if b := zipped(p); b != nil {
+					ct := mime.TypeByExtension(ext)
+					if ct == "" {
+						ct = "application/octet-stream"
+					}
+					w.Header().Set("Content-Type", ct)
+					w.Header().Set("Content-Encoding", "gzip")
+					w.Header().Add("Vary", "Accept-Encoding")
+					w.Header().Set("Content-Length", strconv.Itoa(len(b)))
+					w.Write(b)
+					return
+				}
+			}
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 

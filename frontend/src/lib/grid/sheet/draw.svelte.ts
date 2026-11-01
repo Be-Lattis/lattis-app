@@ -87,6 +87,7 @@ export interface DrawHost {
 	readonly fRows: () => number;
 	curPane: Pane | null;
 	missingFrames: number;
+	gridWaiting: boolean;
 	readonly motion: () => boolean;
 	viewNow: { r0: number; r1: number; c0: number; c1: number } | null;
 	readonly rax: () => AxisLike;
@@ -231,7 +232,16 @@ export interface DrawHost {
 	readonly JUMP_FLASH_MS: number;
 }
 
+/** Respiration d'un emplacement de ligne attendue (décalée d'une ligne à l'autre). */
+function shimmerAlpha(row: number): number {
+	if (REDUCED()) return 1;
+	return 0.55 + 0.45 * Math.sin(performance.now() / 260 - row * 0.5);
+}
+
+const REDUCED = () => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
 export function createDraw(sh: DrawHost) {
+	let shimmerTimer: ReturnType<typeof setTimeout> | 0 = 0;
 	function gutterWidth(): number {
 		const { ctx } = sh;
 		const m = (s: string) => ctx.measureText(s).width;
@@ -341,6 +351,14 @@ export function createDraw(sh: DrawHost) {
 			ctx.restore();
 		}
 		if (incomplete) sh.missingFrames++;
+		if (sh.gridWaiting !== incomplete) sh.gridWaiting = incomplete;
+		// Lignes en attente : leurs emplacements respirent, doucement.
+		if (incomplete && !shimmerTimer && !REDUCED()) {
+			shimmerTimer = setTimeout(() => {
+				shimmerTimer = 0;
+				sh.schedule();
+			}, 120);
+		}
 		drawJumpFlash(t0);
 		drawWorking(t0);
 		if (sh.motion())
@@ -612,8 +630,11 @@ export function createDraw(sh: DrawHost) {
 					}
 					const row = e.cache.row(r - e.t.row - 1);
 					if (!row) {
+						// Emplacement de la ligne attendue (scintille, draw).
 						ctx.fillStyle = C.placeholder;
+						ctx.globalAlpha = shimmerAlpha(r);
 						ctx.fillRect(x + 6, y + 7, cw * 0.6, rh(r) - 14);
+						ctx.globalAlpha = 1;
 						continue;
 					}
 					const v = row.cells[i];

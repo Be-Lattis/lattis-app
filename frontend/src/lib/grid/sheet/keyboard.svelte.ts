@@ -17,7 +17,11 @@ import { type SheetPivot, type ChartConfig, type SheetChart, type SheetSource, t
 import { SHEET_ROWS, SHEET_COLS, ROW_H, TOP_H } from './consts';
 
 /** Ce que createKeyboard lit et modifie dans Sheet.svelte. */
+/** Déplacements permis pendant que le contenu de la feuille arrive. */
+const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'Tab']);
+
 export interface KeyboardHost {
+	readonly partial: boolean;
 	readonly boxOf: (r: number, c: number) => MergeRange | undefined;
 	active: { row: number; col: number; };
 	readonly step: (dr: number, dc: number) => Cell;
@@ -271,6 +275,11 @@ export function createKeyboard(sh: KeyboardHost) {
 	}
 
 	function onKeyDown(e: KeyboardEvent) {
+		// Feuille encore partielle (le reste arrive) : on se déplace, rien d'autre.
+		if (sh.partial && !NAV_KEYS.has(e.key)) {
+			e.preventDefault();
+			return;
+		}
 		// Touche maintenue : le cadre suit sans animation.
 		if (e.repeat) sh.noAnimUntil = performance.now() + 150;
 		if (sh.editing) return;

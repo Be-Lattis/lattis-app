@@ -1001,6 +1001,14 @@ export interface Layout {
      * (Pending d'un tableau, d'un TCD ou d'un graphique) ; Layout le donne.
      */
     "pending"?: boolean;
+
+    /**
+     * Partial (LayoutVisible) : Cells et Styles ne couvrent que les lignes
+     * demandées ; UsedRow et UsedCol disent où va la feuille entière.
+     */
+    "partial"?: boolean;
+    "usedRow"?: number;
+    "usedCol"?: number;
 }
 
 /**

@@ -9,6 +9,7 @@
 	// Rendu <canvas> de la zone visible, cache de blocs de lignes par tableau,
 	// éditeur DOM superposé à la cellule active, barre de formule.
 	import { onMount, tick, untrack } from 'svelte';
+	import GridLoader from './GridLoader.svelte';
 	import { noticeTtl } from '#lib/shell/notice.js';
 	import { VScroll } from './scroll';
 	import { Axis } from './axis';
@@ -182,6 +183,8 @@
 		onreflink?: (to: { table: string; id: number; key?: string; filter?: { column: string; value: string } }, from: { row: number; col: number; label: string }) => void;
 		/** Alt+← : revenir à l'endroit d'où l'on a basculé. */
 		onrefback?: () => void;
+		/** La feuille demandée n'est pas encore arrivée (barre d'attente). */
+		loading?: boolean;
 		/** Partager le tableau au Data Lake Lattis (clic droit sur un tableau). */
 		onsharedata?: (table: string) => void;
 		/** Classeur partagé en direct : clic droit sur un tableau qui n'est que sur ce poste › « Ajouter au classeur partagé ». */
@@ -198,7 +201,7 @@
 		comments?: CommentHost;
 	}
 
-	let { data, source: rawSource, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing, comments }: Props = $props();
+	let { data, source: rawSource, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, loading = false, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing, comments }: Props = $props();
 
 	// Actions sur des cellules, lignes ou colonnes : leur zone reçoit un
 	// reflet animé jusqu'à leur fin (working.ts, drawWorking).
@@ -776,6 +779,8 @@
 		get wholeKind() { return wholeKind; },
 		get wholeSel() { return wholeSel; }, set wholeSel(v) { wholeSel = v; },
 		get working() { return working; },
+		get partial() { return !!data?.partial; },
+		get gridWaiting() { return gridWaiting; }, set gridWaiting(v) { gridWaiting = v; },
 		get wrap() { return wrap; },
 		get write() { return write; },
 		get writing() { return writing; }, set writing(v) { writing = v; },
@@ -918,6 +923,8 @@
 	const placed = () => entries.map((e) => ({ id: e.t.id, r0: e.t.row, c0: e.t.col, r1: e.last, c1: e.lastCol }));
 
 	const sheetViews = new SheetViews();
+	// Des lignes visibles attendent leur bloc (dessin) : voir GridLoader.
+	let gridWaiting = $state(false);
 
 	// Largeurs : choisies par l'utilisateur, sinon selon le type de la colonne
 	// du premier tableau qui l'occupe, sinon la largeur par défaut.
@@ -1211,6 +1218,9 @@
 			usedRow = Math.max(usedRow, r);
 			usedCol = Math.max(usedCol, c);
 		}
+		// Feuille encore partielle : la barre de défilement va déjà jusqu'au bout.
+		usedRow = Math.max(usedRow, data?.usedRow ?? 0);
+		usedCol = Math.max(usedCol, data?.usedCol ?? 0);
 		// Objets posés sur la feuille (graphiques et cartes, boutons et
 		// contrôles) : la barre de défilement va jusqu'à leur bord, qu'ils
 		// soient sélectionnés ou non (objextent.ts) ; de même pour les
@@ -2593,6 +2603,8 @@
 
 	/** Copier ou couper la sélection (ruban, clic droit). */
 	export async function copySelection(cut = false) {
+		// Feuille encore partielle : copier ce qui est sélectionné, en entier.
+		while (data?.partial) await new Promise((ok) => setTimeout(ok, 50));
 		wrap.focus();
 		const sc = selChart !== null ? charts.find((c) => c.id === selChart) : undefined;
 		if (sc) return copyChart(sc, cut);
@@ -3459,6 +3471,7 @@
 	<div class="wrap" bind:this={wrap} tabindex="0" role="grid" aria-label={tr('grid.sheet.aria', { name: sheetName })} aria-rowcount={-1} aria-colcount={-1} aria-activedescendant={a11yId} aria-keyshortcuts="Shift+F10" data-region-focus onkeydown={onKeyDown}>
 		<GridA11y cellId={a11yId} {speech} row={active.row + 1} col={active.col + 1} editing={editing || fxEditing} selection={speechSel} />
 		<!-- Calque zoomé (zoom.ts) : grille, graphiques, boutons, éditeur et notes ; menus et dialogues hors du calque. -->
+		<GridLoader on={loading || gridWaiting || !!data?.partial} />
 		<div class="zoom" style:zoom={zoom === 1 ? undefined : zoom}>
 			<canvas bind:this={canvas}></canvas>
 			<!-- svelte-ignore a11y_no_static_element_interactions (surface de la grille à la souris ; le clavier passe par la grille (role=grid) qui l'entoure) -->

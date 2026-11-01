@@ -1283,6 +1283,15 @@ export function LayoutFirst(sheet: number): $CancellablePromise<canvas$0.Layout>
 }
 
 /**
+ * LayoutVisible donne la mise en page d'une feuille qu'on arrive sur : sur
+ * une grande feuille de cellules libres, les lignes [top, top+rows[ d'abord
+ * (Partial) ; l'interface demande ensuite Layout, qui donne le reste.
+ */
+export function LayoutVisible(sheet: number, top: number, rows: number): $CancellablePromise<canvas$0.Layout> {
+    return $Call.ByID(794823530, sheet, top, rows);
+}
+
+/**
  * LinkPlace donne la destination d'un lien dans le classeur (« #Feuille2!B3 »,
  * « #Ventes »), suivi depuis la feuille sheet.
  */
@@ -2728,6 +2737,11 @@ export function ShareLocalCopy(): $CancellablePromise<$models.OpenResult> {
  * ShareOpen ouvre un classeur du serveur : chargé en entier dans son cache
  * local (un fichier .lattis du dossier cache de l'utilisateur, rouvert et
  * actualisé s'il existe), qui reste consultable hors ligne.
+ * 
+ * Suivi dans la barre d'état : « Annuler » tant que le chargement n'est pas
+ * validé. Il tient dans une transaction locale, sur un classeur neuf ou sur
+ * la copie de travail du cache : interrompu, il ne laisse rien, le cache
+ * reste tel qu'avant.
  */
 export function ShareOpen(server: string, id: string, title: string): $CancellablePromise<$models.OpenResult> {
     return $Call.ByID(2745915401, server, id, title);
@@ -2761,7 +2775,9 @@ export function ShareRecompile(): $CancellablePromise<$models.RightsView> {
 /**
  * ShareReload recharge la version publiée du classeur partagé ouvert
  * (bandeau « Nouvelle version disponible ») : les ajouts locaux (tableaux
- * privés, cellules libres, feuilles) sont gardés.
+ * privés, cellules libres, feuilles) sont gardés. Suivi dans la barre
+ * d'état : « Annuler » défait la transaction du chargement, le classeur
+ * reste tel qu'avant.
  */
 export function ShareReload(): $CancellablePromise<$models.DocState> {
     return $Call.ByID(747820492);
