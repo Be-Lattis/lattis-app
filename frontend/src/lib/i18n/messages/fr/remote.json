@@ -1205,7 +1205,8 @@
 		"private": {
 			"label": "privé",
 			"tooltip": "Tableau privé : reste sur ce poste, jamais envoyé au serveur",
-			"tooltipWeb": "Pas envoyé au serveur : perdu à la fin de la session, sauf si vous téléchargez le classeur"
+			"tooltipWeb": "Pas envoyé au serveur : perdu à la fin de la session, sauf si vous téléchargez le classeur",
+			"tooltipDraft": "Pas publié : gardé dans votre brouillon sur le serveur"
 		},
 		"rename": "{problem} — renommez-le dans le classeur",
 		"frozenTypes": "Types figés à la publication : {columns}",
@@ -1231,7 +1232,8 @@
 		},
 		"stay": "{n, plural, one {# tableau restera} other {# tableaux resteront}} sur ce poste seulement.",
 		"stayWeb": "{n, plural, one {# tableau ne sera pas publié : perdu à la fin de la session, sauf téléchargement.} other {# tableaux ne seront pas publiés : perdus à la fin de la session, sauf téléchargement.}}",
-		"uncheckIt": "{problem} — décochez-le"
+		"uncheckIt": "{problem} — décochez-le",
+		"stayDraft": "{n, plural, one {# tableau ne sera pas publié : gardé dans votre brouillon.} other {# tableaux ne seront pas publiés : gardés dans votre brouillon.}}"
 	},
 	"dataShare": {
 		"title": {

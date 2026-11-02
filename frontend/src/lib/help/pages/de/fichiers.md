@@ -25,6 +25,8 @@ Jedes Speichern bewahrt eine Version der Arbeitsmappe neben der Datei auf (verst
 
 Während Sie arbeiten, hält Lattis eine Arbeitskopie der Arbeitsmappe auf Ihrem Computer. Beendet sich Lattis, ohne gespeichert zu haben (Absturz, erzwungenes Herunterfahren, Stromausfall), bietet der nächste Start an, die Änderungen wiederherzustellen: Wiederherstellen öffnet die Arbeitsmappe in dem Zustand, in dem sie war, mit ihrem Rückgängig-Verlauf; Verwerfen kehrt zur gespeicherten Datei zurück.
 
+In der Web-App wird alles, was nicht auf dem Server ist, nach jeder Änderung dort gespeichert (die Statusleiste zeigt es) und steht in Ihrer nächsten Sitzung wieder bereit. „Nicht speichern“ löscht es.
+
 Ihre Eingaben und Befehle werden sofort auf den Datenträger geschrieben: Sie überstehen sogar einen Stromausfall.
 
 ## Im Netzwerk freigegebene Arbeitsmappe {#classeur-partage-sur-le-reseau}

@@ -25,6 +25,8 @@ Each save keeps a version of the workbook next to the file (hidden `.lattis-vers
 
 While you work, Lattis keeps a working copy of the workbook on your computer. If Lattis stops without having saved (crash, forced shutdown, power cut), the next start offers to recover the changes: recovering reopens the workbook in the state it was in, with its undo history; discarding goes back to the saved file.
 
+In the web app, whatever is not on the server is saved there after each change (the status bar says so) and comes back in your next session. “Don't save” deletes it.
+
 Your entries and commands are written to disk as soon as they are made: they even survive a power cut.
 
 ## Workbook shared on the network {#classeur-partage-sur-le-reseau}

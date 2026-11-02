@@ -164,6 +164,22 @@ func (e *PGEnv) AsDevice(role, device string) workbook.Server {
 	})
 }
 
+// Dial rend les connexions d'un utilisateur (une par appel), pour ce qui ne
+// passe pas par workbook.Server (brouillons).
+func (e *PGEnv) Dial(role string) workbook.Dialer {
+	return func(ctx context.Context, usage string) (*pgx.Conn, func(), error) {
+		c, err := pgx.Connect(ctx, e.Super)
+		if err != nil {
+			return nil, nil, err
+		}
+		if _, err := c.Exec(ctx, "SET SESSION AUTHORIZATION "+pgx.Identifier{role}.Sanitize()); err != nil {
+			c.Close(ctx)
+			return nil, nil, err
+		}
+		return c, func() { c.Close(context.Background()) }, nil
+	}
+}
+
 // AddMember donne un rôle fourni (reader, participant, editor…) sur un
 // classeur.
 func (e *PGEnv) AddMember(t *testing.T, wb, builtin, userID string) {

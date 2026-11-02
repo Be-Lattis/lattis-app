@@ -10,6 +10,8 @@ export interface Session {
 	modified: unknown;
 	/** Identifiant aléatoire du classeur (_lattis_info, clé id) ; vide : illisible. */
 	workbook?: string;
+	/** Titre d'un brouillon gardé sur le serveur. */
+	title?: string;
 }
 
 /** Sessions d'un même classeur : la plus récente, puis les plus anciennes. */
@@ -42,8 +44,9 @@ export function groupSessions<T extends Session>(sessions: readonly T[]): Sessio
 	return [...groups.values()];
 }
 
-/** Nom affiché d'une session : le fichier, ou « Classeur sans titre ». */
+/** Nom affiché d'une session : le titre (brouillon), le fichier, ou « Classeur sans titre ». */
 export function sessionName(s: Session): string {
+	if (s.title) return s.title;
 	return s.source ? (s.source.split(/[\\/]/).pop() ?? s.source) : t('shell.untitled');
 }
 

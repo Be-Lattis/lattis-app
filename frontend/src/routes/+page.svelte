@@ -91,6 +91,9 @@
 	import BusyBar from '#lib/shell/BusyBar.svelte';
 	import { work as workNow, workText } from '#lib/shell/work.js';
 	import SyncStatusBar from '#lib/shell/SyncStatus.svelte';
+	import DraftStatusBar from '#lib/shell/DraftStatus.svelte';
+	import { draftStatus, type DraftStatus } from '#lib/shell/draft.js';
+	import { get } from 'svelte/store';
 	import UpdateStatus from '#lib/shell/UpdateStatus.svelte';
 	import { syncOf, type SyncStatus } from '#lib/shell/sync.js';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -217,6 +220,8 @@
 	let xlsxAsk = $state<{ q: XLSXQuestion; close: boolean; remember: boolean } | null>(null);
 	// Échec d'une récupération de session : l'écran de récupération reste.
 	let recoverError = $state('');
+	// Écran de récupération quitté sans restaurer : où aller (rien : un classeur neuf).
+	let recoverDone: (() => Promise<void>) | null = null;
 	// Boîtes de dialogue ouvertes par un script ou un assistant (ui.dialog…), la plus ancienne d'abord.
 	let dialogs = $state<DialogSpec[]>([]);
 	let mcpOpen = $state(false);
@@ -349,6 +354,7 @@
 		get queryHost() { return queryHost; },
 		get quitting() { return quitting; }, set quitting(v) { quitting = v; },
 		get recoverError() { return recoverError; }, set recoverError(v) { recoverError = v; },
+		get recoverDone() { return recoverDone; }, set recoverDone(v) { recoverDone = v; },
 		get refBack() { return refBack; }, set refBack(v) { refBack = v; },
 		get reload() { return reload; },
 		get removeAsk() { return removeAsk; }, set removeAsk(v) { removeAsk = v; },
@@ -705,6 +711,7 @@
 		orphans = (await DocumentService.Orphans()) ?? [];
 		if (orphans.length > 0) {
 			recoverError = '';
+			if (was?.shared && was.workbookId) recoverDone = async () => openedRemote(await DocumentService.ShareOpen(was.server, was.workbookId ?? '', was.title));
 			mode = 'recover';
 			return;
 		}
@@ -716,6 +723,14 @@
 		workbook++;
 		notice = t('shell.web.sessionLost');
 		await loadRecent();
+	}
+
+	/** « Plus tard » : les brouillons restent sur le serveur, proposés à la prochaine session. */
+	async function recoverLater() {
+		const done = recoverDone;
+		recoverDone = null;
+		orphans = [];
+		await (done ? done() : startDoc());
 	}
 
 	// Dernière relecture demandée (reload).
@@ -963,6 +978,11 @@
 			if (e?.data) share = e.data;
 			if (mode === 'doc') reload().catch(() => {});
 		});
+		// Édition web : enregistrement sur le serveur (barre d'état, avertissements).
+		const offDraft = Events.On('draft:status', (e: { data?: DraftStatus }) => {
+			if (e?.data) draftStatus.set(e.data);
+		});
+		if (isWeb) DocumentService.DraftStatus().then((st) => draftStatus.set(st)).catch(() => {});
 		// Classeur collaboratif : la file part ou change (barre d'état).
 		const offSync = Events.On('share:sync', (e: { data?: SyncStatus }) => {
 			if (e?.data) syncNow = e.data.shared ? e.data : null;
@@ -1029,6 +1049,7 @@
 					if (!cur.open) {
 						orphans = (await DocumentService.Orphans()) ?? [];
 						if (orphans.length > 0) {
+							recoverDone = async () => openedRemote(await DocumentService.ShareOpen(server, wb, ''));
 							mode = 'recover';
 							return;
 						}
@@ -1046,11 +1067,27 @@
 				// puis rouvert ; bureau : rechargement de la fenêtre, wails3 dev) :
 				// on reprend le classeur qu'il a ouvert, au lieu d'en créer un
 				// autre par-dessus (qui fermait l'ancien, modifié ou non).
-				if ((await DocumentService.State()).open) {
+				const already = await DocumentService.State();
+				if (already.open) {
 					mode = 'doc';
 					view = 'grid';
 					sheetId = 1;
-					return await reload();
+					await reload();
+					// Moteur lancé sur un classeur du serveur : les brouillons de la session
+					// précédente sont proposés une fois.
+					if (isWeb && !already.dirty) {
+						const more = (await DocumentService.OfferDrafts().catch(() => [])) ?? [];
+						if (more.length > 0) {
+							orphans = more;
+							recoverDone = async () => {
+								mode = 'doc';
+								workbook++;
+								await reload();
+							};
+							mode = 'recover';
+						}
+					}
+					return;
 				}
 				const preset = await DocumentService.DemoRequested();
 				if (preset) return await startPresetDemo(preset);
@@ -1109,7 +1146,7 @@
 		// Web : Ctrl+W ou la fermeture de l'onglet demandent confirmation
 		// quand le classeur a des modifications non enregistrées.
 		const leave = (e: BeforeUnloadEvent) => {
-			if (isWeb && mode === 'doc' && (docState.dirty || docState.privateTables)) {
+			if (isWeb && mode === 'doc' && (docState.dirty || docState.privateTables) && get(draftStatus).state !== 'saved') {
 				e.preventDefault();
 				e.returnValue = ''; // anciens navigateurs
 			}
@@ -1177,6 +1214,7 @@
 			offBack();
 			offShare();
 			offSync();
+			offDraft();
 			offCoEdit();
 			offSource();
 			window.removeEventListener('keydown', keys);
@@ -1705,7 +1743,7 @@
 		{:else if mode === 'recover'}
 			<div class="splash">
 				<h1>{t('shell.recovery.title')}</h1>
-				<p>{t('shell.recovery.intro')}</p>
+				<p>{t(isWeb ? 'shell.recovery.introWeb' : 'shell.recovery.intro')}</p>
 				<div class="orphans">
 				{#each allOrphans ? orphanGroups : orphanGroups.slice(0, ORPHANS_SHOWN) as g (g.key)}
 					{@const o = g.latest}
@@ -1738,6 +1776,7 @@
 					<button class="link" onclick={() => (allOrphans = true)}>{t('shell.recovery.showOlder', { n: orphanGroups.length - ORPHANS_SHOWN })}</button>
 				{/if}
 				{#if recoverError}<p class="error">{recoverError}</p>{/if}
+				{#if isWeb}<button class="link" onclick={() => recoverLater().catch((e) => (notice = err(e)))}>{t('shell.recovery.later')}</button>{/if}
 			</div>
 		{:else if mode === 'closed'}
 			<div class="splash" class:first-run={firstRun}>
@@ -2187,7 +2226,7 @@
 		{:else}
 			<span>{t('shell.status.ready')}</span>
 		{/if}
-		{#if mode === 'doc'}<SyncStatusBar status={syncNow} />{/if}
+		{#if mode === 'doc'}<SyncStatusBar status={syncNow} />{#if isWeb}<DraftStatusBar />{/if}{/if}
 		<BusyBar />
 		<PickBanner />
 		{#if data && view === 'grid' && !activePage}<ZoomBar {zoom} onzoom={setZoom} />{/if}

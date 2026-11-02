@@ -13,13 +13,14 @@
 	import { modal } from '#lib/ui/focus.js';
 	import { t } from '#lib/i18n/index.js';
 	import { isWeb } from '#lib/web/platform.js';
+	import { draftKept, draftStatus } from '#lib/shell/draft.js';
 
 	/** Ce que le composant lit et modifie dans la feuille (Sheet.svelte). */
 	export interface AskDialogsView {
 		readonly answerXlsx: (keep: boolean | null) => Promise<void>;
 		bookLock: 'tabs' | 'structure' | 'sheets';
 		readonly cancelClose: () => void;
-		readonly closeDoc: (save?: boolean) => Promise<void>;
+		readonly closeDoc: (save?: boolean, discard?: boolean) => Promise<void>;
 		readonly closing: boolean;
 		readonly confirmProtect: () => void;
 		readonly conflict: (FileQuestion & { close: boolean }) | null;
@@ -239,10 +240,10 @@
 	<div class="modal-back">
 		<div class="modal" role="dialog" aria-modal="true" aria-label={t('shell.close.title')} use:modal={ui.cancelClose}>
 			<p>{ui.quitting ? t('shell.close.questionQuit', { title: ui.docState.title }) : t('shell.close.question', { title: ui.docState.title })}</p>
-			{#if isWeb && ui.docState.privateTables}<p>{t('shell.close.privateWeb', { n: ui.docState.privateTables })}</p>{/if}
+			{#if isWeb && ui.docState.privateTables}<p>{t(draftKept($draftStatus) ? 'shell.close.privateDraft' : 'shell.close.privateWeb', { n: ui.docState.privateTables })}</p>{/if}
 			<div class="actions">
 				<button class="primary" onclick={() => ui.closeDoc(true).catch((e) => ((ui.quitting = false), (ui.notice = ui.err(e))))}>{t('shell.close.save')}</button>
-				<button onclick={() => ui.closeDoc(false).catch((e) => ((ui.quitting = false), (ui.notice = ui.err(e))))}>{t('shell.close.dontSave')}</button>
+				<button onclick={() => ui.closeDoc(false, true).catch((e) => ((ui.quitting = false), (ui.notice = ui.err(e))))}>{t('shell.close.dontSave')}</button>
 				<button onclick={ui.cancelClose}>{t('common.cancel')}</button>
 			</div>
 		</div>

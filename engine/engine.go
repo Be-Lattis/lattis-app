@@ -66,6 +66,9 @@ type Options struct {
 	// ni scripting, ni connexion sortante (InternalHosts ignoré), ni Serveur
 	// Lattis ; Enregistrer télécharge le classeur ; Close efface Dir.
 	PublicDemo bool
+	// Drafts : brouillons de la session sur le Serveur Lattis (lattis-engine
+	// --server) ; nil : aucun. Ignoré en démo publique.
+	Drafts bridge.DraftStore
 }
 
 // Engine est un moteur Lattis : un classeur ouvert, ses services et leurs
@@ -136,11 +139,18 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 		picks: map[string]chan pickResult{}, downloads: map[string]string{},
 		guard: guard,
 	}
-	e.hub.OnIdle = e.host.cancelPicks
+	e.hub.OnIdle = func() {
+		e.host.cancelPicks()
+		// Plus d'onglet (fermé, liaison coupée) : le brouillon part sans attendre.
+		bridge.FlushDraft(e.docs)
+	}
 	// Un onglet qui arrive pendant une opération longue (ouverture du classeur
 	// de la session, page rechargée) la voit tout de suite.
 	e.hub.OnConnect = func() { bridge.ReplayWork(e.docs) }
 	bridge.UseHost(e.host, e.grid, e.docs)
+	if o.Drafts != nil && !o.PublicDemo {
+		bridge.UseDrafts(e.docs, o.Drafts, filepath.Join(o.Dir, "files"))
+	}
 	if o.Demo != "" {
 		e.docs.SetDemo(o.Demo, o.Seed)
 	}

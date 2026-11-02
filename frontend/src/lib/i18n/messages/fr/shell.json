@@ -459,7 +459,9 @@
 		"discardAllTooltip": "Abandonner cette session et ses versions plus anciennes",
 		"discardAll": "Tout abandonner",
 		"discard": "Abandonner",
-		"showOlder": "Voir les {n} plus anciens"
+		"showOlder": "Voir les {n} plus anciens",
+		"introWeb": "Votre session précédente s'est terminée. Ces classeurs ont été gardés :",
+		"later": "Plus tard"
 	},
 	"saveProgress": {
 		"snapshot": "Enregistrement : copie de la base…",
@@ -1101,7 +1103,8 @@
 		"questionQuit": "Enregistrer les modifications de « {title} » avant de quitter Lattis ?",
 		"save": "Enregistrer",
 		"dontSave": "Ne pas enregistrer",
-		"privateWeb": "{n, plural, one {# tableau n'est} other {# tableaux ne sont}} pas sur le serveur : téléchargez le classeur pour les garder."
+		"privateWeb": "{n, plural, one {# tableau n'est} other {# tableaux ne sont}} pas sur le serveur : téléchargez le classeur pour les garder.",
+		"privateDraft": "{n, plural, one {# tableau n'est pas publié} other {# tableaux ne sont pas publiés}} : « Ne pas enregistrer » les supprime."
 	},
 	"damaged": {
 		"title": "Classeur endommagé",
@@ -1284,5 +1287,12 @@
 		"keepAnyway": "Enregistrer quand même",
 		"convert": "Convertir en .lattis",
 		"remember": "Ne plus demander"
+	},
+	"draft": {
+		"saving": "Enregistrement…",
+		"saved": "Enregistré sur le serveur",
+		"tooBig": "Non enregistré (trop volumineux)",
+		"unreachable": "Non enregistré (serveur injoignable)",
+		"error": "Non enregistré"
 	}
 }

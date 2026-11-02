@@ -18,6 +18,8 @@ import type { MergePlan, SheetGroup } from '#bindings/internal/canvas/models.js'
 import { printSheetPages } from '#lib/print/printsheet.js';
 import { demoProgressText } from '#lib/shell/welcome.js';
 import { isWeb } from '#lib/web/platform.js';
+import { draftStatus, draftKept } from '#lib/shell/draft.js';
+import { get } from 'svelte/store';
 import type DocPage from '#lib/doc/DocPage.svelte';
 import QueryHost from '#lib/query/QueryHost.svelte';
 import { type SqlDialect, type SqlScope } from '#lib/shell/SqlExportDialog.svelte';
@@ -45,6 +47,8 @@ export interface FilesHost {
 	lockedCoEdit: boolean;
 	orphans: Orphan[];
 	recoverError: string;
+	/** Écran de récupération quitté sans restaurer : où aller (rien : un classeur neuf). */
+	recoverDone: (() => Promise<void>) | null;
 	damaged: DamagedFile | null;
 	view: View;
 	sheetId: number;
@@ -273,7 +277,7 @@ export function createFiles(h: FilesHost) {
 			if (h.docState.notice) h.notice = h.docState.notice;
 			return;
 		}
-		h.notice = savedNotice(h.docState, isWeb);
+		h.notice = savedNotice(h.docState, isWeb && !draftKept(get(draftStatus)));
 		await h.loadRecent();
 		if (a.close) await closeDoc(false);
 	}
@@ -304,8 +308,8 @@ export function createFiles(h: FilesHost) {
 		h.notice = r.report;
 	}
 
-	/** Ferme le classeur ; modifié, il demande d'abord s'il faut l'enregistrer. */
-	async function closeDoc(save?: boolean) {
+	/** Ferme le classeur ; modifié, il demande d'abord s'il faut l'enregistrer. discard : « Ne pas enregistrer », son brouillon part aussi. */
+	async function closeDoc(save?: boolean, discard = false) {
 		h.closing = false;
 		// Écouteurs « before_close » des scripts : ils peuvent garder le classeur ouvert.
 		if (h.mode === 'doc' && save === undefined && !(await DocumentService.BeforeClose())) {
@@ -313,8 +317,9 @@ export function createFiles(h: FilesHost) {
 			return;
 		}
 		// Édition web : un tableau qui n'est pas sur le serveur n'est que dans la
-		// session (privateTables) ; même classeur enregistré, la question.
-		const onlyHere = isWeb && h.mode === 'doc' && !!h.docState.privateTables;
+		// session (privateTables) ; même classeur enregistré, la question. Gardé
+		// sur le serveur (brouillon), rien à demander de plus.
+		const onlyHere = isWeb && h.mode === 'doc' && !!h.docState.privateTables && !draftKept(get(draftStatus));
 		if (h.mode === 'doc' && (h.docState.dirty || onlyHere) && save === undefined) {
 			h.closing = true;
 			return;
@@ -347,6 +352,7 @@ export function createFiles(h: FilesHost) {
 			}
 		}
 		h.sheet?.closeOverlays();
+		if (discard && isWeb) await DocumentService.DraftForget().catch((e) => console.warn('brouillon', h.err(e)));
 		// Fermé dans tous les cas ; une erreur dit que la file d'envoi d'un
 		// classeur partagé n'a pas pu être gardée (récupération au lancement).
 		const kept = await DocumentService.CloseDocument().then(
@@ -524,7 +530,7 @@ export function createFiles(h: FilesHost) {
 					h.docState = await h.saving(() => DocumentService.Save(a === 'saveAs'));
 					if (h.docState.xlsx) h.xlsxAsk = { q: h.docState.xlsx, close: false, remember: false };
 					else if (h.docState.conflict) h.conflict = { ...h.docState.conflict, close: false };
-					else if (h.docState.notice || !h.docState.dirty) h.notice = savedNotice(h.docState, isWeb);
+					else if (h.docState.notice || !h.docState.dirty) h.notice = savedNotice(h.docState, isWeb && !draftKept(get(draftStatus)));
 					await h.loadRecent();
 					break;
 				case 'download':
@@ -652,6 +658,7 @@ export function createFiles(h: FilesHost) {
 		}
 		try {
 			if (keep) {
+				h.recoverDone = null;
 				h.mode = 'doc';
 				h.workbook++;
 				await h.reload();
@@ -661,8 +668,11 @@ export function createFiles(h: FilesHost) {
 			} else {
 				h.orphans = h.orphans.filter((x) => !gone.has(x.dir));
 				if (h.orphans.length > 0) return;
+				const done = h.recoverDone;
+				h.recoverDone = null;
+				if (done) await done();
 				// Session d'un fichier abandonnée : le fichier tel qu'enregistré.
-				if (o.source) await openPath(o.source).catch(() => startDoc());
+				else if (o.source) await openPath(o.source).catch(() => startDoc());
 				else await startDoc();
 			}
 		} catch (e) {

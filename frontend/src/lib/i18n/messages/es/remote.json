@@ -1205,7 +1205,8 @@
 		"private": {
 			"label": "privada",
 			"tooltip": "Tabla privada: se queda en este equipo, nunca se envía al servidor",
-			"tooltipWeb": "No se envía al servidor: se pierde al terminar la sesión, salvo que descargue el libro"
+			"tooltipWeb": "No se envía al servidor: se pierde al terminar la sesión, salvo que descargue el libro",
+			"tooltipDraft": "No publicado: se conserva en su borrador en el servidor"
 		},
 		"rename": "{problem} — cámbiele el nombre en el libro",
 		"frozenTypes": "Tipos fijados en la publicación: {columns}",
@@ -1231,7 +1232,8 @@
 		},
 		"stay": "{n, plural, one {# tabla se queda} other {# tablas se quedan}} solo en este equipo.",
 		"stayWeb": "{n, plural, one {# tabla no se publicará: se pierde al terminar la sesión, salvo descarga.} other {# tablas no se publicarán: se pierden al terminar la sesión, salvo descarga.}}",
-		"uncheckIt": "{problem}: desmárquela"
+		"uncheckIt": "{problem}: desmárquela",
+		"stayDraft": "{n, plural, one {# tabla no se publicará: se conserva en su borrador.} other {# tablas no se publicarán: se conservan en su borrador.}}"
 	},
 	"dataShare": {
 		"title": {

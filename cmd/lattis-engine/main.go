@@ -237,6 +237,10 @@ func main() {
 	config.InitLoader(ctx, &config.Loader{Memory: publicDemo})
 
 	opts := engine.Options{Dir: dir, BasePath: base, Scripting: scripting, Demo: preset, Seed: seed, InternalHosts: internal, PublicDemo: publicDemo}
+	if serverMode {
+		// Le répertoire de la session peut disparaître avec le moteur.
+		opts.Drafts = bridge.ServerDrafts(server)
+	}
 	if !managed {
 		opts.OriginPatterns = []string{"localhost:*", "127.0.0.1:*"}
 	}

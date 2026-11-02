@@ -9,6 +9,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Nouveautés
 
 - Fichiers récents : une petite croix (ou Suppr dans le menu) retire une entrée de la liste ; le fichier ou le classeur reste.
+- Édition web : ce qui n'est pas sur le serveur (classeur jamais publié, tableaux non publiés, modifications d'un classeur figé, envois en attente) s'y enregistre tout seul après chaque modification, et revient à la session suivante ; la barre d'état dit « Enregistré sur le serveur », ou pourquoi ce n'est pas le cas.
 
 ### Changements
 

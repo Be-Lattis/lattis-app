@@ -32,6 +32,7 @@ export type {
     DemoResult,
     DialogRequest,
     DocState,
+    DraftStatus,
     ExecResult,
     FileQuestion,
     FormChoice,

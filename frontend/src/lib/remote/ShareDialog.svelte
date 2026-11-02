@@ -19,6 +19,7 @@
 	import TableSourcesList from './TableSourcesList.svelte';
 	import { COLLABORATIVE, FROZEN, blocking, defaultSelection, inferredColumns, modeLabel, remoteTypeLabel, uncheckedCount } from './share';
 	import { isWeb } from '#lib/web/platform.js';
+	import { draftKept, draftStatus } from '#lib/shell/draft.js';
 	import { errorText, t } from '#lib/i18n/index.js';
 	import { work, workPhaseText, workRatio } from '#lib/shell/work.js';
 
@@ -63,7 +64,7 @@
 	// Tableaux décochés : dit à côté de Publier, ils ne seront pas sur le serveur
 	// (en édition web, il n'y a pas de poste : ils ne sont que dans la session).
 	const stay = $derived(check ? uncheckedCount(check, selected) : 0);
-	const stayText = $derived(stay ? t(isWeb ? 'remote.shareDialog.stayWeb' : 'remote.shareDialog.stay', { n: stay }) : '');
+	const stayText = $derived(stay ? t(isWeb ? (draftKept($draftStatus) ? 'remote.shareDialog.stayDraft' : 'remote.shareDialog.stayWeb') : 'remote.shareDialog.stay', { n: stay }) : '');
 	// Raison pour laquelle Publier est grisé, dite à côté du bouton (et en
 	// bulle) avec ce qu'il faut faire ; '' quand il est permis.
 	const why = $derived.by(() => {
@@ -213,7 +214,7 @@
 								<input type="checkbox" checked={on} disabled={busy} onchange={(e) => toggle(tb.id, (e.currentTarget as HTMLInputElement).checked)} />
 								<strong>{tb.name}</strong>
 								<span class="muted">{tb.sheet} · {t('remote.shareDialog.rows', { n: tb.rows })}</span>
-								{#if !on}<span class="private" title={t(isWeb ? 'remote.shareDialog.private.tooltipWeb' : 'remote.shareDialog.private.tooltip')}><Icon name="local" size={12} /> {t('remote.shareDialog.private.label')}</span>{/if}
+								{#if !on}<span class="private" title={t(isWeb ? (draftKept($draftStatus) ? 'remote.shareDialog.private.tooltipDraft' : 'remote.shareDialog.private.tooltipWeb') : 'remote.shareDialog.private.tooltip')}><Icon name="local" size={12} /> {t('remote.shareDialog.private.label')}</span>{/if}
 							</label>
 							{#if on}
 								{#each tb.problems ?? [] as p (p)}<p class="problem">{(tb.columns ?? []).every((c) => c.computed) ? t('remote.shareDialog.uncheckIt', { problem: p }) : t('remote.shareDialog.rename', { problem: p })}</p>{/each}

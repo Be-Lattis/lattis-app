@@ -133,6 +133,7 @@ type DocumentService struct {
 	lang     langState               // langue de la session (lang.go)
 	work     workState               // opérations longues suivies (work.go)
 	xlsx     xlsxState               // fichier .xlsx ouvert : format gardé (xlsxdoc.go)
+	drafts   draftState              // brouillons de session sur le serveur (drafts.go)
 
 	// Classeur à ouvrir au lancement (association de fichiers, launch.go).
 	launch launchState
@@ -156,6 +157,7 @@ func (s *DocumentService) current() (*doc.Document, error) {
 // restent dans le répertoire de travail : elles seront proposées en
 // récupération au prochain lancement.
 func (s *DocumentService) ServiceShutdown() error {
+	s.leaveDraft()
 	s.stopMCP()
 	s.stopShare()
 	s.stopCoEdit()
@@ -181,10 +183,17 @@ func (s *DocumentService) Orphans() ([]archive.Orphan, error) {
 	if publicDemo.Load() {
 		return []archive.Orphan{}, nil
 	}
-	return archive.Orphans()
+	out, err := archive.Orphans()
+	if err != nil {
+		return nil, err
+	}
+	// Édition web : ce que le serveur garde des sessions précédentes.
+	return append(out, s.draftOrphans()...), nil
 }
 
 func (s *DocumentService) replace(d *doc.Document) error {
+	// Classeur quitté : ses dernières modifications partent tant qu'il est ouvert.
+	s.leaveDraft()
 	s.mu.Lock()
 	old := s.doc
 	s.doc, s.tables, s.memo = d, map[int64]*grid.Table{}, nil
@@ -218,6 +227,7 @@ func (s *DocumentService) replace(d *doc.Document) error {
 	}
 	// Conversation de l'assistant : propre au classeur.
 	s.aiReplaced(d)
+	s.attachDraft(d)
 	return lost
 }
 
@@ -377,6 +387,9 @@ func (s *DocumentService) Salvage(ctx context.Context, path string) (SalvageResu
 
 // Recover rouvre une session interrompue (répertoire de travail dir).
 func (s *DocumentService) Recover(ctx context.Context, dir string) (DocState, error) {
+	if id, ok := draftOf(dir); ok {
+		return s.recoverDraft(ctx, id)
+	}
 	orphans, err := archive.Orphans()
 	if err != nil {
 		return DocState{}, err
@@ -398,6 +411,9 @@ func (s *DocumentService) Recover(ctx context.Context, dir string) (DocState, er
 
 // Discard abandonne une session interrompue.
 func (s *DocumentService) Discard(dir string) error {
+	if id, ok := draftOf(dir); ok {
+		return s.discardDraft(id)
+	}
 	orphans, err := archive.Orphans()
 	if err != nil {
 		return err
@@ -510,7 +526,9 @@ func (s *DocumentService) saveAs(ctx context.Context, d *doc.Document, name stri
 	if err != nil || p == "" {
 		return s.State(ctx)
 	}
-	return s.saved(ctx, d)
+	st, err := s.saved(ctx, d)
+	s.draftFetched() // l'hôte web vient de le télécharger
+	return st, err
 }
 
 // saveFailed : un fichier modifié par ailleurs devient une question
@@ -527,6 +545,8 @@ func (s *DocumentService) saveFailed(ctx context.Context, d *doc.Document, err e
 
 func (s *DocumentService) saved(ctx context.Context, d *doc.Document) (DocState, error) {
 	addRecentDoc(d)
+	// Le brouillon garde le nom du fichier.
+	s.kickDraft()
 	// Sources du Data Lake envoyées à chaque enregistrement (en arrière-plan).
 	s.pushOnSave(d)
 	if s.listening(api.EventSave) {

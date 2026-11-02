@@ -19,4 +19,10 @@ export interface Orphan {
      * illisible). La récupération regroupe les sessions par classeur.
      */
     "workbook": string;
+
+    /**
+     * Title : titre d'un brouillon du serveur (Dir commence alors par « draft: »,
+     * bridge) ; vide pour une session locale, nommée par Source.
+     */
+    "title"?: string;
 }

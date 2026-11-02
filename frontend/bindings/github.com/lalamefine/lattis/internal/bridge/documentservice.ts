@@ -774,6 +774,21 @@ export function Download(): $CancellablePromise<$models.DocState> {
 }
 
 /**
+ * DraftForget retire le brouillon du classeur ouvert (« Ne pas enregistrer ») ;
+ * plus rien n'est enregistré ensuite.
+ */
+export function DraftForget(): $CancellablePromise<void> {
+    return $Call.ByID(3488966820);
+}
+
+/**
+ * DraftStatus donne l'état d'enregistrement sur le serveur.
+ */
+export function DraftStatus(): $CancellablePromise<$models.DraftStatus> {
+    return $Call.ByID(3669263063);
+}
+
+/**
  * DropDataset retire le partage d'une donnée (la vue disparaît ; les
  * classeurs qui l'utilisent gardent leur dernière copie).
  */
@@ -1457,6 +1472,15 @@ export function NewSheetChoiceValue(sheet: number, value: string): $CancellableP
 }
 
 /**
+ * OfferDrafts rend, une seule fois par moteur, les brouillons à proposer alors
+ * qu'un classeur est déjà ouvert (moteur lancé sur un classeur du serveur,
+ * --workbook) : ils ne passent pas par l'écran du démarrage.
+ */
+export function OfferDrafts(): $CancellablePromise<archive$0.Orphan[] | null> {
+    return $Call.ByID(4040333480);
+}
+
+/**
  * Open ouvre un classeur (path vide : boîte de dialogue).
  */
 export function Open(path: string): $CancellablePromise<$models.OpenResult> {
@@ -1917,8 +1941,8 @@ export function RemoveDuplicates(table: string, cols: number[] | null): $Cancell
 }
 
 /**
- * RemoveRecent retire un classeur de la liste des récents (classeur
- * supprimé du serveur, ou auquel l'utilisateur n'a plus accès).
+ * RemoveRecent retire un classeur de la liste des récents (croix de la
+ * liste, classeur supprimé du serveur, ou plus d'accès) ; le fichier reste.
  */
 export function RemoveRecent(r: $models.RecentFile): $CancellablePromise<void> {
     return $Call.ByID(3493286641, r);

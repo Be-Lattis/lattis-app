@@ -190,7 +190,7 @@ LATTIS_ENGINE_SECRET=<secret> lattis-engine \
 ```
 
 - **Démarrage** : quand il écoute, le moteur écrit `LISTENING 127.0.0.1:<port>` sur sa sortie standard ; `lattisd` relaie `/app/`, `/app/ws`, `/app/upload/…` et `/app/download/…` vers ce port (`/app` redirige vers `/app/`). Il écoute avant d'ouvrir `--workbook` : la page s'affiche aussitôt et suit l'avancement (`work:step`, redit à chaque nouvelle connexion) ; ses appels attendent la fin de l'ouverture, sauf `CancelWork`, `Platform`, `Settings` et `SetLanguage` (`Engine.Starting`).
-- **Arrêt** : à la fermeture de l'entrée standard (session finie, `lattisd` arrêté), ou après `--idle` sans onglet connecté. Un classeur modifié et non enregistré reste dans `<dir>/work` (récupération).
+- **Arrêt** : à la fermeture de l'entrée standard (session finie, `lattisd` arrêté), ou après `--idle` sans onglet connecté. Ce qui n'est pas sur le serveur y est gardé en brouillon (§ 6.3) : le dernier envoi part avant l'arrêt. `<dir>/work` n'aide que si `--dir` survit au moteur.
 - **Jetons** : `GET <token-url>` avec `Authorization: Bearer $LATTIS_ENGINE_SECRET` rend `{"access_token", "pg_role", "expires_in"}` ; le moteur le redemande une minute avant l'expiration, ou après un refus de PostgreSQL. Ce jeton sert de fournisseur `OAUTHBEARER` (pgx) pour ce seul serveur : ouverture de `--workbook` au démarrage (même chemin que « Ouvrir depuis un serveur », copie locale dans `<dir>/partages`), « Ouvrir depuis un serveur » dans la session. Aucun autre serveur n'est joignable.
 - **Réseau** : le WebSocket négocie la compression (`permessage-deflate`, à laisser passer par le relais) ; les fichiers du frontend partent en gzip, ceux de `_app/immutable` avec `Cache-Control: immutable`.
 - **Chemins** : `DocState.Path` ne donne que le nom du fichier (`bridge.HidePaths`) ; tout ce que la session écrit reste dans `--dir`.
@@ -226,10 +226,38 @@ Points d'attention pour `lattisd` :
 
 ### 6.3 Ce qui n'est que dans la session
 
-Il n'y a pas de « poste » en web : ce qui n'est pas sur le serveur (classeur jamais enregistré, tableaux non cochés à la publication, tableaux refusés au partage automatique) n'existe que dans `--dir`. Le moteur s'arrête après `LATTIS_WEB_IDLE` (5 min par défaut) sans onglet connecté, coupure réseau et veille comprises. `--dir` ne survit au moteur qu'avec un volume par utilisateur (Docker : volume nommé ; Kubernetes : `web.cache.size` renseigné ; processus : dossier de l'utilisateur) ; **un moteur de la réserve (`LATTIS_WEB_POOL_SPARE` > 0) et un pod sans `web.cache.size` (`emptyDir`, défaut du chart) perdent `--dir` à l'arrêt.**
+Il n'y a pas de « poste » en web : ce qui n'est pas sur le serveur (classeur jamais publié, tableaux non cochés à la publication ou refusés au partage automatique, modifications d'un classeur figé, file d'envoi) n'est que dans `--dir`. Le moteur s'arrête après `LATTIS_WEB_IDLE` (5 min par défaut) sans onglet connecté, coupure réseau et veille comprises, et **`--dir` disparaît avec lui sur un `emptyDir` (Kubernetes, défaut du chart) ou un moteur de la réserve**. Plutôt qu'un volume par utilisateur, le moteur garde ce travail **en brouillon sur le Serveur Lattis**, après chaque modification.
 
-- Publier : tous les tableaux sont cochés ; en décocher dit qu'il sera perdu à la fin de la session, sauf téléchargement.
-- Fermer (onglet ou Fichier › Fermer) : la question aussi quand un classeur partagé a des tableaux qui ne sont pas sur le serveur ; Enregistrer télécharge alors le classeur.
+**Contrat** (migration serveur `0051`, `docs/contrat-client.md` § 13 du serveur ; côté application, tout est dans `internal/remote/workbook/drafts.go`) : `lattis.draft_save`, `draft_list`, `draft_read`, `draft_delete`, sous le rôle de l'utilisateur, sur `rw`. Limite par personne `draft_quota_mb` (256 Mo par défaut), refus `LT001`, le brouillon précédent reste. Serveur sans ces fonctions (`42883`) : pas de brouillon, les avertissements restent ceux du § suivant.
+
+**Enregistrement** (`internal/bridge/drafts.go`, délais groupés en tête du fichier ; seulement avec `--server` : jamais au bureau ni en démo publique) :
+
+- Déclenché par chaque transaction validée (`Store.OnWrite`), après 300 ms sans autre modification.
+- Un envoi à la fois. Les modifications arrivées pendant un envoi en font exactement un de plus, de l'état le plus récent ; les autres sont sautées. Un échec est réessayé de plus en plus loin (2 s à 2 min).
+- Contenu : archive `.lattis` de la base de travail (avec l'historique d'annulation, sans lui si la limite est atteinte), plus le nom du fichier (`draft.json`). Copie par `VACUUM INTO` sur une connexion à part, hors de la file d'écriture : la saisie n'attend pas (`Store.SnapshotInto`).
+- Ménager le WAL du serveur, car chaque envoi y réécrit toute l'archive : même contenu (empreinte de la base) pas renvoyé ; sous 1 Mo, presque immédiat ; au-delà, 2 s de pause par Mo après l'envoi, 60 s au plus (`draftSpacing`). Le dernier envoi n'attend pas : dernier onglet fermé ou liaison coupée (`Hub.OnIdle`), classeur quitté, arrêt du moteur (20 s au plus, le brouillon précédent reste sinon).
+- Rien à garder : classeur sans modification ; classeur collaboratif sans tableau privé et file vide (son brouillon est retiré ; une file en ligne a 5 s pour partir avant d'en faire un).
+- Identifiant : celui du classeur (`_lattis_info`, clé `id`). Un brouillon de ce classeur que cette session n'a pas repris (proposé puis laissé, vieux fichier renvoyé) n'est jamais écrasé : le nouveau a son propre identifiant. Un classeur vide n'envoie rien.
+
+**Mesures** (PostgreSQL local, 20 colonnes, `TestMesureDrafts`, `TestMesureDraftsWAL`) :
+
+| Lignes | Archive | Instantané + compression | Envoi | Saisie pendant les envois (médiane, p95) | WAL, saisie continue (4 par s) |
+|---|---|---|---|---|---|
+| 1 000 | 0,1 Mo | 151 ms | 14 ms | 3,2 ms, 32 ms | |
+| 70 000 | 5 Mo | | | | 2,3 Go/h |
+| 100 000 | 7,2 Mo | 249 ms | 222 ms | 3 ms, 4,3 ms | |
+| 1 000 000 | 74 Mo | 1,6 s | 2,2 s | 3 ms, 4,7 ms | 9,4 Go/h |
+
+Petit classeur (10 ko) : 0,13 Go/h de WAL. La saisie sans envoi prend 3 ms ; un Ctrl+S sur 1 M de lignes la bloque, lui, près d'une seconde.
+
+**Restauration** : `DocumentService.Orphans` ajoute les brouillons à l'écran de récupération (`Orphan.Dir` = `draft:<id>`), regroupés avec une session locale du même classeur ; `Recover` les dépose en répertoire de travail et les rouvre comme une session interrompue (`doc.Recover`) : tableaux, mise en page, état de publication, file d'envoi, historique. Le classeur restauré reste « modifié », son fichier de session n'existant plus. « Plus tard » laisse les brouillons pour la session suivante. Moteur lancé sur `--workbook` : proposés une fois (`OfferDrafts`), sinon au démarrage et à la liaison retrouvée avec un moteur neuf.
+
+**Retrait** : « Ne pas enregistrer » (`DraftForget`), « Abandonner » à la récupération, classeur téléchargé tel quel puis quitté, classeur collaboratif dont tout est sur le serveur. Une fermeture simple le garde : le fichier de session disparaîtra.
+
+**Interface** : `DraftStatus` et l'évènement `draft:status` donnent, en bas : Enregistrement… / Enregistré sur le serveur / Non enregistré (trop volumineux, serveur injoignable).
+
+- Publier : tous les tableaux sont cochés ; en décocher dit qu'il reste dans le brouillon. Sans brouillon possible (échec, serveur sans brouillons) : perdu à la fin de la session, sauf téléchargement.
+- Fermer l'onglet : pas de question si le brouillon est à jour. Fichier › Fermer : la question si le classeur est modifié ; sans brouillon possible, aussi quand un classeur partagé a des tableaux qui ne sont pas sur le serveur (Enregistrer télécharge alors le classeur).
 - Remplacer un classeur modifié (Ouvrir, Nouveau, Récents, Ouvrir depuis un serveur, lien `/app/?workbook=<id>`) : la question d'abord ; sans interface pour la poser, le moteur le garde en récupération.
 - Liaison retrouvée avec un moteur neuf : récupération s'il y a de quoi, sinon le classeur du serveur, sinon un message ; une réponse en retard n'écrase plus la mise en page d'une relecture plus récente.
 

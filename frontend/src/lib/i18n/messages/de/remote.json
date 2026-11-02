@@ -1205,7 +1205,8 @@
 		"private": {
 			"label": "privat",
 			"tooltip": "Private Tabelle: bleibt auf diesem Computer, wird nie an den Server gesendet",
-			"tooltipWeb": "Nicht an den Server gesendet: am Sitzungsende verloren, außer Sie laden die Arbeitsmappe herunter"
+			"tooltipWeb": "Nicht an den Server gesendet: am Sitzungsende verloren, außer Sie laden die Arbeitsmappe herunter",
+			"tooltipDraft": "Nicht veröffentlicht: bleibt in Ihrem Entwurf auf dem Server"
 		},
 		"rename": "{problem} — benennen Sie sie in der Arbeitsmappe um",
 		"frozenTypes": "Bei der Veröffentlichung festgelegte Typen: {columns}",
@@ -1231,7 +1232,8 @@
 		},
 		"stay": "{n, plural, one {# Tabelle bleibt} other {# Tabellen bleiben}} nur auf diesem Rechner.",
 		"stayWeb": "{n, plural, one {# Tabelle wird nicht veröffentlicht: am Sitzungsende verloren, außer beim Herunterladen.} other {# Tabellen werden nicht veröffentlicht: am Sitzungsende verloren, außer beim Herunterladen.}}",
-		"uncheckIt": "{problem} – Häkchen entfernen"
+		"uncheckIt": "{problem} – Häkchen entfernen",
+		"stayDraft": "{n, plural, one {# Tabelle wird nicht veröffentlicht: bleibt in Ihrem Entwurf.} other {# Tabellen werden nicht veröffentlicht: bleiben in Ihrem Entwurf.}}"
 	},
 	"dataShare": {
 		"title": {

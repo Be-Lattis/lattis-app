@@ -1223,6 +1223,9 @@ type Orphan struct {
 	// le même pour toutes ses sessions quel que soit son nom (vide :
 	// illisible). La récupération regroupe les sessions par classeur.
 	Workbook string `json:"workbook"`
+	// Title : titre d'un brouillon du serveur (Dir commence alors par « draft: »,
+	// bridge) ; vide pour une session locale, nommée par Source.
+	Title string `json:"title,omitempty"`
 }
 
 // RecoverableError est renvoyé par Open quand une session précédente de

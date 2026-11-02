@@ -25,6 +25,8 @@ Cada guardado conserva una versión del libro junto al archivo (carpeta oculta `
 
 Mientras trabaja, Lattis conserva una copia de trabajo del libro en su equipo. Si Lattis se detiene sin haber guardado (bloqueo, apagado forzado, corte de luz), el siguiente inicio ofrece recuperar los cambios: recuperar vuelve a abrir el libro en el estado en que estaba, con su historial de deshacer; descartar vuelve al archivo guardado.
 
+En la aplicación web, lo que no está en el servidor se guarda allí tras cada cambio (la barra de estado lo indica) y vuelve en su próxima sesión. «No guardar» lo elimina.
+
 Sus entradas y comandos se escriben en el disco en cuanto se hacen: sobreviven incluso a un corte de luz.
 
 ## Libro compartido en la red {#classeur-partage-sur-le-reseau}

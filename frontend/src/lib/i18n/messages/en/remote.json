@@ -1205,7 +1205,8 @@
 		"private": {
 			"label": "private",
 			"tooltip": "Private table: stays on this computer, never sent to the server",
-			"tooltipWeb": "Not sent to the server: lost when the session ends, unless you download the workbook"
+			"tooltipWeb": "Not sent to the server: lost when the session ends, unless you download the workbook",
+			"tooltipDraft": "Not published: kept in your draft on the server"
 		},
 		"rename": "{problem} — rename it in the workbook",
 		"frozenTypes": "Types fixed at publication: {columns}",
@@ -1231,7 +1232,8 @@
 		},
 		"stay": "{n, plural, one {# table stays} other {# tables stay}} on this computer only.",
 		"stayWeb": "{n, plural, one {# table won't be published: lost when the session ends, unless you download.} other {# tables won't be published: lost when the session ends, unless you download.}}",
-		"uncheckIt": "{problem} — untick it"
+		"uncheckIt": "{problem} — untick it",
+		"stayDraft": "{n, plural, one {# table will not be published: kept in your draft.} other {# tables will not be published: kept in your draft.}}"
 	},
 	"dataShare": {
 		"title": {

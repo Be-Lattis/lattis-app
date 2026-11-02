@@ -459,7 +459,9 @@
 		"discardAllTooltip": "Diese Sitzung und ihre älteren Versionen verwerfen",
 		"discardAll": "Alle verwerfen",
 		"discard": "Verwerfen",
-		"showOlder": "Die {n} älteren anzeigen"
+		"showOlder": "Die {n} älteren anzeigen",
+		"introWeb": "Ihre vorherige Sitzung wurde beendet. Diese Arbeitsmappen wurden aufbewahrt:",
+		"later": "Später"
 	},
 	"saveProgress": {
 		"snapshot": "Speichern: Datenbank wird kopiert…",
@@ -1101,7 +1103,8 @@
 		"questionQuit": "Änderungen an „{title}“ vor dem Beenden von Lattis speichern?",
 		"save": "Speichern",
 		"dontSave": "Nicht speichern",
-		"privateWeb": "{n, plural, one {# Tabelle ist} other {# Tabellen sind}} nicht auf dem Server: Laden Sie die Arbeitsmappe herunter, um sie zu behalten."
+		"privateWeb": "{n, plural, one {# Tabelle ist} other {# Tabellen sind}} nicht auf dem Server: Laden Sie die Arbeitsmappe herunter, um sie zu behalten.",
+		"privateDraft": "{n, plural, one {# Tabelle ist nicht veröffentlicht} other {# Tabellen sind nicht veröffentlicht}}: „Nicht speichern“ löscht sie."
 	},
 	"damaged": {
 		"title": "Beschädigte Arbeitsmappe",
@@ -1284,5 +1287,12 @@
 		"keepAnyway": "Trotzdem speichern",
 		"convert": "In .lattis umwandeln",
 		"remember": "Nicht mehr fragen"
+	},
+	"draft": {
+		"saving": "Speichern…",
+		"saved": "Auf dem Server gespeichert",
+		"tooBig": "Nicht gespeichert (zu groß)",
+		"unreachable": "Nicht gespeichert (Server nicht erreichbar)",
+		"error": "Nicht gespeichert"
 	}
 }

@@ -459,7 +459,9 @@
 		"discardAllTooltip": "Descartar esta sesión y sus versiones anteriores",
 		"discardAll": "Descartar todo",
 		"discard": "Descartar",
-		"showOlder": "Mostrar las {n} anteriores"
+		"showOlder": "Mostrar las {n} anteriores",
+		"introWeb": "Su sesión anterior terminó. Estos libros se han conservado:",
+		"later": "Más tarde"
 	},
 	"saveProgress": {
 		"snapshot": "Guardando: copia de la base de datos…",
@@ -1101,7 +1103,8 @@
 		"questionQuit": "¿Guardar los cambios de «{title}» antes de salir de Lattis?",
 		"save": "Guardar",
 		"dontSave": "No guardar",
-		"privateWeb": "{n, plural, one {# tabla no está} other {# tablas no están}} en el servidor: descargue el libro para conservarlas."
+		"privateWeb": "{n, plural, one {# tabla no está} other {# tablas no están}} en el servidor: descargue el libro para conservarlas.",
+		"privateDraft": "{n, plural, one {# tabla no está publicada} other {# tablas no están publicadas}}: «No guardar» las elimina."
 	},
 	"damaged": {
 		"title": "Libro dañado",
@@ -1284,5 +1287,12 @@
 		"keepAnyway": "Guardar de todos modos",
 		"convert": "Convertir en .lattis",
 		"remember": "No volver a preguntar"
+	},
+	"draft": {
+		"saving": "Guardando…",
+		"saved": "Guardado en el servidor",
+		"tooBig": "No guardado (demasiado grande)",
+		"unreachable": "No guardado (servidor inaccesible)",
+		"error": "No guardado"
 	}
 }

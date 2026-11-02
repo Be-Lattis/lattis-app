@@ -47,6 +47,7 @@ func (s *DocumentService) Download(ctx context.Context) (DocState, error) {
 	}); err != nil {
 		return DocState{}, err
 	}
+	s.draftFetched()
 	st, err := s.State(ctx)
 	st.Notice = s.say("doc.downloaded", msg.Args{"file": filepath.Base(src)})
 	return st, err

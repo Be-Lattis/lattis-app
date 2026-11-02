@@ -459,7 +459,9 @@
 		"discardAllTooltip": "Discard this session and its older versions",
 		"discardAll": "Discard all",
 		"discard": "Discard",
-		"showOlder": "Show the {n} older ones"
+		"showOlder": "Show the {n} older ones",
+		"introWeb": "Your previous session ended. These workbooks were kept:",
+		"later": "Later"
 	},
 	"saveProgress": {
 		"snapshot": "Saving: copying the database…",
@@ -1101,7 +1103,8 @@
 		"questionQuit": "Save the changes to “{title}” before quitting Lattis?",
 		"save": "Save",
 		"dontSave": "Don't save",
-		"privateWeb": "{n, plural, one {# table is} other {# tables are}} not on the server: download the workbook to keep them."
+		"privateWeb": "{n, plural, one {# table is} other {# tables are}} not on the server: download the workbook to keep them.",
+		"privateDraft": "{n, plural, one {# table is not published} other {# tables are not published}}: “Don't save” deletes them."
 	},
 	"damaged": {
 		"title": "Damaged workbook",
@@ -1284,5 +1287,12 @@
 		"keepAnyway": "Save anyway",
 		"convert": "Convert to .lattis",
 		"remember": "Don't ask again"
+	},
+	"draft": {
+		"saving": "Saving…",
+		"saved": "Saved on the server",
+		"tooBig": "Not saved (too large)",
+		"unreachable": "Not saved (server unreachable)",
+		"error": "Not saved"
 	}
 }

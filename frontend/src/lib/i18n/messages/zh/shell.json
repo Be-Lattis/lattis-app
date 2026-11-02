@@ -459,7 +459,9 @@
 		"discardAllTooltip": "放弃此会话及其较早版本",
 		"discardAll": "全部放弃",
 		"discard": "放弃",
-		"showOlder": "显示 {n} 个较早的版本"
+		"showOlder": "显示 {n} 个较早的版本",
+		"introWeb": "您上次的会话已结束。这些工作簿已保留：",
+		"later": "稍后"
 	},
 	"saveProgress": {
 		"snapshot": "正在保存：复制数据库…",
@@ -1101,7 +1103,8 @@
 		"questionQuit": "退出 Lattis 前是否保存对“{title}”的更改？",
 		"save": "保存",
 		"dontSave": "不保存",
-		"privateWeb": "{n, plural, other {# 个表格}}不在服务器上：请下载工作簿以保留。"
+		"privateWeb": "{n, plural, other {# 个表格}}不在服务器上：请下载工作簿以保留。",
+		"privateDraft": "{n, plural, other {# 个表未发布}}：“不保存”会删除它们。"
 	},
 	"damaged": {
 		"title": "工作簿已损坏",
@@ -1284,5 +1287,12 @@
 		"keepAnyway": "仍然保存",
 		"convert": "转换为 .lattis",
 		"remember": "不再询问"
+	},
+	"draft": {
+		"saving": "正在保存…",
+		"saved": "已保存到服务器",
+		"tooBig": "未保存（文件过大）",
+		"unreachable": "未保存（无法连接服务器）",
+		"error": "未保存"
 	}
 }

@@ -3275,6 +3275,7 @@ export interface MessageParams {
 	'remote.shareDialog.noTables.or': Record<never, never>;
 	'remote.shareDialog.private.label': Record<never, never>;
 	'remote.shareDialog.private.tooltip': Record<never, never>;
+	'remote.shareDialog.private.tooltipDraft': Record<never, never>;
 	'remote.shareDialog.private.tooltipWeb': Record<never, never>;
 	'remote.shareDialog.progress.aria': Record<never, never>;
 	'remote.shareDialog.progress.cancel': Record<never, never>;
@@ -3294,6 +3295,7 @@ export interface MessageParams {
 	'remote.shareDialog.republishTitle': Record<never, never>;
 	'remote.shareDialog.rows': { n: number | string };
 	'remote.shareDialog.stay': { n: number | string };
+	'remote.shareDialog.stayDraft': { n: number | string };
 	'remote.shareDialog.stayWeb': { n: number | string };
 	'remote.shareDialog.tables': Record<never, never>;
 	'remote.shareDialog.uncheckIt': { problem: number | string };
@@ -4077,6 +4079,7 @@ export interface MessageParams {
 	'shell.choice.status': { name: number | string; value: number | string };
 	'shell.choice.statusHidden': { n: number | string; status: number | string };
 	'shell.close.dontSave': Record<never, never>;
+	'shell.close.privateDraft': { n: number | string };
 	'shell.close.privateWeb': { n: number | string };
 	'shell.close.question': { title: number | string };
 	'shell.close.questionQuit': { title: number | string };
@@ -4145,6 +4148,11 @@ export interface MessageParams {
 	'shell.doc.savedRemote': { server: number | string; title: number | string };
 	'shell.doc.savedWeb': { path: number | string };
 	'shell.doc.sharedUntitled': Record<never, never>;
+	'shell.draft.error': Record<never, never>;
+	'shell.draft.saved': Record<never, never>;
+	'shell.draft.saving': Record<never, never>;
+	'shell.draft.tooBig': Record<never, never>;
+	'shell.draft.unreachable': Record<never, never>;
 	'shell.exportReport.detail.buttons': { n: number | string };
 	'shell.exportReport.detail.charts': { n: number | string };
 	'shell.exportReport.detail.clipped': { n: number | string };
@@ -4498,6 +4506,8 @@ export interface MessageParams {
 	'shell.recovery.discardAll': Record<never, never>;
 	'shell.recovery.discardAllTooltip': Record<never, never>;
 	'shell.recovery.intro': Record<never, never>;
+	'shell.recovery.introWeb': Record<never, never>;
+	'shell.recovery.later': Record<never, never>;
 	'shell.recovery.modified': { date: number | string };
 	'shell.recovery.older': { n: number | string };
 	'shell.recovery.recover': Record<never, never>;

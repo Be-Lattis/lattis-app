@@ -520,6 +520,26 @@ export interface DocState {
 }
 
 /**
+ * DraftStatus : état d'enregistrement sur le serveur du classeur ouvert.
+ */
+export interface DraftStatus {
+    /**
+     * State : vide (rien à enregistrer), saving, saved ou failed.
+     */
+    "state": string;
+
+    /**
+     * Reason, avec failed : tooBig, unreachable ou error.
+     */
+    "reason"?: string;
+
+    /**
+     * Active : cette session garde ses brouillons sur le serveur.
+     */
+    "active"?: boolean;
+}
+
+/**
  * ExecResult est l'issue d'une requête d'écriture de l'onglet SQL.
  */
 export interface ExecResult {

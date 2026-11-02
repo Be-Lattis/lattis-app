@@ -63,7 +63,7 @@ func init() {
 		"ValidationList", "ValidationAt", "InvalidCells", "FilterValues", "FieldValues", "PivotFieldValues", "Dependencies", "FormulaHelp", "CustomLists",
 		"TypeMix", "PageBreaks", "PrintPlan", "CoEditState", "ShareState", "LattisState", "AIState",
 		"MCPState", "Favorites", "Scripts", "HTTPHosts", "TableSources", "WorkbookTables", "ExcelTables",
-		"SaveProgress", "DemoProgress", "DemoRequested", "WorkbookReady", "FirstLaunch", "Orphans",
+		"SaveProgress", "DemoProgress", "DemoRequested", "WorkbookReady", "FirstLaunch", "Orphans", "OfferDrafts", "DraftStatus",
 		"CloseRequestSeen", "BeforeClose", "ReportError", "DialogAnswer", "SetLanguage", "Query",
 		// Vue : feuille affichée, sélection (le zoom, gardé dans le
 		// classeur, est une modification).

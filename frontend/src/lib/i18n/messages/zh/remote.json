@@ -1205,7 +1205,8 @@
 		"private": {
 			"label": "私有",
 			"tooltip": "私有表格：保留在本计算机上，从不发送到服务器",
-			"tooltipWeb": "未发送到服务器：会话结束后丢失，除非下载工作簿"
+			"tooltipWeb": "未发送到服务器：会话结束后丢失，除非下载工作簿",
+			"tooltipDraft": "未发布：保留在服务器上的草稿中"
 		},
 		"rename": "{problem} — 请在工作簿中将其重命名",
 		"frozenTypes": "发布时固定的类型：{columns}",
@@ -1231,7 +1232,8 @@
 		},
 		"stay": "{n, plural, other {# 个表格}}将仅保留在此电脑上。",
 		"stayWeb": "{n, plural, other {# 个表格}}不会发布：会话结束后丢失，除非下载。",
-		"uncheckIt": "{problem}：请取消勾选"
+		"uncheckIt": "{problem}：请取消勾选",
+		"stayDraft": "{n, plural, other {# 个表不会发布：保留在您的草稿中。}}"
 	},
 	"dataShare": {
 		"title": {

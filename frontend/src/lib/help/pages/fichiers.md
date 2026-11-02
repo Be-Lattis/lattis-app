@@ -25,6 +25,8 @@ Chaque enregistrement garde une version du classeur, à côté du fichier (dossi
 
 Pendant que vous travaillez, Lattis tient une copie de travail du classeur sur votre poste. Si Lattis s'arrête sans avoir enregistré (panne, arrêt forcé, coupure de courant), le démarrage suivant propose de récupérer les modifications : récupérer rouvre le classeur dans l'état où il était, avec son historique d'annulation ; abandonner revient au fichier enregistré.
 
+Dans l'application web, ce qui n'est pas sur le serveur s'y enregistre après chaque modification (la barre d'état le dit) et revient à votre prochaine session. « Ne pas enregistrer » le supprime.
+
 Vos saisies et commandes sont mises sur disque dès qu'elles sont faites : elles survivent même à une coupure de courant.
 
 ## Classeur partagé sur le réseau

@@ -105,7 +105,29 @@ func remoteServer(ctx context.Context, raw string) (workbook.Server, auth.User, 
 	if err != nil {
 		return nil, auth.User{}, "", err
 	}
-	pools := func() (*pgpool.Pools, error) {
+	return workbook.PG(poolDialer(m, server, user, disc)), user, disc.Name, nil
+}
+
+// sessionDialer donne les connexions à un Serveur Lattis sous l'identité de
+// l'utilisateur.
+func sessionDialer(ctx context.Context, raw string) (workbook.Dialer, error) {
+	m, err := sessions()
+	if err != nil {
+		return nil, err
+	}
+	server, err := auth.NormalizeURL(raw)
+	if err != nil {
+		return nil, err
+	}
+	user, disc, err := m.Session(ctx, server)
+	if err != nil {
+		return nil, err
+	}
+	return poolDialer(m, server, user, disc), nil
+}
+
+func poolDialer(m sessionSource, server string, user auth.User, disc *auth.Discovery) workbook.Dialer {
+	pools := func(ctx context.Context) (*pgpool.Pools, error) {
 		sharePools.mu.Lock()
 		defer sharePools.mu.Unlock()
 		k := poolsKey(server, user.PGRole)
@@ -122,8 +144,8 @@ func remoteServer(ctx context.Context, raw string) (workbook.Server, auth.User, 
 		sharePools.m[k] = p
 		return p, nil
 	}
-	dial := func(ctx context.Context, usage string) (*pgx.Conn, func(), error) {
-		p, err := pools()
+	return func(ctx context.Context, usage string) (*pgx.Conn, func(), error) {
+		p, err := pools(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -139,7 +161,6 @@ func remoteServer(ctx context.Context, raw string) (workbook.Server, auth.User, 
 		}
 		return c.Conn(), c.Release, nil
 	}
-	return workbook.PG(dial), user, disc.Name, nil
 }
 
 // shareState suit le classeur partagé ouvert.

@@ -92,6 +92,11 @@ type Store struct {
 	watchGen atomic.Int64
 	// scans : relevés des requêtes de l'écrivain, par texte (qscan.go).
 	scans scanCache
+	// path, extra : pour ouvrir une connexion à part (snapshot.go) ; onWrite :
+	// prévenu de chaque transaction validée.
+	path    string
+	extra   []func(*sqlite3.Conn) error
+	onWrite atomic.Pointer[func()]
 }
 
 var (
@@ -321,7 +326,7 @@ type job struct {
 // Open ouvre (ou crée) la base au chemin donné, en mode WAL. extra est
 // appelé sur chaque nouvelle connexion (fonctions SQL personnalisées).
 func Open(path string, extra ...func(*sqlite3.Conn) error) (*Store, error) {
-	s := &Store{jobs: make(chan job), done: make(chan struct{})}
+	s := &Store{jobs: make(chan job), done: make(chan struct{}), path: path, extra: extra}
 	initWrite := setup(false, extra)
 	write, err := openDB("file:"+path, "écriture", func(c *sqlite3.Conn) error {
 		if err := initWrite(c); err != nil {
@@ -509,6 +514,9 @@ func (s *Store) writer() {
 			s.settle()
 			s.gen.Add(1)
 			s.busy.Store(false)
+			if f := s.onWrite.Load(); f != nil && j.fn != nil && err == nil {
+				(*f)()
+			}
 			j.res <- err
 		case <-s.done:
 			return
