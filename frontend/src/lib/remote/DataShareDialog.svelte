@@ -39,8 +39,14 @@
 		onnotice?: (msg: string) => void;
 		/** Ajouter le tableau au classeur partagé en direct (la boîte se ferme ; confirmation et envoi par la page). */
 		onaddshared?: () => void;
+		/**
+		 * Publier ce tableau seul au Data Lake, sans proposer le classeur
+		 * (choisi dans Publier sur un serveur › « Seulement certains
+		 * tableaux ») : la boîte va droit au formulaire de la source.
+		 */
+		alone?: boolean;
 	}
-	let { table, ondone, onpublish, onnotice, onaddshared }: Props = $props();
+	let { table, ondone, onpublish, onnotice, onaddshared, alone = false }: Props = $props();
 
 	type Info = {
 		reason: string;
@@ -98,7 +104,7 @@
 		try {
 			const i = (await DocumentService.DataShareInfo(table)) as unknown as Info;
 			info = i;
-			if (i.source) step = 'source';
+			if (i.source || (alone && i.choice)) step = 'source';
 			else if (i.choice) {
 				step = 'choose';
 				way = i.choice === 'collab' ? (i.reason ? 'table' : 'shared') : i.reason ? 'table' : 'workbook';
@@ -232,7 +238,7 @@
 		{#if step === 'source'}
 			<TableSourceForm
 				{table}
-				onback={info?.choice && !info.source ? () => (step = 'choose') : undefined}
+				onback={info?.choice && !info.source && !alone ? () => (step = 'choose') : undefined}
 				ondone={(msg) => {
 					if (msg) onnotice?.(msg);
 					ondone();

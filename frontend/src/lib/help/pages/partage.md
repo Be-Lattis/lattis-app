@@ -2,6 +2,15 @@
 
 Un classeur partagé sur un Serveur Lattis se modifie à plusieurs, en direct ; ses tableaux peuvent aussi alimenter le Data Lake ou se remplir par un formulaire.
 
+## Publier un classeur sur un serveur
+
+**Fichier › Publier sur un serveur…** publie toujours le **classeur complet** : tous ses tableaux, sa mise en page et ses scripts. Choisissez le serveur, le titre et le mode (**Figé** : lecture seule pour tous, vous republiez les nouvelles versions ; **Collaboratif** : chacun modifie selon ses droits). La boîte liste les tableaux avec ce qui est à régler avant de publier (noms, saisies invalides). Un tableau sans aucune colonne saisie reste sur votre poste.
+
+- **Tableau calculé à partir du classeur** (tableau lié à une formule, comme `=FILTRE(Suivi;…)` converti en tableau, ou requête qui ne lit que des tableaux du classeur) : choisissez **Stocké sur le serveur** (ses lignes sont publiées comme celles d'un tableau saisi) ou **Recalculé sur chaque poste** (seule sa définition est publiée ; chaque membre le refait à l'ouverture et dès que ses tableaux sources changent, chez lui ; il porte la marque « recalculé »). Le recalcul sur chaque poste évite qu'une modification d'un tableau source réécrive le tableau calculé pour tout le monde.
+- **Seulement certains tableaux** : si votre compte peut publier au Data Lake Lattis, la boîte propose aussi de ne publier que des tableaux choisis. Le classeur reste alors sur votre poste ; chaque tableau coché passe ensuite par la boîte du Data Lake (dossier, colonnes, audience), comme **Publier uniquement ce tableau comme source de données** ci-dessous.
+
+**Fichier › Republier** (classeur figé) publie de même tout le classeur, avec les mêmes choix pour les tableaux calculés.
+
 ## Ajouter un tableau à un classeur partagé en direct
 
 Dans un classeur collaboratif (partagé en direct sur un Serveur Lattis), un tableau créé après la publication par un propriétaire ou un concepteur (saisi, collé, inséré, converti d'une plage…) est ajouté de lui-même au classeur partagé, aussitôt créé ; hors ligne, il l'est à la reconnexion. Un tableau qui reste sur votre poste (chargé par une requête, refusé par le serveur, ou créé par un éditeur) porte la pastille ambre **sur ce poste** au-dessus de son cadre : les autres membres ne le voient pas. Un clic sur la pastille, ou clic droit sur le tableau › **Ajouter au classeur partagé…**, le crée dans le classeur du serveur, avec ses lignes : les autres membres le reçoivent aussitôt (à la même place sur la feuille, ou dessous si la place est prise chez eux), avec un message dans la barre d'état, et il se synchronise ensuite comme les autres tableaux partagés (saisies, conflits, droits). La même action est proposée par **Partager au Data Lake Lattis…** (« Ajouter ce tableau au classeur partagé », en premier) et dans **Gérer l'accès** › Rôles et droits, sous la liste des tableaux.
@@ -49,7 +58,7 @@ Il faut le rôle « publieur de données » sur le serveur, et un serveur qui ac
 
 ## Partager un tableau comme formulaire
 
-Placez la cellule active dans un tableau, puis **Insertion › Formulaire** : une page web permet de remplir ce tableau sans ouvrir le classeur, depuis un téléphone ou un ordinateur. Chaque envoi ajoute une ligne, que les membres voient arriver en direct ; la ligne est écrite au nom du formulaire (« Formulaire : <titre> »), le répondant n'a aucun droit sur le classeur.
+Placez la cellule active dans un tableau, puis **Insertion › Formulaire** (dans un classeur partagé, aussi clic droit sur le tableau › Tableau › **Générer un formulaire…**) : une page web permet de remplir ce tableau sans ouvrir le classeur, depuis un téléphone ou un ordinateur. Chaque envoi ajoute une ligne, que les membres voient arriver en direct ; la ligne est écrite au nom du formulaire (« Formulaire : <titre> »), le répondant n'a aucun droit sur le classeur.
 
 Le formulaire est servi par le Serveur Lattis : le tableau doit être publié dans un classeur collaboratif, par un propriétaire ou un concepteur du classeur, en ligne. Sinon, la boîte dit ce qui manque et propose l'action à faire d'abord : **Publier sur un serveur…** (classeur local) ou **Ajouter au classeur partagé…** (tableau qui n'est que sur votre poste), puis le concepteur s'ouvre. Un classeur figé, un tableau chargé par une requête, une donnée liée du Data Lake ou une source poussée ne reçoivent pas de formulaire. Un membre qui n'est ni propriétaire ni concepteur peut copier le lien des formulaires qui lui sont ouverts.
 

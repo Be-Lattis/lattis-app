@@ -38,7 +38,7 @@ func TestWatchFollowsServer(t *testing.T) {
 		}
 	}
 	wait("en ligne", func(s workbook.State) bool { return s.Online && s.ReadOnly == "Classeur publié en lecture seule" })
-	_, err := workbook.Republish(ctx, fake.As("alice"), a.DB(), nil)
+	_, err := workbook.Republish(ctx, fake.As("alice"), a.DB(), nil, nil)
 	must(t, err)
 	wait("nouvelle version", func(s workbook.State) bool { return s.NewVersion == 2 })
 	fake.SetDown(true)

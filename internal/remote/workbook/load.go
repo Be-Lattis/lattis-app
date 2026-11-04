@@ -152,6 +152,13 @@ func (l *loader) run(tx *sql.Tx) error {
 	for _, t := range l.tables {
 		drop[t.LocalID] = true
 	}
+	// Tableaux recalculés sur chaque poste de la version d'avant : refaits
+	// d'après la nouvelle (loadLocal).
+	if was, err := LocalTables(l.ctx, tx); err != nil {
+		return err
+	} else {
+		maps.Copy(drop, was)
+	}
 	if l.fresh {
 		ids, err := l.allDataTables()
 		if err != nil {
@@ -214,6 +221,9 @@ func (l *loader) run(tx *sql.Tx) error {
 		}
 	}
 	if err := l.loadTables(); err != nil {
+		return err
+	}
+	if err := l.loadLocal(); err != nil {
 		return err
 	}
 	work.Loop(l.ctx, "place", 0)
@@ -654,6 +664,74 @@ func (l *loader) loadTables() error {
 		}
 	}
 	return nil
+}
+
+// loadLocal crée, vides, les tableaux dérivés recalculés sur chaque poste
+// (localTablesKey) et remet les requêtes qui les chargent (localQueriesKey) ;
+// ils se remplissent au recalcul qui suit le chargement (bridge,
+// recomputeLocal). Une requête du poste du même nom est remplacée : celle
+// du serveur l'emporte, comme le reste de la mise en page.
+func (l *loader) loadLocal() error {
+	was, err := LocalTables(l.ctx, l.tx)
+	if err != nil {
+		return err
+	}
+	for id := range was {
+		if err := l.exec(`DELETE FROM _lattis_queries WHERE target = ?`, id); err != nil {
+			return err
+		}
+	}
+	have := idSet(l.layout.Tables["_lattis_tables"], "id")
+	made := map[int64]bool{}
+	var ids []int64
+	for _, id := range l.layout.localIDs() {
+		if !have[id] || made[id] {
+			continue
+		}
+		cols, key := l.layoutColumns(id)
+		for _, q := range canvas.TableSchema(id, cols, key) {
+			if err := l.exec(q); err != nil {
+				return err
+			}
+		}
+		made[id] = true
+		ids = append(ids, id)
+	}
+	if q := l.layout.Tables[localQueriesKey]; q != nil {
+		nAt, sAt, stAt, tAt := q.index("name"), q.index("source"), q.index("steps"), q.index("target")
+		if nAt < 0 || sAt < 0 {
+			return writeLocal(l.ctx, l.tx, ids)
+		}
+		for _, row := range q.Rows {
+			name, _ := row[nAt].(string)
+			src, _ := row[sAt].(string)
+			steps := "[]"
+			if stAt >= 0 {
+				if v, ok := row[stAt].(string); ok {
+					steps = v
+				}
+			}
+			var target any
+			if tAt >= 0 {
+				if id, ok := asInt(row[tAt]); ok && made[id] {
+					target = id
+					if err := l.exec(`DELETE FROM _lattis_queries WHERE target = ?`, id); err != nil {
+						return err
+					}
+				}
+			}
+			if name == "" || src == "" {
+				continue
+			}
+			if err := l.exec(`DELETE FROM _lattis_queries WHERE name = ?`, name); err != nil {
+				return err
+			}
+			if err := l.exec(`INSERT INTO _lattis_queries (name, source, steps, target) VALUES (?, ?, ?, ?)`, name, src, steps, target); err != nil {
+				return err
+			}
+		}
+	}
+	return writeLocal(l.ctx, l.tx, ids)
 }
 
 // toRids remet les rid locaux à la place des lattis_id d'une table de mise

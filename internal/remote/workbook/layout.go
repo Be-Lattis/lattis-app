@@ -74,6 +74,115 @@ type Layout struct {
 	Theme *canvas.Theme `json:"theme,omitempty"`
 }
 
+// Tableaux dérivés recalculés sur chaque poste (Request.Local) : décrits
+// par la mise en page (place, colonnes, mises en forme), sans tableau du
+// serveur. Deux tables de plus dans Layout.Tables, hors de layoutTables :
+// un poste plus ancien les ignore, et la mise en page en direct les garde
+// telles quelles (lview.extra) quand un concepteur l'envoie.
+const (
+	// localTablesKey : identifiants (de la mise en page) des tableaux
+	// recalculés, colonne tbl.
+	localTablesKey = "_lattis_local_tables"
+	// localQueriesKey : requêtes qui les chargent, et celles qu'elles
+	// lisent (lignes de _lattis_queries, sans « refreshed »).
+	localQueriesKey = "_lattis_local_queries"
+)
+
+// queryColumns : colonnes de _lattis_queries publiées avec les tableaux
+// recalculés sur chaque poste.
+var queryColumns = []string{"id", "name", "source", "steps", "target"}
+
+// localIDs : tableaux recalculés sur chaque poste décrits par la mise en
+// page.
+func (l *Layout) localIDs() []int64 {
+	var out []int64
+	if r := l.Tables[localTablesKey]; r != nil {
+		if at := r.index("tbl"); at >= 0 {
+			for _, row := range r.Rows {
+				if id, ok := asInt(row[at]); ok {
+					out = append(out, id)
+				}
+			}
+		}
+	}
+	return out
+}
+
+// addLocal ajoute à la mise en page les tableaux recalculés sur chaque
+// poste et leurs requêtes (avec les requêtes qu'elles lisent, sans
+// tableau chargé chez les autres).
+func (l *Layout) addLocal(ctx context.Context, q txOrDB, local []int64) error {
+	delete(l.Tables, localTablesKey)
+	delete(l.Tables, localQueriesKey)
+	if len(local) == 0 {
+		return nil
+	}
+	ids := &LayoutRows{Columns: []string{"tbl"}, Rows: [][]any{}}
+	for _, id := range slices.Sorted(slices.Values(local)) {
+		ids.Rows = append(ids.Rows, []any{id})
+	}
+	rows := &LayoutRows{Columns: queryColumns, Rows: [][]any{}}
+	seen := map[string]bool{}
+	var add func(where string, arg any, target bool) error
+	add = func(where string, arg any, target bool) error {
+		var id int64
+		var name, src, steps string
+		var tgt sql.NullInt64
+		err := q.QueryRowContext(ctx, `SELECT id, name, source, steps, target FROM _lattis_queries WHERE `+where, arg).Scan(&id, &name, &src, &steps, &tgt)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if seen[strings.ToLower(name)] {
+			return nil
+		}
+		seen[strings.ToLower(name)] = true
+		var t any
+		if target && tgt.Valid {
+			t = tgt.Int64
+		}
+		rows.Rows = append(rows.Rows, []any{id, name, src, steps, t})
+		// Requêtes lues par celle-ci (source et étapes) : publiées sans
+		// tableau, pour qu'elle se rejoue.
+		for _, ref := range queryRefs(src, steps) {
+			if err := add(`name = ?`, ref, false); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, id := range local {
+		if err := add(`target = ?`, id, true); err != nil {
+			return err
+		}
+	}
+	l.Tables[localTablesKey], l.Tables[localQueriesKey] = ids, rows
+	return nil
+}
+
+// queryRefs donne les requêtes du classeur qu'une requête lit (source de
+// genre « query », et sources des étapes).
+func queryRefs(src, steps string) []string {
+	var out []string
+	var main querySource
+	if json.Unmarshal([]byte(src), &main) == nil && main.Kind == "query" && main.Query != "" {
+		out = append(out, main.Query)
+	}
+	var st []struct {
+		Other *querySource `json:"other"`
+	}
+	if json.Unmarshal([]byte(steps), &st) == nil {
+		for _, x := range st {
+			if x.Other != nil && x.Other.Kind == "query" && x.Other.Query != "" {
+				out = append(out, x.Other.Query)
+			}
+		}
+	}
+	return out
+}
+
 // LayoutRows sont les lignes d'une table de métadonnées.
 type LayoutRows struct {
 	Columns []string `json:"columns"`

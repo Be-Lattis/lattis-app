@@ -187,6 +187,8 @@
 		loading?: boolean;
 		/** Partager le tableau au Data Lake Lattis (clic droit sur un tableau). */
 		onsharedata?: (table: string) => void;
+		/** Classeur partagé : clic droit sur un tableau › Tableau › Générer un formulaire. */
+		onform?: (table: string) => void;
 		/** Classeur partagé en direct : clic droit sur un tableau qui n'est que sur ce poste › « Ajouter au classeur partagé ». */
 		onaddshared?: (table: string) => void;
 		/** Tableaux publiés seuls comme source du Data Lake (sans le classeur). */
@@ -201,7 +203,7 @@
 		comments?: CommentHost;
 	}
 
-	let { data, source: rawSource, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, loading = false, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onsharedata, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing, comments }: Props = $props();
+	let { data, source: rawSource, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, loading = false, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onsharedata, onform, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing, comments }: Props = $props();
 
 	// Actions sur des cellules, lignes ou colonnes : leur zone reçoit un
 	// reflet animé jusqu'à leur fin (working.ts, drawWorking).
@@ -544,6 +546,7 @@
 		get onreflink() { return onreflink; },
 		get onrowlink() { return onrowlink; },
 		get onsharedata() { return onsharedata; },
+		get onform() { return onform; },
 		get onsheet() { return onsheet; },
 		get onstatus() { return onstatus; },
 		get onzoom() { return onzoom; },

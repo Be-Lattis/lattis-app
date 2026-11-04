@@ -985,7 +985,7 @@
 	},
 	"validation": {
 		"notAllowed": "“{value}” is not allowed here: choose from the list ({list}), Alt+↓ to open it",
-		"missingSource": "Enter the source range: Table[Column], Cell[A1:A10] or Sheet2!Cell[A1:A10] (“Select” to pick it)",
+		"missingSource": "Choose a table column, or enter a range: Cell[A1:A10] or Sheet2!Cell[A1:A10] (“Select a range” to point at it)",
 		"missingValues": "Enter at least one value (one per line, or separated by “;”)",
 		"preview": {
 			"notFound": "Source not found: {error}",
@@ -1017,19 +1017,23 @@
 		"pick": "Select the source range (on this sheet or another), then Enter (Esc: cancel)",
 		"pick.oneColumn": "A source range covers a single table column, or free cells",
 		"range": {
-			"help": "A table column (Customers[City]), cells (Cell[A1:A10]) or a named cell.",
+			"help": "A table column, or cells (Cell[A1:A10]) or a named cell.",
 			"aria": "Source range",
 			"placeholder": "Customers[City]"
+		},
+		"column": {
+			"label": "Column",
+			"choose": "Choose a table or a column…"
 		},
 		"pick.source": "Source range:",
 		"title": "Data validation — {target}",
 		"source": "Source of the list",
 		"mode": {
 			"list": "Typed values",
-			"range": "Range"
+			"range": "Column or range"
 		},
-		"pick.tooltip": "Pick the range in the sheet (Enter to come back)",
-		"pick.button": "Select",
+		"pick.tooltip": "Hide this window and point at the range in the sheet (Enter to come back)",
+		"pick.button": "Select a range",
 		"reading": "Reading the range…",
 		"clear": "Clear validation",
 		"listMenu": {
@@ -1602,6 +1606,8 @@
 		"handForget.tooltip": "Values entered on rows gone from the result (Ctrl+Z to undo)",
 		"addShared": "Add to the shared workbook…",
 		"addShared.tooltip": "Create this table, with its rows, in the shared workbook, for all members",
+		"form": "Generate a form…",
+		"form.tooltip": "Create a web page that adds rows to this table",
 		"shareData": "Share to the Lattis Data Lake…",
 		"shareData.tooltip": "Make this table readable from other workbooks on the server",
 		"pushSource": "Update the Data Lake source",

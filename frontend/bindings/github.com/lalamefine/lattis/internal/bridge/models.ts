@@ -1141,6 +1141,12 @@ export interface ShareRequest {
      * Tables : tableaux publiés ; les autres restent privés.
      */
     "tables": number[] | null;
+
+    /**
+     * Local : tableaux dérivés recalculés sur chaque poste (pas stockés
+     * sur le serveur ; workbook.Request.Local).
+     */
+    "local": number[] | null;
 }
 
 /**

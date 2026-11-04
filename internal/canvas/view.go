@@ -104,8 +104,9 @@ type TableInfo struct {
 	// de lignes disparues dont des valeurs saisies sont mises de côté.
 	HandKey  string `json:"handKey,omitempty"`
 	HandKept int    `json:"handKept,omitempty"`
-	// Classeur partagé : "published" (tableau publié sur le serveur) ou
-	// "private" (resté local) ; vide pour un classeur local.
+	// Classeur partagé : "published" (tableau publié sur le serveur),
+	// "local" (dérivé, recalculé sur chaque poste) ou "private" (resté
+	// local) ; vide pour un classeur local.
 	Shared string `json:"shared,omitempty"`
 	// ReadOnly : pourquoi le tableau publié ne se modifie pas (« Classeur
 	// publié en lecture seule », « Hors ligne, lecture seule »), vide sinon.

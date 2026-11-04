@@ -160,7 +160,7 @@ func TestShareFrozenWorkbook(t *testing.T) {
 	}
 	_, err = a.SetCell(ctx, 1, 1, 1, "5")
 	mustShare(t, err)
-	_, err = a.ShareRepublish(ctx, nil)
+	_, err = a.ShareRepublish(ctx, nil, nil)
 	mustShare(t, err)
 	waitShare(t, hb, "nouvelle version", func(s workbook.State) bool { return s.NewVersion == 2 })
 	_, err = b.ShareReload(ctx)

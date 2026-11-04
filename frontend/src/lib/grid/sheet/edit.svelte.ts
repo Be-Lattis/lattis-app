@@ -26,6 +26,8 @@ import { cellNameProblem, columnNameProblem, refusedName, tableNameProblem, type
 import { nameAlertOpen, refuseName } from '#lib/ui/nameAlert.js';
 import { alignment } from '../format';
 import { errorText, t as tr } from '#lib/i18n/index.js';
+import { writeQueued } from '#lib/shell/busy.js';
+import { againIfLost } from '#lib/web/lost.js';
 import { type SheetPivot, type SheetTable, type SheetSource, type TextField, type Range, type Entry } from './model';
 
 /** Ce que createEdit lit et modifie dans Sheet.svelte. */
@@ -316,9 +318,28 @@ export function createEdit(h: EditHost) {
 	// (sur sa cellule) au lieu d'être perdu.
 	// onrefused : reçoit le refus du moteur (renommage depuis la zone de nom).
 	// key : réponse à la question de la clé (keyDlg).
+	// Saisies en file, pas encore écrites par le moteur (« ligne,colonne » →
+	// texte) : derrière une liaison lente, la grille relue ne les montre pas
+	// encore ; retaper l'ancienne valeur doit quand même partir.
+	const queued = new Map<string, { raw: string; n: number }>();
 	function write(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void, key?: KeyChoice): Promise<void> {
-		h.writing = h.writing.catch(() => undefined).then(() => writeNow(row, col, raw, keep, onrefused, key));
+		const k = h.key(row, col);
+		const q = queued.get(k);
+		queued.set(k, { raw, n: (q?.n ?? 0) + 1 });
+		const end = writeQueued();
+		h.writing = h.writing
+			.catch(() => undefined)
+			.then(() => writeNow(row, col, raw, keep, onrefused, key))
+			.finally(() => {
+				end();
+				const q = queued.get(k);
+				if (q && --q.n === 0) queued.delete(k);
+			});
 		return h.writing;
+	}
+	/** Texte de la cellule tel qu'il sera une fois la file écrite. */
+	function valueAfterQueue(row: number, col: number): string {
+		return queued.get(h.key(row, col))?.raw ?? h.cellInfo(row, col).value;
 	}
 
 	async function writeNow(row: number, col: number, raw: string, keep = false, onrefused?: (e: unknown) => void, key?: KeyChoice) {
@@ -349,7 +370,9 @@ export function createEdit(h: EditHost) {
 		h.typed = { row, col, t: performance.now() };
 		try {
 			// Colonne sur un niveau saisie depuis la bande : c'est son en-tête.
-			const m = await h.source.setCell(info.kind === 'header' ? info.e!.t.row : row, col, raw, target, key);
+			// Liaison coupée avant la réponse (version web) : la même saisie repart
+			// à la reconnexion, au lieu de revenir dans l'éditeur comme refusée.
+			const m = await againIfLost(() => h.source.setCell(info.kind === 'header' ? info.e!.t.row : row, col, raw, target, key));
 			h.lastEditMs = performance.now() - t0;
 			if (info.kind === 'data' && isFormula(raw) && info.e) {
 				const name = info.e.t.columns[info.i!]?.name;
@@ -453,7 +476,7 @@ export function createEdit(h: EditHost) {
 		}
 		h.editing = false;
 		h.editErr = null;
-		if (text !== h.cellInfo(row, col).value) {
+		if (text !== valueAfterQueue(row, col)) {
 			write(row, col, text, true);
 			h.lastRepeat = () => write(h.active.row, h.active.col, text);
 		}

@@ -304,7 +304,7 @@ func TestRepublishKeepsLocalAdditions(t *testing.T) {
 		t.Logf("identifiants : stock %d, perso %d", stock, perso)
 	}
 	must(t, a.RenameTable(ctx, nameOf(t, a, stock), "Stock"))
-	info2, err := workbook.Republish(ctx, fake.As("alice"), a.DB(), []int64{tableID(t, a, "Ventes"), tableID(t, a, "Stock")})
+	info2, err := workbook.Republish(ctx, fake.As("alice"), a.DB(), []int64{tableID(t, a, "Ventes"), tableID(t, a, "Stock")}, nil)
 	must(t, err)
 	if info2.Version != 2 {
 		t.Fatalf("version %d", info2.Version)
@@ -579,7 +579,7 @@ func TestPublishFailureLeavesNothing(t *testing.T) {
 	list, _ = fake.As("alice").Workbooks(ctx)
 	must(t, fake.Grant(list[0].ID, "bob", "reader"))
 	r := open(t, fake.As("bob"), list[0].ID, "bob")
-	if _, err := workbook.Republish(ctx, fake.As("bob"), r.DB(), nil); err == nil || !strings.Contains(err.Error(), "propriétaires") {
+	if _, err := workbook.Republish(ctx, fake.As("bob"), r.DB(), nil, nil); err == nil || !strings.Contains(err.Error(), "propriétaires") {
 		t.Fatalf("republication par un lecteur : %v", err)
 	}
 }

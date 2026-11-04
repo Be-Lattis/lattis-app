@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"github.com/lalamefine/lattis/internal/doc"
 	"github.com/lalamefine/lattis/internal/grid"
 	"github.com/lalamefine/lattis/internal/msg"
+	"github.com/lalamefine/lattis/internal/query"
 	"github.com/lalamefine/lattis/internal/remote/auth"
 	"github.com/lalamefine/lattis/internal/remote/collab"
 	"github.com/lalamefine/lattis/internal/remote/pgpool"
@@ -709,6 +711,9 @@ type ShareRequest struct {
 	Mode string `json:"mode"`
 	// Tables : tableaux publiés ; les autres restent privés.
 	Tables []int64 `json:"tables"`
+	// Local : tableaux dérivés recalculés sur chaque poste (pas stockés
+	// sur le serveur ; workbook.Request.Local).
+	Local []int64 `json:"local"`
 }
 
 // SharePublish publie le classeur ouvert sur un Serveur Lattis (Fichier ›
@@ -726,7 +731,7 @@ func (s *DocumentService) SharePublish(ctx context.Context, req ShareRequest) (w
 	server, _ := auth.NormalizeURL(req.Server)
 	return s.publishTracked(ctx, d, func(ctx context.Context) error {
 		_, err := workbook.Publish(ctx, srv, d.DB(), workbook.Request{
-			Server: server, ServerName: name, User: user.PGRole, Title: req.Title, Mode: req.Mode, Tables: req.Tables,
+			Server: server, ServerName: name, User: user.PGRole, Title: req.Title, Mode: req.Mode, Tables: req.Tables, Local: req.Local,
 		})
 		return err
 	})
@@ -762,9 +767,32 @@ func (s *DocumentService) ShareCanPublish(ctx context.Context, server string) (b
 	return srv.CanCreateWorkbooks(ctx)
 }
 
+// ShareLakeCanPublish dit si le compte connecté à server peut publier des
+// tableaux seuls au Data Lake Lattis (sources poussées prises en charge
+// par le serveur, droit de publier au catalogue) : sinon, Publier sur un
+// serveur ne propose que le classeur complet.
+func (s *DocumentService) ShareLakeCanPublish(ctx context.Context, server string) (bool, error) {
+	if server == "" {
+		return false, nil
+	}
+	srv, _, _, err := remoteServer(ctx, server)
+	if err != nil {
+		return false, err
+	}
+	if ok, err := srv.PushedSourcesSupported(ctx); err != nil || !ok {
+		return false, err
+	}
+	cat, err := s.DataCatalog(ctx, server)
+	if err != nil {
+		return false, err
+	}
+	return cat.CanPublish, nil
+}
+
 // ShareRepublish publie une nouvelle version du classeur figé ouvert
-// (Fichier › Republier) ; tables nil : les tableaux déjà publiés.
-func (s *DocumentService) ShareRepublish(ctx context.Context, tables []int64) (workbook.State, error) {
+// (Fichier › Republier) ; tables nil : les tableaux déjà publiés ; local :
+// tableaux recalculés sur chaque poste (nil : ceux qui l'étaient).
+func (s *DocumentService) ShareRepublish(ctx context.Context, tables, local []int64) (workbook.State, error) {
 	d, err := s.current()
 	if err != nil {
 		return workbook.State{}, err
@@ -778,7 +806,7 @@ func (s *DocumentService) ShareRepublish(ctx context.Context, tables []int64) (w
 		return workbook.State{}, err
 	}
 	return s.publishTracked(ctx, d, func(ctx context.Context) error {
-		_, err := workbook.Republish(ctx, srv, d.DB(), tables)
+		_, err := workbook.Republish(ctx, srv, d.DB(), tables, local)
 		return err
 	})
 }
@@ -802,6 +830,7 @@ func (s *DocumentService) afterShare(ctx context.Context, d *doc.Document) (work
 // prévenue, suivi du serveur (re)lancé.
 func (s *DocumentService) shareReady(ctx context.Context, d *doc.Document) (workbook.State, error) {
 	d.Share.SetOnline(true, "")
+	s.recomputeLocal(ctx, d)
 	s.mu.Lock()
 	s.tables, s.memo = map[int64]*grid.Table{}, nil
 	s.mu.Unlock()
@@ -813,9 +842,29 @@ func (s *DocumentService) shareReady(ctx context.Context, d *doc.Document) (work
 	return shownState(d), nil
 }
 
+// recomputeLocal recalcule les tableaux dérivés recalculés sur chaque poste
+// (workbook.LocalQueries) : leur requête vient de la mise en page publiée,
+// leurs lignes ne sont pas sur le serveur. Fait à l'ouverture et après un
+// chargement ; une requête en échec laisse son tableau tel quel (l'erreur
+// va au journal).
+func (s *DocumentService) recomputeLocal(ctx context.Context, d *doc.Document) {
+	ids, err := workbook.LocalQueries(ctx, d.DB().Read())
+	if err != nil || len(ids) == 0 {
+		return
+	}
+	ctx = query.GuardFrom(ctx, s.sys())
+	env := s.queryEnv(d)
+	for _, id := range ids {
+		if _, err := query.Refresh(ctx, env, id); err != nil {
+			slog.Warn("recalcul d'un tableau dérivé du classeur partagé", "query", id, "err", err)
+		}
+	}
+}
+
 // shareShown : classeur partagé d tout juste ouvert (ShareOpen, suivi déjà
 // lancé par replace) : interface prévenue.
 func (s *DocumentService) shareShown(ctx context.Context, d *doc.Document) (workbook.State, error) {
+	s.recomputeLocal(ctx, d)
 	if _, err := s.changed(ctx); err != nil {
 		return shownState(d), err
 	}

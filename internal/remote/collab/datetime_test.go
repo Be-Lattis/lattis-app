@@ -278,7 +278,7 @@ func frozenDateTimes(t *testing.T, publisher workbook.Server, aliceUser string, 
 		_, err = d.SetCell(ctx, 1, 1+i, 1, "2"+string(rune('3'+i))+"/10/2026")
 		must(t, err)
 	}
-	_, err = workbook.Republish(ctx, publisher, d.DB(), nil)
+	_, err = workbook.Republish(ctx, publisher, d.DB(), nil, nil)
 	must(t, err)
 	r2 := &client{t: t, name: "bob", d: pgOpen(t, srv, info.WorkbookID, user)}
 	if ty := remoteTypes(t, r2); ty["Quand"] != "datetime" || ty["Jour"] != "datetime" {

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/coder/websocket"
 )
@@ -90,6 +91,9 @@ type Hub struct {
 	// cours d'ouverture), dans sa goroutine : les autres appels et « $/cancel »
 	// passent ; nil : rien n'est retenu.
 	Hold func(ctx context.Context, m *Method)
+	// Free : appels qui n'attendent pas leur tour (« Annuler », ce qui
+	// affiche la page) ; nil : tous attendent.
+	Free func(m *Method) bool
 	// OnConnect est appelé à chaque nouvelle connexion, une fois comptée
 	// (redire ce qui est en cours à un onglet qui arrive).
 	OnConnect func()
@@ -109,6 +113,38 @@ type conn struct {
 	ctx    context.Context
 	mu     sync.Mutex
 	cancel map[string]context.CancelFunc // appels en cours, par id
+	last   *turn                         // dernier appel arrivé (ordre)
+}
+
+// Overtake : durée au-delà de laquelle un appel en cours n'est plus attendu
+// par le suivant (import, actualisation, publication) : l'interface reste
+// réactive derrière un appel long.
+var Overtake = 2 * time.Second
+
+// turn est la place d'un appel dans l'ordre d'arrivée de sa connexion.
+type turn struct {
+	started chan struct{} // fermé quand l'appel s'exécute
+	done    chan struct{} // fermé quand il a fini
+}
+
+// wait attend le tour de l'appel qui suit t : t fini, ou en cours depuis
+// Overtake.
+func (t *turn) wait(ctx context.Context) {
+	if t == nil {
+		return
+	}
+	select {
+	case <-t.started:
+	case <-ctx.Done():
+		return
+	}
+	timer := time.NewTimer(Overtake)
+	defer timer.Stop()
+	select {
+	case <-t.done:
+	case <-timer.C:
+	case <-ctx.Done():
+	}
 }
 
 func (c *conn) send(v any) error {
@@ -245,9 +281,29 @@ func (h *Hub) handle(c *conn, req request) {
 		c.mu.Unlock()
 	}
 	// Chaque appel dans sa goroutine, comme Wails : un appel long (boîte
-	// de dialogue d'un script, import) ne bloque pas les autres.
+	// de dialogue d'un script, import) ne bloque pas les autres. Mais dans
+	// l'ordre d'arrivée : chacun attend que le précédent ait fini (au plus
+	// Overtake après son début). Sans cela, des appels arrivés d'un bloc
+	// (file vidée à la reconnexion, appels retenus par Hold puis relâchés
+	// ensemble, saisie rapide derrière une liaison lente) s'exécutaient
+	// dans le désordre : une saisie plus ancienne écrasait la dernière.
+	var prev, mine *turn
+	if h.Free == nil || !h.Free(m) {
+		mine = &turn{started: make(chan struct{}), done: make(chan struct{})}
+		c.mu.Lock()
+		prev, c.last = c.last, mine
+		c.mu.Unlock()
+	}
 	go func() {
 		defer func() {
+			if mine != nil {
+				select {
+				case <-mine.started:
+				default:
+					close(mine.started)
+				}
+				close(mine.done)
+			}
 			cancel()
 			if len(req.ID) > 0 {
 				c.mu.Lock()
@@ -257,6 +313,10 @@ func (h *Hub) handle(c *conn, req request) {
 		}()
 		if h.Hold != nil {
 			h.Hold(ctx, m)
+		}
+		prev.wait(ctx)
+		if mine != nil {
+			close(mine.started)
 		}
 		res, err := m.Call(ctx, params)
 		if len(req.ID) == 0 {

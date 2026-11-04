@@ -190,7 +190,7 @@ func TestShareReloadProgressAndCancel(t *testing.T) {
 	mustShare(t, err)
 	check, err := author.ShareCheck(ctx)
 	mustShare(t, err)
-	_, err = author.ShareRepublish(ctx, []int64{check.Tables[0].ID})
+	_, err = author.ShareRepublish(ctx, []int64{check.Tables[0].ID}, nil)
 	mustShare(t, err)
 
 	first := func() string {

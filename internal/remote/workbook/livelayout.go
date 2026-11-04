@@ -564,8 +564,9 @@ type local struct {
 	dump *Layout
 	view *lview
 	orig map[string]map[string]lrow
-	// published : tableaux publiés du poste.
-	published map[int64]bool
+	// published : tableaux publiés du poste ; recomputed : tableaux
+	// recalculés sur chaque poste (mise en page seulement).
+	published, recomputed map[int64]bool
 }
 
 // readLocal lit la mise en page du poste (tableaux publiés seulement).
@@ -591,11 +592,22 @@ func readLocal(ctx context.Context, q txOrDB, ids idMaps) (*local, error) {
 	if err != nil {
 		return nil, err
 	}
-	dump, err := dumpLayout(ctx, q, meta.Version, pub, rids)
+	// Tableaux recalculés sur chaque poste : dans la mise en page, sans
+	// lignes partagées (leurs mises en forme par ligne restent au poste).
+	recomputed, err := LocalTables(ctx, q)
 	if err != nil {
 		return nil, err
 	}
-	l := &local{dump: dump, published: pub}
+	shown := maps.Clone(pub)
+	for id := range recomputed {
+		shown[id] = true
+		rids[id] = map[int64]string{}
+	}
+	dump, err := dumpLayout(ctx, q, meta.Version, shown, rids)
+	if err != nil {
+		return nil, err
+	}
+	l := &local{dump: dump, published: pub, recomputed: recomputed}
 	l.translate(ids)
 	return l, nil
 }
@@ -607,6 +619,11 @@ func (l *local) translate(ids idMaps) {
 	l.orig = map[string]map[string]lrow{}
 	toLayout := map[int64]int64{}
 	for tbl := range l.published {
+		if lid, ok := ids.toLayout("table", tbl); ok {
+			toLayout[tbl] = lid
+		}
+	}
+	for tbl := range l.recomputed {
 		if lid, ok := ids.toLayout("table", tbl); ok {
 			toLayout[tbl] = lid
 		}

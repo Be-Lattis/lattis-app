@@ -59,7 +59,7 @@ func TestPostgresCollaborativePublish(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("%d entrées en attente", n)
 	}
-	if _, err := workbook.Republish(ctx, env.as(alice), a.DB(), nil); err == nil {
+	if _, err := workbook.Republish(ctx, env.as(alice), a.DB(), nil, nil); err == nil {
 		t.Fatal("un classeur collaboratif ne se republie pas")
 	}
 }
@@ -161,7 +161,7 @@ func TestPostgresFrozenLifecycle(t *testing.T) {
 	if len(scripts) != 1 {
 		t.Fatalf("scripts : %+v", scripts)
 	}
-	if _, err := workbook.Republish(ctx, env.as(bob), r.DB(), nil); err == nil {
+	if _, err := workbook.Republish(ctx, env.as(bob), r.DB(), nil, nil); err == nil {
 		t.Fatal("un lecteur republie")
 	}
 
@@ -178,7 +178,7 @@ func TestPostgresFrozenLifecycle(t *testing.T) {
 	}
 	_, err = a.SetCell(ctx, 1, 1, 2, "5")
 	must(t, err)
-	info2, err := workbook.Republish(ctx, env.as(alice), a.DB(), nil)
+	info2, err := workbook.Republish(ctx, env.as(alice), a.DB(), nil, nil)
 	must(t, err)
 	if info2.Version != 2 || info2.Schema == info.Schema {
 		t.Fatalf("republication : %+v", info2)

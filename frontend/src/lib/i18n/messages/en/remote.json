@@ -1233,7 +1233,28 @@
 		"stay": "{n, plural, one {# table stays} other {# tables stay}} on this computer only.",
 		"stayWeb": "{n, plural, one {# table won't be published: lost when the session ends, unless you download.} other {# tables won't be published: lost when the session ends, unless you download.}}",
 		"uncheckIt": "{problem} — untick it",
-		"stayDraft": "{n, plural, one {# table will not be published: kept in your draft.} other {# tables will not be published: kept in your draft.}}"
+		"stayDraft": "{n, plural, one {# table will not be published: kept in your draft.} other {# tables will not be published: kept in your draft.}}",
+		"scope": {
+			"label": "Publish",
+			"workbook": "The whole workbook",
+			"workbookHelp": ": all its tables, layout and scripts",
+			"lake": "Only some tables",
+			"lakeHelp": ": each one becomes a Lattis Data Lake dataset; the workbook stays on this computer"
+		},
+		"lake": {
+			"tables": "Tables to send to the Lattis Data Lake",
+			"help": "Tick the tables to publish. For each one you will then choose its folder, its columns and who can read it.",
+			"why": "Tick at least one table.",
+			"next": "Continue"
+		},
+		"derived": {
+			"legend": "Calculated from the workbook (query “{query}”)",
+			"stored": "Stored on the server: its rows are published like those of an entered table",
+			"local": "Recalculated on each computer: not stored on the server, rebuilt by everyone from the published tables",
+			"badge": "recalculated",
+			"localTooltip": "Not stored on the server: recalculated on each computer from the published tables"
+		},
+		"noStored": "No entered column: it stays on this computer."
 	},
 	"dataShare": {
 		"title": {

@@ -8,6 +8,7 @@
 
 import { t } from '#lib/i18n/index.js';
 import { callStarted } from '#lib/shell/busy.js';
+import { markLost } from './lost.js';
 
 // ---------------------------------------------------------------- promesses
 
@@ -209,7 +210,7 @@ export class RpcClient {
 		ws.onerror = () => {};
 		ws.onclose = () => {
 			this.#ws = null;
-			for (const p of this.#pending.values()) p.reject(new RuntimeError(t('doc.web.lost')));
+			for (const p of this.#pending.values()) p.reject(markLost(new RuntimeError(t('doc.web.lost'))));
 			this.#pending.clear();
 			if (this.#closed) return;
 			// La page le montre (bandeau) : les appels suivants attendent la

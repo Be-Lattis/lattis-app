@@ -2750,6 +2750,16 @@ export function ShareInvitePerson(email: string, roles: string[] | null): $Cance
 }
 
 /**
+ * ShareLakeCanPublish dit si le compte connecté à server peut publier des
+ * tableaux seuls au Data Lake Lattis (sources poussées prises en charge
+ * par le serveur, droit de publier au catalogue) : sinon, Publier sur un
+ * serveur ne propose que le classeur complet.
+ */
+export function ShareLakeCanPublish(server: string): $CancellablePromise<boolean> {
+    return $Call.ByID(513576887, server);
+}
+
+/**
  * ShareLocalCopy enregistre une copie locale du classeur partagé ouvert,
  * détachée du serveur (boîte Enregistrer sous), puis l'ouvre.
  */
@@ -2825,10 +2835,11 @@ export function ShareRemove(): $CancellablePromise<$models.OpenResult> {
 
 /**
  * ShareRepublish publie une nouvelle version du classeur figé ouvert
- * (Fichier › Republier) ; tables nil : les tableaux déjà publiés.
+ * (Fichier › Republier) ; tables nil : les tableaux déjà publiés ; local :
+ * tableaux recalculés sur chaque poste (nil : ceux qui l'étaient).
  */
-export function ShareRepublish(tables: number[] | null): $CancellablePromise<workbook$0.State> {
-    return $Call.ByID(740882395, tables);
+export function ShareRepublish(tables: number[] | null, local: number[] | null): $CancellablePromise<workbook$0.State> {
+    return $Call.ByID(740882395, tables, local);
 }
 
 /**

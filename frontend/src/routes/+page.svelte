@@ -94,6 +94,7 @@
 	import DraftStatusBar from '#lib/shell/DraftStatus.svelte';
 	import { draftStatus, type DraftStatus } from '#lib/shell/draft.js';
 	import { get } from 'svelte/store';
+	import { unsentWrites } from '#lib/shell/busy.js';
 	import UpdateStatus from '#lib/shell/UpdateStatus.svelte';
 	import { syncOf, type SyncStatus } from '#lib/shell/sync.js';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -1146,7 +1147,8 @@
 		// Web : Ctrl+W ou la fermeture de l'onglet demandent confirmation
 		// quand le classeur a des modifications non enregistrées.
 		const leave = (e: BeforeUnloadEvent) => {
-			if (isWeb && mode === 'doc' && (docState.dirty || docState.privateTables) && get(draftStatus).state !== 'saved') {
+			// Saisies encore en file (liaison lente) : pas encore dans le classeur.
+			if (isWeb && mode === 'doc' && (((docState.dirty || docState.privateTables) && get(draftStatus).state !== 'saved') || get(unsentWrites) > 0)) {
 				e.preventDefault();
 				e.returnValue = ''; // anciens navigateurs
 			}
@@ -1248,7 +1250,7 @@
 						query: t.queryId ? { id: t.queryId, name: t.queryName } : undefined,
 						handKey: t.handKey || undefined,
 						handKept: t.handKept || undefined,
-						shared: (t.shared || undefined) as 'published' | 'private' | undefined,
+						shared: (t.shared || undefined) as 'published' | 'private' | 'local' | undefined,
 						readOnly: t.readOnly || undefined,
 						access: t.access || undefined,
 						filtered: t.filtered || undefined,
@@ -1865,6 +1867,7 @@
 						onreflink={mode === 'doc' ? followReference : undefined}
 						onrefback={mode === 'doc' ? refGoBack : undefined}
 						onsharedata={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => (dataShare = t) : undefined}
+						onform={mode === 'doc' && share?.shared && !share.gone ? (t) => (formShare = t) : undefined}
 						onaddshared={mode === 'doc' && share?.mode === 'collaborative' ? (t) => void addToShared(t) : undefined}
 						{sourceTables}
 						onpushsource={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => void pushSource(t) : undefined}

@@ -2,6 +2,15 @@
 
 A workbook shared on a Lattis Server is edited by several people, live; its tables can also feed the Data Lake or be filled in through a form.
 
+## Publish a workbook on a server {#publier-un-classeur-sur-un-serveur}
+
+**File › Publish to a server…** always publishes the **whole workbook**: all its tables, layout and scripts. Choose the server, the title and the mode (**Frozen**: read-only for everyone, you republish new versions; **Collaborative**: everyone edits according to their rights). The dialog lists the tables with anything to fix before publishing (names, invalid entries). A table with no entered column stays on your computer.
+
+- **Table calculated from the workbook** (a table linked to a formula, such as `=FILTER(Tracking,…)` converted to a table, or a query that only reads tables of the workbook): choose **Stored on the server** (its rows are published like those of an entered table) or **Recalculated on each computer** (only its definition is published; each member rebuilds it when opening and as soon as its source tables change, on their own computer; it is marked “recalculated”). Recalculating on each computer avoids a change to a source table rewriting the calculated table for everyone.
+- **Only some tables**: if your account can publish to the Lattis Data Lake, the dialog also offers to publish only chosen tables. The workbook then stays on your computer; each ticked table then goes through the Data Lake dialog (folder, columns, audience), like **Publish only this table as a data source** below.
+
+**File › Republish** (frozen workbook) likewise publishes the whole workbook, with the same choices for calculated tables.
+
 ## Add a table to a live shared workbook {#ajouter-un-tableau-a-un-classeur-partage-en-direct}
 
 In a collaborative workbook (shared live on a Lattis Server), a table created after publishing by an owner or a designer (typed, pasted, inserted, converted from a range…) is added to the shared workbook automatically, as soon as it is created; offline, on reconnection. A table that stays on your computer (loaded by a query, refused by the server, or created by an editor) carries the amber **on this computer** badge above its frame: the other members don't see it. Clicking the badge, or right-clicking the table › **Add to shared workbook…**, creates it in the server's workbook, with its rows: the other members receive it right away (in the same place on the sheet, or below if the place is taken on their side), with a message in the status bar, and it then syncs like the other shared tables (entries, conflicts, rights). The same action is offered by **Share to Lattis Data Lake…** (“Add this table to the shared workbook”, first) and in **Manage access** › Roles and rights, under the list of tables.
@@ -49,7 +58,7 @@ You need the “data publisher” role on the server, and a server that accepts 
 
 ## Share a table as a form {#partager-un-tableau-comme-formulaire}
 
-Put the active cell in a table, then **Insert › Form**: a web page lets people fill in this table without opening the workbook, from a phone or a computer. Each submission adds a row, which members see arrive live; the row is written in the form's name (“Form: <title>”), the respondent has no rights on the workbook.
+Put the active cell in a table, then **Insert › Form** (in a shared workbook, also right-click the table › Table › **Generate a form…**): a web page lets people fill in this table without opening the workbook, from a phone or a computer. Each submission adds a row, which members see arrive live; the row is written in the form's name (“Form: <title>”), the respondent has no rights on the workbook.
 
 The form is served by the Lattis Server: the table must be published in a collaborative workbook, by an owner or a designer of the workbook, online. Otherwise, the dialog says what is missing and offers the action to do first: **Publish to a server…** (local workbook) or **Add to shared workbook…** (table that is only on your computer), then the designer opens. A frozen workbook, a table loaded by a query, a linked Data Lake data item or a pushed source can't get a form. A member who is neither owner nor designer can copy the link of the forms open to them.
 

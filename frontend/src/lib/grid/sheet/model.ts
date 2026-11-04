@@ -286,7 +286,7 @@ export interface SheetTable {
 	handKey?: string;
 	handKept?: number;
 	/** Classeur partagé : tableau publié sur le serveur, ou resté privé (sur ce poste). */
-	shared?: 'published' | 'private';
+	shared?: 'published' | 'private' | 'local';
 	/** Tableau publié en lecture seule : le message à afficher (« Classeur publié en lecture seule »). */
 	readOnly?: string;
 	/** Classeur collaboratif : niveau sur le tableau publié (participant : ses lignes seulement). */

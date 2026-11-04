@@ -4,7 +4,8 @@
 // Un moteur neuf (cmd/lattis-engine) par parcours, profil isolé (e2e/fixtures.ts).
 // Navigateur déjà installé : LATTIS_E2E_CHANNEL (msedge par défaut sous
 // Windows, chrome ailleurs) ; « chromium » pour celui de Playwright
-// (npx playwright install chromium). Go doit être dans le PATH, sauf si
+// (npx playwright install chromium), LATTIS_E2E_EXECUTABLE son chemin s'il
+// est installé ailleurs. Go doit être dans le PATH, sauf si
 // LATTIS_E2E_ENGINE désigne un moteur déjà compilé (go build -tags web).
 import { defineConfig } from '@playwright/test';
 
@@ -21,6 +22,8 @@ export default defineConfig({
 	reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
 	use: {
 		channel: channel === 'chromium' ? undefined : channel,
+		// LATTIS_E2E_EXECUTABLE : navigateur déjà installé ailleurs (conteneur).
+		launchOptions: process.env.LATTIS_E2E_EXECUTABLE ? { executablePath: process.env.LATTIS_E2E_EXECUTABLE } : undefined,
 		viewport: { width: 1400, height: 900 },
 		locale: 'fr-FR',
 		acceptDownloads: true,

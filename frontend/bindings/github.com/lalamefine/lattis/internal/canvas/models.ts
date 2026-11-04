@@ -2741,8 +2741,9 @@ export interface TableInfo {
     "handKept"?: number;
 
     /**
-     * Classeur partagé : "published" (tableau publié sur le serveur) ou
-     * "private" (resté local) ; vide pour un classeur local.
+     * Classeur partagé : "published" (tableau publié sur le serveur),
+     * "local" (dérivé, recalculé sur chaque poste) ou "private" (resté
+     * local) ; vide pour un classeur local.
      */
     "shared"?: string;
 

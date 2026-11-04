@@ -28,6 +28,9 @@ export interface SheetSourceHost {
 	readonly selectSheet: (id: number) => Promise<void>;
 	readonly err: (e: unknown) => string;
 	readonly mode: Mode;
+	/** Classeur partagé, ou travail à plusieurs : la cellule en saisie est signalée. */
+	readonly share: { shared?: boolean } | null;
+	readonly coedit: { active?: boolean } | null;
 }
 
 export function createSheetSource(sh: SheetSourceHost) {
@@ -51,8 +54,13 @@ export function createSheetSource(sh: SheetSourceHost) {
 			sh.headerOffer = null;
 			const ev = await (key ? DocumentService.SetCellKeyed(sh.sheetId, row, col, raw, key) : DocumentService.SetCell(sh.sheetId, row, col, raw));
 			// Relire tout de suite (l'événement doc:changed sert aux changements venus
-			// d'ailleurs, et n'existe pas en mode serveur).
-			await sh.reload();
+			// d'ailleurs, et n'existe pas en mode serveur). Attendue seulement
+			// quand la forme de la feuille change (tableau créé, colonne élargie
+			// ou devenue clé) : la saisie suivante doit la voir. Sinon en
+			// arrière-plan : en version web, la relecture coûte des allers-retours
+			// et la saisie suivante n'a pas à les attendre (audit du 04/11/2026).
+			if (ev.created || ev.widened || ev.keyed || ev.headerOffer || ev.split) await sh.reload();
+			else void sh.reload().catch(() => undefined);
 			if (ev.headerOffer) sh.headerOffer = { sheet: sh.sheetId, table: ev.headerOffer };
 			if (ev.keyed) return t('shell.notice.keyed', { column: ev.keyed.slice(ev.keyed.indexOf('.') + 1) });
 			const undoBirth = ev.split ? t('shell.notice.undoBirth') : '';
@@ -62,7 +70,9 @@ export function createSheetSource(sh: SheetSourceHost) {
 			if (ev.widened) return t('shell.notice.widened', { column: ev.widened, from: typeLabel(ev.from as ColumnType), to: typeLabel(ev.to as ColumnType) });
 			if (ev.invalid) return t('shell.notice.invalidValue');
 		},
-		editing: (row, col, on) => DocumentService.ShareEditing(sh.sheetId, row, col, on),
+		// Seul un classeur partagé (ou le travail à plusieurs) le montre aux
+		// autres : ailleurs, pas d'aller-retour pour rien entre deux saisies.
+		editing: (row, col, on) => (sh.share?.shared || sh.coedit?.active ? DocumentService.ShareEditing(sh.sheetId, row, col, on) : Promise.resolve()),
 		undo: () => ((sh.headerOffer = null), DocumentService.Undo().then(sh.reload)),
 		redo: () => DocumentService.Redo().then(sh.reload),
 		async paste(row, col, block) {
