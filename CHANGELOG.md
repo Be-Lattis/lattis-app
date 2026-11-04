@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.5.3-beta (04/11/2026)
+
 ### Nouveautés
 
 - Classeur partagé : clic droit sur un tableau › Tableau › **Générer un formulaire…** ouvre directement le concepteur de formulaire de ce tableau.
