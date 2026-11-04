@@ -41,6 +41,18 @@
 	}
 
 	let { v }: { v: ShareDialogsView } = $props();
+
+	// Publier sur un serveur › « Seulement certains tableaux » : chaque
+	// tableau choisi passe à son tour par la boîte du Data Lake (tableau seul).
+	let alone = $state<string[]>([]);
+	/** Tableau de la file ouvert dans la boîte du Data Lake (null : aucun). */
+	let aloneCur = $state<string | null>(null);
+	function nextAlone() {
+		const [first, ...rest] = alone;
+		alone = rest;
+		aloneCur = first ?? null;
+		if (first) v.dataShare = first;
+	}
 </script>
 
 {#if v.rightsOpen && v.canRights && v.share}
@@ -52,9 +64,15 @@
 		republish={v.shareDlg.republish}
 		share={v.share}
 		title={v.docState.title}
-		ondone={(st, lake) => {
+		ondone={(st, lake, only) => {
 			const again = v.shareDlg?.republish;
 			v.shareDlg = null;
+			if (only?.length) {
+				v.dataShareAfter = v.formAfter = null;
+				alone = only;
+				nextAlone();
+				return;
+			}
 			// Ouvert depuis Partager au Data Lake : la boîte revient, le tableau publié.
 			const back = v.dataShareAfter;
 			v.dataShareAfter = null;
@@ -87,11 +105,14 @@
 
 {#if v.dataShare}
 	{@const t = v.dataShare}
+	{#key t}
 	<DataShareDialog
 		table={t}
+		alone={aloneCur === t}
 		ondone={() => {
 			v.dataShare = null;
 			v.loadSources();
+			if (aloneCur) nextAlone();
 		}}
 		onpublish={(republish) => {
 			v.dataShareAfter = t;
@@ -103,6 +124,7 @@
 			v.reload().catch((e) => (v.notice = v.err(e)));
 		}}
 	/>
+	{/key}
 {/if}
 
 {#if v.formShare}

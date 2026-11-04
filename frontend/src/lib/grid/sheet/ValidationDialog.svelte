@@ -24,11 +24,31 @@
 		readonly previewTimer: NodeJS.Timeout | undefined;
 		readonly refreshPreview: (delay?: number) => void;
 		readonly startPick: () => void;
+		/** Tableaux du classeur (toutes feuilles) : choix d'une colonne source. */
+		readonly sources: readonly { name: string; columns: string[]; kind?: string }[];
 		validDlg: (DvForm & { target: string; error: string; preview: DvList | null; loading: boolean }) | null;
 		readonly wrap: HTMLDivElement;
 	}
 
 	let { v }: { v: ValidationDialogView } = $props();
+
+	// Source d'une liste : une colonne de tableau, choisie tableau par tableau
+	// (un tableau d'une seule colonne se choisit directement).
+	const tables = $derived(v.sources.filter((s) => s.kind !== 'pivot' && s.columns.length > 0));
+	const colRef = (table: string, col: string) => `${table}[${col}]`;
+	/** Colonne de la liste choisie, si la source en désigne une (sans tenir compte de la casse). */
+	const chosen = $derived.by(() => {
+		const src = (v.validDlg?.src ?? '').trim().replace(/^=/, '').toLowerCase();
+		for (const tb of tables) for (const c of tb.columns) if (colRef(tb.name, c).toLowerCase() === src) return colRef(tb.name, c);
+		return '';
+	});
+	function chooseColumn(ref: string) {
+		const d = v.validDlg;
+		if (!d || !ref) return;
+		d.src = ref;
+		d.error = '';
+		v.refreshPreview(0);
+	}
 </script>
 
 {#if v.validDlg && v.dvPick}
@@ -111,6 +131,23 @@
 					<p class="menu-note">
 						{tr('grid.validation.range.help')}
 					</p>
+					{#if tables.length}
+						<div class="dv-row">
+							<label for="dv-col">{tr('grid.validation.column.label')}</label>
+							<select id="dv-col" value={chosen} onchange={(ev) => chooseColumn((ev.currentTarget as HTMLSelectElement).value)}>
+								<option value="" disabled>{tr('grid.validation.column.choose')}</option>
+								{#each tables as tb (tb.name)}
+									{#if tb.columns.length === 1}
+										<option value={colRef(tb.name, tb.columns[0])}>{tb.name}</option>
+									{:else}
+										<optgroup label={tb.name}>
+											{#each tb.columns as c (c)}<option value={colRef(tb.name, c)}>{c}</option>{/each}
+										</optgroup>
+									{/if}
+								{/each}
+							</select>
+						</div>
+					{/if}
 					<div class="add dv-src">
 						<input
 							type="text"

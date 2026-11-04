@@ -1233,7 +1233,28 @@
 		"stay": "{n, plural, one {# tableau restera} other {# tableaux resteront}} sur ce poste seulement.",
 		"stayWeb": "{n, plural, one {# tableau ne sera pas publié : perdu à la fin de la session, sauf téléchargement.} other {# tableaux ne seront pas publiés : perdus à la fin de la session, sauf téléchargement.}}",
 		"uncheckIt": "{problem} — décochez-le",
-		"stayDraft": "{n, plural, one {# tableau ne sera pas publié : gardé dans votre brouillon.} other {# tableaux ne seront pas publiés : gardés dans votre brouillon.}}"
+		"stayDraft": "{n, plural, one {# tableau ne sera pas publié : gardé dans votre brouillon.} other {# tableaux ne seront pas publiés : gardés dans votre brouillon.}}",
+		"scope": {
+			"label": "Publier",
+			"workbook": "Le classeur complet",
+			"workbookHelp": " : tous ses tableaux, sa mise en page et ses scripts",
+			"lake": "Seulement certains tableaux",
+			"lakeHelp": " : chacun devient une donnée du Data Lake Lattis ; le classeur reste sur ce poste"
+		},
+		"lake": {
+			"tables": "Tableaux à envoyer au Data Lake Lattis",
+			"help": "Cochez les tableaux à publier. Pour chacun, vous choisirez ensuite son dossier, ses colonnes et qui peut le lire.",
+			"why": "Cochez au moins un tableau.",
+			"next": "Continuer"
+		},
+		"derived": {
+			"legend": "Calculé à partir du classeur (requête « {query} »)",
+			"stored": "Stocké sur le serveur : ses lignes sont publiées comme celles d’un tableau saisi",
+			"local": "Recalculé sur chaque poste : pas stocké sur le serveur, refait chez chacun à partir des tableaux publiés",
+			"badge": "recalculé",
+			"localTooltip": "Pas stocké sur le serveur : recalculé sur chaque poste à partir des tableaux publiés"
+		},
+		"noStored": "Aucune colonne saisie : il reste sur ce poste."
 	},
 	"dataShare": {
 		"title": {

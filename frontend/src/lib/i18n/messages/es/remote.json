@@ -1233,7 +1233,28 @@
 		"stay": "{n, plural, one {# tabla se queda} other {# tablas se quedan}} solo en este equipo.",
 		"stayWeb": "{n, plural, one {# tabla no se publicará: se pierde al terminar la sesión, salvo descarga.} other {# tablas no se publicarán: se pierden al terminar la sesión, salvo descarga.}}",
 		"uncheckIt": "{problem}: desmárquela",
-		"stayDraft": "{n, plural, one {# tabla no se publicará: se conserva en su borrador.} other {# tablas no se publicarán: se conservan en su borrador.}}"
+		"stayDraft": "{n, plural, one {# tabla no se publicará: se conserva en su borrador.} other {# tablas no se publicarán: se conservan en su borrador.}}",
+		"scope": {
+			"label": "Publicar",
+			"workbook": "El libro completo",
+			"workbookHelp": ": todas sus tablas, su diseño y sus scripts",
+			"lake": "Solo algunas tablas",
+			"lakeHelp": ": cada una se convierte en un dato del Data Lake de Lattis; el libro se queda en este equipo"
+		},
+		"lake": {
+			"tables": "Tablas que enviar al Data Lake de Lattis",
+			"help": "Marque las tablas que desea publicar. Para cada una elegirá después su carpeta, sus columnas y quién puede leerla.",
+			"why": "Marque al menos una tabla.",
+			"next": "Continuar"
+		},
+		"derived": {
+			"legend": "Calculada a partir del libro (consulta «{query}»)",
+			"stored": "Guardada en el servidor: sus filas se publican como las de una tabla introducida",
+			"local": "Recalculada en cada equipo: no se guarda en el servidor, cada uno la rehace a partir de las tablas publicadas",
+			"badge": "recalculada",
+			"localTooltip": "No se guarda en el servidor: se recalcula en cada equipo a partir de las tablas publicadas"
+		},
+		"noStored": "Ninguna columna introducida: se queda en este equipo."
 	},
 	"dataShare": {
 		"title": {

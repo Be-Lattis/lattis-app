@@ -985,7 +985,7 @@
 	},
 	"validation": {
 		"notAllowed": "« {value} » n'est pas permis ici : choisissez dans la liste ({list}), Alt+↓ pour l'ouvrir",
-		"missingSource": "Indiquez la plage source : Tableau[Colonne], Cell[A1:A10] ou Feuille2!Cell[A1:A10] (« Sélectionner » pour la désigner)",
+		"missingSource": "Choisissez une colonne de tableau, ou indiquez une plage : Cell[A1:A10] ou Feuille2!Cell[A1:A10] (« Sélectionner une plage » pour la désigner)",
 		"missingValues": "Indiquez au moins une valeur (une par ligne, ou séparées par « ; »)",
 		"preview": {
 			"notFound": "Source introuvable : {error}",
@@ -1017,19 +1017,23 @@
 		"pick": "Sélectionnez la plage source (sur cette feuille ou une autre), puis Entrée (Échap : annuler)",
 		"pick.oneColumn": "Une plage source couvre une seule colonne d’un tableau, ou des cellules libres",
 		"range": {
-			"help": "Une colonne de tableau (Clients[Ville]), des cellules (Cell[A1:A10]) ou une cellule nommée.",
+			"help": "Une colonne de tableau, ou des cellules (Cell[A1:A10]) ou une cellule nommée.",
 			"aria": "Plage source",
 			"placeholder": "Clients[Ville]"
+		},
+		"column": {
+			"label": "Colonne",
+			"choose": "Choisir un tableau ou une colonne…"
 		},
 		"pick.source": "Plage source :",
 		"title": "Validation des données — {target}",
 		"source": "Source de la liste",
 		"mode": {
 			"list": "Valeurs saisies",
-			"range": "Plage"
+			"range": "Colonne ou plage"
 		},
-		"pick.tooltip": "Désigner la plage dans la feuille (Entrée pour la reprendre)",
-		"pick.button": "Sélectionner",
+		"pick.tooltip": "Masquer cette fenêtre et désigner la plage dans la feuille (Entrée pour revenir)",
+		"pick.button": "Sélectionner une plage",
 		"reading": "Lecture de la plage…",
 		"clear": "Effacer la validation",
 		"listMenu": {
@@ -1602,6 +1606,8 @@
 		"handForget.tooltip": "Valeurs saisies sur des lignes disparues du résultat (Ctrl+Z pour annuler)",
 		"addShared": "Ajouter au classeur partagé…",
 		"addShared.tooltip": "Créer ce tableau, avec ses lignes, dans le classeur partagé, pour tous les membres",
+		"form": "Générer un formulaire…",
+		"form.tooltip": "Créer une page web qui ajoute des lignes à ce tableau",
 		"shareData": "Partager au Data Lake Lattis…",
 		"shareData.tooltip": "Rendre ce tableau lisible depuis d'autres classeurs du serveur",
 		"pushSource": "Mettre à jour la source du Data Lake",

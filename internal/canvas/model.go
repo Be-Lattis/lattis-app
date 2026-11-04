@@ -85,6 +85,9 @@ type tx struct {
 	// syncingFormulas : recalcul des tableaux liés à une formule en cours
 	// (spilltable.go).
 	syncingFormulas bool
+	// onlyLocal : ce recalcul ne touche que les tableaux recalculés sur
+	// chaque poste (changements reçus du serveur, ApplyRemote).
+	onlyLocal bool
 	// pivotTables : tableaux croisés en cours de calcul comme tableau de
 	// formules (pivotref.go), contre la récursion.
 	pivotTables map[string]bool
@@ -207,8 +210,9 @@ type Sharing interface {
 	// TableLock refuse la modification d'un tableau publié en lecture
 	// seule (classeur figé, hors ligne, droits) ; nil : permise.
 	TableLock(tbl int64) error
-	// TableShare : "published", "private" (tableau resté local d'un
-	// classeur partagé) ou "" (classeur local).
+	// TableShare : "published", "local" (tableau dérivé recalculé sur
+	// chaque poste), "private" (tableau resté local d'un classeur partagé)
+	// ou "" (classeur local).
 	TableShare(tbl int64) string
 }
 

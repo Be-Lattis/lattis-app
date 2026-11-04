@@ -66,6 +66,7 @@
 		readonly onaddshared: ((table: string) => void) | undefined;
 		readonly onpushsource: ((table: string) => void) | undefined;
 		readonly onsharedata: ((table: string) => void) | undefined;
+		readonly onform: ((table: string) => void) | undefined;
 		readonly openCitation: (r: number, c: number, ci: Citation, value: string) => void;
 		readonly openCustomSort: (e: Entry, i: number) => void;
 		readonly openFilter: (e: Entry, i: number) => Promise<void>;
@@ -288,11 +289,12 @@
 	{@const toValues = !why && cols && v.source.columnsToValues ? v.valueColumns(m.e, m.i) : []}
 	{@const refresh = !!m.e.t.query && !!v.source.refreshTable}
 	{@const share = cols && !!v.onsharedata && !m.e.t.query}
+	{@const form = cols && !!v.onform && !m.e.t.query}
 	{@const addShared = cols && !!v.onaddshared && m.e.t.shared === 'private' && !m.e.t.query}
 	{@const pushSource = cols && !!v.onpushsource && v.sourceTables.includes(m.e.t.name)}
 	{@const twoLevel = !why && cols && !!v.source.setTwoLevel && !m.e.t.query}
 	{@const follow = cols && !!v.source.setFollow && !!v.data?.choice && !m.e.t.query}
-	{@const tableItems = toTitle || toHeader || promote || twoLevel || refresh || share || pushSource || follow || !!v.source.convertToRange || !!v.source.deleteTables}
+	{@const tableItems = toTitle || toHeader || promote || twoLevel || refresh || share || form || pushSource || follow || !!v.source.convertToRange || !!v.source.deleteTables}
 	<!-- Situation (ctxmenu.ts) : sur l'en-tête, du texte ou des groupes au-dessus de ses colonnes ; sur une ligne, la 1re (tableau sans en-têtes) ou la dernière. -->
 	{@const ref = !m.rowOnly && !m.header && (!!v.refItems?.go || !!v.refItems?.cite?.list?.length)}
 	{@const promoteRow = !why && !m.header && !!v.source.promoteHeader && m.e.t.rows > 0 && !m.e.t.query && !m.e.t.twoLevel && m.n === 0 && allGenerated(m.e.t.columns.map((c) => c.name))}
@@ -491,6 +493,9 @@
 						{/if}
 						{#if addShared}
 							<button title={tr('grid.menu.addShared.tooltip')} onclick={() => { const n = m.e.t.name; v.menu = null; v.onaddshared?.(n); }}>{tr('grid.menu.addShared')}</button>
+						{/if}
+						{#if form}
+							<button title={tr('grid.menu.form.tooltip')} onclick={() => { const n = m.e.t.name; v.menu = null; v.onform?.(n); }}>{tr('grid.menu.form')}</button>
 						{/if}
 						{#if share}
 							<button title={tr('grid.menu.shareData.tooltip')} onclick={() => { const n = m.e.t.name; v.menu = null; v.onsharedata?.(n); }}>{tr('grid.menu.shareData')}</button>

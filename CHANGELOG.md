@@ -6,6 +6,16 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+### Nouveautés
+
+- Classeur partagé : clic droit sur un tableau › Tableau › **Générer un formulaire…** ouvre directement le concepteur de formulaire de ce tableau.
+- Publier sur un serveur : un tableau calculé à partir du classeur (tableau lié à une formule, requête qui ne lit que des tableaux du classeur) peut être **recalculé sur chaque poste** au lieu d'être stocké sur le serveur. Seule sa définition est publiée ; chaque membre le refait à l'ouverture et dès que ses tableaux sources changent, et une modification d'un tableau source ne réécrit plus le tableau calculé pour tout le monde.
+- Validation des données, liste : une liste « Colonne » propose les tableaux du classeur, colonne par colonne (un tableau d'une seule colonne se choisit directement) ; le bouton **Sélectionner une plage** masque la fenêtre le temps de désigner la plage dans la feuille.
+
+### Changements
+
+- Publier sur un serveur publie toujours le classeur complet : plus de cases par tableau. Pour ne publier que certains tableaux, choisissez « Seulement certains tableaux » (proposé si votre compte peut publier au Data Lake Lattis) : le classeur reste sur votre poste et chaque tableau coché passe par la boîte du Data Lake.
+
 ## 0.5.2-beta (02/11/2026)
 
 ### Nouveautés

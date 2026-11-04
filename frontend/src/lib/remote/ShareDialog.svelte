@@ -3,7 +3,11 @@
 	// serveur, du titre et du mode, puis vérifications avant publication
 	// (spécification de l'application collaborative, §5.3) — types figés,
 	// saisies invalides à corriger ou à accepter comme texte, noms valides en
-	// PostgreSQL. Les tableaux non cochés restent privés (sur ce poste).
+	// PostgreSQL. Publier, c'est toujours le classeur complet : un tableau
+	// dérivé (chargé par une requête qui ne lit que le classeur) peut être
+	// recalculé sur chaque poste au lieu d'être stocké sur le serveur.
+	// Publier seulement certains tableaux, c'est les envoyer au Data Lake
+	// Lattis (choix proposé à qui en a le droit), chacun par sa boîte.
 	// Pendant la publication, la boîte dit l'étape et les lignes envoyées
 	// (évènements work:step du moteur, internal/work) ; « Annuler la
 	// publication » la défait tant que le serveur ne l'a pas validée.
@@ -17,7 +21,7 @@
 	import ServerPicker from './ServerPicker.svelte';
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import TableSourcesList from './TableSourcesList.svelte';
-	import { COLLABORATIVE, FROZEN, blocking, defaultSelection, inferredColumns, modeLabel, remoteTypeLabel, uncheckedCount } from './share';
+	import { COLLABORATIVE, FROZEN, blocking, inferredColumns, modeLabel, remoteTypeLabel } from './share';
 	import { isWeb } from '#lib/web/platform.js';
 	import { draftKept, draftStatus } from '#lib/shell/draft.js';
 	import { errorText, t } from '#lib/i18n/index.js';
@@ -33,14 +37,25 @@
 		/**
 		 * Publié (état à jour) ou abandon (null). lake : tableaux chargés par
 		 * une requête que l'auteur veut en source du Data Lake (actualisée par
-		 * le serveur) plutôt qu'actualisés depuis son poste.
+		 * le serveur) plutôt qu'actualisés depuis son poste. alone : tableaux à
+		 * publier seuls au Data Lake Lattis (le classeur n'est pas publié).
 		 */
-		ondone: (s: State | null, lake?: string[]) => void;
+		ondone: (s: State | null, lake?: string[], alone?: string[]) => void;
 	}
 	let { republish = false, share, title, ondone }: Props = $props();
 
 	let check = $state<Check | null>(null);
-	let selected = $state<number[]>([]);
+	// Tableaux dérivés recalculés sur chaque poste (pas stockés sur le serveur).
+	let local = $state<number[]>([]);
+	// Publier le classeur complet, ou seulement certains tableaux au Data Lake.
+	let scope = $state<'workbook' | 'lake'>('workbook');
+	// Tableaux choisis pour le Data Lake (scope « lake »).
+	let picked = $state<number[]>([]);
+	// Droit de publier des tableaux seuls au Data Lake sur le serveur choisi.
+	let lakeOK = $state(false);
+	// Tableaux envoyés au serveur : tous, sauf les dérivés recalculés sur
+	// chaque poste et ceux qui n'ont aucune colonne saisie.
+	const selected = $derived((check?.tables ?? []).filter((tb) => !local.includes(tb.id) && !noStored(tb)).map((tb) => tb.id));
 	// Tableaux chargés par une requête, publiés en collaboratif : source du
 	// Data Lake (noms) ; les autres s'actualisent depuis ce poste.
 	let lake = $state<string[]>([]);
@@ -61,15 +76,19 @@
 	const servers = $derived(connected(lattis.state.servers));
 	const blocked = $derived(check ? blocking(check, selected) : []);
 	const noTables = $derived(!!check && !(check.tables ?? []).length);
-	// Tableaux décochés : dit à côté de Publier, ils ne seront pas sur le serveur
-	// (en édition web, il n'y a pas de poste : ils ne sont que dans la session).
-	const stay = $derived(check ? uncheckedCount(check, selected) : 0);
+	// Tableaux sans colonne saisie : dits à côté de Publier, ils ne seront pas
+	// sur le serveur (en édition web, ils ne sont que dans la session).
+	const stay = $derived((check?.tables ?? []).filter(noStored).length);
 	const stayText = $derived(stay ? t(isWeb ? (draftKept($draftStatus) ? 'remote.shareDialog.stayDraft' : 'remote.shareDialog.stayWeb') : 'remote.shareDialog.stay', { n: stay }) : '');
 	// Raison pour laquelle Publier est grisé, dite à côté du bouton (et en
 	// bulle) avec ce qu'il faut faire ; '' quand il est permis.
 	const why = $derived.by(() => {
 		if (busy) return '';
 		if (!check) return t('remote.shareDialog.checking');
+		if (scope === 'lake') {
+			if (!server) return t('remote.shareDialog.why.server');
+			return picked.length ? '' : t('remote.shareDialog.lake.why');
+		}
 		if (noTables) return t('remote.shareDialog.why.noTables');
 		if (!selected.length) return t('remote.share.blocking.none');
 		if (blocked.length) return t('remote.shareDialog.why.blocked', { n: blocked.length });
@@ -96,6 +115,24 @@
 		);
 	});
 
+	$effect(() => {
+		const url = server;
+		lakeOK = false;
+		if (republish || !url) return;
+		DocumentService.ShareLakeCanPublish(url).then(
+			(ok) => {
+				if (server === url) lakeOK = ok;
+				if (!ok && server === url) scope = 'workbook';
+			},
+			() => undefined
+		);
+	});
+
+	/** Tableau sans colonne saisie : rien à stocker sur le serveur. */
+	function noStored(tb: { columns?: { computed: boolean }[] | null }): boolean {
+		return (tb.columns ?? []).length > 0 && (tb.columns ?? []).every((c) => c.computed);
+	}
+
 	onMount(async () => {
 		await loadLattis();
 		if (!server) server = connected(lattis.state.servers)[0]?.url ?? '';
@@ -105,7 +142,7 @@
 	async function refresh(first = false) {
 		try {
 			check = await DocumentService.ShareCheck();
-			if (first) selected = defaultSelection(check, republish);
+			if (first) local = (check.tables ?? []).filter((tb) => tb.derived && tb.local).map((tb) => tb.id);
 		} catch (e) {
 			error = err(e);
 		}
@@ -131,15 +168,20 @@
 	}
 
 	function toggle(id: number, on: boolean) {
-		selected = on ? [...selected, id] : selected.filter((x) => x !== id);
+		picked = on ? [...picked, id] : picked.filter((x) => x !== id);
 	}
 
 	async function publish() {
 		error = notice = '';
+		if (scope === 'lake') {
+			const names = (check?.tables ?? []).filter((tb) => picked.includes(tb.id)).map((tb) => tb.name);
+			ondone(null, [], names);
+			return;
+		}
 		busy = publishing = true;
 		stopping = false;
 		try {
-			const st = republish ? await DocumentService.ShareRepublish(selected) : await DocumentService.SharePublish({ server, title: name.trim(), mode, tables: selected });
+			const st = republish ? await DocumentService.ShareRepublish(selected, local) : await DocumentService.SharePublish({ server, title: name.trim(), mode, tables: selected, local });
 			const chosen = (check?.tables ?? []).filter((t) => selected.includes(t.id) && t.query && lake.includes(t.name)).map((t) => t.name);
 			ondone(st, mode === COLLABORATIVE ? chosen : []);
 		} catch (e) {
@@ -183,18 +225,27 @@
 					<ServerPicker id="share-server" bind:value={server} {servers} disabled={busy}>
 						{#snippet none()}<span class="grow"><button onclick={login} disabled={busy}>{t('remote.account.connectServer')}</button></span>{/snippet}
 					</ServerPicker>
-					{#if canCreate === false}<p class="error span" role="alert">{t('remote.shareDialog.cannotCreate')}</p>{/if}
-					<label for="share-title">{t('remote.formDialog.look.title')}</label>
-					<input id="share-title" bind:value={name} disabled={busy} />
-					<span>{t('remote.shareDialog.mode')}</span>
-					<div class="modes">
-						<label><input type="radio" bind:group={mode} value={FROZEN} disabled={busy} /> <strong>{modeLabel(FROZEN)}</strong>{t('remote.shareDialog.frozenHelp')}</label>
-						<label><input type="radio" bind:group={mode} value={COLLABORATIVE} disabled={busy} /> <strong>{modeLabel(COLLABORATIVE)}</strong>{t('remote.shareDialog.collaborativeHelp')}</label>
-					</div>
+					{#if canCreate === false && scope === 'workbook'}<p class="error span" role="alert">{t('remote.shareDialog.cannotCreate')}</p>{/if}
+					{#if lakeOK}
+						<span>{t('remote.shareDialog.scope.label')}</span>
+						<div class="modes" role="radiogroup" aria-label={t('remote.shareDialog.scope.label')}>
+							<label><input type="radio" bind:group={scope} value="workbook" disabled={busy} /> <strong>{t('remote.shareDialog.scope.workbook')}</strong>{t('remote.shareDialog.scope.workbookHelp')}</label>
+							<label><input type="radio" bind:group={scope} value="lake" disabled={busy} /> <strong>{t('remote.shareDialog.scope.lake')}</strong>{t('remote.shareDialog.scope.lakeHelp')}</label>
+						</div>
+					{/if}
+					{#if scope === 'workbook'}
+						<label for="share-title">{t('remote.formDialog.look.title')}</label>
+						<input id="share-title" bind:value={name} disabled={busy} />
+						<span>{t('remote.shareDialog.mode')}</span>
+						<div class="modes">
+							<label><input type="radio" bind:group={mode} value={FROZEN} disabled={busy} /> <strong>{modeLabel(FROZEN)}</strong>{t('remote.shareDialog.frozenHelp')}</label>
+							<label><input type="radio" bind:group={mode} value={COLLABORATIVE} disabled={busy} /> <strong>{modeLabel(COLLABORATIVE)}</strong>{t('remote.shareDialog.collaborativeHelp')}</label>
+						</div>
+					{/if}
 				</div>
 			{/if}
 
-			<h3>{t('remote.shareDialog.tables')}</h3>
+			<h3>{scope === 'lake' ? t('remote.shareDialog.lake.tables') : t('remote.shareDialog.tables')}</h3>
 			{#if !check}
 				<p class="muted">{t('remote.shareDialog.checking')}</p>
 			{:else if noTables}
@@ -204,31 +255,57 @@
 						{t('remote.shareDialog.noTables.or')} <kbd>Ctrl+L</kbd>{t('remote.shareDialog.noTables.after')}</span
 					>
 				</p>
-			{:else}
+			{:else if scope === 'lake'}
+				<p class="muted">{t('remote.shareDialog.lake.help')}</p>
 				<ul class="tables">
 					{#each check.tables ?? [] as tb (tb.id)}
-						{@const on = selected.includes(tb.id)}
-						{@const frozen = inferredColumns(tb)}
+						{@const on = picked.includes(tb.id)}
 						<li class:off={!on}>
 							<label class="tname">
 								<input type="checkbox" checked={on} disabled={busy} onchange={(e) => toggle(tb.id, (e.currentTarget as HTMLInputElement).checked)} />
 								<strong>{tb.name}</strong>
 								<span class="muted">{tb.sheet} · {t('remote.shareDialog.rows', { n: tb.rows })}</span>
-								{#if !on}<span class="private" title={t(isWeb ? (draftKept($draftStatus) ? 'remote.shareDialog.private.tooltipDraft' : 'remote.shareDialog.private.tooltipWeb') : 'remote.shareDialog.private.tooltip')}><Icon name="local" size={12} /> {t('remote.shareDialog.private.label')}</span>{/if}
 							</label>
-							{#if on}
-								{#each tb.problems ?? [] as p (p)}<p class="problem">{(tb.columns ?? []).every((c) => c.computed) ? t('remote.shareDialog.uncheckIt', { problem: p }) : t('remote.shareDialog.rename', { problem: p })}</p>{/each}
-								{#if frozen.length}<p class="muted">{t('remote.shareDialog.frozenTypes', { columns: frozen.join(', ') })}</p>{/if}
-								{#each (tb.columns ?? []).filter((c) => c.invalid) as c (c.index)}
-									<p class="problem">
-										{t('remote.shareDialog.invalid', { name: c.name, type: remoteTypeLabel(c.remote), n: c.invalid })}
-										{#if c.samples?.length}(« {c.samples.join(' », « ')} »){/if}
-										{t('remote.shareDialog.fixOr')}
-										<button class="link" disabled={busy} onclick={() => acceptText(tb.name, c.index)}>{t('remote.shareDialog.acceptText')}</button>
-									</p>
-								{/each}
-								{#if (tb.columns ?? []).some((c) => c.computed)}<p class="muted">{t('remote.shareDialog.computed')}</p>{/if}
-								{#if tb.query && mode === COLLABORATIVE}
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<ul class="tables">
+					{#each check.tables ?? [] as tb (tb.id)}
+						{@const recomputed = local.includes(tb.id)}
+						{@const stays = noStored(tb)}
+						<li class:off={stays}>
+							<div class="tname">
+								<Icon name="table" size={14} />
+								<strong>{tb.name}</strong>
+								<span class="muted">{tb.sheet} · {t('remote.shareDialog.rows', { n: tb.rows })}</span>
+								{#if stays}<span class="private" title={t(isWeb ? (draftKept($draftStatus) ? 'remote.shareDialog.private.tooltipDraft' : 'remote.shareDialog.private.tooltipWeb') : 'remote.shareDialog.private.tooltip')}><Icon name="local" size={12} /> {t('remote.shareDialog.private.label')}</span>
+								{:else if recomputed}<span class="private" title={t('remote.shareDialog.derived.localTooltip')}><Icon name="refresh" size={12} /> {t('remote.shareDialog.derived.badge')}</span>{/if}
+							</div>
+							{#if stays}
+								<p class="muted">{t('remote.shareDialog.noStored')}</p>
+							{:else}
+								{#if !recomputed}
+									{#each tb.problems ?? [] as p (p)}<p class="problem">{t('remote.shareDialog.rename', { problem: p })}</p>{/each}
+									{@const frozen = inferredColumns(tb)}
+									{#if frozen.length}<p class="muted">{t('remote.shareDialog.frozenTypes', { columns: frozen.join(', ') })}</p>{/if}
+									{#each (tb.columns ?? []).filter((c) => c.invalid) as c (c.index)}
+										<p class="problem">
+											{t('remote.shareDialog.invalid', { name: c.name, type: remoteTypeLabel(c.remote), n: c.invalid })}
+											{#if c.samples?.length}(« {c.samples.join(' », « ')} »){/if}
+											{t('remote.shareDialog.fixOr')}
+											<button class="link" disabled={busy} onclick={() => acceptText(tb.name, c.index)}>{t('remote.shareDialog.acceptText')}</button>
+										</p>
+									{/each}
+									{#if (tb.columns ?? []).some((c) => c.computed)}<p class="muted">{t('remote.shareDialog.computed')}</p>{/if}
+								{/if}
+								{#if tb.derived}
+									<fieldset class="refresh">
+										<legend>{t('remote.shareDialog.derived.legend', { query: tb.query ?? '' })}</legend>
+										<label><input type="radio" name="derived-{tb.id}" checked={!recomputed} disabled={busy} onchange={() => (local = local.filter((x) => x !== tb.id))} /> {t('remote.shareDialog.derived.stored')}</label>
+										<label><input type="radio" name="derived-{tb.id}" checked={recomputed} disabled={busy} onchange={() => (local = [...local, tb.id])} /> {t('remote.shareDialog.derived.local')}</label>
+									</fieldset>
+								{:else if tb.query && mode === COLLABORATIVE}
 									{@const toLake = lake.includes(tb.name)}
 									<fieldset class="refresh">
 										<legend>{t('remote.shareDialog.refresh.legend', { query: tb.query })}</legend>
@@ -271,7 +348,7 @@
 				<button onclick={() => ondone(null)} disabled={busy}>{t('common.cancel')}</button>
 			{/if}
 			<button class="primary" onclick={publish} disabled={busy || !!why} title={why || undefined} aria-describedby={why ? 'share-why' : undefined}>
-				{busy ? t('remote.shareDialog.publishing') : republish ? t('remote.shareDialog.republish') : t('remote.shareDialog.publish')}
+				{busy ? t('remote.shareDialog.publishing') : republish ? t('remote.shareDialog.republish') : scope === 'lake' ? t('remote.shareDialog.lake.next') : t('remote.shareDialog.publish')}
 			</button>
 		</footer>
 	</div>

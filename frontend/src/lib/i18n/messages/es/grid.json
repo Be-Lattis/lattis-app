@@ -985,7 +985,7 @@
 	},
 	"validation": {
 		"notAllowed": "«{value}» no está permitido aquí: elija en la lista ({list}), Alt+↓ para abrirla",
-		"missingSource": "Escriba el rango de origen: Tabla[Columna], Cell[A1:A10] u Hoja2!Cell[A1:A10] («Seleccionar» para elegirlo)",
+		"missingSource": "Elija una columna de tabla o indique un rango: Cell[A1:A10] o Hoja2!Cell[A1:A10] («Seleccionar un rango» para señalarlo)",
 		"missingValues": "Escriba al menos un valor (uno por línea, o separados por «;»)",
 		"preview": {
 			"notFound": "Origen no encontrado: {error}",
@@ -1017,19 +1017,23 @@
 		"pick": "Seleccione el rango de origen (en esta hoja o en otra) y luego Entrar (Esc: cancelar)",
 		"pick.oneColumn": "Un rango de origen abarca una sola columna de tabla, o celdas libres",
 		"range": {
-			"help": "Una columna de tabla (Clientes[Ciudad]), celdas (Cell[A1:A10]) o una celda con nombre.",
+			"help": "Una columna de tabla, o celdas (Cell[A1:A10]) o una celda con nombre.",
 			"aria": "Rango de origen",
 			"placeholder": "Clientes[Ciudad]"
+		},
+		"column": {
+			"label": "Columna",
+			"choose": "Elegir una tabla o una columna…"
 		},
 		"pick.source": "Rango de origen:",
 		"title": "Validación de datos — {target}",
 		"source": "Origen de la lista",
 		"mode": {
 			"list": "Valores escritos",
-			"range": "Rango"
+			"range": "Columna o rango"
 		},
-		"pick.tooltip": "Elegir el rango en la hoja (Entrar para volver)",
-		"pick.button": "Seleccionar",
+		"pick.tooltip": "Ocultar esta ventana y señalar el rango en la hoja (Intro para volver)",
+		"pick.button": "Seleccionar un rango",
 		"reading": "Leyendo el rango…",
 		"clear": "Borrar la validación",
 		"listMenu": {
@@ -1602,6 +1606,8 @@
 		"handForget.tooltip": "Valores introducidos en filas que desaparecieron del resultado (Ctrl+Z para deshacer)",
 		"addShared": "Agregar al libro compartido…",
 		"addShared.tooltip": "Crear esta tabla, con sus filas, en el libro compartido, para todos los miembros",
+		"form": "Generar un formulario…",
+		"form.tooltip": "Crear una página web que añade filas a esta tabla",
 		"shareData": "Compartir en el Data Lake de Lattis…",
 		"shareData.tooltip": "Hacer que esta tabla se pueda leer desde otros libros del servidor",
 		"pushSource": "Actualizar el origen del Data Lake",

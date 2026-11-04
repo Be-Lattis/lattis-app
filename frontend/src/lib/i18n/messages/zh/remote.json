@@ -1233,7 +1233,28 @@
 		"stay": "{n, plural, other {# 个表格}}将仅保留在此电脑上。",
 		"stayWeb": "{n, plural, other {# 个表格}}不会发布：会话结束后丢失，除非下载。",
 		"uncheckIt": "{problem}：请取消勾选",
-		"stayDraft": "{n, plural, other {# 个表不会发布：保留在您的草稿中。}}"
+		"stayDraft": "{n, plural, other {# 个表不会发布：保留在您的草稿中。}}",
+		"scope": {
+			"label": "发布",
+			"workbook": "整个工作簿",
+			"workbookHelp": "：包括所有表格、布局和脚本",
+			"lake": "仅部分表格",
+			"lakeHelp": "：每个表格成为 Lattis Data Lake 中的数据；工作簿留在本机"
+		},
+		"lake": {
+			"tables": "要发送到 Lattis Data Lake 的表格",
+			"help": "勾选要发布的表格。随后为每个表格选择文件夹、列以及谁可以读取。",
+			"why": "请至少勾选一个表格。",
+			"next": "继续"
+		},
+		"derived": {
+			"legend": "由工作簿计算得出（查询“{query}”）",
+			"stored": "存储在服务器上：其行像输入的表格一样发布",
+			"local": "在每台电脑上重新计算：不存储在服务器上，每个人根据已发布的表格重建",
+			"badge": "重新计算",
+			"localTooltip": "不存储在服务器上：在每台电脑上根据已发布的表格重新计算"
+		},
+		"noStored": "没有输入的列：它留在本机。"
 	},
 	"dataShare": {
 		"title": {

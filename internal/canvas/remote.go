@@ -107,6 +107,17 @@ func (m *Model) ApplyRemote(ctx context.Context, tables []RemoteTable, keep func
 				out.Tables = append(out.Tables, rt.Table)
 			}
 		}
+		// Tableaux dérivés recalculés sur chaque poste dont les sources
+		// viennent de changer : recalculés ici, hors du journal comme le
+		// reste (les tableaux stockés sur le serveur arrivent tout faits).
+		if len(out.Tables) > 0 {
+			t.onlyLocal = true
+			err := t.syncFormulaTables()
+			t.onlyLocal = false
+			if err != nil {
+				return err
+			}
+		}
 		if after != nil {
 			return after(sqlTx)
 		}
@@ -444,6 +455,14 @@ func (t *tx) rowKey(tb Table, a, b string) (string, error) {
 // sont figés et une valeur hors type est refusée (§9).
 func (t *tx) frozenTypes(tbl int64) bool {
 	return t.m != nil && t.m.sharing != nil && t.m.sharing.TableShare(tbl) == "published"
+}
+
+// localComputed dit si le tableau tbl d'un classeur partagé est un tableau
+// dérivé recalculé sur chaque poste : il garde son identité (décrit par la
+// mise en page publiée) et se recalcule chez chacun, droits de mise en
+// page ou non.
+func (t *tx) localComputed(tbl int64) bool {
+	return t.m != nil && t.m.sharing != nil && t.m.sharing.TableShare(tbl) == "local"
 }
 
 // refuse traite une saisie hors du type figé d'un tableau publié : un

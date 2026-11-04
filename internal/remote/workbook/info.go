@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"maps"
 	"slices"
 	"strconv"
 	"time"
@@ -51,6 +52,10 @@ const (
 	// baseKey : mise en page telle que reçue du serveur (ou publiée), pour
 	// reconnaître au rechargement ce que l'utilisateur a ajouté en local.
 	baseKey = "remote_base"
+	// localKey : tableaux dérivés recalculés sur chaque poste (identifiants
+	// locaux, JSON) : ni stockés sur le serveur ni privés ; leur requête est
+	// publiée avec la mise en page (localTablesKey, localQueriesKey).
+	localKey = "remote_local"
 )
 
 type queryer interface {
@@ -97,13 +102,82 @@ func readBase(ctx context.Context, q queryer) ([]byte, error) {
 	return []byte(raw), err
 }
 
+// LocalTables lit les tableaux recalculés sur chaque poste (localKey).
+func LocalTables(ctx context.Context, q queryer) (map[int64]bool, error) {
+	out := map[int64]bool{}
+	var raw string
+	err := q.QueryRowContext(ctx, `SELECT value FROM _lattis_info WHERE key = ?`, localKey).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var ids []int64
+	if json.Unmarshal([]byte(raw), &ids) == nil {
+		for _, id := range ids {
+			out[id] = true
+		}
+	}
+	return out, nil
+}
+
+// LocalQueries donne les requêtes qui chargent les tableaux recalculés sur
+// chaque poste (à rejouer à l'ouverture et après un chargement).
+func LocalQueries(ctx context.Context, db *sql.DB) ([]int64, error) {
+	local, err := LocalTables(ctx, db)
+	if err != nil || len(local) == 0 {
+		return nil, err
+	}
+	var out []int64
+	for _, tbl := range slices.Sorted(maps.Keys(local)) {
+		var id int64
+		switch err := db.QueryRowContext(ctx, `SELECT id FROM _lattis_queries WHERE target = ?`, tbl).Scan(&id); {
+		case errors.Is(err, sql.ErrNoRows):
+		case err != nil:
+			return nil, err
+		default:
+			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+func writeLocal(ctx context.Context, tx *sql.Tx, ids []int64) error {
+	if len(ids) == 0 {
+		_, err := tx.ExecContext(ctx, `DELETE FROM _lattis_info WHERE key = ?`, localKey)
+		return err
+	}
+	ids = slices.Sorted(slices.Values(ids))
+	b, err := json.Marshal(ids)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO _lattis_info (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`, localKey, string(b))
+	return err
+}
+
 // PrivateTables compte les tableaux qui ne sont que dans ce classeur, pas sur
 // le serveur.
 func PrivateTables(ctx context.Context, db *sql.DB) (int, error) {
 	var n int
 	err := db.QueryRowContext(ctx, `SELECT count(*) FROM _lattis_tables t
 		WHERE NOT EXISTS (SELECT 1 FROM _lattis_remote_tables r WHERE r.tbl = t.id AND r.published = 1)`).Scan(&n)
-	return n, err
+	if err != nil {
+		return n, err
+	}
+	// Recalculés sur chaque poste : pas privés (leur requête est publiée).
+	local, err := LocalTables(ctx, db)
+	if err != nil {
+		return n, err
+	}
+	for id := range local {
+		var ok int
+		if db.QueryRowContext(ctx, `SELECT count(*) FROM _lattis_tables WHERE id = ?`, id).Scan(&ok) == nil && ok > 0 {
+			n--
+		}
+	}
+	return max(n, 0), nil
 }
 
 // Manifest donne la section remote du manifeste (nil : classeur local).

@@ -1248,7 +1248,7 @@
 						query: t.queryId ? { id: t.queryId, name: t.queryName } : undefined,
 						handKey: t.handKey || undefined,
 						handKept: t.handKept || undefined,
-						shared: (t.shared || undefined) as 'published' | 'private' | undefined,
+						shared: (t.shared || undefined) as 'published' | 'private' | 'local' | undefined,
 						readOnly: t.readOnly || undefined,
 						access: t.access || undefined,
 						filtered: t.filtered || undefined,
@@ -1865,6 +1865,7 @@
 						onreflink={mode === 'doc' ? followReference : undefined}
 						onrefback={mode === 'doc' ? refGoBack : undefined}
 						onsharedata={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => (dataShare = t) : undefined}
+						onform={mode === 'doc' && share?.shared && !share.gone ? (t) => (formShare = t) : undefined}
 						onaddshared={mode === 'doc' && share?.mode === 'collaborative' ? (t) => void addToShared(t) : undefined}
 						{sourceTables}
 						onpushsource={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => void pushSource(t) : undefined}

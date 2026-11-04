@@ -39,7 +39,7 @@ export interface FunctionInfo {
     "name": string;
 
     /**
-     * nom dans l'autre langue
+     * nom anglais (français pour l'anglais)
      */
     "other": string;
 

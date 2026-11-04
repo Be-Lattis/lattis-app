@@ -2,6 +2,15 @@
 
 Un libro compartido en un Servidor Lattis lo editan varias personas en directo; sus tablas también pueden alimentar el Data Lake o rellenarse mediante un formulario.
 
+## Publicar un libro en un servidor {#publier-un-classeur-sur-un-serveur}
+
+**Archivo › Publicar en un servidor…** publica siempre el **libro completo**: todas sus tablas, su diseño y sus scripts. Elija el servidor, el título y el modo (**Congelado**: solo lectura para todos, usted republica las nuevas versiones; **Colaborativo**: cada uno modifica según sus derechos). El cuadro enumera las tablas con lo que hay que corregir antes de publicar (nombres, entradas no válidas). Una tabla sin ninguna columna introducida se queda en su equipo.
+
+- **Tabla calculada a partir del libro** (una tabla vinculada a una fórmula, como `=FILTRAR(Seguimiento;…)` convertida en tabla, o una consulta que solo lee tablas del libro): elija **Guardada en el servidor** (sus filas se publican como las de una tabla introducida) o **Recalculada en cada equipo** (solo se publica su definición; cada miembro la rehace al abrir y en cuanto cambian sus tablas de origen, en su propio equipo; lleva la marca «recalculada»). Recalcular en cada equipo evita que un cambio en una tabla de origen reescriba la tabla calculada para todos.
+- **Solo algunas tablas**: si su cuenta puede publicar en el Data Lake de Lattis, el cuadro también propone publicar solo las tablas elegidas. El libro se queda entonces en su equipo; cada tabla marcada pasa después por el cuadro del Data Lake (carpeta, columnas, audiencia), como **Publicar solo esta tabla como origen de datos** más abajo.
+
+**Archivo › Volver a publicar** (libro congelado) publica igualmente todo el libro, con las mismas opciones para las tablas calculadas.
+
 ## Agregar una tabla a un libro compartido en directo {#ajouter-un-tableau-a-un-classeur-partage-en-direct}
 
 En un libro colaborativo (compartido en directo en un Servidor Lattis), una tabla creada después de publicar por el propietario o un diseñador (escrita, pegada, insertada, convertida de un rango…) se agrega sola al libro compartido en cuanto se crea; sin conexión, al reconectarse. Una tabla que se queda en su equipo (cargada por una consulta, rechazada por el servidor o creada por un editor) lleva la etiqueta ámbar **en este equipo** encima de su marco: los demás miembros no la ven. Un clic en la etiqueta, o clic derecho en la tabla › **Agregar al libro compartido…**, la crea en el libro del servidor, con sus filas: los demás miembros la reciben de inmediato (en el mismo lugar de la hoja, o debajo si el lugar está ocupado en su lado), con un mensaje en la barra de estado, y después se sincroniza como las demás tablas compartidas (entradas, conflictos, derechos). La misma acción se ofrece en **Compartir en el Data Lake de Lattis…** («Agregar esta tabla al libro compartido», primero) y en **Administrar acceso** › Roles y derechos, bajo la lista de tablas.
@@ -49,7 +58,7 @@ Necesita el rol «publicador de datos» en el servidor, y un servidor que acepte
 
 ## Compartir una tabla como formulario {#partager-un-tableau-comme-formulaire}
 
-Ponga la celda activa en una tabla, y luego **Insertar › Formulario**: una página web permite rellenar esta tabla sin abrir el libro, desde un teléfono o un equipo. Cada envío agrega una fila, que los miembros ven llegar en directo; la fila se escribe a nombre del formulario («Formulario: <título>»), la persona que responde no tiene derechos sobre el libro.
+Ponga la celda activa en una tabla, y luego **Insertar › Formulario** (en un libro compartido, también clic derecho en la tabla › Tabla › **Generar un formulario…**): una página web permite rellenar esta tabla sin abrir el libro, desde un teléfono o un equipo. Cada envío agrega una fila, que los miembros ven llegar en directo; la fila se escribe a nombre del formulario («Formulario: <título>»), la persona que responde no tiene derechos sobre el libro.
 
 El formulario lo sirve el Servidor Lattis: la tabla debe estar publicada en un libro colaborativo, por un propietario o un diseñador del libro, con conexión. Si no, el cuadro de diálogo indica lo que falta y ofrece la acción que hay que hacer primero: **Publicar en un servidor…** (libro local) o **Agregar al libro compartido…** (tabla que solo está en su equipo), y luego se abre el diseñador. Un libro inmovilizado, una tabla cargada por una consulta, un conjunto de datos del Data Lake vinculado o un origen enviado no pueden tener formulario. Un miembro que no es ni propietario ni diseñador puede copiar el vínculo de los formularios abiertos para él.
 

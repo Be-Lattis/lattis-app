@@ -3,6 +3,7 @@ package workbook
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -42,6 +43,13 @@ type TableCheck struct {
 	// qui a la connexion (lignes remplacées pour tous), ou devient une
 	// source du Data Lake : choix de l'auteur à la publication.
 	Query string `json:"query,omitempty"`
+	// Derived : tableau dérivé, chargé par une requête qui ne lit que ce
+	// classeur (tableaux, SQL sur le classeur, formule de tableau lié,
+	// autres requêtes du même genre) : il peut être recalculé sur chaque
+	// poste au lieu d'être stocké sur le serveur (Request.Local).
+	Derived bool `json:"derived,omitempty"`
+	// Local : déjà recalculé sur chaque poste (republication).
+	Local bool `json:"local,omitempty"`
 }
 
 // ColumnCheck décrit une colonne d'un tableau à publier.
@@ -145,12 +153,77 @@ func InspectIn(ctx context.Context, db *store.Store, l msg.Lang) (Check, error) 
 	if err := rs.Err(); err != nil {
 		return out, err
 	}
+	local, err := LocalTables(ctx, r)
+	if err != nil {
+		return out, err
+	}
 	for i := range out.Tables {
-		if err := inspectTable(ctx, r, l, &out.Tables[i]); err != nil {
+		t := &out.Tables[i]
+		if err := inspectTable(ctx, r, l, t); err != nil {
 			return out, err
 		}
+		if t.Query != "" {
+			if t.Derived, err = derivedQuery(ctx, r, t.Query, map[string]bool{}); err != nil {
+				return out, err
+			}
+		}
+		t.Local = local[t.ID]
 	}
 	return out, nil
+}
+
+// querySource : ce qu'il faut d'une source de requête (internal/query.Source)
+// pour savoir d'où elle lit.
+type querySource struct {
+	Kind  string `json:"kind"`
+	Query string `json:"query"`
+}
+
+// derivedQuery dit si la requête name ne lit que le classeur : tableaux,
+// SQL sur le classeur, formule de tableau lié, et autres requêtes du même
+// genre, sources des étapes (fusion, ajout) comprises.
+func derivedQuery(ctx context.Context, r txOrDB, name string, seen map[string]bool) (bool, error) {
+	k := strings.ToLower(name)
+	if seen[k] {
+		return false, nil // boucle : la requête ne se recalcule pas
+	}
+	seen[k] = true
+	var src, steps string
+	err := r.QueryRowContext(ctx, `SELECT source, steps FROM _lattis_queries WHERE name = ?`, name).Scan(&src, &steps)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	var main querySource
+	if json.Unmarshal([]byte(src), &main) != nil {
+		return false, nil
+	}
+	all := []querySource{main}
+	var st []struct {
+		Other *querySource `json:"other"`
+	}
+	if strings.TrimSpace(steps) != "" && json.Unmarshal([]byte(steps), &st) != nil {
+		return false, nil
+	}
+	for _, s := range st {
+		if s.Other != nil {
+			all = append(all, *s.Other)
+		}
+	}
+	for _, s := range all {
+		switch s.Kind {
+		case "table", "sql", "formula":
+		case "query":
+			if ok, err := derivedQuery(ctx, r, s.Query, seen); !ok || err != nil {
+				return false, err
+			}
+		default:
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func inspectTable(ctx context.Context, r *sql.DB, l msg.Lang, t *TableCheck) error {

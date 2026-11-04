@@ -350,7 +350,21 @@ func tableIDs(ctx context.Context, q txOrDB, tables []RemoteTable) (toLayout, to
 			toLayout[tbl], toLocal[lid] = lid, tbl
 		}
 	}
-	return toLayout, toLocal, rs.Err()
+	if err := rs.Err(); err != nil {
+		return nil, nil, err
+	}
+	// Tableaux recalculés sur chaque poste : même identifiant ici et dans la
+	// mise en page (publiés tels quels, recréés tels quels au chargement).
+	local, err := LocalTables(ctx, q)
+	if err != nil {
+		return nil, nil, err
+	}
+	for id := range local {
+		if _, taken := toLocal[id]; !taken {
+			toLayout[id], toLocal[id] = id, id
+		}
+	}
+	return toLayout, toLocal, nil
 }
 
 // PublishChoices publie les catégories d'onglets à choix posées, changées

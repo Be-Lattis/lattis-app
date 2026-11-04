@@ -246,7 +246,9 @@ func (t *tx) loadQuery(id int64, qname string, it ImportTable, res *QueryLoad) e
 	}
 	// Tableau publié d'un classeur partagé : ses lignes sont remplacées sur
 	// place (queryshared.go), le tableau garde son identité sur le serveur.
-	if old != nil && t.frozenTypes(old.ID) {
+	// Tableau recalculé sur chaque poste : de même, il garde son identité
+	// (celle de la mise en page publiée).
+	if old != nil && (t.frozenTypes(old.ID) || t.localComputed(old.ID)) {
 		if err := t.refreshShared(*old, it, res); err != nil {
 			return err
 		}

@@ -551,6 +551,19 @@ export interface TableCheck {
      * source du Data Lake : choix de l'auteur à la publication.
      */
     "query"?: string;
+
+    /**
+     * Derived : tableau dérivé, chargé par une requête qui ne lit que ce
+     * classeur (tableaux, SQL sur le classeur, formule de tableau lié,
+     * autres requêtes du même genre) : il peut être recalculé sur chaque
+     * poste au lieu d'être stocké sur le serveur (Request.Local).
+     */
+    "derived"?: boolean;
+
+    /**
+     * Local : déjà recalculé sur chaque poste (republication).
+     */
+    "local"?: boolean;
 }
 
 /**

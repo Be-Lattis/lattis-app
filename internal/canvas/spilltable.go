@@ -564,8 +564,17 @@ func (t *tx) syncFormulaTables() error {
 			if err != nil {
 				return err
 			}
-			if t.guardData(tb.Sheet) != nil || t.lockTable(tb.ID) != nil || t.guardWorkbook() != nil {
+			if t.guardData(tb.Sheet) != nil || t.lockTable(tb.ID) != nil {
 				continue // feuille protégée, tableau publié figé : F5 plus tard
+			}
+			// Mise en page réservée (classeur collaboratif, protection du
+			// classeur) : sauf pour un tableau recalculé sur chaque poste,
+			// qui se recalcule chez chacun.
+			if !t.localComputed(tb.ID) && t.guardWorkbook() != nil {
+				continue
+			}
+			if t.onlyLocal && !t.localComputed(tb.ID) {
+				continue
 			}
 			raw := strings.TrimSpace(l.src.Formula)
 			f, err := t.compileSpillFormula(l.src.Sheet, raw)

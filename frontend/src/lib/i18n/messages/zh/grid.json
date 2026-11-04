@@ -985,7 +985,7 @@
 	},
 	"validation": {
 		"notAllowed": "此处不允许输入“{value}”：请从列表（{list}）中选择，按 Alt+↓ 打开列表",
-		"missingSource": "请输入源区域：表格[列]、Cell[A1:A10] 或 Sheet2!Cell[A1:A10]（单击“选择”可选取）",
+		"missingSource": "请选择表格的一列，或输入区域：Cell[A1:A10] 或 Sheet2!Cell[A1:A10]（点击“选择区域”在表中指定）",
 		"missingValues": "请至少输入一个值（每行一个，或用“;”分隔）",
 		"preview": {
 			"notFound": "未找到源：{error}",
@@ -1017,19 +1017,23 @@
 		"pick": "选择源区域（在此工作表或其他工作表上），然后按 Enter（Esc：取消）",
 		"pick.oneColumn": "源区域只能覆盖单个表格列或自由单元格",
 		"range": {
-			"help": "表格列 (客户[城市])、单元格 (Cell[A1:A10]) 或命名单元格。",
+			"help": "表格的一列，或单元格 (Cell[A1:A10])，或命名单元格。",
 			"aria": "源区域",
 			"placeholder": "客户[城市]"
+		},
+		"column": {
+			"label": "列",
+			"choose": "选择表格或列…"
 		},
 		"pick.source": "源区域：",
 		"title": "数据验证 — {target}",
 		"source": "列表的来源",
 		"mode": {
 			"list": "输入的值",
-			"range": "区域"
+			"range": "列或区域"
 		},
-		"pick.tooltip": "在工作表中选取区域（按 Enter 返回）",
-		"pick.button": "选择",
+		"pick.tooltip": "隐藏此窗口并在工作表中指定区域（按 Enter 返回）",
+		"pick.button": "选择区域",
 		"reading": "正在读取区域…",
 		"clear": "清除验证",
 		"listMenu": {
@@ -1602,6 +1606,8 @@
 		"handForget.tooltip": "在已从结果中消失的行上输入的值（按 Ctrl+Z 撤消）",
 		"addShared": "添加到共享工作簿…",
 		"addShared.tooltip": "在共享工作簿中为所有成员创建此表格及其行",
+		"form": "生成表单…",
+		"form.tooltip": "创建一个向此表格添加行的网页",
 		"shareData": "共享到 Lattis Data Lake…",
 		"shareData.tooltip": "使此表格可从服务器上的其他工作簿读取",
 		"pushSource": "更新 Data Lake 源",

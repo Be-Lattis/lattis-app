@@ -985,7 +985,7 @@
 	},
 	"validation": {
 		"notAllowed": "„{value}“ ist hier nicht zulässig: Wählen Sie aus der Liste ({list}), Alt+↓ zum Öffnen",
-		"missingSource": "Geben Sie den Quellbereich an: Tabelle[Spalte], Cell[A1:A10] oder Blatt2!Cell[A1:A10] („Auswählen“, um ihn festzulegen)",
+		"missingSource": "Wählen Sie eine Tabellenspalte oder geben Sie einen Bereich an: Cell[A1:A10] oder Blatt2!Cell[A1:A10] („Bereich auswählen“, um ihn zu zeigen)",
 		"missingValues": "Geben Sie mindestens einen Wert an (einen pro Zeile oder durch „;“ getrennt)",
 		"preview": {
 			"notFound": "Quelle nicht gefunden: {error}",
@@ -1017,19 +1017,23 @@
 		"pick": "Wählen Sie den Quellbereich aus (auf diesem oder einem anderen Blatt), dann Eingabe (Esc: abbrechen)",
 		"pick.oneColumn": "Ein Quellbereich umfasst eine einzelne Tabellenspalte oder freie Zellen",
 		"range": {
-			"help": "Eine Tabellenspalte (Kunden[Ort]), Zellen (Cell[A1:A10]) oder eine benannte Zelle.",
+			"help": "Eine Tabellenspalte, Zellen (Cell[A1:A10]) oder eine benannte Zelle.",
 			"aria": "Quellbereich",
 			"placeholder": "Kunden[Ort]"
+		},
+		"column": {
+			"label": "Spalte",
+			"choose": "Tabelle oder Spalte wählen…"
 		},
 		"pick.source": "Quellbereich:",
 		"title": "Datenüberprüfung — {target}",
 		"source": "Quelle der Liste",
 		"mode": {
 			"list": "Eingegebene Werte",
-			"range": "Bereich"
+			"range": "Spalte oder Bereich"
 		},
-		"pick.tooltip": "Den Bereich im Blatt auswählen (Eingabe, um zurückzukehren)",
-		"pick.button": "Auswählen",
+		"pick.tooltip": "Dieses Fenster ausblenden und den Bereich im Blatt zeigen (Eingabe zum Zurückkehren)",
+		"pick.button": "Bereich auswählen",
 		"reading": "Bereich wird gelesen…",
 		"clear": "Überprüfung löschen",
 		"listMenu": {
@@ -1602,6 +1606,8 @@
 		"handForget.tooltip": "Werte auf Zeilen, die aus dem Ergebnis verschwunden sind (Strg+Z zum Rückgängigmachen)",
 		"addShared": "Zur freigegebenen Arbeitsmappe hinzufügen…",
 		"addShared.tooltip": "Diese Tabelle mit ihren Zeilen in der freigegebenen Arbeitsmappe für alle Mitglieder erstellen",
+		"form": "Formular erstellen…",
+		"form.tooltip": "Eine Webseite erstellen, die dieser Tabelle Zeilen hinzufügt",
 		"shareData": "Im Lattis Data Lake freigeben…",
 		"shareData.tooltip": "Diese Tabelle für andere Arbeitsmappen des Servers lesbar machen",
 		"pushSource": "Data-Lake-Quelle aktualisieren",

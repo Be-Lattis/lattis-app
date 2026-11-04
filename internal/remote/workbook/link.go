@@ -62,7 +62,9 @@ type Link struct {
 	mu        sync.RWMutex
 	info      *Info
 	published map[int64]bool
-	levels    map[int64]string // collaboratif : niveau par tableau local
+	// local : tableaux dérivés recalculés sur chaque poste (localKey).
+	local  map[int64]bool
+	levels map[int64]string // collaboratif : niveau par tableau local
 	// filtered : tableaux dont la lecture est filtrée par les droits (filtre
 	// d'un rôle, ou restriction de lecture) ; restricted : restrictions qui
 	// visent l'utilisateur, par tableau.
@@ -144,8 +146,12 @@ func (l *Link) Reload(ctx context.Context) error {
 		filtered[id] = filt != ""
 	}
 	rs.Close()
+	local, err := LocalTables(ctx, l.db.Read())
+	if err != nil {
+		return err
+	}
 	l.mu.Lock()
-	l.info, l.published, l.levels, l.filtered, l.restricted = info, pub, levels, filtered, restricted
+	l.info, l.published, l.levels, l.filtered, l.restricted, l.local = info, pub, levels, filtered, restricted, local
 	if info != nil && l.newVersion <= info.Version {
 		l.newVersion = 0
 	}
@@ -259,7 +265,9 @@ func (l *Link) Unpublish(tbl int64) {
 	delete(l.levels, tbl)
 }
 
-// TableShare dit si un tableau est publié (canvas.Sharing).
+// TableShare dit si un tableau est publié (canvas.Sharing) : "published",
+// "local" (dérivé, recalculé sur chaque poste), "private" (resté sur ce
+// poste) ; "" pour un classeur local.
 func (l *Link) TableShare(tbl int64) string {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -268,6 +276,8 @@ func (l *Link) TableShare(tbl int64) string {
 		return ""
 	case l.published[tbl]:
 		return "published"
+	case l.local[tbl]:
+		return "local"
 	}
 	return "private"
 }

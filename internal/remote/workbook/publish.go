@@ -38,6 +38,10 @@ type Request struct {
 	Mode  string
 	// Tables : tableaux à publier ; les autres restent privés (locaux).
 	Tables []int64
+	// Local : tableaux dérivés (TableCheck.Derived) recalculés sur chaque
+	// poste : pas stockés sur le serveur, leur requête est publiée avec la
+	// mise en page (localQueriesKey) et rejouée à chaque ouverture.
+	Local []int64
 }
 
 // localTable est un tableau à publier, lu dans le classeur.
@@ -71,6 +75,7 @@ type published struct {
 	columns map[int64][]RemoteColumn // tableau local → colonnes du serveur
 	newIDs  map[int64][]newRowID     // identifiants partagés posés par la publication (ordre des rid)
 	base    []byte
+	local   []int64
 }
 
 // Publish publie le classeur db sur le serveur : création du classeur,
@@ -90,13 +95,14 @@ func Publish(ctx context.Context, srv Server, db *store.Store, req Request) (*In
 		return nil, msg.New("publish.missingTitle", nil)
 	}
 	info := &Info{Server: req.Server, ServerName: req.ServerName, Title: strings.TrimSpace(req.Title), Mode: req.Mode, User: req.User}
-	return publish(ctx, srv, db, info, req.Tables, false)
+	return publish(ctx, srv, db, info, req.Tables, req.Local, false)
 }
 
 // Republish publie une nouvelle version d'un classeur figé (Fichier ›
 // Republier) : les tableaux choisis (nil : ceux déjà publiés) et la mise en
-// page actuelle remplacent d'un coup la version publiée.
-func Republish(ctx context.Context, srv Server, db *store.Store, tables []int64) (*Info, error) {
+// page actuelle remplacent d'un coup la version publiée. local : tableaux
+// recalculés sur chaque poste (nil : ceux qui l'étaient déjà).
+func Republish(ctx context.Context, srv Server, db *store.Store, tables, local []int64) (*Info, error) {
 	info, err := ReadInfo(ctx, db.Read())
 	if err != nil {
 		return nil, err
@@ -125,13 +131,23 @@ func Republish(ctx context.Context, srv Server, db *store.Store, tables []int64)
 		}
 		rs.Close()
 	}
-	return publish(ctx, srv, db, info, tables, true)
+	if local == nil {
+		was, err := LocalTables(ctx, db.Read())
+		if err != nil {
+			return nil, err
+		}
+		local = slices.Collect(maps.Keys(was))
+	}
+	return publish(ctx, srv, db, info, tables, local, true)
 }
 
-func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids []int64, again bool) (*Info, error) {
+func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids, local []int64, again bool) (*Info, error) {
 	if len(ids) == 0 {
 		return nil, msg.New("publish.noTable", nil)
 	}
+	// Tableau recalculé sur chaque poste : stocké sur le serveur ou
+	// recalculé, pas les deux ; un tableau disparu depuis est oublié.
+	local = slices.DeleteFunc(slices.Clone(local), func(id int64) bool { return slices.Contains(ids, id) })
 	// Étapes dites dans la barre d'état et dans la boîte de publication
 	// (internal/work) : un gros tableau prend des minutes.
 	op := "publish"
@@ -146,6 +162,16 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 	}
 	if b := check.Blocking(ids); len(b) > 0 {
 		return nil, msg.New("publish.impossible", msg.Args{"reasons": strings.Join(b, "\n")})
+	}
+	derived := map[int64]TableCheck{}
+	for _, t := range check.Tables {
+		derived[t.ID] = t
+	}
+	local = slices.DeleteFunc(local, func(id int64) bool { _, ok := derived[id]; return !ok })
+	for _, id := range local {
+		if t := derived[id]; !t.Derived {
+			return nil, msg.New("publish.notDerived", msg.Args{"table": t.Name})
+		}
 	}
 	var total int64
 	for _, t := range check.Tables {
@@ -168,7 +194,7 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 	if err != nil {
 		return nil, err
 	}
-	out := &published{info: info, tables: tables, remote: map[int64]string{}, columns: map[int64][]RemoteColumn{}, newIDs: map[int64][]newRowID{}}
+	out := &published{info: info, tables: tables, remote: map[int64]string{}, columns: map[int64][]RemoteColumn{}, newIDs: map[int64][]newRowID{}, local: local}
 	err = srv.Publish(ctx, func(p Publisher) error {
 		var schema string
 		if again {
@@ -214,12 +240,18 @@ func publish(ctx context.Context, srv Server, db *store.Store, info *Info, ids [
 			out.newIDs[t.id] = src.added
 		}
 		work.Loop(ctx, "layout", 0)
-		pub := map[int64]bool{}
+		pub, shown := map[int64]bool{}, map[int64]bool{}
 		for _, t := range tables {
-			pub[t.id] = true
+			pub[t.id], shown[t.id] = true, true
 		}
-		layout, err := dumpLayout(ctx, rtx, meta.Version, pub, &publishIDs{q: rtx, tables: pub, added: out.newIDs})
+		for _, id := range local {
+			shown[id] = true
+		}
+		layout, err := dumpLayout(ctx, rtx, meta.Version, shown, &publishIDs{q: rtx, tables: pub, added: out.newIDs, local: shown})
 		if err != nil {
+			return err
+		}
+		if err := layout.addLocal(ctx, rtx, local); err != nil {
 			return err
 		}
 		if out.base, err = json.Marshal(layout); err != nil {
@@ -537,10 +569,17 @@ type publishIDs struct {
 	q      txOrDB
 	tables map[int64]bool
 	added  map[int64][]newRowID
+	// local : tableaux de la mise en page ; ceux qui ne sont pas dans
+	// tables (recalculés sur chaque poste) n'ont pas de lignes partagées :
+	// leurs mises en forme par ligne ne sont pas publiées.
+	local map[int64]bool
 }
 
 func (p *publishIDs) rowID(ctx context.Context, tbl, rid int64) (string, bool, bool, error) {
 	if !p.tables[tbl] {
+		if p.local[tbl] {
+			return "", true, false, nil
+		}
 		return "", false, false, nil
 	}
 	a := p.added[tbl]
@@ -621,6 +660,9 @@ func (p *published) record(ctx context.Context, tx *sql.Tx) error {
 		return err
 	}
 	if err := writeInfo(ctx, tx, p.info); err != nil {
+		return err
+	}
+	if err := writeLocal(ctx, tx, p.local); err != nil {
 		return err
 	}
 	// Identifiants de la mise en page : ceux du poste (livelayout.go).
