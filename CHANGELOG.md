@@ -15,6 +15,14 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ### Changements
 
 - Publier sur un serveur publie toujours le classeur complet : plus de cases par tableau. Pour ne publier que certains tableaux, choisissez « Seulement certains tableaux » (proposé si votre compte peut publier au Data Lake Lattis) : le classeur reste sur votre poste et chaque tableau coché passe par la boîte du Data Lake.
+- Édition web : derrière une connexion lente, la saisie n'attend plus la relecture de toute la feuille entre deux cellules, et un classeur non partagé ne signale plus la cellule en saisie au moteur.
+
+### Corrections
+
+- Édition web : des saisies arrivées ensemble au moteur (reconnexion, ouverture du classeur, connexion lente) pouvaient s'appliquer dans le désordre, une valeur plus ancienne écrasant la dernière tapée.
+- Ctrl+Z et Ctrl+Y attendent les saisies encore en route : ils défont la dernière, pas celle d'avant.
+- Édition web : une saisie en route quand la connexion se coupe repart à la reconnexion, au lieu de revenir dans l'éditeur comme refusée ; retaper l'ancienne valeur d'une cellule dont la saisie est encore en route n'est plus ignoré.
+- Édition web : fermer l'onglet pendant que des saisies sont encore en route demande confirmation.
 
 ## 0.5.2-beta (02/11/2026)
 

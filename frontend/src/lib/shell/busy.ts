@@ -88,3 +88,22 @@ export function trackCalls() {
 		return fetch0(input, init).finally(callStarted());
 	};
 }
+
+const unsent = writable(0);
+/**
+ * Saisies de la grille pas encore confirmées par le moteur (file d'écriture) :
+ * en version web, derrière une liaison lente, elles n'existent que dans
+ * l'onglet ; le fermer les perdrait (beforeunload le demande).
+ */
+export const unsentWrites: Readable<number> = { subscribe: unsent.subscribe };
+
+/** Compte une saisie en file ; rend sa fin (à appeler une fois). */
+export function writeQueued(): () => void {
+	unsent.update((n) => n + 1);
+	let done = false;
+	return () => {
+		if (done) return;
+		done = true;
+		unsent.update((n) => n - 1);
+	};
+}

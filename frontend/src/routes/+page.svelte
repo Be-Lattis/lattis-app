@@ -94,6 +94,7 @@
 	import DraftStatusBar from '#lib/shell/DraftStatus.svelte';
 	import { draftStatus, type DraftStatus } from '#lib/shell/draft.js';
 	import { get } from 'svelte/store';
+	import { unsentWrites } from '#lib/shell/busy.js';
 	import UpdateStatus from '#lib/shell/UpdateStatus.svelte';
 	import { syncOf, type SyncStatus } from '#lib/shell/sync.js';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -1146,7 +1147,8 @@
 		// Web : Ctrl+W ou la fermeture de l'onglet demandent confirmation
 		// quand le classeur a des modifications non enregistrées.
 		const leave = (e: BeforeUnloadEvent) => {
-			if (isWeb && mode === 'doc' && (docState.dirty || docState.privateTables) && get(draftStatus).state !== 'saved') {
+			// Saisies encore en file (liaison lente) : pas encore dans le classeur.
+			if (isWeb && mode === 'doc' && (((docState.dirty || docState.privateTables) && get(draftStatus).state !== 'saved') || get(unsentWrites) > 0)) {
 				e.preventDefault();
 				e.returnValue = ''; // anciens navigateurs
 			}

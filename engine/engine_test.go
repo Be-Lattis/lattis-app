@@ -39,7 +39,7 @@ func dial(t *testing.T, srv *httptest.Server) *client {
 		t.Fatal(err)
 	}
 	ws.SetReadLimit(transport.MaxMessage)
-	c := &client{t: t, ws: ws, resp: make(chan map[string]json.RawMessage, 16), events: make(chan transport.Event, 64)}
+	c := &client{t: t, ws: ws, resp: make(chan map[string]json.RawMessage, 16), events: make(chan transport.Event, 4096)}
 	go func() {
 		for {
 			_, b, err := ws.Read(context.Background())

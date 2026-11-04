@@ -114,6 +114,9 @@ func New(ctx context.Context, o Options) (*Engine, error) {
 	e.hub.Accept = &websocket.AcceptOptions{OriginPatterns: o.OriginPatterns, CompressionMode: websocket.CompressionNoContextTakeover}
 	// Messages du moteur dans la langue de la session (internal/msg).
 	e.hub.Translate = bridge.ErrorTranslator(e.docs)
+	// « Annuler » et ce qui affiche la page passent sans attendre leur tour
+	// (ni l'ouverture du classeur de la session : Starting).
+	e.hub.Free = func(m *transport.Method) bool { return freeCall(m.Short) }
 	secrets := o.Secrets
 	if secrets == nil {
 		secrets = &bridge.MemSecrets{}
@@ -185,8 +188,7 @@ func (e *Engine) Starting(fn func()) {
 	done := make(chan struct{})
 	e.starting = done
 	e.hub.Hold = func(ctx context.Context, m *transport.Method) {
-		switch m.Short {
-		case "DocumentService.CancelWork", "DocumentService.Platform", "DocumentService.Settings", "DocumentService.SetLanguage":
+		if freeCall(m.Short) {
 			return
 		}
 		select {
@@ -198,6 +200,16 @@ func (e *Engine) Starting(fn func()) {
 		defer close(done)
 		fn()
 	}()
+}
+
+// freeCall : appels jamais retenus, ni par l'ouverture du classeur de la
+// session, ni derrière un appel long.
+func freeCall(short string) bool {
+	switch short {
+	case "DocumentService.CancelWork", "DocumentService.Platform", "DocumentService.Settings", "DocumentService.SetLanguage":
+		return true
+	}
+	return false
 }
 
 // Handler sert le WebSocket /ws, l'envoi et le téléchargement de fichiers,

@@ -395,7 +395,10 @@ export function createKeyboard(sh: KeyboardHost) {
 		}
 		if (ctrl && (e.key === 'z' || e.key === 'Z') && sh.source.undo) {
 			e.preventDefault();
-			sh.source.undo().catch((err) => sh.say(errorText(err)));
+			// Après les saisies encore en file : Ctrl+Z défait la dernière,
+			// pas celle d'avant (liaison lente, audit du 04/11/2026).
+			const undo = sh.source.undo;
+			sh.writing = sh.writing.catch(() => undefined).then(() => undo().then(() => undefined, (err) => sh.say(errorText(err))));
 			return;
 		}
 		if (ctrl && (e.key === 'a' || e.key === 'A' || e.key === ' ')) {
@@ -434,7 +437,8 @@ export function createKeyboard(sh: KeyboardHost) {
 		}
 		if (ctrl && (e.key === 'y' || e.key === 'Y') && sh.source.redo) {
 			e.preventDefault();
-			sh.source.redo().catch((err) => sh.say(errorText(err)));
+			const redo = sh.source.redo;
+			sh.writing = sh.writing.catch(() => undefined).then(() => redo().then(() => undefined, (err) => sh.say(errorText(err))));
 			return;
 		}
 		switch (e.key) {

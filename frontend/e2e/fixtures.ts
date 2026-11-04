@@ -11,12 +11,15 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-type Options = { demo: string; recent: object[] };
+type Options = { demo: string; recent: object[]; latency: number };
 
 export const test = base.extend<Options & { app: Page }>({
 	demo: ['', { option: true }],
 	recent: [[], { option: true }],
-	app: async ({ page, demo, recent }, use, testInfo) => {
+	// Latence ajoutée à la liaison WebSocket, dans chaque sens (ms) : voir slowSocket.
+	latency: [0, { option: true }],
+	app: async ({ page, demo, recent, latency }, use, testInfo) => {
+		if (latency) await page.addInitScript(slowSocket, latency);
 		const dir = mkdtempSync(join(tmpdir(), 'lattis-e2e-'));
 		const cfg = join(dir, 'config');
 		const cache = join(dir, 'cache');
@@ -78,6 +81,80 @@ function engineURL(proc: ChildProcess): Promise<string> {
 		proc.stderr!.on('data', read);
 		proc.once('exit', (code) => ko(new Error(`moteur web arrêté (${code}) :\n${log}`)));
 	});
+}
+
+// slowSocket remplace WebSocket dans la page par une liaison lente : chaque
+// message (dans les deux sens) arrive après latency ms plus un aléa, dans
+// l'ordre (comme TCP). window.__lattisNet règle la latence en cours de route
+// et coupe la liaison (cut : le moteur et la page voient une coupure ; les
+// messages en route sont perdus).
+function slowSocket(latency: number) {
+	type Net = { up: number; down: number; jitter: number; sockets: WebSocket[]; sent: string[]; log: string[]; cut: () => void };
+	const net: Net = {
+		up: latency,
+		down: latency,
+		jitter: latency / 2,
+		sockets: [],
+		sent: [],
+		log: [],
+		cut() {
+			for (const s of net.sockets.splice(0)) s.close();
+		}
+	};
+	(window as unknown as { __lattisNet: Net }).__lattisNet = net;
+	const Real = window.WebSocket;
+	// File ordonnée par sens : un message ne double jamais le précédent.
+	const lane = () => {
+		let last = 0;
+		return (dir: 'up' | 'down', fn: () => void) => {
+			const now = performance.now();
+			last = Math.max(last, now + net[dir] + Math.random() * net.jitter);
+			setTimeout(fn, last - now);
+		};
+	};
+	class Slow {
+		static CONNECTING = 0;
+		static OPEN = 1;
+		static CLOSING = 2;
+		static CLOSED = 3;
+		onopen: ((e: Event) => void) | null = null;
+		onmessage: ((e: MessageEvent) => void) | null = null;
+		onclose: ((e: CloseEvent) => void) | null = null;
+		onerror: ((e: Event) => void) | null = null;
+		_ws: WebSocket;
+		_up = lane();
+		_down = lane();
+		_gone = false;
+		constructor(url: string | URL, protocols?: string | string[]) {
+			const ws = new Real(url, protocols);
+			this._ws = ws;
+			net.sockets.push(ws);
+			ws.onopen = (e) => this._down('down', () => !this._gone && this.onopen?.(e));
+			ws.onmessage = (e) =>
+				this._down('down', () => {
+					net.log.push(`${Math.round(performance.now())} < ${String(e.data).slice(0, 120)}`);
+					if (!this._gone) this.onmessage?.(e);
+				});
+			ws.onerror = (e) => this.onerror?.(e);
+			ws.onclose = (e) => {
+				// La coupure se voit aussitôt ; ce qui était en route est perdu.
+				this._gone = true;
+				this.onclose?.(e);
+			};
+		}
+		get readyState() {
+			return this._gone ? 3 : this._ws.readyState;
+		}
+		send(m: string) {
+			net.sent.push(m);
+			net.log.push(`${Math.round(performance.now())} > ${m.slice(0, 120)}`);
+			this._up('up', () => this._ws.readyState === 1 && this._ws.send(m));
+		}
+		close(code?: number, reason?: string) {
+			this._ws.close(code, reason);
+		}
+	}
+	(window as unknown as { WebSocket: unknown }).WebSocket = Slow;
 }
 
 // --- Aides --------------------------------------------------------------------
