@@ -329,6 +329,7 @@
 		get linkAsk() { return linkAsk; }, set linkAsk(v) { linkAsk = v; },
 		get loadRecent() { return loadRecent; },
 		get loadSources() { return loadSources; },
+		get loadFormTables() { return loadFormTables; },
 		get locked() { return locked; }, set locked(v) { locked = v; },
 		get lockedCoEdit() { return lockedCoEdit; }, set lockedCoEdit(v) { lockedCoEdit = v; },
 		get mcpOpen() { return mcpOpen; }, set mcpOpen(v) { mcpOpen = v; },
@@ -382,6 +383,7 @@
 		get showBreaks() { return showBreaks; }, set showBreaks(v) { showBreaks = v; },
 		get similar() { return similar; },
 		get sourceTables() { return sourceTables; }, set sourceTables(v) { sourceTables = v; },
+		get formTables() { return formTables; }, set formTables(v) { formTables = v; },
 		get sqlExport() { return sqlExport; }, set sqlExport(v) { sqlExport = v; },
 		get subtotalDlg() { return subtotalDlg; }, set subtotalDlg(v) { subtotalDlg = v; },
 		get themeCat() { return themeCat; },
@@ -401,7 +403,7 @@
 
 	// --- Classeur partagé : ../lib/app/sharing.svelte.ts ---
 	const sharingCtl = createSharing(appCtx);
-	const { loadConflicts, addToShared, resolveConflict, resolveHeld, resolveAllConflicts, gotoConflict, gotoRow, followReference, refGoBack, loadSources, pushSource, retryShare, shareLocalCopy, shareForget, askDetach, shareDetach, askRemove, shareRemove, reloadShare, openedRemote } = sharingCtl;
+	const { loadConflicts, addToShared, resolveConflict, resolveHeld, resolveAllConflicts, gotoConflict, gotoRow, followReference, refGoBack, loadSources, loadFormTables, pushSource, retryShare, shareLocalCopy, shareForget, askDetach, shareDetach, askRemove, shareRemove, reloadShare, openedRemote } = sharingCtl;
 
 	// Colonnes de référence (décision 0016) : « Basculer sur » va à la ligne
 	// citée en notant l'endroit d'où l'on part ; Alt+← ou « Revenir à… » de
@@ -480,6 +482,9 @@
 	// Tableaux publiés seuls comme source du Data Lake (sans le classeur) :
 	// clic droit › « Mettre à jour la source du Data Lake ».
 	let sourceTables = $state<string[]>([]);
+	// Tableaux qui ont déjà un formulaire modifiable : Insertion › « Modifier
+	// le formulaire » (au lieu de « Formulaire ») sur l'un d'eux.
+	let formTables = $state<string[]>([]);
 	let shareReloading = $state(false);
 	// Serveur injoignable : « Réessayer » en cours ; question avant « Détacher du serveur ».
 	let shareRetrying = $state(false);
@@ -645,6 +650,9 @@
 			DocumentService.Threads(0).catch(() => null)
 		]);
 		side.catch(() => {}); // erreur rendue par l'await plus bas
+		// Tableaux qui ont déjà un formulaire (Insertion › Modifier le formulaire) :
+		// un aller-retour au serveur, sans retarder l'affichage.
+		void loadFormTables();
 		// La vue d'abord (LayoutFirst) : sur un grand tableau, ce qui le
 		// parcourt en entier (suggestion de clé, TCD, graphique…) vient après
 		// (completeLayout).
@@ -976,8 +984,11 @@
 		// Classeur partagé : connexion perdue ou retrouvée, nouvelle version
 		// publiée (tableaux en lecture seule ou non : mise en page relue).
 		const offShare = Events.On('share:changed', (e: { data?: ShareState }) => {
+			const back = !!e?.data?.online && !share?.online;
 			if (e?.data) share = e.data;
 			if (mode === 'doc') reload().catch(() => {});
+			// Connexion retrouvée (ou établie après l'ouverture) : formulaires relus.
+			if (back) void loadFormTables();
 		});
 		// Édition web : enregistrement sur le serveur (barre d'état, avertissements).
 		const offDraft = Events.On('draft:status', (e: { data?: DraftStatus }) => {
@@ -1387,6 +1398,12 @@
 		const here = onGrid ? sheet?.aiContext() : undefined;
 		return { sheet: activeInfo?.name ?? '', table: here?.table ?? '', selection: here?.selection ?? '' };
 	});
+	/** Tableau de la cellule active (Insertion › Formulaire ou Modifier le formulaire). */
+	const activeTableName = $derived.by(() => {
+		if (mode !== 'doc') return undefined;
+		void sheetStatus;
+		return sheet?.activeTable();
+	});
 	const aiTables = $derived((help?.tables ?? []).map((t) => ({ name: t.name, rows: t.rows, kind: t.kind })));
 
 	/** Cible d'une étape de l'assistant (tableau, sinon feuille) : y aller. */
@@ -1645,6 +1662,7 @@
 			const c = sheet?.activeCell() ?? { row: 0, col: 0 };
 			dataInsert = { sheet: sheetId, ...c };
 		} : undefined}
+		formEdit={!!activeTableName && formTables.includes(activeTableName)}
 		onform={mode === 'doc' ? () => {
 			const tb = sheet?.activeTable();
 			if (tb) formShare = tb;
@@ -1870,6 +1888,7 @@
 						onform={mode === 'doc' && share?.shared && !share.gone ? (t) => (formShare = t) : undefined}
 						onaddshared={mode === 'doc' && share?.mode === 'collaborative' ? (t) => void addToShared(t) : undefined}
 						{sourceTables}
+						{formTables}
 						onpushsource={mode === 'doc' && sharedWorkbooksEnabled() ? (t) => void pushSource(t) : undefined}
 						pageBreaks={breaks && !breaks.empty ? { rows: breaks.rows ?? [], cols: breaks.cols ?? [], manualRows: breaks.manualRows ?? [], manualCols: breaks.manualCols ?? [], area: breaks.area, framed: !!layout?.pageSetup?.area } : undefined}
 					/>

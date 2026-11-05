@@ -363,7 +363,9 @@
 		},
 		"form": {
 			"label": "Formular",
-			"tooltip": "Die aktive Tabelle als Formular freigeben (Lattis-Server)"
+			"tooltip": "Die aktive Tabelle als Formular freigeben (Lattis-Server)",
+			"editLabel": "Formular bearbeiten",
+			"editTooltip": "Das Formular dieser Tabelle bearbeiten (Lattis-Server)"
 		},
 		"chart": {
 			"tooltip": "{chart} der aktiven Tabelle",

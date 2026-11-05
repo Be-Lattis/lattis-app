@@ -29,6 +29,8 @@
 		formAfter: string | null;
 		formShare: string | null;
 		readonly loadSources: () => Promise<void>;
+		readonly formTables: readonly string[];
+		readonly loadFormTables: () => Promise<void>;
 		readonly mode: Mode;
 		notice: string;
 		openRemote: boolean;
@@ -131,7 +133,12 @@
 	{@const t = v.formShare}
 	<FormDialog
 		table={t}
-		ondone={() => (v.formShare = null)}
+		direct={v.formTables.includes(t)}
+		ondone={() => {
+			v.formShare = null;
+			// Formulaire créé ou supprimé : le bouton du ruban suit.
+			void v.loadFormTables();
+		}}
 		onpublish={() => {
 			v.formAfter = t;
 			v.shareDlg = { republish: false };

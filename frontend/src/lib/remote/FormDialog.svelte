@@ -54,8 +54,10 @@
 		onaddshared?: () => void;
 		/** Message de la barre d'état. */
 		onnotice?: (msg: string) => void;
+		/** Ouvert par « Modifier le formulaire » : un seul formulaire modifiable s'ouvre tout de suite dans le concepteur (plusieurs : la liste). */
+		direct?: boolean;
 	}
-	let { table, ondone, onpublish, onaddshared, onnotice }: Props = $props();
+	let { table, ondone, onpublish, onaddshared, onnotice, direct = false }: Props = $props();
 
 	const HELP = 'partage#partager-un-tableau-comme-formulaire';
 	const err = errorText;
@@ -100,6 +102,7 @@
 			const i = (await DocumentService.FormInfo(table)) as unknown as FormInfo;
 			info = i;
 			if (i.reason) step = 'reason';
+			else if (direct && manageable.length === 1 && !draft) edit(manageable[0]);
 			else if (manageable.length && !draft) step = 'list';
 			else if (!draft) draft = newDraft(i);
 		} catch (e) {
@@ -721,6 +724,7 @@
 					{#each verdict.warnings as m (m)}<p class="warn">{m}</p>{/each}
 				</div>
 				<button type="button" class="sf-btn" disabled={!form?.url || busy} onclick={() => (prefill = true)} title={form?.url ? t('remote.formDialog.prefill.tooltip') : t('remote.formDialog.prefill.saveFirst')}>{t('remote.formDialog.prefill.label')}</button>
+				{#if form && manageable.length}<button type="button" class="sf-btn" disabled={busy} onclick={() => (step = 'list')}>{t('remote.formDialog.allForms')}</button>{/if}
 				{#if form?.url}<button type="button" class="sf-btn" onclick={() => form && copyLink(form.url)}>{t('remote.formQR.copy')}</button>{/if}
 				<button type="button" class="sf-btn" onclick={saveDraft} disabled={busy}>{busy ? t('remote.formDialog.saving') : t('remote.formDialog.saveDraft')}</button>
 				<button type="button" class="sf-btn primary" onclick={openForm} disabled={busy || verdict.errors.length > 0}>{form?.state === 'open' ? t('remote.formDialog.save') : t('remote.formDialog.open')}</button>

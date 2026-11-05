@@ -449,6 +449,7 @@
 		"responses": "{n, plural, other {# 条回复}}",
 		"edit": "编辑…",
 		"newForm": "新建表单…",
+		"allForms": "全部表单",
 		"done": "表单“{title}”已开放。回复将实时作为表格的新行到达。",
 		"prefill": {
 			"label": "预填链接…",

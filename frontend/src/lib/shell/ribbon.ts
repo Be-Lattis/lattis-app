@@ -11,6 +11,15 @@ export function tabLabel(id: string): string {
 	return tAny(`ribbon.tabs.${id}`);
 }
 
+/**
+ * Insertion › Formulaire : sur un tableau qui a déjà un formulaire que
+ * l'utilisateur peut modifier, « Modifier le formulaire » (le concepteur
+ * s'ouvre sur ce formulaire).
+ */
+export function formCommand(edit: boolean): { label: string; hint: string } {
+	return edit ? { label: t('ribbon.cmd.form.editLabel'), hint: t('ribbon.cmd.form.editTooltip') } : { label: t('ribbon.cmd.form.label'), hint: t('ribbon.cmd.form.tooltip') };
+}
+
 /** Drapeaux d'une commande, posés à sa définition (Ribbon.svelte). */
 export interface Gated {
 	label: string;

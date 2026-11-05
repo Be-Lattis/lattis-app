@@ -141,9 +141,12 @@ func TestFormInfo(t *testing.T) {
 	if fi, err = a.FormInfo(ctx, rv.LocalTables[0]); err != nil || fi.Reason != FormPrivate {
 		t.Fatalf("tableau privé : %+v %v", fi, err)
 	}
+	if ft, err := a.FormTables(ctx); err != nil || len(ft) != 0 {
+		t.Fatalf("aucun formulaire : %v %v", ft, err)
+	}
 	fi, err = a.FormInfo(ctx, "Nids")
 	mustShare(t, err)
-	if fi.Reason != "" || fi.TableID == "" || fi.ServerName != "Serveur des nids" || len(fi.Columns) != 5 {
+	if fi.Reason != "" || fi.TableID =="" || fi.ServerName != "Serveur des nids" || len(fi.Columns) != 5 {
 		t.Fatalf("Nids : %+v", fi)
 	}
 	col := map[string]FormColumn{}
@@ -200,6 +203,9 @@ func TestFormInfo(t *testing.T) {
 	if fi, err = a.FormInfo(ctx, "Nids"); err != nil || len(fi.Forms) != 1 || fi.Forms[0].State != workbook.FormOpen {
 		t.Fatalf("formulaires du tableau : %+v %v", fi.Forms, err)
 	}
+	if ft, err := a.FormTables(ctx); err != nil || strings.Join(ft, ",") != "Nids" {
+		t.Fatalf("tableaux à formulaire : %v %v", ft, err)
+	}
 
 	// « Ajouter une colonne Reçu le » : opération de structure, envoyée.
 	fi, err = a.FormAddColumn(ctx, "Nids", "Reçu le", "date")
@@ -236,5 +242,8 @@ func TestFormInfo(t *testing.T) {
 	mustShare(t, err)
 	if fi.Reason != FormRights || len(fi.Forms) != 1 || fi.Forms[0].URL == "" || fi.Forms[0].Manageable || len(fi.Columns) != 0 {
 		t.Fatalf("lecteur : %+v", fi)
+	}
+	if ft, err := b.FormTables(ctx); err != nil || len(ft) != 0 {
+		t.Fatalf("lecteur, rien à modifier : %v %v", ft, err)
 	}
 }

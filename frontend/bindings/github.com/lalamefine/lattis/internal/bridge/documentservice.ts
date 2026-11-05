@@ -1083,6 +1083,17 @@ export function FormSetState(server: string, id: string, state: string, names: {
 }
 
 /**
+ * FormTables rend les noms des tableaux du classeur ouvert qui ont déjà un
+ * formulaire que l'utilisateur peut modifier (Insertion › Modifier le
+ * formulaire, menu du tableau). Vide pour un classeur local ou figé, sans
+ * droit de conception, hors ligne ou si le serveur ne propose pas les
+ * formulaires : le bouton reste alors « Formulaire ».
+ */
+export function FormTables(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2633140045);
+}
+
+/**
  * FormatAsTable refait un tableau de la plage qui contient la cellule.
  */
 export function FormatAsTable(sheet: number, row: number, col: number): $CancellablePromise<$models.DocState> {

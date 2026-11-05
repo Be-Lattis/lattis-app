@@ -288,6 +288,55 @@ func (s *DocumentService) FormInfo(ctx context.Context, table string) (FormInfo,
 	return out, nil
 }
 
+// FormTables rend les noms des tableaux du classeur ouvert qui ont déjà un
+// formulaire que l'utilisateur peut modifier (Insertion › Modifier le
+// formulaire, menu du tableau). Vide pour un classeur local ou figé, sans
+// droit de conception, hors ligne ou si le serveur ne propose pas les
+// formulaires : le bouton reste alors « Formulaire ».
+func (s *DocumentService) FormTables(ctx context.Context) ([]string, error) {
+	out := []string{}
+	d, err := s.current()
+	if err != nil {
+		return out, nil
+	}
+	info := d.Share.Info()
+	if info == nil || info.Mode == workbook.Frozen || !info.CanDesign() || !d.Share.State().Online {
+		return out, nil
+	}
+	srv, _, _, err := remoteServer(ctx, info.Server)
+	if err != nil {
+		return out, nil
+	}
+	forms, err := srv.ListForms(ctx, info.WorkbookID)
+	if err != nil {
+		return out, nil
+	}
+	ids := map[string]bool{}
+	for _, f := range forms {
+		if f.Manageable && f.TableID != "" {
+			ids[f.TableID] = true
+		}
+	}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := d.DB().Read().QueryContext(ctx, `SELECT t.name, r.remote_id FROM _lattis_remote_tables r JOIN _lattis_tables t ON t.id = r.tbl WHERE r.published = 1 AND r.remote_id IS NOT NULL ORDER BY t.name`)
+	if err != nil {
+		return out, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name, id string
+		if err := rows.Scan(&name, &id); err != nil {
+			return out, err
+		}
+		if ids[id] {
+			out = append(out, name)
+		}
+	}
+	return out, rows.Err()
+}
+
 func cmpLabel(r workbook.RestrictionRule) string {
 	if r.Label != "" {
 		return r.Label

@@ -193,6 +193,8 @@
 		onaddshared?: (table: string) => void;
 		/** Tableaux publiés seuls comme source du Data Lake (sans le classeur). */
 		sourceTables?: readonly string[];
+		/** Tableaux qui ont déjà un formulaire modifiable (clic droit › Modifier le formulaire…). */
+		formTables?: readonly string[];
 		/** Clic droit › « Mettre à jour la source du Data Lake » d'un de ces tableaux. */
 		onpushsource?: (table: string) => void;
 		/** Sauts de page de l'impression (traits pointillés) et zone imprimée ; absent : rien. */
@@ -203,7 +205,7 @@
 		comments?: CommentHost;
 	}
 
-	let { data, source: rawSource, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, loading = false, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onsharedata, onform, onaddshared, sourceTables = [], onpushsource, pageBreaks, onplacing, comments }: Props = $props();
+	let { data, source: rawSource, catalog, sources = [], onstatus, autoBench, gridlines = true, headings = false, onhscroll, locked = '', structure = false, layoutLocked = '', freeze, zoom = 1, onzoom, animate = true, loading = false, sheetName = '', onsheet, onrowlink, onreflink, onrefback, onsharedata, onform, onaddshared, sourceTables = [], formTables = [], onpushsource, pageBreaks, onplacing, comments }: Props = $props();
 
 	// Actions sur des cellules, lignes ou colonnes : leur zone reçoit un
 	// reflet animé jusqu'à leur fin (working.ts, drawWorking).
@@ -702,6 +704,7 @@
 		get sourceColumns() { return sourceColumns; },
 		get sources() { return sources; },
 		get sourceTables() { return sourceTables; },
+		get formTables() { return formTables; },
 		get space() { return space; },
 		get spaceKey() { return spaceKey; },
 		get spacer() { return spacer; },

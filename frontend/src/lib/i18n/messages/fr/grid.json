@@ -1609,6 +1609,8 @@
 		"addShared.tooltip": "Créer ce tableau, avec ses lignes, dans le classeur partagé, pour tous les membres",
 		"form": "Générer un formulaire…",
 		"form.tooltip": "Créer une page web qui ajoute des lignes à ce tableau",
+		"formEdit": "Modifier le formulaire…",
+		"formEdit.tooltip": "Modifier la page web qui ajoute des lignes à ce tableau",
 		"shareData": "Partager au Data Lake Lattis…",
 		"shareData.tooltip": "Rendre ce tableau lisible depuis d'autres classeurs du serveur",
 		"pushSource": "Mettre à jour la source du Data Lake",

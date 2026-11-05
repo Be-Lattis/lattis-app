@@ -33,7 +33,7 @@
 	import Submenu from '#lib/ui/Submenu.svelte';
 	import type { RecentFile } from '#bindings/internal/bridge/models.js';
 	import { recentDetail, recentKey, recentLabel, recentRemote } from './doctitle';
-	import { alignPatch, gate, protectedThing, tabLabel, tipOf, type Gated } from './ribbon';
+	import { alignPatch, formCommand, gate, protectedThing, tabLabel, tipOf, type Gated } from './ribbon';
 	import { commandTips, TAB_TIPS, assignKeyTips, keyChars, keyOf, matchTip } from '#lib/ui/keytips.js';
 	import { cycle, focusRegion, isTextField, modalOpen, regionOf, tabbables } from '#lib/ui/focus.js';
 	import { cm, FIT_CHOICES, fitLabel, fitted, hasBreaks, marginLabel, MARGINS, marginPreset, PAPERS, paperOf, SCALE_CHOICES, scaleLabel, type PageAction, type PageSetup } from './pagesetup';
@@ -184,6 +184,8 @@
 		oninsertdata?: () => void;
 		/** Insertion › Formulaire : partager le tableau actif comme formulaire. */
 		onform?: () => void;
+		/** Le tableau actif a déjà un formulaire : « Modifier le formulaire ». */
+		formEdit?: boolean;
 		onformula?: (what: 'insert' | 'sum' | 'reference') => void;
 		/** Presse-papiers ; PasteKind : collage spécial (boîte, ou Valeurs, Formules, Formats, Transposer). */
 		onclip?: (what: 'cut' | 'copy' | 'paste' | PasteKind) => void;
@@ -280,7 +282,7 @@
 		ontheme?: (id: string) => void;
 	}
 
-	let { view, undo, redo, disabled = false, recent = [], onrecent, onrecentremove, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, onsparkline, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onoutline, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, oncomment, comment = false, commentsPane = false, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
+	let { view, undo, redo, disabled = false, recent = [], onrecent, onrecentremove, onview, ai = false, onai, onfile, onundo, onredo, onbench, onsort, onsortcustom, onstyle, onfind, onrules, onfilter, filters = false, errorsOnly = false, note = false, onedit, tableReadOnly, onrecalc, ontovalues, ondedup, onwhatif, ontextcols, onpivot, oninsertdata, onform, formEdit = false, onchart, onformula, onclip, onpainter, onaudit, oncells, gridlines = true, ongridlines, headings = false, onheadings, context = 'sheet', ondoc, docState, onbutton, onobject, onsparkline, sheetProtected = false, sheetOwnProtected = sheetProtected, workbookProtected = false, structureProtected = false, structureByBook = false, layoutShared = false, onprotect, ondata, onoutline, onformat, onmerge, onwrap, onlines, onvalidation, onmergesheets, onnote, oncomment, comment = false, commentsPane = false, onlink, freeze, onfreeze, cellStyle, merged = false, zoom = 1, onzoom, animate = true, onanimate, shared = false, republish = false, reconnect = false, detach = false, remove = false, rights = false, pageSetup, onpage, pageBreaks = false, onpagebreaks, themes = [], ontheme }: Props = $props();
 	const fmt = (tab: FormatTab) => (onformat ? () => onformat(tab) : undefined);
 	const lines = (rows: boolean, hide: boolean) => (onlines ? () => onlines(rows, hide) : undefined);
 	const frz = (what: FreezeAction) => (onfreeze ? () => onfreeze(what) : undefined);
@@ -656,7 +658,7 @@
 				commands: [
 					{ label: t('ribbon.cmd.pivot.label'), icon: 'pivot-table', ro: true, run: onpivot, hint: t('ribbon.cmd.pivot.tooltip') },
 					{ label: t('ribbon.cmd.table.label'), icon: 'table', run: ed('formatAsTable'), hint: t('ribbon.cmd.table.tooltip') },
-					...(sharedWorkbooksEnabled() ? [{ label: t('ribbon.cmd.dataLake.label'), icon: 'database' as const, run: oninsertdata, hint: t('ribbon.cmd.dataLake.tooltip') }, { label: t('ribbon.cmd.form.label'), icon: 'form' as const, run: onform, hint: t('ribbon.cmd.form.tooltip') }] : [])
+					...(sharedWorkbooksEnabled() ? [{ label: t('ribbon.cmd.dataLake.label'), icon: 'database' as const, run: oninsertdata, hint: t('ribbon.cmd.dataLake.tooltip') }, { ...formCommand(formEdit), icon: 'form' as const, run: onform }] : [])
 				]
 			},
 			{

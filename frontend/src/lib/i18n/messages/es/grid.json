@@ -1609,6 +1609,8 @@
 		"addShared.tooltip": "Crear esta tabla, con sus filas, en el libro compartido, para todos los miembros",
 		"form": "Generar un formulario…",
 		"form.tooltip": "Crear una página web que añade filas a esta tabla",
+		"formEdit": "Modificar el formulario…",
+		"formEdit.tooltip": "Modificar la página web que añade filas a esta tabla",
 		"shareData": "Compartir en el Data Lake de Lattis…",
 		"shareData.tooltip": "Hacer que esta tabla se pueda leer desde otros libros del servidor",
 		"pushSource": "Actualizar el origen del Data Lake",

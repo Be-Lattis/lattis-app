@@ -363,7 +363,9 @@
 		},
 		"form": {
 			"label": "Formulaire",
-			"tooltip": "Partager le tableau actif comme formulaire (Serveur Lattis)"
+			"tooltip": "Partager le tableau actif comme formulaire (Serveur Lattis)",
+			"editLabel": "Modifier le formulaire",
+			"editTooltip": "Modifier le formulaire de ce tableau (Serveur Lattis)"
 		},
 		"chart": {
 			"tooltip": "{chart} du tableau actif",

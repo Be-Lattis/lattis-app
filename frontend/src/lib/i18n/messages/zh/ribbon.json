@@ -363,7 +363,9 @@
 		},
 		"form": {
 			"label": "表单",
-			"tooltip": "将活动表格作为表单共享（Lattis 服务器）"
+			"tooltip": "将活动表格作为表单共享（Lattis 服务器）",
+			"editLabel": "编辑表单",
+			"editTooltip": "编辑此表格的表单（Lattis 服务器）"
 		},
 		"chart": {
 			"tooltip": "活动表格的{chart}",

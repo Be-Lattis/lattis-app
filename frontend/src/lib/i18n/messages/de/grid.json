@@ -1609,6 +1609,8 @@
 		"addShared.tooltip": "Diese Tabelle mit ihren Zeilen in der freigegebenen Arbeitsmappe für alle Mitglieder erstellen",
 		"form": "Formular erstellen…",
 		"form.tooltip": "Eine Webseite erstellen, die dieser Tabelle Zeilen hinzufügt",
+		"formEdit": "Formular bearbeiten…",
+		"formEdit.tooltip": "Die Webseite bearbeiten, die dieser Tabelle Zeilen hinzufügt",
 		"shareData": "Im Lattis Data Lake freigeben…",
 		"shareData.tooltip": "Diese Tabelle für andere Arbeitsmappen des Servers lesbar machen",
 		"pushSource": "Data-Lake-Quelle aktualisieren",

@@ -363,7 +363,9 @@
 		},
 		"form": {
 			"label": "Form",
-			"tooltip": "Share the active table as a form (Lattis Server)"
+			"tooltip": "Share the active table as a form (Lattis Server)",
+			"editLabel": "Edit form",
+			"editTooltip": "Edit this table's form (Lattis Server)"
 		},
 		"chart": {
 			"tooltip": "{chart} of the active table",

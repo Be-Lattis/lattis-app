@@ -38,6 +38,8 @@ export interface SharingHost {
 	readonly help: FormulaHelp | null;
 	refBack: RefSpot[];
 	sourceTables: string[];
+	/** Tableaux qui ont déjà un formulaire modifiable (Insertion › Modifier le formulaire). */
+	formTables: string[];
 	shareRetrying: boolean;
 	readonly opened: (r: OpenResult) => Promise<void>;
 	readonly closeDoc: (save?: boolean) => Promise<void>;
@@ -238,6 +240,15 @@ export function createSharing(sh: SharingHost) {
 		const links = ((await DocumentService.TableSources().catch(() => null)) ?? []) as unknown as SourceLink[];
 		sh.sourceTables = links.map((l) => l.tableName).filter((n) => !!n);
 	}
+	/** Tableaux qui ont déjà un formulaire que l'utilisateur peut modifier (le pont rend une liste vide hors classeur partagé en ligne). */
+	async function loadFormTables() {
+		if (sh.mode !== 'doc' || !sharedWorkbooksEnabled()) {
+			sh.formTables = [];
+			return;
+		}
+		const names = (await DocumentService.FormTables().catch(() => null)) ?? [];
+		if (names.length !== sh.formTables.length || names.some((n, i) => n !== sh.formTables[i])) sh.formTables = names;
+	}
 	async function pushSource(table: string) {
 		sh.notice = t('shell.share.sourceUpdating', { table });
 		try {
@@ -364,6 +375,7 @@ export function createSharing(sh: SharingHost) {
 		followReference,
 		refGoBack,
 		loadSources,
+		loadFormTables,
 		pushSource,
 		retryShare,
 		shareLocalCopy,

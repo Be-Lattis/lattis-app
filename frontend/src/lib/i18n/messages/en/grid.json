@@ -1609,6 +1609,8 @@
 		"addShared.tooltip": "Create this table, with its rows, in the shared workbook, for all members",
 		"form": "Generate a form…",
 		"form.tooltip": "Create a web page that adds rows to this table",
+		"formEdit": "Edit the form…",
+		"formEdit.tooltip": "Edit the web page that adds rows to this table",
 		"shareData": "Share to the Lattis Data Lake…",
 		"shareData.tooltip": "Make this table readable from other workbooks on the server",
 		"pushSource": "Update the Data Lake source",

@@ -1386,6 +1386,8 @@ export interface MessageParams {
 	'grid.menu.follow.on.tooltip': { name: number | string };
 	'grid.menu.form': Record<never, never>;
 	'grid.menu.form.tooltip': Record<never, never>;
+	'grid.menu.formEdit': Record<never, never>;
+	'grid.menu.formEdit.tooltip': Record<never, never>;
 	'grid.menu.formatCells': Record<never, never>;
 	'grid.menu.handForget': { n: number | string };
 	'grid.menu.handForget.tooltip': Record<never, never>;
@@ -2679,6 +2681,7 @@ export interface MessageParams {
 	'remote.formDialog.access.public.label': Record<never, never>;
 	'remote.formDialog.access.serverAccounts.detail': Record<never, never>;
 	'remote.formDialog.access.serverAccounts.label': { server: number | string };
+	'remote.formDialog.allForms': Record<never, never>;
 	'remote.formDialog.already': { n: number | string };
 	'remote.formDialog.audience.add': Record<never, never>;
 	'remote.formDialog.audience.address': Record<never, never>;
@@ -3543,6 +3546,8 @@ export interface MessageParams {
 	'ribbon.cmd.fixed2.tooltip': Record<never, never>;
 	'ribbon.cmd.fontColor.label': Record<never, never>;
 	'ribbon.cmd.fontColor.tooltip': Record<never, never>;
+	'ribbon.cmd.form.editLabel': Record<never, never>;
+	'ribbon.cmd.form.editTooltip': Record<never, never>;
 	'ribbon.cmd.form.label': Record<never, never>;
 	'ribbon.cmd.form.tooltip': Record<never, never>;
 	'ribbon.cmd.format.cells': Record<never, never>;

@@ -1609,6 +1609,8 @@
 		"addShared.tooltip": "在共享工作簿中为所有成员创建此表格及其行",
 		"form": "生成表单…",
 		"form.tooltip": "创建一个向此表格添加行的网页",
+		"formEdit": "编辑表单…",
+		"formEdit.tooltip": "编辑向此表格添加行的网页",
 		"shareData": "共享到 Lattis Data Lake…",
 		"shareData.tooltip": "使此表格可从服务器上的其他工作簿读取",
 		"pushSource": "更新 Data Lake 源",

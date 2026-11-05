@@ -449,6 +449,7 @@
 		"responses": "{n, plural, one {# response} other {# responses}}",
 		"edit": "Edit…",
 		"newForm": "New form…",
+		"allForms": "All forms",
 		"done": "Form “{title}” is open. Responses arrive as new rows of the table, live.",
 		"prefill": {
 			"label": "Prefilled link…",

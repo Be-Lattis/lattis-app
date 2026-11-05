@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { alignPatch, blockedBy, gate, protectedThing, tipOf, type Gated, type GatedMenu, type GateState } from './ribbon';
+import { alignPatch, blockedBy, formCommand, gate, protectedThing, tipOf, type Gated, type GatedMenu, type GateState } from './ribbon';
+import { setLang } from '#lib/i18n/index.js';
 import { hintKeys, keyLabel, pdfPrinterHint } from '#lib/web/platform.js';
 
 const run = () => {};
@@ -127,5 +128,18 @@ describe('alignement (audit 3, M10)', () => {
 		expect(alignPatch(undefined, 'left')).toEqual({ al: 'left' });
 		expect(alignPatch('left', 'left')).toEqual({ al: null });
 		expect(alignPatch('center', 'right')).toEqual({ al: 'right' });
+	});
+});
+
+// Insertion › Formulaire : sur un tableau qui a déjà un formulaire, le
+// bouton devient « Modifier le formulaire » (et son info-bulle suit).
+describe('formulaire du tableau actif', () => {
+	it('Formulaire, ou Modifier le formulaire', async () => {
+		await setLang('fr');
+		expect(formCommand(false)).toEqual({ label: 'Formulaire', hint: 'Partager le tableau actif comme formulaire (Serveur Lattis)' });
+		expect(formCommand(true)).toEqual({ label: 'Modifier le formulaire', hint: 'Modifier le formulaire de ce tableau (Serveur Lattis)' });
+		await setLang('en');
+		expect(formCommand(true).label).toBe('Edit form');
+		await setLang('fr');
 	});
 });

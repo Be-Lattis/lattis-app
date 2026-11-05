@@ -449,6 +449,7 @@
 		"responses": "{n, plural, one {# respuesta} other {# respuestas}}",
 		"edit": "Modificar…",
 		"newForm": "Nuevo formulario…",
+		"allForms": "Todos los formularios",
 		"done": "El formulario «{title}» está abierto. Las respuestas llegan como nuevas filas de la tabla, en directo.",
 		"prefill": {
 			"label": "Enlace rellenado previamente…",

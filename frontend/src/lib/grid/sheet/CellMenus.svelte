@@ -100,6 +100,7 @@
 		readonly sheetLines: (op: LinesOp) => void;
 		readonly source: SheetSource;
 		readonly sourceTables: readonly string[];
+		readonly formTables: readonly string[];
 		readonly spillUnder: (row: number, col: number) => { row: number; col: number; rows: string[][]; } | undefined;
 		readonly startEdit: (byTyping: boolean, initial?: string) => void;
 		readonly startPivotMove: (p: SheetPivot) => void;
@@ -495,7 +496,8 @@
 							<button title={tr('grid.menu.addShared.tooltip')} onclick={() => { const n = m.e.t.name; v.menu = null; v.onaddshared?.(n); }}>{tr('grid.menu.addShared')}</button>
 						{/if}
 						{#if form}
-							<button title={tr('grid.menu.form.tooltip')} onclick={() => { const n = m.e.t.name; v.menu = null; v.onform?.(n); }}>{tr('grid.menu.form')}</button>
+							{@const formEdit = v.formTables.includes(m.e.t.name)}
+							<button title={formEdit ? tr('grid.menu.formEdit.tooltip') : tr('grid.menu.form.tooltip')} onclick={() => { const n = m.e.t.name; v.menu = null; v.onform?.(n); }}>{formEdit ? tr('grid.menu.formEdit') : tr('grid.menu.form')}</button>
 						{/if}
 						{#if share}
 							<button title={tr('grid.menu.shareData.tooltip')} onclick={() => { const n = m.e.t.name; v.menu = null; v.onsharedata?.(n); }}>{tr('grid.menu.shareData')}</button>
