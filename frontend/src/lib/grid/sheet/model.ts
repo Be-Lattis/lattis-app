@@ -375,6 +375,12 @@ export interface SheetSource {
 	redo?(): Promise<unknown>;
 	/** Colle un bloc (une seule étape d'annulation). */
 	paste?(row: number, col: number, block: string[][]): Promise<string | void>;
+	/**
+	 * Recopie (poignée de la sélection) : block, calculé à partir de la zone
+	 * src, collé à partir de (row, col), avec la validation des données de
+	 * src ; une seule étape d'annulation. Absente : paste (valeurs seules).
+	 */
+	fill?(src: ClipRect, row: number, col: number, block: string[][]): Promise<string | void>;
 	/** Lignes ou colonnes entières de la feuille : insertion (avant a, b lignes) ou suppression (a à b). */
 	sheetLines?(op: LinesOp, a: number, b: number): Promise<unknown>;
 	/** Mise en forme conditionnelle de lignes (rows) ou colonnes entières i0 à i1. */

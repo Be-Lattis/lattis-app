@@ -7,6 +7,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 ## Non publié
 
 - Validation des données, fenêtre simplifiée : une nouvelle règle s'ouvre sur une **liste préremplie** des valeurs déjà saisies ; message de saisie et alerte d'erreur passent sous **Plus d'options** ; dans un tableau, seuls les types de règle adaptés au type de la colonne sont proposés ; la formule personnalisée et les bornes en formule ont la même complétion que la barre de formule.
+- Validation des données : une saisie refusée ouvre toujours la même fenêtre (Réessayer/Annuler, Oui/Non ou OK selon le style d'alerte), liste simple comprise. La recopie (poignée, Ctrl+D, Ctrl+R) emporte la règle de validation des cellules source, et Annuler retire valeurs et règles en une fois.
 
 ## 0.5.3-beta (04/11/2026)
 

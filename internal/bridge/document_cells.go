@@ -187,6 +187,30 @@ func (s *DocumentService) Paste(ctx context.Context, sheet int64, row, col int, 
 	return ev, err
 }
 
+// Fill écrit la recopie (poignée de la sélection) : le bloc calculé à partir
+// de la zone src, collé à partir de (row, col), avec la validation des
+// données de src (voir canvas.Model.Fill). Une seule étape d'annulation.
+func (s *DocumentService) Fill(ctx context.Context, sheet int64, src canvas.Rect, row, col int, block [][]string) (canvas.Event, error) {
+	d, err := s.current()
+	if err != nil {
+		return canvas.Event{}, err
+	}
+	width := 1
+	for _, r := range block {
+		width = max(width, len(r))
+	}
+	w := s.watchChange(sheet, row, col, row+max(len(block), 1)-1, col+width-1, "paste")
+	wctx, t := s.track(ctx, true)
+	ev, err := d.Fill(wctx, sheet, src, row, col, block)
+	s.untrack(t, &err)
+	if err != nil {
+		return ev, err
+	}
+	_, err = s.changed(ctx)
+	s.fireChange(w)
+	return ev, err
+}
+
 // SetNote pose la note d'une cellule (texte vide : la retire).
 func (s *DocumentService) SetNote(ctx context.Context, sheet int64, row, col int, text string) (DocState, error) {
 	return s.act(ctx, func(d *doc.Document) error { return d.SetNote(ctx, sheet, row, col, text) })

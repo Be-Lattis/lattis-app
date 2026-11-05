@@ -105,6 +105,8 @@ export function workZones(method: string, args: unknown[], look: WorkLookup): Wo
 			return wholeTable(tableArg(a[0], look));
 		case 'paste':
 			return blockZone(a[0], a[1], a[2]);
+		case 'fill':
+			return blockZone(a[1], a[2], a[3]);
 		case 'clearRange':
 		case 'clearCells':
 		case 'applyStyle':
@@ -158,6 +160,7 @@ const ZONED = new Set([
 	'clearFilters',
 	'setFilter',
 	'paste',
+	'fill',
 	'clearRange',
 	'clearCells',
 	'applyStyle',

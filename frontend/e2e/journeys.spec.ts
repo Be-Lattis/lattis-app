@@ -254,7 +254,32 @@ test('14. validation des données', async ({ app }) => {
 	await goTo(app, 'A2');
 	await app.keyboard.type('Banane');
 	await app.keyboard.press('Enter');
-	await expect(app.getByText(/n'est pas permis/).first()).toBeVisible();
+	// Liste simple comme les autres règles : la boîte Réessayer/Annuler.
+	const alert = app.getByRole('alertdialog');
+	await expect(alert).toContainText(/n'est pas permis/);
+	await alert.getByRole('button', { name: 'Réessayer', exact: true }).click();
+	await expect(alert).toBeHidden();
+	await expect(app.locator('textarea.editor')).toHaveValue('Banane');
+	await app.keyboard.press('Escape');
+	await goTo(app, 'A2');
+	await expect(activeCell(app)).toContainText('Pomme');
+	// Recopie (Ctrl+D) : A3 prend la règle de A2 ; Annuler retire valeur et règle.
+	await goTo(app, 'A3');
+	await app.keyboard.press('Control+D');
+	await expect(activeCell(app)).toContainText('Pomme');
+	await app.keyboard.type('Banane');
+	await app.keyboard.press('Enter');
+	await expect(alert).toContainText(/n'est pas permis/);
+	await alert.getByRole('button', { name: 'Annuler', exact: true }).click();
+	await expect(alert).toBeHidden();
+	await goTo(app, 'A3');
+	await app.keyboard.press('Control+Z');
+	await expect(activeCell(app)).toContainText('Poire');
+	await app.keyboard.type('Banane');
+	await app.keyboard.press('Enter');
+	await goTo(app, 'A3');
+	await expect(activeCell(app)).toContainText('Banane');
+	await expect(alert).toBeHidden();
 });
 
 // Lignes masquées (Accueil › Format) : la flèche les saute ; Annuler les rend.

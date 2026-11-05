@@ -75,6 +75,11 @@ export function createSheetSource(sh: SheetSourceHost) {
 		editing: (row, col, on) => (sh.share?.shared || sh.coedit?.active ? DocumentService.ShareEditing(sh.sheetId, row, col, on) : Promise.resolve()),
 		undo: () => ((sh.headerOffer = null), DocumentService.Undo().then(sh.reload)),
 		redo: () => DocumentService.Redo().then(sh.reload),
+		async fill(src, row, col, block) {
+			const ev = await DocumentService.Fill(sh.sheetId, src, row, col, block);
+			await sh.reload();
+			if (ev.refusedCount) return refusedNotice(ev);
+		},
 		async paste(row, col, block) {
 			const ev = await DocumentService.Paste(sh.sheetId, row, col, block);
 			await sh.reload();

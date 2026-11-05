@@ -1096,6 +1096,7 @@
 		"set": "Validation des données posée",
 		"alert": {
 			"title": "Valeur non valide",
+			"default": "Cette valeur n'est pas permise dans cette cellule.",
 			"continue": "Continuer ?",
 			"yes": "Oui",
 			"no": "Non",

@@ -927,6 +927,15 @@ export function FileTables(kind: string, path: string): $CancellablePromise<quer
 }
 
 /**
+ * Fill écrit la recopie (poignée de la sélection) : le bloc calculé à partir
+ * de la zone src, collé à partir de (row, col), avec la validation des
+ * données de src (voir canvas.Model.Fill). Une seule étape d'annulation.
+ */
+export function Fill(sheet: number, src: canvas$0.Rect, row: number, col: number, block: (string[] | null)[] | null): $CancellablePromise<canvas$0.Event> {
+    return $Call.ByID(2276648435, sheet, src, row, col, block);
+}
+
+/**
  * FilterValues donne les valeurs distinctes d'une colonne pour le filtre.
  */
 export function FilterValues(table: string, i: number): $CancellablePromise<canvas$0.FilterValue[] | null> {

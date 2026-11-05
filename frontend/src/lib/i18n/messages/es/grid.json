@@ -1096,6 +1096,7 @@
 		"set": "Validación de datos aplicada",
 		"alert": {
 			"title": "Valor no válido",
+			"default": "Este valor no está permitido en esta celda.",
 			"continue": "¿Continuar?",
 			"yes": "Sí",
 			"no": "No",

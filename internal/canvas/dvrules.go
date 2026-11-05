@@ -520,19 +520,35 @@ func (t *tx) dvLayer(q string, args ...any) (any, bool, error) {
 // colonne puis cellule du tableau, ou cellule libre), comme la grille.
 // L'en-tête d'un tableau n'en a pas.
 func (t *tx) dvAt(sheet int64, row, col int, tables []Table) (*dvCell, error) {
+	c, dv, err := t.dvRawAt(sheet, row, col, tables)
+	if c == nil || err != nil {
+		return nil, err
+	}
+	r, ok := ParseDV(dv)
+	if !ok {
+		return nil, nil
+	}
+	c.rule = r
+	return c, nil
+}
+
+// dvRawAt donne la propriété dv qui s'applique à la cellule (row, col),
+// telle qu'écrite dans sa couche (nil : aucune), et la cellule (nil : un
+// en-tête de tableau, ou une ligne absente).
+func (t *tx) dvRawAt(sheet int64, row, col int, tables []Table) (*dvCell, any, error) {
 	c := &dvCell{sheet: sheet, row: row, col: col}
 	for i := range tables {
 		tb := &tables[i]
 		if col >= tb.Col && col <= tb.Right() && row >= tb.Top() && row <= tb.Bottom() {
 			if row <= tb.Row {
-				return nil, nil
+				return nil, nil, nil
 			}
 			ids, err := t.ridsAt(tb, row, row)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if len(ids) == 0 {
-				return nil, nil
+				return nil, nil, nil
 			}
 			c.tb, c.rid = tb, ids[0]
 		}
@@ -557,18 +573,13 @@ func (t *tx) dvAt(sheet int64, row, col int, tables []Table) (*dvCell, error) {
 	for _, l := range layers {
 		v, found, err := t.dvLayer(l.q, l.args...)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if found {
 			dv = v
 		}
 	}
-	r, ok := ParseDV(dv)
-	if !ok {
-		return nil, nil
-	}
-	c.rule = r
-	return c, nil
+	return c, dv, nil
 }
 
 // dvFormula : le texte d'une formule de la validation pour cette cellule

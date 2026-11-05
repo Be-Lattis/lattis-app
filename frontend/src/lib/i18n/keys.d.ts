@@ -1903,6 +1903,7 @@ export interface MessageParams {
 	'grid.typeMix.date': { n: number | string; total: number | string };
 	'grid.typeMix.number': { n: number | string; total: number | string };
 	'grid.validation.alert.continue': Record<never, never>;
+	'grid.validation.alert.default': Record<never, never>;
 	'grid.validation.alert.no': Record<never, never>;
 	'grid.validation.alert.retry': Record<never, never>;
 	'grid.validation.alert.title': Record<never, never>;

@@ -259,11 +259,13 @@ export function createKeyboard(sh: KeyboardHost) {
 			return;
 		}
 		const block = copyFillBlock(plan, down, (r, c) => sh.cellInfo(r, c).value);
-		const paste = sh.source.paste;
+		// Valeurs et validation des données de la source, en une étape d'annulation.
+		const { fill, paste } = sh.source;
+		const { src } = plan;
 		sh.lastRepeat = () => copyFill(down);
 		sh.writing = sh.writing.catch(() => undefined).then(async () => {
 			try {
-				await paste(dst.r0, dst.c0, block);
+				await (fill ? fill({ r0: src.r0, c0: src.c0, r1: src.r1, c1: src.c1 }, dst.r0, dst.c0, block) : paste(dst.r0, dst.c0, block));
 				sh.message = down ? tr('grid.fill.down') : tr('grid.fill.right');
 			} catch (err) {
 				sh.message = errorText(err);

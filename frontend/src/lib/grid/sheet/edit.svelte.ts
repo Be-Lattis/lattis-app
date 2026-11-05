@@ -314,6 +314,19 @@ export function createEdit(h: EditHost) {
 			h.writing = h.writing.catch(() => undefined).then(() => done(at.row, at.col, false).then(() => undefined, () => undefined));
 		}
 	});
+
+	/**
+	 * Saisie refusée par la validation des données, vérifiée par le moteur ou
+	 * ici (liste simple) : toujours la même boîte (arrêt : Réessayer/Annuler ;
+	 * avertissement : Oui/Non ; informations : OK), un texte par défaut si la
+	 * règle n'en a pas, et le texte dans la barre d'état (lecteurs d'écran).
+	 */
+	function showDvAlert(a: DvAlert, row: number, col: number, raw: string, keep: boolean) {
+		const text = a.text.trim() || tr('grid.validation.alert.default');
+		h.dvAlert = { ...a, text, row, col, raw, keep };
+		h.say(text);
+	}
+
 	// keep : saisie au clavier ; refusée, son texte revient dans l'éditeur
 	// (sur sa cellule) au lieu d'être perdu.
 	// onrefused : reçoit le refus du moteur (renommage depuis la zone de nom).
@@ -393,11 +406,8 @@ export function createEdit(h: EditHost) {
 			const q = key ? null : keyQuestion(h.message, e);
 			const hq = key ? null : handQuestion(h.message, e);
 			const dva = key === 'dv' ? null : dvAlertOf(e);
-			if (dva) {
-				// Validation des données : l'alerte demande quoi faire (Réessayer, Oui, OK…).
-				h.message = '';
-				h.dvAlert = { ...dva, row, col, raw, keep };
-			} else if (q) {
+			if (dva) showDvAlert(dva, row, col, raw, keep);
+			else if (q) {
 				// Recherche dans un tableau sans clé : la boîte demande quoi utiliser.
 				h.message = '';
 				h.keyDlg = { ...q, row, col, raw, keep, choice: 'index' };
@@ -469,8 +479,11 @@ export function createEdit(h: EditHost) {
 		if (text !== h.cellInfo(row, col).value) {
 			const r = h.refusal(row, col, text);
 			if ('message' in r) {
-				h.say(r.message);
-				return false;
+				// Liste simple : la même boîte qu'un refus du moteur ; Réessayer rouvre l'éditeur.
+				h.editing = false;
+				h.editErr = null;
+				showDvAlert({ style: 'stop', title: '', text: r.message }, row, col, text, true);
+				return true;
 			}
 			text = r.value;
 		}
@@ -862,8 +875,11 @@ export function createEdit(h: EditHost) {
 		if (text !== h.cellInfo(row, col).value) {
 			const r = h.refusal(row, col, text);
 			if ('message' in r) {
-				h.say(r.message);
-				return 'refused';
+				h.fxEditing = false;
+				h.completion = h.sig = null;
+				h.refreshFx();
+				showDvAlert({ style: 'stop', title: '', text: r.message }, row, col, text, false);
+				return true;
 			}
 			text = r.value;
 		}

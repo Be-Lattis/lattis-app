@@ -1096,6 +1096,7 @@
 		"set": "Data validation set",
 		"alert": {
 			"title": "Invalid value",
+			"default": "This value is not allowed in this cell.",
 			"continue": "Continue?",
 			"yes": "Yes",
 			"no": "No",

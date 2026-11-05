@@ -437,10 +437,11 @@ export function createMouse(sh: MouseHost) {
 			row = sel.r0;
 			col = right ? sel.c1 + 1 : to.c0;
 		}
-		const paste = sh.source.paste;
+		// Valeurs et validation des données de la source, en une étape d'annulation.
+		const { fill, paste } = sh.source;
 		sh.writing = sh.writing.catch(() => undefined).then(async () => {
 			try {
-				await paste(row, col, block);
+				await (fill ? fill({ r0: sel.r0, c0: sel.c0, r1: sel.r1, c1: sel.c1 }, row, col, block) : paste(row, col, block));
 				sh.message = tr('grid.fill.series');
 			} catch (err) {
 				sh.message = errorText(err);

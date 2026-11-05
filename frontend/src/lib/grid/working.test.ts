@@ -22,6 +22,8 @@ describe('workZones', () => {
 
 	it('collage, effacement, mise en forme : le bloc ou le rectangle', () => {
 		expect(workZones('paste', [10, 2, [['a', 'b', 'c'], ['d']]], look)).toEqual([{ r0: 10, c0: 2, r1: 11, c1: 4 }]);
+		// Recopie : la zone remplie (la source, premier argument, n'est pas réécrite).
+		expect(workZones('fill', [{ r0: 1, c0: 3, r1: 1, c1: 3 }, 2, 3, [['1'], ['2']]], look)).toEqual([{ r0: 2, c0: 3, r1: 3, c1: 3 }]);
 		expect(workZones('clearRange', [5, 3, 1, 0, false], look)).toEqual([{ r0: 1, c0: 0, r1: 5, c1: 3 }]);
 		expect(workZones('applyStyle', [1, 1, 1, 1, { bold: true }], look)).toEqual([{ r0: 1, c0: 1, r1: 1, c1: 1 }]);
 	});

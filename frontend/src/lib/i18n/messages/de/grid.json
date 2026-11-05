@@ -1096,6 +1096,7 @@
 		"set": "Datenüberprüfung festgelegt",
 		"alert": {
 			"title": "Ungültiger Wert",
+			"default": "Dieser Wert ist in dieser Zelle nicht zulässig.",
 			"continue": "Fortfahren?",
 			"yes": "Ja",
 			"no": "Nein",
