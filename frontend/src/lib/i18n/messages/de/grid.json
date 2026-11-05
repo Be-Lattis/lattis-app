@@ -1041,8 +1041,8 @@
 			"reading": "Liste wird gelesen…",
 			"empty": "Der Bereich der Liste ist leer"
 		},
+		"more": "Weitere Optionen",
 		"tab": {
-			"options": "Einstellungen",
 			"input": "Eingabemeldung",
 			"error": "Fehlermeldung"
 		},

@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+- Validation des données, fenêtre simplifiée : une nouvelle règle s'ouvre sur une **liste préremplie** des valeurs déjà saisies ; message de saisie et alerte d'erreur passent sous **Plus d'options** ; dans un tableau, seuls les types de règle adaptés au type de la colonne sont proposés ; la formule personnalisée et les bornes en formule ont la même complétion que la barre de formule.
+
 ## 0.5.3-beta (04/11/2026)
 
 ### Nouveautés

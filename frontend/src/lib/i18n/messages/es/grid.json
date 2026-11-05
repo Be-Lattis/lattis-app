@@ -1041,8 +1041,8 @@
 			"reading": "Leyendo la lista…",
 			"empty": "El rango de la lista está vacío"
 		},
+		"more": "Más opciones",
 		"tab": {
-			"options": "Configuración",
 			"input": "Mensaje de entrada",
 			"error": "Mensaje de error"
 		},

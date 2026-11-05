@@ -235,8 +235,20 @@ test('14. validation des données', async ({ app }) => {
 	await app.getByRole('button', { name: 'Validation des données', exact: true }).click();
 	const dlg = app.getByRole('dialog', { name: /Validation/ });
 	await expect(dlg).toBeVisible();
+	// Pas encore de règle : une liste, préremplie des valeurs de la colonne.
+	await expect(dlg.locator('#dv-type')).toHaveValue('list');
+	await expect(dlg.locator('textarea').first()).toHaveValue('Pomme\nPoire\nKiwi');
+	// Colonne de texte : ni Entier ni Heure ; message et alerte repliés.
+	await expect(dlg.locator('#dv-type option[value="whole"]')).toHaveCount(0);
+	await expect(dlg.locator('#dv-type option[value="length"]')).toHaveCount(1);
+	await expect(dlg.locator('#dv-it')).toBeHidden();
+	await dlg.getByText("Plus d'options").click();
+	await expect(dlg.locator('#dv-it')).toBeVisible();
+	// Formule personnalisée : la complétion de la barre de formule.
+	await dlg.locator('#dv-type').selectOption('custom');
+	await dlg.locator('#dv-f').pressSequentially('=ESTN');
+	await expect(dlg.getByRole('option', { name: /ESTNUM/ })).toBeVisible();
 	await dlg.locator('#dv-type').selectOption('list');
-	await dlg.locator('textarea').fill('Pomme\nPoire\nKiwi');
 	await dlg.getByRole('button', { name: 'OK', exact: true }).click();
 	await expect(dlg).toBeHidden();
 	await goTo(app, 'A2');

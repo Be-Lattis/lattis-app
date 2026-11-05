@@ -1041,8 +1041,8 @@
 			"reading": "Lecture de la liste…",
 			"empty": "La plage de la liste est vide"
 		},
+		"more": "Plus d'options",
 		"tab": {
-			"options": "Options",
 			"input": "Message de saisie",
 			"error": "Alerte d'erreur"
 		},

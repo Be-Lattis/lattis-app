@@ -6,7 +6,8 @@ import { type SyncKind } from '../cache';
 import { type AxisLike } from '../anim';
 import { type CellStyle } from '../style';
 import { cleanSource, dvTarget, dvSource, validate, validateSource, type DvList, type MergeRange } from '../sheetfmt';
-import { dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, type DvAlert, type DvForm } from '../dvrule';
+import { dvDistinct, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvNewForm, dvRule, dvTypesFor, type DvAlert, type DvForm } from '../dvrule';
+import { editValue } from '../format';
 import { type Cell, type CellRange } from '../mergesel';
 import { type KeyChoice } from '../keychoice';
 import { refMessage, refTarget, type Citation } from '../reflink';
@@ -277,10 +278,27 @@ export function createValidation(sh: ValidationHost) {
 		}
 		sh.closeMenus();
 		const dv = dvAt(sh.active.row, sh.active.col);
-		sh.validDlg = { target: validationTarget(), ...dvForm(dvRule(dv)), error: '', preview: null, loading: false };
+		const rule = dvRule(dv);
+		const t = targetColumns();
+		// Pas encore de règle : une liste des valeurs déjà saisies.
+		const f = rule ? dvForm(rule) : dvNewForm(presentValues(t));
+		f.types = dvTypesFor(t?.types ?? null, f.type);
+		sh.validDlg = { target: validationTarget(), ...f, error: '', preview: null, loading: false };
 		if (sh.validDlg.type === 'list' && sh.validDlg.mode === 'range') refreshPreview(0);
-		// Bornes et formule relues dans la langue de la session, écrites pour la cellule active.
 		const seq = ++dvDlgSeq;
+		// Colonne de tableau pas encore toute lue : la liste est complétée si elle n'a pas été touchée.
+		if (!rule && t && t.e.cache.rows > 0) {
+			const first = sh.validDlg.text;
+			void t.e.cache
+				.ensure(0, Math.min(t.e.cache.rows, PREFILL_ROWS) - 1)
+				.then(() => {
+					const cur = sh.validDlg;
+					if (!cur || seq !== dvDlgSeq || cur.type !== 'list' || cur.mode !== 'list' || cur.text !== first) return;
+					cur.text = dvDistinct(presentValues(t)).join('\n');
+				})
+				.catch(() => undefined);
+		}
+		// Bornes et formule relues dans la langue de la session, écrites pour la cellule active.
 		if (dvRule(dv) && !dvLegacy(dv) && sh.source.validationAt)
 			void sh.source
 				.validationAt(sh.active.row, sh.active.col)
@@ -293,6 +311,50 @@ export function createValidation(sh: ValidationHost) {
 					cur.formula = f.formula;
 				})
 				.catch(() => undefined);
+	}
+
+	/** Lignes d'un tableau lues au plus pour préremplir la liste. */
+	const PREFILL_ROWS = 5000;
+
+	/** Colonnes de tableau visées par la sélection (tableau de la cellule active), null hors tableau. */
+	function targetColumns(): { e: Entry; cols: number[]; types: string[] } | null {
+		const e = sh.tableAt(sh.active.row, sh.active.col);
+		if (!e) return null;
+		const sel = sh.selection();
+		const cols: number[] = [];
+		for (let c = Math.max(sel.c0, e.t.col); c <= Math.min(sel.c1, e.t.col + e.t.columns.length - 1); c++) cols.push(c - e.t.col);
+		if (!cols.length) cols.push(sh.active.col - e.t.col);
+		return { e, cols, types: cols.map((i) => (e.t.columns[i].formula !== undefined ? 'formula' : e.t.columns[i].type)) };
+	}
+
+	/**
+	 * Valeurs déjà saisies dans la cible, dans l'ordre : toutes les lignes lues
+	 * des colonnes du tableau, sinon les cellules libres de la sélection (sans
+	 * les formules).
+	 */
+	function presentValues(t: { e: Entry; cols: number[] } | null): string[] {
+		const out: string[] = [];
+		if (t) {
+			const n = Math.min(t.e.cache.rows, PREFILL_ROWS);
+			for (let r = 0; r < n; r++) {
+				const row = t.e.cache.row(r);
+				if (!row) continue;
+				for (const i of t.cols) {
+					const col = t.e.t.columns[i];
+					if (col.formula !== undefined) out.push(row.text[i] ?? '');
+					else out.push(row.bad?.get(i) ?? editValue(col.type, row.cells[i]));
+				}
+			}
+			return out;
+		}
+		const sel = sh.selection();
+		const found: [number, number, string][] = [];
+		for (const [k, v] of sh.cells) {
+			const [r, c] = k.split(',').map(Number);
+			if (r >= sel.r0 && r <= sel.r1 && c >= sel.c0 && c <= sel.c1 && !v.trimStart().startsWith('=')) found.push([r, c, v]);
+		}
+		found.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+		return found.map((x) => x[2]);
 	}
 
 	/** Ce que vise la validation (la sélection), pour le titre du dialogue. */
@@ -332,7 +394,6 @@ export function createValidation(sh: ValidationHost) {
 			const p = dvFromForm(d, sh.addrA1(sh.active.row, sh.active.col));
 			if ('error' in p) {
 				d.error = p.error;
-				d.tab = 'options';
 				return;
 			}
 			dv = p.dv;

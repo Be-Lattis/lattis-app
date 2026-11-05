@@ -1936,6 +1936,7 @@ export interface MessageParams {
 	'grid.validation.missingValues': Record<never, never>;
 	'grid.validation.mode.list': Record<never, never>;
 	'grid.validation.mode.range': Record<never, never>;
+	'grid.validation.more': Record<never, never>;
 	'grid.validation.msgText': Record<never, never>;
 	'grid.validation.msgTitle': Record<never, never>;
 	'grid.validation.notAllowed': { list: number | string; value: number | string };
@@ -1974,7 +1975,6 @@ export interface MessageParams {
 	'grid.validation.styleLabel': Record<never, never>;
 	'grid.validation.tab.error': Record<never, never>;
 	'grid.validation.tab.input': Record<never, never>;
-	'grid.validation.tab.options': Record<never, never>;
 	'grid.validation.target.cell': { addr: number | string };
 	'grid.validation.target.cells': { range: number | string };
 	'grid.validation.target.col': { col: number | string };

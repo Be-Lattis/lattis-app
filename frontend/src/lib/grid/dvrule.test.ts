@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dvAlertOf, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvRule, hasBounds, twoBounds } from './dvrule';
+import { DV_TYPES, dvAlertOf, dvDistinct, dvForm, dvFromForm, dvInputOf, dvLegacy, dvListOf, dvNewForm, dvRule, dvTypesFor, hasBounds, twoBounds } from './dvrule';
 
 describe('validation des données (forme objet)', () => {
 	it('lit les trois formes de dv', () => {
@@ -20,12 +20,43 @@ describe('validation des données (forme objet)', () => {
 
 	it('ouvre le dialogue sur une validation', () => {
 		const f = dvForm({ type: 'decimal', op: 'notbetween', min: '1,5', max: '=B1', blank: false, input: { title: 'Aide', msg: 'Un nombre' }, error: { style: 'warning', msg: 'Hors bornes' } });
-		expect(f).toMatchObject({ tab: 'options', type: 'decimal', op: 'notbetween', min: '1,5', max: '=B1', blank: false, inTitle: 'Aide', inMsg: 'Un nombre', errStyle: 'warning', errMsg: 'Hors bornes' });
-		expect(dvForm(null)).toMatchObject({ type: 'any', op: 'between', blank: true, errStyle: 'stop' });
+		expect(f).toMatchObject({ more: true, type: 'decimal', op: 'notbetween', min: '1,5', max: '=B1', blank: false, inTitle: 'Aide', inMsg: 'Un nombre', errStyle: 'warning', errMsg: 'Hors bornes' });
+		expect(dvForm(null)).toMatchObject({ more: false, type: 'any', op: 'between', blank: true, errStyle: 'stop' });
 		expect(dvForm({ type: 'list', src: 'T[C]' })).toMatchObject({ type: 'list', mode: 'range', src: 'T[C]' });
 		expect(dvForm({ type: 'list', list: ['a', 'b'] })).toMatchObject({ mode: 'list', text: 'a\nb' });
 		expect(twoBounds('between') && twoBounds('notbetween') && !twoBounds('>=')).toBe(true);
 		expect(hasBounds('length') && !hasBounds('custom') && !hasBounds('list')).toBe(true);
+	});
+
+	it('« Plus d’options » ouvert seulement si la règle a un message ou une alerte', () => {
+		expect(dvForm({ type: 'list', list: ['a'] }).more).toBe(false);
+		expect(dvForm({ type: 'list', list: ['a'], input: { title: '', msg: 'Aide' } }).more).toBe(true);
+		expect(dvForm({ type: 'list', list: ['a'], error: { style: 'info' } }).more).toBe(true);
+		expect(dvForm({ type: 'list', list: ['a'], error: { title: 'Non' } }).more).toBe(true);
+	});
+
+	it('nouvelle validation : une liste des valeurs déjà saisies', () => {
+		const f = dvNewForm(['Pomme', ' Poire ', '', 'pomme', 'Kiwi', 'a;b', 'Poire']);
+		expect(f).toMatchObject({ type: 'list', mode: 'list', text: 'Pomme\nPoire\nKiwi', more: false });
+		expect(dvNewForm([]).text).toBe('');
+		expect(dvDistinct(['1', '2', '3', '2'], 2)).toEqual(['1', '2']);
+		// Sans retouche, la liste préremplie se pose telle quelle.
+		expect(dvFromForm(f, 'A2')).toEqual({ dv: ['Pomme', 'Poire', 'Kiwi'] });
+	});
+
+	it('types proposés selon le type de la colonne', () => {
+		expect(dvTypesFor(null)).toEqual(DV_TYPES);
+		expect(dvTypesFor(['formula'])).toEqual(DV_TYPES);
+		expect(dvTypesFor(['integer'])).toEqual(['any', 'whole', 'decimal', 'list', 'custom']);
+		expect(dvTypesFor(['decimal'])).toEqual(['any', 'whole', 'decimal', 'list', 'custom']);
+		expect(dvTypesFor(['date'])).toEqual(['any', 'list', 'date', 'custom']);
+		// Texte : ni Entier (refuse « 5 ») ni Heure (refuse tout).
+		expect(dvTypesFor(['text'])).toEqual(['any', 'list', 'length', 'custom']);
+		expect(dvTypesFor(['boolean'])).toEqual(['any', 'list', 'custom']);
+		// Plusieurs colonnes : ce qu'elles permettent toutes.
+		expect(dvTypesFor(['integer', 'text'])).toEqual(['any', 'list', 'custom']);
+		// Règle existante d'un autre type : gardée pour pouvoir la changer.
+		expect(dvTypesFor(['text'], 'whole')).toEqual(['any', 'whole', 'list', 'length', 'custom']);
 	});
 
 	it('pose la propriété dv d’après le dialogue', () => {

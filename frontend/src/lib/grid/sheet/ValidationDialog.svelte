@@ -6,10 +6,12 @@
 -->
 <script lang="ts">
 	import { dvPreview, type DvList } from '../sheetfmt';
-	import { DV_OP_KEYS, DV_OPS, DV_TYPES, dvRule, hasBounds, twoBounds, type DvForm } from '../dvrule';
+	import { DV_OP_KEYS, DV_OPS, dvRule, hasBounds, twoBounds, type DvForm } from '../dvrule';
+	import { type Catalog } from '../autocomplete';
+	import FormulaField from '../FormulaField.svelte';
 	import { modal } from '#lib/ui/focus.js';
 	import { t as tr } from '#lib/i18n/index.js';
-	import { type DvPick } from './model';
+	import { type DvPick, type Entry } from './model';
 
 	/** Ce que le composant lit et modifie dans la feuille (Sheet.svelte). */
 	export interface ValidationDialogView {
@@ -24,6 +26,9 @@
 		readonly previewTimer: NodeJS.Timeout | undefined;
 		readonly refreshPreview: (delay?: number) => void;
 		readonly startPick: () => void;
+		/** Fonctions, tableaux et noms : aide à la saisie des formules. */
+		readonly catalog: Catalog | undefined;
+		readonly tableAt: (r: number, c: number) => Entry | undefined;
 		/** Tableaux du classeur (toutes feuilles) : choix d'une colonne source. */
 		readonly sources: readonly { name: string; columns: string[]; kind?: string }[];
 		validDlg: (DvForm & { target: string; error: string; preview: DvList | null; loading: boolean }) | null;
@@ -42,6 +47,8 @@
 		for (const tb of tables) for (const c of tb.columns) if (colRef(tb.name, c).toLowerCase() === src) return colRef(tb.name, c);
 		return '';
 	});
+	/** Tableau de la cellule active : [Colonne] y est la valeur de la ligne. */
+	const here = $derived(v.tableAt(v.active.row, v.active.col)?.t.name);
 	function chooseColumn(ref: string) {
 		const d = v.validDlg;
 		if (!d || !ref) return;
@@ -81,105 +88,102 @@
 		}}
 	>
 		<div class="menu-title" title={tr('grid.validation.title', { target: d.target })}>{tr('grid.validation.title', { target: d.target })}</div>
-		<div class="dv-tabs" role="tablist">
-			{#each ['options', 'input', 'error'] as const as tab (tab)}
-				<button role="tab" aria-selected={d.tab === tab} class:on={d.tab === tab} onclick={() => (d.tab = tab)}>{tr(`grid.validation.tab.${tab}`)}</button>
-			{/each}
+		<div class="dv-row">
+			<label for="dv-type">{tr('grid.validation.allow')}</label>
+			<select id="dv-type" bind:value={d.type} onchange={() => ((d.error = ''), d.type === 'list' && d.mode === 'range' && v.refreshPreview(0))}>
+				{#each d.types as ty (ty)}<option value={ty}>{tr(`grid.validation.type.${ty}`)}</option>{/each}
+			</select>
 		</div>
-		{#if d.tab === 'options'}
+		{#if hasBounds(d.type)}
 			<div class="dv-row">
-				<label for="dv-type">{tr('grid.validation.allow')}</label>
-				<select id="dv-type" bind:value={d.type} onchange={() => ((d.error = ''), d.type === 'list' && d.mode === 'range' && v.refreshPreview(0))}>
-					{#each DV_TYPES as ty (ty)}<option value={ty}>{tr(`grid.validation.type.${ty}`)}</option>{/each}
+				<label for="dv-op">{tr('grid.validation.data')}</label>
+				<select id="dv-op" bind:value={d.op}>
+					{#each DV_OPS as op (op)}<option value={op}>{tr(`grid.validation.op.${DV_OP_KEYS[op]}`)}</option>{/each}
 				</select>
 			</div>
-			{#if hasBounds(d.type)}
+			<div class="dv-row">
+				<label for="dv-min">{twoBounds(d.op) ? tr('grid.validation.min') : tr('grid.validation.value')}</label>
+				<FormulaField id="dv-min" bind:value={d.min} catalog={v.catalog} table={here} oninput={() => (d.error = '')} />
+			</div>
+			{#if twoBounds(d.op)}
 				<div class="dv-row">
-					<label for="dv-op">{tr('grid.validation.data')}</label>
-					<select id="dv-op" bind:value={d.op}>
-						{#each DV_OPS as op (op)}<option value={op}>{tr(`grid.validation.op.${DV_OP_KEYS[op]}`)}</option>{/each}
-					</select>
+					<label for="dv-max">{tr('grid.validation.max')}</label>
+					<FormulaField id="dv-max" bind:value={d.max} catalog={v.catalog} table={here} oninput={() => (d.error = '')} />
 				</div>
-				<div class="dv-row">
-					<label for="dv-min">{twoBounds(d.op) ? tr('grid.validation.min') : tr('grid.validation.value')}</label>
-					<input id="dv-min" type="text" spellcheck="false" bind:value={d.min} oninput={() => (d.error = '')} />
-				</div>
-				{#if twoBounds(d.op)}
+			{/if}
+			<p class="menu-note">{tr('grid.validation.boundHelp')}</p>
+		{:else if d.type === 'custom'}
+			<div class="dv-row">
+				<label for="dv-f">{tr('grid.validation.formulaLabel')}</label>
+				<FormulaField id="dv-f" placeholder="=ESTNUM({v.addrA1(v.active.row, v.active.col)})" bind:value={d.formula} catalog={v.catalog} table={here} oninput={() => (d.error = '')} />
+			</div>
+			<p class="menu-note">{tr('grid.validation.formulaHelp', { cell: v.addrA1(v.active.row, v.active.col) })}</p>
+		{:else if d.type === 'list'}
+			<div class="dv-mode" role="radiogroup" aria-label={tr('grid.validation.source')}>
+				<label><input type="radio" name="dv-mode" value="list" bind:group={d.mode} onchange={() => (d.error = '')} /> {tr('grid.validation.mode.list')}</label>
+				<label><input type="radio" name="dv-mode" value="range" bind:group={d.mode} onchange={() => ((d.error = ''), v.refreshPreview(0))} /> {tr('grid.validation.mode.range')}</label>
+			</div>
+			{#if d.mode === 'list'}
+				<p class="menu-note">
+					{tr('grid.validation.list.help')}
+				</p>
+				<div class="add"><textarea bind:value={d.text} rows="7" placeholder={tr('grid.validation.list.placeholder')}></textarea></div>
+			{:else}
+				<p class="menu-note">
+					{tr('grid.validation.range.help')}
+				</p>
+				{#if tables.length}
 					<div class="dv-row">
-						<label for="dv-max">{tr('grid.validation.max')}</label>
-						<input id="dv-max" type="text" spellcheck="false" bind:value={d.max} oninput={() => (d.error = '')} />
+						<label for="dv-col">{tr('grid.validation.column.label')}</label>
+						<select id="dv-col" value={chosen} onchange={(ev) => chooseColumn((ev.currentTarget as HTMLSelectElement).value)}>
+							<option value="" disabled>{tr('grid.validation.column.choose')}</option>
+							{#each tables as tb (tb.name)}
+								{#if tb.columns.length === 1}
+									<option value={colRef(tb.name, tb.columns[0])}>{tb.name}</option>
+								{:else}
+									<optgroup label={tb.name}>
+										{#each tb.columns as c (c)}<option value={colRef(tb.name, c)}>{c}</option>{/each}
+									</optgroup>
+								{/if}
+							{/each}
+						</select>
 					</div>
 				{/if}
-				<p class="menu-note">{tr('grid.validation.boundHelp')}</p>
-			{:else if d.type === 'custom'}
-				<div class="dv-row">
-					<label for="dv-f">{tr('grid.validation.formulaLabel')}</label>
-					<input id="dv-f" type="text" spellcheck="false" placeholder="=ESTNUM({v.addrA1(v.active.row, v.active.col)})" bind:value={d.formula} oninput={() => (d.error = '')} />
+				<div class="add dv-src">
+					<input
+						type="text"
+						aria-label={tr('grid.validation.range.aria')}
+						placeholder={tr('grid.validation.range.placeholder')}
+						spellcheck="false"
+						bind:value={d.src}
+						oninput={() => ((d.error = ''), v.refreshPreview())}
+						onkeydown={(ev) => {
+							if (ev.key === 'Enter') v.applyValidation();
+						}}
+					/>
+					<button title={tr('grid.validation.pick.tooltip')} onclick={v.startPick}>{tr('grid.validation.pick.button')}</button>
 				</div>
-				<p class="menu-note">{tr('grid.validation.formulaHelp', { cell: v.addrA1(v.active.row, v.active.col) })}</p>
-			{:else if d.type === 'list'}
-				<div class="dv-mode" role="radiogroup" aria-label={tr('grid.validation.source')}>
-					<label><input type="radio" name="dv-mode" value="list" bind:group={d.mode} onchange={() => (d.error = '')} /> {tr('grid.validation.mode.list')}</label>
-					<label><input type="radio" name="dv-mode" value="range" bind:group={d.mode} onchange={() => ((d.error = ''), v.refreshPreview(0))} /> {tr('grid.validation.mode.range')}</label>
-				</div>
-				{#if d.mode === 'list'}
-					<p class="menu-note">
-						{tr('grid.validation.list.help')}
-					</p>
-					<div class="add"><textarea bind:value={d.text} rows="7" placeholder={tr('grid.validation.list.placeholder')}></textarea></div>
-				{:else}
-					<p class="menu-note">
-						{tr('grid.validation.range.help')}
-					</p>
-					{#if tables.length}
-						<div class="dv-row">
-							<label for="dv-col">{tr('grid.validation.column.label')}</label>
-							<select id="dv-col" value={chosen} onchange={(ev) => chooseColumn((ev.currentTarget as HTMLSelectElement).value)}>
-								<option value="" disabled>{tr('grid.validation.column.choose')}</option>
-								{#each tables as tb (tb.name)}
-									{#if tb.columns.length === 1}
-										<option value={colRef(tb.name, tb.columns[0])}>{tb.name}</option>
-									{:else}
-										<optgroup label={tb.name}>
-											{#each tb.columns as c (c)}<option value={colRef(tb.name, c)}>{c}</option>{/each}
-										</optgroup>
-									{/if}
-								{/each}
-							</select>
-						</div>
-					{/if}
-					<div class="add dv-src">
-						<input
-							type="text"
-							aria-label={tr('grid.validation.range.aria')}
-							placeholder={tr('grid.validation.range.placeholder')}
-							spellcheck="false"
-							bind:value={d.src}
-							oninput={() => ((d.error = ''), v.refreshPreview())}
-							onkeydown={(ev) => {
-								if (ev.key === 'Enter') v.applyValidation();
-							}}
-						/>
-						<button title={tr('grid.validation.pick.tooltip')} onclick={v.startPick}>{tr('grid.validation.pick.button')}</button>
-					</div>
-					{#if d.loading}
-						<p class="menu-note">{tr('grid.validation.reading')}</p>
-					{:else if d.preview}
-						<p class="menu-note" class:error={!!d.preview.error || !d.preview.values.length}>{dvPreview(d.preview)}</p>
-					{/if}
+				{#if d.loading}
+					<p class="menu-note">{tr('grid.validation.reading')}</p>
+				{:else if d.preview}
+					<p class="menu-note" class:error={!!d.preview.error || !d.preview.values.length}>{dvPreview(d.preview)}</p>
 				{/if}
 			{/if}
-			{#if d.type !== 'any'}
-				<label class="dv-check"><input type="checkbox" bind:checked={d.blank} /> {tr('grid.validation.blank')}</label>
-			{/if}
-		{:else if d.tab === 'input'}
+		{/if}
+		{#if d.type !== 'any'}
+			<label class="dv-check"><input type="checkbox" bind:checked={d.blank} /> {tr('grid.validation.blank')}</label>
+		{/if}
+		<!-- Message de saisie et alerte d'erreur : repliés tant qu'ils ne servent pas. -->
+		<details class="dv-more" bind:open={d.more}>
+			<summary>{tr('grid.validation.more')}</summary>
+			<div class="dv-sub">{tr('grid.validation.tab.input')}</div>
 			<p class="menu-note">{tr('grid.validation.inputHelp')}</p>
 			<div class="dv-row">
 				<label for="dv-it">{tr('grid.validation.msgTitle')}</label>
 				<input id="dv-it" type="text" maxlength="32" bind:value={d.inTitle} />
 			</div>
-			<div class="add"><textarea aria-label={tr('grid.validation.msgText')} placeholder={tr('grid.validation.msgText')} maxlength="255" rows="4" bind:value={d.inMsg}></textarea></div>
-		{:else}
+			<div class="add"><textarea aria-label={tr('grid.validation.msgText')} placeholder={tr('grid.validation.msgText')} maxlength="255" rows="3" bind:value={d.inMsg}></textarea></div>
+			<div class="dv-sub">{tr('grid.validation.tab.error')}</div>
 			<div class="dv-row">
 				<label for="dv-st">{tr('grid.validation.styleLabel')}</label>
 				<select id="dv-st" bind:value={d.errStyle}>
@@ -191,8 +195,8 @@
 				<label for="dv-et">{tr('grid.validation.msgTitle')}</label>
 				<input id="dv-et" type="text" maxlength="32" bind:value={d.errTitle} />
 			</div>
-			<div class="add"><textarea aria-label={tr('grid.validation.msgText')} placeholder={tr('grid.validation.errorPlaceholder')} maxlength="255" rows="4" bind:value={d.errMsg}></textarea></div>
-		{/if}
+			<div class="add"><textarea aria-label={tr('grid.validation.msgText')} placeholder={tr('grid.validation.errorPlaceholder')} maxlength="255" rows="3" bind:value={d.errMsg}></textarea></div>
+		</details>
 		{#if d.error}<p class="menu-note error">{d.error}</p>{/if}
 		<div class="foot">
 			{#if dvRule(v.dvAt(v.active.row, v.active.col))}<button onclick={() => v.applyValidation(true)}>{tr('grid.validation.clear')}</button>{/if}
@@ -307,25 +311,22 @@
 		max-width: none;
 	}
 
-	.dv-tabs {
-		display: flex;
-		gap: 2px;
-		margin: 2px 14px 6px;
-		border-bottom: 1px solid #e2e4e7;
+	.dv-more {
+		margin: 8px 0 0;
+		border-top: 1px solid #e2e4e7;
+		padding-top: 4px;
 	}
 
-	.dv-tabs button {
-		border: none;
-		background: none;
-		padding: 4px 8px;
-		border-bottom: 2px solid transparent;
+	.dv-more summary {
+		margin: 2px 14px;
 		color: #4b5563;
 		cursor: pointer;
 	}
 
-	.dv-tabs button.on {
-		border-bottom-color: var(--accent, #1a73e8);
-		color: #111827;
+	.dv-sub {
+		margin: 8px 14px 2px;
+		font-weight: 600;
+		color: #374151;
 	}
 
 	.dv-row {

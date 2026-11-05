@@ -38,9 +38,12 @@ export interface DvRuleData {
 	error?: DvMessage | null;
 }
 
-/** État du dialogue Validation des données (trois onglets). */
+/** État du dialogue Validation des données. */
 export interface DvForm {
-	tab: 'options' | 'input' | 'error';
+	/** « Plus d'options » ouvert : message de saisie et alerte d'erreur. */
+	more: boolean;
+	/** Types proposés (colonne de tableau : ceux de son type). */
+	types: DvType[];
 	type: DvType;
 	op: DvOp;
 	min: string;
@@ -91,7 +94,8 @@ export function dvLegacy(dv: unknown): boolean {
 /** Dialogue ouvert sur la validation r (null : aucune). */
 export function dvForm(r: DvRuleData | null | undefined): DvForm {
 	const f: DvForm = {
-		tab: 'options',
+		more: false,
+		types: DV_TYPES,
 		type: 'any',
 		op: 'between',
 		min: '',
@@ -124,7 +128,58 @@ export function dvForm(r: DvRuleData | null | undefined): DvForm {
 	f.errStyle = s === 'warning' || s === 'info' ? s : 'stop';
 	f.errTitle = r.error?.title ?? '';
 	f.errMsg = r.error?.msg ?? '';
+	f.more = !!(f.inTitle || f.inMsg || f.errTitle || f.errMsg || f.errStyle !== 'stop');
 	return f;
+}
+
+/** Valeurs reprises au plus dans la liste d'une nouvelle validation. */
+export const DV_PREFILL_MAX = 200;
+
+/**
+ * Nouvelle validation : une liste, préremplie des valeurs déjà saisies
+ * (distinctes, sans tenir compte de la casse, dans l'ordre où elles
+ * apparaissent ; une valeur qui contient « ; » est laissée de côté).
+ */
+export function dvNewForm(values: Iterable<string>, max = DV_PREFILL_MAX): DvForm {
+	return { ...dvForm(null), type: 'list', text: dvDistinct(values, max).join('\n') };
+}
+
+/** Valeurs distinctes non vides, dans l'ordre d'apparition (max au plus). */
+export function dvDistinct(values: Iterable<string>, max = DV_PREFILL_MAX): string[] {
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const raw of values) {
+		const v = raw.trim();
+		const k = v.toLowerCase();
+		if (!v || /[;\n\r]/.test(v) || seen.has(k)) continue;
+		seen.add(k);
+		out.push(v);
+		if (out.length >= max) break;
+	}
+	return out;
+}
+
+/** Types de règle qui ont un sens pour chaque type de colonne (le moteur compare la valeur typée). */
+const DV_BY_COLUMN: Record<string, DvType[]> = {
+	integer: ['whole', 'decimal'],
+	decimal: ['whole', 'decimal'],
+	date: ['date'],
+	// Texte : une règle Entier refuse même « 5 », une règle Heure refuse tout.
+	text: ['length'],
+	boolean: []
+};
+
+/**
+ * Types proposés pour une validation : null (cellules libres) ou un type de
+ * colonne inconnu, tous ; sinon Tout, Liste, Personnalisée et ceux que
+ * permettent toutes les colonnes visées. current reste proposé, pour être
+ * changé.
+ */
+export function dvTypesFor(columns: readonly string[] | null, current?: DvType): DvType[] {
+	if (!columns?.length || columns.some((c) => !(c in DV_BY_COLUMN))) return DV_TYPES;
+	const ok = new Set<DvType>(['any', 'list', 'custom', ...(current ? [current] : [])]);
+	for (const ty of DV_TYPES) if (columns.every((c) => DV_BY_COLUMN[c].includes(ty))) ok.add(ty);
+	return DV_TYPES.filter((ty) => ok.has(ty));
 }
 
 /** L'opérateur compare à deux valeurs (Minimum, Maximum). */

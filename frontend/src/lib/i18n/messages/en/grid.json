@@ -1041,8 +1041,8 @@
 			"reading": "Reading the list…",
 			"empty": "The range of the list is empty"
 		},
+		"more": "More options",
 		"tab": {
-			"options": "Settings",
 			"input": "Input message",
 			"error": "Error alert"
 		},
