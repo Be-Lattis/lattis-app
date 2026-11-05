@@ -72,6 +72,19 @@ export function defaultSelection(check: Check | null, republish: boolean): numbe
 	return (republish ? tables.filter((t) => t.published) : tables).map((t) => t.id);
 }
 
+/**
+ * Tableaux dérivés (requête qui ne lit que le classeur : SQL sur le
+ * classeur, tableau, formule de tableau lié) recalculés sur chaque poste
+ * d'avance : publiés comme tableaux dynamiques (leur requête, pas leurs
+ * lignes), à la première publication comme à la republication (un tableau
+ * publié avant avec ses lignes le devient). « Stocké sur le serveur » reste
+ * un choix explicite. Pas ceux sans colonne saisie (ils restent sur le
+ * poste).
+ */
+export function derivedLocal(check: Check | null): number[] {
+	return (check?.tables ?? []).filter((t) => t.derived && !((t.columns ?? []).length > 0 && (t.columns ?? []).every((c) => c.computed))).map((t) => t.id);
+}
+
 /** Tableaux non cochés : ils ne seront pas sur le serveur. */
 export function uncheckedCount(check: Check | null, ids: readonly number[]): number {
 	return (check?.tables ?? []).filter((t) => !ids.includes(t.id)).length;

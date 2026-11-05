@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+- Publier sur un serveur : un tableau calculé à partir du classeur (requête SQL sur le classeur, requête sur un tableau, tableau lié à une formule) est publié par défaut comme **tableau dynamique** : sa requête, sans ses lignes, recalculée sur le poste de chacun, en édition web comme sur ordinateur. Republier un classeur où il avait été envoyé figé le rend dynamique.
+
 ## 0.5.4-beta (05/11/2026)
 
 - Validation des données, fenêtre simplifiée : une nouvelle règle s'ouvre sur une **liste préremplie** des valeurs déjà saisies ; message de saisie et alerte d'erreur passent sous **Plus d'options** ; dans un tableau, seuls les types de règle adaptés au type de la colonne sont proposés ; la formule personnalisée et les bornes en formule ont la même complétion que la barre de formule.

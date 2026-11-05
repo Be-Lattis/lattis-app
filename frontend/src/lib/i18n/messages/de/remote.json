@@ -1250,7 +1250,7 @@
 		},
 		"derived": {
 			"legend": "Aus der Arbeitsmappe berechnet (Abfrage „{query}“)",
-			"stored": "Auf dem Server gespeichert: ihre Zeilen werden wie die einer eingegebenen Tabelle veröffentlicht",
+			"stored": "Auf dem Server gespeichert: ihre Zeilen werden wie die einer eingegebenen Tabelle veröffentlicht, ohne ihre Abfrage (für andere eine feste Tabelle)",
 			"local": "Auf jedem Rechner neu berechnet: nicht auf dem Server gespeichert, bei jedem aus den veröffentlichten Tabellen erstellt",
 			"badge": "neu berechnet",
 			"localTooltip": "Nicht auf dem Server gespeichert: auf jedem Rechner aus den veröffentlichten Tabellen neu berechnet"

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Check, State } from '#bindings/internal/remote/workbook/models.js';
 import type { Conflict } from '#bindings/internal/remote/collab/models.js';
 import { syncAt } from '#lib/grid/cache.js';
-import { banner, blocking, detachQuestion, removeQuestion, goneError, goneText, offlineText, serverDown, serverLabel, canRepublish, conflictText, defaultSelection, uncheckedCount, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, roleChip, rolesLabel, whenLabel } from './share';
+import { banner, blocking, detachQuestion, removeQuestion, goneError, goneText, offlineText, serverDown, serverLabel, canRepublish, conflictText, defaultSelection, derivedLocal, uncheckedCount, inferredColumns, modeLabel, refusedNotice, remoteTypeLabel, roleChip, rolesLabel, whenLabel } from './share';
 
 const check: Check = {
 	tables: [
@@ -22,6 +22,24 @@ describe('partage', () => {
 		expect(uncheckedCount(check, [1])).toBe((check.tables ?? []).length - 1);
 		expect(defaultSelection(check, true)).toEqual([1]);
 		expect(defaultSelection(null, false)).toEqual([]);
+	});
+
+	it('publie les tableaux dérivés comme tableaux dynamiques par défaut', () => {
+		const col = { index: 0, name: 'Prix', type: 'decimal', remote: 'decimal', inferred: false, computed: false, invalid: 0, samples: [] };
+		const c: Check = {
+			tables: [
+				{ id: 1, name: 'Ventes', sheet: 'F', rows: 3, published: true, problems: [], invalid: 0, columns: [col] },
+				// Requête SQL sur le classeur, publiée avant avec ses lignes (stockée) : devient recalculée.
+				{ id: 2, name: 'Chers', sheet: 'F', rows: 2, published: true, problems: [], invalid: 0, columns: [col], query: 'Chers', derived: true },
+				{ id: 3, name: 'Top', sheet: 'F', rows: 1, published: false, problems: [], invalid: 0, columns: [col], query: 'Top', derived: true, local: true },
+				// Requête sur une connexion externe : pas dérivée.
+				{ id: 4, name: 'Clients', sheet: 'F', rows: 9, published: false, problems: [], invalid: 0, columns: [col], query: 'Clients' },
+				// Sans colonne saisie : reste sur le poste.
+				{ id: 5, name: 'Calc', sheet: 'F', rows: 1, published: false, problems: [], invalid: 0, columns: [{ ...col, computed: true }], query: 'Calc', derived: true }
+			]
+		};
+		expect(derivedLocal(c)).toEqual([2, 3]);
+		expect(derivedLocal(null)).toEqual([]);
 	});
 
 	it('dit ce qui bloque la publication', () => {

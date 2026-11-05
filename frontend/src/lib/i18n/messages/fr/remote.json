@@ -1250,7 +1250,7 @@
 		},
 		"derived": {
 			"legend": "Calculé à partir du classeur (requête « {query} »)",
-			"stored": "Stocké sur le serveur : ses lignes sont publiées comme celles d’un tableau saisi",
+			"stored": "Stocké sur le serveur : ses lignes sont publiées comme celles d’un tableau saisi, sans sa requête (tableau figé chez les autres)",
 			"local": "Recalculé sur chaque poste : pas stocké sur le serveur, refait chez chacun à partir des tableaux publiés",
 			"badge": "recalculé",
 			"localTooltip": "Pas stocké sur le serveur : recalculé sur chaque poste à partir des tableaux publiés"

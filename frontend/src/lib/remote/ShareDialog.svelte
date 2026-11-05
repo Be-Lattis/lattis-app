@@ -21,7 +21,7 @@
 	import ServerPicker from './ServerPicker.svelte';
 	import { lattis, loadLattis, requestLogin } from './lattis.svelte.js';
 	import TableSourcesList from './TableSourcesList.svelte';
-	import { COLLABORATIVE, FROZEN, blocking, inferredColumns, modeLabel, remoteTypeLabel } from './share';
+	import { COLLABORATIVE, FROZEN, blocking, derivedLocal, inferredColumns, modeLabel, remoteTypeLabel } from './share';
 	import { isWeb } from '#lib/web/platform.js';
 	import { draftKept, draftStatus } from '#lib/shell/draft.js';
 	import { errorText, t } from '#lib/i18n/index.js';
@@ -142,7 +142,7 @@
 	async function refresh(first = false) {
 		try {
 			check = await DocumentService.ShareCheck();
-			if (first) local = (check.tables ?? []).filter((tb) => tb.derived && tb.local).map((tb) => tb.id);
+			if (first) local = derivedLocal(check);
 		} catch (e) {
 			error = err(e);
 		}
@@ -302,8 +302,8 @@
 								{#if tb.derived}
 									<fieldset class="refresh">
 										<legend>{t('remote.shareDialog.derived.legend', { query: tb.query ?? '' })}</legend>
-										<label><input type="radio" name="derived-{tb.id}" checked={!recomputed} disabled={busy} onchange={() => (local = local.filter((x) => x !== tb.id))} /> {t('remote.shareDialog.derived.stored')}</label>
 										<label><input type="radio" name="derived-{tb.id}" checked={recomputed} disabled={busy} onchange={() => (local = [...local, tb.id])} /> {t('remote.shareDialog.derived.local')}</label>
+										<label><input type="radio" name="derived-{tb.id}" checked={!recomputed} disabled={busy} onchange={() => (local = local.filter((x) => x !== tb.id))} /> {t('remote.shareDialog.derived.stored')}</label>
 									</fieldset>
 								{:else if tb.query && mode === COLLABORATIVE}
 									{@const toLake = lake.includes(tb.name)}

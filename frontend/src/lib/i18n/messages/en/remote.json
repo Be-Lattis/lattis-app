@@ -1250,7 +1250,7 @@
 		},
 		"derived": {
 			"legend": "Calculated from the workbook (query “{query}”)",
-			"stored": "Stored on the server: its rows are published like those of an entered table",
+			"stored": "Stored on the server: its rows are published like those of an entered table, without its query (a fixed table for others)",
 			"local": "Recalculated on each computer: not stored on the server, rebuilt by everyone from the published tables",
 			"badge": "recalculated",
 			"localTooltip": "Not stored on the server: recalculated on each computer from the published tables"

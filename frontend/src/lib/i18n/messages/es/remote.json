@@ -1250,7 +1250,7 @@
 		},
 		"derived": {
 			"legend": "Calculada a partir del libro (consulta «{query}»)",
-			"stored": "Guardada en el servidor: sus filas se publican como las de una tabla introducida",
+			"stored": "Guardada en el servidor: sus filas se publican como las de una tabla introducida, sin su consulta (tabla fija para los demás)",
 			"local": "Recalculada en cada equipo: no se guarda en el servidor, cada uno la rehace a partir de las tablas publicadas",
 			"badge": "recalculada",
 			"localTooltip": "No se guarda en el servidor: se recalcula en cada equipo a partir de las tablas publicadas"
