@@ -1205,6 +1205,8 @@
 		"copyTooltip": "Kopiert das Ergebnis (mit Überschriften), zum Einfügen in eine Tabellenkalkulation",
 		"copied": "Kopiert ✓",
 		"clipboard": "Zwischenablage",
+		"copyError": "Meldung kopieren",
+		"copyErrorTooltip": "Kopiert die Fehlermeldung, zum Beispiel um sie weiterzugeben",
 		"toSheet": "In ein Blatt:",
 		"copyToSheetTooltip": "Kopiert das Ergebnis in eine neue Tabelle auf einem neuen Blatt",
 		"copyToSheet": "Kopieren",

@@ -1205,6 +1205,8 @@
 		"copyTooltip": "Copia el resultado (encabezados incluidos), para pegarlo en una hoja de cálculo",
 		"copied": "Copiado ✓",
 		"clipboard": "Portapapeles",
+		"copyError": "Copiar el mensaje",
+		"copyErrorTooltip": "Copia el mensaje de error, por ejemplo para transmitirlo",
 		"toSheet": "A una hoja:",
 		"copyToSheetTooltip": "Copia el resultado en una nueva tabla, en una hoja nueva",
 		"copyToSheet": "Copiar",

@@ -1205,6 +1205,8 @@
 		"copyTooltip": "Copies the result (headers included), to paste into a spreadsheet",
 		"copied": "Copied ✓",
 		"clipboard": "Clipboard",
+		"copyError": "Copy message",
+		"copyErrorTooltip": "Copies the error message, for example to pass it on",
 		"toSheet": "To a sheet:",
 		"copyToSheetTooltip": "Copies the result into a new table, on a new sheet",
 		"copyToSheet": "Copy",

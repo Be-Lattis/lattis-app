@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+- Onglet SQL : une jointure entre deux tableaux avec des colonnes écrites sans préfixe (`SELECT Année, Commune FROM Suividesnids JOIN BDD_nids ON …`) ne s'arrête plus sur « Colonne ambiguë : « c_1 » » ; les messages d'erreur citent les noms des tableaux et des colonnes tels qu'ils sont affichés, se sélectionnent et se copient (bouton **Copier le message**).
+
 ## 0.5.4-beta (05/11/2026)
 
 - Publier sur un serveur : un tableau calculé à partir du classeur (requête SQL sur le classeur, requête sur un tableau, tableau lié à une formule) est publié par défaut comme **tableau dynamique** : sa requête, sans ses lignes, recalculée sur le poste de chacun, en édition web comme sur ordinateur. Republier un classeur où il avait été envoyé figé le rend dynamique.

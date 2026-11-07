@@ -4754,6 +4754,8 @@ export interface MessageParams {
 	'shell.sqlView.clear': Record<never, never>;
 	'shell.sqlView.clipboard': Record<never, never>;
 	'shell.sqlView.copied': Record<never, never>;
+	'shell.sqlView.copyError': Record<never, never>;
+	'shell.sqlView.copyErrorTooltip': Record<never, never>;
 	'shell.sqlView.copyToSheet': Record<never, never>;
 	'shell.sqlView.copyToSheetTooltip': Record<never, never>;
 	'shell.sqlView.copyTooltip': Record<never, never>;

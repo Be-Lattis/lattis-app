@@ -1205,6 +1205,8 @@
 		"copyTooltip": "复制结果（含标题），可粘贴到电子表格中",
 		"copied": "已复制 ✓",
 		"clipboard": "剪贴板",
+		"copyError": "复制消息",
+		"copyErrorTooltip": "复制错误消息，例如用于转发",
 		"toSheet": "到工作表：",
 		"copyToSheetTooltip": "将结果复制到新工作表上的新表格中",
 		"copyToSheet": "复制",

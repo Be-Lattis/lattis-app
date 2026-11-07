@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Catalog, analyze, displayHeaders, errorSpan, quote, statementAt, statements, tokenize, translate, type SqlObject } from './names';
+import { Catalog, analyze, displayHeaders, errorSpan, quote, readableError, statementAt, statements, tokenize, translate, type SqlObject } from './names';
 
 const objects: SqlObject[] = [
 	{
@@ -61,7 +61,25 @@ describe('translate', () => {
 	});
 
 	it('cherche une colonne seule dans les tableaux cités', () => {
-		expect(tr('SELECT Montant, Ville FROM Clients JOIN "Ventes 2026" USING (c_0)')).toBe('SELECT c_1 AS "Montant", c_2 AS "Ville" FROM t_1 JOIN t_2 USING (c_0)');
+		// c_1 et c_2 sont dans les deux tableaux : sans préfixe, SQLite les disait ambiguës.
+		expect(tr('SELECT Montant, Ville FROM Clients JOIN "Ventes 2026" USING (c_0)')).toBe(
+			'SELECT t_2.c_1 AS "Montant", t_1.c_2 AS "Ville" FROM t_1 JOIN t_2 USING (c_0)'
+		);
+		expect(tr('SELECT Ville FROM Clients')).toBe('SELECT c_2 AS "Ville" FROM t_1');
+	});
+
+	it('préfixe une colonne seule dont le nom interne est aussi dans un autre tableau cité', () => {
+		expect(tr('SELECT Montant FROM Clients c JOIN "Ventes 2026" v ON v.Code = c.Code ORDER BY Montant')).toBe(
+			'SELECT v.c_1 AS "Montant" FROM t_1 c JOIN t_2 v ON v.c_0 = c.c_0 ORDER BY v.c_1'
+		);
+		// Sous-requête corrélée : sans préfixe, c_2 désignait la colonne du tableau de la sous-requête.
+		expect(tr('SELECT Ville FROM Clients WHERE EXISTS (SELECT 1 FROM "Ventes 2026" WHERE Montant > 0 AND Ville = \'Lyon\')')).toBe(
+			'SELECT c_2 AS "Ville" FROM t_1 WHERE EXISTS (SELECT 1 FROM t_2 WHERE c_1 > 0 AND t_1.c_2 = \'Lyon\')'
+		);
+		// Bras d'un UNION, tableau cité deux fois, écriture : rien à préfixer, ou rien de sûr.
+		expect(tr('SELECT Ville FROM Clients UNION SELECT Montant FROM "Ventes 2026"')).toBe('SELECT c_2 AS "Ville" FROM t_1 UNION SELECT c_1 FROM t_2');
+		expect(tr('SELECT Ville FROM Clients a JOIN Clients b ON 1')).toBe('SELECT c_2 AS "Ville" FROM t_1 a JOIN t_1 b ON 1');
+		expect(tr('INSERT INTO Clients SELECT Ville, Montant FROM Clients, "Ventes 2026"')).toBe('INSERT INTO t_1 SELECT c_2, c_1 FROM t_1, t_2');
 	});
 
 	it('refuse une colonne ambiguë', () => {
@@ -159,6 +177,24 @@ describe('statementAt', () => {
 	});
 });
 
+describe('readableError', () => {
+	it('redonne les noms affichés des noms internes cités par SQLite', () => {
+		const q = 'SELECT Ville FROM Clients a JOIN Clients b ON 1';
+		const x = translate(q, cat);
+		expect(readableError('Colonne ambiguë : « c_2 » est dans plusieurs tableaux de la requête ; préciser le tableau (Tableau."c_2")', cat, x)).toBe(
+			'Colonne ambiguë : « Ville » est dans plusieurs tableaux de la requête ; préciser le tableau (Tableau."Ville")'
+		);
+		expect(readableError('ambiguous column name: c_2', cat, x)).toBe('ambiguous column name: Ville');
+		expect(readableError('UNIQUE constraint failed: t_2.c_0', cat)).toBe('UNIQUE constraint failed: Ventes 2026.Code');
+		expect(readableError('no such column: v.c_9 near t_1', cat, translate('SELECT v.Montant FROM "Ventes 2026" v', cat))).toBe('no such column: v.c_9 near Clients');
+		expect(readableError('erreur dans v.c_1', cat, translate('SELECT v.Montant FROM "Ventes 2026" v', cat))).toBe('erreur dans v.Montant');
+	});
+	it('laisse les autres mots et un nom interne ambigu', () => {
+		expect(readableError('near "abc_1": syntax error ; xt_1 ; c_12x', cat)).toBe('near "abc_1": syntax error ; xt_1 ; c_12x');
+		expect(readableError('ambiguous column name: c_0', cat, translate('SELECT 1 FROM Clients, "Ventes 2026"', cat))).toBe('ambiguous column name: c_0');
+	});
+});
+
 describe('errorSpan', () => {
 	it('repère le mot cité par SQLite', () => {
 		expect(errorSpan('SELEC * FROM Ventes', 'near "SELEC": syntax error')).toEqual({ from: 0, to: 5 });
@@ -166,6 +202,7 @@ describe('errorSpan', () => {
 		expect(errorSpan('SELECT Prixx FROM Ventes', 'Colonne inconnue : « Prixx »')).toEqual({ from: 7, to: 12 });
 		expect(errorSpan('SELEC * FROM Ventes', 'Erreur de syntaxe près de « SELEC »')).toEqual({ from: 0, to: 5 });
 		expect(errorSpan('SELECT 1 FROM Inconnue', 'Tableau inconnu : « Inconnue »')).toEqual({ from: 14, to: 22 });
+		expect(errorSpan('SELECT Ville FROM a, b', 'Colonne ambiguë : « Ville » est dans plusieurs tableaux')).toEqual({ from: 7, to: 12 });
 	});
 	it('rend null quand la position est inconnue', () => {
 		expect(errorSpan('SELECT 1', 'database is locked')).toBeNull();

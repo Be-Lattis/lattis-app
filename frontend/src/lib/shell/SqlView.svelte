@@ -27,7 +27,7 @@
 	const loadEditor = () => import('#lib/sql/SqlEditor.svelte');
 	import SqlReference from '#lib/sql/SqlReference.svelte';
 	import { entryFor } from '#lib/sql/reference.svelte.js';
-	import { Catalog, displayHeaders, quote, translate, type SqlObject } from '#lib/sql/names.js';
+	import { Catalog, displayHeaders, quote, readableError, translate, type SqlObject, type Translation } from '#lib/sql/names.js';
 	import { load, record, save, search, when, type HistoryEntry } from '#lib/sql/history.js';
 	import { isWrite } from '#lib/sql/write.js';
 	import { defaultNameHint, isDefaultTableName } from '#lib/grid/defaultname.js';
@@ -232,6 +232,23 @@
 	let ran = $state('');
 	let copied = $state(false);
 	let sending = $state(false);
+	let errorCopied = $state(false);
+	// Traduction de la dernière lecture : ses noms internes (c_1…) cités par une
+	// erreur redeviennent les noms affichés.
+	let lastTr: Translation | undefined;
+
+	/** Message d'erreur sans le préfixe technique du moteur, aux noms affichés. */
+	const shownError = (e: unknown, tr?: Translation) => readableError(errorText(e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, ''), catalog, tr);
+
+	async function copyError() {
+		try {
+			await navigator.clipboard.writeText(error);
+			errorCopied = true;
+			setTimeout(() => (errorCopied = false), 1500);
+		} catch {
+			// Presse-papiers refusé : le message reste sélectionnable.
+		}
+	}
 
 	let entries = $state<HistoryEntry[]>(load());
 	let filter = $state('');
@@ -256,6 +273,7 @@
 		error = '';
 		editor?.showError('');
 		const at = Date.now();
+		let tr: Translation | undefined;
 		try {
 			// Vues donnees.* : la requête part au serveur qui les a (SQL de
 			// PostgreSQL, lecture seule) ; elle ne cite pas les tableaux du classeur.
@@ -291,7 +309,8 @@
 				running = false;
 				return;
 			}
-			const tr = translate(text, catalog);
+			tr = translate(text, catalog);
+			lastTr = tr;
 			sent = tr.sql;
 			const r = await run(tr.sql);
 			result = r;
@@ -301,8 +320,8 @@
 			remember({ sql: text, at, rows: (r.rows ?? []).length, micros: r.micros });
 		} catch (e) {
 			result = null;
-			// Sans le préfixe technique du moteur.
-			error = errorText(e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, '');
+			// Sans le préfixe technique du moteur, aux noms affichés.
+			error = shownError(e, tr);
 			editor?.showError(error);
 			remember({ sql: text, at, error });
 		}
@@ -439,7 +458,7 @@
 			const fav = favList.find((f) => same(f.sql, ran));
 			await tosheet(sent, fav?.name ?? '', headers, link, result?.columns ?? []);
 		} catch (e) {
-			error = errorText(e).replace(/^sqlite3:\s*(SQL logic error:\s*)?/i, '');
+			error = shownError(e, lastTr);
 		}
 		sending = false;
 	}
@@ -713,7 +732,12 @@
 		></div>
 		<div class="result">
 			{#if error}
-				<p class="error">{error}</p>
+				<div class="error-bar">
+					<p class="error">{error}</p>
+					<button class="res-btn" onclick={copyError} title={t('shell.sqlView.copyErrorTooltip')}
+						><Icon name="copy" size={14} />{errorCopied ? t('shell.sqlView.copied') : t('shell.sqlView.copyError')}</button
+					>
+				</div>
 			{:else if result}
 				<div class="result-bar">
 					<p class="muted">
@@ -921,6 +945,23 @@
 	.fav-error {
 		margin: 8px 8px 0;
 		font-size: 12px;
+	}
+	/* Messages (erreurs, nombre de lignes) : sélectionnables et copiables,
+	   alors que l'application ne l'est pas (.app : user-select: none). */
+	.error,
+	.result-bar p {
+		user-select: text;
+		cursor: text;
+	}
+	.error-bar {
+		display: flex;
+		align-items: flex-start;
+		gap: 8px;
+	}
+	.error-bar .error {
+		flex: 1;
+		min-width: 0;
+		margin-top: 0;
 	}
 	.sql {
 		/* Contexte d'empilement propre : rien de la vue ne passe au-dessus du volet d'aide. */

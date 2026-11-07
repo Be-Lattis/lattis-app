@@ -1,0 +1,187 @@
+{
+	"objects": [
+		{
+			"name": "Suividesnids",
+			"sqlName": "t_1",
+			"rows": 3,
+			"kind": "table",
+			"columns": [
+				{
+					"name": "Année",
+					"sql": "c_1",
+					"type": "integer"
+				},
+				{
+					"name": "NID suivi",
+					"sql": "c_2",
+					"type": "text"
+				},
+				{
+					"name": "N° DE NID",
+					"sql": "c_3",
+					"type": "text"
+				},
+				{
+					"name": "N° DE NID.N° DE NID",
+					"sql": "c_4",
+					"type": "text"
+				},
+				{
+					"name": "Observateur",
+					"sql": "c_5",
+					"type": "text"
+				},
+				{
+					"name": "Date visite",
+					"sql": "c_6",
+					"type": "date"
+				}
+			]
+		},
+		{
+			"name": "BDD_nids",
+			"sqlName": "t_2",
+			"rows": 2,
+			"kind": "table",
+			"columns": [
+				{
+					"name": "N° DE NID",
+					"sql": "c_1",
+					"type": "text"
+				},
+				{
+					"name": "Coordonnées.Latitude",
+					"sql": "c_2",
+					"type": "decimal"
+				},
+				{
+					"name": "Coordonnées.Longitude",
+					"sql": "c_3",
+					"type": "decimal"
+				},
+				{
+					"name": "Commune",
+					"sql": "c_4",
+					"type": "text"
+				},
+				{
+					"name": "Statut",
+					"sql": "c_5",
+					"type": "text"
+				}
+			]
+		},
+		{
+			"name": "Clients",
+			"sqlName": "t_3",
+			"rows": 3,
+			"kind": "table",
+			"columns": [
+				{
+					"name": "Code",
+					"sql": "c_1",
+					"type": "integer"
+				},
+				{
+					"name": "Nom client",
+					"sql": "c_2",
+					"type": "text"
+				},
+				{
+					"name": "Ville",
+					"sql": "c_3",
+					"type": "text"
+				}
+			]
+		},
+		{
+			"name": "Ventes2026",
+			"sqlName": "t_4",
+			"rows": 3,
+			"kind": "table",
+			"columns": [
+				{
+					"name": "Code",
+					"sql": "c_1",
+					"type": "integer"
+				},
+				{
+					"name": "Montant",
+					"sql": "c_2",
+					"type": "decimal"
+				},
+				{
+					"name": "Date",
+					"sql": "c_3",
+					"type": "date"
+				},
+				{
+					"name": "Vendeur",
+					"sql": "c_4",
+					"type": "text"
+				}
+			]
+		}
+	],
+	"cases": [
+		{ "name": "colonne seule", "sql": "SELECT Année FROM Suividesnids", "out": "SELECT c_1 AS \"Année\" FROM t_1" },
+		{ "name": "deux colonnes, espace", "sql": "SELECT Année, \"NID suivi\" FROM Suividesnids", "out": "SELECT c_1 AS \"Année\", c_2 AS \"NID suivi\" FROM t_1" },
+		{ "name": "casse libre, crochets", "sql": "select année, [nid suivi] from suividesnids", "out": "select c_1 AS \"année\", c_2 AS \"nid suivi\" from t_1" },
+		{ "name": "accents gardés", "sql": "SELECT \"Date visite\", Observateur FROM Suividesnids", "out": "SELECT c_6 AS \"Date visite\", c_5 AS \"Observateur\" FROM t_1" },
+		{ "name": "apostrophes inverses", "sql": "SELECT `NID suivi` FROM Suividesnids", "out": "SELECT c_2 AS \"NID suivi\" FROM t_1" },
+		{ "name": "nom à point entre guillemets", "sql": "SELECT \"Coordonnées.Latitude\", \"Coordonnées.Longitude\" FROM BDD_nids", "out": "SELECT c_2 AS \"Coordonnées.Latitude\", c_3 AS \"Coordonnées.Longitude\" FROM t_2" },
+		{ "name": "nom à point entre crochets", "sql": "SELECT [Coordonnées.Latitude] FROM BDD_nids", "out": "SELECT c_2 AS \"Coordonnées.Latitude\" FROM t_2" },
+		{ "name": "nom à point préfixé du tableau", "sql": "SELECT BDD_nids.\"Coordonnées.Latitude\" FROM BDD_nids", "out": "SELECT t_2.c_2 AS \"BDD_nids.\"\"Coordonnées.Latitude\"\"\" FROM t_2" },
+		{ "name": "nom à point préfixé d'un alias", "sql": "SELECT b.\"Coordonnées.Latitude\" FROM BDD_nids b", "out": "SELECT b.c_2 AS \"b.\"\"Coordonnées.Latitude\"\"\" FROM t_2 b" },
+		{ "name": "nom à point dans WHERE", "sql": "SELECT Commune FROM BDD_nids WHERE \"Coordonnées.Latitude\" > 45", "out": "SELECT c_4 AS \"Commune\" FROM t_2 WHERE c_2 > 45" },
+		{ "name": "nom à point qui répète", "sql": "SELECT \"N° DE NID.N° DE NID\" FROM Suividesnids", "out": "SELECT c_4 AS \"N° DE NID.N° DE NID\" FROM t_1" },
+		{ "name": "étoile", "sql": "SELECT * FROM Suividesnids", "out": "SELECT id, c_1 AS \"Année\", c_2 AS \"NID suivi\", c_3 AS \"N° DE NID\", c_4 AS \"N° DE NID.N° DE NID\", c_5 AS \"Observateur\", c_6 AS \"Date visite\" FROM t_1" },
+		{ "name": "étoile et colonne", "sql": "SELECT *, Année + 1 AS suivante FROM Suividesnids", "out": "SELECT id, c_1 AS \"Année\", c_2 AS \"NID suivi\", c_3 AS \"N° DE NID\", c_4 AS \"N° DE NID.N° DE NID\", c_5 AS \"Observateur\", c_6 AS \"Date visite\", c_1 + 1 AS suivante FROM t_1" },
+		{ "name": "DISTINCT et ORDER BY", "sql": "SELECT DISTINCT Année FROM Suividesnids ORDER BY Année", "out": "SELECT DISTINCT c_1 AS \"Année\" FROM t_1 ORDER BY c_1" },
+		{ "name": "GROUP BY et alias", "sql": "SELECT Année, COUNT(*) AS n FROM Suividesnids GROUP BY Année ORDER BY n DESC", "out": "SELECT c_1 AS \"Année\", COUNT(*) AS n FROM t_1 GROUP BY c_1 ORDER BY n DESC" },
+		{ "name": "GROUP BY rang", "sql": "SELECT Année, count(\"NID suivi\") FROM Suividesnids GROUP BY 1", "out": "SELECT c_1 AS \"Année\", count(c_2) AS \"count(\"\"NID suivi\"\")\" FROM t_1 GROUP BY 1" },
+		{ "name": "HAVING", "sql": "SELECT Observateur, count(*) FROM Suividesnids GROUP BY Observateur HAVING count(*) > 1", "out": "SELECT c_5 AS \"Observateur\", count(*) FROM t_1 GROUP BY c_5 HAVING count(*) > 1" },
+		{ "name": "agrégats", "sql": "SELECT min(Année), max(Année), avg(Année), sum(Année), total(Année), group_concat(Observateur, ', ') FROM Suividesnids", "out": "SELECT min(c_1) AS \"min(Année)\", max(c_1) AS \"max(Année)\", avg(c_1) AS \"avg(Année)\", sum(c_1) AS \"sum(Année)\", total(c_1) AS \"total(Année)\", group_concat(c_5, ', ') AS \"group_concat(Observateur, ', ')\" FROM t_1" },
+		{ "name": "chaîne et commentaire qui citent un nom", "sql": "SELECT Année FROM Suividesnids WHERE \"NID suivi\" <> 'Année' -- Année\n/* Observateur */", "out": "SELECT c_1 AS \"Année\" FROM t_1 WHERE c_2 <> 'Année' -- Année\n/* Observateur */" },
+		{ "name": "noms internes intacts", "sql": "SELECT c_1 FROM t_1 WHERE c_2 = 'oui'", "out": "SELECT c_1 FROM t_1 WHERE c_2 = 'oui'" },
+		{ "name": "alias de colonne au nom d'une colonne", "sql": "SELECT Année AS \"N° DE NID\" FROM Suividesnids", "out": "SELECT c_1 AS \"N° DE NID\" FROM t_1" },
+		{ "name": "alias sans AS", "sql": "SELECT Année an FROM Suividesnids", "out": "SELECT c_1 an FROM t_1" },
+		{ "name": "fonction", "sql": "SELECT upper(Observateur), length(\"NID suivi\") FROM Suividesnids", "out": "SELECT upper(c_5) AS \"upper(Observateur)\", length(c_2) AS \"length(\"\"NID suivi\"\")\" FROM t_1" },
+		{ "name": "CASE", "sql": "SELECT CASE WHEN \"NID suivi\" = 'oui' THEN Année ELSE 0 END AS a FROM Suividesnids", "out": "SELECT CASE WHEN c_2 = 'oui' THEN c_1 ELSE 0 END AS a FROM t_1" },
+		{ "name": "dates", "sql": "SELECT Observateur FROM Suividesnids WHERE \"Date visite\" >= '2024-01-01' ORDER BY \"Date visite\" DESC LIMIT 10", "out": "SELECT c_5 AS \"Observateur\" FROM t_1 WHERE c_6 >= '2024-01-01' ORDER BY c_6 DESC LIMIT 10" },
+		{ "name": "LIKE, IN, BETWEEN", "sql": "SELECT Année FROM Suividesnids WHERE Observateur LIKE 'P%' AND Année IN (2024, 2025) AND Année BETWEEN 2000 AND 2100", "out": "SELECT c_1 AS \"Année\" FROM t_1 WHERE c_5 LIKE 'P%' AND c_1 IN (2024, 2025) AND c_1 BETWEEN 2000 AND 2100" },
+		{ "name": "fenêtre PARTITION", "sql": "SELECT Année, Observateur, row_number() OVER (PARTITION BY Année ORDER BY \"Date visite\") AS rang FROM Suividesnids", "out": "SELECT c_1 AS \"Année\", c_5 AS \"Observateur\", row_number() OVER (PARTITION BY c_1 ORDER BY c_6) AS rang FROM t_1" },
+		{ "name": "fenêtre cadre", "sql": "SELECT Année, sum(Année) OVER (ORDER BY Année ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumul FROM Suividesnids", "out": "SELECT c_1 AS \"Année\", sum(c_1) OVER (ORDER BY c_1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumul FROM t_1" },
+		{ "name": "CTE et étoile", "sql": "WITH x AS (SELECT Année, count(*) AS n FROM Suividesnids GROUP BY Année) SELECT * FROM x", "out": "WITH x AS (SELECT c_1, count(*) AS n FROM t_1 GROUP BY c_1) SELECT * FROM x" },
+		{ "name": "CTE et alias", "sql": "WITH x AS (SELECT Année AS an FROM Suividesnids) SELECT an FROM x", "out": "WITH x AS (SELECT c_1 AS an FROM t_1) SELECT an FROM x" },
+		{ "name": "CTE puis tableau", "sql": "WITH x AS (SELECT 2024 AS an) SELECT Observateur FROM Suividesnids WHERE Année IN (SELECT an FROM x)", "out": "WITH x AS (SELECT 2024 AS an) SELECT c_5 FROM t_1 WHERE c_1 IN (SELECT an FROM x)" },
+		{ "name": "sous-requête IN", "sql": "SELECT Année FROM Suividesnids WHERE \"N° DE NID\" IN (SELECT \"N° DE NID\" FROM BDD_nids WHERE Commune = 'Lyon')", "out": "SELECT c_1 AS \"Année\" FROM t_1 WHERE c_3 IN (SELECT c_1 FROM t_2 WHERE c_4 = 'Lyon')" },
+		{ "name": "sous-requête scalaire", "sql": "SELECT Montant FROM \"Ventes2026\" WHERE Date > (SELECT min(Date) FROM \"Ventes2026\")", "out": "SELECT c_2 AS \"Montant\" FROM t_4 WHERE c_3 > (SELECT min(c_3) FROM t_4)" },
+		{ "name": "sous-requête dans FROM", "sql": "SELECT * FROM (SELECT Ville FROM Clients)", "out": "SELECT * FROM (SELECT c_3 FROM t_3)" },
+		{ "name": "sous-requête corrélée préfixée", "sql": "SELECT Année FROM Suividesnids s WHERE EXISTS (SELECT 1 FROM BDD_nids b WHERE b.\"N° DE NID\" = s.\"N° DE NID\")", "out": "SELECT c_1 AS \"Année\" FROM t_1 s WHERE EXISTS (SELECT 1 FROM t_2 b WHERE b.c_1 = s.c_3)" },
+		{ "name": "sous-requête corrélée sans préfixe", "sql": "SELECT \"NID suivi\" FROM Suividesnids WHERE EXISTS (SELECT 1 FROM BDD_nids WHERE Commune = 'Lyon' AND Année = 2024)", "out": "SELECT c_2 AS \"NID suivi\" FROM t_1 WHERE EXISTS (SELECT 1 FROM t_2 WHERE c_4 = 'Lyon' AND t_1.c_1 = 2024)", "before": "SELECT c_2 AS \"NID suivi\" FROM t_1 WHERE EXISTS (SELECT 1 FROM t_2 WHERE c_4 = 'Lyon' AND c_1 = 2024)" },
+		{ "name": "jointure préfixée par alias", "sql": "SELECT s.Année, b.Commune FROM Suividesnids s JOIN BDD_nids b ON b.\"N° DE NID\" = s.\"N° DE NID\"", "out": "SELECT s.c_1 AS \"s.Année\", b.c_4 AS \"b.Commune\" FROM t_1 s JOIN t_2 b ON b.c_1 = s.c_3" },
+		{ "name": "jointure préfixée par tableau", "sql": "SELECT Suividesnids.Année, BDD_nids.Commune FROM Suividesnids JOIN BDD_nids ON BDD_nids.\"N° DE NID\" = Suividesnids.\"N° DE NID\"", "out": "SELECT t_1.c_1 AS \"Suividesnids.Année\", t_2.c_4 AS \"BDD_nids.Commune\" FROM t_1 JOIN t_2 ON t_2.c_1 = t_1.c_3" },
+		{ "name": "jointure sans préfixe", "sql": "SELECT Année, Commune FROM Suividesnids JOIN BDD_nids ON BDD_nids.\"N° DE NID\" = Suividesnids.\"N° DE NID\"", "out": "SELECT t_1.c_1 AS \"Année\", t_2.c_4 AS \"Commune\" FROM t_1 JOIN t_2 ON t_2.c_1 = t_1.c_3", "before": "SELECT c_1 AS \"Année\", c_4 AS \"Commune\" FROM t_1 JOIN t_2 ON t_2.c_1 = t_1.c_3" },
+		{ "name": "jointure gauche, alias, sans préfixe", "sql": "SELECT Année, Commune FROM Suividesnids AS s LEFT JOIN BDD_nids b ON b.\"N° DE NID\" = s.\"N° DE NID\" ORDER BY Année", "out": "SELECT s.c_1 AS \"Année\", b.c_4 AS \"Commune\" FROM t_1 AS s LEFT JOIN t_2 b ON b.c_1 = s.c_3 ORDER BY s.c_1", "before": "SELECT c_1 AS \"Année\", c_4 AS \"Commune\" FROM t_1 AS s LEFT JOIN t_2 b ON b.c_1 = s.c_3 ORDER BY c_1" },
+		{ "name": "jointure par virgule", "sql": "SELECT Observateur, Statut FROM Suividesnids, BDD_nids WHERE Suividesnids.\"N° DE NID\" = BDD_nids.\"N° DE NID\"", "out": "SELECT t_1.c_5 AS \"Observateur\", t_2.c_5 AS \"Statut\" FROM t_1, t_2 WHERE t_1.c_3 = t_2.c_1", "before": "SELECT c_5 AS \"Observateur\", c_5 AS \"Statut\" FROM t_1, t_2 WHERE t_1.c_3 = t_2.c_1" },
+		{ "name": "jointure, nom propre à un tableau sans collision", "sql": "SELECT \"Date visite\", Statut FROM Suividesnids s JOIN BDD_nids b ON b.\"N° DE NID\" = s.\"N° DE NID\"", "out": "SELECT c_6 AS \"Date visite\", b.c_5 AS \"Statut\" FROM t_1 s JOIN t_2 b ON b.c_1 = s.c_3", "before": "SELECT c_6 AS \"Date visite\", c_5 AS \"Statut\" FROM t_1 s JOIN t_2 b ON b.c_1 = s.c_3" },
+		{ "name": "jointure USING interne", "sql": "SELECT Montant, Ville FROM Clients JOIN \"Ventes2026\" USING (c_1)", "out": "SELECT t_4.c_2 AS \"Montant\", t_3.c_3 AS \"Ville\" FROM t_3 JOIN t_4 USING (c_1)", "before": "SELECT c_2 AS \"Montant\", c_3 AS \"Ville\" FROM t_3 JOIN t_4 USING (c_1)" },
+		{ "name": "jointure, étoile", "sql": "SELECT * FROM Clients, \"Ventes2026\" v", "out": "SELECT t_3.id, t_3.c_1 AS \"Code\", t_3.c_2 AS \"Nom client\", t_3.c_3 AS \"Ville\", v.id, v.c_1 AS \"Code\", v.c_2 AS \"Montant\", v.c_3 AS \"Date\", v.c_4 AS \"Vendeur\" FROM t_3, t_4 v" },
+		{ "name": "jointure, Tableau.*", "sql": "SELECT c.*, v.Montant FROM Clients c JOIN \"Ventes2026\" v ON v.Code = c.Code", "out": "SELECT c.id, c.c_1 AS \"Code\", c.c_2 AS \"Nom client\", c.c_3 AS \"Ville\", v.c_2 AS \"v.Montant\" FROM t_3 c JOIN t_4 v ON v.c_1 = c.c_1" },
+		{ "name": "jointure, GROUP BY sans préfixe", "sql": "SELECT Ville, sum(Montant) AS total FROM Clients c JOIN \"Ventes2026\" v ON v.Code = c.Code GROUP BY Ville ORDER BY total DESC", "out": "SELECT c.c_3 AS \"Ville\", sum(v.c_2) AS total FROM t_3 c JOIN t_4 v ON v.c_1 = c.c_1 GROUP BY c.c_3 ORDER BY total DESC", "before": "SELECT c_3 AS \"Ville\", sum(c_2) AS total FROM t_3 c JOIN t_4 v ON v.c_1 = c.c_1 GROUP BY c_3 ORDER BY total DESC" },
+		{ "name": "requête signalée", "sql": "-- Toutes les colonnes du tableau Suividesnids (259 lignes)\nSELECT Année, \"NID suivi\", COUNT(\"NID suivi\"), \"Coordonnées.Latitude\", \"Coordonnées.Longitude\" FROM Suividesnids LEFT JOIN BDD_nids ON \"N° DE NID.N° DE NID\"", "out": "-- Toutes les colonnes du tableau Suividesnids (259 lignes)\nSELECT t_1.c_1 AS \"Année\", t_1.c_2 AS \"NID suivi\", COUNT(t_1.c_2) AS \"COUNT(\"\"NID suivi\"\")\", t_2.c_2 AS \"Coordonnées.Latitude\", t_2.c_3 AS \"Coordonnées.Longitude\" FROM t_1 LEFT JOIN t_2 ON t_1.c_4", "before": "-- Toutes les colonnes du tableau Suividesnids (259 lignes)\nSELECT c_1 AS \"Année\", c_2 AS \"NID suivi\", COUNT(c_2) AS \"COUNT(\"\"NID suivi\"\")\", c_2 AS \"Coordonnées.Latitude\", c_3 AS \"Coordonnées.Longitude\" FROM t_1 LEFT JOIN t_2 ON c_4" },
+		{ "name": "requête signalée, jointure explicite", "sql": "SELECT Année, \"NID suivi\", COUNT(\"NID suivi\"), \"Coordonnées.Latitude\", \"Coordonnées.Longitude\" FROM Suividesnids LEFT JOIN BDD_nids ON Suividesnids.\"N° DE NID\" = BDD_nids.\"N° DE NID\" GROUP BY Année, \"NID suivi\"", "out": "SELECT t_1.c_1 AS \"Année\", t_1.c_2 AS \"NID suivi\", COUNT(t_1.c_2) AS \"COUNT(\"\"NID suivi\"\")\", t_2.c_2 AS \"Coordonnées.Latitude\", t_2.c_3 AS \"Coordonnées.Longitude\" FROM t_1 LEFT JOIN t_2 ON t_1.c_3 = t_2.c_1 GROUP BY t_1.c_1, t_1.c_2", "before": "SELECT c_1 AS \"Année\", c_2 AS \"NID suivi\", COUNT(c_2) AS \"COUNT(\"\"NID suivi\"\")\", c_2 AS \"Coordonnées.Latitude\", c_3 AS \"Coordonnées.Longitude\" FROM t_1 LEFT JOIN t_2 ON t_1.c_3 = t_2.c_1 GROUP BY c_1, c_2" },
+		{ "name": "colonne vraiment ambiguë", "sql": "SELECT \"N° DE NID\" FROM Suividesnids JOIN BDD_nids ON 1", "refused": "Colonne « N° DE NID » ambiguë : présente dans « Suividesnids » et « BDD_nids ». Préciser le tableau, par exemple Suividesnids.\"N° DE NID\"." },
+		{ "name": "jointure d'un tableau avec lui-même, alias", "sql": "SELECT a.Année, b.Année FROM Suividesnids a JOIN Suividesnids b ON a.\"N° DE NID\" = b.\"N° DE NID\" AND a.Année < b.Année", "out": "SELECT a.c_1 AS \"a.Année\", b.c_1 AS \"b.Année\" FROM t_1 a JOIN t_1 b ON a.c_3 = b.c_3 AND a.c_1 < b.c_1" },
+		{ "name": "jointure d'un tableau avec lui-même, sans préfixe", "sql": "SELECT Observateur FROM Suividesnids a JOIN Suividesnids b ON a.Année = b.Année", "out": "SELECT c_5 AS \"Observateur\" FROM t_1 a JOIN t_1 b ON a.c_1 = b.c_1", "sqlite": "Colonne ambiguë : « c_5 »" },
+		{ "name": "UNION", "sql": "SELECT Ville FROM Clients UNION SELECT Vendeur FROM \"Ventes2026\"", "out": "SELECT c_3 AS \"Ville\" FROM t_3 UNION SELECT c_4 FROM t_4" },
+		{ "name": "UNION ALL et ORDER BY", "sql": "SELECT Ville AS v FROM Clients UNION ALL SELECT Vendeur FROM \"Ventes2026\" ORDER BY v", "out": "SELECT c_3 AS v FROM t_3 UNION ALL SELECT c_4 FROM t_4 ORDER BY v" },
+		{ "name": "UNION d'étoiles", "sql": "SELECT * FROM Clients UNION ALL SELECT Code, Montant, Date FROM \"Ventes2026\"", "refused": "Colonne « Code » ambiguë : présente dans « Clients » et « Ventes2026 ». Préciser le tableau, par exemple Clients.Code." },
+		{ "name": "EXCEPT", "sql": "SELECT \"N° DE NID\" FROM Suividesnids EXCEPT SELECT \"N° DE NID\" FROM BDD_nids", "refused": "Colonne « N° DE NID » ambiguë : présente dans « Suividesnids » et « BDD_nids ». Préciser le tableau, par exemple Suividesnids.\"N° DE NID\"." },
+		{ "name": "VALUES", "sql": "VALUES (1, 'Année')", "out": "VALUES (1, 'Année')" },
+		{ "name": "point-virgule final", "sql": "SELECT Année FROM Suividesnids;", "out": "SELECT c_1 AS \"Année\" FROM t_1;" },
+		{ "name": "colonne inconnue", "sql": "SELECT Inconnue FROM Suividesnids", "out": "SELECT Inconnue FROM t_1", "sqlite": "Colonne inconnue : « Inconnue »" },
+		{ "name": "tableau inconnu", "sql": "SELECT Année FROM Inconnu", "out": "SELECT Année FROM Inconnu", "sqlite": "Tableau inconnu : « Inconnu »" }
+	]
+}

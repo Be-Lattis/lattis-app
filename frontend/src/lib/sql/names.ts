@@ -7,6 +7,7 @@
 
 import type { ColumnType } from '#lib/grid/format.js';
 import { lower, t } from '#lib/i18n/index.js';
+import { isWrite } from './write';
 
 export interface SqlColumn {
 	name: string;
@@ -143,6 +144,13 @@ export interface Resolved {
 	role: Role;
 	table?: SqlObject;
 	column?: SqlColumn;
+	/**
+	 * Colonne écrite sans préfixe dont le nom interne (c_1…) est aussi celui
+	 * d'une colonne d'une autre source de la même requête : préfixe à lui
+	 * donner (alias ou nom interne du tableau), sinon SQLite la dirait
+	 * ambiguë ou la rattacherait à l'autre tableau.
+	 */
+	qualifier?: string;
 }
 export interface Analysis {
 	tokens: Token[];
@@ -167,8 +175,12 @@ export function analyze(src: string, catalog: Catalog): Analysis {
 
 	// Portées : chaque sous-requête « (SELECT … ) » a ses tableaux ; une colonne
 	// se cherche d'abord dans sa sous-requête, puis dans les requêtes englobantes.
-	const scopes: { parent: number; tables: SqlObject[] }[] = [{ parent: -1, tables: [] }];
+	// Dans une portée, chaque membre d'un UNION / EXCEPT / INTERSECT est un
+	// « bras » (arm) : ses tableaux ne sont pas visibles des autres pour SQLite.
+	const scopes: { parent: number; parentArm: number; tables: SqlObject[] }[] = [{ parent: -1, parentArm: 0, tables: [] }];
 	const scopeOf: number[] = [];
+	const armOf: number[] = [];
+	const arms: number[] = [0];
 	const stack: { depth: number; scope: number }[] = [];
 	let depth = 0;
 	let cur = 0;
@@ -178,11 +190,14 @@ export function analyze(src: string, catalog: Catalog): Analysis {
 			depth++;
 			if (kw(at(k + 1), 'SELECT', 'WITH', 'VALUES')) {
 				stack.push({ depth, scope: cur });
-				scopes.push({ parent: cur, tables: [] });
+				scopes.push({ parent: cur, parentArm: arms[cur], tables: [] });
+				arms.push(0);
 				cur = scopes.length - 1;
 			}
 		}
+		if (kw(t, 'UNION', 'EXCEPT', 'INTERSECT')) arms[cur]++;
 		scopeOf[k] = cur;
+		armOf[k] = arms[cur];
 		if (t.text === ')') {
 			if (stack.length && stack[stack.length - 1].depth === depth) cur = stack.pop()!.scope;
 			depth--;
@@ -195,6 +210,9 @@ export function analyze(src: string, catalog: Catalog): Analysis {
 
 	// 1. Tableaux : après FROM, JOIN, INTO, UPDATE, TABLE, ou dans la liste du FROM ;
 	//    un alias peut suivre (AS facultatif).
+	// Sources de chaque bras (tableau du classeur, ou inconnue : expression de
+	// table, sous-requête, fonction), pour préfixer les colonnes au besoin.
+	const sources: { scope: number; arm: number; table?: SqlObject; alias?: string }[] = [];
 	let inFrom = false;
 	for (let k = 0; k < sig.length; k++) {
 		const t = at(k)!;
@@ -202,9 +220,13 @@ export function analyze(src: string, catalog: Catalog): Analysis {
 		else if (kw(t, ...clauseEnd) || t.text === ')') inFrom = false;
 		const prev = at(k - 1);
 		const tablePlace = kw(prev, 'FROM', 'JOIN', 'INTO', 'UPDATE', 'TABLE') || (inFrom && prev?.text === ',');
+		// Portée du mot qui précède (FROM, JOIN, «,») : une sous-requête ouvre la sienne dès « ( ».
+		if (tablePlace && (t.text === '(' || isName(t))) sources.push({ scope: scopeOf[k - 1], arm: armOf[k - 1] });
 		if (!tablePlace || !isName(t) || at(k + 1)?.text === '(' || at(k + 1)?.text === '.') continue;
 		const o = catalog.table(t.value);
 		if (!o) continue;
+		const source = sources[sources.length - 1];
+		source.table = o;
 		resolved.push({ token: sig[k], role: 'table', table: o });
 		done.add(k);
 		addScope(k, o);
@@ -214,10 +236,29 @@ export function analyze(src: string, catalog: Catalog): Analysis {
 		if (isName(alias) && at(a + 1)?.text !== '(' && !catalog.table(alias.value)) {
 			aliases.set(fold(alias.value), o);
 			resolved.push({ token: sig[a], role: 'alias', table: o });
+			source.alias = alias.text;
 			done.add(a);
 			k = a;
 		}
 	}
+
+	// Préfixe d'une colonne c, écrite sans préfixe au jeton k et trouvée dans le
+	// tableau o de la portée found : seulement si une autre source visible
+	// depuis k (bras de k, puis bras englobants jusqu'à found) peut avoir une
+	// colonne au même nom interne, et si o y est cité une seule fois.
+	const qualifierFor = (k: number, found: number, o: SqlObject, c: SqlColumn): string | undefined => {
+		const chain: [number, number][] = [];
+		for (let s = scopeOf[k], arm = armOf[k]; s >= 0; arm = scopes[s].parentArm, s = scopes[s].parent) {
+			chain.push([s, arm]);
+			if (s === found) break;
+		}
+		const visible = sources.filter((x) => chain.some(([s, arm]) => x.scope === s && x.arm === arm));
+		const own = visible.filter((x) => x.table === o && x.scope === found);
+		if (own.length !== 1) return undefined;
+		const internal = fold(c.sql);
+		const clash = visible.some((x) => x !== own[0] && (!x.table || (x.table !== o && x.table.columns.some((y) => fold(y.sql) === internal))));
+		return clash ? (own[0].alias ?? o.sqlName) : undefined;
+	};
 
 	const qualifier = (name: string) => aliases.get(fold(name)) ?? catalog.table(name);
 
@@ -249,7 +290,10 @@ export function analyze(src: string, catalog: Catalog): Analysis {
 				const col = catalog.column(o, t.value);
 				return col ? [{ o, col }] : [];
 			});
-			if (hits.length === 1) resolved.push({ token: sig[k], role: 'column', table: hits[0].o, column: hits[0].col });
+			if (hits.length === 1) {
+				const qualifier = qualifierFor(k, s, hits[0].o, hits[0].col);
+				resolved.push({ token: sig[k], role: 'column', table: hits[0].o, column: hits[0].col, ...(qualifier ? { qualifier } : {}) });
+			}
 			else if (hits.length > 1) ambiguous.push({ token: sig[k], name: t.value, tables: hits.map((h) => h.o) });
 			if (hits.length > 0) break;
 		}
@@ -264,6 +308,9 @@ export interface Translation {
 	sql: string;
 	/** Tableaux cités, pour retrouver les en-têtes d'un SELECT *. */
 	scope: SqlObject[];
+	/** Pour readableError : nom affiché de chaque nom interne de colonne écrit sans préfixe (null si plusieurs), alias de la requête. */
+	columns: Map<string, string | null>;
+	aliases: Map<string, SqlObject>;
 }
 
 /** Traduit les noms affichés en noms internes ; échoue sur une colonne ambiguë. */
@@ -279,10 +326,22 @@ export function translate(src: string, catalog: Catalog): Translation {
 		})
 		);
 	}
+	// Une écriture ne passe pas par ici dans un classeur (DocumentService.Execute) ;
+	// ses listes de colonnes (INSERT INTO t (a, b), SET a = …) refusent un préfixe.
+	const qualify = !isWrite(src);
 	const repl = new Map<number, string>();
+	const columns = new Map<string, string | null>();
 	for (const r of a.resolved) {
 		if (r.role === 'table') repl.set(r.token, r.table!.sqlName);
-		else if (r.role === 'column') repl.set(r.token, r.column!.sql);
+		else if (r.role === 'column') {
+			const c = r.column!;
+			if (qualify && r.qualifier) repl.set(r.token, `${r.qualifier}.${c.sql}`);
+			else {
+				repl.set(r.token, c.sql);
+				const k = fold(c.sql);
+				columns.set(k, columns.has(k) && columns.get(k) !== c.name ? null : c.name);
+			}
+		}
 	}
 	expandStars(a, repl);
 	const headers = selectHeaders(a, repl);
@@ -292,7 +351,32 @@ export function translate(src: string, catalog: Catalog): Translation {
 		const h = headers.get(i);
 		if (h !== undefined) out += ` AS ${quoteAlways(h)}`;
 	});
-	return { sql: out, scope: a.scope };
+	return { sql: out, scope: a.scope, columns, aliases: a.aliases };
+}
+
+const internalName = /(?<![\p{L}\p{N}_$.])(?:([\p{L}_][\p{L}\p{N}_$]*)\.)?\b([tc]_\d+)(?![\p{L}\p{N}_$])/gu;
+
+/**
+ * Message d'erreur aux noms affichés : les noms internes qu'il cite (t_1,
+ * c_2, t_1.c_2, alias.c_2), venus de la requête traduite, redeviennent ceux
+ * des tableaux et des colonnes. Un nom qu'on ne sait pas rattacher reste tel quel.
+ */
+export function readableError(message: string, catalog: Catalog, tr?: Pick<Translation, 'scope' | 'columns' | 'aliases'>): string {
+	return message.replace(internalName, (all, q: string | undefined, name: string) => {
+		const f = fold(name);
+		if (name.startsWith('t_') && !q) return catalog.objects.find((o) => fold(o.sqlName) === f)?.name ?? all;
+		if (!name.startsWith('c_')) return all;
+		if (q) {
+			const alias = tr?.aliases.get(fold(q));
+			const o = alias ?? catalog.table(q);
+			const c = o?.columns.find((x) => fold(x.sql) === f);
+			return o && c ? `${alias ? q : o.name}.${c.name}` : all;
+		}
+		const shown = tr?.columns.get(f);
+		if (shown) return shown;
+		const hits = (tr?.scope ?? []).flatMap((o) => o.columns.filter((x) => fold(x.sql) === f));
+		return hits.length === 1 ? hits[0].name : all;
+	});
 }
 
 // Une lecture (SELECT, WITH) liste les colonnes au lieu de « * » ou « Tableau.* » :
@@ -473,7 +557,7 @@ export function errorSpan(text: string, message: string): { from: number; to: nu
 	const m =
 		/near "([^"]+)"/.exec(message) ??
 		/no such (?:column|table|function): ([^\s,]+)/i.exec(message) ??
-		/(?:près de|inconnue? :) « ([^»]+) »/.exec(message);
+		/(?:près de|inconnue? :|ambiguë :) « ([^»]+) »/.exec(message);
 	if (!m) return null;
 	const word = m[1];
 	const at = text.toLowerCase().indexOf(word.toLowerCase());

@@ -1205,6 +1205,8 @@
 		"copyTooltip": "Copie le résultat (en-têtes compris), à coller dans un tableur",
 		"copied": "Copié ✓",
 		"clipboard": "Presse-papiers",
+		"copyError": "Copier le message",
+		"copyErrorTooltip": "Copie le message d'erreur, par exemple pour le transmettre",
 		"toSheet": "Vers une feuille :",
 		"copyToSheetTooltip": "Copie le résultat dans un nouveau tableau, sur une nouvelle feuille",
 		"copyToSheet": "Copier",

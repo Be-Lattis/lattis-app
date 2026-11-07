@@ -75,16 +75,67 @@ func (t *tx) execSQL(q string, args []any) (int64, error) {
 	for attempt := 0; ; attempt++ {
 		n, err := t.execSQLOnce(q, args)
 		if err == nil || attempt >= 8 {
-			return n, err
+			return n, t.shownNames(err)
 		}
 		widened, werr := t.widenFor(err)
 		if werr != nil {
-			return 0, werr
+			return 0, t.shownNames(werr)
 		}
 		if !widened {
-			return n, err
+			return n, t.shownNames(err)
 		}
 	}
+}
+
+// internalRef : nom interne d'un tableau (t_3), éventuellement suivi d'une
+// colonne (t_3.c_2 ; index de clé t_3_key), tel que SQLite le cite dans une
+// erreur (UNIQUE constraint failed: t_3.c_2…).
+var internalRef = regexp.MustCompile(`\bt_(\d+)(?:\.c_(\d+))?\b`)
+
+// namedErr : une erreur dont le texte cite les noms affichés au lieu des
+// noms internes ; l'erreur d'origine reste accessible (errors.Is, errors.As).
+type namedErr struct {
+	text string
+	err  error
+}
+
+func (e *namedErr) Error() string { return e.text }
+func (e *namedErr) Unwrap() error { return e.err }
+
+// shownNames remplace dans le texte d'une erreur de SQLite les noms internes
+// (t_3, t_3.c_2) par ceux des tableaux et colonnes affichés ; un nom qui ne
+// désigne aucun tableau reste tel quel. Une erreur qui a déjà son message
+// (msg.Messager) est rendue telle quelle.
+func (t *tx) shownNames(err error) error {
+	if err == nil {
+		return nil
+	}
+	if _, ok := err.(msg.Messager); ok {
+		return err
+	}
+	text := err.Error()
+	out := internalRef.ReplaceAllStringFunc(text, func(m string) string {
+		p := internalRef.FindStringSubmatch(m)
+		tid, _ := strconv.ParseInt(p[1], 10, 64)
+		tb, terr := t.table(tid)
+		if terr != nil {
+			return m
+		}
+		if p[2] == "" {
+			return tb.Name
+		}
+		cid, _ := strconv.ParseInt(p[2], 10, 64)
+		for _, c := range tb.Cols {
+			if c.ID == cid {
+				return tb.Name + "." + c.Name
+			}
+		}
+		return m
+	})
+	if out == text {
+		return err
+	}
+	return &namedErr{text: out, err: err}
 }
 
 var strictErr = regexp.MustCompile(`cannot store (\w+) value in \w+ column t_(\d+)\.c_(\d+)`)
