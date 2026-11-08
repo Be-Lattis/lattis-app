@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+## 0.5.5-beta (08/11/2026)
+
 - Onglet SQL : une jointure entre deux tableaux avec des colonnes écrites sans préfixe (`SELECT Année, Commune FROM Suividesnids JOIN BDD_nids ON …`) ne s'arrête plus sur « Colonne ambiguë : « c_1 » » ; les messages d'erreur citent les noms des tableaux et des colonnes tels qu'ils sont affichés, se sélectionnent et se copient (bouton **Copier le message**).
 
 ## 0.5.4-beta (05/11/2026)
