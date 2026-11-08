@@ -6,6 +6,8 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+- Mises à jour : « Rechercher maintenant » n'échoue plus sur « le serveur des versions ne répond pas » : la recherche demandait trop de versions d'un coup à GitHub, qui finissait par ne plus répondre.
+
 ## 0.5.5-beta (08/11/2026)
 
 - Onglet SQL : une jointure entre deux tableaux avec des colonnes écrites sans préfixe (`SELECT Année, Commune FROM Suividesnids JOIN BDD_nids ON …`) ne s'arrête plus sur « Colonne ambiguë : « c_1 » » ; les messages d'erreur citent les noms des tableaux et des colonnes tels qu'ils sont affichés, se sélectionnent et se copient (bouton **Copier le message**).

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -159,7 +160,7 @@ func (c *Client) get(ctx context.Context, rawURL, accept string) (*http.Response
 		case resp.StatusCode == http.StatusProxyAuthRequired:
 			return nil, msg.New("update.proxyAuth", nil)
 		}
-		return nil, msg.New("update.httpStatus", msg.Args{"status": resp.Status})
+		return nil, &statusError{msg.New("update.httpStatus", msg.Args{"status": resp.Status}), resp.StatusCode}
 	}
 	return resp, nil
 }
@@ -181,13 +182,34 @@ func (c *Client) getSmall(ctx context.Context, rawURL, accept string, max int64)
 	return b, nil
 }
 
+// statusError : réponse HTTP autre que 200 (code gardé pour réessayer).
+type statusError struct {
+	error
+	code int
+}
+
+func (e *statusError) Unwrap() error { return e.error }
+
 // maxListing : taille maximale d'une réponse de l'API (liste des versions).
 const maxListing = 4 << 20
+
+// listingSizes : nombre de versions demandées à l'API, puis moins si GitHub
+// échoue (504 au bout d'une quinzaine de secondes sur 20 versions aux
+// notes longues). Seule la plus récente compte : 10 suffisent largement.
+var listingSizes = []int{10, 3}
 
 // Releases liste les dernières versions publiées (API GitHub, 60 appels par
 // heure sans jeton : la recherche se fait au plus deux fois par jour).
 func (c *Client) Releases(ctx context.Context) ([]Release, error) {
-	b, err := c.getSmall(ctx, fmt.Sprintf("%s/repos/%s/releases?per_page=20", c.api(), c.repo()), "application/vnd.github+json", maxListing)
+	var b []byte
+	var err error
+	for _, n := range listingSizes {
+		b, err = c.getSmall(ctx, fmt.Sprintf("%s/repos/%s/releases?per_page=%d", c.api(), c.repo(), n), "application/vnd.github+json", maxListing)
+		var se *statusError
+		if err == nil || !errors.As(err, &se) || se.code < 500 {
+			break
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
