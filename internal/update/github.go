@@ -194,8 +194,7 @@ func (e *statusError) Unwrap() error { return e.error }
 const maxListing = 4 << 20
 
 // listingSizes : nombre de versions demandées à l'API, puis moins si GitHub
-// échoue (504 au bout d'une quinzaine de secondes sur 20 versions aux
-// notes longues). Seule la plus récente compte : 10 suffisent largement.
+// répond 5xx. Seule la plus récente compte : 10 suffisent largement.
 var listingSizes = []int{10, 3}
 
 // Releases liste les dernières versions publiées (API GitHub, 60 appels par

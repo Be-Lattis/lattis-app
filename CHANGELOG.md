@@ -6,7 +6,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
-- Mises à jour : « Rechercher maintenant » n'échoue plus sur « le serveur des versions ne répond pas » : la recherche demandait trop de versions d'un coup à GitHub, qui finissait par ne plus répondre.
+- Mises à jour : la recherche demande moins de versions à GitHub et, s'il répond en erreur, réessaie une fois avec une liste plus courte.
 
 ## 0.5.5-beta (08/11/2026)
 
