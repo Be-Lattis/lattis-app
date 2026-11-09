@@ -806,6 +806,8 @@
 		grid: '#e2e4e7',
 		strip: '#f5f6f7',
 		stripLine: '#d4d7db',
+		// Traits de redimensionnement des en-têtes : même gris, plus foncé.
+		stripTick: '#9aa0a6',
 		// Sauts de page (Affichage › Sauts de page).
 		pageBreak: '#5f6368',
 		stripText: '#5f6368',

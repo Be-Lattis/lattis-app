@@ -77,7 +77,7 @@ export interface DrawHost {
 	followBadges: { kind: 'follow' | 'name' | 'unnamed' | 'local'; e: Entry; label: string; radii: number[]; x0: number; x1: number; y0: number; y1: number; clip: { x0: number; x1: number; y0: number; y1: number } }[];
 	pivotBadges: { p: SheetPivot; label: string; radii: number[]; x0: number; x1: number; y0: number; y1: number; clip: { x0: number; x1: number; y0: number; y1: number } }[];
 	hiddenMarks: HiddenMark[];
-	readonly C: { bg: string; calc: string; grid: string; strip: string; stripLine: string; pageBreak: string; stripText: string; head: string; linkHead: string; linkHeadText: string; linkBorder: string; linkIcon: string; followBadge: string; nameBadge: string; unnamedBadge: string; sourceBadge: string; localBadge: string; headText: string; icon: string; border: string; gray: string; text: string; placeholder: string; select: string; active: string; activeStrip: string; error: string; link: string; spill: string; found: string; findCross: string; findGutter: string; frozen: string; nullMark: string; note: string; pending: string; conflict: string; };
+	readonly C: { bg: string; calc: string; grid: string; strip: string; stripLine: string; stripTick: string; pageBreak: string; stripText: string; head: string; linkHead: string; linkHeadText: string; linkBorder: string; linkIcon: string; followBadge: string; nameBadge: string; unnamedBadge: string; sourceBadge: string; localBadge: string; headText: string; icon: string; border: string; gray: string; text: string; placeholder: string; select: string; active: string; activeStrip: string; error: string; link: string; spill: string; found: string; findCross: string; findGutter: string; frozen: string; nullMark: string; note: string; pending: string; conflict: string; };
 	MARGIN: number;
 	readonly updateExtent: () => void;
 	keyGrew: boolean;
@@ -1480,7 +1480,7 @@ export function createDraw(sh: DrawHost) {
 		}
 		// Petits traits aux séparations de colonnes : on voit où redimensionner.
 		ctx.beginPath();
-		ctx.strokeStyle = C.stripLine;
+		ctx.strokeStyle = C.stripTick;
 		ctx.lineWidth = 1;
 		for (let c = c0; c <= c1; c++) {
 			const x = Math.round(cx(c + 1)) - 0.5;
@@ -1563,7 +1563,7 @@ export function createDraw(sh: DrawHost) {
 		// Petits traits aux séparations de lignes (un quart de la marge, à droite) :
 		// on voit où redimensionner, comme pour les colonnes.
 		ctx.beginPath();
-		ctx.strokeStyle = C.stripLine;
+		ctx.strokeStyle = C.stripTick;
 		ctx.lineWidth = 1;
 		for (let r = r0; r <= r1; r++) {
 			const y = Math.round(ry(r + 1)) - 0.5;

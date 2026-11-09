@@ -6,6 +6,7 @@ Ce qui change pour les utilisateurs de Lattis, version par version. Le détail t
 
 ## Non publié
 
+- Grille : les petits traits qui marquent où élargir une colonne ou une ligne, dans les en-têtes, sont plus foncés et se voient mieux.
 - Mises à jour : la recherche demande moins de versions à GitHub et, s'il répond en erreur, réessaie une fois avec une liste plus courte.
 
 ## 0.5.5-beta (08/11/2026)
